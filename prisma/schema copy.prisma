@@ -1,0 +1,31 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+  trades Trade[]
+}
+
+model Trade {
+  id        Int     @id @default(autoincrement())
+  user    User    @relation(fields: [userId], references: [id])
+  userId  Int
+  instrument     String
+  buyPrice   String
+  sellPrice  String
+  buyDate    DateTime
+  sellDate    DateTime
+  pnl    String
+  timeInPosition  Int
+}
