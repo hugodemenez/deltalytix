@@ -42,7 +42,7 @@ import { useUser } from './context/user-data'
 export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
   const [instrument, setInstrument] = useState<string>("all")
   const [accountNumber, setAccountNumber] = useState<string>("all")
-  const [formattedTrades, setFormattedTrades] = useState<Trade[]>(trades)
+  const [formattedTrades, setFormattedTrades] = useState<Trade[]>(trades.sort((a, b) => new Date(a.buyDate).getTime() - new Date(b.buyDate).getTime()))
   // Set default range to first month of the data in formattedTrades
   const firstTradeDate = formattedTrades.length > 0 ? new Date(formattedTrades[0].buyDate) : new Date()
   const lastTradeDate = formattedTrades.length > 0 ? new Date(formattedTrades[formattedTrades.length - 1].buyDate) : new Date()
@@ -61,7 +61,7 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
     });
 
     setFormattedTrades(newFormattedTrades);
-  }, [instrument, accountNumber, dateRange])
+  }, [trades, instrument, accountNumber, dateRange])
 
 
   // from formattedTrades create statistics

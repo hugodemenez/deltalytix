@@ -64,7 +64,7 @@ export default function AuthenticationPage() {
                 Simple authentication
               </h1>
               <p className="text-sm text-muted-foreground">
-                Enter your email, we will send a magic link to your inbox and create a new account if you don't have one.
+                Enter your email, we will send a magic link to your inbox and create a new account if you don&apos;t have one.
               </p>
             </div>
             <UserAuthForm />

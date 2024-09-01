@@ -51,7 +51,7 @@ export default function DailyPnlChart({dailyTradingData}: {dailyTradingData: any
       short: chartData.reduce((acc, curr) => acc + curr.short, 0),
       long: chartData.reduce((acc, curr) => acc + curr.long, 0),
     }),
-    [dailyTradingData]
+    [chartConfig,dailyTradingData]
   )
 
   return (
