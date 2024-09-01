@@ -42,7 +42,6 @@ export default function DailyPnlChart({dailyTradingData}: {dailyTradingData: any
     short: (values as { shortNumber?: number }).shortNumber ?? 0,
     long: (values as { longNumber?: number }).longNumber ?? 0,
   }));
-  console.log(chartData)
 
   const [activeChart, setActiveChart] =
     React.useState<keyof typeof chartConfig>("long")
@@ -52,7 +51,7 @@ export default function DailyPnlChart({dailyTradingData}: {dailyTradingData: any
       short: chartData.reduce((acc, curr) => acc + curr.short, 0),
       long: chartData.reduce((acc, curr) => acc + curr.long, 0),
     }),
-    []
+    [dailyTradingData]
   )
 
   return (

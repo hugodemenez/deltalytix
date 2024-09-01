@@ -1,17 +1,18 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public"]
 }
 
 model Trade {
-  id             BigInt @id @default(autoincrement())
+  id             String @id
+  accountNumber  String
   quantity       Int
   buyId          BigInt
   sellId         BigInt
@@ -22,4 +23,7 @@ model Trade {
   sellDate       String
   pnl            String
   timeInPosition String
+  userId         String
+
+  @@schema("public")
 }
