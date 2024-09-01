@@ -36,7 +36,7 @@ import { redirect } from 'next/navigation'
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: {
-        redirectTo: 'http://localhost:3000/auth/callback',
+        redirectTo: process.env.REDIRECT_URL,
       },
     })
     if (data.url) {
@@ -75,7 +75,7 @@ import { redirect } from 'next/navigation'
     const { error } = await supabase.auth.signInWithOtp({
       email: email,
       options: {
-        emailRedirectTo: 'http://localhost:3000/auth/callback',
+        emailRedirectTo: process.env.REDIRECT_URL,
       },
     })
   }
