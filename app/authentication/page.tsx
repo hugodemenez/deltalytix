@@ -7,8 +7,8 @@ import { buttonVariants } from "@/components/ui/button"
 import { UserAuthForm } from "./components/user-auth-form"
 
 export const metadata: Metadata = {
-  title: "Authentication",
-  description: "Authentication forms built using the components.",
+  title: "Deltalytix - Authentication",
+  description: "Authenticate with email or discord",
 }
 
 export default function AuthenticationPage() {
