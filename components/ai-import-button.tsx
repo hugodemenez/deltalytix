@@ -295,10 +295,10 @@ export default function Component() {
     return numericValue;
   };
 
-  const convertTimeInPosition = (time: string | undefined): string | undefined => {
+  const convertTimeInPosition = (time: string | undefined): number | undefined => {
     if (typeof time !== 'string' || time.trim() === '') {
       console.warn('Invalid time value:', time);
-      return ''; // or return a default value that makes sense for your application
+      return 0; // or return a default value that makes sense for your application
     }
 
     // Parse timeInPosition
@@ -308,7 +308,7 @@ export default function Component() {
     const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
     const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0;
     const timeInSeconds = (minutes * 60) + seconds;
-    return timeInSeconds.toString();
+    return timeInSeconds;
   }
 
   const handleSave = async () => {
