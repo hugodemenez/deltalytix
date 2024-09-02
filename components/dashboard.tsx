@@ -1,42 +1,24 @@
 'use client'
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { ArrowUp, ArrowDown, Percent, TrendingUp, Award, Calendar as CalendarIcon, X, Clock, PiggyBank } from 'lucide-react'
 import { DateRange } from 'react-day-picker'
 import { format, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { CSVImporter } from "csv-import-react";
 import { Trade } from '@prisma/client'
-import CsvImporter from './csv-importer'
-import { Bar, BarChart } from "recharts"
-import DailyPnlChart from './dailyPnlChart'
 import ImportButton from './import-button'
 import CalendarPnl from './calendar-pnl'
 import { User } from '@supabase/supabase-js'
-import { useUser } from './context/user-data'
+import DailyChart from './daily-chart'
+import SmartImportButton from './smart-import-button'
 
 
 export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
@@ -81,15 +63,7 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
     if (acc.nbWin + acc.nbLoss > 0) {
       acc.winRate = acc.nbWin / (acc.nbWin + acc.nbLoss) * 100;
     }
-    // Parse timeInPosition
-    const timeInPosition = trade.timeInPosition;
-    const minutesMatch = timeInPosition.match(/(\d+)min/);
-    const secondsMatch = timeInPosition.match(/(\d+)sec/);
-    const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
-    const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0;
-    const timeInSeconds = (minutes * 60) + seconds;
-
-    acc.totalPositionTime += timeInSeconds;
+    acc.totalPositionTime += trade.timeInPosition;
     return acc;
   }, { cumulativeFees: 0, cumulativePnl: 0, winningStreak: 0, winRate: 0, nbTrades: 0, nbBe: 0, nbWin: 0, nbLoss: 0, totalPositionTime: 0 });
   
@@ -138,8 +112,6 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
   return (
     <div className="container mx-auto p-4">
       <div className='w-full flex justify-between items-center mb-4'>
-        <h1 className="text-2xl font-bold">Trading Analysis Dashboard</h1>
-        <ImportButton></ImportButton>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-y-4 justify-between items-center mb-4">
@@ -300,7 +272,7 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
         </Card>
       </div>
       <div className='mb-4'>
-        <DailyPnlChart dailyTradingData={calendarData}></DailyPnlChart>
+      <DailyChart dailyTradingData={calendarData}/>
       </div>
 
       <CalendarPnl

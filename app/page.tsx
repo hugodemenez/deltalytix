@@ -1,6 +1,5 @@
 'use server'
 import { useUser } from '@/components/context/user-data'
-import CsvImporter from '@/components/csv-importer'
 import Dashboard from '@/components/dashboard'
 import Navbar from '@/components/navbar'
 import { Button } from '@/components/ui/button'

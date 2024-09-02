@@ -14,8 +14,8 @@ model Trade {
   id             String @id
   accountNumber  String
   quantity       Int
-  buyId          BigInt
-  sellId         BigInt
+  buyId          String
+  sellId         String
   instrument     String
   buyPrice       String
   sellPrice      String
@@ -24,6 +24,8 @@ model Trade {
   pnl            String
   timeInPosition String
   userId         String
+  side           String @default("")
+  comission      Float @default(0.97)
 
   @@schema("public")
 }

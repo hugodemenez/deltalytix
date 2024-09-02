@@ -36,7 +36,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export default function DailyPnlChart({dailyTradingData}: {dailyTradingData: any}) {
+export default function DailyChart({dailyTradingData}: {dailyTradingData: any}) {
   const chartData = Object.entries(dailyTradingData).map(([date, values]) => ({
     date,
     short: (values as { shortNumber?: number }).shortNumber ?? 0,

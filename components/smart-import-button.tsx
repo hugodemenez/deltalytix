@@ -8,15 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
-import { UploadIcon, InfoIcon } from 'lucide-react'
+import { UploadIcon, InfoIcon, XIcon, AlertTriangleIcon } from 'lucide-react'
 import { saveTrades } from '@/server/database'
 import { Trade } from '@prisma/client'
 import { createClient } from '@/hooks/auth'
 import { useRouter } from 'next/navigation'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ColumnConfig = {
   [key: string]: {
@@ -27,15 +27,15 @@ type ColumnConfig = {
 
 const columnConfig: ColumnConfig = {
   "instrument": { defaultMapping: ["sym", "symbol", "ticker", "instrument"], required: true },
-  "buyId": { defaultMapping: ["buyFillId",], required: false },
+  "buyId": { defaultMapping: ["buyFillId"], required: false },
   "sellId": { defaultMapping: ["sellFillId", "exit_id", "id"], required: false },
   "quantity": { defaultMapping: ["qty", "quantity", "amount", "volume", "size"], required: true },
-  "buyPrice": { defaultMapping: ["buyPrice",], required: true },
-  "sellPrice": { defaultMapping: ["sellPrice",], required: true },
-  "buyDate": { defaultMapping: ["boughtTimestamp",], required: true },
-  "sellDate": { defaultMapping: ["soldTimestamp",], required: true },
+  "buyPrice": { defaultMapping: ["buyPrice"], required: true },
+  "sellPrice": { defaultMapping: ["sellPrice"], required: true },
+  "buyDate": { defaultMapping: ["boughtTimestamp"], required: true },
+  "sellDate": { defaultMapping: ["soldTimestamp"], required: true },
   "pnl": { defaultMapping: ["pnl", "profit", "profit_loss", "gain_loss"], required: false },
-  "timeInPosition": { defaultMapping: ["duration",], required: false },
+  "timeInPosition": { defaultMapping: ["duration"], required: false },
 }
 
 const destinationColumns = Object.keys(columnConfig)
@@ -49,7 +49,6 @@ export default function Component() {
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
   const [mappings, setMappings] = useState<{ [key: string]: string }>({})
-  const [includedFields, setIncludedFields] = useState<{ [key: string]: boolean }>({})
   const [accountNumber, setAccountNumber] = useState('')
   const [step, setStep] = useState(0)
   const [selectedHeaderIndex, setSelectedHeaderIndex] = useState<number>(0)
@@ -89,21 +88,22 @@ export default function Component() {
       setHeaders(newHeaders)
 
       const newMappings: { [key: string]: string } = {}
-      const newIncludedFields: { [key: string]: boolean } = {}
+      const mappedDestinations = new Set<string>()
+
       newHeaders.forEach(header => {
-        const matchedDestination = Object.entries(columnConfig).find(([_, config]) =>
-          config.defaultMapping.some(match => header.toLowerCase().includes(match.toLowerCase()))
+        const matchedDestination = Object.entries(columnConfig).find(([column, config]) =>
+          !mappedDestinations.has(column) && config.defaultMapping.some(match => 
+            header.toLowerCase().includes(match.toLowerCase())
+          )
         )
         if (matchedDestination) {
           newMappings[header] = matchedDestination[0]
-          newIncludedFields[header] = true
+          mappedDestinations.add(matchedDestination[0])
         } else {
           newMappings[header] = ''
-          newIncludedFields[header] = false
         }
       })
       setMappings(newMappings)
-      setIncludedFields(newIncludedFields)
     } else {
       setError("Invalid header row selected.")
     }
@@ -114,23 +114,51 @@ export default function Component() {
   }
 
   const handleMapping = (header: string, value: string) => {
-    setMappings(prev => ({ ...prev, [header]: value }))
-    setIncludedFields(prev => ({ ...prev, [header]: true }))
+    setMappings(prev => {
+      const newMappings = { ...prev }
+      
+      // Remove the previous mapping for this header
+      if (newMappings[header]) {
+        delete newMappings[header]
+      }
+      
+      // Remove any existing mapping to the new value
+      Object.keys(newMappings).forEach(key => {
+        if (newMappings[key] === value) {
+          delete newMappings[key]
+        }
+      })
+      
+      // Set the new mapping
+      newMappings[header] = value
+      
+      return newMappings
+    })
   }
 
-  const handleIncludeToggle = (header: string) => {
-    setIncludedFields(prev => ({ ...prev, [header]: !prev[header] }))
+  const handleRemoveMapping = (header: string) => {
+    setMappings(prev => {
+      const newMappings = { ...prev }
+      delete newMappings[header]
+      return newMappings
+    })
   }
 
   const isRequiredFieldsMapped = () => {
     return requiredFields.every(field =>
-      Object.entries(mappings).some(([key, value]) => value === field && includedFields[key])
+      Object.values(mappings).includes(field)
     )
   }
 
   const getMissingRequiredFields = (): string[] => {
     return requiredFields.filter(field =>
-      !Object.entries(mappings).some(([key, value]) => value === field && includedFields[key])
+      !Object.values(mappings).includes(field)
+    )
+  }
+
+  const getRemainingFieldsToMap = (): string[] => {
+    return destinationColumns.filter(column => 
+      !Object.values(mappings).includes(column)
     )
   }
 
@@ -157,29 +185,25 @@ export default function Component() {
     }
   }
 
-
-  const handleSave =  async () => {
+  const handleSave = async () => {
     const supabase = createClient()
     await supabase.auth.refreshSession()
     const { data : {user}} = await supabase.auth.getUser()
 
-
     const jsonData = csvData.slice(1).map(row => {
       const item: { [key: string]: string | BigInt | number } = { accountNumber }
       headers.forEach((header, index) => {
-        if (includedFields[header] && mappings[header]) {
-          // If quantity col then convert to number
+        if (mappings[header]) {
           if (mappings[header] === 'quantity') {
             item[mappings[header]] = parseFloat(row[index])
-          } 
-          else {
+          } else {
             item[mappings[header]] = row[index]
           }
         }
       })
       if (item.buyId && item.sellId) {
-      item.userId = user!.id;
-      item.id = user!.id.concat(item.buyId as string,item.sellId as string)
+        item.userId = user!.id;
+        item.id = user!.id.concat(item.buyId as string,item.sellId as string)
       }
       return item as unknown as Trade
     })
@@ -191,14 +215,12 @@ export default function Component() {
       title: "CSV data saved for "+user!.id,
       description: "Your CSV data has been successfully imported.",
     })
-    // Here you would typically send jsonData to your database
     setIsOpen(false)
     setStep(0)
     setRawCsvData([])
     setCsvData([])
     setHeaders([])
     setMappings({})
-    setIncludedFields({})
     setAccountNumber('')
     setSelectedHeaderIndex(0)
     setError(null)
@@ -268,55 +290,88 @@ export default function Component() {
         return (
           <div className="space-y-4">
             {headers.length > 0 && csvData.length > 0 ? (
-              <div className="max-h-[calc(80vh-200px)] overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Your File Column</TableHead>
-                      <TableHead>Your Sample Data</TableHead>
-                      <TableHead>Destination Column</TableHead>
-                      <TableHead>Include</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {headers.map((header, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{header}</TableCell>
-                        <TableCell>
-                          {csvData.slice(1, 4).map((row, i) => (
-                            <span key={i} className="mr-2">{row[index]}</span>
-                          ))}
-                        </TableCell>
-                        <TableCell>
-                          <Select onValueChange={(value) => handleMapping(header, value)} value={mappings[header] || undefined}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select one" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {destinationColumns.map((column, i) => (
-                                <SelectItem key={i} value={column}>
-                                  {column}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Checkbox
-                            checked={includedFields[header]}
-                            onCheckedChange={() => handleIncludeToggle(header)}
-                            disabled={columnConfig[mappings[header]]?.required}
-                          />
-                        </TableCell>
-                      </TableRow>
+              <>
+                <div className="mb-4">
+                  <h3 className="text-lg font-medium mb-2">Remaining Fields to Map:</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {getRemainingFieldsToMap().map((field, index) => (
+                      <span key={index} className="bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm">
+                        {field}
+                        {columnConfig[field].required && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <AlertTriangleIcon className="h-4 w-4 ml-1 text-yellow-500 inline" />
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Required field</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </span>
                     ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  </div>
+                </div>
+                <div className="max-h-[calc(80vh-300px)] overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Your File Column</TableHead>
+                        <TableHead>Your Sample Data</TableHead>
+                        <TableHead>Destination Column</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {headers.map((header, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{header}</TableCell>
+                          <TableCell>
+                            {csvData.slice(1, 4).map((row, i) => (
+                              <span key={i} className="mr-2">{row[index]}</span>
+                            ))}
+                          </TableCell>
+                          <TableCell>
+                            <Select onValueChange={(value) => handleMapping(header, value)} value={mappings[header] || undefined}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select one" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {destinationColumns.map((column, i) => (
+                                  <SelectItem key={i} value={column} disabled={Object.values(mappings).includes(column) && mappings[header] !== column}>
+                                    {column}
+                                    {columnConfig[column].required && (
+                                      <span className="ml-1 text-yellow-500">*</span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell>
+                            {mappings[header] && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveMapping(header)}
+                              >
+                                <XIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             ) : (
               <p>No data to display. Please go back and select a valid header row.</p>
             )}
-            {error && <p className="text-red-500 mt-2">{error}</p>}
+            {error &&
+              <p className="text-red-500 mt-2">{error}</p>
+            }
           </div>
         )
       case 3:

@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { createClient } from "@/hooks/auth";
 import { signOut } from "@/server/auth";
+import SmartImportButton from "./smart-import-button";
+import AiImportButton from "./ai-import-button";
 
 export default function Navbar() {
     const { user } = useUser();
@@ -42,6 +44,9 @@ export default function Navbar() {
     return (
         <nav className="flex justify-between p-4">
             <div></div>
+            <div className="flex gap-x-4">
+        {/* <SmartImportButton></SmartImportButton> */}
+        <AiImportButton></AiImportButton>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Avatar className="cursor-pointer">
@@ -76,10 +81,6 @@ export default function Navbar() {
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                        <DropdownMenuItem>
-                            <Users className="mr-2 h-4 w-4" />
-                            <span>Team</span>
-                        </DropdownMenuItem>
                         <DropdownMenuSub>
                             <DropdownMenuSubTrigger>
                                 <UserPlus className="mr-2 h-4 w-4" />
@@ -103,17 +104,8 @@ export default function Navbar() {
                                 </DropdownMenuSubContent>
                             </DropdownMenuPortal>
                         </DropdownMenuSub>
-                        <DropdownMenuItem>
-                            <Plus className="mr-2 h-4 w-4" />
-                            <span>New Team</span>
-                            <DropdownMenuShortcut>⌘+T</DropdownMenuShortcut>
-                        </DropdownMenuItem>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                        <Github className="mr-2 h-4 w-4" />
-                        <span>GitHub</span>
-                    </DropdownMenuItem>
                     <DropdownMenuItem>
                         <LifeBuoy className="mr-2 h-4 w-4" />
                         <span>Support</span>
@@ -133,6 +125,8 @@ export default function Navbar() {
                 </DropdownMenuContent>
             </DropdownMenu>
 
+
+            </div>
 
         </nav>
     )

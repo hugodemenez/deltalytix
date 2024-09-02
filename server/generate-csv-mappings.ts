@@ -37,7 +37,7 @@ export async function generateCsvMapping(
           .describe("The date and time the shortlink was created (createdAt)"),
       }),
       prompt:
-        `The following columns are the headings from a CSV import file for importing trading data. ` +
+        `The following columns are the headings from a CSV import file for importing a company's short links. ` +
         `Map these column names to the correct fields in our database (link, url, title, description, tags, createdAt) by providing the matching column name for each field.` +
         `You may also consult the first few rows of data to help you make the mapping, but you are mapping the columns, not the values. ` +
         `If you are not sure or there is no matching column, omit the value.\n\n` +
