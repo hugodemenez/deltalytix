@@ -1,13 +1,12 @@
-generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
-}
-
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
   schemas   = ["public"]
+}
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
 }
 
 model Trade {
@@ -25,7 +24,7 @@ model Trade {
   timeInPosition String
   userId         String
   side           String @default("")
-  comission      Float @default(0.97)
+  comission      String @default("0")
 
   @@schema("public")
 }
