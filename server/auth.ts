@@ -33,6 +33,7 @@ import { redirect } from 'next/navigation'
 
  export async function signInWithDiscord() {
     const supabase = await createClient()
+    console.log(process.env.REDIRECT_URL)
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: {
