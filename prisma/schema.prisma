@@ -24,7 +24,7 @@ model Trade {
   timeInPosition String
   userId         String
   side           String @default("")
-  comission      String @default("0")
+  comission      Float @default(0)
 
   @@schema("public")
 }

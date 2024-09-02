@@ -62,35 +62,72 @@ export default function Component() {
   const { toast } = useToast()
   const router = useRouter()
 
+  const generateAIMappings = useCallback(async (headers: string[], sampleData: string[][]) => {
+    setIsGeneratingMappings(true);
+    try {
+      const firstRows = sampleData.map(row => {
+        const rowData: Record<string, string> = {};
+        headers.forEach((header, i) => {
+          rowData[header] = row[i];
+        });
+        return rowData;
+      });
+      const aiMappings = await generateCsvMapping(headers, firstRows);
 
+      const newMappings: { [key: string]: string } = {};
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0]
-    Papa.parse(file, {
-      complete: (result) => {
-        if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-          setRawCsvData(result.data as string[][])
-          if (isRithmicImport) {
-            processRithmicCsv(result.data as string[][])
-          } else {
-            setStep(1) // Move to header selection step for regular CSV
-            setSelectedHeaderIndex(0) // Default select the first row as header
-            processHeaderSelection(0, result.data as string[][])
-          }
-          setError(null)
-        } else {
-          setError("The CSV file appears to be empty or invalid.")
+      // Process AI mappings
+      for await (const partialObject of readStreamableValue(aiMappings.object)) {
+        if (partialObject) {
+          Object.entries(partialObject).forEach(([field, value]) => {
+            if (typeof value === 'string' && headers.includes(value) && Object.keys(columnConfig).includes(field)) {
+              newMappings[value] = field;
+            }
+          });
         }
-      },
-      error: (error) => {
-        setError(`Error parsing CSV: ${error.message}`)
       }
-    })
-  }, [isRithmicImport])
+      console.log('AI Mappings:', newMappings);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
+      // Handle Rithmic-specific mappings
+      if (isRithmicImport) {
+        newMappings['AccountNumber'] = 'accountNumber';
+        newMappings['Instrument'] = 'instrument';
+      }
 
-  const processRithmicCsv = (data: string[][]) => {
+      // Apply default mappings if AI didn't find a match
+      headers.forEach(header => {
+        if (!newMappings[header]) {
+          const defaultMapping = Object.entries(columnConfig).find(([_, config]) =>
+            config.defaultMapping.includes(header)
+          );
+          if (defaultMapping) {
+            newMappings[header] = defaultMapping[0];
+          }
+        }
+      });
+
+      setMappings(newMappings);
+    } catch (error) {
+      console.error('Error generating AI mappings:', error);
+      toast({
+        title: "Error generating mappings",
+        description: "An error occurred while generating AI mappings. Please map columns manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingMappings(false);
+    }
+  },[isRithmicImport, toast]);
+
+  const processHeaderSelection = useCallback((index: number, data: string[][]) => {
+    setSelectedHeaderIndex(index)
+    const newHeaders = data[index].filter(header => header && header.trim() !== '')
+    setHeaders(newHeaders)
+    setCsvData(data.slice(index))
+    generateAIMappings(newHeaders, data.slice(index + 1, index + 6))
+  },[generateAIMappings])
+
+  const processRithmicCsv = useCallback((data: string[][]) => {
     const processedData: string[][] = []
     let currentAccount = ''
     let currentInstrument = ''
@@ -119,92 +156,54 @@ export default function Component() {
     } else {
       setError("Unable to process Rithmic CSV. Please check the file format.")
     }
-  }
+  },[generateAIMappings])
 
-  const processHeaderSelection = (index: number, data: string[][]) => {
-    setSelectedHeaderIndex(index)
-    const newHeaders = data[index].filter(header => header && header.trim() !== '')
-    setHeaders(newHeaders)
-    setCsvData(data.slice(index))
-    generateAIMappings(newHeaders, data.slice(index + 1, index + 6))
-  }
-
-  const generateAIMappings = async (headers: string[], sampleData: string[][]) => {
-    setIsGeneratingMappings(true);
-    try {
-      const firstRows = sampleData.map(row => {
-        const rowData: Record<string, string> = {};
-        headers.forEach((header, i) => {
-          rowData[header] = row[i];
-        });
-        return rowData;
-      });
-      const aiMappings = await generateCsvMapping(headers, firstRows);
-      
-      const newMappings: { [key: string]: string } = {};
-  
-      // Process AI mappings
-      for await (const partialObject of readStreamableValue(aiMappings.object)) {
-        if (partialObject) {
-          Object.entries(partialObject).forEach(([field, value]) => {
-            if (typeof value === 'string' && headers.includes(value) && Object.keys(columnConfig).includes(field)) {
-              newMappings[value] = field;
-            }
-          });
-        }
-      }
-      console.log('AI Mappings:', newMappings);
-  
-      // Handle Rithmic-specific mappings
-      if (isRithmicImport) {
-        newMappings['AccountNumber'] = 'accountNumber';
-        newMappings['Instrument'] = 'instrument';
-      }
-  
-      // Apply default mappings if AI didn't find a match
-      headers.forEach(header => {
-        if (!newMappings[header]) {
-          const defaultMapping = Object.entries(columnConfig).find(([_, config]) => 
-            config.defaultMapping.includes(header)
-          );
-          if (defaultMapping) {
-            newMappings[header] = defaultMapping[0];
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0]
+    Papa.parse(file, {
+      complete: (result) => {
+        if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+          setRawCsvData(result.data as string[][])
+          if (isRithmicImport) {
+            processRithmicCsv(result.data as string[][])
+          } else {
+            setStep(1) // Move to header selection step for regular CSV
+            setSelectedHeaderIndex(0) // Default select the first row as header
+            processHeaderSelection(0, result.data as string[][])
           }
+          setError(null)
+        } else {
+          setError("The CSV file appears to be empty or invalid.")
         }
-      });
-  
-      setMappings(newMappings);
-    } catch (error) {
-      console.error('Error generating AI mappings:', error);
-      toast({
-        title: "Error generating mappings",
-        description: "An error occurred while generating AI mappings. Please map columns manually.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsGeneratingMappings(false);
-    }
-  };
+      },
+      error: (error) => {
+        setError(`Error parsing CSV: ${error.message}`)
+      }
+    })
+  }, [processRithmicCsv, isRithmicImport, processHeaderSelection])
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
+
 
   const handleMapping = (header: string, value: string) => {
     setMappings(prev => {
       const newMappings = { ...prev }
-      
+
       // Remove the previous mapping for this header
       if (newMappings[header]) {
         delete newMappings[header]
       }
-      
+
       // Remove any existing mapping to the new value
       Object.keys(newMappings).forEach(key => {
         if (newMappings[key] === value) {
           delete newMappings[key]
         }
       })
-      
+
       // Set the new mapping
       newMappings[header] = value
-      
+
       return newMappings
     })
   }
@@ -230,7 +229,7 @@ export default function Component() {
   }
 
   const getRemainingFieldsToMap = (): string[] => {
-    return destinationColumns.filter(column => 
+    return destinationColumns.filter(column =>
       !Object.values(mappings).includes(column)
     )
   }
@@ -279,20 +278,20 @@ export default function Component() {
       console.warn('Invalid PNL value:', pnl);
       return 0; // or return a default value that makes sense for your application
     }
-  
+
     let formattedPnl = pnl.trim();
-    
+
     if (formattedPnl.includes('(')) {
       formattedPnl = formattedPnl.replace('(', '-').replace(')', '');
     }
-    
+
     const numericValue = parseFloat(formattedPnl.replace(/[$,]/g, ''));
-    
+
     if (isNaN(numericValue)) {
       console.warn('Unable to parse PNL value:', pnl);
       return 0; // or return a default value that makes sense for your application
     }
-  
+
     return numericValue;
   };
 
@@ -302,20 +301,20 @@ export default function Component() {
       return ''; // or return a default value that makes sense for your application
     }
 
-  // Parse timeInPosition
-  const timeInPosition =time;
-  const minutesMatch = timeInPosition.match(/(\d+)min/);
-  const secondsMatch = timeInPosition.match(/(\d+)sec/);
-  const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
-  const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0;
-  const timeInSeconds = (minutes * 60) + seconds;
-  return timeInSeconds.toString();
+    // Parse timeInPosition
+    const timeInPosition = time;
+    const minutesMatch = timeInPosition.match(/(\d+)min/);
+    const secondsMatch = timeInPosition.match(/(\d+)sec/);
+    const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
+    const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0;
+    const timeInSeconds = (minutes * 60) + seconds;
+    return timeInSeconds.toString();
   }
 
   const handleSave = async () => {
     const supabase = createClient()
     await supabase.auth.refreshSession()
-    const { data : {user}} = await supabase.auth.getUser()
+    const { data: { user } } = await supabase.auth.getUser()
 
     const jsonData = csvData.slice(1).map(row => {
       const item: Partial<Trade> = {};
@@ -323,7 +322,7 @@ export default function Component() {
         if (mappings[header]) {
           const key = mappings[header] as keyof Trade;
           const cellValue = row[index];
-  
+
           switch (key) {
             case 'quantity':
               item[key] = parseFloat(cellValue) || 0;
@@ -342,34 +341,34 @@ export default function Component() {
           }
         }
       });
-  
+
       if (item.buyId && item.sellId) {
         item.userId = user!.id;
         item.id = user!.id.concat(item.buyId, item.sellId);
       }
-      
+
       // Set default value for side if not provided
       if (!item.side) {
         item.side = 'B';
       }
-      
+
       // Set account number if it wasn't in the CSV
       if (!item.accountNumber) {
         item.accountNumber = accountNumber;
       }
-  
+
       return item as Trade;
     });
 
-    const filteredData = jsonData.filter((item): item is Trade => 
-      !!item.instrument && !!item.quantity && !!item.buyPrice && 
+    const filteredData = jsonData.filter((item): item is Trade =>
+      !!item.instrument && !!item.quantity && !!item.buyPrice &&
       !!item.sellPrice && !!item.buyDate && !!item.sellDate && !!item.pnl
     )
     console.log('JSON Data:', filteredData)
 
     await saveTrades(filteredData)
     toast({
-      title: "CSV data saved for "+user!.id,
+      title: "CSV data saved for " + user!.id,
       description: "Your CSV data has been successfully imported.",
     })
     setIsOpen(false)

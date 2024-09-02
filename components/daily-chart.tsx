@@ -16,11 +16,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Trade } from "@prisma/client"
 
 export const description = "An interactive bar chart"
-
-
 
 const chartConfig = {
   views: {
@@ -51,7 +48,7 @@ export default function DailyChart({dailyTradingData}: {dailyTradingData: any}) 
       short: chartData.reduce((acc, curr) => acc + curr.short, 0),
       long: chartData.reduce((acc, curr) => acc + curr.long, 0),
     }),
-    [chartConfig,dailyTradingData]
+    [chartData]
   )
 
   return (
