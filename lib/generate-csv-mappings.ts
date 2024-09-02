@@ -56,7 +56,7 @@ export async function generateCsvMapping(
         side: z
           .string()
           .optional()
-          .describe("The side of the trade (e.g., buy or sell)"),
+          .describe("The entry side of the trade (e.g., buy or sell)"),
         comission: z
           .string()
           .optional()
