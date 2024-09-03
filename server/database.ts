@@ -12,4 +12,5 @@ export async function saveTrades(data: Trade[]) {
     )
     await prisma.$disconnect()
     revalidatePath('/')
+    return {error:null, trades:data}
 }

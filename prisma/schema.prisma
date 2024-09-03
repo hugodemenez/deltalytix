@@ -13,8 +13,8 @@ model Trade {
   id             String @id
   accountNumber  String
   quantity       Int
-  buyId          String
-  sellId         String
+  buyId          String? @default("")
+  sellId         String? @default("")
   instrument     String
   buyPrice       String
   sellPrice      String
@@ -25,6 +25,6 @@ model Trade {
   userId         String
   side           String @default("")
   comission      Float @default(0)
-
+  createdAt      DateTime @default(now())
   @@schema("public")
 }

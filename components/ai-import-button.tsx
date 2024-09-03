@@ -53,6 +53,7 @@ export default function Component() {
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
   const [mappings, setMappings] = useState<{ [key: string]: string }>({})
+  const [isSaving, setIsSaving] = useState(false)
   const [step, setStep] = useState(0)
   const [selectedHeaderIndex, setSelectedHeaderIndex] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
@@ -117,7 +118,7 @@ export default function Component() {
     } finally {
       setIsGeneratingMappings(false);
     }
-  },[isRithmicImport, toast]);
+  }, [isRithmicImport, toast]);
 
   const processHeaderSelection = useCallback((index: number, data: string[][]) => {
     setSelectedHeaderIndex(index)
@@ -125,7 +126,7 @@ export default function Component() {
     setHeaders(newHeaders)
     setCsvData(data.slice(index))
     generateAIMappings(newHeaders, data.slice(index + 1, index + 6))
-  },[generateAIMappings])
+  }, [generateAIMappings])
 
   const processRithmicCsv = useCallback((data: string[][]) => {
     const processedData: string[][] = []
@@ -156,7 +157,7 @@ export default function Component() {
     } else {
       setError("Unable to process Rithmic CSV. Please check the file format.")
     }
-  },[generateAIMappings])
+  }, [generateAIMappings])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -342,9 +343,13 @@ export default function Component() {
         }
       });
 
+      item.userId = user!.id;
+
       if (item.buyId && item.sellId) {
-        item.userId = user!.id;
         item.id = user!.id.concat(item.buyId, item.sellId);
+      }
+      else {
+        item.id = user!.id.concat(Math.random().toString(36).substring(2, 15));
       }
 
       // Set default value for side if not provided
@@ -366,11 +371,33 @@ export default function Component() {
     )
     console.log('JSON Data:', filteredData)
 
-    await saveTrades(filteredData)
-    toast({
-      title: "CSV data saved for " + user!.id,
-      description: "Your CSV data has been successfully imported.",
-    })
+    setIsSaving(true)
+    try {
+      const result = await saveTrades(filteredData)
+      if (result.error) {
+        toast({
+          title: "Error saving trades",
+          description: result.error,
+          variant: "destructive",
+        })
+        return
+      }
+      toast({
+        title: "CSV data saved for " + user!.id,
+        description: "Your CSV data has been successfully imported.",
+      })
+      setIsOpen(false)
+      // ... reset other state variables ...
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: "Error saving trades",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
     setIsOpen(false)
     setStep(0)
     setRawCsvData([])
@@ -567,7 +594,7 @@ export default function Component() {
             )}
             {step > 0 && (
               <Button onClick={handleNextStep}>
-                {step === 3 ? "Save" : "Next"}
+                {isSaving ? "Saving..." : (step === 3 ? "Save" : "Next")}
               </Button>
             )}
           </DialogFooter>

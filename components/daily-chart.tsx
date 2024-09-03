@@ -23,21 +23,21 @@ const chartConfig = {
   views: {
     label: "Number of trades",
   },
-  short: {
-    label: "Short",
-    color: "hsl(var(--chart-1))",
-  },
   long: {
     label: "Long",
     color: "hsl(var(--chart-2))",
+  },
+  short: {
+    label: "Short",
+    color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig
 
 export default function DailyChart({dailyTradingData}: {dailyTradingData: any}) {
   const chartData = Object.entries(dailyTradingData).map(([date, values]) => ({
     date,
-    short: (values as { shortNumber?: number }).shortNumber ?? 0,
     long: (values as { longNumber?: number }).longNumber ?? 0,
+    short: (values as { shortNumber?: number }).shortNumber ?? 0,
   }));
 
   const [activeChart, setActiveChart] =
