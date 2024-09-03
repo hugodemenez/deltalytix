@@ -305,7 +305,6 @@ export default function Component() {
   };
 
   const convertTimeInPosition = (time: string | undefined): number | undefined => {
-    console.log('Time in position:', time);
     if (typeof time !== 'string' || time.trim() === '') {
       console.warn('Invalid time value:', time);
       return 0; // or return a default value that makes sense for your application
@@ -313,7 +312,6 @@ export default function Component() {
     // Check if the time is a float in string form
     if (/^\d+\.\d+$/.test(time)) {
       const floatTime = parseFloat(time);
-      console.log('Time value is a float:', floatTime);
       return floatTime; // Return the float value directly
     }
     // Parse timeInPosition
