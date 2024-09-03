@@ -48,7 +48,7 @@ export async function generateCsvMapping(
           .describe("The date when the sell transaction occurred"),
         pnl: z
           .string()
-          .describe("The profit or loss from the trade"),
+          .describe("The profit or loss from the trade brut or gross pnl when there is comission"),
         timeInPosition: z
           .string()
           .optional()
