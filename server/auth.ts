@@ -34,17 +34,18 @@ import { redirect } from 'next/navigation'
 
  export async function signInWithDiscord(redirectUrl: string | null = null) {
     const supabase = await createClient()
-    console.log(process.env.REDIRECT_URL)
+    console.log(redirectUrl ? `${getWebsiteURL()}${redirectUrl}` : `${getWebsiteURL()}auth/callback/`)
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: {
-
         redirectTo: redirectUrl ? `${getWebsiteURL()}${redirectUrl}` : `${getWebsiteURL()}auth/callback/`,
       },
     })
+    console.log(error,data)
     if (data.url) {
         redirect(data.url) // use the redirect API for your server framework
       }
+    
   }
   
 
