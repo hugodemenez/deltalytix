@@ -352,11 +352,6 @@ export default function Component() {
         item.id = user!.id.concat(Math.random().toString(36).substring(2, 15));
       }
 
-      // Set default value for side if not provided
-      if (!item.side) {
-        item.side = 'B';
-      }
-
       // Set account number if it wasn't in the CSV
       if (!item.accountNumber) {
         item.accountNumber = accountNumber;
@@ -369,7 +364,6 @@ export default function Component() {
       !!item.instrument && !!item.quantity && !!item.buyPrice &&
       !!item.sellPrice && !!item.buyDate && !!item.sellDate && !!item.pnl
     )
-    console.log('JSON Data:', filteredData)
 
     setIsSaving(true)
     try {

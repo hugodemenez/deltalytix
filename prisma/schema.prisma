@@ -23,7 +23,7 @@ model Trade {
   pnl            String
   timeInPosition Float @default(0)
   userId         String
-  side           String @default("")
+  side           String? @default("")
   comission      Float @default(0)
   createdAt      DateTime @default(now())
   @@schema("public")

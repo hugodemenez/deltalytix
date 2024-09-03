@@ -91,16 +91,18 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
     if (!acc[date]) {
       acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0 }
     }
-    var pnl = trade.pnl
-    if (pnl.includes('(')) {
-      pnl = pnl.replace('(', '-').replace(')', '')
-    }
-    acc[date].pnl += parseFloat(pnl.replace('$', '')) - (trade.quantity * 0.97 * 2);
     acc[date].tradeNumber++
-
     // Chck if trade.buyDate<trade.sellDate
+    acc[date].pnl += parseFloat(trade.pnl)
 
-    const isLong = new Date(trade.buyDate) < new Date(trade.sellDate)
+    console.log(trade)
+    let isLong = false
+    if (trade.side !== ''){
+      isLong = trade.side === 'long' || trade.side === 'buy' || trade.side === 'B'
+    }
+    else{
+      isLong = new Date(trade.buyDate) < new Date(trade.sellDate)
+    }
     acc[date].longNumber += isLong ? 1 : 0
     acc[date].shortNumber += isLong ? 0 : 1
 

@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { createClient } from '@/hooks/auth'
+import Image from 'next/image'
 
 type UserMetadata = {
   avatar_url?: string;
@@ -76,7 +77,7 @@ export default function ProfilePage() {
             {metadata.avatar_decoration && (
               <div>
                 <p className="font-semibold">Avatar Decoration:</p>
-                <img src={metadata.avatar_decoration} alt="Avatar Decoration" className="w-16 h-16" />
+                <Image src={metadata.avatar_decoration} alt="Avatar Decoration" className="w-16 h-16" />
               </div>
             )}
           </div>
