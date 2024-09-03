@@ -20,31 +20,83 @@ import { User } from '@supabase/supabase-js'
 import DailyChart from './daily-chart'
 import SmartImportButton from './smart-import-button'
 import AiImportButton from './ai-import-button'
+import { useTrades } from './context/trades-data'
 
 
-export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
+export default function Dashboard() {
+  const { trades, setTrades } = useTrades()
   const [instrument, setInstrument] = useState<string>("all")
   const [accountNumber, setAccountNumber] = useState<string>("all")
-  const [formattedTrades, setFormattedTrades] = useState<Trade[]>(trades.sort((a, b) => new Date(a.buyDate).getTime() - new Date(b.buyDate).getTime()))
-  // Set default range to first month of the data in formattedTrades
-  const firstTradeDate = formattedTrades.length > 0 ? new Date(formattedTrades[0].buyDate) : new Date()
-  const lastTradeDate = formattedTrades.length > 0 ? new Date(formattedTrades[formattedTrades.length - 1].buyDate) : new Date()
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: firstTradeDate,
-    to: lastTradeDate
-  })
 
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    return {
+      from: new Date(),
+      to: new Date()
+    };
+  })
   useEffect(() => {
-    let newFormattedTrades = trades.sort((a, b) => new Date(a.buyDate).getTime() - new Date(b.buyDate).getTime());
-    newFormattedTrades = newFormattedTrades.filter((trade: any) => {
-      if (instrument !== "all" && trade.instrument !== instrument) return false;
-      if (accountNumber !== "all" && trade.accountNumber !== accountNumber) return false;
-      if (dateRange && (new Date(trade.buyDate) < dateRange.from! || new Date(trade.buyDate) > dateRange.to!)) return false;
-      return true;
+    if (trades.length === 0) {
+      return;
+    }
+
+    let sortedTrades = trades.sort((a, b) => {
+      const dateA = new Date(a.buyDate);
+      const dateB = new Date(b.buyDate);
+      if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+        return 0; // Handle invalid dates
+      }
+      return dateA.getTime() - dateB.getTime();
     });
 
-    setFormattedTrades(newFormattedTrades);
+    setDateRange({
+      from: new Date(sortedTrades[0].buyDate),
+      to: new Date(sortedTrades[sortedTrades.length - 1].buyDate)
+    });
+  }, [trades]);
+
+  const formattedTrades = useMemo(() => {
+    let sortedTrades = trades
+    .sort((a, b) => {
+      const dateA = new Date(a.buyDate);
+      const dateB = new Date(b.buyDate);
+      if (isNaN(dateA.getTime()) || isNaN(dateB.getTime())) {
+        return 0; // Handle invalid dates
+      }
+      return dateA.getTime() - dateB.getTime();
+    })
+    return sortedTrades
+      .filter((trade: Trade) => {
+        
+        const buyDate = new Date(trade.buyDate);
+        
+        // Filter out trades with invalid dates
+        if (isNaN(buyDate.getTime())) {
+          return false;
+        }
+        
+        // Instrument filter
+        if (instrument !== "all" && trade.instrument !== instrument) {
+          return false;
+        }
+        
+        // Account filter
+        if (accountNumber !== "all" && trade.accountNumber !== accountNumber) {
+          return false;
+        }
+        
+        // Date range filter
+        if (dateRange && dateRange.from && dateRange.to) {
+          if (buyDate < dateRange.from || buyDate > dateRange.to) {
+            return false;
+          }
+        }
+        
+        return true;
+      })
+
+
   }, [trades, instrument, accountNumber, dateRange])
+
 
 
   // from formattedTrades create statistics
@@ -87,6 +139,8 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
 
   // eachEntry is a date containing all formattedTrades for that day
   const calendarData = formattedTrades.reduce((acc: any, trade: Trade) => {
+
+    try{
     const date = format(new Date(trade.buyDate), 'yyyy-MM-dd')
     if (!acc[date]) {
       acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0 }
@@ -95,7 +149,6 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
     // Chck if trade.buyDate<trade.sellDate
     acc[date].pnl += parseFloat(trade.pnl)
 
-    console.log(trade)
     let isLong = false
     if (trade.side !== ''){
       isLong = trade.side === 'long' || trade.side === 'buy' || trade.side === 'B'
@@ -107,6 +160,10 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
     acc[date].shortNumber += isLong ? 0 : 1
 
     return acc
+    }catch(e){
+      console.log(trade)
+      return acc
+    }
   }
     , {})
 

@@ -14,3 +14,10 @@ export async function saveTrades(data: Trade[]) {
     revalidatePath('/')
     return {error:null, trades:data}
 }
+
+export async function getTrades(userId: string) {
+    const prisma = new PrismaClient()
+    const trades = await prisma.trade.findMany({where: {userId: userId}})
+    await prisma.$disconnect()
+    return trades
+}

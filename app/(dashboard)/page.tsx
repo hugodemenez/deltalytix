@@ -1,4 +1,5 @@
 'use server'
+import { TradeDataProvider } from '@/components/context/trades-data'
 import { useUser } from '@/components/context/user-data'
 import Dashboard from '@/components/dashboard'
 import Navbar from '@/components/navbar'
@@ -15,12 +16,13 @@ export default async function Home() {
   if(!user) {
     redirect('/authentication')
   }
-  const prisma = new PrismaClient()
-  const trades = await prisma.trade.findMany({where: {userId: user.id}})
+
 
   return (
     <div>
-      <Dashboard trades={trades} user={user}></Dashboard>
+      <TradeDataProvider>
+      <Dashboard></Dashboard>
+      </TradeDataProvider>
     </div>
   )
 }

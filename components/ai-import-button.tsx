@@ -13,13 +13,14 @@ import { useToast } from "@/hooks/use-toast"
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { UploadIcon, XIcon, AlertTriangleIcon, InfoIcon } from 'lucide-react'
-import { saveTrades } from '@/server/database'
+import { getTrades, saveTrades } from '@/server/database'
 import { Trade } from '@prisma/client'
 import { createClient } from '@/hooks/auth'
 import { useRouter } from 'next/navigation'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { generateCsvMapping } from '@/lib/generate-csv-mappings'
 import { readStreamableValue } from 'ai/rsc';
+import { useTrades } from './context/trades-data'
 
 type ColumnConfig = {
   [key: string]: {
@@ -62,6 +63,7 @@ export default function Component() {
   const [accountNumber, setAccountNumber] = useState<string>('')
   const { toast } = useToast()
   const router = useRouter()
+  const setTrades = useTrades().setTrades
 
   const generateAIMappings = useCallback(async (headers: string[], sampleData: string[][]) => {
     setIsGeneratingMappings(true);
@@ -134,9 +136,15 @@ export default function Component() {
     let currentInstrument = ''
     let isHeaderRow = false
     let headers: string[] = []
-
+  
+    const isAccountNumber = (value: string) => {
+      // Check if the value contains both letters and numbers
+      // and is longer than 4 characters (to distinguish from symbols)
+      return /^(?=.*[a-zA-Z])(?=.*\d).{5,}$/.test(value);
+    }
+  
     data.forEach((row) => {
-      if (row[0] && row[0].startsWith('FTT-')) {
+      if (row[0] && isAccountNumber(row[0])) {
         currentAccount = row[0]
       } else if (row[0] && row[0].length === 4) {
         currentInstrument = row[0]
@@ -148,7 +156,7 @@ export default function Component() {
         processedData.push([currentAccount, currentInstrument, ...row])
       }
     })
-
+  
     if (processedData.length > 0 && headers.length > 0) {
       setCsvData(processedData)
       setHeaders(headers)
@@ -402,7 +410,7 @@ export default function Component() {
     setSelectedHeaderIndex(0)
     setAccountNumber('')
     setIsRithmicImport(false)
-    router.refresh()
+     setTrades(await getTrades(user!.id))
   }
 
   const renderStep = () => {
