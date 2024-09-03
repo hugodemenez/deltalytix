@@ -22,13 +22,8 @@ export default async function RootLayout({
   return (
     <html lang="en" className="h-screen w-screen">
       <body className={inter.className + " h-screen w-screen overflow-x-hidden"}>
-        <Toaster />
-        <UserDataProvider>
-          <div className="container mx-auto p-4 "> 
-            <Navbar />
+            <Toaster/>
             {children}
-          </div>
-        </UserDataProvider>
       </body>
     </html>
   );
