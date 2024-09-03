@@ -103,12 +103,12 @@ export default function Dashboard() {
   const statistics = formattedTrades.reduce((acc: any, trade: Trade) => {
     const pnl = parseFloat(trade.pnl.replace('(', '-').replace(')', '').replace('$', ''));
     acc.pnl = pnl;
-    if (pnl < 0) {
+    if (acc.pnl < 0) {
       acc.winningStreak = 0;
     }
     acc.nbTrades++;
     acc.cumulativePnl += pnl;
-    acc.cumulativeFees += trade.quantity * 0.97 * 2;
+    acc.cumulativeFees +=  (trade.comission!=0?trade.comission:0.97*2*trade.quantity) ;
     acc.nbBe += pnl === 0 ? 1 : 0;
     acc.nbWin += pnl > 0 ? 1 : 0;
     acc.nbLoss += pnl < 0 ? 1 : 0;
