@@ -19,6 +19,7 @@ import CalendarPnl from './calendar-pnl'
 import { User } from '@supabase/supabase-js'
 import DailyChart from './daily-chart'
 import SmartImportButton from './smart-import-button'
+import AiImportButton from './ai-import-button'
 
 
 export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
@@ -111,7 +112,8 @@ export default function Dashboard({ trades }: { trades: Trade[], user: User }) {
 
   return (
     <div className="container mx-auto p-4">
-      <div className='w-full flex justify-between items-center mb-4'>
+      <div className='w-full flex justify-end items-center mb-4'>
+        <AiImportButton/>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-y-4 justify-between items-center mb-4">

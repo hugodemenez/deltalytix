@@ -24,7 +24,7 @@ export default function Icon() {
                     color: 'white',
                 }}
             >
-                <svg width="208" height="219" viewBox="0 0 208 219" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg width="32" height="32" viewBox="0 0 208 219" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M69 73L208 219L69 219L69 73Z" fill="white" />
                     <path d="M-1.52588e-05 146L139 1.52588e-05L-2.49507e-06 3.10702e-06L-1.52588e-05 146Z" fill="white" />
                 </svg>

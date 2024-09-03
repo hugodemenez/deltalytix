@@ -338,7 +338,7 @@ export default function Component() {
               item[key] = convertTimeInPosition(cellValue);
               break;
             default:
-              item[key] = cellValue;
+              item[key] = cellValue as any;
           }
         }
       });
