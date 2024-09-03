@@ -19,7 +19,7 @@ export default async function Home() {
   const trades = await prisma.trade.findMany({where: {userId: user.id}})
 
   return (
-    <div className="container mx-auto p-4 ">
+    <div>
       <Dashboard trades={trades} user={user}></Dashboard>
     </div>
   )
