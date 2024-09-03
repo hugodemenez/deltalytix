@@ -136,13 +136,13 @@ export default function Component() {
     let currentInstrument = ''
     let isHeaderRow = false
     let headers: string[] = []
-  
+
     const isAccountNumber = (value: string) => {
       // Check if the value contains both letters and numbers
       // and is longer than 4 characters (to distinguish from symbols)
       return /^(?=.*[a-zA-Z])(?=.*\d).{5,}$/.test(value);
     }
-  
+
     data.forEach((row) => {
       if (row[0] && isAccountNumber(row[0])) {
         currentAccount = row[0]
@@ -156,7 +156,7 @@ export default function Component() {
         processedData.push([currentAccount, currentInstrument, ...row])
       }
     })
-  
+
     if (processedData.length > 0 && headers.length > 0) {
       setCsvData(processedData)
       setHeaders(headers)
@@ -305,11 +305,17 @@ export default function Component() {
   };
 
   const convertTimeInPosition = (time: string | undefined): number | undefined => {
+    console.log('Time in position:', time);
     if (typeof time !== 'string' || time.trim() === '') {
       console.warn('Invalid time value:', time);
       return 0; // or return a default value that makes sense for your application
     }
-
+    // Check if the time is a float in string form
+    if (/^\d+\.\d+$/.test(time)) {
+      const floatTime = parseFloat(time);
+      console.log('Time value is a float:', floatTime);
+      return floatTime; // Return the float value directly
+    }
     // Parse timeInPosition
     const timeInPosition = time;
     const minutesMatch = timeInPosition.match(/(\d+)min/);
@@ -410,7 +416,7 @@ export default function Component() {
     setSelectedHeaderIndex(0)
     setAccountNumber('')
     setIsRithmicImport(false)
-     setTrades(await getTrades(user!.id))
+    setTrades(await getTrades(user!.id))
   }
 
   const renderStep = () => {
