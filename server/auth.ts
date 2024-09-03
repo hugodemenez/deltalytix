@@ -1,5 +1,6 @@
 'use server'
 import { toast } from '@/hooks/use-toast'
+import { getWebsiteURL } from '@/lib/utils'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
   import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -31,13 +32,14 @@ import { redirect } from 'next/navigation'
     )
   }
 
- export async function signInWithDiscord() {
+ export async function signInWithDiscord(redirectUrl: string | null = null) {
     const supabase = await createClient()
     console.log(process.env.REDIRECT_URL)
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'discord',
       options: {
-        redirectTo: process.env.REDIRECT_URL,
+
+        redirectTo: redirectUrl ? `${getWebsiteURL()}${redirectUrl}` : `${getWebsiteURL()}auth/callback/`,
       },
     })
     if (data.url) {
@@ -71,12 +73,12 @@ import { redirect } from 'next/navigation'
     await supabase.auth.signOut()
   }
 
-  export async function signInWithEmail(email:string){
+  export async function signInWithEmail(email:string, redirectUrl: string | null = null){
     const supabase = await createClient()
     const { error } = await supabase.auth.signInWithOtp({
       email: email,
       options: {
-        emailRedirectTo: process.env.REDIRECT_URL,
+        emailRedirectTo: redirectUrl ? `${getWebsiteURL()}${redirectUrl}` : `${getWebsiteURL()}auth/callback/`,
       },
     })
   }
