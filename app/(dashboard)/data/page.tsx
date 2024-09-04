@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const {user} = useUser()
 
   useEffect(() => {
+    if (!user) return
     fetchGroupedTrades(user!.id)
       .then((fetchedTrades) => {
         setTrades(fetchedTrades as GroupedTrades)
