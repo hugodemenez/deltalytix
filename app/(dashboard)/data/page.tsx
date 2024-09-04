@@ -32,7 +32,7 @@ export default function DashboardPage() {
       })
       .catch((err) => setError(err instanceof Error ? err : new Error('An error occurred')))
       .finally(() => setLoading(false))
-  }, [])
+  }, [user])
 
   const handleDeleteAccount = async (accountNumber: string) => {
     try {
