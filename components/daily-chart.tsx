@@ -16,6 +16,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { CalendarData } from "@/lib/types"
 
 export const description = "An interactive bar chart"
 
@@ -33,7 +34,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export default function DailyChart({dailyTradingData}: {dailyTradingData: any}) {
+export default function DailyChart({dailyTradingData}: {dailyTradingData: CalendarData}) {
   const chartData = Object.entries(dailyTradingData).map(([date, values]) => ({
     date,
     long: (values as { longNumber?: number }).longNumber ?? 0,

@@ -587,7 +587,7 @@ export default function Component() {
 
   return (
     <div>
-      <Button onClick={() => setIsOpen(true)}>
+      <Button onClick={() => setIsOpen(true)} className='w-full'>
         <UploadIcon className="mr-2 h-4 w-4" /> Import CSV
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

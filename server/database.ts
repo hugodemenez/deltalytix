@@ -21,3 +21,30 @@ export async function getTrades(userId: string) {
     await prisma.$disconnect()
     return trades
 }
+
+import { CalendarEntry } from '@/lib/types'
+import { generateAIComment } from './generate-ai-comment'
+
+export async function updateTradesWithComment(dayData: CalendarEntry, dateString: string) {
+    const prisma = new PrismaClient()
+  try {
+    const { comment, emotion } = await generateAIComment(dayData, dateString)
+
+    // Update all trades for the day with the generated comment
+    await prisma.trade.updateMany({
+      where: {
+        id: {
+          in: dayData.trades.map(trade => trade.id)
+        }
+      },
+      data: {
+        comment: `${comment} (Emotion: ${emotion})`
+      }
+    })
+
+    return { comment, emotion }
+  } catch (error) {
+    console.error("Error updating trades with comment:", error)
+    throw error
+  }
+}

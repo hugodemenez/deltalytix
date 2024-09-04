@@ -26,5 +26,6 @@ model Trade {
   side           String? @default("")
   commission      Float @default(0)
   createdAt      DateTime @default(now())
+  comment       String?
   @@schema("public")
 }

@@ -12,3 +12,16 @@ export type CalendarData = {
   [date: string]: CalendarEntry;
 };
 
+
+export type StatisticsProps = {
+  cumulativeFees: number;
+  cumulativePnl: number;
+  winningStreak: number;
+  winRate: number;
+  nbTrades: number;
+  nbBe: number;
+  nbWin: number;
+  nbLoss: number;
+  totalPositionTime: number;
+  averagePositionTime: string;
+}
