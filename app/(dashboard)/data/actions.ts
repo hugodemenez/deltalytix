@@ -13,7 +13,7 @@ interface Trade {
 
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
-export async function fetchGroupedTrades(): Promise<GroupedTrades> {
+export async function fetchGroupedTrades(userId:string): Promise<GroupedTrades> {
   const trades = await prisma.trade.findMany({
     select: {
       id: true,
@@ -24,7 +24,10 @@ export async function fetchGroupedTrades(): Promise<GroupedTrades> {
     orderBy: [
       { accountNumber: 'asc' },
       { instrument: 'asc' }
-    ]
+    ],
+    where: {
+      userId: userId
+    }
   })
 
   const groupedTrades = trades.reduce<GroupedTrades>((acc, trade) => {
@@ -41,11 +44,12 @@ export async function fetchGroupedTrades(): Promise<GroupedTrades> {
   return groupedTrades
 }
 
-export async function deleteInstrument(accountNumber: string, instrument: string): Promise<void> {
+export async function deleteInstrument(accountNumber: string, instrument: string, userId:string): Promise<void> {
   await prisma.trade.deleteMany({
     where: {
       accountNumber: accountNumber,
-      instrument: instrument
+      instrument: instrument,
+      userId: userId
     }
   })
 }

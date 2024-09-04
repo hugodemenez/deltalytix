@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, use } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { TrashIcon } from "lucide-react"
 import { fetchGroupedTrades, deleteInstrument, updateCommission } from "./actions"
 import debounce from 'lodash/debounce'
+import { useUser } from '@/components/context/user-data'
 
 interface Trade {
   id: string
@@ -21,9 +22,10 @@ export default function DashboardPage() {
   const [trades, setTrades] = useState<GroupedTrades>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const {user} = useUser()
 
   useEffect(() => {
-    fetchGroupedTrades()
+    fetchGroupedTrades(user!.id)
       .then((fetchedTrades) => {
         setTrades(fetchedTrades as GroupedTrades)
       })
@@ -35,7 +37,7 @@ export default function DashboardPage() {
     try {
       setLoading(true)
       await Promise.all(Object.keys(trades[accountNumber]).map(instrument => 
-        deleteInstrument(accountNumber, instrument)
+        deleteInstrument(accountNumber, instrument,user!.id)
       ))
       setTrades((prevTrades) => {
         const newTrades = { ...prevTrades }
@@ -53,7 +55,7 @@ export default function DashboardPage() {
   const handleDeleteInstrument = async (accountNumber: string, instrument: string) => {
     try {
       setLoading(true)
-      await deleteInstrument(accountNumber, instrument)
+      await deleteInstrument(accountNumber, instrument,user!.id)
       setTrades((prevTrades) => {
         const newTrades = { ...prevTrades }
         delete newTrades[accountNumber][instrument]
