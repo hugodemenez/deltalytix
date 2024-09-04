@@ -331,6 +331,9 @@ export default function Component() {
 
     const jsonData = csvData.slice(1).map(row => {
       const item: Partial<Trade> = {};
+      let quantity = 0; // Temporary variable to store quantity
+      let commission = 0; // Temporary variable to store commission
+
       headers.forEach((header, index) => {
         if (mappings[header]) {
           const key = mappings[header] as keyof Trade;
@@ -338,13 +341,14 @@ export default function Component() {
 
           switch (key) {
             case 'quantity':
-              item[key] = parseFloat(cellValue) || 0;
+              quantity = parseFloat(cellValue) || 0;
+              item[key] = quantity;
               break;
             case 'pnl':
               item[key] = formatPnl(cellValue).toString();
               break;
             case 'commission':
-              item[key] = parseFloat(cellValue) || 0;
+              commission = parseFloat(cellValue) || 0;
               break;
             case 'timeInPosition':
               item[key] = convertTimeInPosition(cellValue);
@@ -354,6 +358,13 @@ export default function Component() {
           }
         }
       });
+
+      // Calculate commission per quantity
+      if (quantity !== 0) {
+        item.commission = commission / quantity;
+      } else {
+        item.commission = commission;
+      }
 
       item.userId = user!.id;
 

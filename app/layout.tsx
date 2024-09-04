@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { createClient } from "@/server/auth";
 import Navbar from "@/components/navbar";
 import { UserDataProvider } from "@/components/context/user-data";
+import { Analytics } from "@vercel/analytics/react"
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,8 +23,9 @@ export default async function RootLayout({
   return (
     <html lang="en" className="h-screen w-screen">
       <body className={inter.className + " h-screen w-screen overflow-x-hidden"}>
-            <Toaster/>
-            {children}
+        <Analytics />
+        <Toaster />
+        {children}
       </body>
     </html>
   );

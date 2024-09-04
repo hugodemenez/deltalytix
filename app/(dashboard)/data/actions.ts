@@ -19,7 +19,8 @@ export async function fetchGroupedTrades(userId:string): Promise<GroupedTrades> 
       id: true,
       accountNumber: true,
       instrument: true,
-      commission: true
+      commission: true,
+      quantity: true,
     },
     orderBy: [
       { accountNumber: 'asc' },
