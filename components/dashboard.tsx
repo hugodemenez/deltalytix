@@ -21,7 +21,7 @@ import DailyChart from './daily-chart'
 import SmartImportButton from './smart-import-button'
 import AiImportButton from './ai-import-button'
 import { useTrades } from './context/trades-data'
-
+import { CalendarData } from '@/lib/types'
 
 export default function Dashboard() {
   const { trades, setTrades } = useTrades()
@@ -108,7 +108,7 @@ export default function Dashboard() {
     }
     acc.nbTrades++;
     acc.cumulativePnl += pnl;
-    acc.cumulativeFees +=  (trade.commission!=0?trade.commission:0.97*2*trade.quantity) ;
+    acc.cumulativeFees +=  (trade.commission*trade.quantity) ;
     acc.nbBe += pnl === 0 ? 1 : 0;
     acc.nbWin += pnl > 0 ? 1 : 0;
     acc.nbLoss += pnl < 0 ? 1 : 0;
@@ -138,12 +138,12 @@ export default function Dashboard() {
   const formattedAveragePositionTime = parsePositionTime(timeInSeconds);
 
   // eachEntry is a date containing all formattedTrades for that day
-  const calendarData = formattedTrades.reduce((acc: any, trade: Trade) => {
+  const calendarData: CalendarData = formattedTrades.reduce((acc: any, trade: Trade) => {
 
     try{
     const date = format(new Date(trade.buyDate), 'yyyy-MM-dd')
     if (!acc[date]) {
-      acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0 }
+      acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0, trades: [] }
     }
     acc[date].tradeNumber++
     // Chck if trade.buyDate<trade.sellDate
@@ -158,6 +158,7 @@ export default function Dashboard() {
     }
     acc[date].longNumber += isLong ? 1 : 0
     acc[date].shortNumber += isLong ? 0 : 1
+    acc[date].trades.push(trade)
 
     return acc
     }catch(e){
