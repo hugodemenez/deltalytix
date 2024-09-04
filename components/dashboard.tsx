@@ -108,7 +108,7 @@ export default function Dashboard() {
     }
     acc.nbTrades++;
     acc.cumulativePnl += pnl;
-    acc.cumulativeFees +=  (trade.comission!=0?trade.comission:0.97*2*trade.quantity) ;
+    acc.cumulativeFees +=  (trade.commission!=0?trade.commission:0.97*2*trade.quantity) ;
     acc.nbBe += pnl === 0 ? 1 : 0;
     acc.nbWin += pnl > 0 ? 1 : 0;
     acc.nbLoss += pnl < 0 ? 1 : 0;

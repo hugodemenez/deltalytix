@@ -42,7 +42,7 @@ const columnConfig: ColumnConfig = {
   "pnl": { defaultMapping: [], required: true },
   "timeInPosition": { defaultMapping: [], required: false },
   "side": { defaultMapping: [], required: false },
-  "comission": { defaultMapping: [], required: false },
+  "commission": { defaultMapping: [], required: false },
 }
 
 const destinationColumns = Object.keys(columnConfig)
@@ -343,7 +343,7 @@ export default function Component() {
             case 'pnl':
               item[key] = formatPnl(cellValue).toString();
               break;
-            case 'comission':
+            case 'commission':
               item[key] = parseFloat(cellValue) || 0;
               break;
             case 'timeInPosition':

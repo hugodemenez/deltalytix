@@ -4,6 +4,7 @@ import { useUser } from "./context/user-data";
 import {
     Cloud,
     CreditCard,
+    Database,
     Github,
     Keyboard,
     LifeBuoy,
@@ -67,6 +68,13 @@ export default function Navbar() {
                                 <span>Billing</span>
                                 <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
                             </DropdownMenuItem>
+                            <Link href={"/data"}>
+                            <DropdownMenuItem>
+                                <Database className="mr-2 h-4 w-4" />
+                                <span>Data</span>
+                                <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+                            </DropdownMenuItem>
+                            </Link>
                             <DropdownMenuItem>
                                 <Settings className="mr-2 h-4 w-4" />
                                 <span>Settings</span>
