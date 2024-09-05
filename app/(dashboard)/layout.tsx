@@ -1,3 +1,4 @@
+import { TradeDataProvider } from "@/components/context/trades-data";
 import { UserDataProvider } from "@/components/context/user-data";
 import Navbar from "@/components/navbar";
 
@@ -9,11 +10,11 @@ export default async function RootLayout({
 }>) {
 
   return (
-        <UserDataProvider>
-          <div className="container mx-auto p-4 "> 
-            <Navbar/>
-            {children}
-          </div>
-        </UserDataProvider>
+    <UserDataProvider>
+      <TradeDataProvider>
+        <Navbar />
+        {children}
+      </TradeDataProvider>
+    </UserDataProvider>
   );
 }

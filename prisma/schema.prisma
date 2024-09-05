@@ -10,7 +10,7 @@ generator client {
 }
 
 model Trade {
-  id             String @id
+  id             String @id @unique @default(uuid())
   accountNumber  String
   quantity       Int
   buyId          String? @default("")

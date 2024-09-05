@@ -94,7 +94,7 @@ export default function CalendarPnl({dateRange, calendarData}: {dateRange: {from
         return (
           <React.Fragment key={dateString}>
             {isFirstDay && dayOfWeek !== 0 && (
-              <div className="hidden sm:bloc col-span-7" style={{ gridColumnStart: 1, gridColumnEnd: dayOfWeek + 1 }}></div>
+              <div className="hidden sm:block col-span-7" style={{ gridColumnStart: 1, gridColumnEnd: dayOfWeek + 1 }}></div>
             )}
             <Dialog open={selectedDate === date} onOpenChange={(open) => {
               if (open) {

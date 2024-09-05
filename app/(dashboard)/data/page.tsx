@@ -138,7 +138,7 @@ export default function DashboardPage() {
                             onChange={(e) => handleUpdateCommission(accountNumber, instrument, parseFloat(e.target.value))}
                           />
                           <Button 
-                            variant="destructive" 
+                            variant="outline" 
                             size="sm" 
                             onClick={() => handleDeleteInstrument(accountNumber, instrument)}
                           >

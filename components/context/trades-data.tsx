@@ -3,6 +3,7 @@ import { createClient } from '@/hooks/auth';
 import { getTrades } from '@/server/database';
 import { Trade } from '@prisma/client';
 import React, { createContext, useState, useContext, useEffect, Dispatch, SetStateAction } from 'react';
+import { useUser } from './user-data';
 
 const supabase = createClient();
 
@@ -15,10 +16,10 @@ const TradeDataContext = createContext<TradeDataContextProps | undefined>(undefi
 
 export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [trades, setTrades] = useState<Trade[]>([]);
+  const { user } = useUser();
 
   useEffect(() => {
     const fetchTrades = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         const tradesData = await getTrades(user.id);
         setTrades(tradesData);
@@ -26,7 +27,7 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     fetchTrades();
-  }, []);
+  }, [user]);
 
   return (
     <TradeDataContext.Provider value={{ trades, setTrades }}>

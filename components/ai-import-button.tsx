@@ -324,6 +324,19 @@ export default function Component() {
     return timeInSeconds;
   }
 
+  function generateTradeHash(trade: Trade): number {
+    const stringToHash = `${trade.userId}${trade.accountNumber}${trade.instrument}${trade.quantity}${trade.buyPrice}${trade.sellPrice}${trade.buyDate}${trade.sellDate}${trade.pnl}${trade.commission}${trade.timeInPosition}`;
+  
+    let hash = 0;
+    for (let i = 0; i < stringToHash.length; i++) {
+      const char = stringToHash.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+  
+    return Math.abs(hash); // Ensure positive integer
+  }
+
   const handleSave = async () => {
     const supabase = createClient()
     await supabase.auth.refreshSession()
@@ -368,12 +381,8 @@ export default function Component() {
 
       item.userId = user!.id;
 
-      if (item.buyId && item.sellId) {
-        item.id = user!.id.concat(item.buyId, item.sellId);
-      }
-      else {
-        item.id = user!.id.concat(Math.random().toString(36).substring(2, 15));
-      }
+      // Generate id based on fields
+      item.id = generateTradeHash(item as Trade).toString();
 
       // Set account number if it wasn't in the CSV
       if (!item.accountNumber) {
