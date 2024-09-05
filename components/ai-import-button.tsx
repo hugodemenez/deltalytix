@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,14 +12,14 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
-import { UploadIcon, XIcon, AlertTriangleIcon, InfoIcon } from 'lucide-react'
+import { UploadIcon, XIcon, AlertTriangleIcon, InfoIcon, PlusCircleIcon } from 'lucide-react'
 import { getTrades, saveTrades } from '@/server/database'
 import { Trade } from '@prisma/client'
 import { createClient } from '@/hooks/auth'
 import { useRouter } from 'next/navigation'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { generateCsvMapping } from '@/lib/generate-csv-mappings'
-import { readStreamableValue } from 'ai/rsc';
+import { readStreamableValue } from 'ai/rsc'
 import { useTrades } from './context/trades-data'
 
 type ColumnConfig = {
@@ -61,9 +61,16 @@ export default function Component() {
   const [isGeneratingMappings, setIsGeneratingMappings] = useState(false)
   const [isRithmicImport, setIsRithmicImport] = useState(false)
   const [accountNumber, setAccountNumber] = useState<string>('')
+  const [isAddingNewAccount, setIsAddingNewAccount] = useState(false)
+  const [newAccountNumber, setNewAccountNumber] = useState<string>('')
   const { toast } = useToast()
   const router = useRouter()
-  const setTrades = useTrades().setTrades
+  const { trades, setTrades } = useTrades()
+
+  const accounts = useMemo(() => {
+    const accountSet = new Set(trades.map(trade => trade.accountNumber))
+    return Array.from(accountSet)
+  }, [trades])
 
   const generateAIMappings = useCallback(async (headers: string[], sampleData: string[][]) => {
     setIsGeneratingMappings(true);
@@ -79,7 +86,6 @@ export default function Component() {
 
       const newMappings: { [key: string]: string } = {};
 
-      // Process AI mappings
       for await (const partialObject of readStreamableValue(aiMappings.object)) {
         if (partialObject) {
           Object.entries(partialObject).forEach(([field, value]) => {
@@ -91,13 +97,11 @@ export default function Component() {
       }
       console.log('AI Mappings:', newMappings);
 
-      // Handle Rithmic-specific mappings
       if (isRithmicImport) {
         newMappings['AccountNumber'] = 'accountNumber';
         newMappings['Instrument'] = 'instrument';
       }
 
-      // Apply default mappings if AI didn't find a match
       headers.forEach(header => {
         if (!newMappings[header]) {
           const defaultMapping = Object.entries(columnConfig).find(([_, config]) =>
@@ -138,8 +142,6 @@ export default function Component() {
     let headers: string[] = []
 
     const isAccountNumber = (value: string) => {
-      // Check if the value contains both letters and numbers
-      // and is longer than 4 characters (to distinguish from symbols)
       return /^(?=.*[a-zA-Z])(?=.*\d).{5,}$/.test(value);
     }
 
@@ -161,7 +163,7 @@ export default function Component() {
       setCsvData(processedData)
       setHeaders(headers)
       generateAIMappings(headers, processedData.slice(1, 6))
-      setStep(2) // Skip header selection for Rithmic import
+      setStep(2)
     } else {
       setError("Unable to process Rithmic CSV. Please check the file format.")
     }
@@ -176,8 +178,8 @@ export default function Component() {
           if (isRithmicImport) {
             processRithmicCsv(result.data as string[][])
           } else {
-            setStep(1) // Move to header selection step for regular CSV
-            setSelectedHeaderIndex(0) // Default select the first row as header
+            setStep(1)
+            setSelectedHeaderIndex(0)
             processHeaderSelection(0, result.data as string[][])
           }
           setError(null)
@@ -193,26 +195,18 @@ export default function Component() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
 
-
   const handleMapping = (header: string, value: string) => {
     setMappings(prev => {
       const newMappings = { ...prev }
-
-      // Remove the previous mapping for this header
       if (newMappings[header]) {
         delete newMappings[header]
       }
-
-      // Remove any existing mapping to the new value
       Object.keys(newMappings).forEach(key => {
         if (newMappings[key] === value) {
           delete newMappings[key]
         }
       })
-
-      // Set the new mapping
       newMappings[header] = value
-
       return newMappings
     })
   }
@@ -265,17 +259,17 @@ export default function Component() {
           variant: "destructive",
         })
       } else if (!Object.values(mappings).includes('accountNumber') && !accountNumber) {
-        setStep(3) // Move to account number input step
+        setStep(3)
       } else {
         handleSave()
       }
     } else if (step === 3) {
-      if (accountNumber) {
+      if (accountNumber || newAccountNumber) {
         handleSave()
       } else {
         toast({
           title: "Account number required",
-          description: "Please enter an account number.",
+          description: "Please select an existing account or enter a new one.",
           variant: "destructive",
         })
       }
@@ -285,7 +279,7 @@ export default function Component() {
   const formatPnl = (pnl: string | undefined): number => {
     if (typeof pnl !== 'string' || pnl.trim() === '') {
       console.warn('Invalid PNL value:', pnl);
-      return 0; // or return a default value that makes sense for your application
+      return 0;
     }
 
     let formattedPnl = pnl.trim();
@@ -298,7 +292,7 @@ export default function Component() {
 
     if (isNaN(numericValue)) {
       console.warn('Unable to parse PNL value:', pnl);
-      return 0; // or return a default value that makes sense for your application
+      return 0;
     }
 
     return numericValue;
@@ -307,14 +301,12 @@ export default function Component() {
   const convertTimeInPosition = (time: string | undefined): number | undefined => {
     if (typeof time !== 'string' || time.trim() === '') {
       console.warn('Invalid time value:', time);
-      return 0; // or return a default value that makes sense for your application
+      return 0;
     }
-    // Check if the time is a float in string form
     if (/^\d+\.\d+$/.test(time)) {
       const floatTime = parseFloat(time);
-      return floatTime; // Return the float value directly
+      return floatTime;
     }
-    // Parse timeInPosition
     const timeInPosition = time;
     const minutesMatch = timeInPosition.match(/(\d+)min/);
     const secondsMatch = timeInPosition.match(/(\d+)sec/);
@@ -331,10 +323,10 @@ export default function Component() {
     for (let i = 0; i < stringToHash.length; i++) {
       const char = stringToHash.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
   
-    return Math.abs(hash); // Ensure positive integer
+    return Math.abs(hash);
   }
 
   const handleSave = async () => {
@@ -344,8 +336,8 @@ export default function Component() {
 
     const jsonData = csvData.slice(1).map(row => {
       const item: Partial<Trade> = {};
-      let quantity = 0; // Temporary variable to store quantity
-      let commission = 0; // Temporary variable to store commission
+      let quantity = 0;
+      let commission = 0;
 
       headers.forEach((header, index) => {
         if (mappings[header]) {
@@ -372,7 +364,6 @@ export default function Component() {
         }
       });
 
-      // Calculate commission per quantity
       if (quantity !== 0) {
         item.commission = commission / quantity;
       } else {
@@ -380,13 +371,10 @@ export default function Component() {
       }
 
       item.userId = user!.id;
-
-      // Generate id based on fields
       item.id = generateTradeHash(item as Trade).toString();
 
-      // Set account number if it wasn't in the CSV
       if (!item.accountNumber) {
-        item.accountNumber = accountNumber;
+        item.accountNumber = accountNumber || newAccountNumber;
       }
 
       return item as Trade;
@@ -413,7 +401,6 @@ export default function Component() {
         description: "Your CSV data has been successfully imported.",
       })
       setIsOpen(false)
-      // ... reset other state variables ...
       router.refresh()
     } catch (error) {
       toast({
@@ -433,6 +420,8 @@ export default function Component() {
     setError(null)
     setSelectedHeaderIndex(0)
     setAccountNumber('')
+    setNewAccountNumber('')
+    setIsAddingNewAccount(false)
     setIsRithmicImport(false)
     setTrades(await getTrades(user!.id))
   }
@@ -464,10 +453,6 @@ export default function Component() {
       case 1:
         return (
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <h3 className="text-lg font-medium">Select Header Row</h3>
-              <InfoIcon className="h-4 w-4 text-gray-500" />
-            </div>
             <div className="max-h-[calc(80vh-200px)] overflow-auto">
               <Table>
                 <TableBody>
@@ -583,12 +568,46 @@ export default function Component() {
         return (
           <div className="space-y-4">
             <Label htmlFor="accountNumber">Account Number</Label>
-            <Input
-              id="accountNumber"
-              value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value)}
-              placeholder="Enter account number"
-            />
+            {isAddingNewAccount ? (
+              <div className="flex items-center space-x-2">
+                <Input
+                  id="newAccountNumber"
+                  value={newAccountNumber}
+                  onChange={(e) => setNewAccountNumber(e.target.value)}
+                  placeholder="Enter new account number"
+                  className="flex-grow"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsAddingNewAccount(false)
+                    setNewAccountNumber('')
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Select onValueChange={setAccountNumber} value={accountNumber}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select an account" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((account, index) => (
+                      <SelectItem key={index} value={account}>{account}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddingNewAccount(true)}
+                >
+                  <PlusCircleIcon className="mr-2 h-4 w-4" />
+                  Add New
+                </Button>
+              </div>
+            )}
           </div>
         )
     }
@@ -606,7 +625,7 @@ export default function Component() {
               {step === 0 && "Upload CSV"}
               {step === 1 && "Select Header Row"}
               {step === 2 && "Map Columns"}
-              {step === 3 && "Enter Account Number"}
+              {step === 3 && "Select or Add Account"}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-grow overflow-auto">
