@@ -8,6 +8,10 @@ import { TrashIcon } from "lucide-react"
 import { fetchGroupedTrades, deleteInstrument, updateCommission } from "./actions"
 import debounce from 'lodash/debounce'
 import { useUser } from '@/components/context/user-data'
+import { getTrades } from '@/server/database'
+import { useTrades } from '@/components/context/trades-data'
+import { toast } from '@/hooks/use-toast'
+import { User } from '@supabase/supabase-js'
 
 interface Trade {
   id: string
@@ -19,32 +23,36 @@ interface Trade {
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
 export default function DashboardPage() {
-  const [trades, setTrades] = useState<GroupedTrades>({})
+  const { trades, setTrades } = useTrades()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-  const {user} = useUser()
+  const { user } = useUser()
+  const [groupedTrades, setGroupedTrades] = useState<GroupedTrades>({})
 
   useEffect(() => {
+    console.log(user)
     if (!user) return
-    fetchGroupedTrades(user!.id)
-      .then((fetchedTrades) => {
-        setTrades(fetchedTrades as GroupedTrades)
-      })
-      .catch((err) => setError(err instanceof Error ? err : new Error('An error occurred')))
-      .finally(() => setLoading(false))
-  }, [user])
+    const groupedTrades = trades.reduce<GroupedTrades>((acc, trade) => {
+      if (!acc[trade.accountNumber]) {
+        acc[trade.accountNumber] = {}
+      }
+      if (!acc[trade.accountNumber][trade.instrument]) {
+        acc[trade.accountNumber][trade.instrument] = []
+      }
+      acc[trade.accountNumber][trade.instrument].push(trade)
+      return acc
+    }, {})
+    setGroupedTrades(groupedTrades)
+    setLoading(false)
+  }, [trades, user])
 
   const handleDeleteAccount = async (accountNumber: string) => {
     try {
       setLoading(true)
-      await Promise.all(Object.keys(trades[accountNumber]).map(instrument => 
-        deleteInstrument(accountNumber, instrument,user!.id)
+      await Promise.all(Object.keys(groupedTrades[accountNumber]).map(instrument =>
+        deleteInstrument(accountNumber, instrument, user!.id)
       ))
-      setTrades((prevTrades) => {
-        const newTrades = { ...prevTrades }
-        delete newTrades[accountNumber]
-        return newTrades
-      })
+      setTrades(await getTrades(user!.id))
     } catch (error) {
       console.error("Failed to delete account:", error)
       setError(error instanceof Error ? error : new Error('Failed to delete account'))
@@ -56,15 +64,8 @@ export default function DashboardPage() {
   const handleDeleteInstrument = async (accountNumber: string, instrument: string) => {
     try {
       setLoading(true)
-      await deleteInstrument(accountNumber, instrument,user!.id)
-      setTrades((prevTrades) => {
-        const newTrades = { ...prevTrades }
-        delete newTrades[accountNumber][instrument]
-        if (Object.keys(newTrades[accountNumber]).length === 0) {
-          delete newTrades[accountNumber]
-        }
-        return newTrades
-      })
+      await deleteInstrument(accountNumber, instrument, user!.id)
+      setTrades(await getTrades(user!.id))
     } catch (error) {
       console.error("Failed to delete instrument:", error)
       setError(error instanceof Error ? error : new Error('Failed to delete instrument'))
@@ -74,29 +75,27 @@ export default function DashboardPage() {
   }
 
   const debouncedUpdateCommission = useCallback(
-    debounce(async (accountNumber: string, instrument: string, newCommission: number) => {
+    debounce(async (accountNumber: string, instrument: string, newCommission: number, user: User) => {
       try {
         await updateCommission(accountNumber, instrument, newCommission)
-        setTrades((prevTrades) => {
-          const newTrades = { ...prevTrades }
-          newTrades[accountNumber][instrument] = newTrades[accountNumber][instrument].map(trade => ({
-            ...trade,
-            commission: newCommission
-          }))
-          return newTrades
-        })
       } catch (error) {
         console.error("Failed to update commission:", error)
         setError(error instanceof Error ? error : new Error('Failed to update commission'))
+      }
+      finally{
+        setTrades(await getTrades(user!.id))
+        toast({
+          title: 'Commission updated successfully',
+          variant: 'default',
+        })
       }
     }, 500),
     []
   )
 
-  const handleUpdateCommission = (accountNumber: string, instrument: string, newCommission: number) => {
-    setLoading(true)
-    debouncedUpdateCommission(accountNumber, instrument, newCommission)
-    setLoading(false)
+  const handleUpdateCommission = (accountNumber: string, instrument: string, newCommission: number, user: User | null) => {
+    if (!user) return
+    debouncedUpdateCommission(accountNumber, instrument, newCommission, user)
   }
 
   if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>
@@ -111,13 +110,13 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-8">
-            {Object.entries(trades).map(([accountNumber, instruments]) => (
+            {Object.entries(groupedTrades).map(([accountNumber, instruments]) => (
               <div key={accountNumber} className="border-b pb-6 last:border-b-0">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">Account: {accountNumber}</h2>
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
+                  <Button
+                    variant="destructive"
+                    size="sm"
                     onClick={() => handleDeleteAccount(accountNumber)}
                   >
                     <TrashIcon className="w-4 h-4 mr-2" />
@@ -133,13 +132,13 @@ export default function DashboardPage() {
                           <Input
                             type="number"
                             placeholder="Commission"
-                            defaultValue={trades[0].commission}
+                            defaultValue={Array.isArray(trades) && trades.length > 0 ? trades[0].commission : 0}
                             className="w-32"
-                            onChange={(e) => handleUpdateCommission(accountNumber, instrument, parseFloat(e.target.value))}
+                            onChange={(e) => handleUpdateCommission(accountNumber, instrument, parseFloat(e.target.value), user)}
                           />
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleDeleteInstrument(accountNumber, instrument)}
                           >
                             <TrashIcon className="w-4 h-4 mr-2" />

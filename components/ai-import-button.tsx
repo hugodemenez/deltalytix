@@ -317,7 +317,7 @@ export default function Component() {
   }
 
   function generateTradeHash(trade: Trade): number {
-    const stringToHash = `${trade.userId}${trade.accountNumber}${trade.instrument}${trade.quantity}${trade.buyPrice}${trade.sellPrice}${trade.buyDate}${trade.sellDate}${trade.pnl}${trade.commission}${trade.timeInPosition}`;
+    const stringToHash = `${trade.userId}${trade.accountNumber}${trade.instrument}${trade.quantity}${trade.buyPrice}${trade.sellPrice}${trade.buyDate}${trade.sellDate}${trade.pnl}${trade.commission}${trade.timeInPosition}${trade.buyId}${trade.sellId}`;
   
     let hash = 0;
     for (let i = 0; i < stringToHash.length; i++) {

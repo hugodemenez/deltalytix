@@ -1,8 +1,8 @@
 // CalendarSection.tsx
 import React from 'react'
 import { DateRange } from 'react-day-picker'
-import CalendarPnl from './calendar-pnl'
 import { CalendarData } from '@/lib/types'
+import CalendarPnl from '../calendar-pnl'
 
 interface CalendarSectionProps {
   dateRange: DateRange | undefined

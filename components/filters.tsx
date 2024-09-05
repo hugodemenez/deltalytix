@@ -17,9 +17,9 @@ export function FilterSelectors({ accountNumber, setAccountNumber, instrument, s
   const uniqueInstruments = Array.from(new Set(trades.map(trade => trade.instrument)))
 
   return (
-    <div className='grid grid-cols-1 sm:grid-cols-3 gap-x-4'>
+    <div className='grid grid-cols-1 sm:grid-cols-3 gap-4 '>
       <Select value={accountNumber} onValueChange={setAccountNumber}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Select account" />
         </SelectTrigger>
         <SelectContent>
@@ -30,7 +30,7 @@ export function FilterSelectors({ accountNumber, setAccountNumber, instrument, s
         </SelectContent>
       </Select>
       <Select value={instrument} onValueChange={setInstrument}>
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Select instrument" />
         </SelectTrigger>
         <SelectContent>

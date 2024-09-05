@@ -82,7 +82,7 @@ export function formatCalendarData(trades: Trade[]) {
       acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0, trades: [] }
     }
     acc[date].tradeNumber++
-    acc[date].pnl += parseFloat(trade.pnl.replace('(', '-').replace(')', '').replace('$', ''));
+    acc[date].pnl += parseFloat(trade.pnl.replace('(', '-').replace(')', '').replace('$', ''))-trade.commission;
 
     const isLong = trade.side ? (trade.side === 'long' || trade.side === 'buy' || trade.side === 'B') : (new Date(trade.buyDate) < new Date(trade.sellDate))
     acc[date].longNumber += isLong ? 1 : 0

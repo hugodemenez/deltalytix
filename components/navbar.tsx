@@ -42,7 +42,7 @@ export default function Navbar() {
     const { user } = useUser();
 
     return (
-        <nav className="flex justify-between p-4">
+        <nav className="flex justify-between py-4">
             <Logo />
             <div className="flex gap-x-4">
                 <DropdownMenu>

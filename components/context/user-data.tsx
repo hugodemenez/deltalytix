@@ -1,6 +1,7 @@
 'use client'
 import { createClient } from '@/hooks/auth';
 import { User } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
 import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const supabase = createClient();
@@ -13,11 +14,15 @@ const UserDataContext = createContext<UserDataContextProps | undefined>(undefine
 
 export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   
   useEffect(() => {
     const getUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/authentication');
+      }
       if (error) {
         console.error('Error fetching user:', error);
       } else {

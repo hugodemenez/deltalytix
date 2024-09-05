@@ -5,13 +5,12 @@ import { DateRange } from 'react-day-picker'
 import { useTrades } from './context/trades-data'
 import { CalendarData } from '@/lib/types'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
-import { CalendarSection } from './calendar-section'
-import { Analytics } from './analytics-section'
-import { Graphs } from './graphs-section'
 import { FilterSelectors } from './filters'
 import Statistics from './statistics'
 import { DateRangeSelector } from './date-range-selector'
-import { Navigation } from './navigation'
+import { GraphsSection } from './sections/graphs-section'
+import { CalendarSection } from './sections/calendar-section'
+import StatisticsSection from './sections/statistics-section'
 
 export default function Dashboard() {
   const { trades } = useTrades()
@@ -74,17 +73,17 @@ export default function Dashboard() {
   const scrollToSection = (sectionId: string) => {
     const section = document.getElementById(sectionId);
     if (section) {
-      const yOffset = -80; 
+      const yOffset = -80;
       const y = section.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({top: y, behavior: 'smooth'});
+      window.scrollTo({ top: y, behavior: 'smooth' });
     }
     setIsMobileMenuOpen(false);
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen">
-      <main className="flex-grow p-4 lg:p-6 overflow-x-hidden">
-        <div className="flex justify-between gap-y-4 mb-4 ">
+    <div className="flex flex-col lg:flex-row min-h-screen ">
+      <main className="flex-grow py-4 lg:py-6 overflow-x-hidden">
+        <div className="flex flex-col sm:flex-row justify-between gap-y-4 mb-4 px-2">
           <DateRangeSelector dateRange={dateRange} setDateRange={setDateRange} />
           <FilterSelectors
             accountNumber={accountNumber}
@@ -94,24 +93,10 @@ export default function Dashboard() {
             trades={trades}
           />
         </div>
-        <section id="accomplishments" className="mb-10">
-          <h2 className="text-2xl font-bold mb-4">Statistics</h2>
-          <Statistics statistics={statistics} />
-        </section>
-          <Graphs calendarData={calendarData} />
-          <CalendarSection dateRange={dateRange} calendarData={calendarData} />
+        <StatisticsSection statistics={statistics}></StatisticsSection>
+        <GraphsSection calendarData={calendarData} />
+        <CalendarSection dateRange={dateRange} calendarData={calendarData} />
       </main>
-      {/* <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <button 
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="w-full p-4 text-center text-blue-600 font-medium"
-        >
-          {isMobileMenuOpen ? 'Close Menu' : 'Open Menu'}
-        </button>
-      </div> */}
-      {/* <div className={`fixed inset-y-0 right-0 transform ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 transition duration-200 ease-in-out z-50`}>
-        <Navigation activeSection={activeSection} onSectionClick={scrollToSection} />
-      </div> */}
     </div>
   );
 }

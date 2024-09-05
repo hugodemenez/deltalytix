@@ -2,7 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Award, Clock, PiggyBank } from "lucide-react"
 import { StatisticsProps } from "@/lib/types"
 
-export default function Component({ statistics }: { statistics: StatisticsProps }) {
+export default function Statistics({ statistics }: { statistics: StatisticsProps }) {
   const winRate = (statistics.nbWin / statistics.nbTrades * 100).toFixed(2)
   const lossRate = (statistics.nbLoss / statistics.nbTrades * 100).toFixed(2)
   const beRate = (statistics.nbBe / statistics.nbTrades * 100).toFixed(2)
