@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts"
-import { format, isValid } from 'date-fns'
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps } from "recharts"
+import { format, isValid, startOfDay } from 'date-fns'
 
 import {
   Card,
@@ -15,11 +15,9 @@ import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
 import { useTrades } from "../context/trades-data"
+import { Trade } from "@prisma/client"
 
 const chartConfig = {
   equity: {
@@ -28,11 +26,33 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-
 const safeParseDate = (dateString: string): Date | null => {
   const date = new Date(dateString)
-  return isValid(date) ? date : null
+  return isValid(date) ? startOfDay(date) : null
 }
+
+interface ChartDataPoint {
+  date: string;
+  equity: number;
+  dailyPnL: number;
+  equityFormatted: string;
+  dailyPnLFormatted: string;
+}
+
+const CustomTooltip: React.FC<TooltipProps<number, string>> = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload as ChartDataPoint;
+    return (
+      <div className="bg-background p-2 border rounded shadow-sm">
+        <p className="text-sm font-medium">{format(safeParseDate(data.date) || new Date(), 'MMM dd, yyyy')}</p>
+        <p className="text-sm">Equity: {data.equityFormatted}</p>
+        <p className="text-sm">PnL: {data.dailyPnLFormatted}</p>
+      </div>
+    );
+  }
+
+  return null;
+};
 
 export default function EnhancedEquityChart() {
   const { trades } = useTrades()
@@ -47,28 +67,33 @@ export default function EnhancedEquityChart() {
     if (showDailyPnL) {
       // Calculate daily PnL
       const dailyPnL = validTrades.reduce((acc, trade) => {
-        const date = trade.sellDate || trade.buyDate
-        const pnl = parseFloat(trade.pnl) || 0
-        if (!acc[date]) {
-          acc[date] = 0
+        const date = safeParseDate(trade.sellDate || trade.buyDate)
+        if (!date) return acc
+
+        const dateString = date.toISOString()
+        if (!acc[dateString]) {
+          acc[dateString] = {
+            pnl: 0,
+            commission: 0
+          }
         }
-        acc[date] += pnl
+        acc[dateString].pnl += parseFloat(trade.pnl) || 0
+        acc[dateString].commission += trade.commission || 0
         return acc
-      }, {} as Record<string, number>)
+      }, {} as Record<string, { pnl: number, commission: number }>)
 
       let cumulativePnL = 0
       return Object.entries(dailyPnL)
-        .sort(([dateA], [dateB]) => {
-          const a = safeParseDate(dateA)
-          const b = safeParseDate(dateB)
-          return a && b ? a.getTime() - b.getTime() : 0
-        })
-        .map(([date, pnl]) => {
-          cumulativePnL += pnl
+        .sort(([dateA], [dateB]) => new Date(dateA).getTime() - new Date(dateB).getTime())
+        .map(([date, { pnl, commission }]) => {
+          const dailyNetPnL = pnl - commission
+          cumulativePnL += dailyNetPnL
           return {
             date,
             equity: cumulativePnL,
-            equityFormatted: `$${cumulativePnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+            dailyPnL: dailyNetPnL,
+            equityFormatted: `$${cumulativePnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+            dailyPnLFormatted: `$${dailyNetPnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
           }
         })
     } else {
@@ -81,11 +106,14 @@ export default function EnhancedEquityChart() {
           return dateA && dateB ? dateA.getTime() - dateB.getTime() : 0
         })
         .map((trade) => {
-          cumulativePnL += parseFloat(trade.pnl) || 0
+          const tradePnL = (parseFloat(trade.pnl) || 0) - (trade.commission || 0)
+          cumulativePnL += tradePnL
           return {
             date: trade.sellDate || trade.buyDate,
             equity: cumulativePnL,
-            equityFormatted: `$${cumulativePnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+            dailyPnL: tradePnL,
+            equityFormatted: `$${cumulativePnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+            dailyPnLFormatted: `$${tradePnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
           }
         })
     }
@@ -104,10 +132,9 @@ export default function EnhancedEquityChart() {
         </div>
         <div className="flex">
           {["daily", "per-trade"].map((key) => {
-            const chart = key as keyof typeof chartConfig
             return (
               <button
-                key={chart}
+                key={key}
                 data-active={showDailyPnL === (key==="daily")}
                 className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left even:border-l data-[active=true]:bg-muted/50 sm:border-l sm:border-t-0 sm:px-8 sm:py-6"
                 onClick={() => setShowDailyPnL(key==="daily")}
@@ -126,6 +153,7 @@ export default function EnhancedEquityChart() {
           className="aspect-auto h-[250px] w-full"
         >
           {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
                 margin={{
@@ -149,19 +177,9 @@ export default function EnhancedEquityChart() {
                 />
                 <YAxis
                   tickFormatter={(value) => `$${value.toLocaleString()}`}
-                  domain={[finalEquity, 'auto']}
+                  domain={['auto', 'auto']}
                 />
-                <ChartTooltip
-                  content={
-                    <ChartTooltipContent
-                      className="w-[150px]"
-                      labelFormatter={(value) => {
-                        const date = safeParseDate(value)
-                        return date ? format(date, 'MMM dd, yyyy') : ''
-                      }}
-                    />
-                  }
-                />
+                <ChartTooltip content={<CustomTooltip />} />
                 <Line
                   type="monotone"
                   dataKey="equity"
@@ -170,6 +188,7 @@ export default function EnhancedEquityChart() {
                   dot={false}
                 />
               </LineChart>
+            </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center">
               <p className="text-muted-foreground">No data available</p>
