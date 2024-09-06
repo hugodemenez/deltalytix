@@ -15,7 +15,7 @@ export default async function RootLayout({
   return (
     <UserDataProvider>
       <TradeDataProvider>
-        <div className="px-2 sm:px-12 lg:px-48">
+        <div className="px-2 sm:px-6 lg:px-32">
         <Toaster />
         <Navbar />
         {children}
