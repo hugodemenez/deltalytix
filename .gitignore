@@ -39,3 +39,6 @@ next-env.d.ts
 
 #database
 **.db
+
+#videos
+**.mp4

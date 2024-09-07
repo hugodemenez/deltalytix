@@ -1,17 +1,20 @@
 'use client'
 
-import { useState, useEffect, useCallback, use } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { TrashIcon } from "lucide-react"
-import { fetchGroupedTrades, deleteInstrument, updateCommission } from "./actions"
+import { TrashIcon, AlertCircle } from "lucide-react"
+import { deleteInstrument, updateCommission } from "./actions"
 import debounce from 'lodash/debounce'
 import { useUser } from '@/components/context/user-data'
 import { getTrades } from '@/server/database'
 import { useTrades } from '@/components/context/trades-data'
 import { toast } from '@/hooks/use-toast'
 import { User } from '@supabase/supabase-js'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 interface Trade {
   id: string
@@ -28,18 +31,19 @@ export default function DashboardPage() {
   const [error, setError] = useState<Error | null>(null)
   const { user } = useUser()
   const [groupedTrades, setGroupedTrades] = useState<GroupedTrades>({})
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ type: 'account' | 'instrument', accountNumber: string, instrument?: string } | null>(null)
 
   useEffect(() => {
-    console.log(user)
     if (!user) return
     const groupedTrades = trades.reduce<GroupedTrades>((acc, trade) => {
       if (!acc[trade.accountNumber]) {
         acc[trade.accountNumber] = {}
       }
-      if (!acc[trade.accountNumber][trade.instrument]) {
-        acc[trade.accountNumber][trade.instrument] = []
+      const instrumentKey = trade.instrument.slice(0, 2)
+      if (!acc[trade.accountNumber][instrumentKey]) {
+        acc[trade.accountNumber][instrumentKey] = []
       }
-      acc[trade.accountNumber][trade.instrument].push(trade)
+      acc[trade.accountNumber][instrumentKey].push(trade)
       return acc
     }, {})
     setGroupedTrades(groupedTrades)
@@ -53,56 +57,91 @@ export default function DashboardPage() {
         deleteInstrument(accountNumber, instrument, user!.id)
       ))
       setTrades(await getTrades(user!.id))
+      toast({
+        title: 'Account deleted successfully',
+        variant: 'default',
+      })
     } catch (error) {
       console.error("Failed to delete account:", error)
       setError(error instanceof Error ? error : new Error('Failed to delete account'))
+      toast({
+        title: 'Failed to delete account',
+        description: 'Please try again later',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
+      setDeleteConfirmation(null)
     }
   }
 
-  const handleDeleteInstrument = async (accountNumber: string, instrument: string) => {
+  const handleDeleteInstrument = async (accountNumber: string, instrumentGroup: string) => {
     try {
       setLoading(true)
-      await deleteInstrument(accountNumber, instrument, user!.id)
+      const instrumentsToDelete = groupedTrades[accountNumber][instrumentGroup].map(trade => trade.instrument)
+      await Promise.all(instrumentsToDelete.map(instrument => 
+        deleteInstrument(accountNumber, instrument, user!.id)
+      ))
       setTrades(await getTrades(user!.id))
+      toast({
+        title: 'Instrument group deleted successfully',
+        variant: 'default',
+      })
     } catch (error) {
-      console.error("Failed to delete instrument:", error)
-      setError(error instanceof Error ? error : new Error('Failed to delete instrument'))
+      console.error("Failed to delete instrument group:", error)
+      setError(error instanceof Error ? error : new Error('Failed to delete instrument group'))
+      toast({
+        title: 'Failed to delete instrument group',
+        description: 'Please try again later',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
+      setDeleteConfirmation(null)
     }
   }
 
   const debouncedUpdateCommission = useCallback(
-    debounce(async (accountNumber: string, instrument: string, newCommission: number, user: User) => {
+    debounce(async (accountNumber: string, instrumentGroup: string, newCommission: number, user: User) => {
       try {
-        await updateCommission(accountNumber, instrument, newCommission)
-      } catch (error) {
-        console.error("Failed to update commission:", error)
-        setError(error instanceof Error ? error : new Error('Failed to update commission'))
-      }
-      finally{
-        setTrades(await getTrades(user!.id))
+        const instrumentsToUpdate = groupedTrades[accountNumber][instrumentGroup].map(trade => trade.instrument)
+        await Promise.all(instrumentsToUpdate.map(instrument => 
+          updateCommission(accountNumber, instrument, newCommission)
+        ))
+        setTrades(await getTrades(user.id))
         toast({
           title: 'Commission updated successfully',
           variant: 'default',
         })
+      } catch (error) {
+        console.error("Failed to update commission:", error)
+        setError(error instanceof Error ? error : new Error('Failed to update commission'))
+        toast({
+          title: 'Failed to update commission',
+          description: 'Please try again later',
+          variant: 'destructive',
+        })
       }
     }, 500),
-    []
+    [groupedTrades]
   )
 
-  const handleUpdateCommission = (accountNumber: string, instrument: string, newCommission: number, user: User | null) => {
+  const handleUpdateCommission = (accountNumber: string, instrumentGroup: string, newCommission: number, user: User | null) => {
     if (!user) return
-    debouncedUpdateCommission(accountNumber, instrument, newCommission, user)
+    debouncedUpdateCommission(accountNumber, instrumentGroup, newCommission, user)
   }
 
   if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>
-  if (error) return <div className="flex justify-center items-center h-screen text-red-500">Error: {error.message}</div>
+  if (error) return (
+    <Alert variant="destructive">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>Error</AlertTitle>
+      <AlertDescription>{error.message}</AlertDescription>
+    </Alert>
+  )
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="py-12">
       <Card>
         <CardHeader>
           <CardTitle>Trade Management Dashboard</CardTitle>
@@ -114,36 +153,72 @@ export default function DashboardPage() {
               <div key={accountNumber} className="border-b pb-6 last:border-b-0">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">Account: {accountNumber}</h2>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteAccount(accountNumber)}
-                  >
-                    <TrashIcon className="w-4 h-4 mr-2" />
-                    Delete Account
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                      >
+                        <TrashIcon className="w-4 h-4 mr-2" />
+                        Delete Account
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the account
+                          and all associated instruments and trades.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteAccount(accountNumber)}>
+                          Continue
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
                 <div className="space-y-4 pl-4">
-                  {Object.entries(instruments).map(([instrument, trades]) => (
-                    <div key={instrument} className="bg-gray-100 p-4 rounded-lg">
+                  {Object.entries(instruments).map(([instrumentGroup, trades]) => (
+                    <div key={instrumentGroup} className="bg-gray-100 p-4 rounded-lg">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-md font-medium">Instrument: {instrument}</h3>
+                        <h3 className="text-md font-medium">Instrument Group: {instrumentGroup}</h3>
                         <div className="flex items-center space-x-2">
                           <Input
                             type="number"
                             placeholder="Commission"
-                            defaultValue={Array.isArray(trades) && trades.length > 0 ? trades[0].commission : 0}
+                            defaultValue={trades[0].commission}
                             className="w-32"
-                            onChange={(e) => handleUpdateCommission(accountNumber, instrument, parseFloat(e.target.value), user)}
+                            onChange={(e) => handleUpdateCommission(accountNumber, instrumentGroup, parseFloat(e.target.value), user)}
                           />
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteInstrument(accountNumber, instrument)}
-                          >
-                            <TrashIcon className="w-4 h-4 mr-2" />
-                            Remove Instrument
-                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                              >
+                                <TrashIcon className="w-4 h-4 mr-2" />
+                                Remove Instrument Group
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete all instruments
+                                  and trades associated with this instrument group.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteInstrument(accountNumber, instrumentGroup)}>
+                                  Continue
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </div>

@@ -11,6 +11,7 @@ import { DateRangeSelector } from './date-range-selector'
 import { GraphsSection } from './sections/graphs-section'
 import { CalendarSection } from './sections/calendar-section'
 import StatisticsSection from './sections/statistics-section'
+import CalendarPnl from './calendar/calendar-pnl'
 
 export default function Dashboard() {
   const { trades } = useTrades()

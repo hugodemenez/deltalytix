@@ -9,7 +9,7 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
   const beRate = Number((nbBe / nbTrades * 100).toFixed(2))
 
   const positiveColor = "hsl(var(--chart-2))" // Green color
-  const negativeColor = "hsl(var(--chart-1))" // Orangish color
+  const negativeColor = "hsl(var(--chart-1))" // Red color
   const neutralColor = "hsl(var(--muted-foreground))" // Neutral color for breakeven
 
   const data = [
@@ -36,18 +36,25 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
                   outerRadius={55}
                   paddingAngle={2}
                   dataKey="value"
+                  stroke="none"
                 >
                   {data.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`} 
                       fill={entry.color}
-                      strokeWidth={index === 0 ? 2 : 1}  // Make the winning slice border thicker
                     />
                   ))}
                 </Pie>
                 <Tooltip 
                   formatter={(value: number) => `${value.toFixed(2)}%`}
-                  contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))' }}
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--background))', 
+                    borderColor: 'hsl(var(--border))',
+                    color: 'hsl(var(--foreground))'
+                  }}
+                  itemStyle={{
+                    color: 'hsl(var(--foreground))'
+                  }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -55,7 +62,7 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
           <div className="text-xs space-y-2">
             {data.map((entry, index) => (
               <div key={`legend-${index}`} className="flex items-center">
-                <div className="w-3 h-3 mr-2" style={{ backgroundColor: entry.color }}></div>
+                <div className="w-3 h-3 mr-2 rounded-full" style={{ backgroundColor: entry.color }}></div>
                 <span className="font-medium">{entry.name}: {entry.value.toFixed(2)}%</span>
               </div>
             ))}
