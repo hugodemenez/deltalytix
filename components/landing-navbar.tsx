@@ -133,17 +133,17 @@ export default function Component() {
                                                 </a>
                                             </NavigationMenuLink>
                                         </li>
-                                        <ListItem href="#data-import" title="Data Import" icon={<Database className="h-4 w-4" />}>
+                                        <ListItem href="/#data-import" title="Data Import" icon={<Database className="h-4 w-4" />}>
                                             Import data from various providers.
                                         </ListItem>
-                                        <ListItem href="#performance-visualization" title="Performance Visualization" icon={<LineChart className="h-4 w-4" />}>
+                                        <ListItem href="/#performance-visualization" title="Performance Visualization" icon={<LineChart className="h-4 w-4" />}>
                                             Visualize your trading performance.
                                         </ListItem>
-                                        <ListItem href="#daily-performance" title="Daily Performance" icon={<Calendar className="h-4 w-4" />}>
+                                        <ListItem href="/#daily-performance" title="Daily Performance" icon={<Calendar className="h-4 w-4" />}>
                                             Track your daily trading results with an intuitive calendar view.
                                         </ListItem>
                                         <div className='col-span-2'>
-                                            <ListItem href="#ai-journaling" title="AI-Powered Journaling" icon={<BookOpen className="h-4 w-4" />} >
+                                            <ListItem href="/#ai-journaling" title="AI-Powered Journaling" icon={<BookOpen className="h-4 w-4" />} >
                                                 Improve your trading emotions with AI-assisted journaling.
                                             </ListItem>
                                         </div>

@@ -8,6 +8,7 @@ export default function DeltalytixDashboard() {
   const { theme } = useTheme()
   const features = [
     {
+      id: "data-import",
       title: "Data Import",
       icon: <Database className="h-5 w-5 text-muted-foreground" />,
       description: "Import data from various providers. Our platform uses AI mapping from CSV to support major brokers and trading platforms exports, allowing you to centralize all your trading information in one place.",
@@ -15,6 +16,7 @@ export default function DeltalytixDashboard() {
       image: theme === "dark" ? "/field-mapping-dark.png" : "/field-mapping-light.jpeg"
     },
     {
+      id: "performance-visualization",
       title: "Performance Visualization",
       icon: <BarChart3 className="h-5 w-5 text-muted-foreground" />,
       description: "Visualize your trading performance with interactive charts and graphs. Analyze patterns, identify strengths, and pinpoint areas for improvement.",
@@ -22,6 +24,7 @@ export default function DeltalytixDashboard() {
       image: theme === "dark" ? "/charts-dark.png" : "/charts-light.png"
     },
     {
+      id: "daily-performance",
       title: "Daily Performance",
       icon: <Calendar className="h-5 w-5 text-muted-foreground" />,
       description: "Track your daily trading results with an intuitive calendar view. Quickly identify trends and patterns in your trading performance.",
@@ -29,6 +32,7 @@ export default function DeltalytixDashboard() {
       image: theme === "dark" ? "/calendar-dark.png" : "/calendar-light.png"
     },
     {
+      id: "ai-journaling",
       title: "AI-Powered Journaling",
       icon: <Brain className="h-5 w-5 text-muted-foreground" />,
       description: "Improve your trading emotions with AI-assisted journaling. Our advanced algorithms analyze your entries to identify emotional patterns and biases.",
@@ -42,8 +46,8 @@ export default function DeltalytixDashboard() {
       <h2 className="text-2xl font-bold mb-4">Features</h2>
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
         {features.map((feature, index) => (
-          <Card key={index} className={`bg-card ${
-            index < 2 ? 'lg:col-span-3' : 
+            <Card id={feature.id} key={feature.id} className={`bg-card ${
+              index < 2 ? 'lg:col-span-3' : 
             index === 2 ? 'lg:col-span-4' : 'lg:col-span-2'
           }`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
