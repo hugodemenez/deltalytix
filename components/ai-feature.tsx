@@ -21,6 +21,7 @@ const Circle = forwardRef<
     </div>
   );
 });
+Circle.displayName = "Circle"; 
 
 export function AnimatedBeamDemo() {
   const containerRef = useRef<HTMLDivElement>(null);
