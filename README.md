@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Deltalytix
+
+Deltalytix is an advanced analytics platform for modern traders, providing comprehensive tools to store, explore, and understand trading track records.
+
+## Features
+
+### 1. User Authentication
+- Secure authentication system using Supabase
+- Support for Discord login
+- User profile management
+
+### 2. Data Import and Processing
+- CSV data import functionality
+- AI-assisted field mapping for efficient data processing
+- Support for multiple CSV formats, including Rithmic Performance Import
+- Data encryption for enhanced security
+
+### 3. Advanced Analytics
+- Daily performance chart with customizable views (PnL, Volume, etc.)
+- Trading session summaries
+- Decile statistics and trading habits analysis (upcoming)
+- AI-powered sentiment analysis (upcoming)
+
+### 4. User Interface
+- Responsive design for both desktop and mobile
+- Dark mode support
+- Customizable dashboard
+- Interactive charts and data visualizations
+
+### 5. Developer-Friendly
+- Open-source project
+- Comprehensive documentation (upcoming)
+- Active developer community
+
+### 6. Pricing Tiers
+- Multiple pricing plans to suit different trader needs
+- Features include:
+  - Account limits
+  - Data storage duration
+  - Mentor Mode
+
+### 7. Data Management
+- Secure storage of trading data
+- Easy access to historical trading information
+- Data visualization tools
 
 ## Getting Started
 
-First, run the development server:
+To run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Technologies Used
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- Supabase
+- Prisma
 
-## Learn More
+## Contributing
 
-To learn more about Next.js, take a look at the following resources:
+We welcome contributions to Deltalytix. Please check out our [GitHub repository](https://github.com/hugodemenez/deltalytix) for more information on how to get involved.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Support
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+For any questions or support, please join our [Discord community](https://discord.gg/a5YVF5Ec2n).
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This work is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc/4.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+You are free to:
+- Share — copy and redistribute the material in any medium or format
+- Adapt — remix, transform, and build upon the material
+
+Under the following terms:
+- Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+- NonCommercial — You may not use the material for commercial purposes.
+
+No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.

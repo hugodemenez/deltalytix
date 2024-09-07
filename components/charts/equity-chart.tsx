@@ -22,7 +22,7 @@ import { Trade } from "@prisma/client"
 const chartConfig = {
   equity: {
     label: "Equity",
-    color: "hsl(var(--chart-1))",
+    color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig
 

@@ -1,3 +1,4 @@
+import { Logo } from '@/components/logo'
 import { ImageResponse } from 'next/og'
 
 // Image metadata
@@ -22,11 +23,13 @@ export default function Icon() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
+                    borderRadius: '4px',
+                    border: '1px solid white',
                 }}
             >
-                <svg width="32" height="32" viewBox="0 0 208 219" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M69 73L208 219L69 219L69 73Z" fill="white" />
-                    <path d="M-1.52588e-05 146L139 1.52588e-05L-2.49507e-06 3.10702e-06L-1.52588e-05 146Z" fill="white" />
+                <svg viewBox="0 0 255 255" xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="white">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M159 63L127.5 0V255H255L236.5 218H159V63Z" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M-3.05176e-05 255L127.5 -5.96519e-06L127.5 255L-3.05176e-05 255ZM64 217L121 104L121 217L64 217Z" />
                 </svg>
             </div>
         ),

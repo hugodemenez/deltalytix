@@ -11,6 +11,7 @@ import { DateRangeSelector } from './date-range-selector'
 import { GraphsSection } from './sections/graphs-section'
 import { CalendarSection } from './sections/calendar-section'
 import StatisticsSection from './sections/statistics-section'
+import CalendarPnl from './calendar/calendar-pnl'
 
 export default function Dashboard() {
   const { trades } = useTrades()
@@ -51,34 +52,6 @@ export default function Dashboard() {
   const statistics = calculateStatistics(formattedTrades);
   const calendarData: CalendarData = formatCalendarData(formattedTrades);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrollPosition = window.scrollY;
-      const sections = ['accomplishments', 'graphs', 'analytics', 'calendar'];
-      const currentSection = sections.find(section => {
-        const element = document.getElementById(section);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          return scrollPosition >= offsetTop - 100 && scrollPosition < offsetTop + offsetHeight - 100;
-        }
-        return false;
-      });
-      if (currentSection) setActiveSection(currentSection);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const scrollToSection = (sectionId: string) => {
-    const section = document.getElementById(sectionId);
-    if (section) {
-      const yOffset = -80;
-      const y = section.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
-    setIsMobileMenuOpen(false);
-  };
 
   return (
     <div className="flex flex-col lg:flex-row min-h-screen ">
