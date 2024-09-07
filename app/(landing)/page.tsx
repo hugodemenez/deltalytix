@@ -80,7 +80,7 @@ export default function LandingPage() {
                                     onLoadedData={handleVideoLoad}
                                     onError={handleVideoError}
                                 >
-                                    <source src={theme === "dark" ? "/demo-dark.mp4" : "/demo.mp4"} type="video/mp4" />
+                                    <source src={theme === "dark" ? "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo-dark.mp4" : "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo.mp4"} type="video/mp4" />
                                     <track
                                         src="/path/to/captions.vtt"
                                         kind="subtitles"

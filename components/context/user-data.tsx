@@ -31,7 +31,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     getUser();
-  }, []);
+  }, [router]);
 
 
   return (

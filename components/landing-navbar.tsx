@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Logo } from "@/components/logo"
-import { Moon, Sun, Github, FileText, Cpu, Users, Layers } from "lucide-react"
+import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart } from "lucide-react"
 import {
     NavigationMenu,
     NavigationMenuContent,
@@ -69,20 +69,25 @@ export default function Navbar() {
                                                 Deltalytix
                                             </div>
                                             <p className="text-sm leading-tight text-muted-foreground">
-                                                Master your trading journey with advanced analytics and insights.
+                                                Elevate your trading with comprehensive analytics and AI-powered insights.
                                             </p>
                                         </a>
                                     </NavigationMenuLink>
                                 </li>
-                                <ListItem href="#overview" title="Overview">
-                                    Get a bird's eye view of your trading performance.
+                                <ListItem href="#data-import" title="Data Import" icon={<Database className="h-4 w-4" />}>
+                                    Import data from various providers.
                                 </ListItem>
-                                <ListItem href="#analytics" title="Analytics">
-                                    Deep dive into your trading patterns and metrics.
+                                <ListItem href="#performance-visualization" title="Performance Visualization" icon={<LineChart className="h-4 w-4" />}>
+                                    Visualize your trading performance.
                                 </ListItem>
-                                <ListItem href="#portfolio" title="Portfolio Management">
-                                    Optimize your investment portfolio with ease.
+                                <ListItem href="#daily-performance" title="Daily Performance" icon={<Calendar className="h-4 w-4" />}>
+                                    Track your daily trading results with an intuitive calendar view.
                                 </ListItem>
+                                <div className='col-span-2'>
+                                    <ListItem href="#ai-journaling" title="AI-Powered Journaling" icon={<BookOpen className="h-4 w-4" />} >
+                                        Improve your trading emotions with AI-assisted journaling.
+                                    </ListItem>
+                                </div>
                             </ul>
                         </NavigationMenuContent>
                     </NavigationMenuItem>
@@ -110,14 +115,8 @@ export default function Navbar() {
                                 <ListItem href="#documentation" title="Documentation" icon={<FileText className="h-4 w-4" />}>
                                     Comprehensive guides and API references.
                                 </ListItem>
-                                <ListItem href="#engine" title="Engine" icon={<Cpu className="h-4 w-4" />}>
-                                    Learn about our powerful trading engine.
-                                </ListItem>
                                 <ListItem href="https://discord.gg/a5YVF5Ec2n" title="Join the community" icon={<Users className="h-4 w-4" />}>
                                     Connect with other developers and traders.
-                                </ListItem>
-                                <ListItem href="#integrations" title="Apps & Integrations" icon={<Layers className="h-4 w-4" />}>
-                                    Discover apps and integrate with our platform.
                                 </ListItem>
                                 <li className="row-span-3 md:col-span-2">
                                     <NavigationMenuLink asChild>

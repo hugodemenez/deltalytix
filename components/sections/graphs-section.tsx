@@ -12,10 +12,10 @@ interface GraphsProps {
 export function GraphsSection({ calendarData }: GraphsProps) {
   return (
     <section id="graphs" className="mb-10 space-y-4">
-      <EquityChart/>
+        <PNLChart dailyTradingData={calendarData} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <DailyChart dailyTradingData={calendarData} />
-        <PNLChart dailyTradingData={calendarData} />
+      <EquityChart/>
       </div>
     </section>
   )

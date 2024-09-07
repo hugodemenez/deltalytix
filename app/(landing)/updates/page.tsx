@@ -51,8 +51,8 @@ export default function RoadmapBlog() {
       <div className="max-w-2xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">Deltalytix Product Roadmap</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-12">
-          We're constantly working to improve Deltalytix and provide you with the best trading analytics platform. 
-          Here's a look at our recent updates and what's coming next.
+          We&apos;re constantly working to improve Deltalytix and provide you with the best trading analytics platform. 
+          Here&apos;s a look at our recent updates and what&apos;s coming next.
         </p>
         {roadmapData.map((milestone) => (
           <div key={milestone.id} className="mb-16">

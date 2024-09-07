@@ -1,7 +1,8 @@
 'use client'
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
+import { Progress } from "@/components/ui/progress"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: { nbWin: number, nbLoss: number, nbBe: number, nbTrades: number }) {
   const winRate = Number((nbWin / nbTrades * 100).toFixed(2))
@@ -14,8 +15,8 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
 
   const data = [
     { name: 'Win', value: winRate, color: positiveColor },
-    { name: 'Loss', value: lossRate, color: negativeColor },
     { name: 'BE', value: beRate, color: neutralColor },
+    { name: 'Loss', value: lossRate, color: negativeColor },
   ]
 
   return (
@@ -24,50 +25,35 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
         <CardTitle className="text-sm font-medium">Trade Performance</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between h-[140px]">
-          <div className="w-[140px] h-[140px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={55}
-                  paddingAngle={2}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {data.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.color}
+        <TooltipProvider delayDuration={100}>
+          <div className="relative h-8">
+            <Progress value={100} className="h-8 rounded-md" />
+            {data.map((entry, index) => {
+              const prevTotal = data.slice(0, index).reduce((sum, d) => sum + d.value, 0)
+              return (
+                <Tooltip key={entry.name}>
+                  <TooltipTrigger asChild>
+                    <div
+                      className="absolute top-0 h-8 cursor-pointer transition-opacity hover:opacity-80"
+                      style={{
+                        left: `${prevTotal}%`,
+                        width: `${entry.value}%`,
+                        backgroundColor: entry.color,
+                        borderTopLeftRadius: index === 0 ? '0.375rem' : '0',
+                        borderBottomLeftRadius: index === 0 ? '0.375rem' : '0',
+                        borderTopRightRadius: index === data.length - 1 ? '0.375rem' : '0',
+                        borderBottomRightRadius: index === data.length - 1 ? '0.375rem' : '0',
+                      }}
                     />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value: number) => `${value.toFixed(2)}%`}
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--background))', 
-                    borderColor: 'hsl(var(--border))',
-                    color: 'hsl(var(--foreground))'
-                  }}
-                  itemStyle={{
-                    color: 'hsl(var(--foreground))'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{entry.name}: {entry.value.toFixed(2)}%</p>
+                  </TooltipContent>
+                </Tooltip>
+              )
+            })}
           </div>
-          <div className="text-xs space-y-2">
-            {data.map((entry, index) => (
-              <div key={`legend-${index}`} className="flex items-center">
-                <div className="w-3 h-3 mr-2 rounded-full" style={{ backgroundColor: entry.color }}></div>
-                <span className="font-medium">{entry.name}: {entry.value.toFixed(2)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        </TooltipProvider>
       </CardContent>
     </Card>
   )

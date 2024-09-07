@@ -62,7 +62,7 @@ export default function DailyChart({dailyTradingData}: {dailyTradingData: Calend
           </CardDescription>
         </div>
         <div className="flex">
-          {["short", "long"].map((key) => {
+          {["long", "short"].map((key) => {
             const chart = key as keyof typeof chartConfig
             return (
               <button

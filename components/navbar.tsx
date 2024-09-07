@@ -34,7 +34,7 @@ export default function Navbar() {
     <nav className="flex items-center justify-between px-4 py-6 text-primary">
       <div className="flex items-center space-x-4">
         <Link href="/dashboard">
-          <Logo />
+          <Logo className='fill-black h-6 w-6 dark:fill-white'/>
         </Link>
       </div>
       <div className="flex-1 max-w-2xl mx-4">

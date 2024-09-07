@@ -23,9 +23,14 @@ export default function Icon() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: 'white',
+                    borderRadius: '4px',
+                    border: '1px solid white',
                 }}
             >
-                <Logo className="w-6 h-6 p-2 fill-white" />
+                <svg viewBox="0 0 255 255" xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="white">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M159 63L127.5 0V255H255L236.5 218H159V63Z" />
+                    <path fillRule="evenodd" clipRule="evenodd" d="M-3.05176e-05 255L127.5 -5.96519e-06L127.5 255L-3.05176e-05 255ZM64 217L121 104L121 217L64 217Z" />
+                </svg>
             </div>
         ),
         // ImageResponse options

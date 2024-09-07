@@ -26,7 +26,7 @@ export default function RootLayout({
       // Clear the hash after showing the toast
       router.replace('/authentication');
     }
-  }, []);
+  }, [router]);
 
   return (
     <>

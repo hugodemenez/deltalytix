@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -101,14 +101,11 @@ export default function DashboardPage() {
     }
   }
 
-  const debouncedUpdateCommission = useCallback(
-    debounce(async (accountNumber: string, instrumentGroup: string, newCommission: number, user: User) => {
+  const debouncedUpdateCommission = useMemo(
+    () => debounce(async (accountNumber: string, instrument: string, newCommission: number, userId: string) => {
       try {
-        const instrumentsToUpdate = groupedTrades[accountNumber][instrumentGroup].map(trade => trade.instrument)
-        await Promise.all(instrumentsToUpdate.map(instrument => 
-          updateCommission(accountNumber, instrument, newCommission)
-        ))
-        setTrades(await getTrades(user.id))
+        await updateCommission(accountNumber, instrument, newCommission)
+        setTrades(await getTrades(userId))
         toast({
           title: 'Commission updated successfully',
           variant: 'default',
@@ -123,13 +120,22 @@ export default function DashboardPage() {
         })
       }
     }, 500),
-    [groupedTrades]
+    [setTrades, setError] // Empty dependency array
   )
 
-  const handleUpdateCommission = (accountNumber: string, instrumentGroup: string, newCommission: number, user: User | null) => {
+  const handleUpdateCommission = useCallback((accountNumber: string, instrumentGroup: string, newCommission: number, user: User | null) => {
     if (!user) return
-    debouncedUpdateCommission(accountNumber, instrumentGroup, newCommission, user)
-  }
+    
+    const instrumentsToUpdate = groupedTrades[accountNumber]?.[instrumentGroup]
+    if (!instrumentsToUpdate) {
+      console.error(`No instruments found for account ${accountNumber} and group ${instrumentGroup}`)
+      return
+    }
+
+    instrumentsToUpdate.forEach(trade => {
+      debouncedUpdateCommission(accountNumber, trade.instrument, newCommission, user.id)
+    })
+  }, [debouncedUpdateCommission, groupedTrades])
 
   if (loading) return <div className="flex justify-center items-center h-screen">Loading...</div>
   if (error) return (
@@ -182,7 +188,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-4 pl-4">
                   {Object.entries(instruments).map(([instrumentGroup, trades]) => (
-                    <div key={instrumentGroup} className="bg-gray-100 p-4 rounded-lg">
+                    <div key={instrumentGroup} className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg">
                       <div className="flex justify-between items-center">
                         <h3 className="text-md font-medium">Instrument Group: {instrumentGroup}</h3>
                         <div className="flex items-center space-x-2">
