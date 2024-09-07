@@ -85,7 +85,7 @@ export default function Component() {
                         <ul className="space-y-2 list-none">
                             <MobileNavItem href="https://github.com/hugodemenez/deltalytix" onClick={onLinkClick}>Open Source</MobileNavItem>
                             <MobileNavItem href="#documentation" onClick={onLinkClick}>Documentation</MobileNavItem>
-                            <MobileNavItem href="https://discord.gg/a5YVF5Ec2n" onClick={onLinkClick}>Join the community</MobileNavItem>
+                            <MobileNavItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} onClick={onLinkClick}>Join the community</MobileNavItem>
                             <MobileNavItem href="#api" onClick={onLinkClick}>API</MobileNavItem>
                         </ul>
                     </AccordionContent>

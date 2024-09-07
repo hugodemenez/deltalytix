@@ -39,11 +39,12 @@ export default function DeltalytixDashboard() {
 
   return (
     <div className="p-4 bg-background text-foreground">
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <h2 className="text-2xl font-bold mb-4">Features</h2>
+      <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
         {features.map((feature, index) => (
           <Card key={index} className={`bg-card ${
-            index < 2 ? 'lg:col-span-5' : 
-            index === 2 ? 'lg:col-span-2' : 'lg:col-span-3'
+            index < 2 ? 'lg:col-span-3' : 
+            index === 2 ? 'lg:col-span-4' : 'lg:col-span-2'
           }`}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-lg font-medium">{feature.title}</CardTitle>

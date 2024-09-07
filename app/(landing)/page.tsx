@@ -5,6 +5,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useTheme } from '@/components/context/theme-provider'
 import Features from '@/components/features'
+import OpenSource from '@/components/open-source'
+import GitHubRepoCard from '@/components/open-source'
 
 export default function LandingPage() {
     const { theme } = useTheme();
@@ -96,6 +98,9 @@ export default function LandingPage() {
                 </section>
                 <section id="features">
                     <Features />
+                </section>
+                <section id="open-source">
+                    <GitHubRepoCard />
                 </section>
             </main>
         </div>

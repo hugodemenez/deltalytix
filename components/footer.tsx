@@ -21,8 +21,6 @@ export default function Footer() {
             <h4 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Company</h4>
             <ul className="space-y-2">
               <li><Link href="/about" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">About</Link></li>
-              <li><Link href="/blog" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Blog</Link></li>
-              <li><Link href="/careers" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Careers</Link></li>
             </ul>
           </div>
           <div>
