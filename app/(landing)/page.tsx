@@ -79,7 +79,7 @@ export default function LandingPage() {
                                     muted 
                                     autoPlay 
                                     playsInline 
-                                    className={`rounded-lg ${videoLoaded ? 'block' : 'hidden'}`}
+                                    className={`rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg ${videoLoaded ? 'block' : 'hidden'}`}
                                     onLoadedData={handleVideoLoad}
                                     onError={handleVideoError}
                                 >
