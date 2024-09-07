@@ -1,68 +1,84 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Trade } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-interface Trade {
-  id: string
-  accountNumber: string
-  instrument: string
-  commission: number
-}
-
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
-export async function fetchGroupedTrades(userId:string): Promise<GroupedTrades> {
+interface FetchTradesResult {
+  groupedTrades: GroupedTrades;
+  flattenedTrades: Trade[];
+}
+
+export async function fetchGroupedTrades(userId: string): Promise<FetchTradesResult> {
   const trades = await prisma.trade.findMany({
-    select: {
-      id: true,
-      accountNumber: true,
-      instrument: true,
-      commission: true,
-      quantity: true,
+    where: {
+      userId: userId
     },
     orderBy: [
       { accountNumber: 'asc' },
       { instrument: 'asc' }
-    ],
-    where: {
-      userId: userId
-    }
+    ]
   })
 
   const groupedTrades = trades.reduce<GroupedTrades>((acc, trade) => {
     if (!acc[trade.accountNumber]) {
       acc[trade.accountNumber] = {}
     }
-    if (!acc[trade.accountNumber][trade.instrument]) {
-      acc[trade.accountNumber][trade.instrument] = []
+    const instrumentKey = trade.instrument.slice(0, 2)
+    if (!acc[trade.accountNumber][instrumentKey]) {
+      acc[trade.accountNumber][instrumentKey] = []
     }
-    acc[trade.accountNumber][trade.instrument].push(trade)
+    acc[trade.accountNumber][instrumentKey].push(trade)
     return acc
   }, {})
 
-  return groupedTrades
+  return {
+    groupedTrades,
+    flattenedTrades: trades
+  }
 }
 
-export async function deleteInstrument(accountNumber: string, instrument: string, userId:string): Promise<void> {
+export async function deleteAccount(accountNumber: string, userId: string): Promise<void> {
   await prisma.trade.deleteMany({
     where: {
       accountNumber: accountNumber,
-      instrument: instrument,
       userId: userId
     }
   })
 }
 
-export async function updateCommission(accountNumber: string, instrument: string, newCommission: number): Promise<void> {
+export async function deleteInstrumentGroup(accountNumber: string, instrumentGroup: string, userId: string): Promise<void> {
+  await prisma.trade.deleteMany({
+    where: {
+      accountNumber: accountNumber,
+      instrument: { startsWith: instrumentGroup },
+      userId: userId
+    }
+  })
+}
+
+export async function updateCommissionForGroup(accountNumber: string, instrumentGroup: string, newCommission: number): Promise<void> {
   await prisma.trade.updateMany({
     where: {
       accountNumber: accountNumber,
-      instrument: instrument
+      instrument: { startsWith: instrumentGroup }
     },
     data: {
       commission: newCommission
+    }
+  })
+}
+
+export async function renameAccount(oldAccountNumber: string, newAccountNumber: string, userId: string): Promise<void> {
+  await prisma.trade.updateMany({
+    where: {
+      accountNumber: oldAccountNumber,
+      userId: userId
+    },
+    data: {
+      accountNumber: newAccountNumber
     }
   })
 }

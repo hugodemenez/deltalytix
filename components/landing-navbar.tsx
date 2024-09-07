@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -61,9 +61,37 @@ export default function Component() {
     const { theme, toggleTheme } = useTheme()
     const [isOpen, setIsOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
+    const [isVisible, setIsVisible] = useState(true)
+    const [lastScrollY, setLastScrollY] = useState(0)
 
     const toggleMenu = () => setIsOpen(!isOpen)
     const closeMenu = () => setIsOpen(false)
+
+    useEffect(() => {
+        const controlNavbar = () => {
+            if (typeof window !== 'undefined') {
+                const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
+                
+                if (scrollPercent <= 25) {
+                    setIsVisible(true)
+                } else if (window.scrollY > lastScrollY) {
+                    setIsVisible(false)
+                } else {
+                    setIsVisible(true)
+                }
+
+                setLastScrollY(window.scrollY)
+            }
+        }
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('scroll', controlNavbar)
+
+            return () => {
+                window.removeEventListener('scroll', controlNavbar)
+            }
+        }
+    }, [lastScrollY])
 
     const MobileNavContent = ({ onLinkClick }: { onLinkClick: () => void }) => (
         <nav className="flex flex-col space-y-4">
@@ -108,7 +136,7 @@ export default function Component() {
     return (
         <>
             <div className={`fixed inset-0 bg-background/80 backdrop-blur-sm z-40 transition-opacity duration-300 ${hoveredItem ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
-            <header className="px-4 lg:px-6 h-14 flex items-center justify-between relative z-50 bg-background text-foreground">
+            <header className={`fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50 bg-background text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <Link href="/" className="flex items-center space-x-2">
                     <Logo className='w-6 h-6 fill-black dark:fill-white' />
                     <span className="font-bold text-xl">Deltalytix</span>
