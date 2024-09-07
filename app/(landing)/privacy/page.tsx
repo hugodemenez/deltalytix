@@ -8,7 +8,7 @@ export default function PrivacyPolicy() {
       
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">1. Introduction</h2>
-        <p>Welcome to Deltalytix ("we", "our", or "us"). We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you visit our website and use our services, and tell you about your privacy rights and how the law protects you.</p>
+        <p>Welcome to Deltalytix (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;). We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you visit our website and use our services, and tell you about your privacy rights and how the law protects you.</p>
       </section>
 
       <section className="mb-6">

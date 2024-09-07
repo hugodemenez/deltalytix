@@ -8,7 +8,7 @@ export default function TermsOfUse() {
       
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">1. Acceptance of Terms</h2>
-        <p>By accessing or using Deltalytix's website and services, you agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use our services.</p>
+        <p>By accessing or using Deltalytix&apos;s website and services, you agree to be bound by these Terms of Use. If you do not agree to these terms, please do not use our services.</p>
       </section>
 
       <section className="mb-6">
