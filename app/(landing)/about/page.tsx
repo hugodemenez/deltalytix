@@ -21,7 +21,7 @@ export default function AboutPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              At Deltalytix, we're on a mission to empower traders with advanced analytics and AI-driven insights. 
+              At Deltalytix, we&apos;re on a mission to empower traders with advanced analytics and AI-driven insights. 
               Our platform is designed to help you understand your trading patterns, optimize your strategies, 
               and ultimately become a better trader through comprehensive backtesting and analysis of your real track record.
             </p>
@@ -30,13 +30,13 @@ export default function AboutPage() {
 
         <Card className="bg-card">
           <CardHeader>
-            <CardTitle className="text-2xl">The Founder's Story</CardTitle>
+            <CardTitle className="text-2xl">The Founder&apos;s Story</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground mb-4">
               With over 5 years of trading experience, our founder has mastered order book trading with a specific 
               focus on volume profile. Combining a strong background in engineering, computer science, and financial 
-              markets, along with a master's degree in quantitative finance, he identified a gap in the market for 
+              markets, along with a master&apos;s degree in quantitative finance, he identified a gap in the market for 
               a tool that could truly help traders understand and improve their performance.
             </p>
             <p className="text-muted-foreground">
@@ -49,7 +49,7 @@ export default function AboutPage() {
 
         <Card className="bg-card md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-2xl">Founder's Expertise</CardTitle>
+            <CardTitle className="text-2xl">Founder&apos;s Expertise</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
