@@ -99,11 +99,6 @@ export default function Navbar() {
               <span>Settings</span>
               <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
             </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Keyboard className="mr-2 h-4 w-4" />
-              <span>Keyboard shortcuts</span>
-              <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuSub>
@@ -117,14 +112,9 @@ export default function Navbar() {
                       <Mail className="mr-2 h-4 w-4" />
                       <span>Email</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem disabled>
                       <MessageSquare className="mr-2 h-4 w-4" />
                       <span>Message</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      <span>More...</span>
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
@@ -138,6 +128,11 @@ export default function Navbar() {
             <DropdownMenuItem disabled>
               <Cloud className="mr-2 h-4 w-4" />
               <span>API</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <Keyboard className="mr-2 h-4 w-4" />
+              <span>Keyboard shortcuts</span>
+              <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => {
