@@ -96,10 +96,10 @@ export default function LandingPage() {
                         </div>
                     </div>
                 </section>
-                <section id="features">
+                <section id="features" className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
                     <Features />
                 </section>
-                <section id="open-source">
+                <section id="open-source" className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
                     <GitHubRepoCard />
                 </section>
             </main>

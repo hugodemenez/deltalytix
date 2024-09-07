@@ -11,7 +11,7 @@ export default function AboutPage() {
   ]
 
   return (
-    <div className="container mx-auto px-4 py-12 bg-background text-foreground">
+    <div className="px-4 py-12 bg-background text-foreground">
       <h1 className="text-4xl font-bold text-center mb-8">About Deltalytix</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

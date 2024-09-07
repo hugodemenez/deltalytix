@@ -36,6 +36,7 @@
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.1.2",
+    "@react-email/components": "^0.0.25",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@types/d3": "^7.4.3",
@@ -47,6 +48,7 @@
     "csv-import-react": "^1.0.13",
     "d3": "^7.9.0",
     "date-fns": "^3.6.0",
+    "framer-motion": "^11.5.4",
     "install": "^0.13.0",
     "lucide-react": "^0.437.0",
     "next": "^14.2.8",
@@ -59,6 +61,7 @@
     "react-hook-form": "^7.53.0",
     "react-papaparse": "^4.4.0",
     "recharts": "^2.13.0-alpha.4",
+    "resend": "^4.0.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8"
