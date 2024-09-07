@@ -51,10 +51,10 @@ export default function LandingPage() {
                                 </div>
                                 <div className="flex flex-col gap-2 min-[400px]:flex-row">
                                     <Button className="inline-flex h-10 items-center justify-center rounded-md bg-gray-900 dark:bg-white px-8 text-sm font-medium text-white dark:text-gray-900 shadow transition-colors hover:bg-gray-700 dark:hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50" asChild>
-                                        <Link href="#talk-to-us">Talk to us</Link>
+                                        <Link href="/authentication">Get Started</Link>
                                     </Button>
                                     <Button variant="outline" className="inline-flex h-10 items-center justify-center rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-8 text-sm font-medium shadow-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50" asChild>
-                                        <Link href="#get-started">Get Started</Link>
+                                        <Link href="/support">Talk to us</Link>
                                     </Button>
                                 </div>
                                 <p className="text-sm text-gray-500 dark:text-gray-400">Used by some of the most successful traders in the world.</p>
