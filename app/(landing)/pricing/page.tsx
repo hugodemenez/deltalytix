@@ -31,7 +31,7 @@ export default function PricingContent() {
     basic: {
       name: "Basic",
       description: "Best for beginners!",
-      price: { annual: 9.99, monthly: 14.99 },
+      price: { annual: 35, monthly: 45 },
       features: [
         "Can add up to 1 account",
         "Data Storage allowed up to 3 months of trading",
@@ -41,7 +41,7 @@ export default function PricingContent() {
     premium: {
       name: "Premium",
       description: "Best for advanced traders!",
-      price: { annual: 19.99, monthly: 29.99 },
+      price: { annual: 45, monthly: 50 },
       features: [
         "Unlimited Accounts",
         "Unlimited Data Storage",
