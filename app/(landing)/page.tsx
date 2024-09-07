@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useTheme } from '@/components/context/theme-provider'
+import Features from '@/components/features'
 
 export default function LandingPage() {
     const { theme } = useTheme();
@@ -58,12 +59,12 @@ export default function LandingPage() {
                             </div>
                             <div className="flex items-center justify-center">
                                 {!videoLoaded && !videoError && (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800 rounded-lg">
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-black rounded-lg">
                                         <p className="text-gray-500 dark:text-gray-400">Loading video...</p>
                                     </div>
                                 )}
                                 {videoError && (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800 rounded-lg">
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-black rounded-lg">
                                         <p className="text-red-500">Failed to load video</p>
                                     </div>
                                 )}
@@ -92,6 +93,9 @@ export default function LandingPage() {
                             </div>
                         </div>
                     </div>
+                </section>
+                <section id="features">
+                    <Features />
                 </section>
             </main>
         </div>

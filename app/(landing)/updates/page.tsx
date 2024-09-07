@@ -15,7 +15,6 @@ const roadmapData: Milestone[] = [
     id: 1,
     title: "Core Functionality",
     description: "We've laid the foundation for Deltalytix with essential features. You can now process CSV data, view trades on a calendar, and access basic analytics. We've also implemented authentication and migrated to a robust Postgres database.",
-    image: "/placeholder.svg?height=400&width=800",
     status: 'completed'
   },
   {
@@ -28,7 +27,6 @@ const roadmapData: Milestone[] = [
     id: 3,
     title: "Optimization and Advanced Charts",
     description: "We're currently working on significant improvements to data management and custom fee implementations. Our new PnL daily chart provides deeper insights into your trading performance, and we're excited about the upcoming AI-powered trading session summaries.",
-    image: "/placeholder.svg?height=400&width=800",
     status: 'in-progress'
   },
   {
