@@ -72,10 +72,10 @@ export default function Component() {
                     <AccordionTrigger>Features</AccordionTrigger>
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
-                            <MobileNavItem href="#data-import" onClick={onLinkClick}>Data Import</MobileNavItem>
-                            <MobileNavItem href="#performance-visualization" onClick={onLinkClick}>Performance Visualization</MobileNavItem>
-                            <MobileNavItem href="#daily-performance" onClick={onLinkClick}>Daily Performance</MobileNavItem>
-                            <MobileNavItem href="#ai-journaling" onClick={onLinkClick}>AI-Powered Journaling</MobileNavItem>
+                            <MobileNavItem href="/#data-import" onClick={onLinkClick}>Data Import</MobileNavItem>
+                            <MobileNavItem href="/#performance-visualization" onClick={onLinkClick}>Performance Visualization</MobileNavItem>
+                            <MobileNavItem href="/#daily-performance" onClick={onLinkClick}>Daily Performance</MobileNavItem>
+                            <MobileNavItem href="/#ai-journaling" onClick={onLinkClick}>AI-Powered Journaling</MobileNavItem>
                         </ul>
                     </AccordionContent>
                 </AccordionItem>
@@ -84,9 +84,9 @@ export default function Component() {
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
                             <MobileNavItem href="https://github.com/hugodemenez/deltalytix" onClick={onLinkClick}>Open Source</MobileNavItem>
-                            <MobileNavItem href="#documentation" onClick={onLinkClick}>Documentation</MobileNavItem>
+                            <MobileNavItem href="/docs" onClick={onLinkClick}>Documentation</MobileNavItem>
                             <MobileNavItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} onClick={onLinkClick}>Join the community</MobileNavItem>
-                            <MobileNavItem href="#api" onClick={onLinkClick}>API</MobileNavItem>
+                            <MobileNavItem href="/api" onClick={onLinkClick}>API</MobileNavItem>
                         </ul>
                     </AccordionContent>
                 </AccordionItem>

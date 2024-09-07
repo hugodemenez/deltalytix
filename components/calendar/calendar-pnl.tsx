@@ -84,19 +84,19 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
+        <h2 className="text-xl sm:text-2xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="icon" onClick={handlePrevMonth}>
+          <Button variant="outline" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon" onClick={handleNextMonth}>
+          <Button variant="outline" size="icon" onClick={handleNextMonth} aria-label="Next month">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-4">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2 md:gap-4">
         {WEEKDAYS.map((day) => (
-          <div key={day} className="text-center font-semibold">{day}</div>
+          <div key={day} className="text-center font-semibold text-xs sm:text-sm">{day}</div>
         ))}
         {calendarDays.map((date) => {
           const dateString = format(date, 'yyyy-MM-dd')
@@ -106,7 +106,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
             <React.Fragment key={dateString}>
               <Card
                 className={cn(
-                  "h-24 cursor-pointer hover:border-primary transition-colors",
+                  "h-16 sm:h-20 md:h-24 cursor-pointer hover:border-primary transition-colors",
                   !isSameMonth(date, currentDate) && "opacity-50",
                   dayData && dayData.pnl >= 0
                     ? "bg-green-50 dark:bg-green-900/20"
@@ -119,29 +119,29 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
                   initializeComment(dayData)
                 }}
               >
-                <CardHeader className="p-2">
-                  <CardTitle className="text-xs font-medium flex justify-between">
+                <CardHeader className="p-1 sm:p-2">
+                  <CardTitle className="text-xs font-medium flex justify-between items-center">
                     <span>{format(date, 'd')}</span>
-                    {isToday(date) && <Badge variant="outline">Today</Badge>}
+                    {isToday(date) && <Badge variant="outline" className="text-[10px] px-1">Today</Badge>}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-2">
+                <CardContent className="p-1 sm:p-2">
                   {dayData ? (
                     <>
                       <div className={cn(
-                        "text-sm font-bold",
+                        "text-xs sm:text-sm font-bold",
                         dayData.pnl >= 0
                           ? "text-green-600 dark:text-green-400"
                           : "text-red-600 dark:text-red-400"
                       )}>
                         ${dayData.pnl.toFixed(2)}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">
                         {dayData.tradeNumber} trade{dayData.tradeNumber > 1 ? 's' : ''}
                       </div>
                     </>
                   ) : (
-                    <div className="text-xs text-muted-foreground">No trades</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground">No trades</div>
                   )}
                 </CardContent>
               </Card>

@@ -54,7 +54,7 @@ export default function PricingContent() {
     <div>
       <main className="container mx-auto px-4 py-16">
         <h1 className="text-4xl font-bold text-center mb-4">Pricing</h1>
-        <p className="text-xl text-center text-gray-600 mb-12">Analyze, improve, and advance all in one tool.</p>
+        <p className="text-xl text-center text-gray-600 mb-12">Store, explore and improve your trading data.</p>
 
         <Tabs defaultValue="annual" className="w-full max-w-3xl mx-auto mb-12">
           <TabsList className="grid w-full grid-cols-2">
