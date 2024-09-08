@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -43,11 +43,7 @@ interface ColumnMappingProps {
 export default function ColumnMapping({ headers, csvData, mappings, setMappings, error }: ColumnMappingProps) {
   const [isGeneratingMappings, setIsGeneratingMappings] = useState(false);
 
-  useEffect(() => {
-    generateAIMappings();
-  }, [headers, csvData]);
-
-  const generateAIMappings = async () => {
+  const generateAIMappings = useCallback(async () => {
     setIsGeneratingMappings(true);
     try {
       const firstRows = csvData.slice(1, 6).map(row => {
@@ -88,7 +84,11 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
     } finally {
       setIsGeneratingMappings(false);
     }
-  };
+  }, [headers, csvData, setMappings]);
+
+  useEffect(() => {
+    generateAIMappings();
+  }, [generateAIMappings]);
 
   const handleMapping = (header: string, value: string) => {
     setMappings(prev => {
@@ -121,7 +121,11 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
   }
 
   if (isGeneratingMappings) {
-    return <div>Generating AI mappings...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (

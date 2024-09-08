@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
@@ -10,18 +10,18 @@ interface HeaderSelectionProps {
 }
 
 export default function HeaderSelection({ rawCsvData, setCsvData, setHeaders, setError }: HeaderSelectionProps) {
-  const processHeaderSelection = (index: number, data: string[][]) => {
+  const processHeaderSelection = useCallback((index: number, data: string[][]) => {
     const newHeaders = data[index].filter(header => header && header.trim() !== '')
     setHeaders(newHeaders)
     setCsvData(data.slice(index))
     setError(null)
-  }
+  }, [setCsvData, setHeaders, setError]);
 
   useEffect(() => {
     if (rawCsvData.length > 0) {
       processHeaderSelection(0, rawCsvData)
     }
-  }, [rawCsvData])
+  }, [rawCsvData, processHeaderSelection]);
 
   return (
     <div className="space-y-4">
