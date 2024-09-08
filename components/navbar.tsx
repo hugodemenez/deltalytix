@@ -24,6 +24,8 @@ import { signOut } from "@/server/auth"
 import { Logo } from './logo'
 import Link from 'next/link'
 import { useTheme } from './context/theme-provider'
+import AiImportButton from './ai-import-button'
+import { EnhancedFilterSelectors } from './enhanced-filter-selectors'
 
 export default function Navbar() {
   const { user } = useUser()
@@ -32,35 +34,19 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-6 text-primary bg-background shadow-sm">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-6 text-primary bg-background shadow-sm w-screen pr-6">
         <div className="flex items-center space-x-4">
           <Link href="/dashboard">
-            <Logo className='fill-black h-6 w-6 dark:fill-white'/>
+            <Logo className='fill-black h-6 w-6 dark:fill-white' />
           </Link>
         </div>
         <div className="flex-1 max-w-2xl mx-4">
-          <div className="relative">
-            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              type="search"
-              placeholder="Search for or jump to"
-              className="w-full pl-8 pr-12 py-1 bg-secondary border-secondary rounded text-sm"
-              onFocus={() => setSearchFocused(true)}
-              onBlur={() => setSearchFocused(false)}
-            />
-            {searchFocused && (
-              <span className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground text-xs">
-                ⌘K
-              </span>
-            )}
-          </div>
+          <EnhancedFilterSelectors />
         </div>
         <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon" onClick={toggleTheme}>
+          <AiImportButton />
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className='hidden md:flex'>
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </Button>
-          <Button variant="ghost" size="icon">
-            <RefreshCcw className="h-5 w-5" />
           </Button>
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
@@ -134,6 +120,11 @@ export default function Navbar() {
                 <Keyboard className="mr-2 h-4 w-4" />
                 <span>Keyboard shortcuts</span>
                 <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={toggleTheme}>
+                {theme === 'light' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                <span>Change theme</span>
+                <DropdownMenuShortcut>⌘T</DropdownMenuShortcut>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => {

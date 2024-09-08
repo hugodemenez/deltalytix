@@ -616,7 +616,7 @@ export default function Component() {
   return (
     <div>
       <Button onClick={() => setIsOpen(true)} className='w-full'>
-        <UploadIcon className="mr-2 h-4 w-4" /> Import CSV
+        <UploadIcon className="sm:mr-2 h-4 w-4" /> <span className='hidden md:block'>Import CSV</span>
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">

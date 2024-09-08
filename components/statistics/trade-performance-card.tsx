@@ -1,12 +1,23 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout | null = null
+  return (...args: Parameters<T>) => {
+    if (timeout) clearTimeout(timeout)
+    timeout = setTimeout(() => func(...args), wait)
+  }
+}
+
 export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: { nbWin: number, nbLoss: number, nbBe: number, nbTrades: number }) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
+  const [isTouch, setIsTouch] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
+  const lastTouchTime = useRef(0)
 
   const winRate = Number((nbWin / nbTrades * 100).toFixed(2))
   const lossRate = Number((nbLoss / nbTrades * 100).toFixed(2))
@@ -22,8 +33,50 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
     { name: 'Loss', value: lossRate, color: negativeColor },
   ]
 
+  const handleTooltipToggle = useCallback((name: string) => {
+    setActiveTooltip(prev => prev === name ? null : name)
+  }, [])
+
+  const debouncedTooltipToggle = useMemo(
+    () => debounce((name: string) => {
+      handleTooltipToggle(name)
+    }, 300),
+    [handleTooltipToggle]
+  )
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
+      if (cardRef.current && !cardRef.current.contains(event.target as Node)) {
+        setActiveTooltip(null)
+      }
+    }
+
+    const handleTouchStart = () => {
+      setIsTouch(true)
+    }
+
+    document.addEventListener('mousedown', handleOutsideClick)
+    document.addEventListener('touchstart', handleOutsideClick)
+    window.addEventListener('touchstart', handleTouchStart, { once: true })
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
+      document.removeEventListener('touchstart', handleOutsideClick)
+      window.removeEventListener('touchstart', handleTouchStart)
+    }
+  }, [])
+
+  const handleTouchStart = useCallback((name: string, e: React.TouchEvent) => {
+    e.preventDefault()
+    const now = Date.now()
+    if (now - lastTouchTime.current > 300) {
+      debouncedTooltipToggle(name)
+      lastTouchTime.current = now
+    }
+  }, [debouncedTooltipToggle])
+
   return (
-    <Card className="col-span-1">
+    <Card className="col-span-1" ref={cardRef}>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">Trade Performance</CardTitle>
       </CardHeader>
@@ -47,9 +100,10 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
                         borderTopRightRadius: index === data.length - 1 ? '0.375rem' : '0',
                         borderBottomRightRadius: index === data.length - 1 ? '0.375rem' : '0',
                       }}
-                      onClick={() => setActiveTooltip(activeTooltip === entry.name ? null : entry.name)}
-                      onMouseEnter={() => setActiveTooltip(entry.name)}
-                      onMouseLeave={() => setActiveTooltip(null)}
+                      onClick={() => !isTouch && handleTooltipToggle(entry.name)}
+                      onMouseEnter={() => !isTouch && setActiveTooltip(entry.name)}
+                      onMouseLeave={() => !isTouch && setActiveTooltip(null)}
+                      onTouchStart={(e) => handleTouchStart(entry.name, e)}
                     />
                   </TooltipTrigger>
                   <TooltipContent>

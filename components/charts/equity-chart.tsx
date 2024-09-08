@@ -16,8 +16,7 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart"
-import { useTrades } from "../context/trades-data"
-import { Trade } from "@prisma/client"
+import { useFormattedTrades, useTrades } from "../context/trades-data"
 
 const chartConfig = {
   equity: {
@@ -55,7 +54,7 @@ const CustomTooltip: React.FC<TooltipProps<number, string>> = ({ active, payload
 };
 
 export default function EnhancedEquityChart() {
-  const { trades } = useTrades()
+  const { formattedTrades:trades } = useFormattedTrades()
   const [showDailyPnL, setShowDailyPnL] = React.useState(true)
 
   const chartData = React.useMemo(() => {
@@ -119,11 +118,9 @@ export default function EnhancedEquityChart() {
     }
   }, [trades, showDailyPnL])
 
-  const finalEquity = chartData.length > 0 ? chartData[chartData.length - 1].equity : 0
-
   return (
     <Card>
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
+      <CardHeader className="sm:min-h-[200px] md:min-h-[120px] flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
         <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
           <CardTitle>Equity Curve</CardTitle>
           <CardDescription>
