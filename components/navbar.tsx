@@ -26,6 +26,7 @@ import Link from 'next/link'
 import { useTheme } from './context/theme-provider'
 import AiImportButton from './ai-import-button'
 import { EnhancedFilterSelectors } from './enhanced-filter-selectors'
+import ImportButton from './import-csv/import-button'
 
 export default function Navbar() {
   const { user } = useUser()
@@ -44,7 +45,7 @@ export default function Navbar() {
           <EnhancedFilterSelectors />
         </div>
         <div className="flex items-center space-x-4">
-          <AiImportButton />
+          <ImportButton />
           <Button variant="ghost" size="icon" onClick={toggleTheme} className='hidden md:flex'>
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>

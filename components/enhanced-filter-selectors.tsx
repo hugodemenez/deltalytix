@@ -128,7 +128,7 @@ export function EnhancedFilterSelectors() {
   const CommandContent = React.useMemo(() => (
     <Command className={`rounded-lg border relative overflow-visible h-12 ${open ? 'rounded-b-none' : ''}`} ref={commandRef}>
       <CommandInput
-      className='text-lg'
+        className='text-lg sm:text-sm'
         onFocus={() => setOpen(true)}
         ref={inputRef}
         placeholder="Type to filter..."
