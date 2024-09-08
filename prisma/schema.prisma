@@ -13,19 +13,19 @@ model Trade {
   id             String @id @unique @default(uuid())
   accountNumber  String
   quantity       Int
-  buyId          String? @default("")
-  sellId         String? @default("")
+  entryId        String? @default("")
+  closeId        String? @default("")
   instrument     String
-  buyPrice       String
-  sellPrice      String
-  buyDate        String
-  sellDate       String
-  pnl            String
+  entryPrice     String
+  closePrice     String
+  entryDate      String
+  closeDate      String
+  pnl            Float
   timeInPosition Float @default(0)
   userId         String
   side           String? @default("")
-  commission      Float @default(0)
+  commission     Float @default(0)
   createdAt      DateTime @default(now())
-  comment       String?
+  comment        String?
   @@schema("public")
 }

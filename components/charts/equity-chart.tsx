@@ -59,14 +59,14 @@ export default function EnhancedEquityChart() {
 
   const chartData = React.useMemo(() => {
     const validTrades = trades.filter(trade => {
-      const buyDate = safeParseDate(trade.buyDate)
+      const buyDate = safeParseDate(trade.entryDate)
       return buyDate !== null
     })
 
     if (showDailyPnL) {
       // Calculate daily PnL
       const dailyPnL = validTrades.reduce((acc, trade) => {
-        const date = safeParseDate(trade.sellDate || trade.buyDate)
+        const date = safeParseDate(trade.closeDate || trade.entryDate)
         if (!date) return acc
 
         const dateString = date.toISOString()
@@ -76,7 +76,7 @@ export default function EnhancedEquityChart() {
             commission: 0
           }
         }
-        acc[dateString].pnl += parseFloat(trade.pnl) || 0
+        acc[dateString].pnl += trade.pnl || 0
         acc[dateString].commission += trade.commission || 0
         return acc
       }, {} as Record<string, { pnl: number, commission: number }>)
@@ -100,15 +100,15 @@ export default function EnhancedEquityChart() {
       let cumulativePnL = 0
       return validTrades
         .sort((a, b) => {
-          const dateA = safeParseDate(a.buyDate)
-          const dateB = safeParseDate(b.buyDate)
+          const dateA = safeParseDate(a.entryDate)
+          const dateB = safeParseDate(b.entryDate)
           return dateA && dateB ? dateA.getTime() - dateB.getTime() : 0
         })
         .map((trade) => {
-          const tradePnL = (parseFloat(trade.pnl) || 0) - (trade.commission || 0)
+          const tradePnL = (trade.pnl || 0) - (trade.commission || 0)
           cumulativePnL += tradePnL
           return {
-            date: trade.sellDate || trade.buyDate,
+            date: trade.closeDate || trade.entryDate,
             equity: cumulativePnL,
             dailyPnL: tradePnL,
             equityFormatted: `$${cumulativePnL.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,

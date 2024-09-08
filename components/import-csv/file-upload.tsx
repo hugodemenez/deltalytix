@@ -1,12 +1,10 @@
 import React, { useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
+import { ImportType } from './import-type-selection'
 
 interface FileUploadProps {
-  isRithmicImport: boolean
-  setIsRithmicImport: React.Dispatch<React.SetStateAction<boolean>>
+  importType: ImportType
   setRawCsvData: React.Dispatch<React.SetStateAction<string[][]>>
   setCsvData: React.Dispatch<React.SetStateAction<string[][]>>
   setHeaders: React.Dispatch<React.SetStateAction<string[]>>
@@ -15,14 +13,14 @@ interface FileUploadProps {
 }
 
 export default function FileUpload({
-  isRithmicImport,
-  setIsRithmicImport,
+  importType,
   setRawCsvData,
   setCsvData,
   setHeaders,
   setStep,
   setError
 }: FileUploadProps) {
+
   const processRithmicCsv = useCallback((data: string[][]) => {
     const processedData: string[][] = []
     let currentAccount = ''
@@ -51,11 +49,22 @@ export default function FileUpload({
     if (processedData.length > 0 && headers.length > 0) {
       setCsvData(processedData)
       setHeaders(headers)
-      setStep(2)
+      setStep(3) // Skip header selection for Rithmic
     } else {
       setError("Unable to process Rithmic CSV. Please check the file format.")
     }
-  }, [setHeaders, setCsvData, setStep, setError])
+  }, [setCsvData, setHeaders, setStep, setError])
+
+  const processTradezellaOrTradovateCsv = useCallback((data: string[][]) => {
+    if (data.length > 0) {
+      const headers = data[0].filter(header => header && header.trim() !== '')
+      setHeaders(headers)
+      setCsvData(data)
+      setStep(2) // Go to header selection step
+    } else {
+      setError("The CSV file appears to be empty or invalid.")
+    }
+  }, [setCsvData, setHeaders, setStep, setError])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -63,13 +72,10 @@ export default function FileUpload({
       complete: (result) => {
         if (result.data && Array.isArray(result.data) && result.data.length > 0) {
           setRawCsvData(result.data as string[][])
-          if (isRithmicImport) {
+          if (importType === 'rithmic') {
             processRithmicCsv(result.data as string[][])
           } else {
-            setStep(1)
-            const newHeaders = (result.data[0] as string[]).filter(header => header && header.trim() !== '')
-            setHeaders(newHeaders)
-            setCsvData(result.data as string[][])
+            processTradezellaOrTradovateCsv(result.data as string[][])
           }
           setError(null)
         } else {
@@ -80,20 +86,13 @@ export default function FileUpload({
         setError(`Error parsing CSV: ${error.message}`)
       }
     })
-  }, [isRithmicImport, processRithmicCsv, setRawCsvData, setCsvData, setHeaders, setStep, setError])
+  }, [importType, processRithmicCsv, processTradezellaOrTradovateCsv, setRawCsvData, setError])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center space-x-2">
-        <Checkbox
-          id="rithmic-import"
-          checked={isRithmicImport}
-          onCheckedChange={(checked) => setIsRithmicImport(checked as boolean)}
-        />
-        <Label htmlFor="rithmic-import">Rithmic Performance Import</Label>
-      </div>
+      <p className="text-lg font-semibold">Upload {importType.charAt(0).toUpperCase() + importType.slice(1)} CSV File</p>
       <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer">
         <input {...getInputProps()} />
         {isDragActive ? (

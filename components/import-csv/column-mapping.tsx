@@ -6,6 +6,7 @@ import { XIcon, AlertTriangleIcon } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { generateCsvMapping } from '@/lib/generate-csv-mappings'
 import { readStreamableValue } from 'ai/rsc'
+import { ImportType } from './import-type-selection'
 
 type ColumnConfig = {
   [key: string]: {
@@ -17,13 +18,13 @@ type ColumnConfig = {
 const columnConfig: ColumnConfig = {
   "accountNumber": { defaultMapping: ["account", "accountnumber"], required: false },
   "instrument": { defaultMapping: ["symbol", "ticker"], required: true },
-  "buyId": { defaultMapping: ["buyid", "buyorderid"], required: false },
-  "sellId": { defaultMapping: ["sellid", "sellorderid"], required: false },
+  "entryId": { defaultMapping: ["buyid", "buyorderid"], required: false },
+  "closeId": { defaultMapping: ["sellid", "sellorderid"], required: false },
   "quantity": { defaultMapping: ["qty", "amount"], required: true },
-  "buyPrice": { defaultMapping: ["buyprice", "entryprice"], required: true },
-  "sellPrice": { defaultMapping: ["sellprice", "exitprice"], required: true },
-  "buyDate": { defaultMapping: ["buydate", "entrydate"], required: true },
-  "sellDate": { defaultMapping: ["selldate", "exitdate"], required: true },
+  "entryPrice": { defaultMapping: ["buyprice", "entryprice"], required: true },
+  "closePrice": { defaultMapping: ["sellprice", "exitprice"], required: true },
+  "entryDate": { defaultMapping: ["buydate", "entrydate"], required: true },
+  "closeDate": { defaultMapping: ["selldate", "exitdate"], required: true },
   "pnl": { defaultMapping: ["pnl", "profit"], required: true },
   "timeInPosition": { defaultMapping: ["timeinposition", "duration"], required: false },
   "side": { defaultMapping: ["side", "direction"], required: false },
@@ -38,9 +39,10 @@ interface ColumnMappingProps {
   mappings: { [key: string]: string };
   setMappings: React.Dispatch<React.SetStateAction<{ [key: string]: string }>>;
   error: string | null;
+  importType: ImportType;
 }
 
-export default function ColumnMapping({ headers, csvData, mappings, setMappings, error }: ColumnMappingProps) {
+export default function ColumnMapping({ headers, csvData, mappings, setMappings, error, importType }: ColumnMappingProps) {
   const [isGeneratingMappings, setIsGeneratingMappings] = useState(false);
 
   const generateAIMappings = useCallback(async () => {
@@ -67,6 +69,11 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
         }
       }
 
+      if (importType === 'rithmic') {
+        newMappings['AccountNumber'] = 'accountNumber';
+        newMappings['Instrument'] = 'instrument';
+      }
+
       headers.forEach(header => {
         if (!newMappings[header]) {
           const defaultMapping = Object.entries(columnConfig).find(([_, config]) =>
@@ -84,7 +91,7 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
     } finally {
       setIsGeneratingMappings(false);
     }
-  }, [headers, csvData, setMappings]);
+  }, [headers, csvData, setMappings, importType]);
 
   useEffect(() => {
     generateAIMappings();

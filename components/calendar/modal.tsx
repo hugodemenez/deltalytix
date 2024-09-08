@@ -63,11 +63,11 @@ export function CalendarModal({
                         <TableCell>{trade.instrument}</TableCell>
                         <TableCell>{trade.side}</TableCell>
                         <TableCell className={cn(
-                          parseFloat(trade.pnl) >= 0
+                          trade.pnl >= 0
                             ? "text-green-600 dark:text-green-400"
                             : "text-red-600 dark:text-red-400"
                         )}>
-                          ${parseFloat(trade.pnl).toFixed(2)}
+                          ${trade.pnl.toFixed(2)}
                         </TableCell>
                         <TableCell>${trade.commission.toFixed(2)}</TableCell>
                         <TableCell>{parsePositionTime(trade.timeInPosition)}</TableCell>

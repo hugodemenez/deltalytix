@@ -35,7 +35,7 @@ export function calculateStatistics(formattedTrades: Trade[]): StatisticsProps {
   };
 
   const statistics = formattedTrades.reduce((acc: StatisticsProps, trade: Trade) => {
-    const pnl = parseFloat(trade.pnl.replace('(', '-').replace(')', '').replace('$', ''));
+    const pnl = trade.pnl;
     
     acc.nbTrades++;
     acc.cumulativePnl += pnl;
@@ -66,14 +66,14 @@ export function calculateStatistics(formattedTrades: Trade[]): StatisticsProps {
 
 export function formatCalendarData(trades: Trade[]) {
   return trades.reduce((acc: any, trade: Trade) => {
-    const date = format(new Date(trade.buyDate), 'yyyy-MM-dd')
+    const date = format(new Date(trade.entryDate), 'yyyy-MM-dd')
     if (!acc[date]) {
       acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0, trades: [] }
     }
     acc[date].tradeNumber++
-    acc[date].pnl += parseFloat(trade.pnl.replace('(', '-').replace(')', '').replace('$', ''))-trade.commission;
+    acc[date].pnl += trade.pnl-trade.commission;
 
-    const isLong = trade.side ? (trade.side === 'long' || trade.side === 'buy' || trade.side === 'B') : (new Date(trade.buyDate) < new Date(trade.sellDate))
+    const isLong = trade.side ? (trade.side === 'long' || trade.side === 'buy' || trade.side === 'B') : (new Date(trade.entryDate) < new Date(trade.closeDate))
     acc[date].longNumber += isLong ? 1 : 0
     acc[date].shortNumber += isLong ? 0 : 1
     acc[date].trades.push(trade)

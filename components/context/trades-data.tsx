@@ -43,7 +43,7 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       // Initialize dateRange based on fetched trades
       if (tradesData.length > 0) {
-        const dates = tradesData.map(trade => new Date(trade.buyDate))
+        const dates = tradesData.map(trade => new Date(trade.entryDate))
         const minDate = new Date(Math.min(...dates.map(date => date.getTime())))
         const maxDate = new Date(Math.max(
           ...dates.map(date => date.getTime()),
@@ -63,11 +63,10 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [fetchTrades])
 
   const formattedTrades = useMemo(() => {
-    console.log('formattedTrades', trades, instruments, accountNumbers, dateRange)
     return trades
-      .sort((a, b) => new Date(a.buyDate).getTime() - new Date(b.buyDate).getTime())
+      .sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime())
       .filter((trade) => {
-        const buyDate = new Date(trade.buyDate)
+        const buyDate = new Date(trade.entryDate)
         if (isNaN(buyDate.getTime())) return false
         if (!(instruments.length===0) && !instruments.includes(trade.instrument)) return false
         if (!(accountNumbers.length===0) && !accountNumbers.includes(trade.accountNumber)) return false

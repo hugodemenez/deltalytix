@@ -39,11 +39,11 @@ const prisma = new PrismaClient().$extends({
             if (trade.accountNumber && typeof trade.accountNumber === 'string') {
               trade.accountNumber = encrypt(trade.accountNumber);
             }
-            if (trade.buyPrice) {
-              trade.buyPrice = encrypt(trade.buyPrice);
+            if (trade.entryPrice) {
+              trade.entryPrice = encrypt(trade.entryPrice);
             }
-            if (trade.sellPrice) {
-              trade.sellPrice = encrypt(trade.sellPrice);
+            if (trade.closePrice) {
+              trade.closePrice = encrypt(trade.closePrice);
             }
             // if (trade.userId) {
             //   trade.userId = encrypt(trade.userId);
@@ -59,11 +59,11 @@ const prisma = new PrismaClient().$extends({
           if (trade.accountNumber && typeof trade.accountNumber === 'string') {
             trade.accountNumber = decrypt(trade.accountNumber);
           }
-          if (trade.buyPrice) {
-            trade.buyPrice = decrypt(trade.buyPrice);
+          if (trade.entryPrice) {
+            trade.entryPrice = decrypt(trade.entryPrice);
           }
-          if (trade.sellPrice) {
-            trade.sellPrice = decrypt(trade.sellPrice);
+          if (trade.closePrice) {
+            trade.closePrice = decrypt(trade.closePrice);
           }
           // if (trade.userId) {
           //   trade.userId = decrypt(trade.userId);

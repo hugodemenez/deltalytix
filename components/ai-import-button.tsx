@@ -317,7 +317,7 @@ export default function Component() {
   }
 
   function generateTradeHash(trade: Trade): number {
-    const stringToHash = `${trade.userId}${trade.accountNumber}${trade.instrument}${trade.quantity}${trade.buyPrice}${trade.sellPrice}${trade.buyDate}${trade.sellDate}${trade.pnl}${trade.commission}${trade.timeInPosition}${trade.buyId}${trade.sellId}`;
+    const stringToHash = `${trade.userId}${trade.accountNumber}${trade.instrument}${trade.quantity}${trade.entryPrice}${trade.closePrice}${trade.entryDate}${trade.closeDate}${trade.pnl}${trade.commission}${trade.timeInPosition}${trade.entryId}${trade.closeId}`;
   
     let hash = 0;
     for (let i = 0; i < stringToHash.length; i++) {
@@ -350,7 +350,7 @@ export default function Component() {
               item[key] = quantity;
               break;
             case 'pnl':
-              item[key] = formatPnl(cellValue).toString();
+              item[key] = formatPnl(cellValue);
               break;
             case 'commission':
               commission = parseFloat(cellValue) || 0;
@@ -381,8 +381,8 @@ export default function Component() {
     });
 
     const filteredData = jsonData.filter((item): item is Trade =>
-      !!item.instrument && !!item.quantity && !!item.buyPrice &&
-      !!item.sellPrice && !!item.buyDate && !!item.sellDate && !!item.pnl
+      !!item.instrument && !!item.quantity && !!item.entryPrice &&
+      !!item.closePrice && !!item.entryDate && !!item.closeDate && !!item.pnl
     )
 
     setIsSaving(true)

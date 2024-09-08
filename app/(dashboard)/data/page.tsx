@@ -117,7 +117,7 @@ export default function DashboardPage() {
           variant: 'destructive',
         })
       }
-    }, 500),
+    }, 1000),
     [setTrades]
   )
 

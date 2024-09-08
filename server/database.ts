@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 
 
 export async function saveTrades(data: Trade[]) {
+  console.log('data', data)
     const prisma = new PrismaClient()
     await prisma.trade.createMany({data:data,skipDuplicates: true}).catch((e) => {
         console.error(e)
