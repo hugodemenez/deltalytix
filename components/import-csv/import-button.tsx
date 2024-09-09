@@ -100,7 +100,7 @@ export default function ImportButton() {
   }
 
    const generateTradeHash = (trade: Partial<Trade>): string => {
-    const hashString = `${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}`
+    const hashString = `${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}`
     return hashString
   }
 
@@ -125,7 +125,7 @@ export default function ImportButton() {
           userId: user.id,
         }))
       } else {
-        csvData.slice(1).forEach(row => {
+        csvData.forEach(row => {
           const item: Partial<Trade> = {};
           let quantity = 0;
           let commission = 0;
@@ -201,6 +201,15 @@ export default function ImportButton() {
         title: "Import Successful",
         description: `${newTrades.length} trades have been imported.`,
       })
+      // Reset the import process
+      setImportType('rithmic')
+      setStep(0)
+      setRawCsvData([])
+      setCsvData([])
+      setHeaders([])
+      setMappings({})
+      setAccountNumber('')
+      setNewAccountNumber('')
       router.refresh()
     } catch (error) {
       console.error('Error saving trades:', error)

@@ -22,38 +22,44 @@ export default function FileUpload({
 }: FileUploadProps) {
 
   const processRithmicCsv = useCallback((data: string[][]) => {
-    const processedData: string[][] = []
-    let currentAccount = ''
-    let currentInstrument = ''
-    let isHeaderRow = false
-    let headers: string[] = []
 
+    const processedData: string[][] = [];
+    let currentAccountNumber = '';
+    let currentInstrument = '';
+    let headers: string[] = [];
+  
     const isAccountNumber = (value: string) => {
-      return /^(?=.*[a-zA-Z])(?=.*\d).{5,}$/.test(value);
-    }
-
+      return value.length > 4 && 
+             !/^[A-Z]{3}\d$/.test(value) && 
+             !/^\d+$/.test(value) && 
+             value !== 'Account' && 
+             value !== 'Entry Order Number';
+    };
+  
+    const isInstrument = (value: string) => {
+      return /^[A-Z]{3}\d$/.test(value);
+    };
+  
     data.forEach((row) => {
       if (row[0] && isAccountNumber(row[0])) {
-        currentAccount = row[0]
-      } else if (row[0] && row[0].length === 4) {
-        currentInstrument = row[0]
+        currentAccountNumber = row[0];
+      } else if (row[0] && isInstrument(row[0])) {
+        currentInstrument = row[0];
       } else if (row[0] === 'Entry Order Number') {
-        isHeaderRow = true
-        headers = ['AccountNumber', 'Instrument', ...row]
-        processedData.push(headers)
-      } else if (isHeaderRow && row[0] && row[0] !== 'Entry Order Number') {
-        processedData.push([currentAccount, currentInstrument, ...row])
+        headers = ['AccountNumber', 'Instrument', ...row];
+      } else if (headers.length > 0 && row[0] && row[0] !== 'Entry Order Number' && row[0] !== 'Account') {
+        processedData.push([currentAccountNumber, currentInstrument, ...row]);
       }
-    })
-
+    });
+  
     if (processedData.length > 0 && headers.length > 0) {
-      setCsvData(processedData)
-      setHeaders(headers)
-      setStep(3) // Skip header selection for Rithmic
+      setCsvData(processedData);
+      setHeaders(headers);
+      setStep(3); // Skip header selection for Rithmic
     } else {
-      setError("Unable to process Rithmic CSV. Please check the file format.")
+      setError("Unable to process Rithmic CSV. Please check the file format.");
     }
-  }, [setCsvData, setHeaders, setStep, setError])
+  }, []);
 
   const processTradezellaOrTradovateCsv = useCallback((data: string[][]) => {
     if (data.length > 0) {

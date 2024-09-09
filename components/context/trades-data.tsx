@@ -40,6 +40,7 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (user) {
       const tradesData = await getTrades(user.id)
       setTrades(tradesData)
+      console.log("Fetched trades:", tradesData)
 
       // Initialize dateRange based on fetched trades
       if (tradesData.length > 0) {
@@ -63,6 +64,7 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [fetchTrades])
 
   const formattedTrades = useMemo(() => {
+    console.log("Formatted trades:", trades)
     return trades
       .sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime())
       .filter((trade) => {
