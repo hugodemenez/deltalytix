@@ -17,6 +17,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { PrismaClient, Trade } from '@prisma/client'
+import ExportButton from '@/components/export-button'
 
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
@@ -174,7 +175,7 @@ export default function DashboardPage() {
     <div className="py-4 sm:py-8 md:py-12 px-4 sm:px-6 md:px-8">
       <Card>
         <CardHeader>
-          <CardTitle>Trade Management Dashboard</CardTitle>
+          <CardTitle className='flex justify-between items-center'>Trade Management Dashboard <ExportButton trades={trades}/></CardTitle>
           <CardDescription>Manage accounts, instruments, and commissions</CardDescription>
         </CardHeader>
         <CardContent>
