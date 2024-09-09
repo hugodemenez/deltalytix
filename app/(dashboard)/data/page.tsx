@@ -274,7 +274,7 @@ export default function DashboardPage() {
                 {expandedAccounts[accountNumber] && (
                   <div id={`account-${accountNumber}`} className="space-y-4 pl-2 sm:pl-4">
                     {Object.entries(instruments).map(([instrumentGroup, trades]) => (
-                      <div key={instrumentGroup} className="bg-gray-100 dark:bg-gray-800 p-3 sm:p-4 rounded-lg">
+                      <div key={instrumentGroup} className="bg-gray-100 dark:bg-white/5 p-3 sm:p-4 rounded-lg">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
                           <h3 className="text-md font-medium mb-2 sm:mb-0">Instrument Group: {instrumentGroup}</h3>
                           <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">

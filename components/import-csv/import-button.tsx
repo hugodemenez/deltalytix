@@ -158,13 +158,29 @@ export default function ImportButton() {
               }
             }
           });
-    
-          if (quantity !== 0) {
-            item.commission = commission / quantity;
-          } else {
-            item.commission = commission;
+
+          // If commission is 0, we default to tradovate values
+          if (commission === 0) {
+            // If ZN, then commission is 1.94 * quantity
+            if (item.instrument?.startsWith('ZN')) {
+              item.commission = 1.94 * quantity
+            }
+            // If ZB, then commission is 2.08 * quantity
+            if (item.instrument?.startsWith('ZB')) {
+              item.commission = 2.08 * quantity
+            }
           }
     
+          // Based on pnl and entryPrice / exitPrice we can know if it was long or short
+          if (item.pnl && item.entryPrice && item.closePrice) {
+            item.side = (item.pnl > 0 && item.entryPrice > item.closePrice) ? 'short' : 'long';
+          } else if (item.pnl && item.entryPrice && item.closePrice) {
+            item.side = (item.pnl < 0 && item.entryPrice < item.closePrice) ? 'short' : 'long';
+            // If entryPrice and closePrice are the same, we need to determine the side based on the date
+            if (item.entryDate && item.closeDate) {
+              item.side = new Date(item.entryDate) < new Date(item.closeDate) ? 'long' : 'short';
+            }
+          }     
           item.userId = user!.id;
     
           if (!item.accountNumber) {

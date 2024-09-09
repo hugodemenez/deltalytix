@@ -61,6 +61,9 @@ export async function deleteInstrumentGroup(accountNumber: string, instrumentGro
 
 export async function updateCommissionForGroup(accountNumber: string, instrumentGroup: string, newCommission: number): Promise<void> {
   // We have to update the commission for all trades in the group and compute based on the quantity
+  console.log('accountNumber', accountNumber)
+  console.log('instrumentGroup', instrumentGroup)
+  console.log('newCommission', newCommission)
   const trades = await prisma.trade.findMany({
     where: {
       accountNumber: accountNumber,
@@ -69,7 +72,8 @@ export async function updateCommissionForGroup(accountNumber: string, instrument
   })
   // For each trade, update the commission
   for (const trade of trades) {
-    const updatedCommission = trade.commission * trade.quantity
+    const updatedCommission = newCommission * trade.quantity
+    console.log('updatedCommission', updatedCommission)
     await prisma.trade.update({
       where: {
         id: trade.id
