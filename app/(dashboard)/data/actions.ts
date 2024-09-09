@@ -60,15 +60,25 @@ export async function deleteInstrumentGroup(accountNumber: string, instrumentGro
 }
 
 export async function updateCommissionForGroup(accountNumber: string, instrumentGroup: string, newCommission: number): Promise<void> {
-  await prisma.trade.updateMany({
+  // We have to update the commission for all trades in the group and compute based on the quantity
+  const trades = await prisma.trade.findMany({
     where: {
       accountNumber: accountNumber,
       instrument: { startsWith: instrumentGroup }
-    },
-    data: {
-      commission: newCommission
     }
   })
+  // For each trade, update the commission
+  for (const trade of trades) {
+    const updatedCommission = trade.commission * trade.quantity
+    await prisma.trade.update({
+      where: {
+        id: trade.id
+      },
+      data: {
+        commission: updatedCommission
+      }
+    })
+  }
 }
 
 export async function renameAccount(oldAccountNumber: string, newAccountNumber: string, userId: string): Promise<void> {

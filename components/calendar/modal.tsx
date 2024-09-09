@@ -69,7 +69,7 @@ export function CalendarModal({
                         )}>
                           ${trade.pnl.toFixed(2)}
                         </TableCell>
-                        <TableCell>${trade.commission.toFixed(2)}</TableCell>
+                        <TableCell>${(trade.commission).toFixed(2)}</TableCell>
                         <TableCell>{parsePositionTime(trade.timeInPosition)}</TableCell>
                       </TableRow>
                     ))}
