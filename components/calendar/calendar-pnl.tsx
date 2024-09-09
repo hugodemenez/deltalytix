@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from "react"
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday } from "date-fns"
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay } from "date-fns"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -35,7 +35,9 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
-  const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  const startDate = startOfWeek(monthStart)
+  const endDate = endOfMonth(monthEnd)
+  const calendarDays = eachDayOfInterval({ start: startDate, end: endDate })
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
