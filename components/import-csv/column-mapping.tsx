@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { XIcon, AlertTriangleIcon } from 'lucide-react'
+import { XIcon, AlertTriangleIcon, InfoIcon } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { generateCsvMapping } from '@/lib/generate-csv-mappings'
 import { readStreamableValue } from 'ai/rsc'
@@ -138,19 +138,18 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
   return (
     <div className="space-y-4">
       <div className="mb-4">
-        <h3 className="text-lg font-medium mb-2">Remaining Fields to Map:</h3>
         <div className="flex flex-wrap gap-2">
           {getRemainingFieldsToMap().map((field, index) => (
             <span key={index} className="bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm">
               {field}
-              {columnConfig[field].required && (
+              {columnConfig[field] && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      <AlertTriangleIcon className="h-4 w-4 ml-1 text-yellow-500 inline" />
+                      {columnConfig[field].required ? <AlertTriangleIcon className="h-4 w-4 ml-1 text-yellow-500 inline" /> : <InfoIcon className="h-4 w-4 ml-1 text-yellow-500 inline" />}
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Required field</p>
+                      <p>{columnConfig[field].required ? "Required field" : "Optional field"}</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

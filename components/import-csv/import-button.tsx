@@ -56,7 +56,7 @@ export default function ImportButton() {
 
   const { toast } = useToast()
   const router = useRouter()
-  const { trades, setTrades } = useTrades()
+  const { trades, setTrades, refreshTrades } = useTrades()
   const { user } = useUser()
 
   const formatPnl = (pnl: string | undefined): {pnl: number, error?: string} => {
@@ -100,7 +100,7 @@ export default function ImportButton() {
   }
 
    const generateTradeHash = (trade: Partial<Trade>): string => {
-    const hashString = `${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}`
+    const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
     return hashString
   }
 
@@ -210,7 +210,9 @@ export default function ImportButton() {
       setMappings({})
       setAccountNumber('')
       setNewAccountNumber('')
-      router.refresh()
+      // Update trades
+      refreshTrades()
+
     } catch (error) {
       console.error('Error saving trades:', error)
       toast({

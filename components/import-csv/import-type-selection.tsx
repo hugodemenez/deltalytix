@@ -12,7 +12,6 @@ interface ImportTypeSelectionProps {
 export default function ImportTypeSelection({ selectedType, setSelectedType }: ImportTypeSelectionProps) {
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Select Import Type</h2>
       <RadioGroup value={selectedType} onValueChange={(value) => setSelectedType(value as ImportType)}>
         <div className="flex items-center space-x-2">
           <RadioGroupItem value="rithmic" id="rithmic" />

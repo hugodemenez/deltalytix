@@ -98,7 +98,6 @@ export default function FileUpload({
 
   return (
     <div className="space-y-4">
-      <p className="text-lg font-semibold">Upload {importType.charAt(0).toUpperCase() + importType.slice(1)} CSV File</p>
       <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer">
         <input {...getInputProps()} />
         {isDragActive ? (
