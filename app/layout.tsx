@@ -6,6 +6,7 @@ import { createClient } from "@/server/auth";
 import Navbar from "@/components/navbar";
 import { UserDataProvider } from "@/components/context/user-data";
 import { Analytics } from "@vercel/analytics/react"
+import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,6 +24,7 @@ export default async function RootLayout({
   return (
     <html lang="en" className="h-screen w-screen">
       <body className={inter.className + " h-screen w-screen overflow-x-hidden"}>
+        <SpeedInsights />
         <Analytics />
         <Toaster />
         {children}
