@@ -281,7 +281,7 @@ export default function DashboardPage() {
                             <Input
                               type="number"
                               placeholder="Commission"
-                              defaultValue={trades[0].commission}
+                              defaultValue={trades[0].commission/trades[0].quantity}
                               className="w-full sm:w-32"
                               onChange={(e) => handleUpdateCommission(accountNumber, instrumentGroup, parseFloat(e.target.value), user)}
                               aria-label={`Update commission for instrument group ${instrumentGroup}`}
