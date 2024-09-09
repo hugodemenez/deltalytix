@@ -8,6 +8,7 @@ import Features from '@/components/features'
 import OpenSource from '@/components/open-source'
 import GitHubRepoCard from '@/components/open-source'
 
+
 export default function LandingPage() {
     const { theme } = useTheme();
     const [videoLoaded, setVideoLoaded] = useState(false);
@@ -100,7 +101,7 @@ export default function LandingPage() {
                     <Features />
                 </section>
                 <section id="open-source" className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
-                    <GitHubRepoCard />
+                <GitHubRepoCard />
                 </section>
             </main>
         </div>

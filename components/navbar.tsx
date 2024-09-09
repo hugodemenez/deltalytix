@@ -24,7 +24,6 @@ import { signOut } from "@/server/auth"
 import { Logo } from './logo'
 import Link from 'next/link'
 import { useTheme } from './context/theme-provider'
-import AiImportButton from './ai-import-button'
 import { EnhancedFilterSelectors } from './enhanced-filter-selectors'
 import ImportButton from './import-csv/import-button'
 

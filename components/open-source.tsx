@@ -1,16 +1,16 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { GitBranchIcon, UsersIcon, BookOpenIcon, ShieldCheckIcon, StarIcon, GitForkIcon } from 'lucide-react'
+import { GitBranchIcon, UsersIcon, BookOpenIcon, ShieldCheckIcon, StarIcon } from 'lucide-react'
 import { MdOutlineBrightness1, MdBalance, MdOutlineAdjust } from 'react-icons/md'
 import { LuGitFork } from 'react-icons/lu'
-import { fetchGithubStars, getGithubStats } from '@/server/github'
 import { ChartSSR } from './chart-ssr'
 import Link from 'next/link'
+import { getGithubData } from '@/server/github-data'
 
 const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || 'default_owner'
 const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || 'default_repo'
@@ -34,74 +34,81 @@ interface GithubStats {
   stats: { value: number; date: Date }[];
 }
 
+interface LastCommit {
+  commit: {
+    committer: {
+      date: string;
+    };
+  };
+}
+
+const formatTimeAgo = (dateString: string) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+
+  if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`
+  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`
+  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`
+  return `${seconds} second${seconds !== 1 ? 's' : ''} ago`
+}
+
 export default function GitHubRepoCard() {
-  const [repoData, setRepoData] = useState<RepoData | null>(null)
-  const [githubStats, setGithubStats] = useState<GithubStats | null>(null)
-  const [starCount, setStarCount] = useState<number>(0)
-  const [lastUpdated, setLastUpdated] = useState<string>('')
+  const [repoData, setRepoData] = useState<RepoData | null>(null);
+  const [githubStats, setGithubStats] = useState<GithubStats | null>(null);
+  const [stars, setStars] = useState<number>(0);
+  const [lastCommit, setLastCommit] = useState<LastCommit | null>(null);
+
+  const fetchGithubData = useCallback(async () => {
+    try {
+      const { repoData, githubStats, stars, lastCommit } = await getGithubData();
+      const lastUpdated = lastCommit?.commit?.committer?.date || new Date().toISOString();
+      setRepoData(repoData);
+      setGithubStats(githubStats);
+      setStars(stars);
+      setLastCommit(lastCommit);
+    } catch (error) {
+      console.error('Error fetching GitHub data:', error);
+    }
+  }, []);
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [repoResponse, statsResponse, starsResponse] = await Promise.all([
-          fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`),
-          getGithubStats(),
-          fetchGithubStars()
-        ])
-        const repoData = await repoResponse.json()
-        setRepoData(repoData)
-        setGithubStats(statsResponse)
-        setStarCount(starsResponse.stargazers_count)
-        setLastUpdated(new Date().toISOString())
-      } catch (error) {
-        console.error('Error fetching data:', error)
-      }
-    }
+    fetchGithubData();
+    const intervalId = setInterval(fetchGithubData, 3600000); // Refresh every hour
+    return () => clearInterval(intervalId);
+  }, [fetchGithubData]);
 
-    fetchData()
-    const intervalId = setInterval(fetchData, 3600000) // Update every hour
-
-    return () => clearInterval(intervalId)
-  }, [])
-
-  if (!repoData || !githubStats) return <div className="text-center p-4">Loading...</div>
-
-  const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-    const minutes = Math.floor(seconds / 60)
-    const hours = Math.floor(minutes / 60)
-    const days = Math.floor(hours / 24)
-
-    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`
-    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`
-    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`
-    return `${seconds} second${seconds !== 1 ? 's' : ''} ago`
+  if (!repoData || !githubStats || !lastCommit) {
+    return <div className="text-center p-4">Loading GitHub data...</div>;
   }
 
+  const lastUpdated = lastCommit.commit.committer.date;
+
   return (
-    <div className=" px-4 mb-16 md:mb-32">
-      <div className="mb-12">
-        <h2 className="text-3xl md:text-4xl mb-4 font-medium text-primary">Open startup</h2>
-        <p className="text-muted-foreground max-w-[500px]">
+    <div className="px-4 mb-8 md:mb-16 lg:mb-32">
+      <div className="mb-6 md:mb-12">
+        <h2 className="text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-4 font-medium text-primary">Open startup</h2>
+        <p className="text-sm md:text-base text-muted-foreground max-w-[500px]">
           We believe in being as transparent as possible, from <a href={`https://github.com/${REPO_OWNER}/${REPO_NAME}`} target="_blank" rel="noreferrer" className="underline">code</a> to metrics. You can also request a feature and vote on which ones we should prioritize.
         </p>
       </div>
-      <Card className="border border-border bg-background p-4 md:p-8 lg:p-10">
-        <div className="flex flex-col lg:flex-row lg:space-x-16">
-          <div className="lg:basis-1/2 mb-8 lg:mb-0">
+      <Card className="border border-border bg-background p-4 md:p-6 lg:p-8">
+        <div className="flex flex-col lg:flex-row lg:space-x-8 xl:space-x-16">
+          <div className="lg:basis-1/2 mb-6 lg:mb-0">
             <Accordion type="single" collapsible className="w-full">
               <AccordionItem value="open-source">
                 <AccordionTrigger className="flex items-center justify-between text-primary">
                   <div className="flex items-center space-x-2">
-                    <GitBranchIcon className="h-6 w-6 md:h-8 md:w-8" />
-                    <span className="text-base md:text-lg">Open source</span>
+                    <GitBranchIcon className="h-5 w-5 md:h-6 md:w-6" />
+                    <span className="text-sm md:text-base lg:text-lg">Open source</span>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground">
+                <AccordionContent className="text-xs md:text-sm text-muted-foreground">
                   <p>All of our code is fully open source: clone, fork and contribute to {repoData.name}.</p>
-                  <Button variant="outline" className="mt-4 mb-2 border-primary text-primary">
+                  <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
                     View repository
                   </Button>
                 </AccordionContent>
@@ -109,13 +116,13 @@ export default function GitHubRepoCard() {
               <AccordionItem value="community">
                 <AccordionTrigger className="flex items-center justify-between text-primary">
                   <div className="flex items-center space-x-2">
-                    <UsersIcon className="h-6 w-6 md:h-8 md:w-8" />
-                    <span className="text-base md:text-lg">Community</span>
+                    <UsersIcon className="h-5 w-5 md:h-6 md:w-6" />
+                    <span className="text-sm md:text-base lg:text-lg">Community</span>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground">
+                <AccordionContent className="text-xs md:text-sm text-muted-foreground">
                   <p>Join a community of traders passionate about algorithmic trading and financial analysis.</p>
-                  <Button variant="outline" className="mt-4 mb-2 border-primary text-primary">
+                  <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
                     <a href={process.env.NEXT_PUBLIC_DISCORD_INVITATION} target="_blank" rel="noreferrer">
                       Join Community
                     </a>
@@ -125,13 +132,13 @@ export default function GitHubRepoCard() {
               <AccordionItem value="open-roadmap">
                 <AccordionTrigger className="flex items-center justify-between text-primary">
                   <div className="flex items-center space-x-2">
-                    <BookOpenIcon className="h-6 w-6 md:h-8 md:w-8" />
-                    <span className="text-base md:text-lg">Open roadmap</span>
+                    <BookOpenIcon className="h-5 w-5 md:h-6 md:w-6" />
+                    <span className="text-sm md:text-base lg:text-lg">Open roadmap</span>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground">
+                <AccordionContent className="text-xs md:text-sm text-muted-foreground">
                   <p>Missing a feature? Start a discussion, report an issue, contribute the code, or even fork the repository.</p>
-                  <Button variant="outline" className="mt-4 mb-2 border-primary text-primary">
+                  <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
                     <Link href="/updates">View Updates</Link>
                   </Button>
                 </AccordionContent>
@@ -139,37 +146,37 @@ export default function GitHubRepoCard() {
               <AccordionItem value="security">
                 <AccordionTrigger className="flex items-center justify-between text-primary">
                   <div className="flex items-center space-x-2">
-                    <ShieldCheckIcon className="h-6 w-6 md:h-8 md:w-8" />
-                    <span className="text-base md:text-lg">Security</span>
+                    <ShieldCheckIcon className="h-5 w-5 md:h-6 md:w-6" />
+                    <span className="text-sm md:text-base lg:text-lg">Security</span>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="text-sm text-muted-foreground">
+                <AccordionContent className="text-xs md:text-sm text-muted-foreground">
                   <p>We take security seriously. Learn about our security measures and how to report vulnerabilities.</p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
           </div>
           <div className="lg:basis-1/2">
-            <Card className="w-full h-full border border-border bg-card p-4 md:p-6 lg:p-8">
-              <CardHeader className="border-b border-border pb-4 mb-4">
-                <CardTitle className="font-medium text-lg md:text-xl lg:text-2xl text-primary">{repoData.name}</CardTitle>
+            <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
+              <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
+                <CardTitle className="font-medium text-base md:text-lg lg:text-xl text-primary">{repoData.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge variant="outline" className="text-muted-foreground">{repoData.language}</Badge>
-                  {repoData.license && <Badge variant="outline" className="text-muted-foreground">{repoData.license.spdx_id}</Badge>}
+                <div className="flex flex-wrap gap-2 mb-3 md:mb-4">
+                  <Badge variant="outline" className="text-muted-foreground text-xs md:text-sm">{repoData.language}</Badge>
+                  {repoData.license && <Badge variant="outline" className="text-muted-foreground text-xs md:text-sm">{repoData.license.spdx_id}</Badge>}
                 </div>
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-6">
+                <div className="flex flex-wrap gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
                   <div className="flex items-center space-x-1">
-                    <MdOutlineBrightness1 />
+                    <MdOutlineBrightness1 className="w-3 h-3 md:w-4 md:h-4" />
                     <span>{repoData.language}</span>
                   </div>
                   <div className="flex items-center space-x-1">
-                    <MdBalance />
+                    <MdBalance className="w-3 h-3 md:w-4 md:h-4" />
                     <span>{repoData.license?.spdx_id || 'N/A'}</span>
                   </div>
                   <div className="flex items-center space-x-1">
-                    <StarIcon className="w-3 h-3" />
+                    <StarIcon className="w-3 h-3 md:w-4 md:h-4" />
                     <span>
                       {Intl.NumberFormat("en", {
                         notation: "compact",
@@ -179,7 +186,7 @@ export default function GitHubRepoCard() {
                     </span>
                   </div>
                   <div className="flex items-center space-x-1">
-                    <LuGitFork />
+                    <LuGitFork className="w-3 h-3 md:w-4 md:h-4" />
                     <span>
                       {Intl.NumberFormat("en", {
                         notation: "compact",
@@ -189,7 +196,7 @@ export default function GitHubRepoCard() {
                     </span>
                   </div>
                   <div className="flex items-center space-x-1">
-                    <MdOutlineAdjust />
+                    <MdOutlineAdjust className="w-3 h-3 md:w-4 md:h-4" />
                     <span>
                       {Intl.NumberFormat("en", {
                         notation: "compact",
@@ -199,28 +206,28 @@ export default function GitHubRepoCard() {
                     </span>
                   </div>
                 </div>
-                <div className="pb-10 mt-10 h-[130px]">
+                <div className="pb-6 md:pb-10 mt-6 md:mt-10 h-[100px] md:h-[130px]">
                   <ChartSSR data={githubStats.stats} />
-                  <p className="text-muted-foreground text-sm mt-4">
-                    Updated {formatTimeAgo(lastUpdated)}
+                  <p className="text-muted-foreground text-xs md:text-sm mt-2 md:mt-4">
+                    Last updated {formatTimeAgo(lastUpdated)}
                   </p>
                 </div>
                 <a
                   href={`https://github.com/${REPO_OWNER}/${REPO_NAME}`}
-                  className="border border-border flex justify-center h-8 leading-[30px] text-muted-foreground mt-4"
+                  className="border border-border flex justify-center h-7 md:h-8 leading-[28px] md:leading-[30px] text-muted-foreground mt-3 md:mt-4"
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <div className="bg-background pl-2 pr-3 text-[14px] flex items-center space-x-2 border-r-[1px] border-border">
-                    <StarIcon className="w-4 h-4" />
+                  <div className="bg-background pl-2 pr-3 text-xs md:text-sm flex items-center space-x-2 border-r-[1px] border-border">
+                    <StarIcon className="w-3 h-3 md:w-4 md:h-4" />
                     <span className="font-medium">Star</span>
                   </div>
-                  <div className="px-4 text-[14px]">
+                  <div className="px-3 md:px-4 text-xs md:text-sm items-center flex">
                     {Intl.NumberFormat("en", {
                       notation: "compact",
                       minimumFractionDigits: 0,
                       maximumFractionDigits: 1,
-                    }).format(starCount)}
+                    }).format(stars)}
                   </div>
                 </a>
               </CardContent>
