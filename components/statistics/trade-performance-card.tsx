@@ -25,7 +25,7 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
 
   const positiveColor = "hsl(var(--chart-2))" // Green color
   const negativeColor = "hsl(var(--chart-1))" // Red color
-  const neutralColor = "hsl(var(--muted-foreground))" // Neutral color for breakeven
+  const neutralColor = "hsl(var(--secondary))" // Neutral color for breakeven
 
   const data = [
     { name: 'Win', value: winRate, color: positiveColor },

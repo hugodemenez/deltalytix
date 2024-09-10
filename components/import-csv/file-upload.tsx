@@ -78,7 +78,7 @@ export default function FileUpload({
       complete: (result) => {
         if (result.data && Array.isArray(result.data) && result.data.length > 0) {
           setRawCsvData(result.data as string[][])
-          if (importType === 'rithmic') {
+          if (importType === 'rithmic-performance') {
             processRithmicCsv(result.data as string[][])
           } else {
             processTradezellaOrTradovateCsv(result.data as string[][])

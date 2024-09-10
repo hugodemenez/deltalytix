@@ -29,3 +29,11 @@ model Trade {
   comment        String?
   @@schema("public")
 }
+
+model TickDetails{
+  id String @id @unique @default(uuid())
+  ticker String
+  tickValue Float
+  tickSize Float
+  @@schema("public")
+}

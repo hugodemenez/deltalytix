@@ -43,7 +43,7 @@ const columnConfig: ColumnConfig = {
 export default function ImportButton() {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [step, setStep] = useState<number>(0)
-  const [importType, setImportType] = useState<ImportType>('rithmic')
+  const [importType, setImportType] = useState<ImportType>('rithmic-performance')
   const [rawCsvData, setRawCsvData] = useState<string[][]>([])
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
@@ -218,7 +218,7 @@ export default function ImportButton() {
         description: `${newTrades.length} trades have been imported.`,
       })
       // Reset the import process
-      setImportType('rithmic')
+      setImportType('rithmic-performance')
       setStep(0)
       setRawCsvData([])
       setCsvData([])

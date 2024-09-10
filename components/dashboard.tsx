@@ -1,37 +1,37 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
-import { DateRange } from 'react-day-picker'
+import React, { useState, useEffect } from 'react'
 import { useFormattedTrades, useTrades } from './context/trades-data'
 import { CalendarData } from '@/lib/types'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
-import Statistics from './statistics'
+import StatisticsSection from './sections/statistics-section'
 import { GraphsSection } from './sections/graphs-section'
 import { CalendarSection } from './sections/calendar-section'
-import StatisticsSection from './sections/statistics-section'
-import CalendarPnl from './calendar/calendar-pnl'
-import { AnalyticsSection } from './sections/analytics-section'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import ImportButton from './import-csv/import-button'
+import LoadingOverlay from '@/components/loading-overlay'
 
 export default function Dashboard() {
-  const { trades } = useTrades()
-  const { formattedTrades, instruments, accountNumbers, dateRange, setInstruments, setAccountNumbers, setDateRange } = useFormattedTrades()
+  const { trades, isLoading } = useTrades()
+  const { formattedTrades } = useFormattedTrades()
 
-  const statistics = calculateStatistics(formattedTrades);
-  const calendarData: CalendarData = formatCalendarData(formattedTrades);
-
-  const [isDialogOpen, setIsDialogOpen] = useState(trades.length === 0)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   useEffect(() => {
-    setIsDialogOpen(trades.length === 0)
-  }, [trades])
+    if (!isLoading) {
+      setIsDialogOpen(trades.length === 0)
+    }
+  }, [isLoading, trades.length])
+
+  const statistics = calculateStatistics(formattedTrades)
+  const calendarData: CalendarData = formatCalendarData(formattedTrades)
 
   return (
     <>
+      {isLoading && <LoadingOverlay />}
       <div className={`flex flex-col lg:flex-row min-h-screen ${isDialogOpen ? 'blur-sm' : ''}`}>
         <main className="flex-grow py-4 lg:py-6 overflow-x-hidden">
-          <StatisticsSection statistics={statistics}></StatisticsSection>
+          <StatisticsSection statistics={statistics} />
           <GraphsSection calendarData={calendarData} />
           <CalendarSection calendarData={calendarData} />
         </main>
@@ -50,5 +50,5 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

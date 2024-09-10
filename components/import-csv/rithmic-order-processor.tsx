@@ -5,19 +5,18 @@ import { Input } from "@/components/ui/input"
 import { Trade } from '@prisma/client'
 import { useUser } from '../context/user-data'
 import debounce from 'lodash/debounce'
+import { Button } from '../ui/button'
+import { toast } from '@/hooks/use-toast'
+import { getTickDetails } from '@/server/database'
 
 interface RithmicOrder {
   "Account": string
-  "Status": string
   "Buy/Sell": "B" | "S"
-  "Qty To Fill": string
-  "Max Show Qty": string
+  "Qty Filled": string
   "Symbol": string
-  "Price Type": string
   "Limit Price": string
   "Order Number": string
   "Update Time (RDT)": string
-  "Qty Filled": string
   "Commission Fill Rate": string
   "Closed Profit/Loss": string
 }
@@ -31,9 +30,22 @@ interface RithmicOrderProcessorProps {
 
 
 export default function RithmicOrderProcessor({ csvData, headers, setProcessedTrades }: RithmicOrderProcessorProps) {
-  const [tickValues, setTickValues] = useState<{ [key: string]: { tickValue: number } }>({})
+  const [tickValues, setTickValues] = useState<{ [key: string]: { tickValue: number, tickSize: number } }>({})
   const [trades, setTrades] = useState<Trade[]>([])
   const { user } = useUser()
+
+  useEffect(() => {
+    const fetchTickDetails = async () => {
+      const tickDetails = await getTickDetails()
+      // Format the tickDetails to be used in the tickValues
+      const tickValues = tickDetails.reduce((acc, tickDetail) => {
+        acc[tickDetail.ticker] = { tickValue: tickDetail.tickValue, tickSize: tickDetail.tickSize }
+        return acc
+      }, {} as { [key: string]: { tickValue: number, tickSize: number } })
+      setTickValues(tickValues)
+    }
+    fetchTickDetails()
+  }, [])
 
   const orders: RithmicOrder[] = useMemo(() => {
     return csvData.map(row => {
@@ -53,14 +65,18 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     if (!partialTrade.entryPrice || !partialTrade.closePrice || !partialTrade.quantity) {
       return 0
     }
-    const tickValue = tickValues[partialTrade.instrument!]?.tickValue
+    // To get instrument tick value, we only get first 2 characters of the instrument
+    const instrument = partialTrade.instrument!.slice(0, 2)
+    const tickValue = tickValues[instrument]?.tickValue
+    const tickSize = tickValues[instrument]?.tickSize
     if (!tickValue) {
       return 0
     }
     if (partialTrade.side === 'Short') {
-      return (parseFloat(partialTrade.entryPrice!) - parseFloat(partialTrade.closePrice!)) * partialTrade.quantity! * tickValue
+      // Round to 2 decimal places
+      return Math.round((parseFloat(partialTrade.entryPrice!) - parseFloat(partialTrade.closePrice!)) / tickSize * partialTrade.quantity! * tickValue * 100) / 100
     }
-    return (parseFloat(partialTrade.closePrice!) - parseFloat(partialTrade.entryPrice!)) * partialTrade.quantity! * tickValue
+    return Math.round((parseFloat(partialTrade.closePrice!) - parseFloat(partialTrade.entryPrice!)) / tickSize * partialTrade.quantity! * tickValue * 100) / 100
   }, [tickValues])
 
   const completeTrade = useCallback((partialTrade: Partial<Trade>): Trade => {
@@ -87,7 +103,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
 
   const processOrders = useCallback(() => {
     const trades: Partial<Trade>[] = []
-    const ongoingTrades: { symbol: string, remainingQuantity: number }[] = []
+    const ongoingTrades: { symbol: string, remainingQuantity: number, closePrice: string }[] = []
     let lastPnl = 0
 
     orders.forEach((order) => {
@@ -113,25 +129,6 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
         return;
       }
 
-      // If pnl is different from 0 and different than previous pnl, we calculate the tick value
-      if (closedPnL !== 0 && closedPnL !== lastPnl) {
-        // We calculate the tick value of the previous trade
-        // find the previous trade in the trades array
-        // We should sort the trades by closeDate desc (because latest trades is element 0)
-        // We filter out the trades that are not closed
-        const previousTrade = trades.filter(trade => trade.closeDate !== undefined).sort((a, b) => new Date(b.closeDate!).getTime() - new Date(a.closeDate!).getTime())[0]
-        if (previousTrade) {
-          // Check if the tick value is already set
-          if (!tickValues[previousTrade.instrument!]) {
-            // We calculate the price change
-            const priceChange = Math.abs(parseFloat(previousTrade.closePrice!) - parseFloat(previousTrade.entryPrice!))
-            // Then we know for the price change, the value it represents for 1 quantity and 1 price change
-            const tickValue = Math.abs((closedPnL - (previousTrade.pnl || 0))) / (quantity * priceChange)
-            handleTickValueChange(previousTrade.instrument!, tickValue.toString())
-          }
-          lastPnl = closedPnL
-        }
-      }
 
       const openedPositions = trades.filter(trade => trade.closeDate === undefined)
       if (openedPositions.length === 0) {
@@ -156,37 +153,49 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
           if (matchedTrade.side === (side === 'B' ? 'Long' : 'Short')) {
             // If same side, we increase the size of the position
             matchedTrade.quantity = (matchedTrade.quantity || 0) + quantity
+            // We add the price to the entry price
+            matchedTrade.entryPrice = ((parseFloat(matchedTrade.entryPrice || '0')  + (price * quantity)) ).toString()
           }
           else {
             // If opposite side and quantity is equal to the matchedTrade.quantity, close the position
             if (matchedTrade.quantity === quantity) {
+              matchedTrade.entryPrice = (parseFloat(matchedTrade.entryPrice || '0') / matchedTrade.quantity!).toString()
               matchedTrade.closeId = orderNumber
               matchedTrade.closeDate = timestamp
               matchedTrade.closePrice = price.toString()
               matchedTrade.commission = (matchedTrade.commission || 0) + commission
               matchedTrade.timeInPosition = (new Date(timestamp).getTime() - new Date(matchedTrade.entryDate!).getTime()) / 1000
+              matchedTrade.pnl = computePnl(matchedTrade)
             }
             else {
               // If opposite side and quantity is less than the matchedTrade.quantity, remember the quantity remaining to be closed
               if (matchedTrade.side !== (side === 'B' ? 'Long' : 'Short')) {
+                console.log('Reducing trade', matchedTrade)
                 // We add to a list of remaining trades to be closed
                 // We check beforehand if the trade is already in the list
                 const existingTrade = ongoingTrades.find(trade => trade.symbol === symbol)
                 if (existingTrade) {
                   // We decrease the remaining quantity of the trade
                   existingTrade.remainingQuantity -= quantity
+                  // We add the price to the exit price
+                  existingTrade.closePrice = (parseFloat(existingTrade.closePrice || '0')  + (price * quantity)).toString()
                   // If the remaining quantity is 0, we remove the trade from the list
                   if (existingTrade.remainingQuantity === 0) {
                     ongoingTrades.splice(ongoingTrades.indexOf(existingTrade), 1)
+                    console.log('Trade closed', existingTrade)
                     // We add remaining fields to the trade
+                    matchedTrade.entryPrice = (parseFloat(matchedTrade.entryPrice || '0') / matchedTrade.quantity!).toFixed(3).toString()
                     matchedTrade.closeDate = timestamp
-                    matchedTrade.closePrice = price.toString()
+                    matchedTrade.closePrice = (parseFloat(existingTrade.closePrice || '0') / matchedTrade.quantity!).toFixed(3).toString()
                     matchedTrade.commission = (matchedTrade.commission || 0) + commission
+                    matchedTrade.timeInPosition = (new Date(timestamp).getTime() - new Date(matchedTrade.entryDate!).getTime()) / 1000
+                    matchedTrade.closeId = orderNumber
+                    matchedTrade.pnl = computePnl(matchedTrade)
                   }
                 }
                 // There is no ongoingTrade for this symbol, we create a new one
                 else {
-                  ongoingTrades.push({ symbol: symbol, remainingQuantity: matchedTrade.quantity! - quantity })
+                  ongoingTrades.push({ symbol: symbol, remainingQuantity: matchedTrade.quantity! - quantity, closePrice: price.toString() })
                 }
               }
               // If same side, we increase the size of the position
@@ -224,21 +233,6 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     processOrders();
   }, [processOrders]);
 
-  const handleTickValueChange = useCallback((symbol: string, value: string) => {
-    setTickValues(prev => ({ ...prev, [symbol]: { tickValue: parseFloat(value) || 0 } }))
-  }, [])
-
-  const debouncedProcessOrders = useCallback(
-    debounce(() => {
-      processOrders()
-    }, 1000),
-    [processOrders]
-  )
-
-  const handleTickValueChangeWithDebounce = useCallback((symbol: string, value: string) => {
-    handleTickValueChange(symbol, value)
-    debouncedProcessOrders()
-  }, [handleTickValueChange, debouncedProcessOrders])
 
   return (
     <div className="space-y-4">
@@ -253,12 +247,13 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
               <Input
                 id={`tick-${symbol}`}
                 type="number"
-                value={tickValues[symbol]?.tickValue || ""}
-                onChange={(e) => handleTickValueChangeWithDebounce(symbol, e.target.value)}
+                value={tickValues[symbol.slice(0, 2)]?.tickValue || ""}
+                disabled
                 placeholder="Enter tick value"
                 className="w-full"
                 aria-label={`Tick value for ${symbol}`}
               />
+              <Button onClick={()=>toast({title: "Wrong / missing tick value", description: `Please contact support for ${symbol} at support@deltalytix.app we are working on automating this process`})}>Report wrong / missing tick value</Button>
             </div>
           ))}
         </div>

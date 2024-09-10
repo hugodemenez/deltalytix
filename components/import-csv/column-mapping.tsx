@@ -69,7 +69,7 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
         }
       }
 
-      if (importType === 'rithmic') {
+      if (importType === 'rithmic-performance') {
         newMappings['AccountNumber'] = 'accountNumber';
         newMappings['Instrument'] = 'instrument';
       }
@@ -140,13 +140,13 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
       <div className="mb-4">
         <div className="flex flex-wrap gap-2">
           {getRemainingFieldsToMap().map((field, index) => (
-            <span key={index} className="bg-primary text-primary-foreground px-2 py-1 rounded-md text-sm">
+            <span key={index} className={`bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-sm`}>
               {field}
               {columnConfig[field] && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
-                      {columnConfig[field].required ? <AlertTriangleIcon className="h-4 w-4 ml-1 text-yellow-500 inline" /> : <InfoIcon className="h-4 w-4 ml-1 text-yellow-500 inline" />}
+                      {columnConfig[field].required ? <AlertTriangleIcon className="h-4 w-4 ml-1 text-red-500 inline" /> : <InfoIcon className="h-4 w-4 ml-1 text-yellow-500 inline" />}
                     </TooltipTrigger>
                     <TooltipContent>
                       <p>{columnConfig[field].required ? "Required field" : "Optional field"}</p>
