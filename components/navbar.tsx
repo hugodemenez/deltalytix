@@ -26,6 +26,7 @@ import Link from 'next/link'
 import { useTheme } from './context/theme-provider'
 import { EnhancedFilterSelectors } from './enhanced-filter-selectors'
 import ImportButton from './import-csv/import-button'
+import DateCalendarFilter from './filters/date-calendar-filter'
 
 export default function Navbar() {
   const { user } = useUser()
@@ -34,17 +35,17 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-6 text-primary bg-background shadow-sm w-screen pr-6">
-        <div className="flex items-center space-x-4">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-6 text-primary bg-background shadow-sm w-screen pr-6 gap-x-4">
           <Link href="/dashboard">
             <Logo className='fill-black h-6 w-6 dark:fill-white' />
           </Link>
-        </div>
-        <div className="flex-1 max-w-2xl mx-4">
-          <EnhancedFilterSelectors />
+        <div className="flex-1 max-w-2xl">
+          <DateCalendarFilter />
         </div>
         <div className="flex items-center space-x-4">
+          <div className='hidden md:flex'>
           <ImportButton />
+          </div>
           <Button variant="ghost" size="icon" onClick={toggleTheme} className='hidden md:flex'>
             {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
           </Button>

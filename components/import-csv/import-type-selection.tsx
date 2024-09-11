@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export type ImportType = 'other' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' 
+export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate'
 
 interface ImportTypeSelectionProps {
   selectedType: ImportType
@@ -10,12 +10,13 @@ interface ImportTypeSelectionProps {
 }
 
 const videoUrls: Record<ImportType, { url: string, details: string }> = {
-  'other': {
+  '': {
     url: '',
     details: ''
   },
-  'rithmic-performance': {url:
-    process.env.NEXT_PUBLIC_RITHMIC_PERFORMANCE_TUTORIAL_VIDEO || '',
+  'rithmic-performance': {
+    url:
+      process.env.NEXT_PUBLIC_RITHMIC_PERFORMANCE_TUTORIAL_VIDEO || '',
     details: 'Remember to expand every row to see the full details during export.'
   },
   'rithmic-orders': {
@@ -32,7 +33,7 @@ const videoUrls: Record<ImportType, { url: string, details: string }> = {
   },
 }
 
-const importTypes: ImportType[] = ['other', 'rithmic-performance', 'rithmic-orders', 'tradezella', 'tradovate']
+const importTypes: ImportType[] = ['', 'rithmic-performance', 'rithmic-orders', 'tradezella', 'tradovate']
 
 export default function ImportTypeSelection({ selectedType, setSelectedType }: ImportTypeSelectionProps) {
   const videoRefs = useRef<Record<ImportType, HTMLVideoElement | null>>({
@@ -40,7 +41,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType }: I
     'rithmic-orders': null,
     'tradezella': null,
     'tradovate': null,
-    'other': null,
+    '': null,
   })
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType }: I
                     {type.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                   </div>
                   <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                    {type === 'other' ? 'CSV file with AI mapping' : `Import from ${type}`}
+                    {type === '' ? 'CSV file with AI mapping' : `Import from ${type}`}
                   </div>
                 </div>
               </Button>
@@ -91,48 +92,54 @@ export default function ImportTypeSelection({ selectedType, setSelectedType }: I
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Tutorial Video</h2>
-          <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-            {importTypes.map((type) => (
-              videoUrls[type].url !='' && (
-                <video
-                  key={type}
-                  ref={setVideoRef(type)}
-                  height="600"
-                  width="600"
-                  preload="metadata"
-                  loop
-                  muted
-                  controls
-                  playsInline
-                  className={cn(
-                    "rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover",
-                    selectedType !== type && "hidden"
-                  )}
-                >
-                  <source src={videoUrls[type].url} type="video/mp4" />
-                  <track
-                    src="/path/to/captions.vtt"
-                    kind="subtitles"
-                    srcLang="en"
-                    label="English"
-                  />
-                  Your browser does not support the video tag.
-                </video>
-              )
-            ))}
-          </div>
-          {videoUrls[selectedType] ? (
-            <p className="text-sm text-muted-foreground">
-              Watch this tutorial video to learn how to import data from {selectedType.split('-').join(' ')}.
-              <br />
-              {videoUrls[selectedType].details}
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Tutorial video for {selectedType.split('-').join(' ')} is not available.
-            </p>
-          )}
+          {
+            selectedType !== '' && (
+              <>
+                <h2 className="text-2xl font-bold">Tutorial Video</h2>
+                <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  {importTypes.map((type) => (
+                    videoUrls[type].url != '' && (
+                      <video
+                        key={type}
+                        ref={setVideoRef(type)}
+                        height="600"
+                        width="600"
+                        preload="metadata"
+                        loop
+                        muted
+                        controls
+                        playsInline
+                        className={cn(
+                          "rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover",
+                          selectedType !== type && "hidden"
+                        )}
+                      >
+                        <source src={videoUrls[type].url} type="video/mp4" />
+                        <track
+                          src="/path/to/captions.vtt"
+                          kind="subtitles"
+                          srcLang="en"
+                          label="English"
+                        />
+                        Your browser does not support the video tag.
+                      </video>
+                    )
+                  ))}
+                </div>
+                {videoUrls[selectedType] ? (
+                  <p className="text-sm text-muted-foreground">
+                    Watch this tutorial video to learn how to import data from {selectedType.split('-').join(' ')}.
+                    <br />
+                    {videoUrls[selectedType].details}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Tutorial video for {selectedType.split('-').join(' ')} is not available.
+                  </p>
+                )}
+              </>
+            )
+          }
         </div>
       </div>
     </div>

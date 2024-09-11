@@ -10,7 +10,6 @@ export default function CumulativePnlCard({ cumulativePnl, cumulativeFees }: { c
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">${(cumulativePnl - cumulativeFees).toFixed(2)}</div>
-        <p className="text-xs text-muted-foreground">Since first import</p>
       </CardContent>
     </Card>
   )

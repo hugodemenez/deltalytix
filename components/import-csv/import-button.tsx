@@ -43,7 +43,7 @@ const columnConfig: ColumnConfig = {
 export default function ImportButton() {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [step, setStep] = useState<number>(0)
-  const [importType, setImportType] = useState<ImportType>('rithmic-performance')
+  const [importType, setImportType] = useState<ImportType>('')
   const [rawCsvData, setRawCsvData] = useState<string[][]>([])
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
@@ -87,7 +87,8 @@ export default function ImportButton() {
       return 0;
     }
     if (/^\d+\.\d+$/.test(time)) {
-      const floatTime = parseFloat(time);
+      // Round to the nearest second
+      const floatTime = Math.round(parseFloat(time));
       return floatTime;
     }
     const timeInPosition = time;
@@ -170,17 +171,30 @@ export default function ImportButton() {
               item.commission = 2.08 * quantity
             }
           }
+          else {
+            item.commission = commission
+          }
     
+
+          // On rithmic performance, the side is stored as 'B' or 'S'
+          if (item.side === 'B' || item.side === 'S') {
+            // If side is B or S, then we can set the side based on the side
+            item.side = item.side === 'B' ? 'long' : 'short';
+          } else {
           // Based on pnl and entryPrice / exitPrice we can know if it was long or short
           if (item.pnl && item.entryPrice && item.closePrice) {
-            item.side = (item.pnl > 0 && item.entryPrice > item.closePrice) ? 'short' : 'long';
-          } else if (item.pnl && item.entryPrice && item.closePrice) {
-            item.side = (item.pnl < 0 && item.entryPrice < item.closePrice) ? 'short' : 'long';
-            // If entryPrice and closePrice are the same, we need to determine the side based on the date
-            if (item.entryDate && item.closeDate) {
-              item.side = new Date(item.entryDate) < new Date(item.closeDate) ? 'long' : 'short';
+            if (item.pnl > 0 ) {
+              item.side = (item.entryPrice > item.closePrice) ? 'short' : 'long';
+            } else if (item.pnl < 0) {
+              item.side = (item.entryPrice < item.closePrice) ? 'short' : 'long';
+            } else { // If pnl==0, then we need to determine the side based on the date
+              if (item.entryDate && item.closeDate) {
+                item.side = new Date(item.entryDate) < new Date(item.closeDate) ? 'long' : 'short';
+              }
+              }
             }
-          }     
+          }
+
           item.userId = user!.id;
     
           if (!item.accountNumber) {
@@ -218,7 +232,7 @@ export default function ImportButton() {
         description: `${newTrades.length} trades have been imported.`,
       })
       // Reset the import process
-      setImportType('rithmic-performance')
+      setImportType('')
       setStep(0)
       setRawCsvData([])
       setCsvData([])
