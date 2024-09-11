@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -44,7 +44,7 @@ export default function ImportButton() {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [step, setStep] = useState<number>(0)
   const [importType, setImportType] = useState<ImportType>('rithmic-performance')
-  const [rawCsvData, setRawCsvData] = useState<string[][]>([])
+  const [rawCsvData, setRawCsvData] = useState<string[][][]>([])
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
   const [mappings, setMappings] = useState<{ [key: string]: string }>({})
@@ -125,7 +125,10 @@ export default function ImportButton() {
           userId: user.id,
         }))
       } else {
-        csvData.forEach(row => {
+        csvData.forEach((row, rowIndex) => {
+          // Skip the header row for the first file
+          if (rowIndex === 0 && !accountNumber && !newAccountNumber) return
+
           const item: Partial<Trade> = {};
           let quantity = 0;
           let commission = 0;
@@ -353,6 +356,16 @@ export default function ImportButton() {
         return null
     }
   }
+
+  useEffect(() => {
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      })
+    }
+  }, [error])
 
   return (
     <div>

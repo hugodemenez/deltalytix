@@ -1,11 +1,12 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { ImportType } from './import-type-selection'
+import { Button } from "@/components/ui/button"
 
 interface FileUploadProps {
   importType: ImportType
-  setRawCsvData: React.Dispatch<React.SetStateAction<string[][]>>
+  setRawCsvData: React.Dispatch<React.SetStateAction<string[][][]>>
   setCsvData: React.Dispatch<React.SetStateAction<string[][]>>
   setHeaders: React.Dispatch<React.SetStateAction<string[]>>
   setStep: React.Dispatch<React.SetStateAction<number>>
@@ -20,9 +21,9 @@ export default function FileUpload({
   setStep,
   setError
 }: FileUploadProps) {
+  const [files, setFiles] = useState<File[]>([])
 
   const processRithmicCsv = useCallback((data: string[][]) => {
-
     const processedData: string[][] = [];
     let currentAccountNumber = '';
     let currentInstrument = '';
@@ -59,53 +60,80 @@ export default function FileUpload({
     } else {
       setError("Unable to process Rithmic CSV. Please check the file format.");
     }
-  }, []);
+  }, [setCsvData, setHeaders, setStep, setError]);
 
   const processTradezellaOrTradovateCsv = useCallback((data: string[][]) => {
     if (data.length > 0) {
       const headers = data[0].filter(header => header && header.trim() !== '')
       setHeaders(headers)
-      setCsvData(data)
+      setCsvData(data.slice(1))  // Remove the header row from csvData
       setStep(2) // Go to header selection step
     } else {
       setError("The CSV file appears to be empty or invalid.")
     }
   }, [setCsvData, setHeaders, setStep, setError])
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0]
-    Papa.parse(file, {
-      complete: (result) => {
-        if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-          setRawCsvData(result.data as string[][])
-          if (importType === 'rithmic-performance') {
-            processRithmicCsv(result.data as string[][])
-          } else {
-            processTradezellaOrTradovateCsv(result.data as string[][])
-          }
-          setError(null)
-        } else {
-          setError("The CSV file appears to be empty or invalid.")
-        }
-      },
-      error: (error) => {
-        setError(`Error parsing CSV: ${error.message}`)
-      }
-    })
-  }, [importType, processRithmicCsv, processTradezellaOrTradovateCsv, setRawCsvData, setError])
+  const processFiles = useCallback(() => {
+    let allData: string[][][] = []
+    let processedCount = 0
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
+    const processNextFile = (index: number) => {
+      if (index >= files.length) {
+        setRawCsvData(allData)
+        if (importType === 'rithmic-performance') {
+          processRithmicCsv(allData.flat())
+        } else {
+          processTradezellaOrTradovateCsv(allData.flat())
+        }
+        return
+      }
+
+      Papa.parse(files[index], {
+        complete: (result) => {
+          if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+            allData.push(result.data as string[][])
+            processedCount++
+            processNextFile(index + 1)
+          } else {
+            setError(`File ${files[index].name} appears to be empty or invalid.`)
+          }
+        },
+        error: (error) => {
+          setError(`Error parsing CSV: ${error.message}`)
+        }
+      })
+    }
+
+    processNextFile(0)
+  }, [files, importType, setRawCsvData, setError, processRithmicCsv, processTradezellaOrTradovateCsv])
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    setFiles(prevFiles => [...prevFiles, ...acceptedFiles])
+  }, [])
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, multiple: true })
 
   return (
     <div className="space-y-4">
       <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer">
         <input {...getInputProps()} />
         {isDragActive ? (
-          <p>Drop the CSV file here ...</p>
+          <p>Drop the CSV files here ...</p>
         ) : (
-          <p>Drag and drop a CSV file here, or click to select a file</p>
+          <p>Drag and drop CSV files here, or click to select files</p>
         )}
       </div>
+      {files.length > 0 && (
+        <div>
+          <h3>Selected Files:</h3>
+          <ul>
+            {files.map((file, index) => (
+              <li key={index}>{file.name}</li>
+            ))}
+          </ul>
+          <Button onClick={processFiles}>Process Files</Button>
+        </div>
+      )}
     </div>
   )
 }

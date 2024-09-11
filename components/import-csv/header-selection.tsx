@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 
 interface HeaderSelectionProps {
-  rawCsvData: string[][]
+  rawCsvData: string[][][]
   setCsvData: React.Dispatch<React.SetStateAction<string[][]>>
   setHeaders: React.Dispatch<React.SetStateAction<string[]>>
   setError: React.Dispatch<React.SetStateAction<string | null>>
@@ -15,11 +15,19 @@ interface HeaderSelectionProps {
 export default function HeaderSelection({ rawCsvData, setCsvData, setHeaders, setError }: HeaderSelectionProps) {
   const [selectedHeaderIndex, setSelectedHeaderIndex] = useState<number>(0)
 
-  const processHeaderSelection = useCallback((index: number, data: string[][]) => {
-    const newHeaders = data[index].filter(header => header && header.trim() !== '')
-    console.log('newHeaders', newHeaders)
-    setHeaders(newHeaders)
-    setCsvData(data.slice(index + 1))
+  const processHeaderSelection = useCallback((index: number, data: string[][][]) => {
+    const firstFileHeaders = data[0][index].filter(header => header && header.trim() !== '')
+    setHeaders(firstFileHeaders)
+
+    const processedData = data.flatMap((file, fileIndex) => {
+      if (fileIndex === 0) {
+        return file.slice(index + 1)
+      } else {
+        return file.slice(1) // Remove header for subsequent files
+      }
+    })
+
+    setCsvData(processedData)
     setError(null)
   }, [setCsvData, setHeaders, setError])
 
@@ -41,18 +49,19 @@ export default function HeaderSelection({ rawCsvData, setCsvData, setHeaders, se
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]">Select</TableHead>
-              {rawCsvData[0]?.slice(0, 6).map((_, index) => (
+              {rawCsvData[0][0]?.slice(0, 6).map((_, index) => (
                 <TableHead key={index}>Column {index + 1}</TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rawCsvData.map((row: string[], rowIndex: number) => (
+            {rawCsvData[0].map((row: string[], rowIndex: number) => (
               <TableRow key={rowIndex}>
                 <TableCell className="w-[50px]">
                   <RadioGroup value={selectedHeaderIndex.toString()} onValueChange={handleHeaderSelection}>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value={rowIndex.toString()} id={`row-${rowIndex}`} />
+                      <Label htmlFor={`row-${rowIndex}`}>Row {rowIndex + 1}</Label>
                     </div>
                   </RadioGroup>
                 </TableCell>

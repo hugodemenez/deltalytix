@@ -46,7 +46,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType }: I
   useEffect(() => {
     Object.entries(videoRefs.current).forEach(([type, videoElement]) => {
       if (videoElement) {
-        if (type === selectedType && videoUrls[type]) {
+        if (type === selectedType && videoUrls[type as ImportType].url) {
           videoElement.play().catch(() => {
             // Autoplay was prevented, handle as needed
           })
@@ -94,7 +94,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType }: I
           <h2 className="text-2xl font-bold">Tutorial Video</h2>
           <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
             {importTypes.map((type) => (
-              videoUrls[type].url !='' && (
+              videoUrls[type].url && (
                 <video
                   key={type}
                   ref={setVideoRef(type)}
@@ -122,7 +122,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType }: I
               )
             ))}
           </div>
-          {videoUrls[selectedType] ? (
+          {videoUrls[selectedType].url ? (
             <p className="text-sm text-muted-foreground">
               Watch this tutorial video to learn how to import data from {selectedType.split('-').join(' ')}.
               <br />
