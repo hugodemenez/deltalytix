@@ -18,12 +18,7 @@ export default async function RootLayout({
             <Toaster />
             <Navbar />
             <div className="flex flex-1">
-              <FilterLeftPane />
-              <main className="flex-1 overflow-x-hidden pl-0 sm:pl-64 ">
-                <div className="px-2 sm:px-6 lg:px-32 py-4">
                   {children}
-                </div>
-              </main>
             </div>
           </div>
         </TradeDataProvider>

@@ -40,6 +40,15 @@ export async function fetchGroupedTrades(userId: string): Promise<FetchTradesRes
   }
 }
 
+export async function deleteAccounts(accountNumbers: string[], userId: string): Promise<void> {
+  await prisma.trade.deleteMany({
+    where: {
+      accountNumber: { in: accountNumbers },
+      userId: userId
+    }
+  })
+}
+
 export async function deleteAccount(accountNumber: string, userId: string): Promise<void> {
   await prisma.trade.deleteMany({
     where: {

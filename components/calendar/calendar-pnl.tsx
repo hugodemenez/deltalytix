@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from "react"
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay } from "date-fns"
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek } from "date-fns"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -36,7 +36,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
   const startDate = startOfWeek(monthStart)
-  const endDate = endOfMonth(monthEnd)
+  const endDate = endOfWeek(monthEnd)
   const calendarDays = eachDayOfInterval({ start: startDate, end: endDate })
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
@@ -83,10 +83,26 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
     }
   }
 
+  const calculateMonthlyTotal = () => {
+    return Object.values(calendarData).reduce((total, day) => total + day.pnl, 0)
+  }
+
+  const monthlyTotal = calculateMonthlyTotal()
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl sm:text-2xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
+        <div className="flex items-center space-x-4">
+          <h2 className="text-xl sm:text-2xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
+          <div className={cn(
+            "text-lg font-bold",
+            monthlyTotal >= 0
+              ? "text-green-600 dark:text-green-400"
+              : "text-red-600 dark:text-red-400"
+          )}>
+            ${monthlyTotal.toFixed(2)}
+          </div>
+        </div>
         <div className="flex items-center space-x-2">
           <Button variant="outline" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
             <ChevronLeft className="h-4 w-4" />
@@ -96,19 +112,20 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-1 sm:gap-2 md:gap-4">
-        {WEEKDAYS.map((day) => (
+      <div className="grid grid-cols-8 gap-1 sm:gap-2 md:gap-4">
+        {[...WEEKDAYS, 'Weekly'].map((day) => (
           <div key={day} className="text-center font-semibold text-xs sm:text-sm">{day}</div>
         ))}
-        {calendarDays.map((date) => {
+        {calendarDays.map((date, index) => {
           const dateString = format(date, 'yyyy-MM-dd')
           const dayData = calendarData[dateString]
-          
+          const isLastDayOfWeek = getDay(date) === 6
+
           return (
             <React.Fragment key={dateString}>
               <Card
                 className={cn(
-                  "h-16 sm:h-20 md:h-24 cursor-pointer hover:border-primary transition-colors",
+                  "h-24 sm:h-28 md:h-32 cursor-pointer hover:border-primary transition-colors",
                   !isSameMonth(date, currentDate) && "opacity-50",
                   dayData && dayData.pnl >= 0
                     ? "bg-green-50 dark:bg-green-900/20"
@@ -147,6 +164,20 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
                   )}
                 </CardContent>
               </Card>
+              {isLastDayOfWeek && (
+                <Card className="h-24 sm:h-28 md:h-32 flex items-center justify-center">
+                  <CardContent className="p-1 sm:p-2">
+                    <div className={cn(
+                      "text-xs sm:text-sm font-bold",
+                      calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-red-600 dark:text-red-400"
+                    )}>
+                      ${calculateWeeklyTotal(index, calendarDays, calendarData).toFixed(2)}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </React.Fragment>
           )
         })}
@@ -165,4 +196,13 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
       />
     </div>
   )
+}
+
+function calculateWeeklyTotal(index: number, calendarDays: Date[], calendarData: CalendarData) {
+  const startOfWeekIndex = index - 6
+  const weekDays = calendarDays.slice(startOfWeekIndex, index + 1)
+  return weekDays.reduce((total, day) => {
+    const dayData = calendarData[format(day, 'yyyy-MM-dd')]
+    return total + (dayData ? dayData.pnl : 0)
+  }, 0)
 }

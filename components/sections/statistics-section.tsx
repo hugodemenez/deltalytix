@@ -1,9 +1,7 @@
-import Statistics from "@/components/statistics";
 import { StatisticsProps } from "@/lib/types";
 import AveragePositionTimeCard from "../statistics/average-position-time-card";
 import CumulativePnlCard from "../statistics/cumulative-pnl-card";
 import TradePerformanceCard from "../statistics/trade-performance-card";
-import WinningStreakCard from "../statistics/winning-streak-card";
 
 export default function StatisticsSection({ statistics }: { statistics: StatisticsProps }) {
     return (

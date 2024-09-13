@@ -104,7 +104,9 @@ export default function TradeExportDialog({ trades }: Props) {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
+        <Button
+                size="sm"
+        >
           <Download className="mr-2 h-4 w-4" /> Export Trades
         </Button>
       </DialogTrigger>
