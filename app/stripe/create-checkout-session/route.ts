@@ -12,7 +12,6 @@ export async function POST(req: Request, res: Response) {
     if (!user) {
         return NextResponse.redirect(`${websiteURL}authentication?subscription=true`, 303);
     }
-    console.log('websiteURL', websiteURL)
     if (!body.get('lookup_key')) {
         return NextResponse.json({ message: "Lookup key is required" }, { status: 400 });
     }
@@ -20,6 +19,7 @@ export async function POST(req: Request, res: Response) {
         lookup_keys: [body.get('lookup_key') as string],
         expand: ['data.product'],
     });
+    console.log('prices', prices)
     const session = await stripe.checkout.sessions.create({
         billing_address_collection: 'auto',
         customer_email: user.email,
@@ -31,7 +31,6 @@ export async function POST(req: Request, res: Response) {
                 price: prices.data[0].id,
                 // For metered billing, do not pass quantity
                 quantity: 1,
-
             },
         ],
         mode: 'subscription',
@@ -39,7 +38,6 @@ export async function POST(req: Request, res: Response) {
         cancel_url: `${websiteURL}pricing?canceled=true`,
     });
     console.log('session', session)
-    console.log('prices', prices)
 
   console.log('session.url', session.url)
   return NextResponse.redirect(session.url as string, 303 );

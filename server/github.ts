@@ -23,10 +23,8 @@ export async function getGithubStats() {
     ])
 
     // Handle the case where commitsData.data is {}
-    // Wait until the data is available
-    while (Object.keys(commitsData.data).length === 0) {
-      console.log('Waiting for commits data...')
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+    if (Object.keys(commitsData.data).length === 0) {
+      return null
     }
     const stats = commitsData.data.slice(-12).map((week) => ({
       value: week.total,
