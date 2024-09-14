@@ -51,7 +51,6 @@ export async function updateTradesWithComment(dayData: CalendarEntry, dateString
 }
 
 export async function getTickDetails() {
-
   const prisma = new PrismaClient()
   const tickDetails = await prisma.tickDetails.findMany()
   await prisma.$disconnect()

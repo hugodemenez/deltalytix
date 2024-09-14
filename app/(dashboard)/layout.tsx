@@ -3,7 +3,6 @@ import { TradeDataProvider } from "@/components/context/trades-data";
 import { UserDataProvider } from "@/components/context/user-data";
 import FilterLeftPane from "@/components/filters/filter-left-pane";
 import Navbar from "@/components/navbar";
-import SubscriptionModal from "@/components/subscription-modal";
 import { Toaster } from "@/components/ui/toaster";
 
 export default async function RootLayout({
@@ -17,7 +16,6 @@ export default async function RootLayout({
         <TradeDataProvider>
           <div className="min-h-screen flex flex-col">
             <Toaster />
-            <SubscriptionModal />
             <Navbar />
             <div className="flex flex-1">
               {children}
