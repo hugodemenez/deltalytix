@@ -14,7 +14,7 @@ import {
   ChartConfig,
   ChartContainer,
 } from "@/components/ui/chart"
-import { CalendarData } from "@/lib/types"
+import { useCalendarData } from "../context/trades-data"
 
 const chartConfig = {
   pnl: {
@@ -23,24 +23,20 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-const formatCurrency = (value: number) => 
+const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const positiveColor = "hsl(var(--chart-2))" // Green color
 const negativeColor = "hsl(var(--chart-1))" // Orangish color
 
-export default function PNLChart({ dailyTradingData }: { dailyTradingData: CalendarData }) {
-  const chartData = Object.entries(dailyTradingData).map(([date, values]) => ({
+export default function PNLChart() {
+  const { calendarData } = useCalendarData()
+  const chartData = Object.entries(calendarData).map(([date, values]) => ({
     date,
     pnl: values.pnl,
     shortNumber: values.shortNumber,
     longNumber: values.longNumber,
   })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const totalPNL = React.useMemo(
-    () => chartData.reduce((acc, curr) => acc + curr.pnl, 0),
-    [chartData]
-  )
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -61,18 +57,18 @@ export default function PNLChart({ dailyTradingData }: { dailyTradingData: Calen
 
   return (
     <Card>
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b p-0">
-        <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
-          <CardTitle>Daily Profit/Loss</CardTitle>
-          <CardDescription>
-            Showing daily P/L over time
-          </CardDescription>
-        </div>
+      <CardHeader className="sm:min-h-[120px] flex flex-col items-stretch space-y-0 border-b p-6">
+        <CardTitle>
+          Daily Profit/Loss
+        </CardTitle>
+        <CardDescription>
+          Showing daily P/L over time
+        </CardDescription>
       </CardHeader>
       <CardContent className="px-2 sm:p-6">
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
+          className="aspect-auto h-[350px] w-full"
         >
           <BarChart
             accessibilityLayer
@@ -112,7 +108,7 @@ export default function PNLChart({ dailyTradingData }: { dailyTradingData: Calen
               className="transition-all duration-300 ease-in-out"
             >
               {chartData.map((entry, index) => (
-                <Cell 
+                <Cell
                   key={`cell-${index}`}
                   fill={entry.pnl >= 0 ? positiveColor : negativeColor}
                 />

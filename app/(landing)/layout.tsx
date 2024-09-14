@@ -16,12 +16,14 @@ export default async function RootLayout({
 
   return (
     <ThemeProvider>
+        <UserDataProvider>
         <div className="px-2 sm:px-6 lg:px-32">
         <Toaster />
         <Navbar />
         {children}
         <Footer />
         </div>
+        </UserDataProvider>
     </ThemeProvider>
   );
 }

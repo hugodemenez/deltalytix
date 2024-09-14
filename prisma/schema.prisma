@@ -37,3 +37,11 @@ model TickDetails{
   tickSize Float
   @@schema("public")
 }
+
+model Subscription {
+  id String @id @unique @default(uuid())
+  email String @unique
+  plan String
+  createdAt DateTime @default(now())
+  @@schema("public")
+}

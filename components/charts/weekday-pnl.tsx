@@ -16,6 +16,7 @@ import {
   ChartContainer,
 } from "@/components/ui/chart"
 import { Trade } from "@prisma/client"
+import { useCalendarData } from "../context/trades-data"
 
 export const description = "An interactive bar chart showing average PnL for each day of the week"
 
@@ -61,7 +62,7 @@ const getColor = (value: number, min: number, max: number, darkMode: boolean) =>
   
   const saturation = darkMode ? 
     Math.min(100, s + ratio * 60) : // Increase saturation significantly in dark mode
-    Math.min(100, 70 + ratio * 30); // Start with higher saturation and increase in light mode
+    30
   
   const lightness = darkMode ?
     Math.max(20, 60 - ratio * 40) : // Darker colors for higher absolute values in dark mode
@@ -70,7 +71,8 @@ const getColor = (value: number, min: number, max: number, darkMode: boolean) =>
   return `hsl(${h}, ${saturation}%, ${lightness}%)`;
 };
 
-export default function WeeklyPnLChart({calendarData}: {calendarData: CalendarData}) {
+export default function WeeklyPnLChart() {
+  const {calendarData} = useCalendarData()
   const [darkMode, setDarkMode] = React.useState(false);
 
   React.useEffect(() => {

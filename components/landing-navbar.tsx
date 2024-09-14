@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/navigation-menu"
 import { useTheme } from './context/theme-provider'
 import { cn } from '@/lib/utils'
+import { useUser } from './context/user-data'
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -58,6 +59,7 @@ const MobileNavItem = ({ href, children, onClick, className }: { href: string; c
 )
 
 export default function Component() {
+    const { user } = useUser()
     const { theme, toggleTheme } = useTheme()
     const [isOpen, setIsOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
@@ -128,7 +130,7 @@ export default function Component() {
                 </ul>
             </Accordion>
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
-                <Link href="/authentication">Sign in</Link>
+                <Link href={user ? "/dashboard" : "/authentication"}>{user ? "Dashboard" : "Sign in"}</Link>
             </Button>
         </nav>
     )

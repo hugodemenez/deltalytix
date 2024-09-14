@@ -4,9 +4,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { XIcon, AlertTriangleIcon, InfoIcon } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { generateCsvMapping } from '@/lib/generate-csv-mappings'
 import { readStreamableValue } from 'ai/rsc'
 import { ImportType } from './import-type-selection'
+import { generateCsvMapping } from '@/server/generate-csv-mappings'
 
 type ColumnConfig = {
   [key: string]: {
@@ -67,11 +67,6 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
             }
           });
         }
-      }
-
-      if (importType === 'rithmic-performance') {
-        newMappings['AccountNumber'] = 'accountNumber';
-        newMappings['Instrument'] = 'instrument';
       }
 
       headers.forEach(header => {

@@ -17,7 +17,6 @@ export default function HeaderSelection({ rawCsvData, setCsvData, setHeaders, se
 
   const processHeaderSelection = useCallback((index: number, data: string[][]) => {
     const newHeaders = data[index].filter(header => header && header.trim() !== '')
-    console.log('newHeaders', newHeaders)
     setHeaders(newHeaders)
     setCsvData(data.slice(index + 1))
     setError(null)

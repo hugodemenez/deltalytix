@@ -1,10 +1,13 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Check, X } from "lucide-react"
+import { useUser } from './context/user-data'
+import { getIsSubscribed } from '@/server/database'
 
 type BillingPeriod = 'annual' | 'monthly';
 
@@ -24,15 +27,27 @@ type Plans = {
   [key: string]: Plan;
 };
 
-export default function PricingPage() {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annual')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
 
-  const plans: Plans = {
+
+export default function PaywallModal() {
+    const {user} = useUser()
+    const [isOpen, setIsOpen] = useState(false)
+    const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annual')
+
+    useEffect(() => {
+        const checkSubscription = async () => {
+            if (user?.email) {
+                const isSubscribed = await getIsSubscribed(user.email);
+                setIsOpen(!isSubscribed);
+            }
+        };
+        checkSubscription();
+    }, [user])
+
+    const plans: Plans = {
     basic: {
       name: "Basic",
-      description: "Discover the power of Deltalytix with our Basic plan. Perfect for beginners and those who want to get started with trading analytics.",
+      description: "Discover the power of Deltalytix.",
       price: { annual: 348, monthly: 34 },
       features: [
         "Can add up to 1 account",
@@ -42,7 +57,7 @@ export default function PricingPage() {
     },
     premium: {
       name: "Premium",
-      description: "Unlock the full potential of Deltalytix with our Premium plan. Ideal for serious traders who want to take their trading to the next level.",
+      description: "Unlock the full potential of Deltalytix.",
       price: { annual: 468, monthly: 49 },
       features: [
         "Unlimited Accounts",
@@ -52,30 +67,29 @@ export default function PricingPage() {
     }
   }
 
-  const handlePlanSelection = (planName: string) => {
-    setSelectedPlan(planName)
-    setIsModalOpen(true)
-  }
-
   return (
-    <div>
-      <main className="container mx-auto px-4 py-16">
-        <h1 className="text-4xl font-bold text-center mb-4">Pricing</h1>
-        <p className="text-xl text-center text-gray-600 mb-12">Store, explore and improve your trading data.</p>
+    <Dialog open={isOpen}>
+      <DialogContent className="sm:max-w-[900px]">
+        <DialogHeader>
+          <DialogTitle className="text-3xl font-bold text-center">Choose Your Plan</DialogTitle>
+          <DialogDescription className="text-center text-lg">
+            Subscribe to access all features and improve your trading performance.
+          </DialogDescription>
+        </DialogHeader>
 
-        <Tabs defaultValue="annual" className="w-full max-w-3xl mx-auto mb-12">
+        <Tabs defaultValue="annual" className="w-full max-w-3xl mx-auto mb-8">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="annual" onClick={() => setBillingPeriod('annual')}>Annual Billing</TabsTrigger>
             <TabsTrigger value="monthly" onClick={() => setBillingPeriod('monthly')}>Monthly Billing</TabsTrigger>
           </TabsList>
-          <p className="text-sm text-center text-gray-500 mt-2">
+          <p className="text-sm text-center text-muted-foreground mt-2">
             {billingPeriod === 'annual' ? 'Save up to 25% with annual billing' : 'Flexible monthly billing'}
           </p>
         </Tabs>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
           {Object.entries(plans).map(([key, plan]) => (
-            <Card key={key} className={key === 'premium' ? 'border-blue-500 shadow-lg' : ''}>
+            <Card key={key} className={key === 'premium' ? 'border-primary shadow-lg' : ''}>
               <CardHeader>
                 <CardTitle>{plan.name}</CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
@@ -83,12 +97,12 @@ export default function PricingPage() {
               <CardContent>
                 <div className="text-4xl font-bold mb-4">
                   ${billingPeriod === 'annual' ? plan.price.annual : plan.price.monthly}
-                  <span className="text-lg font-normal text-gray-500">
+                  <span className="text-lg font-normal text-muted-foreground">
                     /{billingPeriod === 'annual' ? 'year' : 'month'}
                   </span>
                 </div>
                 {billingPeriod === 'annual' && (
-                  <p className="text-sm text-gray-500 mb-4">
+                  <p className="text-sm text-muted-foreground mb-4">
                     Equivalent to ${(plan.price.annual / 12).toFixed(2)}/month
                   </p>
                 )}
@@ -101,7 +115,7 @@ export default function PricingPage() {
                       {key === 'premium' || index < 2 ? (
                         <Check className="h-5 w-5 text-green-500 mr-2" />
                       ) : (
-                        <X className="h-5 w-5 text-red-500 mr-2" />
+                        <X className="h-5 w-5 text-destructive mr-2" />
                       )}
                       {feature}
                     </li>
@@ -117,24 +131,7 @@ export default function PricingPage() {
             </Card>
           ))}
         </div>
-      </main>
-
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-          <div className="max-w-3xl mx-auto space-y-6">
-            <details className="border-b pb-4">
-              <summary className="font-semibold cursor-pointer">Does Deltalytix trade for me?</summary>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">No, Deltalytix is not a brokerage. You execute trades on your broker and then transfer the data into Deltalytix to track and analyze your trading performance.</p>
-            </details>
-            <details className="border-b pb-4">
-              <summary className="font-semibold cursor-pointer">How secure is Deltalytix?</summary>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">Your data security is our top priority. Deltalytix does not sell or advertise your data, and we employ industry-standard security measures to protect your information.</p>
-            </details>
-          </div>
-        </div>
-      </section>
-
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

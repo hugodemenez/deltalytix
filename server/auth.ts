@@ -94,4 +94,5 @@ export async function signInWithEmail(email: string, redirectUrl: string | null 
       emailRedirectTo: redirectUrl ? `${getWebsiteURL()}${redirectUrl}` : `${getWebsiteURL()}auth/callback/`,
     },
   })
+  console.log(error)
 }

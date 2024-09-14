@@ -5,77 +5,137 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
+import { getDomainOfItemsWithSameAxis } from 'recharts/types/util/ChartUtils'
 
-interface RithmicPerformanceProcessorProps {
+interface TradovateProcessorProps {
     headers: string[];
     csvData: string[][];
     setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
 }
 
-export default function RithmicPerformanceProcessor({ headers, csvData, setProcessedTrades }: RithmicPerformanceProcessorProps) {
+const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
+    if (typeof pnl !== 'string' || pnl.trim() === '') {
+      console.warn('Invalid PNL value:', pnl);
+      return { pnl: 0, error: 'Invalid PNL value' };
+    }
+
+    let formattedPnl = pnl.trim();
+
+    if (formattedPnl.includes('(')) {
+      formattedPnl = formattedPnl.replace('(', '-').replace(')', '');
+    }
+
+    const numericValue = parseFloat(formattedPnl.replace(/[$,]/g, ''));
+
+    if (isNaN(numericValue)) {
+      console.warn('Unable to parse PNL value:', pnl);
+      return { pnl: 0, error: 'Unable to parse PNL value' };
+    }
+
+    return { pnl: numericValue };
+  };
+
+  const convertTimeInPosition = (time: string | undefined): number | undefined => {
+    if (typeof time !== 'string' || time.trim() === '') {
+      console.warn('Invalid time value:', time);
+      return 0;
+    }
+    if (/^\d+\.\d+$/.test(time)) {
+      // Round to the nearest second
+      const floatTime = Math.round(parseFloat(time));
+      return floatTime;
+    }
+    const timeInPosition = time;
+    const minutesMatch = timeInPosition.match(/(\d+)min/);
+    const secondsMatch = timeInPosition.match(/(\d+)sec/);
+    const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0;
+    const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0;
+    const timeInSeconds = (minutes * 60) + seconds;
+    return timeInSeconds;
+  }
+
+  const generateTradeHash = (trade: Partial<Trade>): string => {
+    const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
+    return hashString
+  }
+
+
+export default function TradovateProcessor({ headers, csvData, setProcessedTrades }: TradovateProcessorProps) {
     const [trades, setTrades] = useState<Trade[]>([])
 
     const newMappings: { [key: string]: string } = {
-        "AccountNumber": "accountNumber",
-        "Instrument": "instrument",
-        "Fill Size": "quantity",
-        "Trade P&L": "pnl",
-        "Trade Life Span": "timeInPosition",
-        "Commission & Fees": "commission",
-        "Entry Buy/Sell": "side",
-        "Entry Order Number": "entryId",
-        "Entry Price": "entryPrice",
-        "Entry Time": "entryDate",
-        "Exit Order Number": "closeId",
-        "Exit Price": "closePrice",
-        "Exit Time": "closeDate",
+        "symbol": "instrument",
+        "qty": "quantity",
+        "pnl": "pnl",
+        "duration": "timeInPosition",
+        "buyFillId": "entryId",
+        "buyPrice": "entryPrice",
+        "boughtTimestamp": "entryDate",
+        "sellFillId": "closeId",
+        "sellPrice": "closePrice",
+        "soldTimestamp": "closeDate",
     }
 
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
-        const accountNumber = 'default-account'; // Replace with actual account number
+        //TODO: Ask user for account number using account selection component
+        const accountNumber = 'default-account';
 
         csvData.forEach(row => {
             const item: Partial<Trade> = {};
             let quantity = 0;
             headers.forEach((header, index) => {
-                if (newMappings[header]) {
-                    const key = newMappings[header] as keyof Trade;
-                    const cellValue = row[index];
-                    switch (key) {
-                        case 'quantity':
-                            quantity = parseFloat(cellValue) || 0;
-                            item[key] = quantity;
-                            break;
-                        case 'pnl':
-                            const pnl = parseFloat(cellValue) || 0;
-                            item[key] = pnl;
-                            break;
-                        case 'commission':
-                            item[key] = parseFloat(cellValue) || 0;
-                            break;
-                        case 'timeInPosition':
-                            item[key] = parseFloat(cellValue) || 0;
-                            break;
-                        default:
-                            item[key] = cellValue as any;
+              if (newMappings[header]) {
+                const key = newMappings[header] as keyof Trade;
+                const cellValue = row[index];
+                switch (key) {
+                  case 'quantity':
+                    quantity = parseFloat(cellValue) || 0;
+                    item[key] = quantity;
+                    break;
+                  case 'pnl':
+                    const { pnl, error } = formatPnl(cellValue)
+                    if (error) {
+                      return
                     }
+                    item[key] = pnl
+                    break;
+                  case 'timeInPosition':
+                    item[key] = convertTimeInPosition(cellValue);
+                    break;
+                  default:
+                    item[key] = cellValue as any;
                 }
+              }
             });
 
-            // On rithmic performance, the side is stored as 'B' or 'S'
-            if (item.side === 'B' || item.side === 'S') {
-                item.side = item.side === 'B' ? 'Long' : 'Short';
+            if (item.instrument==''){
+              return
             }
 
-            // This is going to be set later
-            item.userId = ''
-            if (!item.accountNumber) {
-                item.accountNumber = accountNumber;
+            // Default commissions for tradeovate are 1.94 for ZN and 2.08 for ZB
+            // Instrument are only first 2 characters of the symbol
+            if (item.instrument) {
+              item.instrument = item.instrument.slice(0, 2)
             }
-            item.id = `${item.entryId}-${item.closeId}`;
+            if (item.instrument === 'ZN') {
+              item.commission = 1.94 * item.quantity!
+            } else if (item.instrument === 'ZB') {
+              item.commission = 2.08 * item.quantity!
+            }
+              // If entryDate is after closeDate (which is buy and sell on tradovate then it means it is short)
+              if (item.entryDate && item.closeDate && new Date(item.entryDate) > new Date(item.closeDate)) {
+                item.side = 'short'
+              }else{
+                item.side = 'long'
+              }
+
+            if (!item.accountNumber) {
+              item.accountNumber = accountNumber;
+            }
+            item.id = generateTradeHash(item as Trade).toString();
             newTrades.push(item as Trade);
-        });
+          })
 
         setTrades(newTrades);
         setProcessedTrades(newTrades);

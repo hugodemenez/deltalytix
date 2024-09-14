@@ -35,8 +35,10 @@ export default function AuthenticationPage() {
         <div className="relative hidden h-full flex-col bg-muted p-10 text-white dark:border-r lg:flex">
           <div className="absolute inset-0 bg-zinc-900" />
           <div className="relative z-20 flex items-center text-lg font-medium">
-            <Logo className="w-10 h-10 fill-white"/>
-            Deltalytix
+            <Link href="/" className="flex items-center gap-2">
+              <Logo className="w-10 h-10 fill-white"/>
+              Deltalytix
+            </Link>
           </div>
           <div className="relative z-20 mt-auto">
             <blockquote className="space-y-2">

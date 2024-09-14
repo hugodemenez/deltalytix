@@ -24,7 +24,7 @@ import LoadingOverlay from '@/components/loading-overlay'
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
 export default function DashboardPage() {
-  const { trades, setTrades } = useTrades()
+  const { trades, setTrades, refreshTrades } = useTrades()
   const [loading, setLoading] = useState(true)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [renameLoading, setRenameLoading] = useState(false)
@@ -80,8 +80,11 @@ export default function DashboardPage() {
         variant: 'destructive',
       })
     } finally {
+      // Refresh trades
+      await refreshTrades()
       setDeleteLoading(false)
       setDeleteDialogOpen(false)
+
     }
   }
 

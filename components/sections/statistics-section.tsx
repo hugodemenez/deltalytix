@@ -1,12 +1,16 @@
-import { StatisticsProps } from "@/lib/types";
 import AveragePositionTimeCard from "../statistics/average-position-time-card";
 import CumulativePnlCard from "../statistics/cumulative-pnl-card";
 import TradePerformanceCard from "../statistics/trade-performance-card";
+import { useTradeStatistics } from "../context/trades-data";
+import LongShortPerformanceCard from "../statistics/long-short-card";
 
-export default function StatisticsSection({ statistics }: { statistics: StatisticsProps }) {
+export default function StatisticsSection() {
+    const { statistics } = useTradeStatistics()
+
     return (
         <section id="accomplishments" className="mb-10">
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <LongShortPerformanceCard />
                 <AveragePositionTimeCard averagePositionTime={statistics.averagePositionTime} />
                 <CumulativePnlCard cumulativePnl={statistics.cumulativePnl} cumulativeFees={statistics.cumulativeFees} />
                 <TradePerformanceCard

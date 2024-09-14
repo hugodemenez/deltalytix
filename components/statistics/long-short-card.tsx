@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useCalendarData } from '../context/trades-data'
 
 function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null
@@ -13,24 +14,33 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (.
   }
 }
 
-export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: { nbWin: number, nbLoss: number, nbBe: number, nbTrades: number }) {
+export default function LongShortPerformanceCard() {
+  const { calendarData } = useCalendarData()
+  const chartData = Object.entries(calendarData).map(([date, values]) => ({
+    date,
+    pnl: values.pnl,
+    shortNumber: values.shortNumber,
+    longNumber: values.longNumber,
+  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const longNumber = chartData.reduce((acc, curr) => acc + curr.longNumber, 0)
+  const shortNumber = chartData.reduce((acc, curr) => acc + curr.shortNumber, 0)
+
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const [isTouch, setIsTouch] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const lastTouchTime = useRef(0)
 
-  const winRate = Number((nbWin / nbTrades * 100).toFixed(2))
-  const lossRate = Number((nbLoss / nbTrades * 100).toFixed(2))
-  const beRate = Number((nbBe / nbTrades * 100).toFixed(2))
+  const totalTrades = longNumber + shortNumber
+  const longRate = Number((longNumber / totalTrades * 100).toFixed(2))
+  const shortRate = Number((shortNumber / totalTrades * 100).toFixed(2))
 
-  const positiveColor = "hsl(var(--chart-2))" // Green color
-  const negativeColor = "hsl(var(--chart-1))" // Red color
-  const neutralColor = "hsl(var(--muted))" // Neutral color for breakeven
+  const longColor = "hsl(var(--chart-2))" 
+  const shortColor = "hsl(var(--chart-1))" 
 
   const data = [
-    { name: 'Win', value: winRate, color: positiveColor },
-    { name: 'BE', value: beRate, color: neutralColor },
-    { name: 'Loss', value: lossRate, color: negativeColor },
+    { name: 'Long', value: longRate, color: longColor, number: longNumber },
+    { name: 'Short', value: shortRate, color: shortColor, number: shortNumber },
   ]
 
   const handleTooltipToggle = useCallback((name: string) => {
@@ -78,7 +88,7 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
   return (
     <Card className="col-span-1" ref={cardRef}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Trade Performance</CardTitle>
+        <CardTitle className="text-sm font-medium">Long/Short Distribution</CardTitle>
       </CardHeader>
       <CardContent>
         <TooltipProvider delayDuration={0}>
@@ -102,13 +112,16 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
                     />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>{entry.name}: {entry.value.toFixed(2)}%</p>
+                    <p>{entry.name}: {entry.value.toFixed(2)}% ({entry.number} trades)</p>
                   </TooltipContent>
                 </Tooltip>
               )
             })}
           </div>
         </TooltipProvider>
+        <div className="mt-4 flex flex-col justify-between text-sm">
+          <span>Total Trades: {totalTrades}</span>
+        </div>
       </CardContent>
     </Card>
   )

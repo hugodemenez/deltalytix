@@ -5,17 +5,19 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { UploadIcon } from 'lucide-react'
-import { useRouter } from 'next/navigation'
 import { useTrades } from '../context/trades-data'
 import { Trade } from '@prisma/client'
 import { getTrades, saveTrades } from '@/server/database'
 import ImportTypeSelection, { ImportType } from './import-type-selection'
 import FileUpload from './file-upload'
 import HeaderSelection from './header-selection'
-import ColumnMapping from './column-mapping'
 import AccountSelection from './account-selection'
-import RithmicOrderProcessor from './rithmic-order-processor'
 import { useUser } from '../context/user-data'
+import RithmicOrderProcessor from './rithmic-order-processor-new'
+import RithmicPerformanceProcessor from './rithmic-performance-processor'
+import TradovateProcessor from './tradovate-processor'
+import ColumnMapping from './column-mapping'
+import TradezellaProcessor from './tradezella-processor'
 
 type ColumnConfig = {
   [key: string]: {
@@ -55,14 +57,13 @@ export default function ImportButton() {
   const [processedTrades, setProcessedTrades] = useState<Trade[]>([])
 
   const { toast } = useToast()
-  const router = useRouter()
   const { trades, setTrades, refreshTrades } = useTrades()
   const { user } = useUser()
 
-  const formatPnl = (pnl: string | undefined): {pnl: number, error?: string} => {
+  const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
     if (typeof pnl !== 'string' || pnl.trim() === '') {
       console.warn('Invalid PNL value:', pnl);
-      return {pnl: 0, error: 'Invalid PNL value'};
+      return { pnl: 0, error: 'Invalid PNL value' };
     }
 
     let formattedPnl = pnl.trim();
@@ -75,10 +76,10 @@ export default function ImportButton() {
 
     if (isNaN(numericValue)) {
       console.warn('Unable to parse PNL value:', pnl);
-      return {pnl: 0, error: 'Unable to parse PNL value'};
+      return { pnl: 0, error: 'Unable to parse PNL value' };
     }
 
-    return {pnl: numericValue};
+    return { pnl: numericValue };
   };
 
   const convertTimeInPosition = (time: string | undefined): number | undefined => {
@@ -100,7 +101,7 @@ export default function ImportButton() {
     return timeInSeconds;
   }
 
-   const generateTradeHash = (trade: Partial<Trade>): string => {
+  const generateTradeHash = (trade: Partial<Trade>): string => {
     const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
     return hashString
   }
@@ -118,114 +119,110 @@ export default function ImportButton() {
     setIsSaving(true)
     try {
       let newTrades: Trade[] = []
+      switch (importType) {
+        case 'rithmic-orders':
+          newTrades = processedTrades.map(trade => ({
+            ...trade,
+            id: generateTradeHash(trade),
+            userId: user.id,
+          }))
+          break
+        case 'rithmic-performance':
+          newTrades = processedTrades.map(trade => ({
+            ...trade,
+            id: generateTradeHash(trade),
+            userId: user.id,
+          }))
+          break
+        case 'tradovate':
+          newTrades = processedTrades.map(trade => ({
+            ...trade,
+            id: generateTradeHash(trade),
+            accountNumber: newAccountNumber,
+            userId: user.id,
+          }))
+          break
+        case 'tradezella':
+          newTrades = processedTrades.map(trade => ({
+            ...trade,
+            id: generateTradeHash(trade),
+            userId: user.id,
+          }))
+          break
+        // Default uses AI to map the columns and auto-format the data
+        default:
+          csvData.forEach(row => {
+            const item: Partial<Trade> = {};
+            let quantity = 0;
+            headers.forEach((header, index) => {
+              if (mappings[header]) {
+                const key = mappings[header] as keyof Trade;
+                const cellValue = row[index];
+                switch (key) {
+                  case 'quantity':
+                    quantity = parseFloat(cellValue) || 0;
+                    item[key] = quantity;
+                    break;
+                  case 'pnl':
+                    const { pnl, error } = formatPnl(cellValue)
+                    if (error) {
+                      return
+                    }
+                    item[key] = pnl
+                    break;
+                  case 'commission':
+                    item[key] = parseFloat(cellValue) || 0;
+                    break;
+                  case 'timeInPosition':
+                    item[key] = convertTimeInPosition(cellValue);
+                    break;
+                  default:
+                    item[key] = cellValue as any;
+                }
+              }
+            });
 
-      if (importType === 'rithmic-orders') {
-        newTrades = processedTrades.map(trade => ({
-          ...trade,
-          id: generateTradeHash(trade),
-          userId: user.id,
-        }))
-      } else {
-        csvData.forEach(row => {
-          const item: Partial<Trade> = {};
-          let quantity = 0;
-          let commission = 0;
-    
-          headers.forEach((header, index) => {
-            if (mappings[header]) {
-              const key = mappings[header] as keyof Trade;
-              const cellValue = row[index];
-    
-              switch (key) {
-                case 'quantity':
-                  quantity = parseFloat(cellValue) || 0;
-                  item[key] = quantity;
-                  break;
-                case 'pnl':
-                  const {pnl,error} = formatPnl(cellValue)
-                  if (error) {
-                    return
+            // On rithmic performance, the side is stored as 'B' or 'S'
+            if (item.side === 'B' || item.side === 'S') {
+              // If side is B or S, then we can set the side based on the side
+              item.side = item.side === 'B' ? 'long' : 'short';
+            } else {
+              // Based on pnl and entryPrice / exitPrice we can determine if it was long or short
+              if (item.pnl && item.entryPrice && item.closePrice) {
+                if (item.pnl > 0) {
+                  item.side = (item.entryPrice > item.closePrice) ? 'short' : 'long';
+                } else if (item.pnl < 0) {
+                  item.side = (item.entryPrice < item.closePrice) ? 'short' : 'long';
+                } else { // If pnl==0, then we need to determine the side based on the date
+                  if (item.entryDate && item.closeDate) {
+                    item.side = new Date(item.entryDate) < new Date(item.closeDate) ? 'long' : 'short';
                   }
-                  item[key] = pnl
-                  break;
-                case 'commission':
-                  commission = parseFloat(cellValue) || 0;
-                  break;
-                case 'timeInPosition':
-                  item[key] = convertTimeInPosition(cellValue);
-                  break;
-                default:
-                  item[key] = cellValue as any;
+                }
               }
             }
-          });
 
-          // If commission is 0, we default to tradovate values
-          if (commission === 0) {
-            // If ZN, then commission is 1.94 * quantity
-            if (item.instrument?.startsWith('ZN')) {
-              item.commission = 1.94 * quantity
+            item.userId = user!.id;
+            if (!item.accountNumber) {
+              item.accountNumber = accountNumber || newAccountNumber;
             }
-            // If ZB, then commission is 2.08 * quantity
-            if (item.instrument?.startsWith('ZB')) {
-              item.commission = 2.08 * quantity
-            }
-          }
-          else {
-            item.commission = commission
-          }
-    
-
-          // On rithmic performance, the side is stored as 'B' or 'S'
-          if (item.side === 'B' || item.side === 'S') {
-            // If side is B or S, then we can set the side based on the side
-            item.side = item.side === 'B' ? 'long' : 'short';
-          } else {
-          // Based on pnl and entryPrice / exitPrice we can know if it was long or short
-          if (item.pnl && item.entryPrice && item.closePrice) {
-            if (item.pnl > 0 ) {
-              item.side = (item.entryPrice > item.closePrice) ? 'short' : 'long';
-            } else if (item.pnl < 0) {
-              item.side = (item.entryPrice < item.closePrice) ? 'short' : 'long';
-            } else { // If pnl==0, then we need to determine the side based on the date
-              if (item.entryDate && item.closeDate) {
-                item.side = new Date(item.entryDate) < new Date(item.closeDate) ? 'long' : 'short';
-              }
-              }
-            }
-          }
-
-          item.userId = user!.id;
-    
-          if (!item.accountNumber) {
-            item.accountNumber = accountNumber || newAccountNumber;
-          }
-          item.id = generateTradeHash(item as Trade).toString();
-    
-          console.log('item', item)
-           newTrades.push(item as Trade);
-        })
+            item.id = generateTradeHash(item as Trade).toString();
+            newTrades.push(item as Trade);
+          })
       }
-      
-      console.log('newTrades', newTrades)
 
       // Filter out empty trades
       newTrades = newTrades.filter(trade => {
         // Check if all required fields are present and not empty
         return trade.accountNumber &&
-               trade.instrument &&
-               trade.quantity !== 0 &&
-               (trade.entryPrice || trade.closePrice) &&
-               (trade.entryDate || trade.closeDate);
+          trade.instrument &&
+          trade.quantity !== 0 &&
+          (trade.entryPrice || trade.closePrice) &&
+          (trade.entryDate || trade.closeDate);
       });
 
-      console.log('filtered trades', newTrades)
-      // Log the number of trades after filtering
-      console.log(`Filtered ${newTrades.length} valid trades`);
-
       await saveTrades(newTrades)
-      const updatedTrades = await getTrades(user.id)
-      setTrades(updatedTrades)
+      // Update the trades
+      await refreshTrades()
       setIsOpen(false)
       toast({
         title: "Import Successful",
@@ -275,35 +272,44 @@ export default function ImportButton() {
     } else if (step === 1) {
       setStep(2)
     } else if (step === 2) {
-      if (importType === 'rithmic-orders') {
-        setStep(3)
-      } else {
-        setStep(3)
-      }
+      setStep(3)
     } else if (step === 3) {
-      if (importType === 'rithmic-orders') {
-        handleSave()
-      } else if (!isRequiredFieldsMapped()) {
-        const missingFields = getMissingRequiredFields()
-        toast({
-          title: "Required fields not mapped",
-          description: (
-            <div>
-              <p>Please map the following required fields:</p>
-              <ul className="list-disc pl-4 mt-2">
-                {missingFields.map((field: string) => (
-                  <li key={field}>{field}</li>
-                ))}
-              </ul>
-              <p className="mt-2">These fields are necessary for proper data import.</p>
-            </div>
-          ),
-          variant: "destructive",
-        })
-      } else if (!Object.values(mappings).includes('accountNumber') && !accountNumber) {
-        setStep(4)
-      } else {
-        handleSave()
+      switch (importType) {
+        case 'rithmic-orders':
+          handleSave()
+          break
+        case 'rithmic-performance':
+          handleSave()
+          break
+        case 'tradovate':
+          setStep(4)
+          break
+        case 'tradezella':
+          handleSave()
+          break
+        default:
+          if (!isRequiredFieldsMapped()) {
+            const missingFields = getMissingRequiredFields()
+            toast({
+              title: "Required fields not mapped",
+              description: (
+                <div>
+                  <p>Please map the following required fields:</p>
+                  <ul className="list-disc pl-4 mt-2">
+                    {missingFields.map((field: string) => (
+                      <li key={field}>{field}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2">These fields are necessary for proper data import.</p>
+                </div>
+              ),
+              variant: "destructive",
+            })
+          } else if (!Object.values(mappings).includes('accountNumber') && !accountNumber) {
+            setStep(4)
+          } else {
+            handleSave()
+          }
       }
     } else if (step === 4) {
       if (accountNumber || newAccountNumber) {
@@ -323,7 +329,7 @@ export default function ImportButton() {
       case 0:
         return <ImportTypeSelection selectedType={importType} setSelectedType={setImportType} />
       case 1:
-        return <FileUpload 
+        return <FileUpload
           importType={importType}
           setRawCsvData={setRawCsvData}
           setCsvData={setCsvData}
@@ -332,31 +338,60 @@ export default function ImportButton() {
           setError={setError}
         />
       case 2:
-        return <HeaderSelection 
+        return <HeaderSelection
           rawCsvData={rawCsvData}
           setCsvData={setCsvData}
           setHeaders={setHeaders}
           setError={setError}
         />
       case 3:
-        return importType === 'rithmic-orders' ? (
-          <RithmicOrderProcessor
-            csvData={csvData}
-            headers={headers}
-            setProcessedTrades={setProcessedTrades}
-          />
-        ) : (
-          <ColumnMapping 
-            headers={headers}
-            csvData={csvData}
-            mappings={mappings}
-            setMappings={setMappings}
-            error={error}
-            importType={importType}
-          />
-        )
+        switch (importType) {
+          case 'rithmic-orders':
+            return (
+              <RithmicOrderProcessor
+                csvData={csvData}
+                headers={headers}
+                setProcessedTrades={setProcessedTrades}
+              />
+            )
+          case 'rithmic-performance':
+            return (
+              <RithmicPerformanceProcessor
+                csvData={csvData}
+                headers={headers}
+                setProcessedTrades={setProcessedTrades}
+              />
+            )
+          case 'tradovate':
+            return (
+              <TradovateProcessor
+                csvData={csvData}
+                headers={headers}
+                setProcessedTrades={setProcessedTrades}
+              />
+            )
+          case 'tradezella':
+            return (
+              <TradezellaProcessor
+                csvData={csvData}
+                headers={headers}
+                setProcessedTrades={setProcessedTrades}
+              />
+            )
+          default:
+            return (
+              <ColumnMapping
+                headers={headers}
+                csvData={csvData}
+                mappings={mappings}
+                setMappings={setMappings}
+                error={error}
+                importType={importType}
+              />
+            )
+        }
       case 4:
-        return <AccountSelection 
+        return <AccountSelection
           accounts={Array.from(new Set(trades.map(trade => trade.accountNumber)))}
           accountNumber={accountNumber}
           setAccountNumber={setAccountNumber}

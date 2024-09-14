@@ -4,6 +4,31 @@ import { getTrades } from '@/server/database'
 import { Trade } from '@prisma/client'
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react'
 import { useUser } from './user-data'
+import { calculateStatistics, formatCalendarData } from '@/lib/utils'
+
+// Inferred types
+type StatisticsProps = {
+  cumulativeFees: number
+  cumulativePnl: number
+  winningStreak: number
+  winRate: number
+  nbTrades: number
+  nbBe: number
+  nbWin: number
+  nbLoss: number
+  totalPositionTime: number
+  averagePositionTime: string
+}
+
+type CalendarData = {
+  [date: string]: {
+    pnl: number
+    tradeNumber: number
+    longNumber: number
+    shortNumber: number
+    trades: Trade[]
+  }
+}
 
 interface DateRange {
   from: Date
@@ -27,8 +52,18 @@ interface FormattedTradeContextProps {
   setDateRange: React.Dispatch<React.SetStateAction<DateRange | undefined>>
 }
 
+interface StatisticsContextProps {
+  statistics: StatisticsProps
+}
+
+interface CalendarDataContextProps {
+  calendarData: CalendarData
+}
+
 const TradeDataContext = createContext<TradeDataContextProps | undefined>(undefined)
 const FormattedTradeContext = createContext<FormattedTradeContextProps | undefined>(undefined)
+const StatisticsContext = createContext<StatisticsContextProps | undefined>(undefined)
+const CalendarDataContext = createContext<CalendarDataContextProps | undefined>(undefined)
 
 export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [trades, setTrades] = useState<Trade[]>([])
@@ -85,6 +120,9 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
   }, [trades, instruments, accountNumbers, dateRange])
 
+  const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades, trades])
+  const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades, trades])
+
   return (
     <TradeDataContext.Provider value={{ trades, setTrades, isLoading, refreshTrades }}>
       <FormattedTradeContext.Provider value={{
@@ -96,7 +134,11 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         dateRange,
         setDateRange
       }}>
-        {children}
+        <StatisticsContext.Provider value={{ statistics }}>
+          <CalendarDataContext.Provider value={{ calendarData }}>
+            {children}
+          </CalendarDataContext.Provider>
+        </StatisticsContext.Provider>
       </FormattedTradeContext.Provider>
     </TradeDataContext.Provider>
   )
@@ -114,6 +156,22 @@ export const useFormattedTrades = () => {
   const context = useContext(FormattedTradeContext)
   if (!context) {
     throw new Error('useFormattedTrades must be used within a TradeDataProvider')
+  }
+  return context
+}
+
+export const useTradeStatistics = () => {
+  const context = useContext(StatisticsContext)
+  if (!context) {
+    throw new Error('useTradeStatistics must be used within a TradeDataProvider')
+  }
+  return context
+}
+
+export const useCalendarData = () => {
+  const context = useContext(CalendarDataContext)
+  if (!context) {
+    throw new Error('useCalendarData must be used within a TradeDataProvider')
   }
   return context
 }
