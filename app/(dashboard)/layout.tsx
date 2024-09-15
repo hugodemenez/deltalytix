@@ -3,6 +3,7 @@ import { TradeDataProvider } from "@/components/context/trades-data";
 import { UserDataProvider } from "@/components/context/user-data";
 import FilterLeftPane from "@/components/filters/filter-left-pane";
 import Navbar from "@/components/navbar";
+import { Separator } from "@/components/ui/separator";
 import { Toaster } from "@/components/ui/toaster";
 
 export default async function RootLayout({

@@ -138,7 +138,7 @@ export default function ImportButton() {
           newTrades = processedTrades.map(trade => ({
             ...trade,
             id: generateTradeHash(trade),
-            accountNumber: newAccountNumber,
+            accountNumber: newAccountNumber || accountNumber,
             userId: user.id,
           }))
           break
@@ -219,7 +219,6 @@ export default function ImportButton() {
           (trade.entryPrice || trade.closePrice) &&
           (trade.entryDate || trade.closeDate);
       });
-
       await saveTrades(newTrades)
       // Update the trades
       await refreshTrades()

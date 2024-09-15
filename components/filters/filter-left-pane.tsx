@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTrades, useFormattedTrades } from '../context/trades-data'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -8,10 +8,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { X, Filter, Eye, EyeOff } from "lucide-react"
+import { Filter } from "lucide-react"
 import { useMediaQuery } from '@/hooks/use-media-query'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Switch } from "@/components/ui/switch"
+import DateCalendarFilter from './date-calendar-filter'
 
 interface FilterItem {
   type: 'account' | 'instrument'
@@ -26,10 +26,7 @@ export default function FilterLeftPane() {
   const [selectedItems, setSelectedItems] = useState<FilterItem[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [commandOpen, setCommandOpen] = useState(false)
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
-  const commandRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
   const isMobile = useMediaQuery("(max-width: 768px)")
 
   useEffect(() => {
@@ -103,7 +100,6 @@ export default function FilterLeftPane() {
       handleItemChange(item)
     }
     setSearchTerm('')
-    inputRef.current?.focus()
   }, [handleItemChange, isItemDisabled])
 
   useEffect(() => {
@@ -122,19 +118,6 @@ export default function FilterLeftPane() {
     }
   }, [selectedItems, setAccountNumbers, setInstruments, accountNumbers, instruments])
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (commandRef.current && !commandRef.current.contains(event.target as Node)) {
-        setCommandOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
-
   const anonymizeAccount = (account: string) => {
     if (!showAccountNumbers) {
       return account.slice(0, 3) + '*'.repeat(account.length - 3)
@@ -142,71 +125,9 @@ export default function FilterLeftPane() {
     return account
   }
 
-  const CommandContent = useMemo(() => (
-    <Command className={`rounded-lg border relative overflow-visible h-12 ${commandOpen ? 'rounded-b-none' : ''}`} ref={commandRef}>
-      <CommandInput
-        className='text-lg sm:text-sm'
-        onFocus={() => setCommandOpen(true)}
-        ref={inputRef}
-        placeholder="Search filters..."
-        value={searchTerm}
-        onValueChange={setSearchTerm}
-      />
-      <AnimatePresence>
-        {commandOpen && (
-          <motion.div
-            key="command-list"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className='absolute top-12 bg-background w-full border border-t-0 rounded-b-lg left-0 z-10'
-          >
-            <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
-              <CommandGroup heading="Accounts">
-                {filteredItems
-                  .filter(item => item.type === 'account')
-                  .map(item => (
-                    <CommandItem 
-                      key={item.value} 
-                      onSelect={() => handleSelect(`account:${item.value}`)} 
-                      className={`transition-none ${isItemDisabled(item) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={isItemDisabled(item)}
-                    >
-                      <Checkbox checked={isItemSelected(item)} className="mr-2" disabled={isItemDisabled(item)} />
-                      {anonymizeAccount(item.value)}
-                    </CommandItem>
-                  ))
-                }
-              </CommandGroup>
-              <CommandGroup heading="Instruments">
-                {filteredItems
-                  .filter(item => item.type === 'instrument')
-                  .map(item => (
-                    <CommandItem 
-                      key={item.value} 
-                      onSelect={() => handleSelect(`instrument:${item.value}`)} 
-                      className={`transition-none ${isItemDisabled(item) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      disabled={isItemDisabled(item)}
-                    >
-                      <Checkbox checked={isItemSelected(item)} className="mr-2" disabled={isItemDisabled(item)} />
-                      {item.value}
-                    </CommandItem>
-                  ))
-                }
-              </CommandGroup>
-            </CommandList>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Command>
-  ), [commandOpen, searchTerm, filteredItems, handleSelect, isItemSelected, isItemDisabled, showAccountNumbers])
-
   const FilterContent = useMemo(() => (
-    <div className='py-4 lg:py-6'>
+    <div className='py-4 lg:py-6 space-y-4'>
       <h2 className="text-lg font-semibold mb-4" id="filter-heading">Filters</h2>
-      
       <div className="mb-4 flex items-center justify-between">
         <Label htmlFor="anonymous-mode" className="text-sm font-medium">
           Show Account Numbers
@@ -217,79 +138,72 @@ export default function FilterLeftPane() {
           onCheckedChange={setShowAccountNumbers}
         />
       </div>
-
-      <div className="mb-4">
-        {CommandContent}
-      </div>
-      
-      <ScrollArea className="h-[calc(100vh-300px)]">
-        <div className="space-y-4">
-          <div>
-            <div className="flex items-center mb-2">
+      <DateCalendarFilter />
+      <Command className="rounded-lg border">
+        <CommandInput
+          placeholder="Search filters..."
+          value={searchTerm}
+          onValueChange={setSearchTerm}
+          className={isMobile ? "text-lg" : ""}
+        />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Accounts">
+            <CommandItem onSelect={() => handleSelectAll('account')}>
               <Checkbox 
-                id="select-all-accounts"
                 checked={allItems.filter(item => item.type === 'account' && !isItemDisabled(item)).every(item => isItemSelected(item))}
-                onCheckedChange={() => handleSelectAll('account')}
+                className="mr-2"
               />
-              <Label htmlFor="select-all-accounts" className="ml-2 font-semibold">
-                Accounts
-              </Label>
-            </div>
-            {allItems
+              Select All Accounts
+            </CommandItem>
+            {filteredItems
               .filter(item => item.type === 'account')
               .map(item => (
-                <div key={item.value} className="flex items-center mb-2 ml-4">
+                <CommandItem 
+                  key={item.value} 
+                  onSelect={() => handleSelect(`account:${item.value}`)}
+                  disabled={isItemDisabled(item)}
+                >
                   <Checkbox 
-                    id={`item-${item.value}`}
-                    checked={isItemSelected(item)}
-                    onCheckedChange={() => handleItemChange(item)}
+                    checked={isItemSelected(item)} 
+                    className="mr-2" 
                     disabled={isItemDisabled(item)}
                   />
-                  <Label 
-                    htmlFor={`item-${item.value}`} 
-                    className={`ml-2 ${isItemDisabled(item) ? 'opacity-50' : ''}`}
-                  >
-                    {anonymizeAccount(item.value)}
-                  </Label>
-                </div>
+                  {anonymizeAccount(item.value)}
+                </CommandItem>
               ))
             }
-          </div>
-          <div>
-            <div className="flex items-center mb-2">
+          </CommandGroup>
+          <CommandGroup heading="Instruments">
+            <CommandItem onSelect={() => handleSelectAll('instrument')}>
               <Checkbox 
-                id="select-all-instruments"
                 checked={allItems.filter(item => item.type === 'instrument' && !isItemDisabled(item)).every(item => isItemSelected(item))}
-                onCheckedChange={() => handleSelectAll('instrument')}
+                className="mr-2"
               />
-              <Label htmlFor="select-all-instruments" className="ml-2 font-semibold">
-                Instruments
-              </Label>
-            </div>
-            {allItems
+              Select All Instruments
+            </CommandItem>
+            {filteredItems
               .filter(item => item.type === 'instrument')
               .map(item => (
-                <div key={item.value} className="flex items-center mb-2 ml-4">
+                <CommandItem 
+                  key={item.value} 
+                  onSelect={() => handleSelect(`instrument:${item.value}`)}
+                  disabled={isItemDisabled(item)}
+                >
                   <Checkbox 
-                    id={`item-${item.value}`}
-                    checked={isItemSelected(item)}
-                    onCheckedChange={() => handleItemChange(item)}
+                    checked={isItemSelected(item)} 
+                    className="mr-2" 
                     disabled={isItemDisabled(item)}
                   />
-                  <Label 
-                    htmlFor={`item-${item.value}`} 
-                    className={`ml-2 ${isItemDisabled(item) ? 'opacity-50' : ''}`}
-                  >
-                    {item.value}
-                  </Label>
-                </div>
+                  {item.value}
+                </CommandItem>
               ))
             }
-          </div>
-        </div>
-      </ScrollArea>
+          </CommandGroup>
+        </CommandList>
+      </Command>
     </div>
-  ), [CommandContent, allItems, isItemSelected, isItemDisabled, handleSelectAll, handleItemChange, showAccountNumbers])
+  ), [allItems, filteredItems, handleSelect, handleSelectAll, isItemSelected, isItemDisabled, showAccountNumbers, anonymizeAccount, searchTerm, isMobile])
 
   if (isMobile) {
     return (
@@ -309,9 +223,8 @@ export default function FilterLeftPane() {
   }
 
   return (
-    <div className="md:block fixed left-0 top-0 w-64 h-screen bg-background border-r p-4 flex flex-col overflow-hidden" aria-labelledby="filter-heading">
-      <div className="h-16" /> {/* Space for the Navbar */}
-      {FilterContent}
-    </div>
+      <ScrollArea className="px-4">
+        {FilterContent}
+      </ScrollArea>
   )
 }

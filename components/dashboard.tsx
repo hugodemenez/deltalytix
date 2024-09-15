@@ -20,10 +20,10 @@ export default function Dashboard() {
   }, [isLoading, trades.length])
 
   return (
-    <>
+    <div className='flex w-full px-8'>
       {isLoading && <LoadingOverlay />}
-      <div className={`flex flex-col lg:flex-row min-h-screen ${isDialogOpen ? 'blur-sm' : ''}`}>
-        <main className="flex-grow py-4 lg:py-6 overflow-x-hidden">
+      <div className={`w-full flex flex-col lg:flex-row min-h-screen ${isDialogOpen ? 'blur-sm' : ''}`}>
+        <main className=" w-full py-4 lg:py-6 overflow-x-hidden">
           <StatisticsSection />
           <GraphsSection />
           <CalendarSection />
@@ -42,6 +42,6 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }

@@ -136,6 +136,7 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
             item.id = generateTradeHash(item as Trade).toString();
             newTrades.push(item as Trade);
           })
+          console.log("newTrades", newTrades)
 
         setTrades(newTrades);
         setProcessedTrades(newTrades);

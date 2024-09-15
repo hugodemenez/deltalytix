@@ -29,6 +29,7 @@ import { useTheme } from './context/theme-provider'
 import { EnhancedFilterSelectors } from './enhanced-filter-selectors'
 import ImportButton from './import-csv/import-button'
 import DateCalendarFilter from './filters/date-calendar-filter'
+import { Separator } from './ui/separator'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -43,20 +44,14 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-6 text-primary bg-background shadow-sm w-screen pr-6 gap-x-4">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-10 py-6 text-primary bg-background/80 backdrop-blur-md border-b shadow-sm w-screen gap-x-4">
         <Link href="/dashboard">
           <Logo className='fill-black h-6 w-6 dark:fill-white' />
         </Link>
-        <div className="flex-1 max-w-2xl">
-          <DateCalendarFilter />
-        </div>
         <div className="flex items-center space-x-4">
           <div className='hidden md:flex'>
             <ImportButton />
           </div>
-          <Button variant="ghost" size="icon" onClick={toggleTheme} className='hidden md:flex'>
-            {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-          </Button>
           <Button variant="ghost" size="icon">
             <Bell className="h-5 w-5" />
           </Button>
@@ -130,33 +125,22 @@ export default function Navbar() {
                 <span>Keyboard shortcuts</span>
                 <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
               </DropdownMenuItem>
-              <DropdownMenuItem>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      {theme === 'light' ? <Sun className="h-5 w-5" /> : theme === 'dark' ? <Moon className="h-5 w-5" /> : <Laptop className="h-5 w-5" />}
-                      <span className="sr-only">Toggle theme</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Theme</DropdownMenuLabel>
-                    <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
-                      <DropdownMenuRadioItem value="light">
-                        <Sun className="mr-2 h-4 w-4" />
-                        <span>Light</span>
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="dark">
-                        <Moon className="mr-2 h-4 w-4" />
-                        <span>Dark</span>
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="system">
-                        <Laptop className="mr-2 h-4 w-4" />
-                        <span>System</span>
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Theme</DropdownMenuLabel>
+              <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
+                <DropdownMenuRadioItem value="light">
+                  <Sun className="mr-2 h-4 w-4" />
+                  <span>Light</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark">
+                  <Moon className="mr-2 h-4 w-4" />
+                  <span>Dark</span>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system">
+                  <Laptop className="mr-2 h-4 w-4" />
+                  <span>System</span>
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => {
                 signOut()
