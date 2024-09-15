@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Cursor AI rules file
+.cursorrules
+
 # dependencies
 /node_modules
 /.pnp
@@ -42,6 +45,3 @@ next-env.d.ts
 
 #videos
 **.mp4
-
-# IA
-*.cursorrules
