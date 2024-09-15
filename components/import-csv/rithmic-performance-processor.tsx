@@ -63,6 +63,21 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
                 }
             });
 
+            // Ensure time values are stored as ISO strings
+            try{
+            if (item.entryDate) {
+                item.entryDate = new Date(item.entryDate).toISOString();
+            }
+            if (item.closeDate) {
+                item.closeDate = new Date(item.closeDate).toISOString();
+            }
+            } catch (e) {
+                toast({
+                    title: "Error",
+                    description: "There was an error processing the trades. Please check the data and try again."
+                })
+                return;
+            }
             // On rithmic performance, the side is stored as 'B' or 'S'
             if (item.side === 'B' || item.side === 'S') {
                 item.side = item.side === 'B' ? 'Long' : 'Short';

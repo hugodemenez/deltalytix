@@ -20,7 +20,9 @@ export default async function RootLayout({
         <div className="px-2 sm:px-6 lg:px-32">
         <Toaster />
         <Navbar />
+        <div className="sm:mt-20">
         {children}
+        </div>
         <Footer />
         </div>
         </UserDataProvider>

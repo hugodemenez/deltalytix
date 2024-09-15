@@ -112,10 +112,12 @@ export default function Navbar() {
                 </DropdownMenuSub>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
+              <Link href="/support">
               <DropdownMenuItem>
                 <LifeBuoy className="mr-2 h-4 w-4" />
                 <span>Support</span>
               </DropdownMenuItem>
+              </Link>
               <DropdownMenuItem disabled>
                 <Cloud className="mr-2 h-4 w-4" />
                 <span>API</span>
