@@ -56,10 +56,3 @@ export async function getTickDetails() {
   await prisma.$disconnect()
   return tickDetails
 }
-
-export async function getIsSubscribed(email: string) {
-  const prisma = new PrismaClient()
-  const subscription = await prisma.subscription.findUnique({where: {email: email}})
-  await prisma.$disconnect()
-  return subscription
-}

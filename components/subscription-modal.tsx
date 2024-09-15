@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Check, X } from "lucide-react"
 import { useUser } from './context/user-data'
-import { getIsSubscribed } from '@/server/database'
+import { getIsSubscribed } from '@/server/auth'
 
 type BillingPeriod = 'annual' | 'monthly';
 

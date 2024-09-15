@@ -5,9 +5,7 @@ import { useChat, Message } from 'ai/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2 } from "lucide-react"
 import {
   Dialog,
@@ -34,14 +32,11 @@ export default function SupportPage() {
   const [needsHumanHelp, setNeedsHumanHelp] = useState(false)
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [isContactFormOpen, setIsContactFormOpen] = useState(false)
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const lastMessageRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
 
   useEffect(() => {
-    if (lastMessageRef.current) {
-      lastMessageRef.current.scrollIntoView({ behavior: 'smooth' })
-    }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
   useEffect(() => {
@@ -137,90 +132,85 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="md:container md:mx-auto md:p-4 md:py-8 fixed inset-0 md:static md:h-auto z-50 bg-background md:bg-transparent">
-      <Card className="w-full h-full md:h-auto md:max-w-2xl mx-auto flex flex-col">
-        <CardHeader className="p-4 sm:p-6 flex-shrink-0">
-          <CardTitle className="text-xl sm:text-2xl">Deltalytix Support</CardTitle>
-          <CardDescription className="text-sm sm:text-base">How can we help you with your trading journal?</CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6 flex-grow overflow-hidden">
-          <ScrollArea className="h-[calc(100vh-180px)] md:h-[400px] pr-4" ref={scrollAreaRef}>
-            <AnimatePresence initial={false}>
-              {messages.map((message, index) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
-                  ref={index === messages.length - 1 ? lastMessageRef : null}
-                >
-                  <div className={`flex items-start ${message.role === 'user' ? 'flex-row-reverse' : ''} max-w-[80%] sm:max-w-[70%]`}>
-                    <Avatar className={`w-6 h-6 sm:w-8 sm:h-8 ${message.role === 'user' ? 'ml-2' : 'mr-2'}`}>
-                      <AvatarImage src={message.role === 'user' ? "/user-avatar.png" : "/bot-avatar.png"} alt={message.role} />
-                      <AvatarFallback>{message.role === 'user' ? 'U' : 'AI'}</AvatarFallback>
-                    </Avatar>
-                    <div className={`rounded-lg p-2 sm:p-3 text-base ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      {message.content}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {isLoading && (
+    <div className="fixed inset-0 flex flex-col bg-background">
+      <div className="flex-shrink-0 p-4 border-b">
+        <h1 className="text-xl font-bold">Deltalytix Support</h1>
+        <p className="text-sm text-muted-foreground">How can we help you with your trading journal?</p>
+      </div>
+      <div className="flex-grow overflow-y-auto p-4" style={{ height: 'calc(100dvh - 140px)' }}>
+        <div className="space-y-4">
+          <AnimatePresence initial={false}>
+            {messages.map((message) => (
               <motion.div
+                key={message.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="flex justify-start mb-4"
+                transition={{ duration: 0.3 }}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                <div className="flex items-center bg-muted rounded-lg p-2 sm:p-3 text-base">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Thinking...</span>
+                <div className={`flex items-start ${message.role === 'user' ? 'flex-row-reverse' : ''} max-w-[80%]`}>
+                  <Avatar className={`w-6 h-6 ${message.role === 'user' ? 'ml-2' : 'mr-2'}`}>
+                    <AvatarImage src={message.role === 'user' ? "/user-avatar.png" : "/bot-avatar.png"} alt={message.role} />
+                    <AvatarFallback>{message.role === 'user' ? 'U' : 'AI'}</AvatarFallback>
+                  </Avatar>
+                  <div className={`rounded-lg p-2 text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                    {message.content}
+                  </div>
                 </div>
               </motion.div>
+            ))}
+          </AnimatePresence>
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex justify-start"
+            >
+              <div className="flex items-center bg-muted rounded-lg p-2 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span>Thinking...</span>
+              </div>
+            </motion.div>
+          )}
+          {needsHumanHelp && !isSendingEmail && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              className="flex justify-center"
+            >
+              <Button onClick={() => setIsContactFormOpen(true)} variant="secondary" size="sm" className="text-sm">
+                Request Human Support
+              </Button>
+            </motion.div>
+          )}
+        </div>
+        <div ref={messagesEndRef} />
+      </div>
+      <div className="flex-shrink-0 p-4 border-t bg-background" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
+        <form onSubmit={handleSubmit} className="flex space-x-2">
+          <Input
+            value={input}
+            onChange={handleInputChange}
+            placeholder="Type your message here..."
+            disabled={isLoading || isSendingEmail}
+            aria-label="Chat input"
+            className="flex-grow text-sm"
+          />
+          <Button type="submit" disabled={isLoading || isSendingEmail} size="sm" className="whitespace-nowrap">
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                <span className="sr-only">Sending</span>
+              </>
+            ) : (
+              <span>Send</span>
             )}
-            {needsHumanHelp && !isSendingEmail && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                className="flex justify-center my-4"
-              >
-                <Button onClick={() => setIsContactFormOpen(true)} variant="secondary" size="sm" className="text-base">
-                  Request Human Support
-                </Button>
-              </motion.div>
-            )}
-          </ScrollArea>
-        </CardContent>
-        <CardFooter className="p-4 sm:p-6 flex-shrink-0">
-          <form onSubmit={handleSubmit} className="flex w-full space-x-2">
-            <Input
-              value={input}
-              onChange={handleInputChange}
-              placeholder="Type your message here..."
-              disabled={isLoading || isSendingEmail}
-              aria-label="Chat input"
-              className="text-base"
-            />
-            <Button type="submit" disabled={isLoading || isSendingEmail} size="sm" className="whitespace-nowrap text-base">
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span className="hidden sm:inline">Sending</span>
-                </>
-              ) : (
-                <>
-                  <span className="hidden sm:inline">Send</span>
-                  <span className="sm:hidden">➤</span>
-                </>
-              )}
-            </Button>
-          </form>
-        </CardFooter>
-      </Card>
+          </Button>
+        </form>
+      </div>
 
       <Dialog open={isContactFormOpen} onOpenChange={setIsContactFormOpen}>
         <DialogContent>

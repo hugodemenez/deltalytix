@@ -1,5 +1,6 @@
 'use server'
 import { toast } from '@/hooks/use-toast'
+import { PrismaClient } from '@prisma/client'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
@@ -95,4 +96,12 @@ export async function signInWithEmail(email: string,next: string | null = null) 
     },
   })
   console.log(error)
+}
+
+
+export async function getIsSubscribed(email: string) {
+  const prisma = new PrismaClient()
+  const subscription = await prisma.subscription.findUnique({where: {email: email}})
+  await prisma.$disconnect()
+  return subscription
 }
