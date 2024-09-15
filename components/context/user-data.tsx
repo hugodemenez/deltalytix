@@ -21,7 +21,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const getUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/authentication');
+        // router.push('/authentication');
       }
       if (error) {
         console.error('Error fetching user:', error);

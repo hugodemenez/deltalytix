@@ -21,7 +21,7 @@ const videoUrls: Record<ImportType, { url: string, details: string }> = {
   },
   'rithmic-orders': {
     url: process.env.NEXT_PUBLIC_RITHMIC_ORDER_TUTORIAL_VIDEO || '',
-    details: 'Following fields are mandatory: Account, Buy/Sell, Limit Price, Symbol, Order Number, Update time, Qty filled, Closed profit & loss, Commission fill rate'
+    details: 'Following fields are mandatory: Account, Buy/Sell, Avg Fill Price, Limit Price, Symbol, Order Number, Update time, Qty filled, Closed profit & loss, Commission fill rate'
   },
   'tradezella': {
     url: '',

@@ -83,7 +83,7 @@ export async function getUserId() {
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()
-  redirect('/authentication')
+  redirect('/')
 }
 
 export async function signInWithEmail(email: string, redirectUrl: string | null = null) {

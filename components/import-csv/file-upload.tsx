@@ -1,7 +1,13 @@
-import React, { useCallback } from 'react'
+'use client'
+
+import React, { useCallback, useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { ImportType } from './import-type-selection'
+import { Progress } from "@/components/ui/progress"
+import { XIcon, FileIcon, AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 
 interface FileUploadProps {
   importType: ImportType
@@ -20,6 +26,9 @@ export default function FileUpload({
   setStep,
   setError
 }: FileUploadProps) {
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
+  const [parsedFiles, setParsedFiles] = useState<string[][][]>([])
 
   const processRithmicPerformanceCsv = useCallback((data: string[][]) => {
     const processedData: string[][] = [];
@@ -39,113 +48,223 @@ export default function FileUpload({
       return /^[A-Z]{3}\d$/.test(value);
     };
 
-
     data.forEach((row) => {
-      // Find the account number
       if (row[0] && isAccountNumber(row[0])) {
         currentAccountNumber = row[0];
       } else if (row[0] && isInstrument(row[0])) {
-        // Find the instrument
         currentInstrument = row[0];
       } else if (row[0] === 'Entry Order Number') {
-        // Set the headers
         headers = ['AccountNumber', 'Instrument', ...row];
       } else if (headers.length > 0 && row[0] && row[0] !== 'Entry Order Number' && row[0] !== 'Account') {
-        // Process the data
         processedData.push([currentAccountNumber, currentInstrument, ...row]);
       }
     });
 
-    if (processedData.length > 0 && headers.length > 0) {
-      setCsvData(processedData);
-      setHeaders(headers);
-      setStep(3); // Skip header selection for Rithmic
-    } else {
-      setError("Unable to process Rithmic CSV. Please check the file format.");
-    }
+    return { headers, processedData };
   }, []);
 
   const processRithmicOrdersCsv = useCallback((data: string[][]) => {
-    // Header is always the row under the row with "Completed Orders" as first column
     const headerRowIndex = data.findIndex(row => row[0] === 'Completed Orders') + 1
     const headers = data[headerRowIndex].filter(header => header && header.trim() !== '')
-    setHeaders(headers)
-    setCsvData(data.slice(headerRowIndex + 1))
-    setStep(3) // Go to header selection step
+    const processedData = data.slice(headerRowIndex + 1)
+    return { headers, processedData };
   }, []);
 
   const processTradovateCsv = useCallback((data: string[][]) => {
-    // Header is always first row
     const headers = data[0].filter(header => header && header.trim() !== '')
-    setHeaders(headers)
-    setCsvData(data.slice(1))
-    setStep(3) // Go to header selection step
+    const processedData = data.slice(1)
+    return { headers, processedData };
   }, []);
 
   const processTradezellaCsv = useCallback((data: string[][]) => {
-    // Header is always first row
     const headers = data[0].filter(header => header && header.trim() !== '')
-    setHeaders(headers)
-    setCsvData(data.slice(1))
-    setStep(3) // Go to header selection step
+    const processedData = data.slice(1)
+    return { headers, processedData };
   }, []);
 
   const processCsv = useCallback((data: string[][]) => {
     if (data.length > 0) {
       const headers = data[0].filter(header => header && header.trim() !== '')
-      setHeaders(headers)
-      setCsvData(data)
-      setStep(2) // Go to header selection step
+      return { headers, processedData: data.slice(1) };
     } else {
-      setError("The CSV file appears to be empty or invalid.")
+      throw new Error("The CSV file appears to be empty or invalid.")
     }
-  }, [setCsvData, setHeaders, setStep, setError])
+  }, [])
+
+  const processFile = useCallback((file: File, index: number) => {
+    return new Promise<void>((resolve, reject) => {
+      Papa.parse(file, {
+        complete: (result) => {
+          if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+            setParsedFiles(prevFiles => {
+              const newFiles = [...prevFiles]
+              newFiles[index] = result.data as string[][]
+              return newFiles
+            })
+            setError(null)
+            resolve()
+          } else {
+            reject(new Error("The CSV file appears to be empty or invalid."))
+          }
+        },
+        error: (error) => {
+          reject(new Error(`Error parsing CSV: ${error.message}`))
+        }
+      })
+    })
+  }, [setError])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0]
-    Papa.parse(file, {
-      complete: (result) => {
-        if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-          setRawCsvData(result.data as string[][])
-          switch (importType) {
-            case 'rithmic-performance':
-              processRithmicPerformanceCsv(result.data as string[][])
-              break
-            case 'rithmic-orders':
-              processRithmicOrdersCsv(result.data as string[][])
-              break
-            case 'tradovate':
-              processTradovateCsv(result.data as string[][])
-              break
-            case 'tradezella':
-              processTradezellaCsv(result.data as string[][])
-              break
-            default:
-              processCsv(result.data as string[][])
-          }
-          setError(null)
-        } else {
-          setError("The CSV file appears to be empty or invalid.")
-        }
-      },
-      error: (error) => {
-        setError(`Error parsing CSV: ${error.message}`)
-      }
+    setUploadedFiles(prevFiles => [...prevFiles, ...acceptedFiles])
+    acceptedFiles.forEach((file, index) => {
+      const totalIndex = uploadedFiles.length + index
+      setUploadProgress(prev => ({ ...prev, [file.name]: 0 }))
+      processFile(file, totalIndex)
+        .then(() => {
+          setUploadProgress(prev => ({ ...prev, [file.name]: 100 }))
+        })
+        .catch(error => {
+          setError(error.message)
+          setUploadProgress(prev => ({ ...prev, [file.name]: 0 }))
+        })
     })
-  }, [importType, processRithmicPerformanceCsv, processCsv, setRawCsvData, setError])
+  }, [processFile, setError, uploadedFiles.length])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
 
+  const removeFile = (index: number) => {
+    setUploadedFiles(prevFiles => prevFiles.filter((_, i) => i !== index))
+    setParsedFiles(prevFiles => prevFiles.filter((_, i) => i !== index))
+    setUploadProgress(prev => {
+      const newProgress = { ...prev }
+      delete newProgress[uploadedFiles[index].name]
+      return newProgress
+    })
+  }
+
+  const concatenateFiles = useCallback(() => {
+    if (parsedFiles.length === 0) return
+
+    let concatenatedData: string[][] = []
+    let headers: string[] = []
+
+    try {
+      switch (importType) {
+        case 'rithmic-performance':
+          parsedFiles.forEach((file, index) => {
+            const { headers: fileHeaders, processedData } = processRithmicPerformanceCsv(file)
+            if (index === 0) {
+              headers = fileHeaders
+              concatenatedData = processedData
+            } else {
+              concatenatedData = [...concatenatedData, ...processedData]
+            }
+          })
+          break
+        case 'rithmic-orders':
+          parsedFiles.forEach((file, index) => {
+            const { headers: fileHeaders, processedData } = processRithmicOrdersCsv(file)
+            if (index === 0) {
+              headers = fileHeaders
+              concatenatedData = processedData
+            } else {
+              concatenatedData = [...concatenatedData, ...processedData]
+            }
+          })
+          break
+        case 'tradovate':
+          parsedFiles.forEach((file, index) => {
+            const { headers: fileHeaders, processedData } = processTradovateCsv(file)
+            if (index === 0) {
+              headers = fileHeaders
+              concatenatedData = processedData
+            } else {
+              concatenatedData = [...concatenatedData, ...processedData]
+            }
+          })
+          break
+        case 'tradezella':
+          parsedFiles.forEach((file, index) => {
+            const { headers: fileHeaders, processedData } = processTradezellaCsv(file)
+            if (index === 0) {
+              headers = fileHeaders
+              concatenatedData = processedData
+            } else {
+              concatenatedData = [...concatenatedData, ...processedData]
+            }
+          })
+          break
+        default:
+          parsedFiles.forEach((file, index) => {
+            const { headers: fileHeaders, processedData } = processCsv(file)
+            if (index === 0) {
+              headers = fileHeaders
+              concatenatedData = processedData
+            } else {
+              concatenatedData = [...concatenatedData, ...processedData]
+            }
+          })
+          break
+      }
+
+      setRawCsvData([headers, ...concatenatedData])
+      setCsvData(concatenatedData)
+      setHeaders(headers)
+      setStep(importType === 'rithmic-performance' || importType === 'rithmic-orders' ? 3 : 2)
+      setError(null)
+    } catch (error) {
+      setError((error as Error).message)
+    }
+  }, [importType, parsedFiles, setRawCsvData, setCsvData, setHeaders, setStep, setError, processRithmicPerformanceCsv, processRithmicOrdersCsv, processTradovateCsv, processTradezellaCsv, processCsv])
+
+  useEffect(() => {
+    if (parsedFiles.length > 0 && Object.values(uploadProgress).every(progress => progress === 100)) {
+      concatenateFiles()
+    }
+  }, [parsedFiles, uploadProgress, concatenateFiles])
+
   return (
     <div className="space-y-4">
-      <div {...getRootProps()} className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer">
+      <div 
+        {...getRootProps()} 
+        className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary transition-colors"
+      >
         <input {...getInputProps()} />
         {isDragActive ? (
-          <p>Drop the CSV file here ...</p>
+          <p className="text-lg">Drop the CSV files here ...</p>
         ) : (
-          <p>Drag and drop a CSV file here, or click to select a file</p>
+          <p className="text-lg">Drag and drop CSV files here, or click to select files</p>
         )}
       </div>
+      {uploadedFiles.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold">Uploaded Files:</h3>
+          {uploadedFiles.map((file, index) => (
+            <div key={index} className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-2 rounded">
+              <div className="flex items-center space-x-2">
+                <FileIcon className="h-5 w-5 text-primary" />
+                <span className="text-sm font-medium">{file.name}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Progress value={uploadProgress[file.name] || 0} className="w-24" />
+                <Button variant="ghost" size="icon" onClick={() => removeFile(index)}>
+                  <XIcon className="h-4 w-4" />
+                  <span className="sr-only">Remove file</span>
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {uploadedFiles.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Note</AlertTitle>
+          <AlertDescription>
+            All uploaded files will be processed using the selected import type.
+          </AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 }

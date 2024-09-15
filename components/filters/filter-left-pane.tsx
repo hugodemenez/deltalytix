@@ -223,8 +223,8 @@ export default function FilterLeftPane() {
   }
 
   return (
-      <ScrollArea className="px-4">
+      <div className="px-4 fixed top-18 left-0 h-full min-w-[300px]">
         {FilterContent}
-      </ScrollArea>
+      </div>
   )
 }

@@ -12,17 +12,9 @@ import {
 export default async function Home() {
 
   return (
-    <div>
-
-      <ResizablePanelGroup direction="horizontal">
-        <ResizablePanel defaultSize={20} className='min-w-[300px]'>
-          <FilterLeftPane />
-        </ResizablePanel>
-        <ResizableHandle withHandle/>
-        <ResizablePanel defaultSize={80}>
-          <Dashboard />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+    <div className="flex relative  min-h-screen">
+      <FilterLeftPane />
+      <Dashboard />
     </div>
   )
 }
