@@ -30,6 +30,19 @@ interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> { }
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [isLoading, setIsLoading] = React.useState<boolean>(false)
 
+    const [isSubscription, setIsSubscription] = React.useState<boolean>(false)
+    const [lookupKey, setLookupKey] = React.useState<string | null>(null)
+
+    React.useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search)
+        const subscription = urlParams.get('subscription')
+        setIsSubscription(subscription === 'true')
+        const lookup_key = urlParams.get('lookup_key')
+        setLookupKey(lookup_key)
+    }, [])
+
+
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -39,7 +52,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     async function onSubmitEmail(values: z.infer<typeof formSchema>) {
         setIsLoading(true)
 
-        await signInWithEmail(values.email)
+        await signInWithEmail(values.email, isSubscription ? `stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
 
         setTimeout(() => {
             setIsLoading(false)
@@ -50,7 +63,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         event.preventDefault()
         setIsLoading(true)
 
-        await signInWithDiscord()
+        await signInWithDiscord(isSubscription ? `stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
 
         setTimeout(() => {
             setIsLoading(false)

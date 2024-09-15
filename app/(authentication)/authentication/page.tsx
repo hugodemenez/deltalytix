@@ -12,6 +12,8 @@ export const metadata: Metadata = {
   description: "Authenticate with email or discord",
 }
 
+
+
 export default function AuthenticationPage() {
   return (
     <div>

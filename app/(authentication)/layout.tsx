@@ -1,14 +1,16 @@
 'use client'
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { redirect, useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
+import { createClient } from "@/server/auth";
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  
   const router = useRouter();
 
   useEffect(() => {

@@ -42,14 +42,14 @@ export async function createClient() {
   )
 }
 
-export async function signInWithDiscord() {
+export async function signInWithDiscord(next: string | null = null) {
   const supabase = await createClient()
   const websiteURL = await getWebsiteURL()
   console.log(`${websiteURL}auth/callback/`)
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'discord',
     options: {
-      redirectTo: `${websiteURL}auth/callback/`,
+      redirectTo: `${websiteURL}auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
     },
   })
   console.log(error, data)
@@ -86,12 +86,12 @@ export async function signOut() {
   redirect('/')
 }
 
-export async function signInWithEmail(email: string, redirectUrl: string | null = null) {
+export async function signInWithEmail(email: string,next: string | null = null) {
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email: email,
     options: {
-      emailRedirectTo: redirectUrl ? `${getWebsiteURL()}${redirectUrl}` : `${getWebsiteURL()}auth/callback/`,
+      emailRedirectTo: `${getWebsiteURL()}auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
     },
   })
   console.log(error)

@@ -225,7 +225,7 @@ export default function Component() {
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
                         <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
-                            <Link href="/authentication">Sign in</Link>
+                            <Link href={user ? "/dashboard" : "/authentication"}>{user ? "Dashboard" : "Sign in"}</Link>
                         </Button>
                     </NavigationMenu>
                 </div>
