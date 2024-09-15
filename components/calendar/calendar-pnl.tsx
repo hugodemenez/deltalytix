@@ -84,8 +84,14 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
   }
 
   const calculateMonthlyTotal = () => {
-    return Object.values(calendarData).reduce((total, day) => total + day.pnl, 0)
-  }
+    return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
+      const date = new Date(dateString);
+      if (isSameMonth(date, currentDate)) {
+        return total + dayData.pnl;
+      }
+      return total;
+    }, 0);
+  };
 
   const monthlyTotal = calculateMonthlyTotal()
 
