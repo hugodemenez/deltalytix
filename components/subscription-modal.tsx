@@ -1,13 +1,13 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Check, X } from "lucide-react"
 import { useUser } from './context/user-data'
-import { getIsSubscribed } from '@/server/auth'
+import { getIsSubscribed } from '@/app/(dashboard)/server/subscription'
 
 type BillingPeriod = 'annual' | 'monthly';
 
@@ -34,15 +34,16 @@ export default function PaywallModal() {
     const [isOpen, setIsOpen] = useState(false)
     const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('annual')
 
-    useEffect(() => {
-        const checkSubscription = async () => {
-            if (user?.email) {
-                const isSubscribed = await getIsSubscribed(user.email);
-                setIsOpen(!isSubscribed);
-            }
-        };
-        checkSubscription();
-    }, [user])
+    const checkSubscription = useCallback(async () => {
+      if (user?.email) {
+          const isSubscribed = await getIsSubscribed(user.email);
+          setIsOpen(!isSubscribed);
+      }
+  }, [user?.email]);
+
+  useEffect(() => {
+      checkSubscription();
+  }, [checkSubscription]);
 
     const plans: Plans = {
     basic: {

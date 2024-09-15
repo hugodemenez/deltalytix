@@ -99,9 +99,3 @@ export async function signInWithEmail(email: string,next: string | null = null) 
 }
 
 
-export async function getIsSubscribed(email: string) {
-  const prisma = new PrismaClient()
-  const subscription = await prisma.subscription.findUnique({where: {email: email}})
-  await prisma.$disconnect()
-  return subscription
-}
