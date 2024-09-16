@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
-import { useTrades } from "@/components/context/trades-data"
+import { useFormattedTrades, useTrades } from "@/components/context/trades-data"
 import { Trade } from "@prisma/client"
 
 const chartConfig = {
@@ -18,7 +18,7 @@ const formatCurrency = (value: number) =>
   value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
 export default function TimeOfDayTradeChart() {
-  const { trades } = useTrades()
+  const { formattedTrades :trades} = useFormattedTrades()
 
   const chartData = React.useMemo(() => {
     const hourlyData: { [hour: string]: { totalPnl: number; count: number } } = {}
@@ -27,19 +27,6 @@ export default function TimeOfDayTradeChart() {
     for (let i = 0; i < 24; i++) {
       hourlyData[i.toString()] = { totalPnl: 0, count: 0 }
     }
-// Sum up PNL and count trades for each hour
-// trades.forEach((trade: Trade) => {
-//   if (trade.entryDate && !isNaN(new Date(trade.entryDate).getTime())) {
-//     const hour = new Date(trade.entryDate).getHours().toString()
-//     if (!hourlyData[hour]) {
-//       hourlyData[hour] = { totalPnl: 0, count: 0 }
-//     }
-//     hourlyData[hour].totalPnl += trade.pnl
-//     hourlyData[hour].count++
-//   } else {
-//     console.warn(`Invalid entryDate for trade:`, trade)
-//   }
-// })
 
     // Sum up PNL and count trades for each hour
     trades.forEach((trade: Trade) => {
