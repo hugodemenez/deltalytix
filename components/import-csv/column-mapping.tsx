@@ -68,6 +68,7 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
           });
         }
       }
+      console.log('newMappings', newMappings)
 
       headers.forEach(header => {
         if (!newMappings[header]) {

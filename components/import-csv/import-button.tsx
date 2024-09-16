@@ -18,6 +18,7 @@ import RithmicPerformanceProcessor from './rithmic-performance-processor'
 import TradovateProcessor from './tradovate-processor'
 import ColumnMapping from './column-mapping'
 import TradezellaProcessor from './tradezella-processor'
+import NinjaTraderPerformanceProcessor from './ninjatrader-performance-processor'
 
 type ColumnConfig = {
   [key: string]: {
@@ -146,6 +147,13 @@ export default function ImportButton() {
           newTrades = processedTrades.map(trade => ({
             ...trade,
             id: generateTradeHash(trade),
+            userId: user.id,
+          }))
+          break
+        case 'ninjatrader-performance':
+          newTrades = processedTrades.map(trade => ({
+            ...trade,
+            id: `${user.id}-${trade.id}`,
             userId: user.id,
           }))
           break
@@ -286,6 +294,9 @@ export default function ImportButton() {
         case 'tradezella':
           handleSave()
           break
+        case 'ninjatrader-performance':
+          handleSave()
+          break
         default:
           if (!isRequiredFieldsMapped()) {
             const missingFields = getMissingRequiredFields()
@@ -372,6 +383,14 @@ export default function ImportButton() {
           case 'tradezella':
             return (
               <TradezellaProcessor
+                csvData={csvData}
+                headers={headers}
+                setProcessedTrades={setProcessedTrades}
+              />
+            )
+          case 'ninjatrader-performance':
+            return (
+              <NinjaTraderPerformanceProcessor
                 csvData={csvData}
                 headers={headers}
                 setProcessedTrades={setProcessedTrades}
