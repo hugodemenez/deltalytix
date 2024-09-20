@@ -146,7 +146,7 @@ export default function FilterLeftPane() {
           onValueChange={setSearchTerm}
           className={isMobile ? "text-lg" : ""}
         />
-        <CommandList>
+        <CommandList className='sm:overflow-y-auto sm:max-h-[500px]'>
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup heading="Accounts">
             <CommandItem onSelect={() => handleSelectAll('account')}>

@@ -83,6 +83,9 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
                 item.side = item.side === 'B' ? 'Long' : 'Short';
             }
 
+            if (item.instrument) {
+                item.instrument = item.instrument.slice(0, 2)
+            }
             // This is going to be set later
             item.userId = ''
             if (!item.accountNumber) {

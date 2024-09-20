@@ -12,7 +12,7 @@ import {
 export default async function Home() {
 
   return (
-    <div className="flex relative  min-h-screen">
+    <div className="flex w-full relative  min-h-screen">
       <FilterLeftPane />
       <Dashboard />
     </div>

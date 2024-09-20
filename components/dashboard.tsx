@@ -20,7 +20,7 @@ export default function Dashboard() {
   }, [isLoading, trades.length])
 
   return (
-    <div className='flex w-full sm:px-8 sm:pl-[300px] mx-auto'>
+    <div className='flex flex-1 w-full sm:pl-[300px] '>
       {isLoading && <LoadingOverlay />}
       <div className={`w-full flex flex-col lg:flex-row min-h-screen ${isDialogOpen ? 'blur-sm' : ''}`}>
         <main className=" w-full py-4 lg:py-6 overflow-x-hidden">
