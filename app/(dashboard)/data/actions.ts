@@ -105,3 +105,11 @@ export async function renameAccount(oldAccountNumber: string, newAccountNumber: 
     }
   })
 }
+
+export async function deleteTradesByIds(tradeIds: string[]): Promise<void> {
+  await prisma.trade.deleteMany({
+    where: {
+      id: { in: tradeIds }
+    }
+  })
+}
