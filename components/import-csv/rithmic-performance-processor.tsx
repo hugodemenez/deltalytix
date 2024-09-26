@@ -84,7 +84,7 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
             }
 
             if (item.instrument) {
-                item.instrument = item.instrument.slice(0, 2)
+                item.instrument = item.instrument.slice(0, -2)
             }
             // This is going to be set later
             item.userId = ''

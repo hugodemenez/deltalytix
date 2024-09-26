@@ -37,7 +37,7 @@ export default function FileUpload({
     let headers: string[] = [];
 
     const isAccountNumber = (value: string) => {
-      return value.length > 4 &&
+      return value.length > 8 &&
         !/^[A-Z]{3}\d$/.test(value) &&
         !/^\d+$/.test(value) &&
         value !== 'Account' &&
@@ -45,7 +45,12 @@ export default function FileUpload({
     };
 
     const isInstrument = (value: string) => {
-      return /^[A-Z]{3}\d$/.test(value);
+      // Match common futures instrument patterns:
+      // - 2-4 uppercase letters followed by 1-2 digits (e.g. ESZ4, MESZ4, ZNH3)
+      // - Optionally prefixed with 'M' for micro contracts
+      const isIntrument = /^[A-Z]{2,4}\d{1,2}$/.test(value);
+      isIntrument ? console.log(value, isIntrument) : null;
+      return isIntrument;
     };
 
     data.forEach((row) => {
