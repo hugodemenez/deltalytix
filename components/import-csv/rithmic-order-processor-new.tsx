@@ -81,7 +81,15 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     const processedTrades: Trade[] = []
     const openPositions: { [key: string]: OpenPosition } = {}
 
-    csvData.forEach((row) => {
+    // Sort orders by Update Time (RDT) column in ascending order
+    const sortedCsvData = csvData.sort((a, b) => {
+      const timeIndexA = headers.indexOf("Update Time (RDT)");
+      const timeIndexB = headers.indexOf("Update Time (RDT)");
+      if (timeIndexA === -1 || timeIndexB === -1) return 0;
+      return new Date(a[timeIndexA]).getTime() - new Date(b[timeIndexB]).getTime();
+    });
+
+    sortedCsvData.forEach((row) => {
       if (row.length !== headers.length) return // Skip invalid rows
 
       const order = headers.reduce((acc, header, index) => {
