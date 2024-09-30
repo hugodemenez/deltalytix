@@ -82,7 +82,7 @@ export default function GitHubRepoCard() {
 
   useEffect(() => {
     fetchGithubData();
-    const intervalId = setInterval(fetchGithubData, 10000); // Refresh every 10 seconds
+    const intervalId = setInterval(fetchGithubData, 30000); // Refresh every 30 seconds
     return () => clearInterval(intervalId);
   }, [fetchGithubData]);
 
@@ -107,6 +107,15 @@ export default function GitHubRepoCard() {
       </CardContent>
     </Card>
   );
+
+  // Add this function to ensure we always have valid data for the chart
+  const getValidChartData = (stats: GithubStats['stats'] | undefined) => {
+    if (!stats || stats.length === 0) {
+      // Return a default dataset if stats are undefined or empty
+      return [{ value: 0, date: new Date() }];
+    }
+    return stats;
+  };
 
   return (
     <div className="px-4 mb-8 md:mb-16 lg:mb-32">
@@ -231,7 +240,7 @@ export default function GitHubRepoCard() {
                     </div>
                   </div>
                   <div className="pb-6 md:pb-10 mt-6 md:mt-10 h-[100px] md:h-[130px]">
-                    <ChartSSR data={githubStats?.stats || []} />
+                    <ChartSSR data={getValidChartData(githubStats?.stats)} />
                     <p className="text-muted-foreground text-xs md:text-sm mt-2 md:mt-4">
                       Last updated {formatTimeAgo(lastCommit?.commit.committer.date || new Date().toISOString())}
                     </p>
