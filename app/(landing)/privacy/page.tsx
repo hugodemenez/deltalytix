@@ -7,7 +7,7 @@ export default function PrivacyPolicy() {
       
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">1. Introduction</h2>
-        <p>Deltalytix ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.</p>
+        <p>Deltalytix (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.</p>
       </section>
 
       <section className="mb-6">
@@ -42,7 +42,7 @@ export default function PrivacyPolicy() {
 
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">5. Cookies</h2>
-        <p>We use cookies to persist user connections. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.</p>
+        <p>We use &quot;cookies&quot; to collect information. Cookies are small data files stored on your hard drive by a website. We may use both session cookies (which expire once you close your web browser) and persistent cookies (which stay on your computer until you delete them) to provide you with a more personal and interactive experience on our Site.</p>
       </section>
 
       <section className="mb-6">
@@ -57,12 +57,12 @@ export default function PrivacyPolicy() {
 
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">8. Changes to This Privacy Policy</h2>
-        <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.</p>
+        <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last updated&quot; date.</p>
       </section>
 
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">9. Contact Us</h2>
-        <p>If you have any questions about this Privacy Policy, please contact us at: <a href="mailto:contact@deltalytix.app">contact@deltalytix.app</a></p>
+        <p>If you have any questions about this Privacy Policy, please contact us at: <a href="mailto:privacy@deltalytix.com" className="text-primary hover:underline">privacy@deltalytix.com</a></p>
       </section>
 
       <p className="mt-8 text-sm">Last updated: {new Date().toISOString().split('T')[0]}</p>
