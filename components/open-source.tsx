@@ -11,6 +11,7 @@ import { LuGitFork } from 'react-icons/lu'
 import { ChartSSR } from './chart-ssr'
 import Link from 'next/link'
 import { getGithubData } from '@/server/github-data'
+import { Skeleton } from './ui/skeleton'
 
 const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || 'default_owner'
 const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || 'default_repo'
@@ -61,9 +62,11 @@ export default function GitHubRepoCard() {
   const [githubStats, setGithubStats] = useState<GithubStats | null>(null);
   const [stars, setStars] = useState<number>(0);
   const [lastCommit, setLastCommit] = useState<LastCommit | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchGithubData = useCallback(async () => {
     try {
+      setIsLoading(true);
       const { repoData, githubStats, stars, lastCommit } = await getGithubData();
       const lastUpdated = lastCommit?.commit?.committer?.date || new Date().toISOString();
       setRepoData(repoData);
@@ -72,6 +75,8 @@ export default function GitHubRepoCard() {
       setLastCommit(lastCommit);
     } catch (error) {
       console.error('Error fetching GitHub data:', error);
+    }finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -81,16 +86,61 @@ export default function GitHubRepoCard() {
     return () => clearInterval(intervalId);
   }, [fetchGithubData]);
 
-  if (!repoData || !githubStats || !lastCommit) {
-    return <div className="text-center p-4">Loading GitHub data...</div>;
+  const SkeletonLoader = () => (
+    <div className="px-4 mb-8 md:mb-16 lg:mb-32">
+      <div className="mb-6 md:mb-12">
+        <Skeleton className="h-8 w-64 mb-2 md:mb-4" />
+        <Skeleton className="h-4 w-full max-w-[500px]" />
+      </div>
+      <Card className="border border-border bg-background p-4 md:p-6 lg:p-8">
+        <div className="flex flex-col lg:flex-row lg:space-x-8 xl:space-x-16">
+          <div className="lg:basis-1/2 mb-6 lg:mb-0">
+            {[...Array(4)].map((_, index) => (
+              <div key={index} className="mb-4">
+                <Skeleton className="h-8 w-full mb-2" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ))}
+          </div>
+          <div className="lg:basis-1/2">
+            <Card className="w-full h-full border border-border bg-card p-3 md:p-4 lg:p-6">
+              <CardHeader className="border-b border-border pb-3 md:pb-4 mb-3 md:mb-4">
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2 mb-3 md:mb-4">
+                  <Skeleton className="h-6 w-20" />
+                  <Skeleton className="h-6 w-20" />
+                </div>
+                <div className="flex flex-wrap gap-3 md:gap-4 mb-4 md:mb-6">
+                  {[...Array(5)].map((_, index) => (
+                    <Skeleton key={index} className="h-4 w-16" />
+                  ))}
+                </div>
+                <Skeleton className="h-[100px] md:h-[130px] w-full mb-4" />
+                <Skeleton className="h-4 w-48 mb-4" />
+                <Skeleton className="h-8 w-full" />
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+
+  if (isLoading) {
+    return <SkeletonLoader />;
   }
 
+  if (!repoData || !githubStats || !lastCommit) {
+    return <div className="text-center p-4">Failed to load GitHub data.</div>;
+  }
   const lastUpdated = lastCommit.commit.committer.date;
 
   return (
     <div className="px-4 mb-8 md:mb-16 lg:mb-32">
       <div className="mb-6 md:mb-12">
-        <h2 className="text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-4 font-medium text-primary">Open startup</h2>
+        <h2 className="text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-4 font-medium text-primary">Run your own instance</h2>
         <p className="text-sm md:text-base text-muted-foreground max-w-[500px]">
           We believe in being as transparent as possible, from <a href={`https://github.com/${REPO_OWNER}/${REPO_NAME}`} target="_blank" rel="noreferrer" className="underline">code</a> to metrics. You can also request a feature and vote on which ones we should prioritize.
         </p>
@@ -98,7 +148,7 @@ export default function GitHubRepoCard() {
       <Card className="border border-border bg-background p-4 md:p-6 lg:p-8">
         <div className="flex flex-col lg:flex-row lg:space-x-8 xl:space-x-16">
           <div className="lg:basis-1/2 mb-6 lg:mb-0">
-            <Accordion type="single" collapsible className="w-full">
+            <Accordion type="multiple" className="w-full" defaultValue={["open-source", "community"]}>
               <AccordionItem value="open-source">
                 <AccordionTrigger className="flex items-center justify-between text-primary">
                   <div className="flex items-center space-x-2">
@@ -124,7 +174,7 @@ export default function GitHubRepoCard() {
                   <p>Join a community of traders passionate about algorithmic trading and financial analysis.</p>
                   <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
                     <a href={process.env.NEXT_PUBLIC_DISCORD_INVITATION} target="_blank" rel="noreferrer">
-                      Join Community
+                      Join Discord Community
                     </a>
                   </Button>
                 </AccordionContent>

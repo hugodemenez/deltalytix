@@ -7,6 +7,8 @@ import { useTheme } from '@/components/context/theme-provider'
 import Features from '@/components/features'
 import OpenSource from '@/components/open-source'
 import GitHubRepoCard from '@/components/open-source'
+import PricingPage from './pricing/page'
+import { Skeleton } from '@/components/ui/skeleton'
 
 
 export default function LandingPage() {
@@ -35,72 +37,76 @@ export default function LandingPage() {
     return (
         <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
             <main className="flex-1">
-                <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
-                    <div className="container px-4 md:px-6">
-                        <div className="grid gap-6 lg:grid-cols-[1fr_400px] lg:gap-12 xl:grid-cols-[1fr_600px]">
-                            <div className="flex flex-col justify-center space-y-4">
+                <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
+                    <div className="container px-4 md:px-6 mx-auto">
+                        <div className="flex flex-col w-full gap-y-24">
+                            <div className="flex flex-col  justify-center space-y-4 text-center">
                                 <div className="space-y-2">
                                     <Link href="/updates">
-                                        <Button variant="link" className="text-sm font-semibold tracking-wide uppercase text-gray-500 dark:text-gray-400">September Product Updates →</Button>
+                                        <Button variant="link" className="mx-auto mb-8 box-border flex flex-row justify-center items-center px-4 py-2 w-[214px] h-[26px] bg-[#EAF6F5] dark:bg-[hsl(var(--chart-1)/0.1)] border border-[#BBE2DB] dark:border-[hsl(var(--chart-1)/0.3)] rounded-[26px] text-[10px] font-semibold leading-5 tracking-[0.35px] uppercase text-[rgba(36,36,36,0.8)] dark:text-[hsl(var(--chart-1)/0.8)]">September Product Updates →</Button>
                                     </Link>
                                     <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
                                         Master your trading journey.
                                     </h1>
-                                    <p className="max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl">
+                                    <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl">
                                         Deltalytix is an all-in-one tool for traders to store, explore and understand their track-record.
                                     </p>
                                 </div>
-                                <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                                    <Button className="inline-flex h-10 items-center justify-center rounded-md bg-gray-900 dark:bg-white px-8 text-sm font-medium text-white dark:text-gray-900 shadow transition-colors hover:bg-gray-700 dark:hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50" asChild>
-                                        <Link href="/authentication">Get Started</Link>
-                                    </Button>
-                                    <Button variant="outline" className="inline-flex h-10 items-center justify-center rounded-md border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-8 text-sm font-medium shadow-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-gray-950 disabled:pointer-events-none disabled:opacity-50" asChild>
-                                        <Link href="/support">Talk to us</Link>
+                                <div className="flex w-full justify-center">
+                                    <Button asChild>
+                                        <Link href="/authentication" className="flex justify-center items-center px-8 py-2.5 w-[142px] h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                                            <span className="font-medium text-sm text-white">Get Started</span>
+                                        </Link>
                                     </Button>
                                 </div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Used by some of the most successful traders in the world.</p>
                             </div>
-                            <div className="flex items-center justify-center">
-                                {!videoLoaded && !videoError && (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-black rounded-lg">
-                                        <p className="text-gray-500 dark:text-gray-400">Loading video...</p>
-                                    </div>
-                                )}
-                                {videoError && (
-                                    <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-black rounded-lg">
-                                        <p className="text-red-500">Failed to load video</p>
-                                    </div>
-                                )}
-                                <video 
-                                    ref={videoRef}
-                                    height="600" 
-                                    width="600" 
-                                    preload="metadata" 
-                                    loop 
-                                    muted 
-                                    autoPlay 
-                                    playsInline 
-                                    className={`rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg ${videoLoaded ? 'block' : 'hidden'}`}
-                                    onLoadedData={handleVideoLoad}
-                                    onError={handleVideoError}
-                                >
-                                    <source src={theme === "dark" ? "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo-dark.mp4" : "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo.mp4"} type="video/mp4" />
-                                    <track
-                                        src="/path/to/captions.vtt"
-                                        kind="subtitles"
-                                        srcLang="en"
-                                        label="English"
-                                    />
-                                    Your browser does not support the video tag.
-                                </video>
+                            <div className="flex w-full items-center justify-center  relative  rounded-lg">
+                                <div className="relative w-full h-full">
+                                    <span className="absolute inset-[-12px] md:inset-[-24px] bg-[rgba(50,169,151,0.15)] dark:bg-[hsl(var(--chart-1)/0.15)] rounded-[14.5867px] -z-10"></span>
+                                    <span className="absolute inset-[-4px] md:inset-[-8px] bg-[rgba(50,169,151,0.25)] dark:bg-[hsl(var(--chart-1)/0.25)] rounded-[14.5867px] -z-20"></span>
+                                    <span className="absolute inset-0 shadow-[0_9.1167px_13.675px_-2.735px_rgba(0,0,0,0.1),0_3.64667px_5.47px_-3.64667px_rgba(0,0,0,0.1)] md:shadow-[0_18.2333px_27.35px_-5.47px_rgba(0,0,0,0.1),0_7.29333px_10.94px_-7.29333px_rgba(0,0,0,0.1)] dark:shadow-[0_9.1167px_13.675px_-2.735px_hsl(var(--chart-1)/0.1),0_3.64667px_5.47px_-3.64667px_hsl(var(--chart-1)/0.1)] md:dark:shadow-[0_18.2333px_27.35px_-5.47px_hsl(var(--chart-1)/0.1),0_7.29333px_10.94px_-7.29333px_hsl(var(--chart-1)/0.1)] rounded-[14.5867px] -z-30"></span>
+                                    {!videoLoaded && !videoError && (
+                                        <div className="w-full aspect-video flex items-center justify-center bg-gray-100 dark:bg-black rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800">
+                                            <Skeleton className="w-full aspect-video rounded-[14.5867px]" />
+                                        </div>
+                                    )}
+                                    {videoError && (
+                                        <div className="w-full aspect-video flex items-center justify-center bg-gray-100 dark:bg-black rounded-lg">
+                                            <p className="text-red-500">Failed to load video</p>
+                                        </div>
+                                    )}
+                                    <video 
+                                        ref={videoRef}
+                                        preload="metadata" 
+                                        loop 
+                                        muted 
+                                        autoPlay 
+                                        playsInline 
+                                        className={`w-full h-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800 ${videoLoaded ? 'block' : 'hidden'}`}
+                                        onLoadedData={handleVideoLoad}
+                                        onError={handleVideoError}
+                                    >
+                                        <source src={theme === "dark" ? "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo-dark.mp4" : "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo.mp4"} type="video/mp4" />
+                                        <track
+                                            src="/path/to/captions.vtt"
+                                            kind="subtitles"
+                                            srcLang="en"
+                                            label="English"
+                                        />
+                                        Your browser does not support the video tag.
+                                    </video>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </section>
-                <section id="features" className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
+                <section id="features" className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
                     <Features />
                 </section>
-                <section id="open-source" className="w-full py-12 md:py-24 lg:py-32 xl:py-48">
+                <section id="pricing" className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
+                    <PricingPage />
+                </section>
+                <section id="open-source" className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
                 <GitHubRepoCard />
                 </section>
             </main>

@@ -26,6 +26,7 @@ export default function TradeTable() {
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'entryDate', direction: 'desc' })
   const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set())
   const { toast } = useToast()
+  const [selectAll, setSelectAll] = useState(false)
 
   const filteredAndSortedTrades = useMemo(() => {
     return formattedTrades
@@ -70,6 +71,16 @@ export default function TradeTable() {
     })
   }
 
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedTrades(new Set())
+    } else {
+      const allTradeIds = new Set(filteredAndSortedTrades.map(trade => trade.id))
+      setSelectedTrades(allTradeIds)
+    }
+    setSelectAll(!selectAll)
+  }
+
   const toggleTradeSelection = (id: string) => {
     const newSelected = new Set(selectedTrades)
     if (newSelected.has(id)) {
@@ -78,6 +89,7 @@ export default function TradeTable() {
       newSelected.add(id)
     }
     setSelectedTrades(newSelected)
+    setSelectAll(newSelected.size === filteredAndSortedTrades.length)
   }
 
   return (
@@ -110,7 +122,13 @@ export default function TradeTable() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50px]">Select</TableHead>
+            <TableHead className="w-[50px]">
+              <Checkbox
+                checked={selectAll}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Select all"
+              />
+            </TableHead>
             <TableHead className="w-[100px]">
               <Button variant="ghost" onClick={() => handleSort('instrument')}>
                 Instrument

@@ -26,11 +26,10 @@ export async function fetchGroupedTrades(userId: string): Promise<FetchTradesRes
     if (!acc[trade.accountNumber]) {
       acc[trade.accountNumber] = {}
     }
-    const instrumentKey = trade.instrument.slice(0, 2)
-    if (!acc[trade.accountNumber][instrumentKey]) {
-      acc[trade.accountNumber][instrumentKey] = []
+    if (!acc[trade.accountNumber][trade.instrument]) {
+      acc[trade.accountNumber][trade.instrument] = []
     }
-    acc[trade.accountNumber][instrumentKey].push(trade)
+    acc[trade.accountNumber][trade.instrument].push(trade)
     return acc
   }, {})
 

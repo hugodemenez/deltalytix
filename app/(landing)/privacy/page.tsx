@@ -1,65 +1,71 @@
-import Link from "next/link"
+import React from 'react';
 
 export default function PrivacyPolicy() {
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
-      <p className="mb-4">Last updated: {new Date().toLocaleDateString()}</p>
       
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">1. Introduction</h2>
-        <p>Welcome to Deltalytix (&quot;we&quot;, &quot;our&quot;, or &quot;us&quot;). We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you visit our website and use our services, and tell you about your privacy rights and how the law protects you.</p>
+        <p>Deltalytix ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service.</p>
       </section>
 
       <section className="mb-6">
-        <h2 className="text-2xl font-semibold mb-3">2. Data We Collect</h2>
-        <p>We may collect, use, store and transfer different kinds of personal data about you, including:</p>
+        <h2 className="text-2xl font-semibold mb-3">2. Information We Collect</h2>
+        <p>We collect information when you create an account, including:</p>
         <ul className="list-disc pl-5 mt-2">
-          <li>Identity Data: first name, last name, username</li>
-          <li>Contact Data: email address</li>
-          <li>Technical Data: internet protocol (IP) address, browser type and version, time zone setting and location, browser plug-in types and versions, operating system and platform</li>
-          <li>Usage Data: information about how you use our website and services</li>
-          <li>Trading Data: information about your trading activities that you choose to store and analyze using our services</li>
+          <li>Email address</li>
+          <li>Name</li>
+          <li>Discord profile picture URL (if you sign up using Discord OAuth)</li>
+        </ul>
+        <p className="mt-2">We also collect and store trades data that you provide to us for analysis purposes.</p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-2xl font-semibold mb-3">3. How We Use Your Information</h2>
+        <p>We use the collected information for various purposes, including:</p>
+        <ul className="list-disc pl-5 mt-2">
+          <li>Providing and maintaining our service</li>
+          <li>Notifying you about changes to our service</li>
+          <li>Allowing you to participate in interactive features of our service</li>
+          <li>Providing customer support</li>
+          <li>Gathering analysis or valuable information to improve our service</li>
+          <li>Monitoring the usage of our service</li>
+          <li>Detecting, preventing and addressing technical issues</li>
         </ul>
       </section>
 
       <section className="mb-6">
-        <h2 className="text-2xl font-semibold mb-3">3. How We Use Your Data</h2>
-        <p>We use your personal data to:</p>
-        <ul className="list-disc pl-5 mt-2">
-          <li>Provide and improve our services</li>
-          <li>Communicate with you about our services</li>
-          <li>Analyze usage of our services to improve user experience</li>
-          <li>Comply with legal obligations</li>
-        </ul>
+        <h2 className="text-2xl font-semibold mb-3">4. Data Storage and Security</h2>
+        <p>We use Supabase, a SOC 2 compliant service, to store your data. We implement appropriate data collection, storage and processing practices and security measures to protect against unauthorized access, alteration, disclosure or destruction of your personal information and data stored on our service.</p>
       </section>
 
       <section className="mb-6">
-        <h2 className="text-2xl font-semibold mb-3">4. Data Security</h2>
-        <p>We have put in place appropriate security measures to prevent your personal data from being accidentally lost, used or accessed in an unauthorized way, altered or disclosed. We limit access to your personal data to those employees, agents, contractors and other third parties who have a business need to know.</p>
+        <h2 className="text-2xl font-semibold mb-3">5. Cookies</h2>
+        <p>We use cookies to persist user connections. You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent.</p>
       </section>
 
       <section className="mb-6">
-        <h2 className="text-2xl font-semibold mb-3">5. Your Rights</h2>
-        <p>Under certain circumstances, you have rights under data protection laws in relation to your personal data, including the right to:</p>
-        <ul className="list-disc pl-5 mt-2">
-          <li>Request access to your personal data</li>
-          <li>Request correction of your personal data</li>
-          <li>Request erasure of your personal data</li>
-          <li>Object to processing of your personal data</li>
-          <li>Request restriction of processing your personal data</li>
-          <li>Request transfer of your personal data</li>
-          <li>Right to withdraw consent</li>
-        </ul>
+        <h2 className="text-2xl font-semibold mb-3">6. Third-Party Services</h2>
+        <p>We do not use third-party analytics services. Our service may contain links to other sites that are not operated by us. We strongly advise you to review the Privacy Policy of every site you visit.</p>
       </section>
 
       <section className="mb-6">
-        <h2 className="text-2xl font-semibold mb-3">6. Contact Us</h2>
-        <p>If you have any questions about this privacy policy or our privacy practices, please contact us at:</p>
-        <p className="mt-2">Email: privacy@deltalytix.com</p>
+        <h2 className="text-2xl font-semibold mb-3">7. GDPR Compliance</h2>
+        <p>We comply with the General Data Protection Regulation (GDPR). You have the right to access, update or delete your personal information. Please contact us to exercise these rights.</p>
       </section>
 
-      <Link href="/" className="text-blue-600 hover:underline">Return to Home</Link>
+      <section className="mb-6">
+        <h2 className="text-2xl font-semibold mb-3">8. Changes to This Privacy Policy</h2>
+        <p>We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.</p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-2xl font-semibold mb-3">9. Contact Us</h2>
+        <p>If you have any questions about this Privacy Policy, please contact us at: <a href="mailto:contact@deltalytix.app">contact@deltalytix.app</a></p>
+      </section>
+
+      <p className="mt-8 text-sm">Last updated: {new Date().toISOString().split('T')[0]}</p>
     </div>
-  )
+  );
 }

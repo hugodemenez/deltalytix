@@ -137,8 +137,9 @@ export default function Component() {
 
     return (
         <>
-            <div className={`fixed inset-0 bg-background/80 backdrop-blur-sm z-40 transition-opacity duration-300 ${hoveredItem ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
-            <header className={`fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50 bg-background text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+            <div className={`fixed inset-0 bg-background/80  backdrop-blur-sm z-40 transition-opacity duration-300 ${hoveredItem ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
+            <span className={`h-14 fixed top-0 left-0 right-0 bg-background z-50 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}></span>
+            <header className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <Link href="/" className="flex items-center space-x-2">
                     <Logo className='w-6 h-6 fill-black dark:fill-white' />
                     <span className="font-bold text-xl">Deltalytix</span>
@@ -147,12 +148,12 @@ export default function Component() {
                     <NavigationMenu>
                         <NavigationMenuList className="list-none">
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('features')} onMouseLeave={() => setHoveredItem(null)}>
-                                <NavigationMenuTrigger>Features</NavigationMenuTrigger>
+                                <NavigationMenuTrigger className='bg-transparent'>Features</NavigationMenuTrigger>
                                 <NavigationMenuContent>
                                     <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr] list-none">
                                         <li className="row-span-3">
                                             <NavigationMenuLink asChild>
-                                                <a className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md" href="/">
+                                                <Link className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md" href="/">
                                                     <Logo className='w-6 h-6' />
                                                     <div className="mb-2 mt-4 text-lg font-medium">
                                                         Deltalytix
@@ -160,7 +161,7 @@ export default function Component() {
                                                     <p className="text-sm leading-tight text-muted-foreground">
                                                         Elevate your trading with comprehensive analytics and AI-powered insights.
                                                     </p>
-                                                </a>
+                                                </Link>
                                             </NavigationMenuLink>
                                         </li>
                                         <ListItem href="/#data-import" title="Data Import" icon={<Database className="h-4 w-4" />}>
@@ -182,20 +183,20 @@ export default function Component() {
                             </NavigationMenuItem>
                             <NavigationMenuItem>
                                 <Link href="/pricing" legacyBehavior passHref>
-                                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
                                         Pricing
                                     </NavigationMenuLink>
                                 </Link>
                             </NavigationMenuItem>
                             <NavigationMenuItem>
                                 <Link href="/updates" legacyBehavior passHref>
-                                    <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
                                         Updates
                                     </NavigationMenuLink>
                                 </Link>
                             </NavigationMenuItem>
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('developers')} onMouseLeave={() => setHoveredItem(null)}>
-                                <NavigationMenuTrigger>Developers</NavigationMenuTrigger>
+                                <NavigationMenuTrigger className='bg-transparent'>Developers</NavigationMenuTrigger>
                                 <NavigationMenuContent>
                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] list-none">
                                         <ListItem href="https://github.com/hugodemenez/deltalytix" title="Open Source" icon={<Github className="h-4 w-4" />}>

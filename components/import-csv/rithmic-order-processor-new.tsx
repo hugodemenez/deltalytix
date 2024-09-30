@@ -97,7 +97,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
         return acc
       }, {} as Record<string, string>)
 
-      const symbol = order["Symbol"]
+      const symbol = order["Symbol"].slice(0, -2)
       const quantity = parseInt(order["Qty Filled"])
       const price = parsePrice(order["Avg Fill Price"])
       const side = order["Buy/Sell"]

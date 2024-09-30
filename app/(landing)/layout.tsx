@@ -20,7 +20,7 @@ export default async function RootLayout({
         <div className="px-2 sm:px-6 lg:px-32">
         <Toaster />
         <Navbar />
-        <div className="mt-8 sm:mt-20">
+        <div className="mt-8 sm:mt-20 max-w-screen-xl mx-auto">
         {children}
         </div>
         <Footer />

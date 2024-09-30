@@ -116,7 +116,7 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
             // Default commissions for tradeovate are 1.94 for ZN and 2.08 for ZB
             // Instrument are only first 2 characters of the symbol
             if (item.instrument) {
-              item.instrument = item.instrument.slice(0, 2)
+              item.instrument = item.instrument.slice(0, -2)
             }
             if (item.instrument === 'ZN') {
               item.commission = 1.94 * item.quantity!

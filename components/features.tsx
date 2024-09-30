@@ -42,8 +42,9 @@ export default function DeltalytixDashboard() {
   ]
 
   return (
-    <div className="p-4 bg-background text-foreground">
-      <h2 className="text-2xl font-bold mb-4">Features</h2>
+      <main className="container mx-auto px-4 py-16">
+        <h1 className="text-4xl font-bold text-center mb-4">Features</h1>
+        <p className="text-xl text-center text-gray-600 mb-12">The right tools to help you improve your trading.</p>
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
         {features.map((feature, index) => (
             <Card id={feature.id} key={feature.id} className={`bg-card ${
@@ -80,6 +81,6 @@ export default function DeltalytixDashboard() {
           </Card>
         ))}
       </div>
-    </div>
+    </main>
   )
 }
