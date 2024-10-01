@@ -20,7 +20,7 @@ export default function LandingPage() {
     useEffect(() => {
         setVideoLoaded(false);
         setVideoError(false);
-        
+
         if (videoRef.current) {
             videoRef.current.load();
         }
@@ -49,21 +49,19 @@ export default function LandingPage() {
                                         Master your trading journey.
                                     </h1>
                                     <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl">
-                                        Deltalytix is an all-in-one tool for traders to store, explore and understand their track-record.
+                                        Deltalytix is a web dashboard for traders to store, explore and understand their track-record.
                                     </p>
                                 </div>
                                 <div className="flex w-full justify-center">
-                                    <Button asChild>
-                                        <Link href="/authentication" className="flex justify-center items-center px-8 py-2.5 w-[142px] h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
-                                            <span className="font-medium text-sm text-white">Get Started</span>
-                                        </Link>
-                                    </Button>
+                                    <Link href="/authentication" className="flex justify-center items-center px-8 py-2.5 w-[142px] h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                                        <span className="font-medium text-sm text-white">Get Started</span>
+                                    </Link>
                                 </div>
                             </div>
                             <div className="flex w-full items-center justify-center  relative  rounded-lg">
                                 <div className="relative w-full h-full">
-                                    <span className="absolute inset-[-12px] md:inset-[-24px] bg-[rgba(50,169,151,0.15)] dark:bg-[hsl(var(--chart-1)/0.15)] rounded-[14.5867px] -z-10"></span>
-                                    <span className="absolute inset-[-4px] md:inset-[-8px] bg-[rgba(50,169,151,0.25)] dark:bg-[hsl(var(--chart-1)/0.25)] rounded-[14.5867px] -z-20"></span>
+                                    <span className="absolute inset-[-12px] md:inset-[-24px] bg-[rgba(50,169,151,0.15)] dark:bg-[hsl(var(--chart-1)/0.15)] rounded-[14.5867px] -z-10 animate-pulse"></span>
+                                    <span className="absolute inset-[-4px] md:inset-[-8px] bg-[rgba(50,169,151,0.25)] dark:bg-[hsl(var(--chart-1)/0.25)] rounded-[14.5867px] -z-20 animate-pulse"></span>
                                     <span className="absolute inset-0 shadow-[0_9.1167px_13.675px_-2.735px_rgba(0,0,0,0.1),0_3.64667px_5.47px_-3.64667px_rgba(0,0,0,0.1)] md:shadow-[0_18.2333px_27.35px_-5.47px_rgba(0,0,0,0.1),0_7.29333px_10.94px_-7.29333px_rgba(0,0,0,0.1)] dark:shadow-[0_9.1167px_13.675px_-2.735px_hsl(var(--chart-1)/0.1),0_3.64667px_5.47px_-3.64667px_hsl(var(--chart-1)/0.1)] md:dark:shadow-[0_18.2333px_27.35px_-5.47px_hsl(var(--chart-1)/0.1),0_7.29333px_10.94px_-7.29333px_hsl(var(--chart-1)/0.1)] rounded-[14.5867px] -z-30"></span>
                                     {!videoLoaded && !videoError && (
                                         <div className="w-full aspect-video flex items-center justify-center bg-gray-100 dark:bg-black rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800">
@@ -75,13 +73,13 @@ export default function LandingPage() {
                                             <p className="text-red-500">Failed to load video</p>
                                         </div>
                                     )}
-                                    <video 
+                                    <video
                                         ref={videoRef}
-                                        preload="metadata" 
-                                        loop 
-                                        muted 
-                                        autoPlay 
-                                        playsInline 
+                                        preload="metadata"
+                                        loop
+                                        muted
+                                        autoPlay
+                                        playsInline
                                         className={`w-full h-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800 ${videoLoaded ? 'block' : 'hidden'}`}
                                         onLoadedData={handleVideoLoad}
                                         onError={handleVideoError}
@@ -107,7 +105,7 @@ export default function LandingPage() {
                     <PricingPage />
                 </section>
                 <section id="open-source" className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
-                <GitHubRepoCard />
+                    <GitHubRepoCard />
                 </section>
             </main>
         </div>
