@@ -35,7 +35,7 @@ export type CalendarData = {
 const chartConfig = {
   pnl: {
     label: "Average PnL",
-    color: "hsl(var(--chart-2))",
+    color: "hsl(var(--chart-5))",
   },
 } satisfies ChartConfig
 
@@ -56,7 +56,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameT
 
 const getColor = (value: number, min: number, max: number, darkMode: boolean) => {
   const ratio = Math.abs((value - min) / (max - min));
-  const baseColorVar = value >= 0 ? '--chart-2' : '--chart-1';
+  const baseColorVar = value >= 0 ? '--chart-3' : '--chart-4';
   const baseColor = getComputedStyle(document.documentElement).getPropertyValue(baseColorVar).trim();
   const [h, s, l] = baseColor.split(' ').map(val => parseFloat(val));
   
