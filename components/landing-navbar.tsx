@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Logo } from "@/components/logo"
-import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu } from "lucide-react"
+import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe } from "lucide-react"
 import {
     NavigationMenu,
     NavigationMenuContent,
@@ -20,6 +20,17 @@ import {
 import { useTheme } from './context/theme-provider'
 import { cn } from '@/lib/utils'
 import { useUser } from './context/user-data'
+import { useI18n } from "@/locales/client"
+import { useRouter, usePathname } from "next/navigation"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -65,6 +76,15 @@ export default function Component() {
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const [isVisible, setIsVisible] = useState(true)
     const [lastScrollY, setLastScrollY] = useState(0)
+    const t = useI18n()
+    const router = useRouter()
+    const pathname = usePathname()
+    const [currentLanguage, setCurrentLanguage] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.location.pathname.split('/')[1] || 'en'
+        }
+        return 'en'
+    })
 
     const toggleMenu = () => setIsOpen(!isOpen)
     const closeMenu = () => setIsOpen(false)
@@ -95,43 +115,71 @@ export default function Component() {
         }
     }, [lastScrollY])
 
+    const changeLanguage = (locale: string) => {
+        const currentPathname = pathname
+        if (currentPathname) {
+            const segments = currentPathname.split('/')
+            segments[1] = locale
+            const newPathname = segments.join('/')
+            router.push(newPathname)
+            setCurrentLanguage(locale)
+        }
+    }
+
     const MobileNavContent = ({ onLinkClick }: { onLinkClick: () => void }) => (
         <nav className="flex flex-col space-y-4">
             <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="features">
-                    <AccordionTrigger>Features</AccordionTrigger>
+                    <AccordionTrigger>{t('navbar.features')}</AccordionTrigger>
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
-                            <MobileNavItem href="/#data-import" onClick={onLinkClick}>Data Import</MobileNavItem>
-                            <MobileNavItem href="/#performance-visualization" onClick={onLinkClick}>Performance Visualization</MobileNavItem>
-                            <MobileNavItem href="/#daily-performance" onClick={onLinkClick}>Daily Performance</MobileNavItem>
-                            <MobileNavItem href="/#ai-journaling" onClick={onLinkClick}>AI-Powered Journaling</MobileNavItem>
+                            <MobileNavItem href="/#data-import" onClick={onLinkClick}>{t('navbar.dataImport')}</MobileNavItem>
+                            <MobileNavItem href="/#performance-visualization" onClick={onLinkClick}>{t('navbar.performanceVisualization')}</MobileNavItem>
+                            <MobileNavItem href="/#daily-performance" onClick={onLinkClick}>{t('navbar.dailyPerformance')}</MobileNavItem>
+                            <MobileNavItem href="/#ai-journaling" onClick={onLinkClick}>{t('navbar.aiJournaling')}</MobileNavItem>
                         </ul>
                     </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="developers">
-                    <AccordionTrigger>Developers</AccordionTrigger>
+                    <AccordionTrigger>{t('navbar.developers')}</AccordionTrigger>
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
-                            <MobileNavItem href="https://github.com/hugodemenez/deltalytix" onClick={onLinkClick}>Open Source</MobileNavItem>
-                            <MobileNavItem href="/docs" onClick={onLinkClick}>Documentation</MobileNavItem>
-                            <MobileNavItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} onClick={onLinkClick}>Join the community</MobileNavItem>
-                            <MobileNavItem href="/api" onClick={onLinkClick}>API</MobileNavItem>
+                            <MobileNavItem href="https://github.com/hugodemenez/deltalytix" onClick={onLinkClick}>{t('navbar.openSource')}</MobileNavItem>
+                            <MobileNavItem href="/docs" onClick={onLinkClick}>{t('navbar.documentation')}</MobileNavItem>
+                            <MobileNavItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} onClick={onLinkClick}>{t('navbar.joinCommunity')}</MobileNavItem>
+                            <MobileNavItem href="/api" onClick={onLinkClick}>{t('navbar.api')}</MobileNavItem>
                         </ul>
                     </AccordionContent>
                 </AccordionItem>
                 <ul className='list-none'>
                     <MobileNavItem href="/pricing" onClick={onLinkClick} className={cn(
                         "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180 border-b",
-                    )}>Pricing</MobileNavItem>
+                    )}>{t('navbar.pricing')}</MobileNavItem>
                     <MobileNavItem href="/updates" onClick={onLinkClick} className={cn(
                         "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180 border-b",
-                    )}>Updates</MobileNavItem>
+                    )}>{t('navbar.updates')}</MobileNavItem>
                 </ul>
             </Accordion>
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
-                <Link href={user ? "/dashboard" : "/authentication"}>{user ? "Dashboard" : "Sign in"}</Link>
+                <Link href={user ? "/dashboard" : "/authentication"}>{user ? t('navbar.dashboard') : t('navbar.signIn')}</Link>
             </Button>
+            <div className="py-4 border-t">
+                <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-start">
+                    {theme === 'light' ? <Moon className="h-5 w-5 mr-2" /> : <Sun className="h-5 w-5 mr-2" />}
+                    {theme === 'light' ? t('navbar.darkMode') : t('navbar.lightMode')}
+                </Button>
+                <RadioGroup value={currentLanguage} onValueChange={(value) => { changeLanguage(value); onLinkClick(); }} className="mt-2">
+                    <div className="flex items-center space-x-2 py-1">
+                        <RadioGroupItem value="en" id="en-mobile" />
+                        <Label htmlFor="en-mobile">English</Label>
+                    </div>
+                    <div className="flex items-center space-x-2 py-1">
+                        <RadioGroupItem value="fr" id="fr-mobile" />
+                        <Label htmlFor="fr-mobile">Français</Label>
+                    </div>
+                    {/* Add more languages as needed */}
+                </RadioGroup>
+            </div>
         </nav>
     )
 
@@ -148,7 +196,7 @@ export default function Component() {
                     <NavigationMenu>
                         <NavigationMenuList className="list-none">
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('features')} onMouseLeave={() => setHoveredItem(null)}>
-                                <NavigationMenuTrigger className='bg-transparent'>Features</NavigationMenuTrigger>
+                                <NavigationMenuTrigger className='bg-transparent'>{t('navbar.features')}</NavigationMenuTrigger>
                                 <NavigationMenuContent>
                                     <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr] list-none">
                                         <li className="row-span-3">
@@ -159,23 +207,23 @@ export default function Component() {
                                                         Deltalytix
                                                     </div>
                                                     <p className="text-sm leading-tight text-muted-foreground">
-                                                        Elevate your trading with comprehensive analytics and AI-powered insights.
+                                                        {t('navbar.elevateTrading')}
                                                     </p>
                                                 </Link>
                                             </NavigationMenuLink>
                                         </li>
-                                        <ListItem href="/#data-import" title="Data Import" icon={<Database className="h-4 w-4" />}>
-                                            Import data from various providers.
+                                        <ListItem href="/#data-import" title={t('navbar.dataImport')} icon={<Database className="h-4 w-4" />}>
+                                            {t('navbar.dataImportDescription')}
                                         </ListItem>
-                                        <ListItem href="/#performance-visualization" title="Performance Visualization" icon={<LineChart className="h-4 w-4" />}>
-                                            Visualize your trading performance.
+                                        <ListItem href="/#performance-visualization" title={t('navbar.performanceVisualization')} icon={<LineChart className="h-4 w-4" />}>
+                                            {t('navbar.performanceVisualizationDescription')}
                                         </ListItem>
-                                        <ListItem href="/#daily-performance" title="Daily Performance" icon={<Calendar className="h-4 w-4" />}>
-                                            Track your daily trading results with an intuitive calendar view.
+                                        <ListItem href="/#daily-performance" title={t('navbar.dailyPerformance')} icon={<Calendar className="h-4 w-4" />}>
+                                            {t('navbar.dailyPerformanceDescription')}
                                         </ListItem>
                                         <div className='col-span-2'>
-                                            <ListItem href="/#ai-journaling" title="AI-Powered Journaling" icon={<BookOpen className="h-4 w-4" />} >
-                                                Improve your trading emotions with AI-assisted journaling.
+                                            <ListItem href="/#ai-journaling" title={t('navbar.aiJournaling')} icon={<BookOpen className="h-4 w-4" />} >
+                                                {t('navbar.aiJournalingDescription')}
                                             </ListItem>
                                         </div>
                                     </ul>
@@ -184,38 +232,38 @@ export default function Component() {
                             <NavigationMenuItem>
                                 <Link href="/pricing" legacyBehavior passHref>
                                     <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
-                                        Pricing
+                                        {t('navbar.pricing')}
                                     </NavigationMenuLink>
                                 </Link>
                             </NavigationMenuItem>
                             <NavigationMenuItem>
                                 <Link href="/updates" legacyBehavior passHref>
                                     <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
-                                        Updates
+                                        {t('navbar.updates')}
                                     </NavigationMenuLink>
                                 </Link>
                             </NavigationMenuItem>
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('developers')} onMouseLeave={() => setHoveredItem(null)}>
-                                <NavigationMenuTrigger className='bg-transparent'>Developers</NavigationMenuTrigger>
+                                <NavigationMenuTrigger className='bg-transparent'>{t('navbar.developers')}</NavigationMenuTrigger>
                                 <NavigationMenuContent>
                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] list-none">
-                                        <ListItem href="https://github.com/hugodemenez/deltalytix" title="Open Source" icon={<Github className="h-4 w-4" />}>
-                                            Explore our open-source projects and contribute.
+                                        <ListItem href="https://github.com/hugodemenez/deltalytix" title={t('navbar.openSource')} icon={<Github className="h-4 w-4" />}>
+                                            {t('navbar.openSourceDescription')}
                                         </ListItem>
-                                        <ListItem href="#documentation" title="Documentation" icon={<FileText className="h-4 w-4" />}>
-                                            Comprehensive guides and API references.
+                                        <ListItem href="#documentation" title={t('navbar.documentation')} icon={<FileText className="h-4 w-4" />}>
+                                            {t('navbar.documentationDescription')}
                                         </ListItem>
-                                        <ListItem href="https://discord.gg/a5YVF5Ec2n" title="Join the community" icon={<Users className="h-4 w-4" />}>
-                                            Connect with other developers and traders.
+                                        <ListItem href="https://discord.gg/a5YVF5Ec2n" title={t('navbar.joinCommunity')} icon={<Users className="h-4 w-4" />}>
+                                            {t('navbar.joinCommunityDescription')}
                                         </ListItem>
                                         <li className="row-span-3 md:col-span-2">
                                             <NavigationMenuLink asChild>
                                                 <a className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md" href="#api">
                                                     <div className="mb-2 mt-4 text-lg font-medium">
-                                                        One API to rule them all
+                                                        {t('navbar.oneApi')}
                                                     </div>
                                                     <p className="text-sm leading-tight text-muted-foreground">
-                                                        A single API effortlessly connecting to multiple providers and get one unified format.
+                                                        {t('navbar.oneApiDescription')}
                                                     </p>
                                                 </a>
                                             </NavigationMenuLink>
@@ -226,21 +274,42 @@ export default function Component() {
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
                         <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
-                            <Link href={user ? "/dashboard" : "/authentication"}>{user ? "Dashboard" : "Sign in"}</Link>
+                            <Link href={user ? "/dashboard" : "/authentication"}>{user ? t('navbar.dashboard') : t('navbar.signIn')}</Link>
                         </Button>
                     </NavigationMenu>
                 </div>
 
                 <div className="flex items-center space-x-4">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <Globe className="h-5 w-5" />
+                                <span className="sr-only">{t('navbar.changeLanguage')}</span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-2" align="end">
+                            <RadioGroup value={currentLanguage} onValueChange={changeLanguage}>
+                                <div className="flex items-center space-x-2 py-1">
+                                    <RadioGroupItem value="en" id="en" />
+                                    <Label htmlFor="en">English</Label>
+                                </div>
+                                <div className="flex items-center space-x-2 py-1">
+                                    <RadioGroupItem value="fr" id="fr" />
+                                    <Label htmlFor="fr">Français</Label>
+                                </div>
+                                {/* Add more languages as needed */}
+                            </RadioGroup>
+                        </PopoverContent>
+                    </Popover>
                     <Button variant="ghost" size="icon" onClick={toggleTheme} className="hidden lg:flex">
                         {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                        <span className="sr-only">Toggle theme</span>
+                        <span className="sr-only">{t('navbar.toggleTheme')}</span>
                     </Button>
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
                         <SheetTrigger asChild>
                             <Button variant="ghost" size="icon" className="flex lg:hidden" onClick={toggleMenu}>
                                 <Menu className="h-6 w-6" />
-                                <span className="sr-only">Open menu</span>
+                                <span className="sr-only">{t('navbar.openMenu')}</span>
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="right" className="w-[300px] sm:w-[400px] lg:hidden">
@@ -251,8 +320,25 @@ export default function Component() {
                                 <div className="py-4 border-t">
                                     <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-start">
                                         {theme === 'light' ? <Moon className="h-5 w-5 mr-2" /> : <Sun className="h-5 w-5 mr-2" />}
-                                        {theme === 'light' ? 'Dark mode' : 'Light mode'}
+                                        {theme === 'light' ? t('navbar.darkMode') : t('navbar.lightMode')}
                                     </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" className="w-full justify-start mt-2">
+                                                <Globe className="h-5 w-5 mr-2" />
+                                                {t('navbar.changeLanguage')}
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => changeLanguage('en')}>
+                                                English
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => changeLanguage('fr')}>
+                                                Français
+                                            </DropdownMenuItem>
+                                            {/* Add more languages as needed */}
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </div>
                             </div>
                         </SheetContent>

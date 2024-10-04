@@ -3,48 +3,50 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
 import { useTheme } from "./context/theme-provider"
 import { AnimatedBeamDemo } from "./ai-feature"
+import { useI18n } from "@/locales/client"
 
-export default function DeltalytixDashboard() {
+export default function Features() {
   const { theme } = useTheme()
+  const t = useI18n()
   const features = [
     {
       id: "data-import",
-      title: "Data Import",
+      title: t("features.data-import.title"),
       icon: <Database className="h-5 w-5 text-muted-foreground" />,
-      description: "Import data from various providers. Our platform uses AI mapping from CSV to support major brokers and trading platforms exports, allowing you to centralize all your trading information in one place.",
-      stat: "20+ Data Providers",
+      description: t("features.data-import.description"),
+      stat: t("features.data-import.stat"),
       image: theme === "dark" ? "/field-mapping-dark.png" : "/field-mapping-light.jpeg"
     },
     {
       id: "performance-visualization",
-      title: "Performance Visualization",
+      title: t("features.performance-visualization.title"),
       icon: <BarChart3 className="h-5 w-5 text-muted-foreground" />,
-      description: "Visualize your trading performance with interactive charts and graphs. Analyze patterns, identify strengths, and pinpoint areas for improvement.",
-      stat: "Comprehensive Analytics",
+      description: t("features.performance-visualization.description"),
+      stat: t("features.performance-visualization.stat"),
       image: theme === "dark" ? "/charts-dark.png" : "/charts-light.png"
     },
     {
       id: "daily-performance",
-      title: "Daily Performance",
+      title: t("features.daily-performance.title"),
       icon: <Calendar className="h-5 w-5 text-muted-foreground" />,
-      description: "Track your daily trading results with an intuitive calendar view. Quickly identify trends and patterns in your trading performance.",
-      stat: "Calendar View",
+      description: t("features.daily-performance.description"),
+      stat: t("features.daily-performance.stat"),
       image: theme === "dark" ? "/calendar-dark.png" : "/calendar-light.png"
     },
     {
       id: "ai-journaling",
-      title: "AI-Powered Journaling",
+      title: t("features.ai-journaling.title"),
       icon: <Brain className="h-5 w-5 text-muted-foreground" />,
-      description: "Improve your trading emotions with AI-assisted journaling. Our advanced algorithms analyze your entries to identify emotional patterns and biases.",
-      stat: "Emotional Intelligence",
+      description: t("features.ai-journaling.description"),
+      stat: t("features.ai-journaling.stat"),
       image: <AnimatedBeamDemo />
     }
   ]
 
   return (
       <main className="container mx-auto px-4 py-16">
-        <h1 className="text-4xl font-bold text-center mb-4">Features</h1>
-        <p className="text-xl text-center text-gray-600 mb-12">The right tools to help you improve your trading.</p>
+        <h1 className="text-4xl font-bold text-center mb-4">{t("features.heading")}</h1>
+        <p className="text-xl text-center text-gray-600 mb-12">{t("features.subheading")}</p>
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
         {features.map((feature, index) => (
             <Card id={feature.id} key={feature.id} className={`bg-card ${

@@ -4,15 +4,17 @@ import { useEffect } from "react";
 import { redirect, useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { createClient } from "@/server/auth";
+import { I18nProviderClient } from "@/locales/client";
 
 export default function RootLayout({
   children,
+  params: { locale },
 }: Readonly<{
   children: React.ReactNode;
+  params: { locale: string };
 }>) {
   
   const router = useRouter();
-
   useEffect(() => {
     const hash = window.location.hash;
     const params = new URLSearchParams(hash.slice(1)); // Remove the # and parse
@@ -32,7 +34,7 @@ export default function RootLayout({
 
   return (
     <>
-      {children}
+      <I18nProviderClient locale={locale}>{children}</I18nProviderClient>
     </>
   );
 }

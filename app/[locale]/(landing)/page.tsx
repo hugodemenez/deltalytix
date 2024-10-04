@@ -9,10 +9,13 @@ import OpenSource from '@/components/open-source'
 import GitHubRepoCard from '@/components/open-source'
 import PricingPage from './pricing/page'
 import { Skeleton } from '@/components/ui/skeleton'
-
+import { useI18n } from '@/locales/client'
+import { useUser } from '@/components/context/user-data'
 
 export default function LandingPage() {
+    const t = useI18n()
     const { theme } = useTheme();
+    const { user } = useUser();
     const [videoLoaded, setVideoLoaded] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -46,15 +49,15 @@ export default function LandingPage() {
                                         <Button variant="link" className="mx-auto mb-8 box-border flex flex-row justify-center items-center px-4 py-2 w-[214px] h-[26px] bg-[#EAF6F5] dark:bg-[hsl(var(--chart-1)/0.1)] border border-[#BBE2DB] dark:border-[hsl(var(--chart-1)/0.3)] rounded-[26px] text-[10px] font-semibold leading-5 tracking-[0.35px] uppercase text-[rgba(36,36,36,0.8)] dark:text-[hsl(var(--chart-1)/0.8)]">September Product Updates →</Button>
                                     </Link>
                                     <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                                        Master your trading journey.
+                                        {t('landing.title')}
                                     </h1>
                                     <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl">
-                                        Deltalytix is a web dashboard for traders to store, explore and understand their track-record.
+                                        {t('landing.description')}
                                     </p>
                                 </div>
                                 <div className="flex w-full justify-center">
-                                    <Link href="/authentication" className="flex justify-center items-center px-8 py-2.5 w-[142px] h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
-                                        <span className="font-medium text-sm text-white">Get Started</span>
+                                    <Link href={user ? "/dashboard" : "/authentication"} className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                                        <span className="font-medium text-sm text-white">{user ? t('navbar.dashboard') : t('landing.cta')}</span>
                                     </Link>
                                 </div>
                             </div>
