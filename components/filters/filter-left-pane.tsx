@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTrades, useFormattedTrades } from '../context/trades-data'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
@@ -12,7 +12,6 @@ import { Filter } from "lucide-react"
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { Switch } from "@/components/ui/switch"
 import DateCalendarFilter from './date-calendar-filter'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface FilterItem {
   type: 'account' | 'instrument'
@@ -29,7 +28,16 @@ export default function FilterLeftPane() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const isMobile = useMediaQuery("(max-width: 768px)")
-  const [activeTab, setActiveTab] = useState<'accounts' | 'instruments'>('accounts')
+
+  const filterRef = useRef<HTMLDivElement>(null)
+
+  const disableScroll = useCallback(() => {
+    document.body.style.overflow = 'hidden'
+  }, [])
+
+  const enableScroll = useCallback(() => {
+    document.body.style.overflow = ''
+  }, [])
 
   useEffect(() => {
     const uniqueAccounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
@@ -127,6 +135,46 @@ export default function FilterLeftPane() {
     return account
   }
 
+  const FilterSection = ({ title, items, type }: { title: string, items: FilterItem[], type: 'account' | 'instrument' }) => {
+    const filteredSectionItems = searchTerm
+      ? items.filter(item => item.value.toLowerCase().includes(searchTerm.toLowerCase()))
+      : items
+
+    return (
+      <div className="mb-4">
+        <h3 className="text-md font-semibold mb-2">{title}</h3>
+        <div className="rounded-md border">
+          <CommandItem onSelect={() => handleSelectAll(type)} className="cursor-pointer border-b">
+            <Checkbox 
+              checked={items.filter(item => !isItemDisabled(item)).every(item => isItemSelected(item))}
+              className="mr-2"
+            />
+            Select All {title}
+          </CommandItem>
+          <ScrollArea className="h-[120px]">
+            <div className="p-2">
+              {filteredSectionItems.map(item => (
+                <CommandItem 
+                  key={item.value} 
+                  onSelect={() => handleSelect(`${type}:${item.value}`)}
+                  disabled={isItemDisabled(item)}
+                  className="cursor-pointer"
+                >
+                  <Checkbox 
+                    checked={isItemSelected(item)} 
+                    className="mr-2" 
+                    disabled={isItemDisabled(item)}
+                  />
+                  {type === 'account' ? anonymizeAccount(item.value) : item.value}
+                </CommandItem>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+      </div>
+    )
+  }
+
   const FilterContent = useMemo(() => (
     <div className='py-4 lg:py-6 space-y-4'>
       <h2 className="text-lg font-semibold mb-4" id="filter-heading">Filters</h2>
@@ -141,81 +189,44 @@ export default function FilterLeftPane() {
         />
       </div>
       <DateCalendarFilter />
-      <Command className="rounded-lg border">
+      <Command className="rounded-lg border overflow-y-auto" shouldFilter={false}>
         <CommandInput
           placeholder="Search filters..."
           value={searchTerm}
           onValueChange={setSearchTerm}
           className={isMobile ? "text-lg" : ""}
         />
-        <Tabs defaultValue="accounts" onValueChange={(value) => setActiveTab(value as 'accounts' | 'instruments')}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="accounts">Accounts</TabsTrigger>
-            <TabsTrigger value="instruments">Instruments</TabsTrigger>
-          </TabsList>
-          <CommandList className='sm:overflow-y-auto sm:max-h-[500px]'>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <TabsContent value="accounts">
-              <CommandGroup>
-                <CommandItem onSelect={() => handleSelectAll('account')}>
-                  <Checkbox 
-                    checked={allItems.filter(item => item.type === 'account' && !isItemDisabled(item)).every(item => isItemSelected(item))}
-                    className="mr-2"
-                  />
-                  Select All Accounts
-                </CommandItem>
-                {filteredItems
-                  .filter(item => item.type === 'account')
-                  .map(item => (
-                    <CommandItem 
-                      key={item.value} 
-                      onSelect={() => handleSelect(`account:${item.value}`)}
-                      disabled={isItemDisabled(item)}
-                    >
-                      <Checkbox 
-                        checked={isItemSelected(item)} 
-                        className="mr-2" 
-                        disabled={isItemDisabled(item)}
-                      />
-                      {anonymizeAccount(item.value)}
-                    </CommandItem>
-                  ))
-                }
-              </CommandGroup>
-            </TabsContent>
-            <TabsContent value="instruments">
-              <CommandGroup>
-                <CommandItem onSelect={() => handleSelectAll('instrument')}>
-                  <Checkbox 
-                    checked={allItems.filter(item => item.type === 'instrument' && !isItemDisabled(item)).every(item => isItemSelected(item))}
-                    className="mr-2"
-                  />
-                  Select All Instruments
-                </CommandItem>
-                {filteredItems
-                  .filter(item => item.type === 'instrument')
-                  .map(item => (
-                    <CommandItem 
-                      key={item.value} 
-                      onSelect={() => handleSelect(`instrument:${item.value}`)}
-                      disabled={isItemDisabled(item)}
-                    >
-                      <Checkbox 
-                        checked={isItemSelected(item)} 
-                        className="mr-2" 
-                        disabled={isItemDisabled(item)}
-                      />
-                      {item.value}
-                    </CommandItem>
-                  ))
-                }
-              </CommandGroup>
-            </TabsContent>
-          </CommandList>
-        </Tabs>
+        <CommandList className="overflow-y-hidden min-h-[500px]">
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup>
+            <FilterSection 
+              title="Accounts" 
+              items={allItems.filter(item => item.type === 'account')}
+              type="account"
+            />
+            <FilterSection 
+              title="Instruments" 
+              items={allItems.filter(item => item.type === 'instrument')}
+              type="instrument"
+            />
+          </CommandGroup>
+        </CommandList>
       </Command>
     </div>
-  ), [allItems, filteredItems, handleSelect, handleSelectAll, isItemSelected, isItemDisabled, showAccountNumbers, anonymizeAccount, searchTerm, isMobile, activeTab])
+  ), [allItems, handleSelect, handleSelectAll, isItemSelected, isItemDisabled, showAccountNumbers, anonymizeAccount, searchTerm, isMobile])
+
+  useEffect(() => {
+    const filterElement = filterRef.current
+    if (filterElement && !isMobile) {
+      filterElement.addEventListener('mouseenter', disableScroll)
+      filterElement.addEventListener('mouseleave', enableScroll)
+
+      return () => {
+        filterElement.removeEventListener('mouseenter', disableScroll)
+        filterElement.removeEventListener('mouseleave', enableScroll)
+      }
+    }
+  }, [disableScroll, enableScroll, isMobile])
 
   if (isMobile) {
     return (
@@ -235,8 +246,11 @@ export default function FilterLeftPane() {
   }
 
   return (
-      <div className="px-4 fixed top-18 left-0 h-full min-w-[300px]">
-        {FilterContent}
-      </div>
+    <div 
+      ref={filterRef}
+      className="px-4 fixed top-18 left-0 h-full min-w-[300px] overflow-y-auto"
+    >
+      {FilterContent}
+    </div>
   )
 }
