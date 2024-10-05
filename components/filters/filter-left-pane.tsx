@@ -26,6 +26,7 @@ interface PropfirmGroup {
 const propfirmGroups: PropfirmGroup[] = [
   { name: 'FastTrackTrading', prefix: 'FTT' },
   { name: 'Phidias', prefix: 'PP' },
+  { name: 'Bulenox', prefix: 'BX' },
   // Add more propfirms as needed
 ]
 
