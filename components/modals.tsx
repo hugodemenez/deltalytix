@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback, useEffect, useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -12,6 +12,8 @@ import { useTrades } from './context/trades-data'
 import LoadingOverlay from './loading-overlay'
 import ImportButton from './import-csv/import-button'
 import { useI18n } from "@/locales/client"
+import { toast } from '@/hooks/use-toast'
+import { signOut } from '@/server/auth'
 
 type BillingPeriod = 'annual' | 'monthly';
 
@@ -169,6 +171,9 @@ export default function Modals() {
               </Card>
             ))}
           </div>
+            <Button variant='link' onClick={async()=> await signOut()}>
+              Change account
+            </Button>
         </DialogContent>
       </Dialog>
     </>
