@@ -290,17 +290,29 @@ export default function ImportButton() {
     } else if (step === 1) {
       setStep(2)
     } else if (step === 2) {
-      setStep(3)
+      if (importType === 'tradovate') {
+        if (accountNumber || newAccountNumber) {
+          setStep(3)
+        } else {
+          toast({
+            title: "Account number required",
+            description: "Please select an existing account or enter a new one.",
+            variant: "destructive",
+          })
+        }
+      } else {
+        setStep(3)
+      }
     } else if (step === 3) {
       switch (importType) {
+        case 'tradovate':
+          handleSave()
+          break
         case 'rithmic-orders':
           handleSave()
           break
         case 'rithmic-performance':
           handleSave()
-          break
-        case 'tradovate':
-          setStep(4)
           break
         case 'tradezella':
           handleSave()
@@ -359,6 +371,15 @@ export default function ImportButton() {
           setError={setError}
         />
       case 2:
+        if (importType === 'tradovate') {
+          return <AccountSelection
+            accounts={Array.from(new Set(trades.map(trade => trade.accountNumber)))}
+            accountNumber={accountNumber}
+            setAccountNumber={setAccountNumber}
+            newAccountNumber={newAccountNumber}
+            setNewAccountNumber={setNewAccountNumber}
+          />
+        }
         return <HeaderSelection
           rawCsvData={rawCsvData}
           setCsvData={setCsvData}
@@ -389,6 +410,7 @@ export default function ImportButton() {
                 csvData={csvData}
                 headers={headers}
                 setProcessedTrades={setProcessedTrades}
+                accountNumber={accountNumber || newAccountNumber}
               />
             )
           case 'tradezella':

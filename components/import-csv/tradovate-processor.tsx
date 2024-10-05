@@ -3,14 +3,16 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
-import { getDomainOfItemsWithSameAxis } from 'recharts/types/util/ChartUtils'
+import { useTrades } from '@/components/context/trades-data'
 
 interface TradovateProcessorProps {
     headers: string[];
     csvData: string[][];
     setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
+    accountNumber: string;
 }
 
 const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
@@ -60,8 +62,11 @@ const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => 
   }
 
 
-export default function TradovateProcessor({ headers, csvData, setProcessedTrades }: TradovateProcessorProps) {
+export default function TradovateProcessor({ headers, csvData, setProcessedTrades, accountNumber }: TradovateProcessorProps) {
+    const { trades: existingTrades } = useTrades()
     const [trades, setTrades] = useState<Trade[]>([])
+    const [missingCommissions, setMissingCommissions] = useState<{ [key: string]: number }>({})
+    const [showCommissionPrompt, setShowCommissionPrompt] = useState(false)
 
     const newMappings: { [key: string]: string } = {
         "symbol": "instrument",
@@ -76,10 +81,21 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
         "soldTimestamp": "closeDate",
     }
 
+    const existingCommissions = useMemo(() => {
+        const commissions: { [key: string]: number } = {}
+        existingTrades
+            .filter(trade => trade.accountNumber === accountNumber)
+            .forEach(trade => {
+                if (trade.instrument && trade.commission && trade.quantity) {
+                    commissions[trade.instrument] = trade.commission / trade.quantity
+                }
+            })
+        return commissions
+    }, [existingTrades, accountNumber])
+
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
-        //TODO: Ask user for account number using account selection component
-        const accountNumber = 'default-account';
+        const missingCommissionsTemp: { [key: string]: boolean } = {};
 
         csvData.forEach(row => {
             const item: Partial<Trade> = {};
@@ -113,38 +129,62 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
               return
             }
 
-            // Default commissions for tradeovate are 1.94 for ZN and 2.08 for ZB
-            // Instrument are only first 2 characters of the symbol
             if (item.instrument) {
-              item.instrument = item.instrument.slice(0, -2)
+                item.instrument = item.instrument.slice(0, -2)
+                if (existingCommissions[item.instrument]) {
+                    item.commission = existingCommissions[item.instrument] * item.quantity!
+                } else {
+                    missingCommissionsTemp[item.instrument] = true
+                }
             }
-            if (item.instrument === 'ZN') {
-              item.commission = 1.94 * item.quantity!
-            } else if (item.instrument === 'ZB') {
-              item.commission = 2.08 * item.quantity!
-            }
-              // If entryDate is after closeDate (which is buy and sell on tradovate then it means it is short)
-              if (item.entryDate && item.closeDate && new Date(item.entryDate) > new Date(item.closeDate)) {
-                item.side = 'short'
-              }else{
-                item.side = 'long'
-              }
 
-            if (!item.accountNumber) {
-              item.accountNumber = accountNumber;
+            // If entryDate is after closeDate (which is buy and sell on tradovate then it means it is short)
+            if (item.entryDate && item.closeDate && new Date(item.entryDate) > new Date(item.closeDate)) {
+                item.side = 'short'
+            } else {
+                item.side = 'long'
             }
+
+            item.accountNumber = accountNumber;
             item.id = generateTradeHash(item as Trade).toString();
             newTrades.push(item as Trade);
-          })
-          console.log("newTrades", newTrades)
+        })
+        console.log("newTrades", newTrades)
 
         setTrades(newTrades);
-        setProcessedTrades(newTrades);
-    }, [csvData, headers, setProcessedTrades]);
+        setMissingCommissions(Object.keys(missingCommissionsTemp).reduce((acc, key) => ({ 
+            ...acc, 
+            [key]: existingCommissions[key] || 0 
+        }), {}));
+        setShowCommissionPrompt(Object.keys(missingCommissionsTemp).length > 0);
+    }, [csvData, headers, existingCommissions, accountNumber]);
 
     useEffect(() => {
         processTrades();
     }, [processTrades]);
+
+    const handleCommissionChange = (instrument: string, value: string) => {
+        setMissingCommissions(prev => ({ ...prev, [instrument]: parseFloat(value) || 0 }));
+    };
+
+    const applyCommissions = () => {
+        const updatedTrades = trades.map(trade => {
+            if (missingCommissions.hasOwnProperty(trade.instrument)) {
+                return {
+                    ...trade,
+                    commission: missingCommissions[trade.instrument] * trade.quantity
+                };
+            }
+            return trade;
+        });
+        setTrades(updatedTrades);
+        setProcessedTrades(updatedTrades);
+        setShowCommissionPrompt(false);
+        toast({
+            title: "Commissions Applied",
+            description: "The commissions have been applied to the trades."
+        });
+    };
 
     const totalPnL = useMemo(() => trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [trades]);
     const totalCommission = useMemo(() => trades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [trades]);
@@ -152,6 +192,28 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
 
     return (
         <div className="space-y-4">
+            {showCommissionPrompt && (
+                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
+                    <h3 className="font-bold">Confirm or Update Commissions</h3>
+                    <p>Please confirm or update the commission per contract for the following instruments:</p>
+                    <div className="mt-2 space-y-2">
+                        {Object.keys(missingCommissions).map(instrument => (
+                            <div key={instrument} className="flex items-center space-x-2">
+                                <label htmlFor={`commission-${instrument}`}>{instrument}:</label>
+                                <Input
+                                    id={`commission-${instrument}`}
+                                    type="number"
+                                    step="0.01"
+                                    value={missingCommissions[instrument]}
+                                    onChange={(e) => handleCommissionChange(instrument, e.target.value)}
+                                    className="w-24"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    <Button onClick={applyCommissions} className="mt-4">Apply Commissions</Button>
+                </div>
+            )}
             <div>
                 <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
                 <Table>

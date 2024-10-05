@@ -66,7 +66,7 @@ export default function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <Link href="/profile">
+              <Link href="/dashboard/profile">
                 <DropdownMenuItem>
                   <User className="mr-2 h-4 w-4" />
                   <span>Profile</span>
@@ -78,7 +78,7 @@ export default function Navbar() {
                 <span>Billing</span>
                 <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
               </DropdownMenuItem>
-              <Link href={"/data"}>
+              <Link href={"/dashboard/data"}>
                 <DropdownMenuItem>
                   <Database className="mr-2 h-4 w-4" />
                   <span>Data</span>
