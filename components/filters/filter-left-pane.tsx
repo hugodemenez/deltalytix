@@ -14,9 +14,20 @@ import { Switch } from "@/components/ui/switch"
 import DateCalendarFilter from './date-calendar-filter'
 
 interface FilterItem {
-  type: 'account' | 'instrument'
+  type: 'account' | 'instrument' | 'propfirm'
   value: string
 }
+
+interface PropfirmGroup {
+  name: string
+  prefix: string
+}
+
+const propfirmGroups: PropfirmGroup[] = [
+  { name: 'FastTrackTrading', prefix: 'FTT' },
+  { name: 'Phidias', prefix: 'PP' },
+  // Add more propfirms as needed
+]
 
 export default function FilterLeftPane() {
   const { trades } = useTrades()
@@ -39,30 +50,59 @@ export default function FilterLeftPane() {
     document.body.style.overflow = ''
   }, [])
 
+  const [propfirms, setPropfirms] = useState<string[]>([])
+
   useEffect(() => {
     const uniqueAccounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
     const uniqueInstruments = Array.from(new Set(trades.map(trade => trade.instrument)))
+    const uniquePropfirms = Array.from(new Set(uniqueAccounts.map(account => {
+      const propfirm = propfirmGroups.find(group => account.startsWith(group.prefix))
+      return propfirm ? propfirm.name : 'Other'
+    })))
     
     setAllItems([
       ...uniqueAccounts.map(account => ({ type: 'account' as const, value: account })),
-      ...uniqueInstruments.map(instrument => ({ type: 'instrument' as const, value: instrument }))
+      ...uniqueInstruments.map(instrument => ({ type: 'instrument' as const, value: instrument })),
+      ...uniquePropfirms.map(propfirm => ({ type: 'propfirm' as const, value: propfirm }))
     ])
   }, [trades])
 
   useEffect(() => {
     setSelectedItems([
       ...accountNumbers.map(account => ({ type: 'account' as const, value: account })),
-      ...instruments.map(instrument => ({ type: 'instrument' as const, value: instrument }))
+      ...instruments.map(instrument => ({ type: 'instrument' as const, value: instrument })),
+      ...propfirms.map(propfirm => ({ type: 'propfirm' as const, value: propfirm }))
     ])
-  }, [accountNumbers, instruments])
+  }, [accountNumbers, instruments, propfirms])
 
   const handleItemChange = useCallback((item: FilterItem) => {
-    setSelectedItems(prev => 
-      prev.some(i => i.type === item.type && i.value === item.value)
+    setSelectedItems(prev => {
+      const newItems = prev.some(i => i.type === item.type && i.value === item.value)
         ? prev.filter(i => !(i.type === item.type && i.value === item.value))
         : [...prev, item]
-    )
-  }, [])
+
+      // If a propfirm is selected/deselected, update the related accounts
+      if (item.type === 'propfirm') {
+        const propfirmGroup = propfirmGroups.find(group => group.name === item.value)
+        if (propfirmGroup) {
+          const relatedAccounts = allItems
+            .filter(i => i.type === 'account' && i.value.startsWith(propfirmGroup.prefix))
+          
+          if (newItems.some(i => i.type === 'propfirm' && i.value === item.value)) {
+            // Add related accounts if propfirm is selected
+            return [...newItems, ...relatedAccounts.filter(account => 
+              !newItems.some(i => i.type === 'account' && i.value === account.value)
+            )]
+          } else {
+            // Remove related accounts if propfirm is deselected
+            return newItems.filter(i => !(i.type === 'account' && relatedAccounts.some(account => account.value === i.value)))
+          }
+        }
+      }
+
+      return newItems
+    })
+  }, [allItems])
 
   const isItemDisabled = useCallback((item: FilterItem) => {
     if (item.type === 'instrument') {
@@ -74,7 +114,7 @@ export default function FilterLeftPane() {
     return false
   }, [selectedItems, trades])
 
-  const handleSelectAll = useCallback((type: 'account' | 'instrument') => {
+  const handleSelectAll = useCallback((type: 'account' | 'instrument' | 'propfirm') => {
     setSelectedItems(prev => {
       const itemsOfType = allItems.filter(item => item.type === type)
       const availableItems = itemsOfType.filter(item => !isItemDisabled(item))
@@ -104,7 +144,7 @@ export default function FilterLeftPane() {
   )
 
   const handleSelect = useCallback((selectedValue: string) => {
-    const [type, value] = selectedValue.split(':') as ['account' | 'instrument', string]
+    const [type, value] = selectedValue.split(':') as ['account' | 'instrument' | 'propfirm', string]
     const item = { type, value }
     if (!isItemDisabled(item)) {
       handleItemChange(item)
@@ -119,6 +159,9 @@ export default function FilterLeftPane() {
     const newInstruments = selectedItems
       .filter(item => item.type === 'instrument')
       .map(item => item.value)
+    const newPropfirms = selectedItems
+      .filter(item => item.type === 'propfirm')
+      .map(item => item.value)
 
     if (JSON.stringify(newAccountNumbers) !== JSON.stringify(accountNumbers)) {
       setAccountNumbers(newAccountNumbers)
@@ -126,7 +169,10 @@ export default function FilterLeftPane() {
     if (JSON.stringify(newInstruments) !== JSON.stringify(instruments)) {
       setInstruments(newInstruments)
     }
-  }, [selectedItems, setAccountNumbers, setInstruments, accountNumbers, instruments])
+    if (JSON.stringify(newPropfirms) !== JSON.stringify(propfirms)) {
+      setPropfirms(newPropfirms)
+    }
+  }, [selectedItems, setAccountNumbers, setInstruments, accountNumbers, instruments, propfirms])
 
   const anonymizeAccount = (account: string) => {
     if (!showAccountNumbers) {
@@ -135,7 +181,7 @@ export default function FilterLeftPane() {
     return account
   }
 
-  const FilterSection = ({ title, items, type }: { title: string, items: FilterItem[], type: 'account' | 'instrument' }) => {
+  const FilterSection = ({ title, items, type }: { title: string, items: FilterItem[], type: 'account' | 'instrument' | 'propfirm' }) => {
     const filteredSectionItems = searchTerm
       ? items.filter(item => item.value.toLowerCase().includes(searchTerm.toLowerCase()))
       : items
@@ -176,7 +222,7 @@ export default function FilterLeftPane() {
   }
 
   const FilterContent = useMemo(() => (
-    <div className='py-4 lg:py-6 space-y-4'>
+    <div className='space-y-4'>
       <h2 className="text-lg font-semibold mb-4" id="filter-heading">Filters</h2>
       <div className="mb-4 flex items-center justify-between">
         <Label htmlFor="anonymous-mode" className="text-sm font-medium">
@@ -189,16 +235,21 @@ export default function FilterLeftPane() {
         />
       </div>
       <DateCalendarFilter />
-      <Command className="rounded-lg border overflow-y-auto" shouldFilter={false}>
+      <Command className="rounded-lg border" shouldFilter={false}>
         <CommandInput
           placeholder="Search filters..."
           value={searchTerm}
           onValueChange={setSearchTerm}
           className={isMobile ? "text-lg" : ""}
         />
-        <CommandList className="overflow-y-hidden min-h-[500px]">
+        <CommandList className='min-h-screen'>
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup>
+            <FilterSection 
+              title="Propfirms" 
+              items={allItems.filter(item => item.type === 'propfirm')}
+              type="propfirm"
+            />
             <FilterSection 
               title="Accounts" 
               items={allItems.filter(item => item.type === 'account')}
@@ -215,19 +266,6 @@ export default function FilterLeftPane() {
     </div>
   ), [allItems, handleSelect, handleSelectAll, isItemSelected, isItemDisabled, showAccountNumbers, anonymizeAccount, searchTerm, isMobile])
 
-  useEffect(() => {
-    const filterElement = filterRef.current
-    if (filterElement && !isMobile) {
-      filterElement.addEventListener('mouseenter', disableScroll)
-      filterElement.addEventListener('mouseleave', enableScroll)
-
-      return () => {
-        filterElement.removeEventListener('mouseenter', disableScroll)
-        filterElement.removeEventListener('mouseleave', enableScroll)
-      }
-    }
-  }, [disableScroll, enableScroll, isMobile])
-
   if (isMobile) {
     return (
       <>
@@ -237,8 +275,10 @@ export default function FilterLeftPane() {
               <Filter className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[400px]">
-            {FilterContent}
+          <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
+            <ScrollArea className="h-full px-4 py-6">
+              {FilterContent}
+            </ScrollArea>
           </SheetContent>
         </Sheet>
       </>
@@ -248,9 +288,11 @@ export default function FilterLeftPane() {
   return (
     <div 
       ref={filterRef}
-      className="px-4 fixed top-18 left-0 h-full min-w-[300px] overflow-y-auto"
+      className="fixed top-18 left-0 h-[calc(100vh-4.5rem)] w-[300px] border-r"
     >
-      {FilterContent}
+      <ScrollArea className="h-full px-4 py-6">
+        {FilterContent}
+      </ScrollArea>
     </div>
   )
 }
