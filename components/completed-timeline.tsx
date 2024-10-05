@@ -3,17 +3,22 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
+import { useI18n } from '@/locales/client'
 
 type Milestone = {
   id: number
-  title: string
-  description: string
+  titleKey: string
+  descriptionKey: string
+  image?: string
+  status: 'completed' | 'in-progress' | 'upcoming'
+  estimatedDate?: string
   completedDate?: string
 }
 
 export default function CompletedTimeline({ milestones }: { milestones: Milestone[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const observerRefs = useRef<(HTMLDivElement | null)[]>([])
+  const t = useI18n()
 
   useEffect(() => {
     const observers = observerRefs.current.map((ref, index) => {
@@ -21,14 +26,12 @@ export default function CompletedTimeline({ milestones }: { milestones: Mileston
         const observer = new IntersectionObserver(
           ([entry]) => {
             if (entry.isIntersecting) {
-              // Set only the current index as active
               setActiveIndex(index)
             } else if (activeIndex === index) {
-              // If the current active item is no longer intersecting, set no active item
               setActiveIndex(null)
             }
           },
-          { threshold: 0.9 } // Trigger when 90% of the element is visible
+          { threshold: 0.9 }
         )
         observer.observe(ref)
         return observer
@@ -41,16 +44,15 @@ export default function CompletedTimeline({ milestones }: { milestones: Mileston
     }
   }, [milestones.length, activeIndex])
 
-  // Sort milestones by completedDate, most recent first
-  const sortedMilestones = [...milestones].sort((a, b) => {
-    if (!a.completedDate || !b.completedDate) return 0
-    return new Date(b.completedDate).getTime() - new Date(a.completedDate).getTime()
-  })
+  // Filter and sort completed milestones by completedDate, most recent first
+  const completedMilestones = milestones
+    .filter(milestone => milestone.status === 'completed' && milestone.completedDate)
+    .sort((a, b) => new Date(b.completedDate!).getTime() - new Date(a.completedDate!).getTime())
 
   return (
     <div className="relative">
       <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-700" />
-      {sortedMilestones.map((milestone, index) => (
+      {completedMilestones.map((milestone, index) => (
         <motion.div
           key={milestone.id}
           ref={(el: HTMLDivElement | null) => {
@@ -73,13 +75,29 @@ export default function CompletedTimeline({ milestones }: { milestones: Mileston
           />
           {milestone.completedDate && (
             <Badge variant="outline" className="mb-2">
-              {new Date(milestone.completedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              {formatDate(milestone.completedDate)}
             </Badge>
           )}
-          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">{milestone.title}</h2>
-          <p className="text-gray-600 dark:text-gray-400">{milestone.description}</p>
+          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
+            {t(milestone.titleKey)}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            {t(milestone.descriptionKey)}
+          </p>
+          {milestone.image && (
+            <img 
+              src={milestone.image} 
+              alt={t(milestone.titleKey)} 
+              className="mt-4 rounded-lg shadow-md max-w-full h-auto"
+            />
+          )}
         </motion.div>
       ))}
     </div>
   )
+}
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }

@@ -1,0 +1,36 @@
+export interface TranslationKeys {
+  'updates.milestone1.title': string;
+  'updates.milestone1.description': string;
+  'updates.milestone2.title': string;
+  'updates.milestone2.description': string;
+  'updates.milestone3.title': string;
+  'updates.milestone3.description': string;
+  'updates.milestone4.title': string;
+  'updates.milestone4.description': string;
+  'updates.milestone5.title': string;
+  'updates.milestone5.description': string;
+  'updates.milestone6.title': string;
+  'updates.milestone6.description': string;
+  'updates.milestone7.title': string;
+  'updates.milestone7.description': string;
+  'updates.milestone8.title': string;
+  'updates.milestone8.description': string;
+  'updates.milestone9.title': string;
+  'updates.milestone9.description': string;
+  'updates.milestone10.title': string;
+  'updates.milestone10.description': string;
+  'updates.milestone11.title': string;
+  'updates.milestone11.description': string;
+  'updates.preview': string;
+  'updates.inThreeWeeks': string;
+  'updates.inTwoWeeks': string;
+  'updates.inFourWeeks': string;
+  'updates.inFiveWeeks': string;
+  'updates.statusInProgress': string;
+  'updates.statusUpcoming': string;
+  'updates.title': string;
+  'updates.description': string;
+  'updates.inProgress': string;
+  'updates.upcoming': string;
+  'updates.completed': string;
+}

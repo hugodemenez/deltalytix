@@ -40,13 +40,18 @@ export default function LandingPage() {
     return (
         <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
             <main className="flex-1">
-                <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
+                <section className="w-full py-14 md:py-12 lg:py-16 xl:py-24">
                     <div className="container px-4 md:px-6 mx-auto">
                         <div className="flex flex-col w-full gap-y-24">
                             <div className="flex flex-col  justify-center space-y-4 text-center">
                                 <div className="space-y-2">
                                     <Link href="/updates">
-                                        <Button variant="link" className="mx-auto mb-8 box-border flex flex-row justify-center items-center px-4 py-2 w-[214px] h-[26px] bg-[#EAF6F5] dark:bg-[hsl(var(--chart-1)/0.1)] border border-[#BBE2DB] dark:border-[hsl(var(--chart-1)/0.3)] rounded-[26px] text-[10px] font-semibold leading-5 tracking-[0.35px] uppercase text-[rgba(36,36,36,0.8)] dark:text-[hsl(var(--chart-1)/0.8)]">September Product Updates →</Button>
+                                        <Button 
+                                        variant="link"
+                                        className="mx-auto sm:mb-8 box-border flex flex-row justify-center items-center px-4 py-2 h-[26px] bg-[#EAF6F5] dark:bg-[hsl(var(--chart-1)/0.1)] border border-[#BBE2DB] dark:border-[hsl(var(--chart-1)/0.3)] rounded-[26px] text-[10px] font-semibold leading-5 tracking-[0.35px] uppercase text-[rgba(36,36,36,0.8)] dark:text-[hsl(var(--chart-1)/0.8)]"
+                                        >
+                                            {t('landing.updates')}
+                                        </Button>
                                     </Link>
                                     <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
                                         {t('landing.title')}

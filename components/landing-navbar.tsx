@@ -31,6 +31,9 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { useChangeLocale, useCurrentLocale } from '@/locales/client'
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -79,12 +82,8 @@ export default function Component() {
     const t = useI18n()
     const router = useRouter()
     const pathname = usePathname()
-    const [currentLanguage, setCurrentLanguage] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.location.pathname.split('/')[1] || 'en'
-        }
-        return 'en'
-    })
+    const currentLocale = useCurrentLocale()
+    const changeLocale = useChangeLocale()
 
     const toggleMenu = () => setIsOpen(!isOpen)
     const closeMenu = () => setIsOpen(false)
@@ -115,15 +114,17 @@ export default function Component() {
         }
     }, [lastScrollY])
 
+    const languages = [
+        { value: 'en', label: 'English' },
+        { value: 'fr', label: 'Français' },
+        // Add more languages here
+    ]
+
+    const [open, setOpen] = useState(false)
+
     const changeLanguage = (locale: string) => {
-        const currentPathname = pathname
-        if (currentPathname) {
-            const segments = currentPathname.split('/')
-            segments[1] = locale
-            const newPathname = segments.join('/')
-            router.push(newPathname)
-            setCurrentLanguage(locale)
-        }
+        changeLocale(locale as "en" | "fr")
+        setOpen(false)
     }
 
     const MobileNavContent = ({ onLinkClick }: { onLinkClick: () => void }) => (
@@ -163,23 +164,6 @@ export default function Component() {
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
                 <Link href={user ? "/dashboard" : "/authentication"}>{user ? t('navbar.dashboard') : t('navbar.signIn')}</Link>
             </Button>
-            <div className="py-4 border-t">
-                <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-start">
-                    {theme === 'light' ? <Moon className="h-5 w-5 mr-2" /> : <Sun className="h-5 w-5 mr-2" />}
-                    {theme === 'light' ? t('navbar.darkMode') : t('navbar.lightMode')}
-                </Button>
-                <RadioGroup value={currentLanguage} onValueChange={(value) => { changeLanguage(value); onLinkClick(); }} className="mt-2">
-                    <div className="flex items-center space-x-2 py-1">
-                        <RadioGroupItem value="en" id="en-mobile" />
-                        <Label htmlFor="en-mobile">English</Label>
-                    </div>
-                    <div className="flex items-center space-x-2 py-1">
-                        <RadioGroupItem value="fr" id="fr-mobile" />
-                        <Label htmlFor="fr-mobile">Français</Label>
-                    </div>
-                    {/* Add more languages as needed */}
-                </RadioGroup>
-            </div>
         </nav>
     )
 
@@ -280,25 +264,42 @@ export default function Component() {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                    <Popover>
+                    <Popover open={open} onOpenChange={setOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button
+                                variant="ghost"
+                                className="hidden lg:flex"
+                            >
                                 <Globe className="h-5 w-5" />
                                 <span className="sr-only">{t('navbar.changeLanguage')}</span>
+                                <span className="ml-2">{currentLocale.toUpperCase()}</span>
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-48 p-2" align="end">
-                            <RadioGroup value={currentLanguage} onValueChange={changeLanguage}>
-                                <div className="flex items-center space-x-2 py-1">
-                                    <RadioGroupItem value="en" id="en" />
-                                    <Label htmlFor="en">English</Label>
-                                </div>
-                                <div className="flex items-center space-x-2 py-1">
-                                    <RadioGroupItem value="fr" id="fr" />
-                                    <Label htmlFor="fr">Français</Label>
-                                </div>
-                                {/* Add more languages as needed */}
-                            </RadioGroup>
+                        <PopoverContent className="w-[200px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search language..." />
+                                <CommandList>
+                                    <CommandEmpty>No language found.</CommandEmpty>
+                                    <CommandGroup>
+                                        {languages.map((language) => (
+                                            <CommandItem
+                                                key={language.value}
+                                                onSelect={() => changeLanguage(language.value)}
+                                                className="cursor-pointer"
+                                            >
+                                                {language.label}
+                                            </CommandItem>
+                                        ))}
+                                        <CommandItem onSelect={() => {
+                                            // Here you can implement the logic to request a new language
+                                            console.log("Request new language support")
+                                            setOpen(false)
+                                        }}>
+                                            Request new language
+                                        </CommandItem>
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
                         </PopoverContent>
                     </Popover>
                     <Button variant="ghost" size="icon" onClick={toggleTheme} className="hidden lg:flex">
@@ -322,23 +323,43 @@ export default function Component() {
                                         {theme === 'light' ? <Moon className="h-5 w-5 mr-2" /> : <Sun className="h-5 w-5 mr-2" />}
                                         {theme === 'light' ? t('navbar.darkMode') : t('navbar.lightMode')}
                                     </Button>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="w-full justify-start mt-2">
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="w-full justify-start">
                                                 <Globe className="h-5 w-5 mr-2" />
                                                 {t('navbar.changeLanguage')}
                                             </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => changeLanguage('en')}>
-                                                English
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => changeLanguage('fr')}>
-                                                Français
-                                            </DropdownMenuItem>
-                                            {/* Add more languages as needed */}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[200px] p-0">
+                                            <Command >
+                                                <CommandInput placeholder="Search language..." />
+                                                <CommandList>
+                                                    <CommandEmpty>No language found.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {languages.map((language) => (
+                                                            <CommandItem
+                                                                key={language.value}
+                                                                onSelect={() => {
+                                                                    changeLanguage(language.value)
+                                                                    closeMenu()
+                                                                }}
+                                                                className="cursor-pointer"
+                                                            >
+                                                                {language.label}
+                                                            </CommandItem>
+                                                        ))}
+                                                        <CommandItem onSelect={() => {
+                                                            // Implement request new language logic
+                                                            console.log("Request new language support")
+                                                            closeMenu()
+                                                        }}>
+                                                            Request new language
+                                                        </CommandItem>
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                             </div>
                         </SheetContent>

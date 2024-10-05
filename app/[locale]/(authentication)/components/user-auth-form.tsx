@@ -20,6 +20,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
+import { useI18n } from "@/locales/client"
 
 const formSchema = z.object({
     email: z.string().email(),
@@ -32,6 +33,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
     const [isSubscription, setIsSubscription] = React.useState<boolean>(false)
     const [lookupKey, setLookupKey] = React.useState<string | null>(null)
+    const t = useI18n()
 
     React.useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
@@ -40,8 +42,6 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         const lookup_key = urlParams.get('lookup_key')
         setLookupKey(lookup_key)
     }, [])
-
-
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -83,7 +83,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                                 <FormControl>
                                     <Input
                                         id="email"
-                                        placeholder="name@example.com"
+                                        placeholder={t('auth.emailPlaceholder')}
                                         type="email"
                                         autoCapitalize="none"
                                         autoComplete="email"
@@ -102,7 +102,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                         {isLoading && (
                             <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                         )}
-                        Sign In with Email
+                        {t('auth.signInWithEmail')}
                     </Button>
                 </form>
             </Form>
@@ -113,7 +113,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                        Or continue with
+                        {t('auth.continueWith')}
                     </span>
                 </div>
             </div>
@@ -123,7 +123,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 ) : (
                     <Icons.discord className="mr-2 h-4 w-4" />
                 )}{" "}
-                Discord
+                {t('auth.signInWithDiscord')}
             </Button>
         </div>
     )
