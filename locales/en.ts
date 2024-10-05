@@ -151,4 +151,4 @@ export default {
     'auth.signInWithEmail': 'Sign In with Email',
     'auth.continueWith': 'Or continue with',
     'auth.signInWithDiscord': 'Discord',
-}
+} as const

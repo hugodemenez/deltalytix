@@ -103,7 +103,7 @@ export default function PricingPage() {
                     </p>
                   )}
                   <p className="text-sm text-green-500 mb-4">
-                    {billingPeriod === 'annual' ? t('pricing.annualSavingsAmount', { amount: plan.price.monthly * 12 - plan.price.annual }) : ''}
+                    {billingPeriod === 'annual' ? t('pricing.annualSavingsAmount', { amount: (plan.price.monthly * 12 - plan.price.annual) }) : ''}
                   </p>
                   <ul className="space-y-2">
                     {plan.features.map((feature, index) => (

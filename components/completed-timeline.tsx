@@ -4,15 +4,16 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { useI18n } from '@/locales/client'
+import { TranslationKeys } from '@/app/types/translations'
 
 type Milestone = {
-  id: number
-  titleKey: string
-  descriptionKey: string
-  image?: string
-  status: 'completed' | 'in-progress' | 'upcoming'
-  estimatedDate?: string
-  completedDate?: string
+  id: number;
+  titleKey: keyof TranslationKeys;
+  descriptionKey: keyof TranslationKeys;
+  image?: string;
+  status: 'completed' | 'in-progress' | 'upcoming';
+  estimatedDate?: keyof TranslationKeys;
+  completedDate?: string;
 }
 
 export default function CompletedTimeline({ milestones }: { milestones: Milestone[] }) {
