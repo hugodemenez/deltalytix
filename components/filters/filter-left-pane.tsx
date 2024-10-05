@@ -12,6 +12,7 @@ import { Filter } from "lucide-react"
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { Switch } from "@/components/ui/switch"
 import DateCalendarFilter from './date-calendar-filter'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface FilterItem {
   type: 'account' | 'instrument'
@@ -28,6 +29,7 @@ export default function FilterLeftPane() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const isMobile = useMediaQuery("(max-width: 768px)")
+  const [activeTab, setActiveTab] = useState<'accounts' | 'instruments'>('accounts')
 
   useEffect(() => {
     const uniqueAccounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
@@ -146,64 +148,74 @@ export default function FilterLeftPane() {
           onValueChange={setSearchTerm}
           className={isMobile ? "text-lg" : ""}
         />
-        <CommandList className='sm:overflow-y-auto sm:max-h-[500px]'>
-          <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Accounts">
-            <CommandItem onSelect={() => handleSelectAll('account')}>
-              <Checkbox 
-                checked={allItems.filter(item => item.type === 'account' && !isItemDisabled(item)).every(item => isItemSelected(item))}
-                className="mr-2"
-              />
-              Select All Accounts
-            </CommandItem>
-            {filteredItems
-              .filter(item => item.type === 'account')
-              .map(item => (
-                <CommandItem 
-                  key={item.value} 
-                  onSelect={() => handleSelect(`account:${item.value}`)}
-                  disabled={isItemDisabled(item)}
-                >
+        <Tabs defaultValue="accounts" onValueChange={(value) => setActiveTab(value as 'accounts' | 'instruments')}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="accounts">Accounts</TabsTrigger>
+            <TabsTrigger value="instruments">Instruments</TabsTrigger>
+          </TabsList>
+          <CommandList className='sm:overflow-y-auto sm:max-h-[500px]'>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <TabsContent value="accounts">
+              <CommandGroup>
+                <CommandItem onSelect={() => handleSelectAll('account')}>
                   <Checkbox 
-                    checked={isItemSelected(item)} 
-                    className="mr-2" 
-                    disabled={isItemDisabled(item)}
+                    checked={allItems.filter(item => item.type === 'account' && !isItemDisabled(item)).every(item => isItemSelected(item))}
+                    className="mr-2"
                   />
-                  {anonymizeAccount(item.value)}
+                  Select All Accounts
                 </CommandItem>
-              ))
-            }
-          </CommandGroup>
-          <CommandGroup heading="Instruments">
-            <CommandItem onSelect={() => handleSelectAll('instrument')}>
-              <Checkbox 
-                checked={allItems.filter(item => item.type === 'instrument' && !isItemDisabled(item)).every(item => isItemSelected(item))}
-                className="mr-2"
-              />
-              Select All Instruments
-            </CommandItem>
-            {filteredItems
-              .filter(item => item.type === 'instrument')
-              .map(item => (
-                <CommandItem 
-                  key={item.value} 
-                  onSelect={() => handleSelect(`instrument:${item.value}`)}
-                  disabled={isItemDisabled(item)}
-                >
+                {filteredItems
+                  .filter(item => item.type === 'account')
+                  .map(item => (
+                    <CommandItem 
+                      key={item.value} 
+                      onSelect={() => handleSelect(`account:${item.value}`)}
+                      disabled={isItemDisabled(item)}
+                    >
+                      <Checkbox 
+                        checked={isItemSelected(item)} 
+                        className="mr-2" 
+                        disabled={isItemDisabled(item)}
+                      />
+                      {anonymizeAccount(item.value)}
+                    </CommandItem>
+                  ))
+                }
+              </CommandGroup>
+            </TabsContent>
+            <TabsContent value="instruments">
+              <CommandGroup>
+                <CommandItem onSelect={() => handleSelectAll('instrument')}>
                   <Checkbox 
-                    checked={isItemSelected(item)} 
-                    className="mr-2" 
-                    disabled={isItemDisabled(item)}
+                    checked={allItems.filter(item => item.type === 'instrument' && !isItemDisabled(item)).every(item => isItemSelected(item))}
+                    className="mr-2"
                   />
-                  {item.value}
+                  Select All Instruments
                 </CommandItem>
-              ))
-            }
-          </CommandGroup>
-        </CommandList>
+                {filteredItems
+                  .filter(item => item.type === 'instrument')
+                  .map(item => (
+                    <CommandItem 
+                      key={item.value} 
+                      onSelect={() => handleSelect(`instrument:${item.value}`)}
+                      disabled={isItemDisabled(item)}
+                    >
+                      <Checkbox 
+                        checked={isItemSelected(item)} 
+                        className="mr-2" 
+                        disabled={isItemDisabled(item)}
+                      />
+                      {item.value}
+                    </CommandItem>
+                  ))
+                }
+              </CommandGroup>
+            </TabsContent>
+          </CommandList>
+        </Tabs>
       </Command>
     </div>
-  ), [allItems, filteredItems, handleSelect, handleSelectAll, isItemSelected, isItemDisabled, showAccountNumbers, anonymizeAccount, searchTerm, isMobile])
+  ), [allItems, filteredItems, handleSelect, handleSelectAll, isItemSelected, isItemDisabled, showAccountNumbers, anonymizeAccount, searchTerm, isMobile, activeTab])
 
   if (isMobile) {
     return (

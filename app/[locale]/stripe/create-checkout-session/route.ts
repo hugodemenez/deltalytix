@@ -35,6 +35,10 @@ export async function POST(req: Request, res: Response) {
             },
         ],
         mode: 'subscription',
+        subscription_data: {
+            trial_period_days: lookup_key.includes('basic') ? 7 : 3,
+        },
+        allow_promotion_codes: true,
         success_url: `${websiteURL}dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
     });

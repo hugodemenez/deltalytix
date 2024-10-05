@@ -10,38 +10,15 @@ import ImportButton from './import-csv/import-button'
 import LoadingOverlay from '@/components/loading-overlay'
 
 export default function Dashboard() {
-  const { trades, isLoading } = useTrades()
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-
-  useEffect(() => {
-    if (!isLoading) {
-      setIsDialogOpen(trades.length === 0)
-    }
-  }, [isLoading, trades.length])
-
   return (
     <div className='flex flex-1 w-full sm:pl-[300px] '>
-      {isLoading && <LoadingOverlay />}
-      <div className={`w-full flex flex-col lg:flex-row min-h-screen ${isDialogOpen ? 'blur-sm' : ''}`}>
+      <div className={`w-full flex flex-col lg:flex-row min-h-screen`}>
         <main className=" w-full py-4 lg:py-6 overflow-x-hidden">
           <StatisticsSection />
           <GraphsSection />
           <CalendarSection />
         </main>
       </div>
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>No Trades Available</DialogTitle>
-            <DialogDescription>
-              There are currently no trades to display. Please add some trades to see the dashboard content.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <ImportButton />
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

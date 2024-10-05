@@ -3,17 +3,19 @@ import { PrismaClient, Trade } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 
 
-export async function saveTrades(data: Trade[]) {
-  console.log('data', data)
+export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfTradesAdded: number }> {
     const prisma = new PrismaClient()
-    await prisma.trade.createMany({data:data,skipDuplicates: true}).catch((e) => {
+    let count = 0
+    try{
+    const result = await prisma.trade.createMany({data:data,skipDuplicates: true})
+    count = result.count
+    }catch(e){
         console.error(e)
-        return {error:e, trades:[]}
+        return {error:e, numberOfTradesAdded:0}
     }
-    )
     await prisma.$disconnect()
     revalidatePath('/')
-    return {error:null, trades:data}
+    return {error:count===0?true:false, numberOfTradesAdded:count}
 }
 
 export async function getTrades(userId: string) {

@@ -78,6 +78,7 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setIsLoading(true)
       try {
         const tradesData = await getTrades(user.id)
+        console.log('tradesData', tradesData, user.id)
         setTrades(tradesData)
 
         if (tradesData.length > 0) {

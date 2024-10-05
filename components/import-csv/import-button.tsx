@@ -103,7 +103,10 @@ export default function ImportButton() {
   }
 
   const generateTradeHash = (trade: Partial<Trade>): string => {
-    const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
+    if (!user) {
+      return ''
+    }
+    const hashString = `${user.id}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
     return hashString
   }
 
@@ -124,8 +127,8 @@ export default function ImportButton() {
         case 'rithmic-orders':
           newTrades = processedTrades.map(trade => ({
             ...trade,
-            id: generateTradeHash(trade),
             userId: user.id,
+            id: generateTradeHash(trade),
           }))
           break
         case 'rithmic-performance':
@@ -227,13 +230,21 @@ export default function ImportButton() {
           (trade.entryPrice || trade.closePrice) &&
           (trade.entryDate || trade.closeDate);
       });
-      await saveTrades(newTrades)
+      const {error, numberOfTradesAdded} = await saveTrades(newTrades)
+      if(error){
+        toast({
+          title: "Import Failed",
+          description: "An error occurred while importing trades. Please try again.",
+          variant: "destructive",
+        })
+        return
+      }
       // Update the trades
       await refreshTrades()
       setIsOpen(false)
       toast({
         title: "Import Successful",
-        description: `${newTrades.length} trades have been imported.`,
+        description: `${numberOfTradesAdded} trades have been imported.`,
       })
       // Reset the import process
       setImportType('')

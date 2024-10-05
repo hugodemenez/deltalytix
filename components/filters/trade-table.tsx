@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowUpDown, Trash } from "lucide-react"
 import { saveTrades } from '@/server/database'
 import { useToast } from "@/hooks/use-toast"
-import { deleteTradesByIds } from '@/app/[locale]/(dashboard)/data/actions'
+import { deleteTradesByIds } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
 
 type SortConfig = {
   key: keyof Trade
