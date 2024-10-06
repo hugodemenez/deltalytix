@@ -27,7 +27,7 @@ export default async function RootLayout({ params: { locale }, children }: { par
             <div className="min-h-screen flex flex-col">
               <Toaster />
               <Navbar />
-              <div className="flex flex-1 px-8">
+              <div className="flex flex-1 px-2 sm:px-8">
                 {children}
               </div>
               <Modals />

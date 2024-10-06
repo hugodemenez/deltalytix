@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, endOfWeek } from "date-fns"
+import { enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -15,8 +16,8 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
-  const calendarStart = startOfWeek(monthStart)
-  const calendarEnd = endOfWeek(monthEnd)
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1, locale: enUS })
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1, locale: enUS })
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
@@ -67,17 +68,18 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
               key={dateString}
               className={cn(
                 "flex flex-col items-center",
-                !isSameMonth(date, currentDate) && "opacity-30",
-                isToday(date) && "bg-primary text-primary-foreground rounded-full"
+                !isSameMonth(date, currentDate) && "opacity-30"
               )}
               onClick={() => setSelectedDate(date)}
             >
-              <span className={cn(
-                "text-2xl font-bold mb-1",
-                isToday(date) ? "text-primary-foreground" : "text-foreground"
+              <div className={cn(
+                "w-8 h-8 flex items-center justify-center mb-1",
+                isToday(date) && "bg-primary text-primary-foreground rounded-full"
               )}>
-                {format(date, 'd')}
-              </span>
+                <span className="text-lg font-semibold">
+                  {format(date, 'd')}
+                </span>
+              </div>
               {dayData && (
                 <div
                   className={cn(

@@ -88,7 +88,7 @@ export default function LongShortPerformanceCard() {
   return (
     <Card className="col-span-1" ref={cardRef}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">Long/Short Distribution</CardTitle>
+        <CardTitle className="text-sm font-medium">Long/Short</CardTitle>
       </CardHeader>
       <CardContent>
         <TooltipProvider delayDuration={0}>

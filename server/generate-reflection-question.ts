@@ -3,86 +3,106 @@
 import { openai } from "@ai-sdk/openai"
 import { streamObject } from "ai"
 import { z } from "zod"
-import { GenerateReflectionQuestionParams, GenerateFollowUpParams } from "@/app/types/chat"
+import { GenerateReflectionQuestionParams, GenerateFollowUpParams, ReflectionQuestionResponse } from "@/app/types/chat"
 
-const endConversationKeywords = ['end', 'stop', 'finish', 'bye', 'goodbye', 'thanks', 'thank you', 'nothing', "let's end", "that's all"]
-
-export async function generateReflectionQuestion({ dayData, dateString, messages, userInput }: GenerateReflectionQuestionParams): Promise<{ feedback: string; question: string; shouldEnd: boolean }> {
-  const lowercaseUserInput = userInput.toLowerCase().trim()
-  
-  // Check for explicit end conversation requests
-  if (endConversationKeywords.some(keyword => lowercaseUserInput.includes(keyword)) ||
-      lowercaseUserInput === "stop" ||
-      lowercaseUserInput === "end" ||
-      lowercaseUserInput === "stop the conversation" ||
-      lowercaseUserInput === "end the conversation") {
-    return {
-      feedback: "I understand you'd like to end our conversation. Thank you for reflecting on your trading day. If you have any more questions in the future, feel free to ask.",
-      question: "",
-      shouldEnd: true
-    }
-  }
-
+export async function generateReflectionQuestion({ 
+  dayData, 
+  dateString, 
+  messages, 
+  userInput,
+  isInitialGreeting = false,
+  userName = 'Trader',
+  lastQuestion = ''
+}: GenerateReflectionQuestionParams): Promise<ReflectionQuestionResponse> {
   try {
     const { partialObjectStream } = await streamObject({
-      model: openai("gpt-4o-mini"),
+      model: openai("gpt-3.5-turbo"),
       schema: z.object({
-        feedback: z.string().describe("A brief feedback on the user's response, max 2 sentences"),
-        question: z.string().describe("A single, focused follow-up question"),
+        greeting: z.string().optional().describe("A personalized greeting based on the trading data"),
+        response: z.string().describe("A concise response to the user's input"),
+        question: z.string().optional().describe("A follow-up question, if appropriate"),
         shouldEnd: z.boolean().describe("Whether the conversation should end"),
       }),
-      prompt:
-        `You are an AI assistant specializing in trading psychology and performance analysis. ` +
-        `You're having a conversation with a trader about their day. ` +
-        `Given the following trading data for ${dateString}:\n` +
-        `Total PnL: $${dayData.pnl.toFixed(2)}\n` +
-        `Number of trades: ${dayData.tradeNumber}\n` +
-        `Long trades: ${dayData.longNumber}\n` +
-        `Short trades: ${dayData.shortNumber}\n` +
-        `Trades: ${dayData.trades.map(t => `${t.instrument} (${t.side}): $${t.pnl}`).join(', ')}\n\n` +
-        `Conversation history:\n${messages.map(m => `${m.role}: ${m.content}`).join('\n')}\n\n` +
-        `User's latest input: ${userInput}\n\n` +
-        `Please provide:\n` +
-        `1. A brief feedback on the user's response (max 2 sentences)\n` +
-        `2. A single, focused follow-up question\n` +
-        `3. Whether the conversation should end (true/false)\n` +
-        `Be empathetic, insightful, and aim to help the trader reflect deeply on their trading day. ` +
-        `Only set shouldEnd to true if the user explicitly indicates they want to end the conversation (e.g., "stop", "end", "that's all"). ` +
-        `If the user expresses a desire to end the conversation, provide a brief closing statement instead of a question. ` +
-        `Otherwise, continue the conversation as long as the user is engaging and providing substantive responses.`,
+      prompt: isInitialGreeting
+        ? `You are an AI assistant specializing in trading psychology and performance analysis. 
+           Generate a brief, personalized greeting and initial question based on the following trading data for ${dateString}:
+           Trader's name: ${userName}
+           Total PnL: $${dayData.pnl.toFixed(2)}
+           Number of trades: ${dayData.tradeNumber}
+           Long trades: ${dayData.longNumber}
+           Short trades: ${dayData.shortNumber}
+           Trades: ${dayData.trades.map(t => `${t.instrument} (${t.side}): $${t.pnl}`).join(', ')}
+           
+           Provide:
+           1. A brief, personalized greeting that addresses the trader by name and acknowledges their performance (positive or negative)
+           2. A single, focused initial question to start the reflection process
+           
+           Use appropriate emojis to make the conversation engaging and friendly.`
+        : `You are an AI assistant specializing in trading psychology and performance analysis. 
+           You're having a concise conversation with a trader about their day. 
+           Given the following trading data for ${dateString}:
+           Total PnL: $${dayData.pnl.toFixed(2)}
+           Number of trades: ${dayData.tradeNumber}
+           Long trades: ${dayData.longNumber}
+           Short trades: ${dayData.shortNumber}
+           Trades: ${dayData.trades.map(t => `${t.instrument} (${t.side}): $${t.pnl}`).join(', ')}
+           
+           Conversation history:
+           ${messages.map(m => `${m.role}: ${m.content}`).join('\n')}
+           
+           User's latest input: ${userInput}
+           
+           Last question asked: ${lastQuestion}
+           
+           Please provide:
+           1. A concise response to the user's input. This may include a brief insight or acknowledgment.
+           2. A follow-up question, if appropriate. Make it relevant to the user's last input or a new aspect of their trading day.
+           3. Whether the conversation should end (true/false)
+           
+           Guidelines:
+           - Keep responses very brief, typically 1-2 sentences.
+           - Aim for a focused conversation (3-5 total exchanges).
+           - Always try to ask a follow-up question unless the user clearly wants to end the conversation.
+           - Make questions thought-provoking but concise.
+           - Set shouldEnd to true only if the user explicitly indicates they want to end the conversation.
+           - Use emojis sparingly to keep the conversation engaging.
+           
+           Important: 
+           - Be responsive to the user's input. If they provide new information, acknowledge it and ask about it.
+           - Avoid lengthy analysis or elaboration.
+           - When providing insights, be concise and directly related to the user's input or trading data.
+           - Don't repeat previous questions or topics.`,
       temperature: 0.7,
     });
 
-    let feedback = "";
+    let greeting = "";
+    let response = "";
     let question = "";
     let shouldEnd = false;
 
     for await (const partialObject of partialObjectStream) {
-      if (partialObject.feedback) feedback = partialObject.feedback;
+      if (partialObject.greeting) greeting = partialObject.greeting;
+      if (partialObject.response) response = partialObject.response;
       if (partialObject.question) question = partialObject.question;
       if (partialObject.shouldEnd !== undefined) shouldEnd = partialObject.shouldEnd;
     }
 
-    return { feedback, question, shouldEnd };
+    return { greeting, response, question, shouldEnd };
   } catch (error) {
     console.error("Error generating reflection response:", error);
     return {
-      feedback: "I apologize, but I'm having trouble processing your response.",
-      question: "Can you tell me more about your trading experience today?",
+      response: "I apologize, but I'm having trouble processing your response. Can you briefly tell me about your trading day?",
+      question: "What aspect of your trading would you like to discuss?",
       shouldEnd: false
     };
   }
 }
 
 export async function generateFollowUp({ dayData, dateString, messages, lastContent }: GenerateFollowUpParams): Promise<{ shouldFollowUp: boolean; feedback: string; question: string }> {
-  const lowercaseLastContent = lastContent.toLowerCase()
-  if (endConversationKeywords.some(keyword => lowercaseLastContent.includes(keyword))) {
-    return { shouldFollowUp: false, feedback: "", question: "" }
-  }
 
   try {
     const { partialObjectStream } = await streamObject({
-      model: openai("gpt-4o-mini"),
+      model: openai("gpt-3.5-turbo"),
       schema: z.object({
         shouldFollowUp: z.boolean().describe("Whether a follow-up is necessary"),
         feedback: z.string().optional().describe("A brief feedback or observation, max 2 sentences"),
