@@ -27,7 +27,7 @@ const propfirmGroups: PropfirmGroup[] = [
   { name: 'FastTrackTrading', prefix: 'FTT' },
   { name: 'Phidias', prefix: 'PP' },
   { name: 'Bulenox', prefix: 'BX' },
-  // Add more propfirms as needed
+  { name: 'Other', prefix: '' }, // Add 'Other' to the propfirmGroups
 ]
 
 export default function FilterLeftPane() {
@@ -87,7 +87,11 @@ export default function FilterLeftPane() {
         const propfirmGroup = propfirmGroups.find(group => group.name === item.value)
         if (propfirmGroup) {
           const relatedAccounts = allItems
-            .filter(i => i.type === 'account' && i.value.startsWith(propfirmGroup.prefix))
+            .filter(i => i.type === 'account' && (
+              propfirmGroup.name === 'Other' 
+                ? !propfirmGroups.some(g => g.name !== 'Other' && i.value.startsWith(g.prefix))
+                : i.value.startsWith(propfirmGroup.prefix)
+            ))
           
           if (newItems.some(i => i.type === 'propfirm' && i.value === item.value)) {
             // Add related accounts if propfirm is selected
@@ -198,7 +202,7 @@ export default function FilterLeftPane() {
             />
             Select All {title}
           </CommandItem>
-          <ScrollArea className="h-[120px]">
+          <ScrollArea className="max-h-[120px] overflow-y-auto">
             <div className="p-2">
               {filteredSectionItems.map(item => (
                 <CommandItem 
@@ -243,18 +247,18 @@ export default function FilterLeftPane() {
           onValueChange={setSearchTerm}
           className={isMobile ? "text-lg" : ""}
         />
-        <CommandList className='min-h-screen'>
+        <CommandList className='max-h-[620px]'>
           <CommandEmpty>No results found.</CommandEmpty>
           <CommandGroup>
-            <FilterSection 
-              title="Propfirms" 
-              items={allItems.filter(item => item.type === 'propfirm')}
-              type="propfirm"
-            />
             <FilterSection 
               title="Accounts" 
               items={allItems.filter(item => item.type === 'account')}
               type="account"
+            />
+            <FilterSection 
+              title="Propfirms" 
+              items={allItems.filter(item => item.type === 'propfirm')}
+              type="propfirm"
             />
             <FilterSection 
               title="Instruments" 

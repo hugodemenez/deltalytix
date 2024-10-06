@@ -15,8 +15,8 @@ export default function Dashboard() {
       <div className={`w-full flex flex-col lg:flex-row min-h-screen`}>
         <main className=" w-full py-4 lg:py-6 overflow-x-hidden">
           <StatisticsSection />
-          <GraphsSection />
           <CalendarSection />
+          <GraphsSection />
         </main>
       </div>
     </div>
