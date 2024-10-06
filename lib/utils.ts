@@ -12,12 +12,19 @@ export function cn(...inputs: ClassValue[]) {
 export function parsePositionTime(timeInSeconds: number): string {
   const hours = Math.floor(timeInSeconds / 3600);
   const minutesLeft = Math.floor((timeInSeconds - (hours * 3600)) / 60);
-  const secondsLeft = timeInSeconds - (hours * 3600) - (minutesLeft * 60);
-  // Check if hours, minutesLeft seconds lefts aren't NaN
+  const secondsLeft = Math.floor(timeInSeconds - (hours * 3600) - (minutesLeft * 60));
+  
   if (isNaN(hours) || isNaN(minutesLeft) || isNaN(secondsLeft)) {
     return '0';
   }
-  return `${hours}h ${minutesLeft}m ${secondsLeft}s`;
+  
+  const formattedTime = [
+    hours > 0 ? `${hours}h` : '',
+    `${minutesLeft}m`,
+    `${secondsLeft}s`
+  ].filter(Boolean).join(' ');
+  
+  return formattedTime;
 }
 
 export function calculateStatistics(formattedTrades: Trade[]): StatisticsProps {

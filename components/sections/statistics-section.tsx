@@ -9,16 +9,16 @@ export default function StatisticsSection() {
 
     return (
         <section id="accomplishments" className="mb-10">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
                 <LongShortPerformanceCard />
-                <AveragePositionTimeCard averagePositionTime={statistics.averagePositionTime} />
-                <CumulativePnlCard cumulativePnl={statistics.cumulativePnl} cumulativeFees={statistics.cumulativeFees} />
                 <TradePerformanceCard
                     nbWin={statistics.nbWin}
                     nbLoss={statistics.nbLoss}
                     nbBe={statistics.nbBe}
                     nbTrades={statistics.nbTrades}
                 />
+                <AveragePositionTimeCard averagePositionTime={statistics.averagePositionTime} />
+                <CumulativePnlCard cumulativePnl={statistics.cumulativePnl} cumulativeFees={statistics.cumulativeFees} />
             </div>
         </section>
     )

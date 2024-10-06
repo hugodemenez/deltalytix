@@ -109,6 +109,9 @@ export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: 
             })}
           </div>
         </TooltipProvider>
+        <div className="mt-4 text-sm">
+          <span>Win Rate: <span className="text-green-500">{winRate}%</span></span>
+        </div>
       </CardContent>
     </Card>
   )
