@@ -53,8 +53,12 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
   const initializeChat = async () => {
     if (!dayData) return
 
+    setMessages([]) // Clear existing messages
+    setInput('') // Clear input
+    localStorage.removeItem(`chat_input_${dateString}`) // Clear stored input
+
     try {
-      const { greeting, response } = await generateReflectionQuestion({
+      const { greeting, response, question } = await generateReflectionQuestion({
         dayData,
         dateString,
         messages: [],
@@ -65,7 +69,8 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
 
       const initialMessages: ChatMessage[] = [
         { role: 'assistant', content: greeting || '' },
-        { role: 'assistant', content: response }
+        { role: 'assistant', content: response },
+        { role: 'assistant', content: question || '' }
       ]
 
       setMessages(initialMessages)
@@ -170,8 +175,26 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
 
   const handleRestart = () => {
     initializeChat()
-    setInput('')
-    localStorage.removeItem(`chat_input_${dateString}`)
+  }
+
+  const renderMessage = (message: ChatMessage) => {
+    return (
+      <div className={cn("max-w-[80%] p-3 rounded-lg", 
+        message.role === 'assistant' 
+          ? "bg-muted text-muted-foreground" 
+          : "bg-primary text-primary-foreground"
+      )}>
+        {message.content.split('\n').map((line, index) => (
+          <React.Fragment key={index}>
+            {line}
+            {index < message.content.split('\n').length - 1 && <br />}
+          </React.Fragment>
+        ))}
+        {message.image && (
+          <img src={message.image} alt="User uploaded" className="mt-2 rounded-lg max-w-full h-auto" />
+        )}
+      </div>
+    )
   }
 
   return (
@@ -179,36 +202,29 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
       <div 
         ref={chatContainerRef}
         className="flex-grow overflow-y-auto p-4 space-y-4"
-        style={{ maxHeight: 'calc(100vh - 120px)' }} // Adjust this value based on your layout
+        style={{ maxHeight: 'calc(100vh - 120px)' }}
       >
-        {messages.map((message, index) => (
-          <div key={index} className={cn("flex", message.role === 'assistant' ? "justify-start" : "justify-end")}>
-            <div className={cn("max-w-[80%] p-3 rounded-lg", 
-              message.role === 'assistant' 
-                ? "bg-muted text-muted-foreground" 
-                : "bg-primary text-primary-foreground"
-            )}>
-              {message.content}
-              {message.image && (
-                <img src={message.image} alt="User uploaded" className="mt-2 rounded-lg max-w-full h-auto" />
-              )}
+        {messages.length > 0 && (
+          <>
+            {messages.map((message, index) => (
+              <div key={index} className={cn("flex", message.role === 'assistant' ? "justify-start" : "justify-end")}>
+                {renderMessage(message)}
+              </div>
+            ))}
+            <div className="flex justify-center mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRestart}
+                className="flex items-center space-x-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>Restart Conversation</span>
+              </Button>
             </div>
-          </div>
-        ))}
-        {isLoading && renderLoadingIndicator()}
-        {messages.length > 2 && (
-          <div className="flex justify-center mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRestart}
-              className="flex items-center space-x-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              <span>Restart Conversation</span>
-            </Button>
-          </div>
+          </>
         )}
+        {isLoading && renderLoadingIndicator()}
         <div ref={messagesEndRef} />
       </div>
       <div className="p-4 border-t bg-background sticky bottom-0 left-0 right-0">

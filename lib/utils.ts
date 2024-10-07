@@ -8,7 +8,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-
 export function parsePositionTime(timeInSeconds: number): string {
   const hours = Math.floor(timeInSeconds / 3600);
   const minutesLeft = Math.floor((timeInSeconds - (hours * 3600)) / 60);
@@ -86,4 +85,13 @@ export function formatCalendarData(trades: Trade[]) {
     acc[date].trades.push(trade)
     return acc
   }, {})
+}
+
+export function groupBy<T>(array: T[], key: keyof T): { [key: string]: T[] } {
+  return array.reduce((result, currentValue) => {
+    (result[currentValue[key] as string] = result[currentValue[key] as string] || []).push(
+      currentValue
+    );
+    return result;
+  }, {} as { [key: string]: T[] });
 }

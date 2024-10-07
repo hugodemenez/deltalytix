@@ -224,6 +224,13 @@ export default function ImportButton() {
       // Filter out empty trades
       newTrades = newTrades.filter(trade => {
         // Check if all required fields are present and not empty
+        !trade.accountNumber && console.log('trade.accountNumber missing', trade)
+        !trade.instrument && console.log('trade.instrument missing', trade)
+        trade.quantity === 0 && console.log('trade.quantity is 0', trade)
+        !trade.entryPrice && console.log('trade.entryPrice missing', trade)
+        !trade.closePrice && console.log('trade.closePrice missing', trade)
+        !trade.entryDate && console.log('trade.entryDate missing', trade)
+        !trade.closeDate && console.log('trade.closeDate missing', trade)
         return trade.accountNumber &&
           trade.instrument &&
           trade.quantity !== 0 &&
