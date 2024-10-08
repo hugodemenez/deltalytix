@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CalendarData, CalendarEntry } from "./calendar-pnl"
 import { CalendarModal } from "./new-modal"
+import { Card } from "../ui/card"
 
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -42,7 +43,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
   const maxPnl = getMaxPnl()
 
   return (
-    <div className="space-y-4 p-4">
+    <Card className="space-y-4 p-4">
       <div className="flex justify-between items-center">
         <h2 className="text-4xl font-bold">{format(currentDate, 'MMMM')}</h2>
         <div className="flex items-center space-x-2">
@@ -108,6 +109,6 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
         dayData={selectedDate ? calendarData[format(selectedDate, 'yyyy-MM-dd')] : undefined}
         isLoading={isLoading}
       />
-    </div>
+    </Card>
   )
 }
