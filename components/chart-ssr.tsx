@@ -1,5 +1,18 @@
 import * as d3 from "d3";
 
+/**
+* Renders a server-side chart with optional dot markers
+* @example
+* ChartSSR({ data: [{ value: 10, date: new Date('2021-01-01') }], dots: true })
+* <div className="relative h-full w-full">...</div>
+* @param {{ dots: boolean, data: Array<{ value: number, date: Date }> }} { dots, data } - Object containing chart configuration options.
+* @returns {JSX.Element | null} The SVG chart element or null if pathLine is not defined.
+* @description
+*   - This function uses D3.js to calculate scales and SVG path data.
+*   - It should be executed on the server-side (SSR) due to direct DOM access.
+*   - The `preserveAspectRatio` attribute ensures correct scaling on different screen sizes.
+*   - Dot markers on the chart are optional and controlled by the `dots` parameter.
+*/
 export function ChartSSR({
   data,
   dots = false,

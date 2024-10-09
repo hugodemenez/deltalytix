@@ -4,6 +4,18 @@ import Image from "next/image"
 import { AnimatedBeamDemo } from "./ai-feature"
 import { useI18n } from "@/locales/client"
 
+/**
+* Renders a list of feature cards with i18n support
+* @example
+* Features()
+* <main className="container mx-auto px-4 py-16">...</main>
+* @description
+*   - This function must be used within a React component rendering context.
+*   - The 'useI18n' hook should be provided and properly configured for i18n support.
+*   - The 'Card', 'CardHeader', 'CardTitle', and 'CardContent' components must be defined externally.
+*   - 'Database', 'BarChart3', 'Calendar', and 'Brain' are React components representing icons and must be provided.
+* @returns {JSX.Element} JSX rendering feature cards with i18n titles, descriptions, and stats.
+*/
 export default function Features() {
   const t = useI18n()
   const features = [

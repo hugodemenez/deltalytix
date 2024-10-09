@@ -39,6 +39,19 @@ const videoUrls: Record<ImportType, { url: string, details: string }> = {
 
 const importTypes: ImportType[] = ['', 'rithmic-performance', 'rithmic-orders', 'tradezella', 'tradovate', 'ninjatrader-performance']
 
+/**
+* Manages the selection of different import types and associated tutorial videos
+* @example
+* ImportTypeSelection({ selectedType: 'tradezella', setSelectedType: setTypeHandler })
+* <ImportTypeSelectionComponent />
+* @param {ImportTypeSelectionProps} { selectedType, setSelectedType } - The props containing the currently selected type and the setter function.
+* @returns {ReactElement} Renders a component that allows users to select an import type and watch the corresponding tutorial video.
+* @description
+*   - Plays the video matching the selected import type.
+*   - Pauses all other videos when a new import type is selected.
+*   - Uses a ref object to maintain video elements for efficient DOM access.
+*   - Conditionally renders video source and captions based on the provided URLs and import type.
+*/
 export default function ImportTypeSelection({ selectedType, setSelectedType }: ImportTypeSelectionProps) {
   const videoRefs = useRef<Record<ImportType, HTMLVideoElement | null>>({
     '': null,

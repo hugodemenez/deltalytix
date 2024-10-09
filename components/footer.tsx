@@ -3,6 +3,18 @@ import Link from 'next/link'
 import { Logo } from './logo'
 import { useI18n } from "@/locales/client"
 
+/**
+* Renders the Footer component with navigation and social links
+* @example
+* <Footer />
+* <footer aria-labelledby="footer-heading" className="py-12 ...">...</footer>
+* @returns {React.ReactElement} The footer component with navigation links and social media icons.
+* @description
+*   - It uses the useI18n hook to internationalize text.
+*   - The icons rendered are SVG components passed props.
+*   - React components such as Logo and Link are assumed to be imported and defined elsewhere.
+*   - It utilizes Tailwind CSS for styling.
+*/
 export default function Footer() {
   const t = useI18n()
 
