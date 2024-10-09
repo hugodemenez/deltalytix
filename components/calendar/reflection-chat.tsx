@@ -28,6 +28,7 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
   const [followUpCount, setFollowUpCount] = useState(0)
   const [lastQuestion, setLastQuestion] = useState('')
   const [consecutiveAIResponses, setConsecutiveAIResponses] = useState(0)
+  const [isTyping, setIsTyping] = useState(false)
 
   useEffect(() => {
     const storedMessages = localStorage.getItem(`chat_messages_${dateString}`)
@@ -105,6 +106,7 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
     setMessages(prevMessages => [...prevMessages, userMessage])
     localStorage.setItem(`chat_messages_${dateString}`, JSON.stringify([...messages, userMessage]))
     setInput('')
+    setIsTyping(true)
 
     // Clear any existing follow-up timer
     if (followUpTimer) {
@@ -146,6 +148,7 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
       setMessages(prevMessages => [...prevMessages, errorMessage])
       localStorage.setItem(`chat_messages_${dateString}`, JSON.stringify([...messages, userMessage, errorMessage]))
     } finally {
+      setIsTyping(false)
       setIsLoading(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
@@ -197,6 +200,14 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
     )
   }
 
+  const renderTypingIndicator = () => (
+    <div className="flex justify-start items-center mb-4">
+      <div className="bg-muted text-muted-foreground p-3 rounded-lg max-w-[80%] flex items-center">
+        <span className="typing-indicator">AI is typing<span>.</span><span>.</span><span>.</span></span>
+      </div>
+    </div>
+  )
+
   return (
     <div className="flex flex-col h-full bg-background">
       <div 
@@ -224,7 +235,7 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
             </div>
           </>
         )}
-        {isLoading && renderLoadingIndicator()}
+        {isTyping && renderTypingIndicator()}
         <div ref={messagesEndRef} />
       </div>
       <div className="p-4 border-t bg-background sticky bottom-0 left-0 right-0">
