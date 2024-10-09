@@ -23,6 +23,18 @@ const Circle = forwardRef<
 });
 Circle.displayName = "Circle"; 
 
+/**
+* Renders a demo component with animated beams between two circular icons
+* @example
+* AnimatedBeamDemo()
+* <div> ...Animated content...</div>
+* @returns {JSX.Element} Rendered component with animated beams and icons.
+* @description
+*   - This component must be used within a React functional component.
+*   - It makes use of useRef hook to reference DOM elements for animation.
+*   - The component includes two instances of AnimatedBeam for varied animation effects.
+*   - It encapsulates the complexity of the animations within a visually appealing demo.
+*/
 export function AnimatedBeamDemo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const div1Ref = useRef<HTMLDivElement>(null);

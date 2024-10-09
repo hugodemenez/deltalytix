@@ -13,6 +13,19 @@ interface NinjaTraderPerformanceProcessorProps {
   setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
 }
 
+/**
+* Converts a profit and loss string to a numeric value
+* @example
+* parsePnl('$12,345.67')
+* { pnl: 12345.67 }
+* @param {string | undefined} pnl - The profit and loss value as a string (e.g. "$1,234.56").
+* @returns {{ pnl: number, error?: string }} An object with the numeric value and an optional error message.
+* @description
+*   - The function trims input and removes dollar signs and converts commas to dots for parsing as a float.
+*   - It returns an error object with 'pnl' set to 0 if parsing fails.
+*   - Warning messages are logged to the console for invalid or unparsable inputs.
+*   - This is used for processing CSV fields from NinjaTrader performance reports.
+*/
 const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: string } => {
   if (typeof pnl !== 'string' || pnl.trim() === '') {
     console.warn('Invalid PNL value:', pnl);
@@ -37,6 +50,26 @@ const generateTradeHash = (trade: Partial<Trade>, index: number): string => {
 }
 
 
+/**
+ * Processes NinjaTrader CSV export to display trade performance
+ * @example
+ * NinjaTraderPerformanceProcessor({
+ *   headers: ["Instrument", "Entry time", "Exit time", "Profit"],
+ *   csvData: [
+ *     ["ES 06-21", "10/05/2021 14:55:00", "10/05/2021 15:34:00", "$500"],
+ *     ["NQ 06-21", "11/05/2021 09:15:00", "11/05/2021 12:48:00", "$750"]
+ *   ],
+ *   setProcessedTrades: (trades) => console.log(trades)
+ * })
+ * // Expected return would be the component rendering the processed trades table
+ * @param {NinjaTraderPerformanceProcessorProps} props - Object containing headers, CSV data, and a setter for processed trades.
+ * @returns {JSX.Element} JSX element rendering the trade processing results.
+ * @description
+ *   - Assumes the availability of a 'formatCurrencyValue' function for parsing currency strings.
+ *   - Expects dates in the CSV data to be in the format DD/MM/YYYY HH:mm:ss or parseable by JavaScript's `new Date`.
+ *   - The component localizes dates and assumes UTC when parsing them from the CSV format.
+ *   - The basic structure of CSV data is not validated comprehensively (e.g., headers match expected ones).
+ */
 export default function NinjaTraderPerformanceProcessor({ headers, csvData, setProcessedTrades }: NinjaTraderPerformanceProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
   const newMappings: { [key: string]: string } = {
@@ -99,6 +132,17 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
         return;
       }
 
+      /**
+      * Converts a string representation of a date to a Date object
+      * @example
+      * parseDate('25/12/2020 15:30:00')
+      * new Date('2020-12-25T15:30:00.000Z')
+      * @param {string} dateString - String representing a date in DD/MM/YYYY HH:mm:ss format.
+      * @returns {Date | null} The corresponding Date object or null if string cannot be parsed.
+      * @description
+      *   - The function returns null if dateString is invalid or not in the expected format.
+      *   - TimeZone is assumed to be UTC when converting to Date object.
+      */
       const convertToValidDate = (dateString: string): Date | null => {
         // Check if the date is in the format DD/MM/YYYY HH:mm:ss
         const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})$/;

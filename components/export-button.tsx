@@ -14,6 +14,19 @@ type Props = {
   trades: Trade[]
 }
 
+/**
+* Opens a dialog for exporting selected trades to a CSV file
+* @example
+* <TradeExportDialog trades={[{accountNumber: '123', instrument: 'XYZ', ...}]} />
+* Renders a dialog with export functionality
+* @param {{trades: Trade[]}} props - The component props containing trade objects
+* @returns {ReactElement} Component UI for exporting trades to CSV
+* @description
+*   - This component relies on a structured `trades` prop where each trade has an `accountNumber` and `instrument` property.
+*   - The CSV export will include selected accounts and instruments only.
+*   - Exported CSV filename is generated based on the current date.
+*   - The visibility and toggle state of the dialog are managed within the component.
+*/
 export default function TradeExportDialog({ trades }: Props) {
   const [isOpen, setIsOpen] = useState(false)
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
@@ -24,6 +37,20 @@ export default function TradeExportDialog({ trades }: Props) {
   const accounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
   const instruments = Array.from(new Set(trades.map(trade => trade.instrument.slice(0, 2))))
 
+  /**
+  * Exports filtered trades data to a CSV file
+  * @example
+  * exportTradesData(['12345', '67890'], ['FX', 'EQ'])
+  * // Initiates download of trades_export_YYYY-MM-DD.csv with relevant trade data
+  * @param {string[]} selectedAccounts - List of account numbers to filter trades.
+  * @param {string[]} selectedInstruments - List of instrument prefixes to include in the export.
+  * @returns {void} Initiates download of the filtered trades as a CSV.
+  * @description
+  *   - Filters trades by account number and the first two characters of the instrument.
+  *   - Creates a CSV file and triggers a download in the browser.
+  *   - Wraps comments in the CSV inside quotes to handle commas.
+  *   - Closes the modal/dialogue (if open) after initiating the download.
+  */
   const handleExport = () => {
     // Filter trades based on selected accounts and instruments
     const filteredTrades = trades.filter(trade => 

@@ -9,6 +9,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import ImportButton from './import-csv/import-button'
 import LoadingOverlay from '@/components/loading-overlay'
 
+/**
+* Renders the main dashboard components within a flex container.
+* @example
+* <Dashboard />
+* <div className='flex ...'>...</div>
+* @returns {ReactElement} Returns a React element containing the dashboard layout and sections.
+* @description
+*   - Designed to be used within a React component tree.
+*   - Uses Tailwind CSS classes for styling the layout.
+*   - Responsible for the overall arrangement of the Statistics, Calendar, and Graphs sections.
+*/
 export default function Dashboard() {
   return (
     <div className='flex flex-1 w-full sm:pl-[300px] '>
