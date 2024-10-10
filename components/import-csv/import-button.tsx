@@ -19,6 +19,7 @@ import TradovateProcessor from './tradovate-processor'
 import ColumnMapping from './column-mapping'
 import TradezellaProcessor from './tradezella-processor'
 import NinjaTraderPerformanceProcessor from './ninjatrader-performance-processor'
+import QuantowerOrderProcessor from './quantower-processor'
 
 type ColumnConfig = {
   [key: string]: {
@@ -124,6 +125,13 @@ export default function ImportButton() {
     try {
       let newTrades: Trade[] = []
       switch (importType) {
+        case 'quantower':
+          newTrades = processedTrades.map(trade => ({
+            ...trade,
+            userId: user.id,
+            id: generateTradeHash(trade),
+          }))
+          break
         case 'rithmic-orders':
           newTrades = processedTrades.map(trade => ({
             ...trade,
@@ -312,6 +320,9 @@ export default function ImportButton() {
       }
     } else if (step === 3) {
       switch (importType) {
+        case 'quantower':
+          handleSave()
+          break
         case 'tradovate':
           handleSave()
           break
@@ -395,6 +406,14 @@ export default function ImportButton() {
         />
       case 3:
         switch (importType) {
+          case 'quantower':
+            return (
+              <QuantowerOrderProcessor
+                csvData={csvData}
+                headers={headers}
+                setProcessedTrades={setProcessedTrades}
+              />
+            )
           case 'rithmic-orders':
             return (
               <RithmicOrderProcessor

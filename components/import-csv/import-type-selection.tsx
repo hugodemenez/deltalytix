@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' | 'ninjatrader-performance'
+export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' | 'ninjatrader-performance' | 'quantower'
 
 interface ImportTypeSelectionProps {
   selectedType: ImportType
@@ -35,9 +35,13 @@ const videoUrls: Record<ImportType, { url: string, details: string }> = {
     url: process.env.NEXT_PUBLIC_NINJATRADER_PERFORMANCE_TUTORIAL_VIDEO || '',
     details: ''
   },
+  'quantower': {
+    url: '',
+    details: ''
+  }
 }
 
-const importTypes: ImportType[] = ['', 'rithmic-performance', 'rithmic-orders', 'tradezella', 'tradovate', 'ninjatrader-performance']
+const importTypes: ImportType[] = ['', 'rithmic-performance', 'rithmic-orders', 'tradezella', 'tradovate', 'ninjatrader-performance', 'quantower']
 
 export default function ImportTypeSelection({ selectedType, setSelectedType }: ImportTypeSelectionProps) {
   const videoRefs = useRef<Record<ImportType, HTMLVideoElement | null>>({
@@ -47,6 +51,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType }: I
     'tradezella': null,
     'tradovate': null,
     'ninjatrader-performance': null,
+    'quantower': null,
   })
 
   useEffect(() => {

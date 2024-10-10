@@ -68,6 +68,12 @@ export default function FileUpload({
     return { headers, processedData };
   }, []);
 
+  const processQuantowerCsv = useCallback((data: string[][]) => {
+    const headers = data[0].filter(header => header && header.trim() !== '')
+    const processedData = data.slice(1)
+    return { headers, processedData };
+  }, []);
+
   const processRithmicOrdersCsv = useCallback((data: string[][]) => {
     const headerRowIndex = data.findIndex(row => row[0] === 'Completed Orders') + 1
     const headers = data[headerRowIndex].filter(header => header && header.trim() !== '')
@@ -155,6 +161,17 @@ export default function FileUpload({
 
     try {
       switch (importType) {
+        case 'quantower':
+          parsedFiles.forEach((file, index) => {
+            const { headers: fileHeaders, processedData } = processQuantowerCsv(file)
+            if (index === 0) {
+              headers = fileHeaders
+              concatenatedData = processedData
+            } else {
+              concatenatedData = [...concatenatedData, ...processedData]
+            }
+          })
+          break
         case 'rithmic-performance':
           parsedFiles.forEach((file, index) => {
             const { headers: fileHeaders, processedData } = processRithmicPerformanceCsv(file)
@@ -215,7 +232,7 @@ export default function FileUpload({
       setRawCsvData([headers, ...concatenatedData])
       setCsvData(concatenatedData)
       setHeaders(headers)
-      setStep(importType === 'rithmic-performance' || importType === 'rithmic-orders' ? 3 : 2)
+      setStep(importType === 'rithmic-performance' || importType === 'rithmic-orders' || importType === 'quantower' ? 3 : 2)
       setError(null)
     } catch (error) {
       setError((error as Error).message)
