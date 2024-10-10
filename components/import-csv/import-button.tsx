@@ -410,7 +410,6 @@ export default function ImportButton() {
             return (
               <QuantowerOrderProcessor
                 csvData={csvData}
-                headers={headers}
                 setProcessedTrades={setProcessedTrades}
               />
             )

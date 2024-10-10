@@ -28,7 +28,6 @@ const defaultContractSpecs: { [key: string]: ContractSpec } = {
 interface QuantowerOrderProcessorProps {
   csvData: string[][]
   setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>
-  accountNumber: string
 }
 
 interface Order {
