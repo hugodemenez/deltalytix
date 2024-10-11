@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Check, X } from "lucide-react"
-import { useUser } from './context/user-data'
+import { useUser } from '@/components/context/user-data'
 import { getIsSubscribed } from '@/app/[locale]/(dashboard)/server/subscription'
-import { useTrades } from './context/trades-data'
+import { useTrades } from '@/components/context/trades-data'
 import LoadingOverlay from './loading-overlay'
 import ImportButton from './import-csv/import-button'
 import { useI18n } from "@/locales/client"
-import { toast } from '@/hooks/use-toast'
 import { signOut } from '@/server/auth'
 
 type BillingPeriod = 'annual' | 'monthly';

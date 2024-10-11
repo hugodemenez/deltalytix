@@ -16,7 +16,7 @@ import {
   ChartContainer,
 } from "@/components/ui/chart"
 import { Trade } from "@prisma/client"
-import { useCalendarData } from "../context/trades-data"
+import { useCalendarData } from "../../../../../components/context/trades-data"
 
 export const description = "An interactive bar chart showing average PnL for each day of the week"
 
@@ -71,7 +71,7 @@ const getColor = (value: number, min: number, max: number, darkMode: boolean) =>
   return `hsl(${h}, ${saturation}%, ${lightness}%)`;
 };
 
-export default function WeeklyPnLChart() {
+export default function WeekdayPNLChart() {
   const {calendarData} = useCalendarData()
   const [darkMode, setDarkMode] = React.useState(false);
 

@@ -6,10 +6,9 @@ import { enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { CalendarData, CalendarEntry } from "./calendar-pnl"
 import { CalendarModal } from "./new-modal"
-import { Card } from "../ui/card"
-
+import { CalendarData } from "@/lib/types"
+import { Card } from "@/components/ui/card"
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)

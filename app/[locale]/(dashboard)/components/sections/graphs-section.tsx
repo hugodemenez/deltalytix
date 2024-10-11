@@ -1,14 +1,13 @@
 // Graphs.tsx
 import React from 'react'
-import DailyChart from '../charts/long-short-chart'
-import PNLChart from '../charts/pnl-bar-chart'
 import EquityChart from '../charts/equity-chart'
-import WeekdayPNLChart from '../charts/weekday-pnl'
-import TimeOfDayTradeChart from '../charts/pnl-time-bar-chart'
-import PnLBySideChart from '../charts/pnl-by-side'
 import CommissionsPnLChart from '../charts/commissions-pnl'
-import TimeInPositionChart from '../charts/time-in-position'
 import ContractQuantityChart from '../charts/contract-quantity'
+import PNLChart from '../charts/pnl-bar-chart'
+import PnLBySideChart from '../charts/pnl-by-side'
+import TimeOfDayTradeChart from '../charts/pnl-time-bar-chart'
+import TimeInPositionChart from '../charts/time-in-position'
+import WeekdayPNLChart from '../charts/weekday-pnl'
 
 export function GraphsSection() {
 

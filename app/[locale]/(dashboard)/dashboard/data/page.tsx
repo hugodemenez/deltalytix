@@ -19,8 +19,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { PrismaClient, Trade } from '@prisma/client'
 import ExportButton from '@/components/export-button'
-import LoadingOverlay from '@/components/loading-overlay'
-import TradeTable from '@/components/filters/trade-table'
+import LoadingOverlay from '../../components/loading-overlay'
+import TradeTable from '../../components/filters/trade-table'
 
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 

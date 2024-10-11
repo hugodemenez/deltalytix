@@ -10,21 +10,10 @@ import { cn } from "@/lib/utils"
 import { Trade } from "@prisma/client"
 import { updateTradesWithComment } from "@/server/database"
 import { toast } from "@/hooks/use-toast"
-import { CalendarModal } from "@/components/calendar/new-modal"
+import { CalendarEntry, CalendarData } from "@/lib/types"
+import { CalendarModal } from "./new-modal"
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-export type CalendarEntry = {
-  pnl: number;
-  tradeNumber: number;
-  longNumber: number;
-  shortNumber: number;
-  trades: Trade[];
-};
-
-export type CalendarData = {
-  [date: string]: CalendarEntry;
-};
 
 export default function CalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const [currentDate, setCurrentDate] = useState(new Date())

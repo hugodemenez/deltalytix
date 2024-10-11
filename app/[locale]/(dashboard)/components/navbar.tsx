@@ -2,9 +2,8 @@
 
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useUser } from "./context/user-data"
-import { Search, RefreshCcw, Bell, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, PlusCircle, Settings, User, UserPlus, Moon, Sun, Laptop } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { useUser } from "@/components/context/user-data"
+import { Search, Bell, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -23,13 +22,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { signOut } from "@/server/auth"
-import { Logo } from './logo'
+import { Logo } from '@/components/logo'
 import Link from 'next/link'
-import { useTheme } from './context/theme-provider'
-import { EnhancedFilterSelectors } from './enhanced-filter-selectors'
+import { useTheme } from '@/components/context/theme-provider'
 import ImportButton from './import-csv/import-button'
-import DateCalendarFilter from './filters/date-calendar-filter'
-import { Separator } from './ui/separator'
 
 type Theme = 'light' | 'dark' | 'system'
 

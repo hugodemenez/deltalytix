@@ -1,14 +1,14 @@
 import { CalendarIcon } from "lucide-react"
-import { Button } from "../ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
-import { Calendar } from "../ui/calendar"
-import { useFormattedTrades } from "../context/trades-data"
+import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { useFormattedTrades } from "@/components/context/trades-data"
 import { useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 import { DateRange, SelectRangeEventHandler } from "react-day-picker"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns"
-import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 export default function DateCalendarFilter() {
   const { dateRange, setDateRange } = useFormattedTrades()

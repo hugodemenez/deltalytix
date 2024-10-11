@@ -9,9 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn, parsePositionTime } from "@/lib/utils"
 import { Trade } from "@prisma/client"
-import { CalendarEntry } from "@/components/calendar/calendar-pnl"
-import { ReflectionChat } from "@/components/calendar/reflection-chat"
-import { Charts } from "@/components/calendar/charts"
+import Chat from "../chat"
+import { CalendarEntry } from "@/lib/types"
+import { Charts } from "./charts"
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -28,7 +28,7 @@ export function CalendarModal({
   dayData,
   isLoading,
 }: CalendarModalProps) {
-  const [activeTab, setActiveTab] = useState("charts")
+  const [activeTab, setActiveTab] = useState("reflection")
 
   if (!selectedDate) return null;
 
@@ -45,15 +45,16 @@ export function CalendarModal({
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
           <TabsList className="px-6">
-            <TabsTrigger value="charts">Charts</TabsTrigger>
             <TabsTrigger value="reflection">Reflection</TabsTrigger>
+            <TabsTrigger value="charts">Charts</TabsTrigger>
             <TabsTrigger value="table">Table</TabsTrigger>
           </TabsList>
+          <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
+            <Chat dayData={dayData} dateString={dateString}></Chat>
+            {/* <ReflectionChat dayData={dayData} dateString={dateString} /> */}
+          </TabsContent>
           <TabsContent value="charts" className="flex-grow overflow-auto p-6 pt-2">
             <Charts dayData={dayData} />
-          </TabsContent>
-          <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
-            <ReflectionChat dayData={dayData} dateString={dateString} />
           </TabsContent>
           <TabsContent value="table" className="flex-grow overflow-auto p-6 pt-2">
             <ScrollArea className="h-full">

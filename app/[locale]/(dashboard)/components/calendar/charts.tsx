@@ -2,7 +2,6 @@
 
 import React from 'react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts"
-import { CalendarEntry } from "@/components/calendar/calendar-pnl"
 import {
   Card,
   CardContent,
@@ -15,6 +14,7 @@ import {
   ChartContainer,
 } from "@/components/ui/chart"
 import { Separator } from "@/components/ui/separator"
+import { CalendarEntry } from '@/lib/types'
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;

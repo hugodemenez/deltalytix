@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { useTrades, useFormattedTrades } from '../context/trades-data'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -12,6 +11,7 @@ import { Filter } from "lucide-react"
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { Switch } from "@/components/ui/switch"
 import DateCalendarFilter from './date-calendar-filter'
+import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
 
 interface FilterItem {
   type: 'account' | 'instrument' | 'propfirm'

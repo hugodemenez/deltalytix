@@ -1,8 +1,9 @@
+'use client'
 import AveragePositionTimeCard from "../statistics/average-position-time-card";
 import CumulativePnlCard from "../statistics/cumulative-pnl-card";
 import TradePerformanceCard from "../statistics/trade-performance-card";
-import { useTradeStatistics } from "../context/trades-data";
 import LongShortPerformanceCard from "../statistics/long-short-card";
+import { useTradeStatistics } from "@/components/context/trades-data";
 
 export default function StatisticsSection() {
     const { statistics } = useTradeStatistics()

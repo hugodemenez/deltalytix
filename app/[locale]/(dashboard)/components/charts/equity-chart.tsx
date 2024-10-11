@@ -16,7 +16,7 @@ import {
   ChartContainer,
   ChartTooltip,
 } from "@/components/ui/chart"
-import { useFormattedTrades, useTrades } from "../context/trades-data"
+import { useFormattedTrades, useTrades } from "../../../../../components/context/trades-data"
 
 const chartConfig = {
   equity: {

@@ -14,7 +14,7 @@ import {
   ChartConfig,
   ChartContainer,
 } from "@/components/ui/chart"
-import { useCalendarData } from "../context/trades-data"
+import { useCalendarData } from "../../../../../components/context/trades-data"
 
 const chartConfig = {
   pnl: {

@@ -1,4 +1,4 @@
-import { CalendarEntry } from "@/components/calendar/calendar-pnl"
+import { CalendarEntry } from "@/lib/types";
 
 export interface ChatMessage {
   role: 'user' | 'assistant';

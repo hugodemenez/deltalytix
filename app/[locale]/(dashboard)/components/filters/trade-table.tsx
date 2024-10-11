@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useFormattedTrades, useTrades } from "../context/trades-data"
 import { Trade } from '@prisma/client'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -12,6 +11,7 @@ import { ArrowUpDown, Trash } from "lucide-react"
 import { saveTrades } from '@/server/database'
 import { useToast } from "@/hooks/use-toast"
 import { deleteTradesByIds } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
+import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
 
 type SortConfig = {
   key: keyof Trade

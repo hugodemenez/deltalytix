@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { UploadIcon } from 'lucide-react'
-import { useTrades } from '../context/trades-data'
+import { useTrades } from '@/components/context/trades-data'
 import { Trade } from '@prisma/client'
 import { getTrades, saveTrades } from '@/server/database'
 import ImportTypeSelection, { ImportType } from './import-type-selection'
 import FileUpload from './file-upload'
 import HeaderSelection from './header-selection'
 import AccountSelection from './account-selection'
-import { useUser } from '../context/user-data'
+import { useUser } from '@/components/context/user-data'
 import RithmicOrderProcessor from './rithmic-order-processor-new'
 import RithmicPerformanceProcessor from './rithmic-performance-processor'
 import TradovateProcessor from './tradovate-processor'

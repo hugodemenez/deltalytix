@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn, parsePositionTime } from "@/lib/utils"
 import { Trade } from "@prisma/client"
-import { CalendarEntry } from "@/components/calendar/calendar-pnl"
+import { CalendarEntry } from "@/lib/types"
 
 interface CalendarModalProps {
   isOpen: boolean;

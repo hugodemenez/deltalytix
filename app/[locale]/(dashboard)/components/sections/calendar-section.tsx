@@ -1,15 +1,16 @@
+'use client'
 // CalendarSection.tsx
 import React from 'react'
 import { CalendarData } from '@/lib/types'
-import NewCalendarPnl from '../calendar/calendar-pnl'
-import { useCalendarData } from '../context/trades-data'
+import { useCalendarData } from '@/components/context/trades-data'
+import CalendarPnl from '../calendar/calendar-pnl'
 
 export function CalendarSection() {
   const { calendarData } = useCalendarData()
 
   return (
     <section id="calendar" className="mb-10">
-      <NewCalendarPnl calendarData={calendarData}></NewCalendarPnl>
+      <CalendarPnl calendarData={calendarData} />
     </section>
   )
 }
