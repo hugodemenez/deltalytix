@@ -6,12 +6,14 @@ type Theme = 'light' | 'dark' | 'system'
 
 type ThemeContextType = {
   theme: Theme
+  effectiveTheme: 'light' | 'dark'
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'system',
+  effectiveTheme: 'light',
   setTheme: () => {},
   toggleTheme: () => {},
 })
@@ -20,18 +22,22 @@ export const useTheme = () => useContext(ThemeContext)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system')
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light')
   const [mounted, setMounted] = useState(false)
 
   const applyTheme = (newTheme: Theme) => {
     const root = window.document.documentElement
     root.classList.remove('light', 'dark')
 
-    let effectiveTheme = newTheme
+    let newEffectiveTheme: 'light' | 'dark' = 'light'
     if (newTheme === 'system') {
-      effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+      newEffectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    } else {
+      newEffectiveTheme = newTheme
     }
 
-    root.classList.add(effectiveTheme)
+    root.classList.add(newEffectiveTheme)
+    setEffectiveTheme(newEffectiveTheme)
   }
 
   useEffect(() => {
@@ -40,6 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (savedTheme) {
       setThemeState(savedTheme)
     }
+    applyTheme(savedTheme || 'system')
   }, [])
 
   useEffect(() => {
@@ -68,7 +75,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     setThemeState(prevTheme => {
       if (prevTheme === 'system') {
-        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark'
+        return effectiveTheme === 'light' ? 'dark' : 'light'
       }
       return prevTheme === 'light' ? 'dark' : 'light'
     })
@@ -76,6 +83,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     theme,
+    effectiveTheme,
     setTheme,
     toggleTheme,
   }

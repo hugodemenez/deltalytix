@@ -89,6 +89,8 @@ export default {
     'navbar.openMenu': 'Ouvrir le menu',
     'navbar.darkMode': 'Mode sombre',
     'navbar.lightMode': 'Mode clair',
+    'navbar.systemTheme': 'Thème système',
+    'navbar.changeTheme': 'Changer de thème',
     'navbar.changeLanguage': 'Changer de langue',
     'footer.heading': 'Pied de page',
     'footer.description': 'Analyses avancées pour les traders modernes.',

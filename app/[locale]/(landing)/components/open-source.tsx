@@ -11,7 +11,7 @@ import { LuGitFork } from 'react-icons/lu'
 import { ChartSSR } from './chart-ssr'
 import Link from 'next/link'
 import { getGithubData } from '@/server/github-data'
-import { Skeleton } from './ui/skeleton'
+import { Skeleton } from '../../../../components/ui/skeleton'
 import { useI18n } from "@/locales/client"
 
 const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || 'default_owner'

@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Logo } from "@/components/logo"
-import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe } from "lucide-react"
+import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop } from "lucide-react"
 import {
     NavigationMenu,
     NavigationMenuContent,
@@ -17,23 +17,15 @@ import {
     NavigationMenuTrigger,
     navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
-import { useTheme } from './context/theme-provider'
+import { useTheme } from '@/components/context/theme-provider'
 import { cn } from '@/lib/utils'
-import { useUser } from './context/user-data'
+import { useUser } from '@/components/context/user-data'
 import { useI18n } from "@/locales/client"
 import { useRouter, usePathname } from "next/navigation"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Check, ChevronsUpDown } from "lucide-react"
 import { useChangeLocale, useCurrentLocale } from '@/locales/client'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -74,7 +66,7 @@ const MobileNavItem = ({ href, children, onClick, className }: { href: string; c
 
 export default function Component() {
     const { user } = useUser()
-    const { theme, toggleTheme } = useTheme()
+    const { theme, setTheme } = useTheme()
     const [isOpen, setIsOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
     const [isVisible, setIsVisible] = useState(true)
@@ -125,6 +117,10 @@ export default function Component() {
     const changeLanguage = (locale: string) => {
         changeLocale(locale as "en" | "fr")
         setOpen(false)
+    }
+
+    const handleThemeChange = (value: string) => {
+        setTheme(value as "light" | "dark" | "system")
     }
 
     const MobileNavContent = ({ onLinkClick }: { onLinkClick: () => void }) => (
@@ -302,10 +298,32 @@ export default function Component() {
                             </Command>
                         </PopoverContent>
                     </Popover>
-                    <Button variant="ghost" size="icon" onClick={toggleTheme} className="hidden lg:flex">
-                        {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                        <span className="sr-only">{t('navbar.toggleTheme')}</span>
-                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="hidden lg:flex">
+                                {theme === 'light' ? <Sun className="h-5 w-5" /> : 
+                                 theme === 'dark' ? <Moon className="h-5 w-5" /> : 
+                                 <Laptop className="h-5 w-5" />}
+                                <span className="sr-only">{t('navbar.toggleTheme')}</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
+                                <DropdownMenuRadioItem value="light">
+                                    <Sun className="mr-2 h-4 w-4" />
+                                    <span>{t('navbar.lightMode')}</span>
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="dark">
+                                    <Moon className="mr-2 h-4 w-4" />
+                                    <span>{t('navbar.darkMode')}</span>
+                                </DropdownMenuRadioItem>
+                                <DropdownMenuRadioItem value="system">
+                                    <Laptop className="mr-2 h-4 w-4" />
+                                    <span>{t('navbar.systemTheme')}</span>
+                                </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
                         <SheetTrigger asChild>
                             <Button variant="ghost" size="icon" className="flex lg:hidden" onClick={toggleMenu}>
@@ -319,10 +337,32 @@ export default function Component() {
                                     <MobileNavContent onLinkClick={closeMenu} />
                                 </div>
                                 <div className="py-4 border-t">
-                                    <Button variant="ghost" size="icon" onClick={toggleTheme} className="w-full justify-start">
-                                        {theme === 'light' ? <Moon className="h-5 w-5 mr-2" /> : <Sun className="h-5 w-5 mr-2" />}
-                                        {theme === 'light' ? t('navbar.darkMode') : t('navbar.lightMode')}
-                                    </Button>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="w-full justify-start">
+                                                {theme === 'light' ? <Sun className="h-5 w-5 mr-2" /> : 
+                                                 theme === 'dark' ? <Moon className="h-5 w-5 mr-2" /> : 
+                                                 <Laptop className="h-5 w-5 mr-2" />}
+                                                {t('navbar.changeTheme')}
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
+                                                <DropdownMenuRadioItem value="light">
+                                                    <Sun className="mr-2 h-4 w-4" />
+                                                    <span>{t('navbar.lightMode')}</span>
+                                                </DropdownMenuRadioItem>
+                                                <DropdownMenuRadioItem value="dark">
+                                                    <Moon className="mr-2 h-4 w-4" />
+                                                    <span>{t('navbar.darkMode')}</span>
+                                                </DropdownMenuRadioItem>
+                                                <DropdownMenuRadioItem value="system">
+                                                    <Laptop className="mr-2 h-4 w-4" />
+                                                    <span>{t('navbar.systemTheme')}</span>
+                                                </DropdownMenuRadioItem>
+                                            </DropdownMenuRadioGroup>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant="ghost" size="icon" className="w-full justify-start">

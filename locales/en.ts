@@ -90,6 +90,8 @@ export default {
     'navbar.openMenu': 'Open menu',
     'navbar.darkMode': 'Dark mode',
     'navbar.lightMode': 'Light mode',
+    'navbar.systemTheme': 'System theme',
+    'navbar.changeTheme': 'Change theme',
     'navbar.changeLanguage': 'Change language',
     'footer.heading': 'Footer',
     'footer.description': 'Advanced analytics for modern traders.',

@@ -4,9 +4,8 @@ import React, { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useTheme } from '@/components/context/theme-provider'
-import Features from '@/components/features'
-import OpenSource from '@/components/open-source'
-import GitHubRepoCard from '@/components/open-source'
+import Features from './components/features'
+import GitHubRepoCard from './components/open-source'
 import PricingPage from './pricing/page'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/locales/client'
@@ -14,7 +13,7 @@ import { useUser } from '@/components/context/user-data'
 
 export default function LandingPage() {
     const t = useI18n()
-    const { theme } = useTheme();
+    const { theme, effectiveTheme } = useTheme();
     const { user } = useUser();
     const [videoLoaded, setVideoLoaded] = useState(false);
     const [videoError, setVideoError] = useState(false);
@@ -27,7 +26,8 @@ export default function LandingPage() {
         if (videoRef.current) {
             videoRef.current.load();
         }
-    }, [theme]);
+        console.log(effectiveTheme);
+    }, [theme, effectiveTheme]);
 
     const handleVideoLoad = () => {
         setVideoLoaded(true);
@@ -92,7 +92,7 @@ export default function LandingPage() {
                                         onLoadedData={handleVideoLoad}
                                         onError={handleVideoError}
                                     >
-                                        <source src={theme === "dark" ? "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo-dark.mp4" : "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo.mp4"} type="video/mp4" />
+                                        <source src={effectiveTheme === "dark" ? "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo-dark.mp4" : "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo.mp4"} type="video/mp4" />
                                         <track
                                             src="/path/to/captions.vtt"
                                             kind="subtitles"

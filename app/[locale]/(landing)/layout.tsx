@@ -1,7 +1,7 @@
 import { TradeDataProvider } from "@/components/context/trades-data";
 import { UserDataProvider } from "@/components/context/user-data";
 import { Toaster } from "@/components/ui/toaster";
-import Navbar from "@/components/landing-navbar";
+import Navbar from "./components/landing-navbar";
 import Footer from "@/components/footer";
 import { ThemeProvider } from "@/components/context/theme-provider";
 import { I18nProviderClient } from "@/locales/client";

@@ -3,9 +3,9 @@
 import React, { useState } from 'react'
 import Image from 'next/image'
 import { Badge } from "@/components/ui/badge"
-import CompletedTimeline from '@/components/completed-timeline'
 import { useI18n } from '@/locales/client'
 import { TranslationKeys } from '@/app/types/translations';
+import CompletedTimeline from '../components/completed-timeline'
 
 type Milestone = {
   id: number;
