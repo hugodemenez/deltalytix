@@ -155,7 +155,7 @@ export default function Modals() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <form action={'/stripe/create-checkout-session'} method='POST' className="w-full">
+                  <form action={'/api/stripe/create-checkout-session'} method='POST' className="w-full">
                     <input type="hidden" name="lookup_key" value={`${plan.name.toLowerCase()}-${billingPeriod}`} />
                     <Button type="submit" className="w-full text-sm sm:text-base">
                       {key === 'premium' ? t('pricing.getStarted') : t('pricing.tryBasic')}

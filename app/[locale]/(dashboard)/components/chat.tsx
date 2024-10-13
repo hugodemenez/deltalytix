@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,29 +10,55 @@ import { useActions, useUIState } from 'ai/rsc';
 import { generateId } from 'ai';
 import { cn } from "@/lib/utils";
 import { generateQuestionSuggestions } from '../server/actions';
+import { Skeleton } from "@/components/ui/skeleton";
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
-export default function Chat({ dayData, dateString }: { dayData: any, dateString: string }) {
-  const [input, setInput] = React.useState<string>('');
-  const [conversation, setConversation] = useUIState();
-  const { continueConversation } = useActions();
-  const [isLoading, setIsLoading] = React.useState(false);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [suggestions, setSuggestions] = React.useState<string[]>([]);
-
-  const fetchSuggestions = useCallback(async () => {
-    const newSuggestions = await generateQuestionSuggestions(dayData, dateString);
-    setSuggestions(newSuggestions);
-  }, [dayData, dateString]);
+// Custom hook for managing suggestions
+function useSuggestions(dayData: any, dateString: string) {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchSuggestions();
-  }, [fetchSuggestions]);
+    let isMounted = true;
+    setIsLoading(true);
 
-  const handleSendMessage = async (message: string) => {
+    const fetchSuggestions = async () => {
+      try {
+        const newSuggestions = await generateQuestionSuggestions(dayData, dateString);
+        if (isMounted) {
+          setSuggestions(newSuggestions);
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchSuggestions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dayData, dateString]);
+
+  return { suggestions, isLoading };
+}
+
+export default function Chat({ dayData, dateString }: { dayData: any, dateString: string }) {
+  const [input, setInput] = useState<string>('');
+  const [conversation, setConversation] = useUIState();
+  const { continueConversation } = useActions();
+  const [isMessageLoading, setIsMessageLoading] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { suggestions, isLoading: isSuggestionsLoading } = useSuggestions(dayData, dateString);
+
+  const handleSendMessage = useCallback(async (message: string) => {
     if (message.trim() === '') return;
 
     setConversation((currentConversation: ClientMessage[]) => [
@@ -40,7 +66,7 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
       { id: generateId(), role: 'user', display: message },
     ]);
 
-    setIsLoading(true);
+    setIsMessageLoading(true);
     const response = await continueConversation(message, dayData, dateString);
 
     setConversation((currentConversation: ClientMessage[]) => [
@@ -49,8 +75,8 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
     ]);
 
     setInput('');
-    setIsLoading(false);
-  };
+    setIsMessageLoading(false);
+  }, [continueConversation, dayData, dateString, setConversation]);
 
   const handleFileUpload = (type: 'camera' | 'photo' | 'folder') => {
     if (fileInputRef.current) {
@@ -75,6 +101,40 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
     handleSendMessage(suggestion);
   };
 
+  const renderSuggestions = () => {
+    if (isSuggestionsLoading) {
+      // Tailwind classes for different widths
+      const skeletonWidths = ['w-64', 'w-80', 'w-96'];
+      return (
+        <>
+          {skeletonWidths.map((width, index) => (
+            <Skeleton 
+              key={index}
+              className={`h-8 rounded-full ${width}`}
+            />
+          ))}
+        </>
+      );
+    }
+
+    if (suggestions.length === 0) {
+      return <div className="text-sm text-muted-foreground">No suggestions available</div>;
+    }
+
+    return suggestions.map((suggestion, index) => (
+      <Button
+        key={index}
+        variant="outline"
+        size="sm"
+        onClick={() => handleSuggestionClick(suggestion)}
+        className="text-xs whitespace-normal text-left"
+        disabled={isMessageLoading}
+      >
+        {suggestion}
+      </Button>
+    ));
+  };
+
   return (
     <div className="flex flex-col h-full bg-background">
       <div 
@@ -90,18 +150,7 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
       </div>
       <div className="p-4 border-t bg-background sticky bottom-0 left-0 right-0">
         <div className="flex flex-wrap gap-2 mb-2">
-          {suggestions.map((suggestion, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              size="sm"
-              onClick={() => handleSuggestionClick(suggestion)}
-              className="text-xs whitespace-normal text-left"
-              disabled={isLoading}
-            >
-              {suggestion}
-            </Button>
-          ))}
+          {renderSuggestions()}
         </div>
         <form onSubmit={(e) => {
           e.preventDefault();
@@ -134,8 +183,8 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
             placeholder="Write a reply..."
             className="flex-grow"
           />
-          <Button type="submit" disabled={isLoading} size="icon" className="shrink-0">
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          <Button type="submit" disabled={isMessageLoading} size="icon" className="shrink-0">
+            {isMessageLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </form>
       </div>

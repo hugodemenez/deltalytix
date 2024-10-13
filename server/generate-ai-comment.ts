@@ -1,7 +1,7 @@
 // app/actions/generateAIComment.ts
 'use server'
 
-import { CalendarEntry } from "@/lib/types";
+import { CalendarEntry } from "@/types/calendar";
 import { openai } from "@ai-sdk/openai"
 import { streamObject } from "ai"
 import { z } from "zod"

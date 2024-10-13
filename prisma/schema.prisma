@@ -43,5 +43,31 @@ model Subscription {
   email String @unique
   plan String
   createdAt DateTime @default(now())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id])
+  @@index([email])
+  @@schema("public")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  auth_user_id  String         @unique // Add this line
+  notifications Notification[]
+  subscriptions Subscription?
+  @@index([email])
   @@schema("public")
 }

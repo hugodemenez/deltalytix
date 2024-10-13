@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 import { Trade } from "@prisma/client"
 import { updateTradesWithComment } from "@/server/database"
 import { toast } from "@/hooks/use-toast"
-import { CalendarEntry, CalendarData } from "@/lib/types"
+import { CalendarEntry, CalendarData } from "@/types/calendar"
 import { CalendarModal } from "./new-modal"
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']

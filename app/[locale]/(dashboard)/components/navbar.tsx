@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUser } from "@/components/context/user-data"
-import { Search, Bell, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop } from "lucide-react"
+import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -26,7 +26,7 @@ import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import { useTheme } from '@/components/context/theme-provider'
 import ImportButton from './import-csv/import-button'
-
+import { NotificationDropdown } from './notification-dropdown'
 type Theme = 'light' | 'dark' | 'system'
 
 export default function Navbar() {
@@ -48,9 +48,7 @@ export default function Navbar() {
           <div className='hidden md:flex'>
             <ImportButton />
           </div>
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <NotificationDropdown />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Avatar className="cursor-pointer h-8 w-8">

@@ -1,5 +1,5 @@
 'use server'
-import { createClient } from '@/server/auth'
+import { createClient, handleAuthCallback } from '@/server/auth'
 import { NextResponse } from 'next/server'
 // The client you created from the Server-Side Auth instructions
 
@@ -18,6 +18,9 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
+      // Call handleAuthCallback to ensure user is in the database
+      await handleAuthCallback()
+
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
       const isLocalEnv = process.env.NODE_ENV === 'development'
       console.log('forwardedHost', forwardedHost)

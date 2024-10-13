@@ -25,7 +25,7 @@ export async function getTrades(userId: string) {
     return trades
 }
 
-import { CalendarEntry } from '@/lib/types'
+import { CalendarEntry } from '@/types/calendar'
 import { generateAIComment } from './generate-ai-comment'
 
 export async function updateTradesWithComment(dayData: CalendarEntry, dateString: string) {

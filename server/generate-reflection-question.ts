@@ -3,7 +3,7 @@
 import { openai } from "@ai-sdk/openai"
 import { streamObject } from "ai"
 import { z } from "zod"
-import { GenerateReflectionQuestionParams, GenerateFollowUpParams, ReflectionQuestionResponse } from "@/app/types/chat"
+import { GenerateReflectionQuestionParams, GenerateFollowUpParams, ReflectionQuestionResponse } from "@/types/chat"
 import { groupBy } from '@/lib/utils';
 
 // Common function to generate account summaries

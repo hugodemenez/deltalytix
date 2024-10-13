@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { generateReflectionQuestion } from "@/server/generate-reflection-question"
 import { Plus, Camera, Image, Folder, Send, Loader2, RefreshCw } from 'lucide-react'
-import { ChatMessage } from "@/app/types/chat"
+import { ChatMessage } from "@/types/chat"
 import { cn } from "@/lib/utils"
 import { useUser } from "@/components/context/user-data"
-import { CalendarEntry } from '@/lib/types'
+import { CalendarEntry } from "@/types/calendar"
 
 interface ReflectionChatProps {
   dayData: CalendarEntry | undefined;

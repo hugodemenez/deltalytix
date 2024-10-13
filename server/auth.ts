@@ -5,6 +5,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
+const prisma = new PrismaClient()
+
 export async function getWebsiteURL(){
   let url =
     process?.env?.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production env.
@@ -46,20 +48,18 @@ export async function createClient() {
 export async function signInWithDiscord(next: string | null = null) {
   const supabase = await createClient()
   const websiteURL = await getWebsiteURL()
-  console.log(`${websiteURL}auth/callback/`)
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'discord',
     options: {
-      redirectTo: `${websiteURL}auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
+      redirectTo: `${websiteURL}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
     },
   })
   console.log(error, data)
   if (data.url) {
-    redirect(data.url) // use the redirect API for your server framework
+    // Before redirecting, ensure user is created/updated in Prisma database
+    redirect(data.url)
   }
-
 }
-
 
 export async function getUserId() {
   const supabase = await createClient()
@@ -78,6 +78,8 @@ export async function getUserId() {
     })
     return ''
   }
+  // Ensure user is in Prisma database
+  await ensureUserInDatabase(user)
   return user.id
 }
 
@@ -87,15 +89,40 @@ export async function signOut() {
   redirect('/')
 }
 
-export async function signInWithEmail(email: string,next: string | null = null) {
+export async function signInWithEmail(email: string, next: string | null = null) {
   const supabase = await createClient()
   const { error } = await supabase.auth.signInWithOtp({
     email: email,
     options: {
-      emailRedirectTo: `${getWebsiteURL()}auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
+      emailRedirectTo: `${getWebsiteURL()}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
     },
   })
   console.log(error)
+  // Note: We can't ensure user is in database here because the user hasn't actually signed in yet.
+  // This will be handled in the callback route.
 }
 
+// New function to ensure user is in Prisma database
+async function ensureUserInDatabase(user: any) {
+  if (user) {
+    await prisma.user.upsert({
+      where: { auth_user_id: user.id },
+      update: { email: user.email },
+      create: {
+        id: user.id,
+        email: user.email!,
+        auth_user_id: user.id,
+      },
+    })
+  }
+}
 
+// You might want to add this function to your callback route
+export async function handleAuthCallback() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user) {
+    await ensureUserInDatabase(user)
+  }
+  // No need to handle redirect here, as it's already managed in the route
+}

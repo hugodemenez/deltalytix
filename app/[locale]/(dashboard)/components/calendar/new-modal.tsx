@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn, parsePositionTime } from "@/lib/utils"
 import { Trade } from "@prisma/client"
 import Chat from "../chat"
-import { CalendarEntry } from "@/lib/types"
+import { CalendarEntry } from "@/types/calendar"
 import { Charts } from "./charts"
 
 interface CalendarModalProps {

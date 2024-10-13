@@ -1,8 +1,8 @@
 import { Trade } from "@prisma/client"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { StatisticsProps } from "./types"
 import { format } from "date-fns"
+import { StatisticsProps } from "@/types/statistics"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

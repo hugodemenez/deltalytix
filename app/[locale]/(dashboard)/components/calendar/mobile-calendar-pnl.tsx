@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { CalendarModal } from "./new-modal"
-import { CalendarData } from "@/lib/types"
+import { CalendarData } from "@/types/calendar"
 import { Card } from "@/components/ui/card"
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const [currentDate, setCurrentDate] = useState(new Date())

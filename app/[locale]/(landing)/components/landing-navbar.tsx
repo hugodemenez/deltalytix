@@ -123,6 +123,18 @@ export default function Component() {
         setTheme(value as "light" | "dark" | "system")
     }
 
+    const getThemeIcon = () => {
+        if (theme === 'light') return <Sun className="h-5 w-5" />;
+        if (theme === 'dark') return <Moon className="h-5 w-5" />;
+        // For 'system' theme, we need to check the actual applied theme
+        if (typeof window !== 'undefined') {
+            const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            return isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />;
+        }
+        // Fallback to Laptop icon if we can't determine
+        return <Laptop className="h-5 w-5" />;
+    };
+
     const MobileNavContent = ({ onLinkClick }: { onLinkClick: () => void }) => (
         <nav className="flex flex-col space-y-4">
             <Accordion type="single" collapsible className="w-full">
@@ -301,9 +313,7 @@ export default function Component() {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="hidden lg:flex">
-                                {theme === 'light' ? <Sun className="h-5 w-5" /> : 
-                                 theme === 'dark' ? <Moon className="h-5 w-5" /> : 
-                                 <Laptop className="h-5 w-5" />}
+                                {getThemeIcon()}
                                 <span className="sr-only">{t('navbar.toggleTheme')}</span>
                             </Button>
                         </DropdownMenuTrigger>
@@ -340,10 +350,8 @@ export default function Component() {
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
                                             <Button variant="ghost" size="icon" className="w-full justify-start">
-                                                {theme === 'light' ? <Sun className="h-5 w-5 mr-2" /> : 
-                                                 theme === 'dark' ? <Moon className="h-5 w-5 mr-2" /> : 
-                                                 <Laptop className="h-5 w-5 mr-2" />}
-                                                {t('navbar.changeTheme')}
+                                                {getThemeIcon()}
+                                                <span className="ml-2">{t('navbar.changeTheme')}</span>
                                             </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">

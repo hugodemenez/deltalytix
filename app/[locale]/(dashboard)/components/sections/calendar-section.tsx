@@ -1,7 +1,6 @@
 'use client'
 // CalendarSection.tsx
 import React from 'react'
-import { CalendarData } from '@/lib/types'
 import { useCalendarData } from '@/components/context/trades-data'
 import CalendarPnl from '../calendar/calendar-pnl'
 

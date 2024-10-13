@@ -14,7 +14,7 @@ import {
   ChartContainer,
 } from "@/components/ui/chart"
 import { Separator } from "@/components/ui/separator"
-import { CalendarEntry } from '@/lib/types'
+import { CalendarEntry } from "@/types/calendar"
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;

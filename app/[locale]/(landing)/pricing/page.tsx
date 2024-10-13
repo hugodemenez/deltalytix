@@ -119,7 +119,7 @@ export default function PricingPage() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <form action={'/stripe/create-checkout-session'} method='POST'>
+                  <form action={'/api/stripe/create-checkout-session'} method='POST'>
                     <input type="hidden" name="lookup_key" value={`${plan.name.toLowerCase()}-${billingPeriod}`} />
                     <Button type="submit" className="w-full">{key === 'premium' ? t('pricing.getStarted') : t('pricing.tryBasic')}</Button>
                   </form>

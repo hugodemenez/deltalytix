@@ -1,4 +1,4 @@
-import { CalendarEntry } from "@/lib/types";
+import { CalendarEntry } from "./calendar";
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -13,10 +13,9 @@ export interface GenerateReflectionQuestionParams {
   userInput: string;
   isInitialGreeting?: boolean;
   userName?: string;
-  lastQuestion?: string; // Add this line
+  lastQuestion?: string;
 }
 
-// Update the return type of generateReflectionQuestion
 export interface ReflectionQuestionResponse {
   greeting?: string;
   response: string;
@@ -24,7 +23,7 @@ export interface ReflectionQuestionResponse {
   shouldEnd: boolean;
 }
 
-export type GenerateFollowUpParams = {
+export interface GenerateFollowUpParams {
   dayData: CalendarEntry;
   dateString: string;
   messages: ChatMessage[];

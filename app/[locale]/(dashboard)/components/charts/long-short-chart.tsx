@@ -16,7 +16,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { CalendarData } from "@/lib/types"
+import { CalendarData } from "@/types/calendar"
 
 export const description = "An interactive bar chart"
 

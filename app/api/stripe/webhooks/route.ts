@@ -4,6 +4,7 @@ import type { Stripe } from "stripe";
 import { NextResponse } from "next/server";
 import { stripe } from "@/server/stripe";
 import { PrismaClient } from "@prisma/client";
+import { sendSubscriptionErrorEmail } from "@/server/send-support-email";
 
 export async function GET(req: Request) {
   return NextResponse.json({ message: "Hello World" }, { status: 200 });
@@ -44,6 +45,10 @@ export async function POST(req: Request) {
       switch (event.type) {
         case "checkout.session.completed":
           data = event.data.object as Stripe.Checkout.Session;
+          // Get user id from email
+          const user = await prisma.user.findUnique({
+            where: { email: data.customer_details?.email as string },
+          });
           const subscription = await prisma.subscription.upsert({
             where: {
               email: data.customer_details?.email as string,
@@ -54,8 +59,19 @@ export async function POST(req: Request) {
             create: {
               email: data.customer_details?.email as string,
               plan: data.metadata?.plan as string,
+              user: { connect: { id: user?.id } }
             }
           })
+          console.log('subscription', subscription)
+          // In case of error creating the subscription send email to support
+          if (!subscription) {
+            await sendSubscriptionErrorEmail({
+              contactInfo: {
+                email: data.customer_details?.email as string,
+                additionalInfo: `Error creating subscription`,
+              }
+            })
+          }
           break;
         case "payment_intent.payment_failed":
           data = event.data.object as Stripe.PaymentIntent;
