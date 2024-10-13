@@ -71,7 +71,7 @@ export function NotificationDropdown() {
         <DropdownMenuSeparator />
         {error ? (
           <DropdownMenuItem disabled>{error}</DropdownMenuItem>
-        ) : recentNotifications.length === 0 ? (
+        ) : !recentNotifications || recentNotifications.length === 0 ? (
           <DropdownMenuItem disabled>No notifications</DropdownMenuItem>
         ) : (
           recentNotifications.map((notification) => (
