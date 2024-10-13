@@ -1,6 +1,6 @@
 export default {
     'landing.title': 'Votre journal de trading.',
-    'landing.description': 'Deltalytix est un journal de trading web pour traders pour stocker, explorer et comprendre leur historique de trading.',
+    'landing.description': 'Deltalytix est un journal de trading web pour traders permettant de stocker, explorer et comprendre leur historique de trading.',
     'landing.cta': 'Commencer maintenant',
     'landing.updates': 'Dernières mises à jour du produit →',
     'data-import': 'Importation de données',
