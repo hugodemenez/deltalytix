@@ -26,6 +26,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useChangeLocale, useCurrentLocale } from '@/locales/client'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -113,6 +114,7 @@ export default function Component() {
     ]
 
     const [open, setOpen] = useState(false)
+    const [themeOpen, setThemeOpen] = useState(false)
 
     const changeLanguage = (locale: string) => {
         changeLocale(locale as "en" | "fr")
@@ -121,6 +123,7 @@ export default function Component() {
 
     const handleThemeChange = (value: string) => {
         setTheme(value as "light" | "dark" | "system")
+        setThemeOpen(false)
     }
 
     const getThemeIcon = () => {
@@ -172,6 +175,48 @@ export default function Component() {
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
                 <Link href={user ? "/dashboard" : "/authentication"}>{user ? t('navbar.dashboard') : t('navbar.signIn')}</Link>
             </Button>
+            <div className="py-4 border-t space-y-4">
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="w-full justify-start">
+                            {getThemeIcon()}
+                            <span className="ml-2">{t('navbar.changeTheme')}</span>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                        <Command>
+                            <CommandList>
+                                <CommandGroup>
+                                    <CommandItem onSelect={() => handleThemeChange("light")}>
+                                        <Sun className="mr-2 h-4 w-4" />
+                                        <span>{t('navbar.lightMode')}</span>
+                                    </CommandItem>
+                                    <CommandItem onSelect={() => handleThemeChange("dark")}>
+                                        <Moon className="mr-2 h-4 w-4" />
+                                        <span>{t('navbar.darkMode')}</span>
+                                    </CommandItem>
+                                    <CommandItem onSelect={() => handleThemeChange("system")}>
+                                        <Laptop className="mr-2 h-4 w-4" />
+                                        <span>{t('navbar.systemTheme')}</span>
+                                    </CommandItem>
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+                <Select onValueChange={(value) => changeLanguage(value)}>
+                    <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t('navbar.changeLanguage')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {languages.map((language) => (
+                            <SelectItem key={language.value} value={language.value}>
+                                {language.label}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
         </nav>
     )
 
@@ -310,30 +355,34 @@ export default function Component() {
                             </Command>
                         </PopoverContent>
                     </Popover>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
+                    <Popover open={themeOpen} onOpenChange={setThemeOpen}>
+                        <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" className="hidden lg:flex">
                                 {getThemeIcon()}
                                 <span className="sr-only">{t('navbar.toggleTheme')}</span>
                             </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
-                                <DropdownMenuRadioItem value="light">
-                                    <Sun className="mr-2 h-4 w-4" />
-                                    <span>{t('navbar.lightMode')}</span>
-                                </DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="dark">
-                                    <Moon className="mr-2 h-4 w-4" />
-                                    <span>{t('navbar.darkMode')}</span>
-                                </DropdownMenuRadioItem>
-                                <DropdownMenuRadioItem value="system">
-                                    <Laptop className="mr-2 h-4 w-4" />
-                                    <span>{t('navbar.systemTheme')}</span>
-                                </DropdownMenuRadioItem>
-                            </DropdownMenuRadioGroup>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0">
+                            <Command>
+                                <CommandList>
+                                    <CommandGroup>
+                                        <CommandItem onSelect={() => handleThemeChange("light")}>
+                                            <Sun className="mr-2 h-4 w-4" />
+                                            <span>{t('navbar.lightMode')}</span>
+                                        </CommandItem>
+                                        <CommandItem onSelect={() => handleThemeChange("dark")}>
+                                            <Moon className="mr-2 h-4 w-4" />
+                                            <span>{t('navbar.darkMode')}</span>
+                                        </CommandItem>
+                                        <CommandItem onSelect={() => handleThemeChange("system")}>
+                                            <Laptop className="mr-2 h-4 w-4" />
+                                            <span>{t('navbar.systemTheme')}</span>
+                                        </CommandItem>
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                     <Sheet open={isOpen} onOpenChange={setIsOpen}>
                         <SheetTrigger asChild>
                             <Button variant="ghost" size="icon" className="flex lg:hidden" onClick={toggleMenu}>
@@ -345,69 +394,6 @@ export default function Component() {
                             <div className="flex flex-col h-full">
                                 <div className="flex-grow overflow-y-auto py-6">
                                     <MobileNavContent onLinkClick={closeMenu} />
-                                </div>
-                                <div className="py-4 border-t">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="w-full justify-start">
-                                                {getThemeIcon()}
-                                                <span className="ml-2">{t('navbar.changeTheme')}</span>
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
-                                                <DropdownMenuRadioItem value="light">
-                                                    <Sun className="mr-2 h-4 w-4" />
-                                                    <span>{t('navbar.lightMode')}</span>
-                                                </DropdownMenuRadioItem>
-                                                <DropdownMenuRadioItem value="dark">
-                                                    <Moon className="mr-2 h-4 w-4" />
-                                                    <span>{t('navbar.darkMode')}</span>
-                                                </DropdownMenuRadioItem>
-                                                <DropdownMenuRadioItem value="system">
-                                                    <Laptop className="mr-2 h-4 w-4" />
-                                                    <span>{t('navbar.systemTheme')}</span>
-                                                </DropdownMenuRadioItem>
-                                            </DropdownMenuRadioGroup>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="w-full justify-start">
-                                                <Globe className="h-5 w-5 mr-2" />
-                                                {t('navbar.changeLanguage')}
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[200px] p-0">
-                                            <Command >
-                                                <CommandInput placeholder="Search language..." />
-                                                <CommandList>
-                                                    <CommandEmpty>No language found.</CommandEmpty>
-                                                    <CommandGroup>
-                                                        {languages.map((language) => (
-                                                            <CommandItem
-                                                                key={language.value}
-                                                                onSelect={() => {
-                                                                    changeLanguage(language.value)
-                                                                    closeMenu()
-                                                                }}
-                                                                className="cursor-pointer"
-                                                            >
-                                                                {language.label}
-                                                            </CommandItem>
-                                                        ))}
-                                                        <CommandItem onSelect={() => {
-                                                            // Implement request new language logic
-                                                            console.log("Request new language support")
-                                                            closeMenu()
-                                                        }}>
-                                                            Request new language
-                                                        </CommandItem>
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
                                 </div>
                             </div>
                         </SheetContent>
