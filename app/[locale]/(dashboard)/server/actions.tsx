@@ -41,7 +41,16 @@ export async function continueConversation(
 ): Promise<ClientMessage> {
   'use server';
 
+  if (!dayData || !dayData.trades) {
+    return {
+      id: generateId(),
+      role: 'assistant',
+      display: <div>No trades available</div>,
+    };
+  }
+
   const history = getMutableAIState();
+
 
   const accountSummaries = generateAccountSummaries(dayData.trades);
   const tradeSummaries = generateTradeSummaries(dayData.trades);
@@ -118,6 +127,10 @@ export async function continueConversation(
 
 export async function generateQuestionSuggestions(dayData: any, dateString: string): Promise<string[]> {
   'use server';
+
+  if (!dayData || !dayData.trades) {
+    return getDefaultQuestions();
+  }
 
   const accountSummaries = generateAccountSummaries(dayData.trades);
   const tradeSummaries = generateTradeSummaries(dayData.trades);

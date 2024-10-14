@@ -80,9 +80,9 @@ export default function Modals() {
 
   useEffect(() => {
     if (!isLoading && !isPaywallOpen) {
-      setIsTradesDialogOpen(trades.length === 0)
+      setIsTradesDialogOpen(trades?.length === 0)
     }
-  }, [isLoading, trades.length])
+  }, [isLoading, trades?.length])
 
   return (
     <>
