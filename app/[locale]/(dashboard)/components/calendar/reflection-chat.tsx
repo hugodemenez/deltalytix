@@ -190,7 +190,7 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
         {message.content.split('\n').map((line, index) => (
           <React.Fragment key={index}>
             {line}
-            {index < message.content.split('\n').length - 1 && <br />}
+            {index < message.content.split('\n')?.length - 1 && <br />}
           </React.Fragment>
         ))}
         {message.image && (
@@ -215,9 +215,9 @@ export function ReflectionChat({ dayData, dateString }: ReflectionChatProps) {
         className="flex-grow overflow-y-auto p-4 space-y-4"
         style={{ maxHeight: 'calc(100vh - 120px)' }}
       >
-        {messages.length > 0 && (
+        {messages?.length > 0 && (
           <>
-            {messages.map((message, index) => (
+            {messages?.map((message, index) => (
               <div key={index} className={cn("flex", message.role === 'assistant' ? "justify-start" : "justify-end")}>
                 {renderMessage(message)}
               </div>

@@ -70,10 +70,10 @@ export function Charts({ dayData }: ChartsProps) {
 
   const calculateSummary = (trades: typeof dayData.trades) => ({
     pnl: trades.reduce((sum, trade) => sum + trade.pnl, 0),
-    avgTimeInPosition: trades.length > 0
-      ? trades.reduce((sum, trade) => sum + trade.timeInPosition, 0) / trades.length
+    avgTimeInPosition: trades?.length > 0
+      ? trades.reduce((sum, trade) => sum + trade.timeInPosition, 0) / trades?.length
       : 0,
-    count: trades.length,
+    count: trades?.length || 0,
     longTrades: trades.filter(trade => trade.side?.toUpperCase() === 'LONG'),
     shortTrades: trades.filter(trade => trade.side?.toUpperCase() === 'SHORT'),
   })
