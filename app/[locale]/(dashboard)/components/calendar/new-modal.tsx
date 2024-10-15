@@ -28,7 +28,7 @@ export function CalendarModal({
   dayData,
   isLoading,
 }: CalendarModalProps) {
-  const [activeTab, setActiveTab] = useState("reflection")
+  const [activeTab, setActiveTab] = useState("charts")
 
   if (!selectedDate) return null;
 

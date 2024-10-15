@@ -209,7 +209,6 @@ export function Charts({ dayData }: ChartsProps) {
 
   return (
     <div className="space-y-6">
-      {accountSummaries.map(renderAccountCard)}
 
       <Card className="w-full">
         <CardHeader>
@@ -256,6 +255,8 @@ export function Charts({ dayData }: ChartsProps) {
           </ChartContainer>
         </CardContent>
       </Card>
+      {accountSummaries.map(renderAccountCard)}
+
     </div>
   )
 }
