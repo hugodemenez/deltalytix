@@ -58,7 +58,7 @@ export function CalendarModal({
           </TabsContent>
           <TabsContent value="table" className="flex-grow overflow-auto p-6 pt-2">
             <ScrollArea className="h-full">
-              {dayData && dayData.trades.length > 0 ? (
+              {dayData && dayData.trades?.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
