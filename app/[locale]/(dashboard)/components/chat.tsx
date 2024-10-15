@@ -117,7 +117,7 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
       );
     }
 
-    if (suggestions.length === 0) {
+    if (suggestions?.length === 0) {
       return <div className="text-sm text-muted-foreground">No suggestions available</div>;
     }
 
