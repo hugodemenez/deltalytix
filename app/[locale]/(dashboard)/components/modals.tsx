@@ -80,9 +80,15 @@ export default function Modals() {
 
   useEffect(() => {
     if (!isLoading && !isPaywallOpen) {
+
+
+      if (!trades) {
+        console.warn('No trades available. Please add some trades to see the dashboard content.');
+        return
+      }
       setIsTradesDialogOpen(trades?.length === 0)
     }
-  }, [isLoading, trades?.length])
+  }, [isLoading, trades])
 
   return (
     <>

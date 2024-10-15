@@ -24,8 +24,8 @@ function generateAccountSummaries(trades: any[]) {
   return Object.entries(accountGroups).map(([accountNumber, trades]) => {
     const accountPnL = trades.reduce((sum: number, trade: any) => sum + trade.pnl, 0);
     const accountCommission = trades.reduce((sum: number, trade: any) => sum + trade.commission, 0);
-    const longTrades = trades.filter((t: any) => t.side === 'long').length;
-    const shortTrades = trades.filter((t: any) => t.side === 'short').length;
+    const longTrades = trades.filter((t: any) => t.side === 'long')!.length;
+    const shortTrades = trades.filter((t: any) => t.side === 'short')!.length;
     return `Account ${accountNumber}: PnL: $${(accountPnL - accountCommission).toFixed(2)}, Commission: $${accountCommission.toFixed(2)}, Long: ${longTrades}, Short: ${shortTrades}`;
   }).join('\n');
 }
