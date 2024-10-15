@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Camera, Image, Folder, Send, Loader2 } from 'lucide-react';
-import { ClientMessage } from '../server/actions';
+import { ClientMessage } from '../../server/actions';
 import { useActions, useUIState } from 'ai/rsc';
 import { generateId } from 'ai';
 import { cn } from "@/lib/utils";
-import { generateQuestionSuggestions } from '../server/actions';
+import { generateQuestionSuggestions } from '../../server/actions';
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Allow streaming responses up to 30 seconds

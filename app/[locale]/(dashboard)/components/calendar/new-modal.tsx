@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn, parsePositionTime } from "@/lib/utils"
 import { Trade } from "@prisma/client"
-import Chat from "../chat"
+import Chat from "./chat"
 import { CalendarEntry } from "@/types/calendar"
 import { Charts } from "./charts"
 
@@ -50,8 +50,7 @@ export function CalendarModal({
             <TabsTrigger value="table">Table</TabsTrigger>
           </TabsList>
           <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
-            <Chat dayData={dayData} dateString={dateString}></Chat>
-            {/* <ReflectionChat dayData={dayData} dateString={dateString} /> */}
+            {/* <Chat dayData={dayData} dateString={dateString}></Chat> */}
           </TabsContent>
           <TabsContent value="charts" className="flex-grow overflow-auto p-6 pt-2">
             <Charts dayData={dayData} />
