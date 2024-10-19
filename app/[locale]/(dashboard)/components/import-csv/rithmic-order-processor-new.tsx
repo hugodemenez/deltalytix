@@ -5,17 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from '@/hooks/use-toast'
-import { Trade } from '@prisma/client'
+import { TickDetails, Trade } from '@prisma/client'
+import { getTickDetails } from '@/server/database'
 
 interface ContractSpec {
   tickSize: number;
   tickValue: number;
 }
 
-const defaultContractSpecs: { [key: string]: ContractSpec } = {
-  ZN: { tickSize: 1/64, tickValue: 15.625 },
-  ZB: { tickSize: 1/32, tickValue: 31.25 },
-}
 
 interface RithmicOrderProcessorProps {
   csvData: string[][]
@@ -47,7 +44,16 @@ interface OpenPosition {
 
 export default function RithmicOrderProcessor({ csvData, headers, setProcessedTrades }: RithmicOrderProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
-  const [contractSpecs, setContractSpecs] = useState<{ [key: string]: ContractSpec }>(defaultContractSpecs)
+  const [tickDetails, setTickDetails] = useState<TickDetails[]>([])
+  
+  useEffect(() => {
+    const fetchTickDetails = async () => {
+      const details = await getTickDetails()
+      console.log(details)
+      setTickDetails(details)
+    }
+    fetchTickDetails()
+  }, [])
 
   const parsePrice = (priceString: string): number => {
     if (!priceString || typeof priceString !== 'string') {
@@ -106,7 +112,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
       const orderCommission = commissionRate * quantity
       const orderId = order["Order Number"]
 
-      const contractSpec = contractSpecs[symbol.slice(0, 2)] || { tickSize: 1/64, tickValue: 15.625 }
+      const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || { tickSize: 1/64, tickValue: 15.625 }
 
       const newOrder: Order = {
         quantity,
@@ -205,7 +211,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
       const lastTrade = csvData[csvData.length - 1]
       const lastPrice = parsePrice(lastTrade[headers.indexOf("Avg Fill Price")])
       const lastTimestamp = lastTrade[headers.indexOf("Update Time (RDT)")]
-      const contractSpec = contractSpecs[symbol.slice(0, 2)] || { tickSize: 1/64, tickValue: 15.625 }
+      const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || { tickSize: 1/64, tickValue: 15.625 }
 
       const pnl = calculatePnL(position.entryOrders, [{...position.entryOrders[0], price: lastPrice}], contractSpec, position.side)
 
@@ -234,7 +240,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
 
     setTrades(processedTrades)
     setProcessedTrades(processedTrades)
-  }, [csvData, headers, setProcessedTrades, contractSpecs])
+  }, [csvData, headers, setProcessedTrades, tickDetails])
 
   useEffect(() => {
     processOrders()
@@ -242,14 +248,22 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
 
   const uniqueSymbols = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades])
 
-  const handleContractSpecChange = (symbol: string, field: keyof ContractSpec, value: string) => {
-    setContractSpecs(prev => ({
-      ...prev,
-      [symbol]: {
-        ...prev[symbol],
-        [field]: parseFloat(value)
+  const tradedTickDetails = useMemo(() => 
+    tickDetails.filter(detail => uniqueSymbols.includes(detail.ticker)),
+    [tickDetails, uniqueSymbols]
+  )
+
+  const handleContractSpecChange = (symbol: string, field: keyof TickDetails, value: string) => {
+    const updatedTickDetails = tickDetails.map(detail => {
+      if (detail.ticker === symbol) {
+        return {
+          ...detail,
+          [field]: parseFloat(value)
+        }
       }
-    }))
+      return detail
+    })
+    setTickDetails(updatedTickDetails)
   }
 
   const totalPnL = useMemo(() => trades.reduce((sum, trade) => sum + trade.pnl, 0), [trades])
@@ -260,15 +274,15 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
       <div>
         <h3 className="text-lg font-semibold mb-2">Contract Specifications</h3>
         <div className="grid grid-cols-3 gap-4">
-          {Object.entries(contractSpecs).map(([symbol, spec]) => (
-            <div key={symbol} className="space-y-2">
-              <h4 className="font-medium">{symbol}</h4>
+          {tradedTickDetails.map((detail) => (
+            <div key={detail.ticker} className="space-y-2">
+              <h4 className="font-medium">{detail.ticker}</h4>
               <div className="flex items-center space-x-2">
                 <label className="text-sm">Tick Size:</label>
                 <Input
                   type="number"
-                  value={spec.tickSize}
-                  onChange={(e) => handleContractSpecChange(symbol, 'tickSize', e.target.value)}
+                  value={detail.tickSize}
+                  onChange={(e) => handleContractSpecChange(detail.ticker, 'tickSize', e.target.value)}
                   className="w-24"
                 />
               </div>
@@ -276,8 +290,8 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
                 <label className="text-sm">Tick Value:</label>
                 <Input
                   type="number"
-                  value={spec.tickValue}
-                  onChange={(e) => handleContractSpecChange(symbol, 'tickValue', e.target.value)}
+                  value={detail.tickValue}
+                  onChange={(e) => handleContractSpecChange(detail.ticker, 'tickValue', e.target.value)}
                   className="w-24"
                 />
               </div>

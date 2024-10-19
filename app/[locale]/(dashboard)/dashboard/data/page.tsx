@@ -21,6 +21,7 @@ import { PrismaClient, Trade } from '@prisma/client'
 import ExportButton from '@/components/export-button'
 import LoadingOverlay from '../../components/loading-overlay'
 import TradeTable from '../../components/filters/trade-table'
+import FilterLeftPane from '../../components/filters/filter-left-pane'
 
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
@@ -178,7 +179,7 @@ export default function DashboardPage() {
   }
 
   const handleSelectAccount = (accountNumber: string) => {
-    setSelectedAccounts(prev => 
+    setSelectedAccounts(prev =>
       prev.includes(accountNumber)
         ? prev.filter(acc => acc !== accountNumber)
         : [...prev, accountNumber]
@@ -203,235 +204,238 @@ export default function DashboardPage() {
 
   return (
 
-    <div className="mx-auto container py-4 sm:py-8 md:py-12 px-4 sm:px-6 md:px-8">
+    <div className="flex w-full relative  min-h-screen">
       {loading && <LoadingOverlay />}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex flex-col md:flex-row gap-y-4 md:gap-y-0 justify-between items-center">
-            Data Management Dashboard 
-            <div className="flex space-x-2">
-              <ExportButton trades={trades}/>
-              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={selectedAccounts.length === 0 || deleteLoading}
-                    onClick={() => {
-                      setDeleteMode('selected')
-                      setDeleteDialogOpen(true)
-                    }}
-                  >
-                    {deleteLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>Delete Selected ({selectedAccounts.length})</>
-                    )}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete the selected account(s)
-                      and all associated instruments and trades.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAccounts} disabled={deleteLoading}>
-                      {deleteLoading ? 'Deleting...' : 'Continue'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={deleteLoading}
-                    onClick={() => {
-                      setDeleteMode('all')
-                      setDeleteDialogOpen(true)
-                    }}
-                  >
-                    {deleteLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      <>Delete All</>
-                    )}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete ALL accounts
-                      and all associated instruments and trades.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAccounts} disabled={deleteLoading}>
-                      {deleteLoading ? 'Deleting...' : 'Continue'}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </CardTitle>
-          <CardDescription>Manage accounts, instruments, and commissions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {Object.entries(groupedTrades).map(([accountNumber, instruments]) => (
-              <div key={accountNumber} className="border-b pb-4 last:border-b-0">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center">
-                    <Checkbox
-                      id={`select-${accountNumber}`}
-                      checked={selectedAccounts.includes(accountNumber)}
-                      onCheckedChange={() => handleSelectAccount(accountNumber)}
-                      className="mr-2"
-                    />
-                    <button 
-                      onClick={() => toggleAccountExpansion(accountNumber)}
-                      className="flex items-center text-lg font-semibold focus:outline-none"
-                      aria-expanded={expandedAccounts[accountNumber]}
-                      aria-controls={`account-${accountNumber}`}
-                    >
-                      <span className="mr-2">Account: {accountNumber}</span>
-                      {expandedAccounts[accountNumber] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <div className="flex items-center">
+      <FilterLeftPane />
+      <div className='flex flex-1 flex-col w-full sm:pl-[300px] '>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex flex-col md:flex-row gap-y-4 md:gap-y-0 justify-between items-center">
+              Data Management Dashboard
+              <div className="flex space-x-2">
+                <ExportButton trades={trades} />
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant="destructive"
                       size="sm"
-                      className="mr-2 hidden sm:flex"
+                      disabled={selectedAccounts.length === 0 || deleteLoading}
                       onClick={() => {
-                        setAccountToRename(accountNumber)
-                        setRenameDialogOpen(true)
+                        setDeleteMode('selected')
+                        setDeleteDialogOpen(true)
                       }}
                     >
-                      <Edit2 className="w-4 h-4 mr-2" />
-                      Rename
+                      {deleteLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>Delete Selected ({selectedAccounts.length})</>
+                      )}
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="sm:hidden">
-                          <MoreVertical className="h-4 w-4" />
-                          <span className="sr-only">More options</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => {
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the selected account(s)
+                        and all associated instruments and trades.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteAccounts} disabled={deleteLoading}>
+                        {deleteLoading ? 'Deleting...' : 'Continue'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={deleteLoading}
+                      onClick={() => {
+                        setDeleteMode('all')
+                        setDeleteDialogOpen(true)
+                      }}
+                    >
+                      {deleteLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>Delete All</>
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete ALL accounts
+                        and all associated instruments and trades.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteAccounts} disabled={deleteLoading}>
+                        {deleteLoading ? 'Deleting...' : 'Continue'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardTitle>
+            <CardDescription>Manage accounts, instruments, and commissions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {Object.entries(groupedTrades).map(([accountNumber, instruments]) => (
+                <div key={accountNumber} className="border-b pb-4 last:border-b-0">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className="flex items-center">
+                      <Checkbox
+                        id={`select-${accountNumber}`}
+                        checked={selectedAccounts.includes(accountNumber)}
+                        onCheckedChange={() => handleSelectAccount(accountNumber)}
+                        className="mr-2"
+                      />
+                      <button
+                        onClick={() => toggleAccountExpansion(accountNumber)}
+                        className="flex items-center text-lg font-semibold focus:outline-none"
+                        aria-expanded={expandedAccounts[accountNumber]}
+                        aria-controls={`account-${accountNumber}`}
+                      >
+                        <span className="mr-2">Account: {accountNumber}</span>
+                        {expandedAccounts[accountNumber] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <div className="flex items-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mr-2 hidden sm:flex"
+                        onClick={() => {
                           setAccountToRename(accountNumber)
                           setRenameDialogOpen(true)
-                        }}>
-                          Rename Account
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                        }}
+                      >
+                        <Edit2 className="w-4 h-4 mr-2" />
+                        Rename
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="sm:hidden">
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">More options</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => {
+                            setAccountToRename(accountNumber)
+                            setRenameDialogOpen(true)
+                          }}>
+                            Rename Account
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </div>
-                {expandedAccounts[accountNumber] && (
-                  <div id={`account-${accountNumber}`} className="space-y-4 pl-2 sm:pl-4">
-                    {Object.entries(instruments).map(([instrumentGroup, trades]) => (
-                      <div key={instrumentGroup} className="bg-gray-100 dark:bg-white/5 p-3 sm:p-4 rounded-lg">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
-                          <h3 className="text-md font-medium mb-2 sm:mb-0">Instrument Group: {instrumentGroup}</h3>
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
-                            <Input
-                              type="number"
-                              placeholder="Commission"
-                              defaultValue={trades[0].commission/trades[0].quantity}
-                              className="w-full sm:w-32"
-                              onChange={(e) => handleUpdateCommission(accountNumber, instrumentGroup, parseFloat(e.target.value), user)}
-                              aria-label={`Update commission for instrument group ${instrumentGroup}`}
-                            />
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full sm:w-auto"
-                                >
-                                  <TrashIcon className="w-4 h-4 mr-2" />
-                                  Remove Group
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete all instruments
-                                    and trades associated with this instrument group.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteInstrument(accountNumber, instrumentGroup)}>
-                                    Continue
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                  {expandedAccounts[accountNumber] && (
+                    <div id={`account-${accountNumber}`} className="space-y-4 pl-2 sm:pl-4">
+                      {Object.entries(instruments).map(([instrumentGroup, trades]) => (
+                        <div key={instrumentGroup} className="bg-gray-100 dark:bg-white/5 p-3 sm:p-4 rounded-lg">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
+                            <h3 className="text-md font-medium mb-2 sm:mb-0">Instrument Group: {instrumentGroup}</h3>
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 w-full sm:w-auto">
+                              <Input
+                                type="number"
+                                placeholder="Commission"
+                                defaultValue={trades[0].commission / trades[0].quantity}
+                                className="w-full sm:w-32"
+                                onChange={(e) => handleUpdateCommission(accountNumber, instrumentGroup, parseFloat(e.target.value), user)}
+                                aria-label={`Update commission for instrument group ${instrumentGroup}`}
+                              />
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full sm:w-auto"
+                                  >
+                                    <TrashIcon className="w-4 h-4 mr-2" />
+                                    Remove Group
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This action cannot be undone. This will permanently delete all instruments
+                                      and trades associated with this instrument group.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteInstrument(accountNumber, instrumentGroup)}>
+                                      Continue
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename Account</DialogTitle>
-            <DialogDescription>
-              Enter a new name for the account.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                New Name
-              </Label>
-              <Input
-                id="name"
-                value={newAccountName}
-                onChange={(e) => setNewAccountName(e.target.value)}
-                className="col-span-3"
-              />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
-          </div>
-          <DialogFooter>
-            <Button type="submit" onClick={handleRenameAccount} disabled={renameLoading}>
-              {renameLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Renaming...
-                </>
-              ) : (
-                'Rename Account'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <div className='my-4'>
-      <TradeTable></TradeTable>
+          </CardContent>
+        </Card>
+        <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rename Account</DialogTitle>
+              <DialogDescription>
+                Enter a new name for the account.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  New Name
+                </Label>
+                <Input
+                  id="name"
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" onClick={handleRenameAccount} disabled={renameLoading}>
+                {renameLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Renaming...
+                  </>
+                ) : (
+                  'Rename Account'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <div className='my-4'>
+          <TradeTable></TradeTable>
+        </div>
       </div>
     </div>
   )

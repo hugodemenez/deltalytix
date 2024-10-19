@@ -3,6 +3,7 @@ import { CalendarSection } from '../components/sections/calendar-section'
 import { GraphsSection } from '../components/sections/graphs-section'
 import StatisticsSection from '../components/sections/statistics-section'
 import FilterLeftPane from '../components/filters/filter-left-pane'
+import TickDistributionChart from '../components/charts/tick-distribution'
 
 export default async function Home() {
   return (

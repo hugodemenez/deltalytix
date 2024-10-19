@@ -8,16 +8,18 @@ import PnLBySideChart from '../charts/pnl-by-side'
 import TimeOfDayTradeChart from '../charts/pnl-time-bar-chart'
 import TimeInPositionChart from '../charts/time-in-position'
 import WeekdayPNLChart from '../charts/weekday-pnl'
+import TickDistributionChart from '../charts/tick-distribution'
 
 export function GraphsSection() {
 
   return (
     <section id="graphs" className="mb-10 space-y-4">
       <EquityChart />
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         <TimeOfDayTradeChart/>
         <TimeInPositionChart/>
         <ContractQuantityChart/>
+        <TickDistributionChart/>
       </div>
       <PNLChart />
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">

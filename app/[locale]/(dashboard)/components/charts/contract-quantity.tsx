@@ -8,8 +8,8 @@ import { useFormattedTrades } from "@/components/context/trades-data"
 import { Trade } from "@prisma/client"
 
 const chartConfig = {
-  avgQuantity: {
-    label: "Average Number of Contracts",
+  totalQuantity: {
+    label: "Total Number of Contracts",
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig
@@ -25,18 +25,18 @@ export default function ContractQuantityChart() {
       hourlyData[i.toString()] = { totalQuantity: 0, count: 0 }
     }
 
-    // Sum up quantities and count trades for each hour
+    // Sum up quantities for each hour
     trades.forEach((trade: Trade) => {
       const hour = new Date(trade.entryDate).getHours().toString()
       hourlyData[hour].totalQuantity += trade.quantity
       hourlyData[hour].count++
     })
 
-    // Convert to array format for Recharts and calculate average quantity
+    // Convert to array format for Recharts
     return Object.entries(hourlyData)
       .map(([hour, data]) => ({
         hour: parseInt(hour),
-        avgQuantity: data.count > 0 ? data.totalQuantity / data.count : 0,
+        totalQuantity: data.totalQuantity,
         tradeCount: data.count,
       }))
       .sort((a, b) => a.hour - b.hour)
@@ -55,7 +55,7 @@ export default function ContractQuantityChart() {
       return (
         <div className="bg-background p-2 border rounded shadow-sm">
           <p className="font-semibold">{`${label}h - ${(label + 1) % 24}h`}</p>
-          <p className="font-bold">Avg Contracts: {data.avgQuantity.toFixed(2)}</p>
+          <p className="font-bold">Total Contracts: {data.totalQuantity}</p>
           <p>Number of Trades: {data.tradeCount}</p>
         </div>
       )
@@ -66,8 +66,8 @@ export default function ContractQuantityChart() {
   return (
     <Card>
       <CardHeader className="sm:min-h-[120px] flex flex-col items-stretch space-y-0 border-b p-6">
-        <CardTitle>Average Number of Contracts</CardTitle>
-        <CardDescription>Showing average number of contracts traded for each hour of the day. Darker bars indicate more trades.</CardDescription>
+        <CardTitle>Total Number of Contracts</CardTitle>
+        <CardDescription>Showing total number of contracts traded for each hour of the day. Darker bars indicate more trades.</CardDescription>
       </CardHeader>
       <CardContent className="px-2 sm:p-6">
         <ChartContainer
@@ -101,7 +101,7 @@ export default function ContractQuantityChart() {
             />
             <Tooltip content={<CustomTooltip />} />
             <Bar
-              dataKey="avgQuantity"
+              dataKey="totalQuantity"
               radius={[4, 4, 0, 0]}
               className="transition-all duration-300 ease-in-out"
             >

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowUpDown, Trash } from "lucide-react"
+import { ArrowUpDown, Trash, ChevronLeft, ChevronRight } from "lucide-react"
 import { saveTrades } from '@/server/database'
 import { useToast } from "@/hooks/use-toast"
 import { deleteTradesByIds } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
@@ -27,6 +27,8 @@ export default function TradeTable() {
   const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set())
   const { toast } = useToast()
   const [selectAll, setSelectAll] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const tradesPerPage = 10
 
   const filteredAndSortedTrades = useMemo(() => {
     return formattedTrades
@@ -44,6 +46,13 @@ export default function TradeTable() {
         return 0
       })
   }, [formattedTrades, filterValue, filterKey, sortConfig])
+
+  const paginatedTrades = useMemo(() => {
+    const startIndex = (currentPage - 1) * tradesPerPage
+    return filteredAndSortedTrades.slice(startIndex, startIndex + tradesPerPage)
+  }, [filteredAndSortedTrades, currentPage])
+
+  const totalPages = Math.ceil(filteredAndSortedTrades.length / tradesPerPage)
 
   const handleSort = (key: keyof Trade) => {
     setSortConfig(prevConfig => ({
@@ -90,6 +99,14 @@ export default function TradeTable() {
     }
     setSelectedTrades(newSelected)
     setSelectAll(newSelected.size === filteredAndSortedTrades.length)
+  }
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1))
+  }
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
   }
 
   return (
@@ -180,7 +197,7 @@ export default function TradeTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredAndSortedTrades.map((trade) => (
+          {paginatedTrades.map((trade) => (
             <TableRow key={trade.id}>
               <TableCell>
                 <Checkbox
@@ -200,6 +217,35 @@ export default function TradeTable() {
           ))}
         </TableBody>
       </Table>
+
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-500">
+          Showing {((currentPage - 1) * tradesPerPage) + 1} to {Math.min(currentPage * tradesPerPage, filteredAndSortedTrades.length)} of {filteredAndSortedTrades.length} trades
+        </p>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreviousPage}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Button>
+          <span className="text-sm">
+            Page {currentPage} of {totalPages}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

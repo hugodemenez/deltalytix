@@ -27,6 +27,7 @@ import Link from 'next/link'
 import { useTheme } from '@/components/context/theme-provider'
 import ImportButton from './import-csv/import-button'
 import { NotificationDropdown } from './notification-dropdown'
+import NavbarFilters from './filters/filters'
 type Theme = 'light' | 'dark' | 'system'
 
 export default function Navbar() {
@@ -45,7 +46,7 @@ export default function Navbar() {
           <Logo className='fill-black h-6 w-6 dark:fill-white' />
         </Link>
         <div className="flex items-center space-x-4">
-          <div className='hidden md:flex'>
+          <div className='hidden md:flex gap-x-4'>
             <ImportButton />
           </div>
           <NotificationDropdown />
