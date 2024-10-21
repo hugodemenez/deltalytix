@@ -50,7 +50,9 @@ export default function TickDistributionChart() {
   const chartData = React.useMemo(() => {
     const tickDistribution: { [key: number]: number } = {}
 
-    trades.forEach((trade: Trade) => {
+    if (!tickDetails || tickDetails.length === 0) return []
+     trades.forEach((trade: Trade) => {
+    
       const contractSpec = tickDetails.find(detail => detail.ticker === trade.instrument) || { tickSize: 1, tickValue: 1 }
       const tickValue = Math.round(trade.pnl / trade.quantity / contractSpec.tickValue)
 
