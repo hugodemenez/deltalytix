@@ -88,7 +88,7 @@ export default function Modals() {
       }
       setIsTradesDialogOpen(trades?.length === 0)
     }
-  }, [isLoading, trades])
+  }, [isLoading, trades, isPaywallOpen])
 
   return (
     <>

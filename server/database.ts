@@ -18,7 +18,8 @@ export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfT
     return {error:count===0?true:false, numberOfTradesAdded:count}
 }
 
-export async function getTrades(userId: string) {
+export async function getTrades(userId: string): Promise<Trade[]> {
+  console.log('getTrades', userId)
     const prisma = new PrismaClient()
     const trades = await prisma.trade.findMany({where: {userId: userId}})
     await prisma.$disconnect()
@@ -50,11 +51,4 @@ export async function updateTradesWithComment(dayData: CalendarEntry, dateString
     console.error("Error updating trades with comment:", error)
     throw error
   }
-}
-
-export async function getTickDetails() {
-  const prisma = new PrismaClient()
-  const tickDetails = await prisma.tickDetails.findMany()
-  await prisma.$disconnect()
-  return tickDetails
 }

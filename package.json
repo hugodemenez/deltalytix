@@ -58,7 +58,7 @@
     "install": "^0.13.0",
     "ldrs": "^1.0.2",
     "lucide-react": "^0.437.0",
-    "next": "^14.2.8",
+    "next": "latest",
     "next-international": "^1.2.4",
     "parse-date-range": "^0.1.0",
     "prisma": "^5.20.0",

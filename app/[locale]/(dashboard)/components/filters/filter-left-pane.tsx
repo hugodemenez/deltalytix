@@ -12,16 +12,8 @@ import { useMediaQuery } from '@/hooks/use-media-query'
 import { Switch } from "@/components/ui/switch"
 import DateCalendarFilter from './date-calendar-filter'
 import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
-
-interface FilterItem {
-  type: 'account' | 'instrument' | 'propfirm'
-  value: string
-}
-
-interface PropfirmGroup {
-  name: string
-  prefix: string
-}
+import { FilterSection } from './filter-selection'
+import { FilterItem, PropfirmGroup } from '@/types/filter'
 
 const propfirmGroups: PropfirmGroup[] = [
   { name: 'FastTrackTrading', prefix: 'FTT' },
@@ -29,6 +21,7 @@ const propfirmGroups: PropfirmGroup[] = [
   { name: 'Bulenox', prefix: 'BX' },
   { name: 'Other', prefix: '' }, // Add 'Other' to the propfirmGroups
 ]
+
 
 export default function FilterLeftPane() {
   const { trades } = useTrades()
@@ -179,52 +172,12 @@ export default function FilterLeftPane() {
     }
   }, [selectedItems, setAccountNumbers, setInstruments, accountNumbers, instruments, propfirms])
 
-  const anonymizeAccount = (account: string) => {
+  const anonymizeAccount = useCallback((account: string) => {
     if (!showAccountNumbers) {
       return account.slice(0, 3) + '*'.repeat(account.length - 3)
     }
     return account
-  }
-
-  const FilterSection = ({ title, items, type }: { title: string, items: FilterItem[], type: 'account' | 'instrument' | 'propfirm' }) => {
-    const filteredSectionItems = searchTerm
-      ? items.filter(item => item.value.toLowerCase().includes(searchTerm.toLowerCase()))
-      : items
-
-    return (
-      <div className="mb-4">
-        <h3 className="text-md font-semibold mb-2">{title}</h3>
-        <div className="rounded-md border">
-          <CommandItem onSelect={() => handleSelectAll(type)} className="cursor-pointer border-b">
-            <Checkbox 
-              checked={items.filter(item => !isItemDisabled(item)).every(item => isItemSelected(item))}
-              className="mr-2"
-            />
-            Select All {title}
-          </CommandItem>
-          <ScrollArea className="max-h-[120px] overflow-y-auto">
-            <div className="p-2">
-              {filteredSectionItems.map(item => (
-                <CommandItem 
-                  key={item.value} 
-                  onSelect={() => handleSelect(`${type}:${item.value}`)}
-                  disabled={isItemDisabled(item)}
-                  className="cursor-pointer"
-                >
-                  <Checkbox 
-                    checked={isItemSelected(item)} 
-                    className="mr-2" 
-                    disabled={isItemDisabled(item)}
-                  />
-                  {type === 'account' ? anonymizeAccount(item.value) : item.value}
-                </CommandItem>
-              ))}
-            </div>
-          </ScrollArea>
-        </div>
-      </div>
-    )
-  }
+  }, [showAccountNumbers])
 
   const FilterContent = useMemo(() => (
     <div className='space-y-4'>
@@ -254,22 +207,40 @@ export default function FilterLeftPane() {
               title="Accounts" 
               items={allItems.filter(item => item.type === 'account')}
               type="account"
+              searchTerm={searchTerm}
+              handleSelect={handleSelect}
+              isItemDisabled={isItemDisabled}
+              isItemSelected={isItemSelected}
+              handleSelectAll={handleSelectAll}
+              anonymizeAccount={anonymizeAccount}
             />
             <FilterSection 
               title="Propfirms" 
               items={allItems.filter(item => item.type === 'propfirm')}
               type="propfirm"
+              searchTerm={searchTerm}
+              handleSelect={handleSelect}
+              isItemDisabled={isItemDisabled}
+              isItemSelected={isItemSelected}
+              handleSelectAll={handleSelectAll}
+              anonymizeAccount={anonymizeAccount}
             />
             <FilterSection 
               title="Instruments" 
               items={allItems.filter(item => item.type === 'instrument')}
               type="instrument"
+              searchTerm={searchTerm}
+              handleSelect={handleSelect}
+              isItemDisabled={isItemDisabled}
+              isItemSelected={isItemSelected}
+              handleSelectAll={handleSelectAll}
+              anonymizeAccount={anonymizeAccount}
             />
           </CommandGroup>
         </CommandList>
       </Command>
     </div>
-  ), [allItems, handleSelect, handleSelectAll, isItemSelected, isItemDisabled, showAccountNumbers, anonymizeAccount, searchTerm, isMobile])
+  ), [allItems, showAccountNumbers, searchTerm, isMobile, handleSelect, isItemDisabled, isItemSelected, handleSelectAll, anonymizeAccount])
 
   if (isMobile) {
     return (

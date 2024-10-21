@@ -36,23 +36,24 @@ const generateTradeHash = (trade: Partial<Trade>, index: number): string => {
   return hashString
 }
 
+const newMappings: { [key: string]: string } = {
+  "Account": "accountNumber",
+  "Commission": "commission",
+  "Entry name": "entryId",
+  "Entry price": "entryPrice",
+  "Entry time": "entryDate",
+  "Exit name": "closeId",
+  "Exit price": "closePrice",
+  "Exit time": "closeDate",
+  "Instrument": "instrument",
+  "Market pos.": "side",
+  "Profit": "pnl",
+  "Qty": "quantity"
+}
+
 
 export default function NinjaTraderPerformanceProcessor({ headers, csvData, setProcessedTrades }: NinjaTraderPerformanceProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
-  const newMappings: { [key: string]: string } = {
-    "Account": "accountNumber",
-    "Commission": "commission",
-    "Entry name": "entryId",
-    "Entry price": "entryPrice",
-    "Entry time": "entryDate",
-    "Exit name": "closeId",
-    "Exit price": "closePrice",
-    "Exit time": "closeDate",
-    "Instrument": "instrument",
-    "Market pos.": "side",
-    "Profit": "pnl",
-    "Qty": "quantity"
-  }
 
   const processTrades = useCallback(() => {
     const newTrades: Trade[] = [];

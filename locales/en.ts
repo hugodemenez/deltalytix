@@ -161,4 +161,5 @@ export default {
     'pricing.perYear': '/year',
     'pricing.perMonth': '/month',
     'pricing.mostPopular': 'Most Popular',
+
 } as const

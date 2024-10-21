@@ -6,8 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { useFormattedTrades } from "@/components/context/trades-data"
 import { TickDetails, Trade } from "@prisma/client"
-import { getTickDetails } from "@/server/database"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { getTickDetails } from "../../server/tick-details"
 
 interface ContractSpec {
   tickSize: number
@@ -39,6 +39,9 @@ const chartConfig = {
 export default function TickDistributionChart() {
   const { formattedTrades: trades } = useFormattedTrades()
   const [tickDetails, setTickDetails] = useState<TickDetails[]>([])
+  const [chartData, setChartData] = useState<{ ticks: number; tradeCount: number }[]>([])
+
+  // Fetch tick details
   useEffect(() => {
     const fetchTickDetails = async () => {
       const details = await getTickDetails()
@@ -47,27 +50,35 @@ export default function TickDistributionChart() {
     }
     fetchTickDetails()
   }, [])
-  const chartData = React.useMemo(() => {
-    const tickDistribution: { [key: number]: number } = {}
 
-    if (!tickDetails || tickDetails.length === 0) return []
-     trades.forEach((trade: Trade) => {
-    
-      const contractSpec = tickDetails.find(detail => detail.ticker === trade.instrument) || { tickSize: 1, tickValue: 1 }
-      const tickValue = Math.round(trade.pnl / trade.quantity / contractSpec.tickValue)
+  // Calculate chart data
+  useEffect(() => {
+    const calculateChartData = () => {
+      if (!tickDetails.length || !trades.length) return
 
-      if (!tickDistribution[tickValue]) {
-        tickDistribution[tickValue] = 0
-      }
-      tickDistribution[tickValue]++
-    })
+      const tickDistribution: { [key: number]: number } = {}
 
-    return Object.entries(tickDistribution)
-      .map(([ticks, count]) => ({
-        ticks: parseInt(ticks),
-        tradeCount: count,
-      }))
-      .sort((a, b) => a.ticks - b.ticks)
+      trades.forEach((trade: Trade) => {
+        const contractSpec = tickDetails.find(detail => detail.ticker === trade.instrument) || { tickSize: 1, tickValue: 1 }
+        const tickValue = Math.round(trade.pnl / trade.quantity / contractSpec.tickValue)
+
+        if (!tickDistribution[tickValue]) {
+          tickDistribution[tickValue] = 0
+        }
+        tickDistribution[tickValue]++
+      })
+
+      const newChartData = Object.entries(tickDistribution)
+        .map(([ticks, count]) => ({
+          ticks: parseInt(ticks),
+          tradeCount: count,
+        }))
+        .sort((a, b) => a.ticks - b.ticks)
+
+      setChartData(newChartData)
+    }
+
+    calculateChartData()
   }, [trades, tickDetails])
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -130,4 +141,3 @@ export default function TickDistributionChart() {
     </Card>
   )
 }
-

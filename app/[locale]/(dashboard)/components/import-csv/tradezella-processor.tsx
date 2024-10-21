@@ -17,12 +17,33 @@ const generateTradeHash = (trade: Partial<Trade>): string => {
   return hashString
 }
 
+const newMappings: { [key: string]: string } = {
+  "Account Name": "accountNumber",
+  "Close Date": "closeDate",
+  "Close Time": "closeTime",
+  "Commission": "commission",
+  "Duration": "timeInPosition",
+  "Entry Price": "entryPrice",
+  "Open Date": "entryDate",
+  "Open Time": "entryTime",
+  "Exit Price": "closePrice",
+  "Fee": "commission",
+  "Gross P&L": "pnl",
+  "Instrument": "instrument",
+  "Quantity": "quantity",
+  "Side": "side",
+  "Symbol": "instrument",
+  "Adjusted Cost": "entryId",
+  "Adjusted Proceeds": "closeId",
+}
+
+
 
 export default function TradezellaProcessor({ headers, csvData, setProcessedTrades }: TradezellaProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
 
 
-  
+
   // Account Name: "accountNumber"
   // Close Date: "closeDate"
   // Commission: "commission"
@@ -38,27 +59,6 @@ export default function TradezellaProcessor({ headers, csvData, setProcessedTrad
   // Symbol: "instrument"
   // Adjusted Cost: "entryId"
   // Adjusted Proceeds: "closeId"
-  
-  const newMappings: { [key: string]: string } = {
-    "Account Name": "accountNumber",
-    "Close Date": "closeDate",
-    "Close Time": "closeTime",
-    "Commission": "commission",
-    "Duration": "timeInPosition",
-    "Entry Price": "entryPrice",
-    "Open Date": "entryDate",
-    "Open Time": "entryTime",
-    "Exit Price": "closePrice",
-    "Fee": "commission",
-    "Gross P&L": "pnl",
-    "Instrument": "instrument",
-    "Quantity": "quantity",
-    "Side": "side",
-    "Symbol": "instrument",
-    "Adjusted Cost": "entryId",
-    "Adjusted Proceeds": "closeId",
-  }
-
   const processTrades = useCallback(() => {
     const newTrades: Trade[] = [];
     //TODO: Ask user for account number using account selection component
@@ -105,8 +105,8 @@ export default function TradezellaProcessor({ headers, csvData, setProcessedTrad
 
       // Compute entryDate and closeDate with the time from entryTime and closeTime
       if (entryTime && closeTime) {
-      item.entryDate = new Date(`${item.entryDate} ${entryTime.slice(0,8)}`).toISOString();
-      item.closeDate = new Date(`${item.closeDate} ${closeTime.slice(0,8)}`).toISOString();
+        item.entryDate = new Date(`${item.entryDate} ${entryTime.slice(0, 8)}`).toISOString();
+        item.closeDate = new Date(`${item.closeDate} ${closeTime.slice(0, 8)}`).toISOString();
       }
 
       if (!item.accountNumber) {

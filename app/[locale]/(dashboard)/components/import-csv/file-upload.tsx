@@ -237,7 +237,7 @@ export default function FileUpload({
     } catch (error) {
       setError((error as Error).message)
     }
-  }, [importType, parsedFiles, setRawCsvData, setCsvData, setHeaders, setStep, setError, processRithmicPerformanceCsv, processRithmicOrdersCsv, processTradovateCsv, processTradezellaCsv, processCsv])
+  }, [importType, parsedFiles, setRawCsvData, setCsvData, setHeaders, setStep, setError, processQuantowerCsv, processRithmicPerformanceCsv, processRithmicOrdersCsv, processTradovateCsv, processTradezellaCsv, processCsv])
 
   useEffect(() => {
     if (parsedFiles.length > 0 && Object.values(uploadProgress).every(progress => progress === 100)) {

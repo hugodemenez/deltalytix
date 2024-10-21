@@ -52,7 +52,7 @@ export default {
     'open-source.accordion.open-source.title': 'Open source',
     'open-source.accordion.open-source.description': 'Tout notre code est entièrement open source : clonez, forkez et contribuez à {repoName}.',
     'open-source.accordion.open-source.button': 'Voir le dépôt',
-    'open-source.accordion.community.title': 'Communaut��',
+    'open-source.accordion.community.title': 'Communaut',
     'open-source.accordion.community.description': 'Rejoignez une communauté de traders passionnés par le trading algorithmique et l\'analyse financière.',
     'open-source.accordion.community.button': 'Rejoindre la communauté Discord',
     'open-source.accordion.open-roadmap.title': 'Feuille de route ouverte',

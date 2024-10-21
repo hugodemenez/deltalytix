@@ -3,25 +3,18 @@ import prisma from '@/lib/prisma'
 import { Notification } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 
-export async function getUnreadNotificationsCount(userId: string): Promise<number> {
-  if (!userId) {
-    return 0
-  }
-
-  return prisma.notification.count({
-    where: {
-      userId,
-      readAt: null,
-    },
-  })
+interface NotificationSummary {
+  recent: Notification[];
+  unreadCount: number;
 }
 
-export async function getRecentNotifications(userId: string, limit: number = 5): Promise<Notification[]> {
+export async function getNotificationSummary(userId: string, limit: number = 5): Promise<NotificationSummary> {
+  console.log('getNotificationSummary', userId)
   if (!userId) {
-    return []
+    return { recent: [], unreadCount: 0 };
   }
 
-  return prisma.notification.findMany({
+  const notifications = await prisma.notification.findMany({
     where: {
       userId,
     },
@@ -29,18 +22,24 @@ export async function getRecentNotifications(userId: string, limit: number = 5):
       createdAt: 'desc',
     },
     take: limit,
-  })
+  });
+
+  const unreadCount = notifications.filter(notification => notification.readAt === null).length;
+
+  return {
+    recent: notifications,
+    unreadCount,
+  };
 }
 
 export async function markNotificationAsRead(id: string): Promise<void> {
-  console.log('markNotificationAsRead', id)
   if (!id) {
-    return
+    return;
   }
 
   await prisma.notification.update({
     where: { id },
     data: { readAt: new Date() },
-  })
-  revalidatePath('/[locale]/(dashboard)/','layout')
+  });
+  revalidatePath('/[locale]/(dashboard)/','layout');
 }

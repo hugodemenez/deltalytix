@@ -11,25 +11,25 @@ interface RithmicPerformanceProcessorProps {
     csvData: string[][];
     setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
 }
+const newMappings: { [key: string]: string } = {
+    "AccountNumber": "accountNumber",
+    "Instrument": "instrument",
+    "Fill Size": "quantity",
+    "Trade P&L": "pnl",
+    "Trade Life Span": "timeInPosition",
+    "Commission & Fees": "commission",
+    "Entry Buy/Sell": "side",
+    "Entry Order Number": "entryId",
+    "Entry Price": "entryPrice",
+    "Entry Time": "entryDate",
+    "Exit Order Number": "closeId",
+    "Exit Price": "closePrice",
+    "Exit Time": "closeDate",
+}
 
 export default function RithmicPerformanceProcessor({ headers, csvData, setProcessedTrades }: RithmicPerformanceProcessorProps) {
     const [trades, setTrades] = useState<Trade[]>([])
 
-    const newMappings: { [key: string]: string } = {
-        "AccountNumber": "accountNumber",
-        "Instrument": "instrument",
-        "Fill Size": "quantity",
-        "Trade P&L": "pnl",
-        "Trade Life Span": "timeInPosition",
-        "Commission & Fees": "commission",
-        "Entry Buy/Sell": "side",
-        "Entry Order Number": "entryId",
-        "Entry Price": "entryPrice",
-        "Entry Time": "entryDate",
-        "Exit Order Number": "closeId",
-        "Exit Price": "closePrice",
-        "Exit Time": "closeDate",
-    }
 
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
@@ -64,13 +64,13 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
             });
 
             // Ensure time values are stored as ISO strings
-            try{
-            if (item.entryDate) {
-                item.entryDate = new Date(item.entryDate).toISOString();
-            }
-            if (item.closeDate) {
-                item.closeDate = new Date(item.closeDate).toISOString();
-            }
+            try {
+                if (item.entryDate) {
+                    item.entryDate = new Date(item.entryDate).toISOString();
+                }
+                if (item.closeDate) {
+                    item.closeDate = new Date(item.closeDate).toISOString();
+                }
             } catch (e) {
                 toast({
                     title: "Error",

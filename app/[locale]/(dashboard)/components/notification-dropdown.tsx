@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Link from 'next/link'
-import { getRecentNotifications, getUnreadNotificationsCount } from '@/server/notifications'
+import { getNotificationSummary } from '@/server/notifications'
 import { useUser } from '@/components/context/user-data'
 import { Notification } from '@prisma/client'
 import { NotificationItem } from './notification-item'
@@ -27,17 +27,14 @@ export function NotificationDropdown() {
     async function fetchNotifications() {
       if (user?.id) {
         try {
-          const count = await getUnreadNotificationsCount(user.id)
-          const notifications = await getRecentNotifications(user.id)
-          setUnreadCount(count)
-          setRecentNotifications(notifications)
+          const { recent, unreadCount } = await getNotificationSummary(user.id)
+          setUnreadCount(unreadCount)
+          setRecentNotifications(recent)
           setError(null)
         } catch (err) {
           console.error("Error fetching notifications:", err)
           setError("Failed to fetch notifications")
         }
-      } else {
-        console.log("User ID is undefined")
       }
     }
 
@@ -45,13 +42,12 @@ export function NotificationDropdown() {
   }, [user])
 
   if (!user) {
-    console.log("User is null, not rendering NotificationDropdown")
     return null
   }
 
   const handleRead = (id: string) => {
     setRecentNotifications(prev => prev.filter(n => n.id !== id))
-    setUnreadCount(prev => prev - 1)
+    setUnreadCount(prev => Math.max(0, prev - 1))
   }
 
   return (
@@ -71,7 +67,7 @@ export function NotificationDropdown() {
         <DropdownMenuSeparator />
         {error ? (
           <DropdownMenuItem disabled>{error}</DropdownMenuItem>
-        ) : !recentNotifications || recentNotifications.length === 0 ? (
+        ) : recentNotifications.length === 0 ? (
           <DropdownMenuItem disabled>No notifications</DropdownMenuItem>
         ) : (
           recentNotifications.map((notification) => (

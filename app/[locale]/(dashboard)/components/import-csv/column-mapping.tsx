@@ -87,7 +87,7 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
     } finally {
       setIsGeneratingMappings(false);
     }
-  }, [headers, csvData, setMappings, importType]);
+  }, [headers, csvData, setMappings]);
 
   useEffect(() => {
     generateAIMappings();

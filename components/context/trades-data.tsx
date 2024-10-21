@@ -121,8 +121,8 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       })
   }, [trades, instruments, accountNumbers, dateRange])
 
-  const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades, trades])
-  const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades, trades])
+  const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades])
+  const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades])
 
   return (
     <TradeDataContext.Provider value={{ trades, setTrades, isLoading, refreshTrades }}>

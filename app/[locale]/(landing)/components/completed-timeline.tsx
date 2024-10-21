@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { useI18n } from '@/locales/client'
 import { TranslationKeys } from "@/types/translations"
+import Image from 'next/image'
 
 type Milestone = {
   id: number;
@@ -86,9 +87,11 @@ export default function CompletedTimeline({ milestones }: { milestones: Mileston
             {t(milestone.descriptionKey)}
           </p>
           {milestone.image && (
-            <img 
+            <Image 
               src={milestone.image} 
               alt={t(milestone.titleKey)} 
+              width={100}
+              height={100}
               className="mt-4 rounded-lg shadow-md max-w-full h-auto"
             />
           )}

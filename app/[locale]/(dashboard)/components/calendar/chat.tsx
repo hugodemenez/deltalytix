@@ -167,10 +167,6 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
                 <Camera className="mr-2 h-4 w-4" />
                 Camera
               </Button>
-              <Button variant="ghost" className="w-full justify-start" onClick={() => handleFileUpload('photo')}>
-                <Image className="mr-2 h-4 w-4" />
-                Photo
-              </Button>
               <Button variant="ghost" className="w-full justify-start" onClick={() => handleFileUpload('folder')}>
                 <Folder className="mr-2 h-4 w-4" />
                 Folder

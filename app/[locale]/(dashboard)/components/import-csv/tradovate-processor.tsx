@@ -17,35 +17,35 @@ interface TradovateProcessorProps {
 
 const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
     if (typeof pnl !== 'string' || pnl.trim() === '') {
-      console.warn('Invalid PNL value:', pnl);
-      return { pnl: 0, error: 'Invalid PNL value' };
+        console.warn('Invalid PNL value:', pnl);
+        return { pnl: 0, error: 'Invalid PNL value' };
     }
 
     let formattedPnl = pnl.trim();
 
     if (formattedPnl.includes('(')) {
-      formattedPnl = formattedPnl.replace('(', '-').replace(')', '');
+        formattedPnl = formattedPnl.replace('(', '-').replace(')', '');
     }
 
     const numericValue = parseFloat(formattedPnl.replace(/[$,]/g, ''));
 
     if (isNaN(numericValue)) {
-      console.warn('Unable to parse PNL value:', pnl);
-      return { pnl: 0, error: 'Unable to parse PNL value' };
+        console.warn('Unable to parse PNL value:', pnl);
+        return { pnl: 0, error: 'Unable to parse PNL value' };
     }
 
     return { pnl: numericValue };
-  };
+};
 
-  const convertTimeInPosition = (time: string | undefined): number | undefined => {
+const convertTimeInPosition = (time: string | undefined): number | undefined => {
     if (typeof time !== 'string' || time.trim() === '') {
-      console.warn('Invalid time value:', time);
-      return 0;
+        console.warn('Invalid time value:', time);
+        return 0;
     }
     if (/^\d+\.\d+$/.test(time)) {
-      // Round to the nearest second
-      const floatTime = Math.round(parseFloat(time));
-      return floatTime;
+        // Round to the nearest second
+        const floatTime = Math.round(parseFloat(time));
+        return floatTime;
     }
     const timeInPosition = time;
     const minutesMatch = timeInPosition.match(/(\d+)min/);
@@ -54,12 +54,24 @@ const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => 
     const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0;
     const timeInSeconds = (minutes * 60) + seconds;
     return timeInSeconds;
-  }
+}
 
-  const generateTradeHash = (trade: Partial<Trade>): string => {
+const generateTradeHash = (trade: Partial<Trade>): string => {
     const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
     return hashString
-  }
+}
+const newMappings: { [key: string]: string } = {
+    "symbol": "instrument",
+    "qty": "quantity",
+    "pnl": "pnl",
+    "duration": "timeInPosition",
+    "buyFillId": "entryId",
+    "buyPrice": "entryPrice",
+    "boughtTimestamp": "entryDate",
+    "sellFillId": "closeId",
+    "sellPrice": "closePrice",
+    "soldTimestamp": "closeDate",
+}
 
 
 export default function TradovateProcessor({ headers, csvData, setProcessedTrades, accountNumber }: TradovateProcessorProps) {
@@ -68,18 +80,6 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
     const [missingCommissions, setMissingCommissions] = useState<{ [key: string]: number }>({})
     const [showCommissionPrompt, setShowCommissionPrompt] = useState(false)
 
-    const newMappings: { [key: string]: string } = {
-        "symbol": "instrument",
-        "qty": "quantity",
-        "pnl": "pnl",
-        "duration": "timeInPosition",
-        "buyFillId": "entryId",
-        "buyPrice": "entryPrice",
-        "boughtTimestamp": "entryDate",
-        "sellFillId": "closeId",
-        "sellPrice": "closePrice",
-        "soldTimestamp": "closeDate",
-    }
 
     const existingCommissions = useMemo(() => {
         const commissions: { [key: string]: number } = {}
@@ -101,32 +101,32 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
             const item: Partial<Trade> = {};
             let quantity = 0;
             headers.forEach((header, index) => {
-              if (newMappings[header]) {
-                const key = newMappings[header] as keyof Trade;
-                const cellValue = row[index];
-                switch (key) {
-                  case 'quantity':
-                    quantity = parseFloat(cellValue) || 0;
-                    item[key] = quantity;
-                    break;
-                  case 'pnl':
-                    const { pnl, error } = formatPnl(cellValue)
-                    if (error) {
-                      return
+                if (newMappings[header]) {
+                    const key = newMappings[header] as keyof Trade;
+                    const cellValue = row[index];
+                    switch (key) {
+                        case 'quantity':
+                            quantity = parseFloat(cellValue) || 0;
+                            item[key] = quantity;
+                            break;
+                        case 'pnl':
+                            const { pnl, error } = formatPnl(cellValue)
+                            if (error) {
+                                return
+                            }
+                            item[key] = pnl
+                            break;
+                        case 'timeInPosition':
+                            item[key] = convertTimeInPosition(cellValue);
+                            break;
+                        default:
+                            item[key] = cellValue as any;
                     }
-                    item[key] = pnl
-                    break;
-                  case 'timeInPosition':
-                    item[key] = convertTimeInPosition(cellValue);
-                    break;
-                  default:
-                    item[key] = cellValue as any;
                 }
-              }
             });
 
-            if (item.instrument==''){
-              return
+            if (item.instrument == '') {
+                return
             }
 
             if (item.instrument) {
@@ -152,12 +152,12 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
 
         setTrades(newTrades);
         setProcessedTrades(newTrades);
-        setMissingCommissions(Object.keys(missingCommissionsTemp).reduce((acc, key) => ({ 
-            ...acc, 
-            [key]: existingCommissions[key] || 0 
+        setMissingCommissions(Object.keys(missingCommissionsTemp).reduce((acc, key) => ({
+            ...acc,
+            [key]: existingCommissions[key] || 0
         }), {}));
         setShowCommissionPrompt(Object.keys(missingCommissionsTemp).length > 0);
-    }, [csvData, headers, existingCommissions, accountNumber]);
+    }, [csvData, headers, existingCommissions, accountNumber, setProcessedTrades]);
 
     useEffect(() => {
         processTrades();
