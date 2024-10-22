@@ -6,10 +6,6 @@ import { stripe } from "@/server/stripe";
 import { PrismaClient } from "@prisma/client";
 import { sendSubscriptionErrorEmail } from "@/server/send-support-email";
 
-export async function GET(req: Request) {
-  return NextResponse.json({ message: "Hello World" }, { status: 200 });
-}
-
 export async function POST(req: Request) {
   let event: Stripe.Event | undefined;
   try {

@@ -1,105 +1,16 @@
 'use client'
 
-import React, { useState } from 'react'
+import React from 'react'
 import Image from 'next/image'
 import { Badge } from "@/components/ui/badge"
 import { useI18n } from '@/locales/client'
 import { TranslationKeys } from "@/types/translations"
 import CompletedTimeline from '../components/completed-timeline'
-
-type Milestone = {
-  id: number;
-  titleKey: keyof TranslationKeys;
-  descriptionKey: keyof TranslationKeys;
-  image?: string;
-  status: 'completed' | 'in-progress' | 'upcoming';
-  estimatedDate?: keyof TranslationKeys;
-  completedDate?: string;
-}
+import { Milestone } from '@/types/milestone'
+import { roadmapData } from './data'
 
 function RoadmapBlog() {
   const t = useI18n()
-
-  const roadmapData: Milestone[] = [
-    {
-      id: 1,
-      titleKey: "updates.milestone1.title",
-      descriptionKey: "updates.milestone1.description",
-      status: 'completed',
-      completedDate: "2024-08-30"
-    },
-    {
-      id: 2,
-      titleKey: "updates.milestone2.title",
-      descriptionKey: "updates.milestone2.description",
-      status: 'completed',
-      completedDate: "2024-09-09"
-    },
-    {
-      id: 3,
-      titleKey: "updates.milestone3.title",
-      descriptionKey: "updates.milestone3.description",
-      status: 'completed',
-      completedDate: "2024-09-27"
-    },
-    {
-      id: 4,
-      titleKey: "updates.milestone4.title",
-      descriptionKey: "updates.milestone4.description",
-      status: 'completed',
-      completedDate: "2024-09-23"
-    },
-    {
-      id: 5,
-      titleKey: "updates.milestone5.title",
-      descriptionKey: "updates.milestone5.description",
-      status: 'completed',
-      completedDate: "2024-09-23"
-    },
-    {
-      id: 6,
-      titleKey: "updates.milestone6.title",
-      descriptionKey: "updates.milestone6.description",
-      status: 'completed',
-      completedDate: "2024-09-16"
-    },
-    {
-      id: 7,
-      titleKey: "updates.milestone7.title",
-      descriptionKey: "updates.milestone7.description",
-      status: 'in-progress'
-    },
-    {
-      id: 8,
-      titleKey: "updates.milestone8.title",
-      descriptionKey: "updates.milestone8.description",
-      status: 'upcoming',
-      estimatedDate: "updates.inThreeWeeks"
-    },
-    {
-      id: 9,
-      titleKey: "updates.milestone9.title",
-      descriptionKey: "updates.milestone9.description",
-      status: 'upcoming',
-      estimatedDate: "updates.inTwoWeeks"
-    },
-    {
-      id: 10,
-      titleKey: "updates.milestone10.title",
-      descriptionKey: "updates.milestone10.description",
-      status: 'upcoming',
-      estimatedDate: "updates.inFourWeeks"
-    },
-    {
-      id: 11,
-      titleKey: "updates.milestone11.title",
-      descriptionKey: "updates.milestone11.description",
-      status: 'upcoming',
-      estimatedDate: "updates.inFiveWeeks"
-    }
-  ]
-
-  const [selectedMilestone, setSelectedMilestone] = useState<number | null>(null)
 
   const upcomingFeatures = roadmapData
     .filter(milestone => milestone.status === 'upcoming')
@@ -180,8 +91,19 @@ function MilestoneCard({ milestone }: { milestone: Milestone }) {
 
 export default RoadmapBlog
 
-function sortByEstimatedDate(a: Milestone, b: Milestone) {
+function sortByEstimatedDate(a: Milestone, b: Milestone): number {
+  const estimatedDateOrder: Record<string, number> = {
+    'updates.inTwoWeeks': 1,
+    'updates.inThreeWeeks': 2,
+    'updates.inFourWeeks': 3,
+    'updates.inFiveWeeks': 4,
+  }
+
   if (!a.estimatedDate) return 1
   if (!b.estimatedDate) return -1
-  return a.estimatedDate.localeCompare(b.estimatedDate)
+
+  const aOrder = estimatedDateOrder[a.estimatedDate] || Infinity
+  const bOrder = estimatedDateOrder[b.estimatedDate] || Infinity
+
+  return aOrder - bOrder
 }
