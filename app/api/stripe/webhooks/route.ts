@@ -1,10 +1,14 @@
 'use server'
 
 import type { Stripe } from "stripe";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/server/stripe";
 import { PrismaClient } from "@prisma/client";
 import { sendSubscriptionErrorEmail } from "@/server/send-support-email";
+
+export function GET(request: NextRequest) {
+    return NextResponse.json({ message: 'Hello, world!' })
+}
 
 export async function POST(req: Request) {
   let event: Stripe.Event | undefined;
