@@ -6,7 +6,7 @@ import { stripe } from "@/server/stripe";
 import { PrismaClient } from "@prisma/client";
 import { sendSubscriptionErrorEmail } from "@/server/send-support-email";
 
-export function GET(request: NextRequest) {
+export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Hello, world!' })
 }
 
