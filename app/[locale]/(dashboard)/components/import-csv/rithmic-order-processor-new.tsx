@@ -83,17 +83,20 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     return side === 'Long' ? rawPnL : -rawPnL
   }
 
+  const getHeaderIndex = useCallback((headerPattern: string): number => {
+    return headers.findIndex(header => header.toLowerCase().includes(headerPattern.toLowerCase()))
+  }, [headers])
+
   const processOrders = useCallback(() => {
     const processedTrades: Trade[] = []
     const openPositions: { [key: string]: OpenPosition } = {}
 
-    // Sort orders by Update Time (RDT) column in ascending order
+    // Sort orders by Update Time column in ascending order
     const sortedCsvData = csvData.sort((a, b) => {
-      const timeIndexA = headers.indexOf("Update Time (RDT)");
-      const timeIndexB = headers.indexOf("Update Time (RDT)");
-      if (timeIndexA === -1 || timeIndexB === -1) return 0;
-      return new Date(a[timeIndexA]).getTime() - new Date(b[timeIndexB]).getTime();
-    });
+      const timeIndex = getHeaderIndex('update time')
+      if (timeIndex === -1) return 0
+      return new Date(a[timeIndex]).getTime() - new Date(b[timeIndex]).getTime()
+    })
 
     sortedCsvData.forEach((row) => {
       if (row.length !== headers.length) return // Skip invalid rows
@@ -103,11 +106,15 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
         return acc
       }, {} as Record<string, string>)
 
+      const updateTimeHeader = headers.find(header => 
+        header.toLowerCase().includes('update time')
+      ) || ''
+
       const symbol = order["Symbol"].slice(0, -2)
       const quantity = parseInt(order["Qty Filled"])
       const price = parsePrice(order["Avg Fill Price"])
       const side = order["Buy/Sell"]
-      const timestamp = order["Update Time (RDT)"]
+      const timestamp = order[updateTimeHeader]
       const commissionRate = parseFloat(order["Commission Fill Rate"])
       const orderCommission = commissionRate * quantity
       const orderId = order["Order Number"]
@@ -240,7 +247,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
 
     setTrades(processedTrades)
     setProcessedTrades(processedTrades)
-  }, [csvData, headers, setProcessedTrades, tickDetails])
+  }, [csvData, headers, setProcessedTrades, tickDetails, getHeaderIndex])
 
   useEffect(() => {
     processOrders()
