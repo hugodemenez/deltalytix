@@ -42,6 +42,53 @@ interface OpenPosition {
   originalQuantity: number;
 }
 
+function parseDate(dateString: string): Date {
+  if (!dateString) return new Date()
+  
+  // Try DD/MM/YYYY HH:mm format
+  const ddmmyyyy = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})$/
+  const ddmmyyyyMatch = dateString.match(ddmmyyyy)
+  if (ddmmyyyyMatch) {
+    const [_, day, month, year, hours, minutes] = ddmmyyyyMatch
+    return new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      parseInt(hours),
+      parseInt(minutes)
+    )
+  }
+
+  // Fallback to standard date parsing
+  const parsedDate = new Date(dateString)
+  if (!isNaN(parsedDate.getTime())) {
+    return parsedDate
+  }
+
+  console.warn(`Unable to parse date: ${dateString}`)
+  return new Date()
+}
+
+function cleanCsvData(csvData: string[][], headers: string[]): [string[][], string[]] {
+  // Find indices of non-empty columns from the first row
+  const nonEmptyColumnIndices = headers.reduce<number[]>((acc, header, index) => {
+    // Check if any row has data in this column
+    const hasData = csvData.some(row => row[index]?.trim() !== '');
+    if (hasData) acc.push(index);
+    return acc;
+  }, []);
+
+  // Filter headers
+  const cleanHeaders = nonEmptyColumnIndices.map(i => headers[i]);
+
+  // Filter data rows
+  const cleanData = csvData.map(row =>
+    nonEmptyColumnIndices.map(i => row[i] || '')
+  );
+
+  return [cleanData, cleanHeaders];
+}
+
 export default function RithmicOrderProcessor({ csvData, headers, setProcessedTrades }: RithmicOrderProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
   const [tickDetails, setTickDetails] = useState<TickDetails[]>([])
@@ -88,37 +135,62 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
   }, [headers])
 
   const processOrders = useCallback(() => {
-    const processedTrades: Trade[] = []
-    const openPositions: { [key: string]: OpenPosition } = {}
+    // Clean the CSV data first
+    const [cleanData, cleanHeaders] = cleanCsvData(csvData, headers);
+    
+    const processedTrades: Trade[] = [];
+    const openPositions: { [key: string]: OpenPosition } = {};
 
     // Sort orders by Update Time column in ascending order
-    const sortedCsvData = csvData.sort((a, b) => {
+    const sortedCsvData = cleanData.sort((a, b) => {
       const timeIndex = getHeaderIndex('update time')
       if (timeIndex === -1) return 0
-      return new Date(a[timeIndex]).getTime() - new Date(b[timeIndex]).getTime()
-    })
+      return parseDate(a[timeIndex]).getTime() - parseDate(b[timeIndex]).getTime()
+    });
 
     sortedCsvData.forEach((row) => {
-      if (row.length !== headers.length) return // Skip invalid rows
+      if (row.length !== cleanHeaders.length) {
+        console.warn('Row length mismatch:', row);
+        return; // Skip invalid rows
+      }
 
-      const order = headers.reduce((acc, header, index) => {
-        acc[header] = row[index]
-        return acc
-      }, {} as Record<string, string>)
+      const order = cleanHeaders.reduce((acc, header, index) => {
+        acc[header] = row[index]?.trim() || '';
+        return acc;
+      }, {} as Record<string, string>);
 
-      const updateTimeHeader = headers.find(header => 
-        header.toLowerCase().includes('update time')
-      ) || ''
+      // Add validation for required fields
+      const requiredFields = ["Symbol", "Qty Filled", "Avg Fill Price", "Buy/Sell"];
+      const missingFields = requiredFields.filter(field => !order[field]);
+      
+      if (missingFields.length > 0) {
+        console.warn(`Missing required fields: ${missingFields.join(', ')}`, order);
+        return; // Skip this row
+      }
 
       const symbol = order["Symbol"].slice(0, -2)
       const quantity = parseInt(order["Qty Filled"])
       const price = parsePrice(order["Avg Fill Price"])
       const side = order["Buy/Sell"]
-      const timestamp = order[updateTimeHeader]
+      const timestamp = order[cleanHeaders.find(header => 
+        header.toLowerCase().includes('update time')
+      ) || '']
       const commissionRate = parseFloat(order["Commission Fill Rate"])
       const orderCommission = commissionRate * quantity
       const orderId = order["Order Number"]
 
+      console.log({
+        orderId,
+        symbol,
+        quantity,
+        price,
+        side,
+        timestamp,
+        commissionRate,
+        orderCommission,
+        openPositions,
+      });
+      
       const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || { tickSize: 1/64, tickValue: 15.625 }
 
       const newOrder: Order = {
@@ -152,10 +224,10 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
               entryPrice: openPosition.averageEntryPrice.toFixed(5),
               closePrice: (openPosition.exitOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / 
                            openPosition.exitOrders.reduce((sum, o) => sum + o.quantity, 0)).toFixed(5),
-              entryDate: openPosition.entryDate,
-              closeDate: timestamp,
+              entryDate: parseDate(openPosition.entryDate).toISOString(),
+              closeDate: parseDate(timestamp).toISOString(),
               pnl: pnl,
-              timeInPosition: (new Date(timestamp).getTime() - new Date(openPosition.entryDate).getTime()) / 1000,
+              timeInPosition: (parseDate(timestamp).getTime() - parseDate(openPosition.entryDate).getTime()) / 1000,
               userId: openPosition.userId,
               side: openPosition.side,
               commission: openPosition.totalCommission,
@@ -215,9 +287,9 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
 
     // Close any remaining open positions
     Object.entries(openPositions).forEach(([symbol, position]) => {
-      const lastTrade = csvData[csvData.length - 1]
-      const lastPrice = parsePrice(lastTrade[headers.indexOf("Avg Fill Price")])
-      const lastTimestamp = lastTrade[headers.indexOf("Update Time (RDT)")]
+      const lastTrade = cleanData[cleanData.length - 1]
+      const lastPrice = parsePrice(lastTrade[cleanHeaders.indexOf("Avg Fill Price")])
+      const lastTimestamp = lastTrade[cleanHeaders.indexOf("Update Time (RDT)")]
       const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || { tickSize: 1/64, tickValue: 15.625 }
 
       const pnl = calculatePnL(position.entryOrders, [{...position.entryOrders[0], price: lastPrice}], contractSpec, position.side)
@@ -245,6 +317,9 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
       processedTrades.push(trade)
     })
 
+    console.log('processedTrades',processedTrades
+
+    )
     setTrades(processedTrades)
     setProcessedTrades(processedTrades)
   }, [csvData, headers, setProcessedTrades, tickDetails, getHeaderIndex])
