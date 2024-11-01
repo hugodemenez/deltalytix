@@ -9,7 +9,6 @@ interface NotificationSummary {
 }
 
 export async function getNotificationSummary(userId: string, limit: number = 5): Promise<NotificationSummary> {
-  console.log('getNotificationSummary', userId)
   if (!userId) {
     return { recent: [], unreadCount: 0 };
   }

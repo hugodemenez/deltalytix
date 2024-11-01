@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts"
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import {
   Card,
   CardContent,
@@ -13,8 +13,10 @@ import {
   ChartConfig,
   ChartContainer,
 } from "@/components/ui/chart"
-import { Separator } from "@/components/ui/separator"
 import { CalendarEntry } from "@/types/calendar"
+import { useTheme } from "@/components/context/theme-provider"
+import { Button } from "@/components/ui/button"
+import { FaRegSadTear, FaRegMeh, FaRegSmileBeam } from "react-icons/fa"
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;
@@ -22,7 +24,7 @@ interface ChartsProps {
 
 const chartConfig = {
   pnl: {
-    label: "Trade P/L",
+    label: "P&L Distribution",
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig
@@ -30,27 +32,19 @@ const chartConfig = {
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-const formatTime = (dateString: string) => new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-
 const formatDuration = (seconds: number) => {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
-  const remainingSeconds = Math.floor(seconds % 60)
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${remainingSeconds}s`
-  } else if (minutes > 0) {
-    return `${minutes}m ${remainingSeconds}s`
-  } else {
-    return `${remainingSeconds}s`
-  }
+  
+  if (hours > 0) return `${hours}h ${minutes}m`
+  return `${minutes}m`
 }
 
-const positiveColor = "hsl(var(--chart-2))" // Green color
-const negativeColor = "hsl(var(--chart-1))" // Orangish color
-
 export function Charts({ dayData }: ChartsProps) {
-  if (!dayData || !dayData.trades || dayData.trades.length === 0) {
+  const { effectiveTheme } = useTheme()
+  const isDarkMode = effectiveTheme === 'dark'
+
+  if (!dayData?.trades?.length) {
     return (
       <div className="h-full flex items-center justify-center">
         <p className="text-muted-foreground">No trade data available for this day</p>
@@ -58,205 +52,175 @@ export function Charts({ dayData }: ChartsProps) {
     )
   }
 
-  // Group trades by accountNumber
-  const accountGroups = dayData.trades.reduce((groups, trade) => {
+  // Calculate final P&L for each account
+  const accountPnL = dayData.trades.reduce((acc, trade) => {
     const accountNumber = trade.accountNumber || 'Unknown'
-    if (!groups[accountNumber]) {
-      groups[accountNumber] = []
-    }
-    groups[accountNumber].push(trade)
-    return groups
-  }, {} as Record<string, typeof dayData.trades>)
+    acc[accountNumber] = (acc[accountNumber] || 0) + trade.pnl
+    return acc
+  }, {} as Record<string, number>)
 
-  const calculateSummary = (trades: typeof dayData.trades) => ({
-    pnl: trades.reduce((sum, trade) => sum + trade.pnl, 0),
-    avgTimeInPosition: trades?.length > 0
-      ? trades.reduce((sum, trade) => sum + trade.timeInPosition, 0) / trades?.length
-      : 0,
-    count: trades?.length || 0,
-    longTrades: trades.filter(trade => trade.side?.toUpperCase() === 'LONG'),
-    shortTrades: trades.filter(trade => trade.side?.toUpperCase() === 'SHORT'),
-  })
-
-  const accountSummaries = Object.entries(accountGroups).map(([accountNumber, trades]) => {
-    const summary = calculateSummary(trades)
-    return {
-      accountNumber,
-      ...summary,
-      longSummary: calculateSummary(summary.longTrades),
-      shortSummary: calculateSummary(summary.shortTrades),
-      chartData: trades.map((trade, index) => ({
-        tradeNumber: index + 1,
-        pnl: trade.pnl,
-        symbol: trade.instrument,
-        side: trade.side,
-        time: trade.entryDate,
-        duration: trade.timeInPosition,
-      }))
-    }
-  })
-
-  const allTradesChartData = dayData.trades.map((trade, index) => ({
-    tradeNumber: index + 1,
-    pnl: trade.pnl,
-    symbol: trade.instrument,
-    side: trade.side,
-    time: trade.entryDate,
-    duration: trade.timeInPosition,
-    accountNumber: trade.accountNumber,
+  // Convert to chart data format
+  const chartData = Object.entries(accountPnL).map(([account, pnl]) => ({
+    name: `Account ${account}`,
+    value: pnl,
+    account,
   }))
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
+  // Sort by absolute value for better visualization
+  chartData.sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+
+  const totalPnL = chartData.reduce((sum, item) => sum + item.value, 0)
+
+  // Generate colors based on theme
+  const colors = isDarkMode 
+    ? ['#8b5cf6', '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6']  // Dark mode colors
+    : ['#a78bfa', '#818cf8', '#60a5fa', '#38bdf8', '#22d3ee', '#2dd4bf']  // Light mode colors
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload?.[0]) {
+      const data = payload[0].payload
+      const percentage = ((data.value / totalPnL) * 100).toFixed(1)
       return (
         <div className="bg-background p-2 border rounded shadow-sm">
-          <p className="font-semibold">Trade #{label}</p>
-          <p className={`font-bold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            P/L: {formatCurrency(data.pnl)}
+          <p className="font-semibold">{data.name}</p>
+          <p className={`font-bold ${data.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            P&L: {formatCurrency(data.value)}
           </p>
-          <p>Symbol: {data.symbol}</p>
-          <p>Side: {data.side}</p>
-          <p>Time: {formatTime(data.time)}</p>
-          <p>Duration: {formatDuration(data.duration)}</p>
-          {data.accountNumber && <p>Account: {data.accountNumber}</p>}
+          <p className="text-sm text-muted-foreground">
+            {percentage}% of total
+          </p>
         </div>
-      );
+      )
     }
-    return null;
-  };
+    return null
+  }
 
-  const renderAccountCard = (accountSummary: any) => (
-    <Card key={accountSummary.accountNumber} className="w-full">
-      <CardHeader>
-        <CardTitle>Account: {accountSummary.accountNumber}</CardTitle>
-        <CardDescription>Trade summary and P/L chart for this account</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Overall</h3>
-              <p>P/L: {formatCurrency(accountSummary.pnl)}</p>
-              <p>Avg Time: {formatDuration(accountSummary.avgTimeInPosition)}</p>
-              <p>Count: {accountSummary.count}</p>
-            </div>
-            <Separator />
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Long Trades</h3>
-              <p>P/L: {formatCurrency(accountSummary.longSummary.pnl)}</p>
-              <p>Avg Time: {formatDuration(accountSummary.longSummary.avgTimeInPosition)}</p>
-              <p>Count: {accountSummary.longSummary.count}</p>
-            </div>
-            <Separator />
-            <div>
-              <h3 className="text-lg font-semibold mb-2">Short Trades</h3>
-              <p>P/L: {formatCurrency(accountSummary.shortSummary.pnl)}</p>
-              <p>Avg Time: {formatDuration(accountSummary.shortSummary.avgTimeInPosition)}</p>
-              <p>Count: {accountSummary.shortSummary.count}</p>
-            </div>
-          </div>
-          <div className="lg:col-span-2">
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle>P/L Chart</CardTitle>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <ChartContainer config={chartConfig} className="h-full w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      accessibilityLayer
-                      data={accountSummary.chartData}
-                      margin={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid vertical={false} />
-                      <XAxis
-                        dataKey="tradeNumber"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        minTickGap={32}
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={formatCurrency}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
-                        dataKey="pnl"
-                        radius={[4, 4, 0, 0]}
-                        className="transition-all duration-300 ease-in-out"
-                      >
-                        {accountSummary.chartData.map((entry: any, index: number) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={entry.pnl >= 0 ? positiveColor : negativeColor}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
+  // Calculate average time in position
+  const avgTimeInPosition = dayData?.trades?.length
+    ? dayData.trades.reduce((sum, trade) => sum + trade.timeInPosition, 0) / dayData.trades.length
+    : 0
 
   return (
     <div className="space-y-6">
-
+      {/* Existing Doughnut Chart Card */}
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Daily Trades P/L (All Accounts)</CardTitle>
-          <CardDescription>Overview of all trades across accounts</CardDescription>
+          <CardTitle>Daily P&L Distribution</CardTitle>
+          <CardDescription>
+            Total P&L: {formatCurrency(totalPnL)}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="h-[400px]">
+        <CardContent className="h-[300px]">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                accessibilityLayer
-                data={allTradesChartData}
-                margin={{ left: 12, right: 12, top: 12, bottom: 12 }}
-              >
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="tradeNumber"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  minTickGap={32}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={formatCurrency}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar
-                  dataKey="pnl"
-                  radius={[4, 4, 0, 0]}
-                  className="transition-all duration-300 ease-in-out"
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius="60%"
+                  outerRadius="80%"
+                  paddingAngle={2}
                 >
-                  {allTradesChartData.map((entry, index) => (
-                    <Cell
+                  {chartData.map((entry, index) => (
+                    <Cell 
                       key={`cell-${index}`}
-                      fill={entry.pnl >= 0 ? positiveColor : negativeColor}
+                      fill={colors[index % colors.length]}
+                      className="transition-all duration-300 ease-in-out hover:opacity-80"
                     />
                   ))}
-                </Bar>
-              </BarChart>
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend 
+                  verticalAlign="middle" 
+                  align="right"
+                  layout="vertical"
+                  formatter={(value, entry: any) => (
+                    <span className="text-sm">
+                      {value}: {formatCurrency(entry.payload.value)}
+                    </span>
+                  )}
+                />
+              </PieChart>
             </ResponsiveContainer>
           </ChartContainer>
         </CardContent>
       </Card>
-      {accountSummaries.map(renderAccountCard)}
 
+      {/* Three Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Daily P&L Card */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Daily P&L</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {formatCurrency(totalPnL)}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Across {Object.keys(accountPnL).length} account{Object.keys(accountPnL).length > 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Average Time Card */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Avg Time in Position</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-2">
+            <p className="text-2xl font-bold">
+              {formatDuration(avgTimeInPosition)}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Over {dayData.trades.length} trade{dayData.trades.length > 1 ? 's' : ''}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Mood Card */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">How was your day?</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="flex justify-around items-center">
+              <Button
+                variant="ghost"
+                size="lg"
+                className="flex flex-col items-center hover:text-red-500 h-auto py-2 px-4"
+                onClick={() => {/* Handle mood selection */}}
+              >
+                <FaRegSadTear className="h-6 w-6 mb-1" />
+                <span className="text-sm font-medium">Bad</span>
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="lg"
+                className="flex flex-col items-center hover:text-yellow-500 h-auto py-2 px-4"
+                onClick={() => {/* Handle mood selection */}}
+              >
+                <FaRegMeh className="h-6 w-6 mb-1" />
+                <span className="text-sm font-medium">Okay</span>
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="lg"
+                className="flex flex-col items-center hover:text-green-500 h-auto py-2 px-4"
+                onClick={() => {/* Handle mood selection */}}
+              >
+                <FaRegSmileBeam className="h-6 w-6 mb-1" />
+                <span className="text-sm font-medium">Great</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

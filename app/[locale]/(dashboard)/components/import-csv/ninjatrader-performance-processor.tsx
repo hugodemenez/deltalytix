@@ -127,8 +127,6 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
         return; // Skip this trade if dates are invalid
       }
 
-      console.log("Entry Date", item.entryDate)
-      console.log("Close Date", item.closeDate)
 
       // Compute time in position based on entry and close date
       if (item.entryDate && item.closeDate) {

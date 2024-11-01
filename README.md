@@ -85,3 +85,17 @@ Under the following terms:
 - NonCommercial — You may not use the material for commercial purposes.
 
 No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+
+
+## Cursor usage
+
+You can find cursor rules in the `.cursorrules` file in the root of the project.
+Also, to generate commit messages, use :
+```
+@Commit (Diff of Working State) Take a deep breath and work on this problem step-by-step.
+Summarize the provided diff into a clear and concisely written commit message.
+Use the imperative style for the subject, 
+use Conventional Commits (type and optionally scope), and limit the subject+type+scope to 50 characters or less. 
+Be as descriptive as possible in the unlimited length body. 
+Return as a single codeblock, ready to be pasted into COMMIT_EDITMSG without further editing
+```
