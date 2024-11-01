@@ -42,6 +42,10 @@ interface OpenPosition {
   originalQuantity: number;
 }
 
+interface IncompleteTrade extends OpenPosition {
+  openingOrderDetails: string;
+}
+
 function parseDate(dateString: string): Date {
   if (!dateString) return new Date()
   
@@ -92,6 +96,7 @@ function cleanCsvData(csvData: string[][], headers: string[]): [string[][], stri
 export default function RithmicOrderProcessor({ csvData, headers, setProcessedTrades }: RithmicOrderProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
   const [tickDetails, setTickDetails] = useState<TickDetails[]>([])
+  const [incompleteTrades, setIncompleteTrades] = useState<IncompleteTrade[]>([])
   
   useEffect(() => {
     const fetchTickDetails = async () => {
@@ -140,6 +145,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     
     const processedTrades: Trade[] = [];
     const openPositions: { [key: string]: OpenPosition } = {};
+    const incompleteTradesArray: IncompleteTrade[] = [];
 
     // Sort orders by Update Time column in ascending order
     const sortedCsvData = cleanData.sort((a, b) => {
@@ -287,42 +293,26 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
 
     // Close any remaining open positions
     Object.entries(openPositions).forEach(([symbol, position]) => {
-      const lastTrade = cleanData[cleanData.length - 1]
-      const lastPrice = parsePrice(lastTrade[cleanHeaders.indexOf("Avg Fill Price")])
-      const lastTimestamp = lastTrade[cleanHeaders.indexOf("Update Time (RDT)")]
-      const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || { tickSize: 1/64, tickValue: 15.625 }
+      const incompleteTrade: IncompleteTrade = {
+        ...position,
+        openingOrderDetails: `${position.side} ${position.quantity} @ ${position.averageEntryPrice.toFixed(2)}`
+      };
+      incompleteTradesArray.push(incompleteTrade);
+    });
 
-      const pnl = calculatePnL(position.entryOrders, [{...position.entryOrders[0], price: lastPrice}], contractSpec, position.side)
+    console.log('processedTrades', processedTrades);
+    setTrades(processedTrades);
+    setProcessedTrades(processedTrades);
+    setIncompleteTrades(incompleteTradesArray);
 
-      const trade: Trade = {
-        id: `${position.entryOrders.map(o => o.orderId).join('-')}-open`,
-        accountNumber: position.accountNumber,
-        quantity: position.originalQuantity,
-        entryId: position.entryOrders.map(o => o.orderId).join('-'),
-        closeId: null,
-        instrument: symbol,
-        entryPrice: position.averageEntryPrice.toFixed(5),
-        closePrice: lastPrice.toFixed(5),
-        entryDate: position.entryDate,
-        closeDate: lastTimestamp,
-        pnl: pnl,
-        timeInPosition: (new Date(lastTimestamp).getTime() - new Date(position.entryDate).getTime()) / 1000,
-        userId: position.userId,
-        side: position.side,
-        commission: position.totalCommission,
-        createdAt: new Date(),
-        comment: "Position still open"
-      }
-
-      processedTrades.push(trade)
-    })
-
-    console.log('processedTrades',processedTrades
-
-    )
-    setTrades(processedTrades)
-    setProcessedTrades(processedTrades)
-  }, [csvData, headers, setProcessedTrades, tickDetails, getHeaderIndex])
+    if (incompleteTradesArray.length > 0) {
+      toast({
+        title: "Incomplete Trades Detected",
+        description: `${incompleteTradesArray.length} trade(s) were not completed and have been removed from the analysis.`,
+        variant: "default",
+      });
+    }
+  }, [csvData, headers, setProcessedTrades, tickDetails, getHeaderIndex]);
 
   useEffect(() => {
     processOrders()
@@ -353,6 +343,19 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
 
   return (
     <div className="space-y-4">
+      {incompleteTrades.length > 0 && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+          <p className="font-bold">Incomplete Trades Detected</p>
+          <p>{`${incompleteTrades.length} trade(s) were not completed and have been removed from the analysis.`}</p>
+          <ul className="list-disc list-inside mt-2">
+            {incompleteTrades.map((trade, index) => (
+              <li key={index}>
+                {`${trade.instrument}: ${trade.side} ${trade.quantity} @ ${trade.averageEntryPrice.toFixed(2)} (Opened on ${new Date(trade.entryDate).toLocaleString()})`}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div>
         <h3 className="text-lg font-semibold mb-2">Contract Specifications</h3>
         <div className="grid grid-cols-3 gap-4">
