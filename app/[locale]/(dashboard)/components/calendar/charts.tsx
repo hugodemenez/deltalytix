@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer, Legend, XAxis, YAxis } from "recharts"
 import {
   Card,
   CardContent,
@@ -29,15 +29,19 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-const formatCurrency = (value: number) =>
-  `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const formatCurrency = (value: number | undefined | null) => {
+  if (value == null) return '$0.00'
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
 
 const formatDuration = (seconds: number) => {
   const hours = Math.floor(seconds / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
   
-  if (hours > 0) return `${hours}h ${minutes}m`
-  return `${minutes}m`
+  if (hours > 0) return `${hours}h ${minutes}m ${remainingSeconds}s`
+  if (minutes > 0) return `${minutes}m ${remainingSeconds}s`
+  return `${remainingSeconds}s`
 }
 
 export function Charts({ dayData }: ChartsProps) {
@@ -81,16 +85,20 @@ export function Charts({ dayData }: ChartsProps) {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload?.[0]) {
       const data = payload[0].payload
-      const percentage = ((data.value / totalPnL) * 100).toFixed(1)
+      const percentage = data.account !== 'total' 
+        ? ((data.value / totalPnL) * 100).toFixed(1)
+        : '100'
       return (
         <div className="bg-background p-2 border rounded shadow-sm">
           <p className="font-semibold">{data.name}</p>
           <p className={`font-bold ${data.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            P&L (after comm.): {formatCurrency(data.value)}
+            {formatCurrency(data.value)}
           </p>
-          <p className="text-sm text-muted-foreground">
-            {percentage}% of total
-          </p>
+          {data.account !== 'total' && (
+            <p className="text-sm text-muted-foreground">
+              {percentage}% of total
+            </p>
+          )}
         </div>
       )
     }
@@ -115,37 +123,40 @@ export function Charts({ dayData }: ChartsProps) {
         <CardContent className="h-[300px]">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius="60%"
-                  outerRadius="80%"
-                  paddingAngle={2}
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 40, left: 40, bottom: 5 }}
+                layout="vertical"
+              >
+                <YAxis 
+                  type="category" 
+                  dataKey="name" 
+                  hide 
+                />
+                <XAxis 
+                  type="number"
+                  tickFormatter={(value) => formatCurrency(value)}
+                  domain={['auto', 'auto']}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar 
+                  dataKey="value" 
+                  barSize={20}
+                  name={'Account P&L'}
+                  label={{
+                    position: 'right',
+                    formatter: (value: number) => formatCurrency(value)
+                  }}
                 >
                   {chartData.map((entry, index) => (
-                    <Cell 
+                    <Cell
                       key={`cell-${index}`}
                       fill={colors[index % colors.length]}
                       className="transition-all duration-300 ease-in-out hover:opacity-80"
                     />
                   ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-                <Legend 
-                  verticalAlign="middle" 
-                  align="right"
-                  layout="vertical"
-                  formatter={(value, entry: any) => (
-                    <span className="text-sm">
-                      {value}: {formatCurrency(entry.payload.value)}
-                    </span>
-                  )}
-                />
-              </PieChart>
+                </Bar>
+              </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
         </CardContent>
