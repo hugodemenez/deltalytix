@@ -323,7 +323,6 @@ export default function TradeExportDialog({ trades }: Props) {
                       <PaginationItem>
                         <PaginationPrevious 
                           onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                          disabled={currentPage === 1}
                         />
                       </PaginationItem>
                       
@@ -357,7 +356,6 @@ export default function TradeExportDialog({ trades }: Props) {
                       <PaginationItem>
                         <PaginationNext
                           onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                          disabled={currentPage === totalPages}
                         />
                       </PaginationItem>
                     </PaginationContent>
