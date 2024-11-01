@@ -52,10 +52,12 @@ export function Charts({ dayData }: ChartsProps) {
     )
   }
 
-  // Calculate final P&L for each account
+  // Calculate final P&L for each account (including commissions)
   const accountPnL = dayData.trades.reduce((acc, trade) => {
     const accountNumber = trade.accountNumber || 'Unknown'
-    acc[accountNumber] = (acc[accountNumber] || 0) + trade.pnl
+    // Add commission to P&L calculation
+    const totalPnL = trade.pnl - (trade.commission || 0)
+    acc[accountNumber] = (acc[accountNumber] || 0) + totalPnL
     return acc
   }, {} as Record<string, number>)
 
@@ -84,7 +86,7 @@ export function Charts({ dayData }: ChartsProps) {
         <div className="bg-background p-2 border rounded shadow-sm">
           <p className="font-semibold">{data.name}</p>
           <p className={`font-bold ${data.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            P&L: {formatCurrency(data.value)}
+            P&L (after comm.): {formatCurrency(data.value)}
           </p>
           <p className="text-sm text-muted-foreground">
             {percentage}% of total
@@ -107,7 +109,7 @@ export function Charts({ dayData }: ChartsProps) {
         <CardHeader>
           <CardTitle>Daily P&L Distribution</CardTitle>
           <CardDescription>
-            Total P&L: {formatCurrency(totalPnL)}
+            Total P&L (after commissions): {formatCurrency(totalPnL)}
           </CardDescription>
         </CardHeader>
         <CardContent className="h-[300px]">
@@ -154,7 +156,7 @@ export function Charts({ dayData }: ChartsProps) {
         {/* Daily P&L Card */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Daily P&L</CardTitle>
+            <CardTitle className="text-lg">Daily P&L (after comm.)</CardTitle>
           </CardHeader>
           <CardContent className="pt-2">
             <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
