@@ -35,6 +35,8 @@ export async function POST(req: Request) {
     "checkout.session.completed",
     "payment_intent.succeeded",
     "payment_intent.payment_failed",
+    "customer.subscription.deleted",
+    "customer.subscription.updated"
   ];
 
   if (permittedEvents.includes(event.type)) {
@@ -45,23 +47,34 @@ export async function POST(req: Request) {
       switch (event.type) {
         case "checkout.session.completed":
           data = event.data.object as Stripe.Checkout.Session;
-          // Get user id from email
+          
+          // Retrieve the subscription details from the session
+          const subscription = await stripe.subscriptions.retrieve(
+            data.subscription as string
+          );
+          
           const user = await prisma.user.findUnique({
             where: { email: data.customer_details?.email as string },
           });
-          const subscription = await prisma.subscription.upsert({
+
+          await prisma.subscription.upsert({
             where: {
               email: data.customer_details?.email as string,
             },
             update: {
               plan: data.metadata?.plan as string,
+              endDate: new Date(subscription.current_period_end * 1000),
+              status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE'
             },
             create: {
               email: data.customer_details?.email as string,
               plan: data.metadata?.plan as string,
-              user: { connect: { id: user?.id } }
+              user: { connect: { id: user?.id } },
+              endDate: new Date(subscription.current_period_end * 1000),
+              status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE'
             }
-          })
+          });
+
           console.log('subscription', subscription)
           // In case of error creating the subscription send email to support
           if (!subscription) {
@@ -83,7 +96,37 @@ export async function POST(req: Request) {
           break;
         case "customer.subscription.deleted":
           data = event.data.object as Stripe.Subscription;
-          console.log(`💰 Subscription deleted: ${data.id}`);
+          const customerData = await stripe.customers.retrieve(
+            data.customer as string
+          ) as Stripe.Customer;
+          
+          if (customerData.email) {
+            await prisma.subscription.update({
+              where: { email: customerData.email },
+              data: { 
+                status: "CANCELLED",
+                endDate: new Date(data.ended_at! * 1000)
+              }
+            });
+          }
+          console.log(`Subscription deleted and updated in DB: ${data.id}`);
+          break;
+        case "customer.subscription.updated":
+          data = event.data.object as Stripe.Subscription;
+          const updatedCustomerData = await stripe.customers.retrieve(
+            data.customer as string
+          ) as Stripe.Customer;
+          
+          if (updatedCustomerData.email && data.cancel_at_period_end) {
+            await prisma.subscription.update({
+              where: { email: updatedCustomerData.email },
+              data: {
+                status: "SCHEDULED_CANCELLATION",
+                endDate: new Date(data.current_period_end * 1000)
+              }
+            });
+            console.log(`Subscription scheduled for cancellation: ${data.id}`);
+          }
           break;
         default:
           throw new Error(`Unhandled event: ${event.type}`);

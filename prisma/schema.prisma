@@ -39,12 +39,15 @@ model TickDetails{
 }
 
 model Subscription {
-  id String @id @unique @default(uuid())
-  email String @unique
-  plan String
-  createdAt DateTime @default(now())
-  userId String @unique
-  user User @relation(fields: [userId], references: [id])
+  id        String    @id @unique @default(uuid())
+  email     String    @unique
+  plan      String
+  createdAt DateTime  @default(now())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id])
+  status    String    @default("ACTIVE")
+  endDate   DateTime?
+  trialEndsAt DateTime?
   @@index([email])
   @@schema("public")
 }
