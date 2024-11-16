@@ -42,17 +42,22 @@ interface FilteredTrade extends Trade {
 
 export default function TradeExportDialog({ trades }: Props) {
   const [isOpen, setIsOpen] = useState(false)
-  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
-  const [selectedInstruments, setSelectedInstruments] = useState<string[]>([])
-  const [selectAllAccounts, setSelectAllAccounts] = useState(false)
-  const [selectAllInstruments, setSelectAllInstruments] = useState(false)
-  const [dateRange, setDateRange] = useState<DateRange | undefined>()
+  const accounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
+  const instruments = Array.from(new Set(trades.map(trade => trade.instrument.slice(0, 2))))
+
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>(accounts)
+  const [selectedInstruments, setSelectedInstruments] = useState<string[]>(instruments)
+  const [selectAllAccounts, setSelectAllAccounts] = useState(true)
+  const [selectAllInstruments, setSelectAllInstruments] = useState(true)
+  
+  const [dateRange, setDateRange] = useState<DateRange>({ 
+    from: subMonths(new Date(), 6), 
+    to: new Date() 
+  })
+  
   const [currentPage, setCurrentPage] = useState(1)
   const [filteredTrades, setFilteredTrades] = useState<FilteredTrade[]>([])
   const itemsPerPage = 10
-
-  const accounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
-  const instruments = Array.from(new Set(trades.map(trade => trade.instrument.slice(0, 2))))
 
   const quickSelectors = [
     { label: "This Week", getRange: () => ({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) }) },
@@ -163,6 +168,12 @@ export default function TradeExportDialog({ trades }: Props) {
   const endIndex = startIndex + itemsPerPage
   const currentTrades = filteredTrades.slice(startIndex, endIndex)
 
+  const handleDateRangeSelect = (range: DateRange | undefined) => {
+    if (range) {
+      setDateRange(range)
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -266,7 +277,7 @@ export default function TradeExportDialog({ trades }: Props) {
                     mode="range"
                     defaultMonth={dateRange?.from}
                     selected={dateRange}
-                    onSelect={setDateRange}
+                    onSelect={handleDateRangeSelect}
                     numberOfMonths={2}
                     className="rounded-md border"
                   />

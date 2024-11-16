@@ -153,6 +153,12 @@ export default function TradeTable() {
               </Button>
             </TableHead>
             <TableHead>
+              <Button variant="ghost" onClick={() => handleSort('accountNumber')}>
+                Account
+                {sortConfig.key === 'accountNumber' && <ArrowUpDown className="ml-2 h-4 w-4" />}
+              </Button>
+            </TableHead>
+            <TableHead>
               <Button variant="ghost" onClick={() => handleSort('side')}>
                 Side
                 {sortConfig.key === 'side' && <ArrowUpDown className="ml-2 h-4 w-4" />}
@@ -206,6 +212,7 @@ export default function TradeTable() {
                 />
               </TableCell>
               <TableCell>{trade.instrument}</TableCell>
+              <TableCell>{trade.accountNumber}</TableCell>
               <TableCell>{trade.side}</TableCell>
               <TableCell>{trade.quantity}</TableCell>
               <TableCell>{trade.entryPrice}</TableCell>
