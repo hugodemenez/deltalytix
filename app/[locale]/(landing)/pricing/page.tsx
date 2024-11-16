@@ -119,7 +119,17 @@ export default function PricingPage() {
                   </ul>
                 </CardContent>
                 <CardFooter>
-                  <form action={'/api/stripe/create-checkout-session'} method='POST'>
+                  <form action={'/api/stripe/create-checkout-session'} method='POST' onSubmit={(e) => {
+                    const form = e.currentTarget;
+                    // Add hidden input for referral if it exists
+                    if (window.tolt_referral) {
+                      const referralInput = document.createElement('input');
+                      referralInput.type = 'hidden';
+                      referralInput.name = 'referral';
+                      referralInput.value = window.tolt_referral;
+                      form.appendChild(referralInput);
+                    }
+                  }}>
                     <input type="hidden" name="lookup_key" value={`${plan.name.toLowerCase()}-${billingPeriod}`} />
                     <Button type="submit" className="w-full">{key === 'premium' ? t('pricing.getStarted') : t('pricing.tryBasic')}</Button>
                   </form>

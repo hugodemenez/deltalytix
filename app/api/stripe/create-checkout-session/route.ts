@@ -11,6 +11,8 @@ export async function POST(req: Request, res: Response) {
         return NextResponse.json({ message: "Lookup key is required" }, { status: 400 });
     }
     const lookup_key = body.get('lookup_key') as string;
+    const referral = body.get('referral') as string | null;
+
     const supabase = await createClient();
     const {data:{user}} = await supabase.auth.getUser();
     if (!user) {
@@ -26,6 +28,7 @@ export async function POST(req: Request, res: Response) {
         customer_email: user.email,
         metadata: {
             plan: lookup_key,
+            tolt_referral: referral || '',
         },
         line_items: [
             {

@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -44,6 +45,13 @@ export default async function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-screen w-screen">
+      <head>
+        <Script 
+          src="https://cdn.tolt.io/tolt.js" 
+          data-tolt="954085db-aff4-4df2-bcc8-c71631304415"
+          strategy="afterInteractive"
+        />
+      </head>
       <body className={inter.className + " h-screen w-screen overflow-x-hidden"}>
         <SpeedInsights />
         <Analytics />
