@@ -313,15 +313,15 @@ export default function WidgetCanvas() {
     if (isSmallScreen) {
       switch (size) {
         case 'small':
-          return { w: 12, h: 1.5 }
+          return { w: 12, h: 2.5 }
         case 'small-long':
-          return { w: 12, h: 1.5 }
+          return { w: 12, h: 4 }
         case 'medium':
-          return { w: 12, h: 2.5 }
+          return { w: 12, h: 4.5 }
         case 'large':
-          return { w: 12, h: 3 }
+          return { w: 12, h: 4 }
         default:
-          return { w: 12, h: 2.5 }
+          return { w: 12, h: 4 }
       }
     }
 
@@ -387,29 +387,74 @@ export default function WidgetCanvas() {
             activeLayout: isMobile ? 'mobile' : 'desktop'
           })
         } else {
-          // Set default layouts
-          const defaultLayout: Layouts = {
-            desktop: [
-              { i: 'widget1', type: 'tradePerformance', size: 'small', x: 0, y: 0, w: 3, h: 2 },
-              { i: 'widget2', type: 'longShortPerformance', size: 'small', x: 3, y: 0, w: 3, h: 2 },
-              { i: 'widget3', type: 'cumulativePnl', size: 'small', x: 6, y: 0, w: 3, h: 2 },
-              { i: 'widget4', type: 'winningStreak', size: 'small', x: 9, y: 0, w: 3, h: 2 },
-              { i: 'widget5', type: 'averagePositionTime', size: 'small', x: 0, y: 2, w: 3, h: 2 },
-              { i: 'widget6', type: 'equityChart', size: 'medium', x: 3, y: 2, w: 6, h: 4 },
-              { i: 'widget7', type: 'pnlChart', size: 'small', x: 9, y: 2, w: 3, h: 2 },
-            ],
-            mobile: [
-              { i: 'widget1', type: 'tradePerformance', size: 'small', x: 0, y: 0, w: 12, h: 1.5 },
-              { i: 'widget2', type: 'longShortPerformance', size: 'small', x: 0, y: 1.5, w: 12, h: 1.5 },
-              { i: 'widget3', type: 'cumulativePnl', size: 'small', x: 0, y: 3, w: 12, h: 1.5 },
-              { i: 'widget4', type: 'winningStreak', size: 'small', x: 0, y: 4.5, w: 12, h: 1.5 },
-              { i: 'widget5', type: 'averagePositionTime', size: 'small', x: 0, y: 6, w: 12, h: 1.5 },
-              { i: 'widget6', type: 'equityChart', size: 'medium', x: 0, y: 7.5, w: 12, h: 2.5 },
-              { i: 'widget7', type: 'pnlChart', size: 'small', x: 0, y: 10, w: 12, h: 1.5 },
-            ]
-          }
+          // Define default widgets for desktop
+          const defaultDesktopWidgets = [
+            { 
+              i: 'widget1732477563848', 
+              type: 'calendarWidget' as WidgetType, 
+              size: 'medium' as WidgetSize, 
+              x: 0, 
+              y: 0,
+              ...sizeToGrid('medium')
+            },
+            { 
+              i: 'widget1732477566865', 
+              type: 'equityChart' as WidgetType, 
+              size: 'small-long' as WidgetSize, 
+              x: 6, 
+              y: 0,
+              ...sizeToGrid('small-long')
+            },
+          ]
+
+          // Define default widgets for mobile
+          const defaultMobileWidgets = [
+            {
+              i: "widget1732478863259",
+              type: "calendarWidget" as WidgetType,
+              size: "medium" as WidgetSize,
+              x: 0,
+              y: 0,
+              w: 12,
+              h: 4
+            },
+            {
+              i: "widget1732478800633",
+              type: "equityChart" as WidgetType,
+              size: "small" as WidgetSize,
+              x: 0,
+              y: 4.5,
+              w: 12,
+              h: 2
+            },
+            {
+              i: "widget1732478839903",
+              type: "tickDistribution" as WidgetType,
+              size: "small" as WidgetSize,
+              x: 0,
+              y: 7,
+              w: 12,
+              h: 2
+            },
+            {
+              i: "widget1732478848667",
+              type: "pnlChart" as WidgetType,
+              size: "small" as WidgetSize,
+              x: 0,
+              y: 9.5,
+              w: 12,
+              h: 2
+            }
+          ]
+
+          // Generate responsive layouts for desktop
+          const responsiveDesktopLayouts = generateResponsiveLayout(defaultDesktopWidgets)
+          
           setLayoutState({
-            layouts: defaultLayout,
+            layouts: {
+              desktop: responsiveDesktopLayouts.lg,
+              mobile: defaultMobileWidgets
+            },
             activeLayout: isMobile ? 'mobile' : 'desktop'
           })
         }
@@ -471,13 +516,10 @@ export default function WidgetCanvas() {
   const addWidget = async (type: WidgetType, size: WidgetSize = 'small') => {
     if (!user?.id) return
     
-    // Force medium size for calendar widget
     const effectiveSize = type === 'calendarWidget' ? 'medium' : size
-    
     const currentLayout = layoutState.layouts[layoutState.activeLayout]
-    const grid = sizeToGrid(effectiveSize)
     
-    // Find the rightmost widget in the last row
+    // Calculate position for new widget
     let lastRowY = 0
     let rightmostX = 0
     
@@ -490,23 +532,28 @@ export default function WidgetCanvas() {
       }
     })
 
-    // If adding this widget would exceed the grid width, start a new row
+    const grid = sizeToGrid(effectiveSize)
     const newX = rightmostX + (rightmostX + grid.w > 12 ? -rightmostX : 0)
     const newY = rightmostX + grid.w > 12 ? lastRowY + grid.h : lastRowY
 
     const newWidget: Widget = {
       i: `widget${Date.now()}`,
       type,
-      size: effectiveSize,  // Use effectiveSize instead of 'small'
+      size: effectiveSize,
       x: newX,
       y: newY,
-      ...grid,
+      w: grid.w, // Add w property
+      h: grid.h  // Add h property
     }
 
+    // Generate new responsive layouts including the new widget
     const updatedWidgets = [...currentLayout, newWidget]
+    const responsiveLayouts = generateResponsiveLayout(updatedWidgets)
+    
     const newLayouts = {
       ...layoutState.layouts,
-      [layoutState.activeLayout]: updatedWidgets
+      desktop: responsiveLayouts.lg,
+      mobile: responsiveLayouts.sm
     }
     
     setLayoutState(prev => ({
@@ -768,13 +815,7 @@ export default function WidgetCanvas() {
 
       <ResponsiveGridLayout
         className="layout"
-        layouts={{
-          lg: layoutState.layouts.desktop,
-          md: layoutState.layouts.desktop,
-          sm: layoutState.layouts.mobile,
-          xs: layoutState.layouts.mobile,
-          xxs: layoutState.layouts.mobile
-        }}
+        layouts={generateResponsiveLayout(layoutState.layouts[layoutState.activeLayout])}
         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
         cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
         rowHeight={isMobile ? 75 : 100}
