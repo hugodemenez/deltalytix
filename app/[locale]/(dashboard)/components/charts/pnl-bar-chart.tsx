@@ -1,20 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, Tooltip } from "recharts"
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
-  ChartConfig,
-  ChartContainer,
-} from "@/components/ui/chart"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { useCalendarData } from "../../../../../components/context/trades-data"
+import { cn } from "@/lib/utils"
+
+interface PNLChartProps {
+  size?: 'small' | 'medium' | 'large' | 'small-long'
+}
 
 const chartConfig = {
   pnl: {
@@ -29,14 +24,22 @@ const formatCurrency = (value: number) =>
 const positiveColor = "hsl(var(--chart-2))" // Green color
 const negativeColor = "hsl(var(--chart-1))" // Orangish color
 
-export default function PNLChart() {
+export default function PNLChart({ size = 'medium' }: PNLChartProps) {
   const { calendarData } = useCalendarData()
-  const chartData = Object.entries(calendarData).map(([date, values]) => ({
-    date,
-    pnl: values.pnl,
-    shortNumber: values.shortNumber,
-    longNumber: values.longNumber,
-  })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const chartData = React.useMemo(() => 
+    Object.entries(calendarData)
+      .map(([date, values]) => ({
+        date,
+        pnl: values.pnl,
+        shortNumber: values.shortNumber,
+        longNumber: values.longNumber,
+      }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+    [calendarData]
+  );
+
+  const maxPnL = Math.max(...chartData.map(d => d.pnl));
+  const minPnL = Math.min(...chartData.map(d => d.pnl));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -55,66 +58,139 @@ export default function PNLChart() {
     return null;
   };
 
+  const getChartHeight = () => {
+    switch (size) {
+      case 'small':
+      case 'small-long':
+        return 'h-[140px]'
+      case 'medium':
+        return 'h-[240px]'
+      case 'large':
+        return 'h-[280px]'
+      default:
+        return 'h-[240px]'
+    }
+  }
+
+  const getYAxisWidth = () => {
+    const maxLength = Math.max(
+      Math.abs(minPnL).toFixed(2).length,
+      Math.abs(maxPnL).toFixed(2).length
+    );
+    return size === 'small' 
+      ? Math.max(35, 8 * (maxLength + 1))
+      : Math.max(45, 10 * (maxLength + 1));
+  }
+
   return (
-    <Card>
-      <CardHeader className="sm:min-h-[120px] flex flex-col items-stretch space-y-0 border-b p-6">
-        <CardTitle>
-          Daily Profit/Loss
-        </CardTitle>
-        <CardDescription>
+    <Card className="h-full">
+      <CardHeader 
+        className={cn(
+          "flex flex-col items-stretch space-y-0 border-b",
+          (size === 'small' || size === 'small-long')
+            ? "p-2" 
+            : "p-4 sm:p-6"
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <CardTitle 
+            className={cn(
+              "line-clamp-1",
+              (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
+            )}
+          >
+            Daily Profit/Loss
+          </CardTitle>
+        </div>
+        <CardDescription 
+          className={cn(
+            (size === 'small' || size === 'small-long') ? "hidden" : "text-xs sm:text-sm"
+          )}
+        >
           Showing daily P/L over time
         </CardDescription>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
+      <CardContent 
+        className={cn(
+          (size === 'small' || size === 'small-long') ? "p-1" : "p-2 sm:p-6"
+        )}
+      >
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[350px] w-full"
+          className={cn(
+            "w-full",
+            getChartHeight(),
+            (size === 'small' || size === 'small-long')
+              ? "aspect-[3/2]" 
+              : "aspect-[4/3] sm:aspect-[16/9]"
+          )}
         >
-          <BarChart
-            accessibilityLayer
-            data={chartData}
-            margin={{
-              left: 12,
-              right: 12,
-              top: 12,
-              bottom: 12,
-            }}
-          >
-            <CartesianGrid vertical={false} />
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              minTickGap={32}
-              tickFormatter={(value) => {
-                const date = new Date(value)
-                return date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              }}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={formatCurrency}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar
-              dataKey="pnl"
-              radius={[4, 4, 0, 0]}
-              className="transition-all duration-300 ease-in-out"
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={chartData}
+              margin={
+                (size === 'small' || size === 'small-long')
+                  ? { left: 10, right: 4, top: 4, bottom: 0 }
+                  : { left: 16, right: 8, top: 8, bottom: 0 }
+              }
             >
-              {chartData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.pnl >= 0 ? positiveColor : negativeColor}
-                />
-              ))}
-            </Bar>
-          </BarChart>
+              <CartesianGrid 
+                strokeDasharray="3 3" 
+                opacity={(size === 'small' || size === 'small-long') ? 0.5 : 1}
+              />
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
+                tick={{ fontSize: (size === 'small' || size === 'small-long') ? 10 : 12 }}
+                minTickGap={(size === 'small' || size === 'small-long') ? 16 : 32}
+                tickFormatter={(value) => {
+                  const date = new Date(value)
+                  return date.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })
+                }}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
+                tick={{ 
+                  fontSize: (size === 'small' || size === 'small-long') ? 10 : 12,
+                  fill: 'currentColor'
+                }}
+                width={getYAxisWidth()}
+                tickFormatter={formatCurrency}
+                label={(size === 'small' || size === 'small-long') ? undefined : { 
+                  value: "P/L", 
+                  angle: -90, 
+                  position: 'insideLeft',
+                  fontSize: 12
+                }}
+              />
+              <Tooltip 
+                content={<CustomTooltip />}
+                wrapperStyle={{ 
+                  fontSize: (size === 'small' || size === 'small-long') ? '10px' : '12px'
+                }} 
+              />
+              <Bar
+                dataKey="pnl"
+                radius={[4, 4, 0, 0]}
+                maxBarSize={(size === 'small' || size === 'small-long') ? 30 : 50}
+                className="transition-all duration-300 ease-in-out"
+              >
+                {chartData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={entry.pnl >= 0 ? positiveColor : negativeColor}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
     </Card>

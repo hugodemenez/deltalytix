@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useTradeStatistics } from '@/components/context/trades-data'
 
 function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout | null = null
@@ -13,7 +14,10 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (.
   }
 }
 
-export default function TradePerformanceCard({ nbWin, nbLoss, nbBe, nbTrades }: { nbWin: number, nbLoss: number, nbBe: number, nbTrades: number }) {
+export default function TradePerformanceCard() {
+  const { statistics } = useTradeStatistics()
+
+  const { nbWin, nbLoss, nbBe, nbTrades } = statistics
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null)
   const [isTouch, setIsTouch] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)

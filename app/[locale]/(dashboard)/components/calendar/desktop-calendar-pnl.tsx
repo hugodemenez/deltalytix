@@ -85,12 +85,12 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
   const monthlyTotal = calculateMonthlyTotal()
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col h-full space-y-2 p-1">
       <div className="flex justify-between items-center">
         <div className="flex items-center space-x-4">
-          <h2 className="text-xl sm:text-2xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
+          <h2 className="text-lg sm:text-xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
           <div className={cn(
-            "text-lg font-bold",
+            "text-base font-bold",
             monthlyTotal >= 0
               ? "text-green-600 dark:text-green-400"
               : "text-red-600 dark:text-red-400"
@@ -107,9 +107,9 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-8 gap-1 sm:gap-2 md:gap-4">
+      <div className="grid grid-cols-8 grid-rows-[auto_repeat(6,1fr)] gap-x-1 gap-y-0.5 flex-1 min-h-0">
         {[...WEEKDAYS, 'Weekly'].map((day) => (
-          <div key={day} className="text-center font-semibold text-xs sm:text-sm">{day}</div>
+          <div key={day} className="text-center font-semibold text-[10px] sm:text-xs">{day}</div>
         ))}
         {calendarDays.map((date, index) => {
           const dateString = format(date, 'yyyy-MM-dd')
@@ -120,7 +120,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
             <React.Fragment key={dateString}>
               <Card
                 className={cn(
-                  "h-24 sm:h-28 md:h-32 cursor-pointer hover:border-primary transition-colors",
+                  "h-full cursor-pointer hover:border-primary transition-colors",
                   !isSameMonth(date, currentDate) && "opacity-50",
                   dayData && dayData.pnl >= 0
                     ? "bg-green-50 dark:bg-green-900/20"
@@ -133,37 +133,37 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
                   initializeComment(dayData)
                 }}
               >
-                <CardHeader className="p-1 sm:p-2">
-                  <CardTitle className="text-xs font-medium flex justify-between items-center">
+                <CardHeader className="p-0.5">
+                  <CardTitle className="text-[10px] font-medium flex justify-between items-center">
                     <span>{format(date, 'd')}</span>
-                    {isToday(date) && <Badge variant="outline" className="text-[10px] px-1">Today</Badge>}
+                    {isToday(date) && <Badge variant="outline" className="text-[8px] px-0.5">Today</Badge>}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-1 sm:p-2">
+                <CardContent className="p-0.5">
                   {dayData ? (
                     <>
                       <div className={cn(
-                        "text-xs sm:text-sm font-bold",
+                        "text-[10px] sm:text-xs font-bold",
                         dayData.pnl >= 0
                           ? "text-green-600 dark:text-green-400"
                           : "text-red-600 dark:text-red-400"
                       )}>
                         ${dayData.pnl.toFixed(2)}
                       </div>
-                      <div className="text-[10px] sm:text-xs text-muted-foreground">
+                      <div className="text-[8px] sm:text-[10px] text-muted-foreground">
                         {dayData.tradeNumber} trade{dayData.tradeNumber > 1 ? 's' : ''}
                       </div>
                     </>
                   ) : (
-                    <div className="text-[10px] sm:text-xs text-muted-foreground">No trades</div>
+                    <div className="text-[8px] sm:text-[10px] text-muted-foreground">No trades</div>
                   )}
                 </CardContent>
               </Card>
               {isLastDayOfWeek && (
-                <Card className="h-24 sm:h-28 md:h-32 flex items-center justify-center">
-                  <CardContent className="p-1 sm:p-2">
+                <Card className="h-full flex items-center justify-center">
+                  <CardContent className="p-0.5 flex items-center justify-center">
                     <div className={cn(
-                      "text-xs sm:text-sm font-bold",
+                      "text-[10px] sm:text-xs font-bold",
                       calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
                         ? "text-green-600 dark:text-green-400"
                         : "text-red-600 dark:text-red-400"
@@ -177,19 +177,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
           )
         })}
       </div>
-      {/* <CalendarModal
-        isOpen={selectedDate !== null}
-        onOpenChange={(open) => {
-          if (!open) setSelectedDate(null)
-        }}
-        selectedDate={selectedDate}
-        dayData={selectedDate ? calendarData[format(selectedDate, 'yyyy-MM-dd')] : undefined}
-        aiComment={aiComment}
-        aiEmotion={aiEmotion}
-        isLoading={isLoading}
-        handleGenerateComment={handleGenerateComment}
-      /> */}
-           <CalendarModal
+      <CalendarModal
         isOpen={selectedDate !== null}
         onOpenChange={(open) => {
           if (!open) setSelectedDate(null)

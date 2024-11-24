@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps } from "recharts"
 import { format, isValid, startOfDay } from 'date-fns'
+import { cn } from "@/lib/utils"
 
 import {
   Card,
@@ -53,7 +54,11 @@ const CustomTooltip: React.FC<TooltipProps<number, string>> = ({ active, payload
   return null;
 };
 
-export default function EnhancedEquityChart() {
+interface EquityChartProps {
+  size?: 'small' | 'medium' | 'large' | 'small-long'
+}
+
+export default function EnhancedEquityChart({ size = 'medium' }: EquityChartProps) {
   const { formattedTrades:trades } = useFormattedTrades()
   const [showDailyPnL, setShowDailyPnL] = React.useState(true)
 
@@ -118,75 +123,145 @@ export default function EnhancedEquityChart() {
     }
   }, [trades, showDailyPnL])
 
+  const getChartHeight = () => {
+    switch (size) {
+      case 'small':
+      case 'small-long':
+        return 'h-[140px]'
+      case 'medium':
+        return 'h-[240px]'
+      case 'large':
+        return 'h-[280px]'
+      default:
+        return 'h-[240px]'
+    }
+  }
+
   return (
-    <Card>
-      <CardHeader className="sm:min-h-[200px] md:min-h-[120px] flex flex-col items-stretch space-y-0 border-b p-0 sm:flex-row">
-        <div className="flex flex-1 flex-col justify-center gap-1 px-6 py-5 sm:py-6">
-          <CardTitle>Equity Curve</CardTitle>
-          <CardDescription>
-            Showing cumulative profit and loss over time
-          </CardDescription>
+    <Card className="h-full">
+      <CardHeader 
+        className={cn(
+          "flex flex-col items-stretch space-y-0 border-b",
+          (size === 'small' || size === 'small-long')
+            ? "p-2" 
+            : "p-4 sm:p-6"
+        )}
+      >
+        <div className="flex items-center justify-between">
+          <CardTitle 
+            className={cn(
+              "line-clamp-1",
+              (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
+            )}
+          >
+            Equity Curve
+          </CardTitle>
+          {!(size === 'small' || size === 'small-long') && (
+            <div className="flex">
+              {["daily", "per-trade"].map((key) => (
+                <button
+                  key={key}
+                  data-active={showDailyPnL === (key==="daily")}
+                  className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-4 py-2 text-left even:border-l data-[active=true]:bg-muted/50 sm:border-l sm:border-t-0 sm:px-6 sm:py-4"
+                  onClick={() => setShowDailyPnL(key==="daily")}
+                >
+                  <span className="text-xs text-muted-foreground">
+                    {key==="daily" ? "Daily PnL" : "Per-trade PnL"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="flex">
-          {["daily", "per-trade"].map((key) => {
-            return (
-              <button
-                key={key}
-                data-active={showDailyPnL === (key==="daily")}
-                className="relative z-30 flex flex-1 flex-col justify-center gap-1 border-t px-6 py-4 text-left even:border-l data-[active=true]:bg-muted/50 sm:border-l sm:border-t-0 sm:px-8 sm:py-6"
-                onClick={() => setShowDailyPnL(key==="daily")}
-              >
-                <span className="text-xs text-muted-foreground">
-                  {key==="daily" ? "Daily PnL" : "Per-trade PnL"}
-                </span>
-              </button>
-            )
-          })}
-        </div>
+        <CardDescription 
+          className={cn(
+            (size === 'small' || size === 'small-long') ? "hidden" : "text-xs sm:text-sm"
+          )}
+        >
+          Showing cumulative profit and loss over time
+        </CardDescription>
       </CardHeader>
-      <CardContent className="px-2 sm:p-6">
+      <CardContent 
+        className={cn(
+          (size === 'small' || size === 'small-long') ? "p-1" : "p-2 sm:p-6"
+        )}
+      >
         <ChartContainer
           config={chartConfig}
-          className="aspect-auto h-[250px] w-full"
+          className={cn(
+            "w-full",
+            getChartHeight(),
+            (size === 'small' || size === 'small-long')
+              ? "aspect-[3/2]" 
+              : "aspect-[4/3] sm:aspect-[16/9]"
+          )}
         >
           {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
+                margin={
+                  (size === 'small' || size === 'small-long')
+                    ? { left: 10, right: 4, top: 4, bottom: 0 }
+                    : { left: 16, right: 8, top: 8, bottom: 0 }
+                }
               >
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  opacity={(size === 'small' || size === 'small-long') ? 0.5 : 1}
+                />
                 <XAxis
                   dataKey="date"
                   tickLine={false}
                   axisLine={false}
-                  tickMargin={8}
-                  minTickGap={32}
+                  tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
+                  minTickGap={(size === 'small' || size === 'small-long') ? 16 : 32}
+                  tick={{ fontSize: (size === 'small' || size === 'small-long') ? 10 : 12 }}
                   tickFormatter={(value) => {
                     const date = safeParseDate(value)
-                    return date ? format(date, 'MMM dd') : ''
+                    return date ? format(date, (size === 'small' || size === 'small-long') ? 'MM/dd' : 'MMM dd') : ''
                   }}
                 />
                 <YAxis
-                  tickFormatter={(value) => `$${value.toLocaleString()}`}
+                  tickFormatter={(value) => {
+                    if (size === 'small' || size === 'small-long') {
+                      return value >= 1000 
+                        ? `$${(value / 1000).toFixed(0)}k` 
+                        : `$${value}`
+                    }
+                    return `$${value.toLocaleString()}`
+                  }}
                   domain={['auto', 'auto']}
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
+                  tick={{ fontSize: (size === 'small' || size === 'small-long') ? 10 : 12 }}
+                  width={(size === 'small' || size === 'small-long') ? 35 : 45}
                 />
-                <ChartTooltip content={<CustomTooltip />} />
+                <ChartTooltip 
+                  content={<CustomTooltip />}
+                  wrapperStyle={{ 
+                    fontSize: (size === 'small' || size === 'small-long') ? '10px' : '12px'
+                  }}
+                />
                 <Line
                   type="monotone"
                   dataKey="equity"
                   name="Equity"
                   stroke={`var(--color-equity)`}
                   dot={false}
+                  strokeWidth={(size === 'small' || size === 'small-long') ? 1.5 : 2}
                 />
               </LineChart>
+            </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-muted-foreground">No data available</p>
+              <p className={cn(
+                "text-muted-foreground",
+                (size === 'small' || size === 'small-long') ? "text-xs" : "text-sm"
+              )}>
+                No data available
+              </p>
             </div>
           )}
         </ChartContainer>

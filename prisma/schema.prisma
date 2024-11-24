@@ -67,13 +67,14 @@ model Notification {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  auth_user_id  String         @unique
-  notifications Notification[]
-  subscriptions Subscription?
-  accounts      Account[]
-  
+  id              String           @id @default(cuid())
+  email           String           @unique
+  auth_user_id    String           @unique
+  notifications   Notification[]
+  subscriptions   Subscription?
+  accounts        Account[]
+  dashboardLayout DashboardLayout?
+
   @@index([email])
   @@schema("public")
 }
@@ -107,5 +108,18 @@ model Payout {
   status        String    @default("PENDING")
   
   @@index([accountNumber])
+  @@schema("public")
+}
+
+model DashboardLayout {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [auth_user_id])
+  desktop   Json     @default("[]")
+  mobile    Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
   @@schema("public")
 }

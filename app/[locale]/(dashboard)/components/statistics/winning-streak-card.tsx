@@ -1,7 +1,10 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Award } from "lucide-react"
+import { useTradeStatistics } from "@/components/context/trades-data"
 
-export default function WinningStreakCard({ winningStreak }: { winningStreak: number }) {
+export default function WinningStreakCard() {
+  const { statistics: { winningStreak } } = useTradeStatistics()
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

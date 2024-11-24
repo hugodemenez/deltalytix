@@ -9,7 +9,7 @@ export function CalendarSection() {
 
   return (
     <section id="calendar" className="mb-10">
-      <CalendarPnl calendarData={calendarData} />
+      <CalendarPnl  />
     </section>
   )
 }

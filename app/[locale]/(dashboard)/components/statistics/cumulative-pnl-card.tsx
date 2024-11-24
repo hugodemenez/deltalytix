@@ -1,7 +1,10 @@
+import { useTradeStatistics } from "@/components/context/trades-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { PiggyBank } from "lucide-react"
 
-export default function CumulativePnlCard({ cumulativePnl, cumulativeFees }: { cumulativePnl: number, cumulativeFees: number }) {
+export default function CumulativePnlCard() {
+  const { statistics: { cumulativePnl, cumulativeFees } } = useTradeStatistics()
+
   return (
     <Card className="">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
