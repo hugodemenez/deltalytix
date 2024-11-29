@@ -504,9 +504,11 @@ export default function ImportButton() {
                 Back
               </Button>
             )}
-            <Button onClick={handleNextStep}>
-              {isSaving ? "Saving..." : (step === 4 || (step === 3 && importType === 'rithmic-orders') ? "Save" : "Next")}
-            </Button>
+            {!(step === 0 && importType === 'rithmic-sync') && (
+              <Button onClick={handleNextStep}>
+                {isSaving ? "Saving..." : (step === 4 || (step === 3 && importType === 'rithmic-orders') ? "Save" : "Next")}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
