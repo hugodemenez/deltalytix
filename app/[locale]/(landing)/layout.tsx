@@ -6,6 +6,23 @@ import Footer from "@/components/footer";
 import { ThemeProvider } from "@/components/context/theme-provider";
 import { I18nProviderClient } from "@/locales/client";
 
+import { Metadata } from 'next';
+
+type Locale = 'en' | 'fr';
+
+export async function generateMetadata({ params }: { params: { locale: Locale } }): Promise<Metadata> {
+  const descriptions: Record<Locale, string> = {
+    en: 'Centralize and visualize your trading performance across multiple brokers. Track, analyze, and improve your trading journey with powerful analytics.',
+    fr: 'Centralisez et visualisez vos performances de trading à travers différents brokers. Suivez, analysez et améliorez votre parcours de trading avec des analyses puissantes.',
+  };
+
+  const description = descriptions[params.locale] || descriptions.en;
+
+  return {
+    title: 'Deltalytix',
+    description,
+  };
+}
 
 export default async function RootLayout({
   children,

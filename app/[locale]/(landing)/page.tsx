@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/locales/client'
 import { useUser } from '@/components/context/user-data'
 
+
 export default function LandingPage() {
     const t = useI18n()
     const { theme, effectiveTheme } = useTheme();

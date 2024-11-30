@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://deltalytix.app'), 
   openGraph: {
     title: "Deltalytix",
-    description: "Next generation trading dashboard",
+    description: "Deltalytix is a next generation trading dashboard that provides real-time insights and analytics for traders.",
     images: [
       {
         url: '/opengraph-image.png',
