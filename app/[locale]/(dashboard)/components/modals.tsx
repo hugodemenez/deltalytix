@@ -44,10 +44,6 @@ export default function Modals() {
 
 
   const checkSubscription = useCallback(async () => {
-    if (user?.email === "rapi@rithmic.com") {
-      setIsPaywallOpen(false)
-      return
-    }
     if (user?.email) {
       const isSubscribed = await getIsSubscribed(user.email);
       setIsPaywallOpen(!isSubscribed);
