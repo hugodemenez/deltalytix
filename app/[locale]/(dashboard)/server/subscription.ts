@@ -3,11 +3,11 @@
 import { PrismaClient } from "@prisma/client"
 
 export async function getIsSubscribed(email: string) {
-    const prisma = new PrismaClient()
-    
     if (email.endsWith('@rithmic.com')) {
       return true
     }
+    const prisma = new PrismaClient()
+    
     try {
         const subscription = await prisma.subscription.findUnique({
             where: { email }
