@@ -9,6 +9,7 @@ export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradez
 interface ImportTypeSelectionProps {
   selectedType: ImportType
   setSelectedType: React.Dispatch<React.SetStateAction<ImportType>>
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 const videoUrls: Record<ImportType, { url: string, details: string }> = {
@@ -49,7 +50,7 @@ const videoUrls: Record<ImportType, { url: string, details: string }> = {
 
 const importTypes: ImportType[] = ['', 'rithmic-sync', 'rithmic-performance', 'rithmic-orders', 'tradezella', 'tradovate', 'ninjatrader-performance', 'quantower']
 
-export default function ImportTypeSelection({ selectedType, setSelectedType }: ImportTypeSelectionProps) {
+export default function ImportTypeSelection({ selectedType, setSelectedType, setIsOpen }: ImportTypeSelectionProps) {
   const videoRefs = useRef<Record<ImportType, HTMLVideoElement | null>>({
     '': null,
     'rithmic-performance': null,
@@ -117,6 +118,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType }: I
                 <>
                   <h2 className="text-2xl font-bold">Rithmic Account Login</h2>
                   <RithmicSync 
+                    setIsOpen={setIsOpen}
                     onSync={async (data) => {
                       // Implement sync logic here
                       console.log('Syncing with Rithmic:', data)

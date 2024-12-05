@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/(dashboard)/types/dashboard'
 
 export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfTradesAdded: number }> {
+    console.log('saveTrades', data)
     const prisma = new PrismaClient()
     let count = 0
     try{

@@ -20,6 +20,7 @@ import ColumnMapping from './column-mapping'
 import TradezellaProcessor from './tradezella-processor'
 import NinjaTraderPerformanceProcessor from './ninjatrader-performance-processor'
 import QuantowerOrderProcessor from './quantower-processor'
+import { RithmicSync } from './rithmic-sync'
 
 type ColumnConfig = {
   [key: string]: {
@@ -270,8 +271,6 @@ export default function ImportButton() {
       setMappings({})
       setAccountNumber('')
       setNewAccountNumber('')
-      // Update trades
-      refreshTrades()
 
     } catch (error) {
       console.error('Error saving trades:', error)
@@ -338,6 +337,9 @@ export default function ImportButton() {
         case 'ninjatrader-performance':
           handleSave()
           break
+        case 'rithmic-sync':
+          handleSave()
+          break
         default:
           if (!isRequiredFieldsMapped()) {
             const missingFields = getMissingRequiredFields()
@@ -378,7 +380,7 @@ export default function ImportButton() {
   const renderStep = () => {
     switch (step) {
       case 0:
-        return <ImportTypeSelection selectedType={importType} setSelectedType={setImportType} />
+        return <ImportTypeSelection selectedType={importType} setSelectedType={setImportType} setIsOpen={setIsOpen} />
       case 1:
         return <FileUpload
           importType={importType}
@@ -482,7 +484,7 @@ export default function ImportButton() {
   return (
     <div>
       <Button onClick={() => setIsOpen(true)} className='w-full'>
-        <UploadIcon className="sm:mr-2 h-4 w-4" /> <span className='hidden md:block'>Import CSV</span>
+        <UploadIcon className="sm:mr-2 h-4 w-4" /> <span className='hidden md:block'>Import Trades</span>
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">
