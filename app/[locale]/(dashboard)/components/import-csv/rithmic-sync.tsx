@@ -89,15 +89,6 @@ const generateTradeHash = (
 export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
   const { user } = useUser()
   const { refreshTrades } = useTrades()
-  
-  if (!user) {
-    return (
-      <div className="p-4 text-center">
-        <p>Please log in to sync your Rithmic account.</p>
-      </div>
-    )
-  }
-
   const [isLoading, setIsLoading] = useState(false)
   const [trades, setTrades] = useState<Trade[]>([])
   const [tickDetails, setTickDetails] = useState<TickDetails[]>([])
@@ -277,6 +268,14 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
     await refreshTrades()
     return processedTrades
   }, [tickDetails, user])
+
+  if (!user) {
+    return (
+      <div className="p-4 text-center">
+        <p>Please log in to sync your Rithmic account.</p>
+      </div>
+    )
+  }
 
   async function handleSync(event: React.FormEvent) {
     event.preventDefault()
