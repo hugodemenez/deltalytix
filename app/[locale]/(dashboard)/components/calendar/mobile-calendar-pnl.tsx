@@ -9,6 +9,18 @@ import { cn } from "@/lib/utils"
 import { CalendarModal } from "./new-modal"
 import { CalendarData } from "@/types/calendar"
 import { Card } from "@/components/ui/card"
+
+function formatCurrency(value: number): string {
+  const absValue = Math.abs(value);
+  if (absValue >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M`;
+  }
+  if (absValue >= 1000) {
+    return `${(value / 1000).toFixed(1)}K`;
+  }
+  return value.toFixed(0);
+}
+
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -42,9 +54,17 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
   const maxPnl = getMaxPnl()
 
   return (
-    <Card className="space-y-4 p-4">
+    <Card className="space-y-4 p-4 h-full">
       <div className="flex justify-between items-center">
-        <h2 className="text-4xl font-bold">{format(currentDate, 'MMMM')}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-2xl font-bold">{format(currentDate, 'MMMM')}</h2>
+          <span className={cn(
+            "text-xl font-semibold",
+            monthlyTotal >= 0 ? "text-green-500" : "text-red-500"
+          )}>
+            ${formatCurrency(monthlyTotal)}
+          </span>
+        </div>
         <div className="flex items-center space-x-2">
           <Button variant="ghost" size="icon" onClick={handlePrevMonth}>
             <ChevronLeft className="h-6 w-6" />
@@ -92,12 +112,6 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
             </div>
           )
         })}
-      </div>
-      <div className={cn(
-        "text-2xl font-bold text-center",
-        monthlyTotal >= 0 ? "text-green-500" : "text-red-500"
-      )}>
-        ${monthlyTotal.toFixed(2)}
       </div>
       <CalendarModal
         isOpen={selectedDate !== null}
