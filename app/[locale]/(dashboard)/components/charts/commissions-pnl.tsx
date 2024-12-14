@@ -165,7 +165,6 @@ export default function CommissionsPnLChart({ size = 'medium' }: CommissionsPnLC
               : "aspect-[4/3] sm:aspect-[16/9]"
           )}
         >
-          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
@@ -192,7 +191,6 @@ export default function CommissionsPnLChart({ size = 'medium' }: CommissionsPnLC
               />
               {!(size === 'small' || size === 'small-long') && <Legend />}
             </PieChart>
-          </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
     </Card>

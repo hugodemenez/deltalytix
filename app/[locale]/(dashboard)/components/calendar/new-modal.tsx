@@ -43,7 +43,7 @@ export function CalendarModal({
   dayData,
   isLoading,
 }: CalendarModalProps) {
-  const [activeTab, setActiveTab] = useState("charts")
+  const [activeTab, setActiveTab] = useState("table")
 
   if (!selectedDate) return null;
 
@@ -60,16 +60,10 @@ export function CalendarModal({
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
           <TabsList className="px-6">
-            <TabsTrigger value="reflection">Reflection</TabsTrigger>
-            <TabsTrigger value="charts">Charts</TabsTrigger>
             <TabsTrigger value="table">Table</TabsTrigger>
+            <TabsTrigger value="charts">Charts</TabsTrigger>
+            <TabsTrigger value="reflection">Reflection</TabsTrigger>
           </TabsList>
-          <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
-            {/* <Chat dayData={dayData} dateString={dateString}></Chat> */}
-          </TabsContent>
-          <TabsContent value="charts" className="flex-grow overflow-auto p-6 pt-2">
-            <Charts dayData={dayData} />
-          </TabsContent>
           <TabsContent value="table" className="flex-grow overflow-auto p-6 pt-2">
             <ScrollArea className="h-full">
               {dayData && dayData.trades?.length > 0 ? (
@@ -82,6 +76,7 @@ export function CalendarModal({
                           <TableRow>
                             <TableHead className="sticky top-0 bg-background z-10">Instrument</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">Side</TableHead>
+                            <TableHead className="sticky top-0 bg-background z-10">Quantity</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">PnL</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">Commission</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">Time in Position</TableHead>
@@ -92,6 +87,7 @@ export function CalendarModal({
                             <TableRow key={trade.id}>
                               <TableCell>{trade.instrument}</TableCell>
                               <TableCell>{trade.side}</TableCell>
+                              <TableCell>{trade.quantity}</TableCell>
                               <TableCell className={cn(
                                 trade.pnl >= 0
                                   ? "text-green-600 dark:text-green-400"
@@ -104,7 +100,7 @@ export function CalendarModal({
                             </TableRow>
                           ))}
                           <TableRow className="font-medium">
-                            <TableCell colSpan={2}>Total</TableCell>
+                            <TableCell colSpan={3}>Total</TableCell>
                             <TableCell className={cn(
                               trades.reduce((sum, trade) => sum + trade.pnl, 0) >= 0
                                 ? "text-green-600 dark:text-green-400"
@@ -126,6 +122,13 @@ export function CalendarModal({
                 <p>No trades for this day.</p>
               )}
             </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
+            {/* <Chat dayData={dayData} dateString={dateString}></Chat> */}
+          </TabsContent>
+          <TabsContent value="charts" className="flex-grow overflow-auto p-6 pt-2">
+            <Charts dayData={dayData} />
           </TabsContent>
         </Tabs>
       </DialogContent>

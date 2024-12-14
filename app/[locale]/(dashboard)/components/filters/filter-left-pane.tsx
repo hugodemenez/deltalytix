@@ -180,9 +180,8 @@ export default function FilterLeftPane() {
   }, [showAccountNumbers])
 
   const FilterContent = useMemo(() => (
-    <div className='space-y-4'>
-      <h2 className="text-lg font-semibold mb-4" id="filter-heading">Filters</h2>
-      <div className="mb-4 flex items-center justify-between">
+    <div className='space-y-6'>
+      <div className="flex items-center justify-between">
         <Label htmlFor="anonymous-mode" className="text-sm font-medium">
           Show Account Numbers
         </Label>
@@ -193,18 +192,19 @@ export default function FilterLeftPane() {
         />
       </div>
       <DateCalendarFilter />
-      <Command className="rounded-lg border" shouldFilter={false}>
-        <CommandInput
-          placeholder="Search filters..."
-          value={searchTerm}
-          onValueChange={setSearchTerm}
-          className={isMobile ? "text-lg" : ""}
-        />
-        <CommandList className='max-h-[620px]'>
+      <Command className="rounded-lg border min-h-[calc(100vh-20rem)]" shouldFilter={false}>
+        <div className="border-b">
+          <CommandInput
+            placeholder="Search..."
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            className={`${isMobile ? "text-lg" : ""}`}
+          />
+        </div>
+        <CommandList className="min-h-[calc(100vh-20rem)]">
           <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup>
+          <CommandGroup className="divide-y">
             <FilterSection 
-              title="Accounts" 
               items={allItems.filter(item => item.type === 'account')}
               type="account"
               searchTerm={searchTerm}
@@ -215,7 +215,6 @@ export default function FilterLeftPane() {
               anonymizeAccount={anonymizeAccount}
             />
             <FilterSection 
-              title="Propfirms" 
               items={allItems.filter(item => item.type === 'propfirm')}
               type="propfirm"
               searchTerm={searchTerm}
@@ -226,7 +225,6 @@ export default function FilterLeftPane() {
               anonymizeAccount={anonymizeAccount}
             />
             <FilterSection 
-              title="Instruments" 
               items={allItems.filter(item => item.type === 'instrument')}
               type="instrument"
               searchTerm={searchTerm}
@@ -264,7 +262,7 @@ export default function FilterLeftPane() {
   return (
     <div 
       ref={filterRef}
-      className="fixed top-18 left-0 h-[calc(100vh-4.5rem)] w-[300px] border-r"
+      className="fixed top-18 left-0 h-[calc(100vh-4.5rem)] w-[300px] bg-background border-r border-border/40"
     >
       <ScrollArea className="h-full px-4 py-6">
         {FilterContent}

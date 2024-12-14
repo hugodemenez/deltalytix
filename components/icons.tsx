@@ -162,4 +162,54 @@ export const Icons = {
     </svg>
 
   ),
+  envelope: (props: IconProps) => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <rect width="20" height="16" x="2" y="4" rx="2" />
+      <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+    </svg>
+  ),
+  gmail: (props: IconProps) => (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="currentColor"
+      {...props}
+    >
+      <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/>
+    </svg>
+  ),
+  outlook: (props: IconProps) => (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="currentColor"
+      {...props}
+    >
+      <path d="M7.88 12.04q0 .45-.11.87-.1.41-.33.74-.22.33-.58.52-.37.2-.87.2t-.85-.2q-.35-.21-.57-.55-.22-.33-.33-.75-.1-.42-.1-.86t.1-.87q.1-.41.33-.74.22-.33.57-.52.35-.2.85-.2t.87.2q.36.21.58.55.22.33.33.75.1.42.1.86zM24 12v9.38q0 .46-.33.8-.33.32-.8.32H7.13q-.46 0-.8-.33-.32-.33-.32-.8V18h1.33v3.33h16V12h1.33zm-3.33-1.33h-16v-8q0-.46.32-.8.33-.32.8-.32h16q.46 0 .8.33.33.33.33.8v8z"/>
+    </svg>
+  ),
+  proton: (props: IconProps) => (
+    <svg
+      viewBox="0 0 24 24"
+      width="24"
+      height="24"
+      fill="currentColor"
+      {...props}
+    >
+      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.5 13.5h-9v-2h9v2zm0-3.5h-9v-2h9v2zm-7.298-4.5a1.198 1.198 0 1 1 0-2.396 1.198 1.198 0 0 1 0 2.396zm5.596 0a1.198 1.198 0 1 1 0-2.396 1.198 1.198 0 0 1 0 2.396z"/>
+    </svg>
+  ),
 }

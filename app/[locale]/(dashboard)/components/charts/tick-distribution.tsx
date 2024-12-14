@@ -7,7 +7,7 @@ import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { useFormattedTrades } from "@/components/context/trades-data"
 import { TickDetails, Trade } from "@prisma/client"
 import { useCallback, useEffect, useState } from "react"
-import { getTickDetails } from "../../server/tick-details"
+import { getTickDetails } from "../../../../../server/tick-details"
 import { cn } from "@/lib/utils"
 
 interface ContractSpec {
@@ -165,7 +165,6 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
               : "aspect-[4/3] sm:aspect-[16/9]"
           )}
         >
-          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={
@@ -209,7 +208,6 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
                 className="transition-all duration-300 ease-in-out"
               />
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
     </Card>

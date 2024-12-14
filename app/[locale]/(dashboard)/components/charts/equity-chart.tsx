@@ -197,7 +197,6 @@ export default function EnhancedEquityChart({ size = 'medium' }: EquityChartProp
           )}
         >
           {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={chartData}
                 margin={
@@ -253,7 +252,6 @@ export default function EnhancedEquityChart({ size = 'medium' }: EquityChartProp
                   strokeWidth={(size === 'small' || size === 'small-long') ? 1.5 : 2}
                 />
               </LineChart>
-            </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center">
               <p className={cn(

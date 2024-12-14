@@ -33,4 +33,7 @@ export interface TranslationKeys {
   'updates.inProgress': string;
   'updates.upcoming': string;
   'updates.completed': string;
+  'auth.openMailbox': string;
+  'auth.resendEmail': string;
+  'auth.resendIn': string;
 }

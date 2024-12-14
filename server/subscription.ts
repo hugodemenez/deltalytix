@@ -2,6 +2,14 @@
 
 import { PrismaClient } from "@prisma/client"
 
+interface SubscriptionInfo {
+    isActive: boolean;
+    plan: string | null;
+    status: string;
+    endDate: Date | null;
+    trialEndsAt: Date | null;
+}
+
 export async function getIsSubscribed(email: string) {
     if (email.endsWith('@rithmic.com')) {
       return true
@@ -20,9 +28,9 @@ export async function getIsSubscribed(email: string) {
         // Check if subscription is active based on status and dates
         const isActive = 
             // Must have ACTIVE or TRIAL status
-            (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL') &&
+            (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL') ||
             // If there's an endDate, it must be in the future
-            (!subscription.endDate || subscription.endDate > now) &&
+            (!subscription.endDate || subscription.endDate > now) ||
             // If there's a trial end date, it must be in the future
             (!subscription.trialEndsAt || subscription.trialEndsAt > now)
 
@@ -37,7 +45,7 @@ export async function getIsSubscribed(email: string) {
 }
 
 // Optional: You might want to get more detailed subscription info
-export async function getSubscriptionDetails(email: string) {
+export async function getSubscriptionDetails(email: string): Promise<SubscriptionInfo | null> {
     const prisma = new PrismaClient()
     
     try {
@@ -48,11 +56,12 @@ export async function getSubscriptionDetails(email: string) {
         if (!subscription) return null
 
         const now = new Date()
+        const isActive = (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL') &&
+                        (!subscription.endDate || subscription.endDate > now) &&
+                        (!subscription.trialEndsAt || subscription.trialEndsAt > now)
         
         return {
-            isActive: (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL') &&
-                     (!subscription.endDate || subscription.endDate > now) &&
-                     (!subscription.trialEndsAt || subscription.trialEndsAt > now),
+            isActive,
             plan: subscription.plan,
             status: subscription.status,
             endDate: subscription.endDate,

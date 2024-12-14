@@ -64,14 +64,16 @@ export async function POST(req: Request) {
             update: {
               plan: data.metadata?.plan as string,
               endDate: new Date(subscription.current_period_end * 1000),
-              status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE'
+              status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
+              trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null
             },
             create: {
               email: data.customer_details?.email as string,
               plan: data.metadata?.plan as string,
               user: { connect: { id: user?.id } },
               endDate: new Date(subscription.current_period_end * 1000),
-              status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE'
+              status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
+              trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null
             }
           });
 
@@ -117,15 +119,46 @@ export async function POST(req: Request) {
             data.customer as string
           ) as Stripe.Customer;
           
-          if (updatedCustomerData.email && data.cancel_at_period_end) {
-            await prisma.subscription.update({
-              where: { email: updatedCustomerData.email },
-              data: {
-                status: "SCHEDULED_CANCELLATION",
-                endDate: new Date(data.current_period_end * 1000)
+          if (updatedCustomerData.email) {
+            if (data.cancel_at_period_end) {
+              // Update subscription status first
+              await prisma.subscription.update({
+                where: { email: updatedCustomerData.email },
+                data: {
+                  status: "SCHEDULED_CANCELLATION",
+                  endDate: new Date(data.current_period_end * 1000)
+                }
+              });
+
+              // Then try to save feedback if it exists and has meaningful content
+              const cancellationDetails = data.cancellation_details as Stripe.Subscription.CancellationDetails | null;
+              
+              if ((cancellationDetails?.reason && cancellationDetails.reason !== 'cancellation_requested') || 
+                  cancellationDetails?.feedback || 
+                  cancellationDetails?.comment) {
+                await prisma.subscriptionFeedback.create({
+                  data: {
+                    email: updatedCustomerData.email,
+                    event: "SCHEDULED_CANCELLATION",
+                    cancellationReason: cancellationDetails.feedback || null,
+                    feedback: cancellationDetails.comment || null
+                  }
+                });
               }
-            });
-            console.log(`Subscription scheduled for cancellation: ${data.id}`);
+
+              console.log(`Subscription scheduled for cancellation: ${data.id}`);
+            } else {
+              await prisma.subscription.update({
+                where: { email: updatedCustomerData.email },
+                data: {
+                  status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
+                  plan: data.metadata?.plan as string,
+                  endDate: new Date(data.current_period_end * 1000),
+                  trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
+                }
+              });
+              console.log(`Subscription updated: ${data.id}`);
+            }
           }
           break;
         default:

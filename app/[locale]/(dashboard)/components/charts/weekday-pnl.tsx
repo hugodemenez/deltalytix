@@ -183,7 +183,6 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
               : "aspect-[4/3] sm:aspect-[16/9]"
           )}
         >
-          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={weekdayData}
               margin={
@@ -244,7 +243,6 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
     </Card>

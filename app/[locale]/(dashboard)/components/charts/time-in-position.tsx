@@ -138,7 +138,6 @@ export default function TimeInPositionChart({ size = 'medium' }: TimeInPositionC
               : "aspect-[4/3] sm:aspect-[16/9]"
           )}
         >
-          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={
@@ -197,7 +196,6 @@ export default function TimeInPositionChart({ size = 'medium' }: TimeInPositionC
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
     </Card>

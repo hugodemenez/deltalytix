@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -14,7 +13,6 @@ import { useForm } from "react-hook-form"
 import {
     Form,
     FormControl,
-    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -26,13 +24,19 @@ const formSchema = z.object({
     email: z.string().email(),
 })
 
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> { }
+interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
+
+// Add a type for auth method
+type AuthMethod = 'email' | 'discord' | null
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [isLoading, setIsLoading] = React.useState<boolean>(false)
-
+    const [isEmailSent, setIsEmailSent] = React.useState<boolean>(false)
+    const [countdown, setCountdown] = React.useState<number>(0)
     const [isSubscription, setIsSubscription] = React.useState<boolean>(false)
     const [lookupKey, setLookupKey] = React.useState<string | null>(null)
+    // Add state for tracking auth method
+    const [authMethod, setAuthMethod] = React.useState<AuthMethod>(null)
     const t = useI18n()
 
     React.useEffect(() => {
@@ -43,31 +47,87 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setLookupKey(lookup_key)
     }, [])
 
+    React.useEffect(() => {
+        if (countdown > 0) {
+            const timer = setTimeout(() => setCountdown(countdown - 1), 1000)
+            return () => clearTimeout(timer)
+        }
+    }, [countdown])
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             email: "",
         },
     })
+
     async function onSubmitEmail(values: z.infer<typeof formSchema>) {
+        if (countdown > 0) return
+        
         setIsLoading(true)
-
-        await signInWithEmail(values.email, isSubscription ? `stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
-
-        setTimeout(() => {
+        setAuthMethod('email')
+        try {
+            await signInWithEmail(values.email, isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
+            setIsEmailSent(true)
+            setCountdown(15)
+        } catch (error) {
+            console.error(error)
+            setAuthMethod(null)
+        } finally {
             setIsLoading(false)
-        }, 3000)
+        }
     }
 
     async function onSubmitDiscord(event: React.SyntheticEvent) {
         event.preventDefault()
         setIsLoading(true)
+        setAuthMethod('discord')
 
-        await signInWithDiscord(isSubscription ? `stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
-
-        setTimeout(() => {
+        try {
+            await signInWithDiscord(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
+        } catch (error) {
+            console.error(error)
+            setAuthMethod(null)
             setIsLoading(false)
-        }, 3000)
+        }
+    }
+
+    function openMailClient() {
+        const email = form.getValues('email')
+        const domain = email.split('@')[1]?.toLowerCase()
+
+        if (domain?.includes('gmail.com')) {
+            window.open('https://mail.google.com', '_blank')
+        } else if (
+            domain?.includes('outlook.com') || 
+            domain?.includes('hotmail.com') || 
+            domain?.includes('live.com') ||
+            domain?.includes('msn.com') ||
+            domain?.includes('office365.com')
+        ) {
+            window.open('https://outlook.live.com', '_blank')
+        } else if (
+            domain?.includes('proton.me') || 
+            domain?.includes('protonmail.com') || 
+            domain?.includes('pm.me')
+        ) {
+            window.open('https://mail.proton.me', '_blank')
+        } else if (
+            domain?.includes('icloud.com') || 
+            domain?.includes('me.com') || 
+            domain?.includes('mac.com')
+        ) {
+            window.open('https://www.icloud.com/mail', '_blank')
+        } else if (domain?.includes('yahoo.com')) {
+            window.open('https://mail.yahoo.com', '_blank')
+        } else if (domain?.includes('aol.com')) {
+            window.open('https://mail.aol.com', '_blank')
+        } else if (domain?.includes('zoho.com')) {
+            window.open('https://mail.zoho.com', '_blank')
+        } else {
+            // Default to mailto: for unknown domains
+            window.location.href = `mailto:${email}`
+        }
     }
 
     return (
@@ -88,7 +148,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                                         autoCapitalize="none"
                                         autoComplete="email"
                                         autoCorrect="off"
-                                        disabled={isLoading}
+                                        disabled={isLoading || isEmailSent || authMethod === 'discord'}
                                         {...field}
                                     />
                                 </FormControl>
@@ -96,14 +156,42 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                             </FormItem>
                         )}
                     />
-                    <Button disabled={isLoading}
-                        type="submit"
-                    >
-                        {isLoading && (
-                            <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                        )}
-                        {t('auth.signInWithEmail')}
-                    </Button>
+                    {!isEmailSent ? (
+                        <Button 
+                            disabled={isLoading || countdown > 0 || authMethod === 'discord'}
+                            type="submit"
+                        >
+                            {isLoading && authMethod === 'email' && (
+                                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            {t('auth.signInWithEmail')}
+                        </Button>
+                    ) : (
+                        <div className="space-y-2">
+                            <Button 
+                                type="button" 
+                                variant="outline" 
+                                className="w-full"
+                                onClick={openMailClient}
+                                disabled={authMethod === 'discord'}
+                            >
+                                <Icons.envelope className="mr-2 h-4 w-4" />
+                                {t('auth.openMailbox')}
+                            </Button>
+                            <Button
+                                type="submit"
+                                variant="ghost"
+                                className="w-full"
+                                disabled={countdown > 0 || authMethod === 'discord'}
+                            >
+                                {countdown > 0 ? (
+                                    `${t('auth.resendIn')} ${countdown}s`
+                                ) : (
+                                    t('auth.resendEmail')
+                                )}
+                            </Button>
+                        </div>
+                    )}
                 </form>
             </Form>
 
@@ -117,8 +205,13 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                     </span>
                 </div>
             </div>
-            <Button variant="outline" type="button" disabled={isLoading} onClick={onSubmitDiscord}>
-                {isLoading ? (
+            <Button 
+                variant="outline" 
+                type="button" 
+                disabled={isLoading || authMethod === 'email'} 
+                onClick={onSubmitDiscord}
+            >
+                {isLoading && authMethod === 'discord' ? (
                     <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                     <Icons.discord className="mr-2 h-4 w-4" />

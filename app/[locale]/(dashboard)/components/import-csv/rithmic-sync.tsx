@@ -7,9 +7,9 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from '@/hooks/use-toast'
-import { Loader2 } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { TickDetails, Trade } from '@prisma/client'
-import { getTickDetails } from '../../server/tick-details'
+import { getTickDetails } from '../../../../../server/tick-details'
 import { saveTrades } from '@/server/database'
 import { useUser } from '@/components/context/user-data'
 import { useTrades } from '@/components/context/trades-data'
@@ -113,148 +113,161 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
     }
 
     const processedTrades: Trade[] = []
-    const openPositions: { [key: string]: OpenPosition } = {}
     const incompleteTradesArray: OpenPosition[] = []
 
-    // Sort orders by timestamp
-    const sortedOrders = [...orders].sort((a, b) => a.timestamp - b.timestamp)
-
-    sortedOrders.forEach((rithmicOrder) => {
-      const symbol = rithmicOrder.ticker
-      const quantity = rithmicOrder.filled_quantity
-      const price = rithmicOrder.price
-      const side = rithmicOrder.buy_sell_type
-      const timestamp = new Date(rithmicOrder.timestamp * 1000).toISOString()
-      const orderCommission = quantity * 1.5 // Default commission rate
-      const orderId = rithmicOrder.order_id
-
-      const order: Order = {
-        quantity,
-        price,
-        commission: orderCommission,
-        timestamp,
-        orderId
+    // Group orders by account_id
+    const ordersByAccount = orders.reduce((acc, order) => {
+      if (!acc[order.account_id]) {
+        acc[order.account_id] = []
       }
+      acc[order.account_id].push(order)
+      return acc
+    }, {} as Record<string, RithmicOrder[]>)
 
-      const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || 
-        { tickSize: 1/64, tickValue: 15.625 }
+    // Process each account's orders separately
+    for (const accountId of Object.keys(ordersByAccount)) {
+      const openPositions: { [key: string]: OpenPosition } = {}
+      
+      // Sort orders by timestamp and filter out unfilled orders
+      const sortedOrders = ordersByAccount[accountId]
+        .filter(order => order.filled_quantity > 0)
+        .sort((a, b) => a.timestamp - b.timestamp)
 
-      if (openPositions[symbol]) {
-        const openPosition = openPositions[symbol]
-        
-        if ((side === 'B' && openPosition.side === 'Short') || 
-            (side === 'S' && openPosition.side === 'Long')) {
-          // Close or reduce position
-          openPosition.exitOrders.push(order)
-          openPosition.quantity -= quantity
-          openPosition.totalCommission += orderCommission
+      sortedOrders.forEach((rithmicOrder) => {
+        const symbol = rithmicOrder.ticker
+        const quantity = rithmicOrder.filled_quantity
+        const price = rithmicOrder.price
+        const side = rithmicOrder.buy_sell_type
+        const timestamp = new Date(rithmicOrder.timestamp * 1000).toISOString()
+        const orderCommission = quantity * 1.5 // Default commission rate
+        const orderId = rithmicOrder.order_id
 
-          if (openPosition.quantity <= 0) {
-            // Calculate PnL
-            const totalEntryQuantity = openPosition.entryOrders.reduce((sum, o) => sum + o.quantity, 0)
-            const totalExitQuantity = openPosition.exitOrders.reduce((sum, o) => sum + o.quantity, 0)
-            const avgEntryPrice = openPosition.entryOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / totalEntryQuantity
-            const avgExitPrice = openPosition.exitOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / totalExitQuantity
-            
-            const priceDifference = avgExitPrice - avgEntryPrice
-            const ticks = priceDifference / contractSpec.tickSize
-            const pnl = openPosition.side === 'Long' ? 
-              ticks * contractSpec.tickValue * openPosition.originalQuantity :
-              -ticks * contractSpec.tickValue * openPosition.originalQuantity
+        const order: Order = {
+          quantity,
+          price,
+          commission: orderCommission,
+          timestamp,
+          orderId
+        }
 
-            const entryId = openPosition.entryOrders.map(o => o.orderId).join('-')
-            const closeId = openPosition.exitOrders.map(o => o.orderId).join('-')
-            const timeInPosition = (new Date(timestamp).getTime() - new Date(openPosition.entryDate).getTime()) / 1000
+        const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || 
+          { tickSize: 1/64, tickValue: 15.625 }
 
-            const trade: Trade = {
-              id: generateTradeHash(
-                user.id,
-                openPosition.accountNumber,
-                symbol,
-                openPosition.entryDate,
-                timestamp,
-                openPosition.originalQuantity,
+        if (openPositions[symbol]) {
+          const openPosition = openPositions[symbol]
+          
+          if ((side === 'B' && openPosition.side === 'Short') || 
+              (side === 'S' && openPosition.side === 'Long')) {
+            // Close or reduce position
+            openPosition.exitOrders.push(order)
+            openPosition.quantity -= quantity
+            openPosition.totalCommission += orderCommission
+
+            if (openPosition.quantity <= 0) {
+              // Calculate PnL
+              const totalEntryQuantity = openPosition.entryOrders.reduce((sum, o) => sum + o.quantity, 0)
+              const totalExitQuantity = openPosition.exitOrders.reduce((sum, o) => sum + o.quantity, 0)
+              const avgEntryPrice = openPosition.entryOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / totalEntryQuantity
+              const avgExitPrice = openPosition.exitOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / totalExitQuantity
+              
+              const priceDifference = avgExitPrice - avgEntryPrice
+              const ticks = priceDifference / contractSpec.tickSize
+              const pnl = openPosition.side === 'Long' ? 
+                ticks * contractSpec.tickValue * openPosition.originalQuantity :
+                -ticks * contractSpec.tickValue * openPosition.originalQuantity
+
+              const entryId = openPosition.entryOrders.map(o => o.orderId).join('-')
+              const closeId = openPosition.exitOrders.map(o => o.orderId).join('-')
+              const timeInPosition = (new Date(timestamp).getTime() - new Date(openPosition.entryDate).getTime()) / 1000
+
+              const trade: Trade = {
+                id: generateTradeHash(
+                  user.id,
+                  openPosition.accountNumber,
+                  symbol,
+                  openPosition.entryDate,
+                  timestamp,
+                  openPosition.originalQuantity,
+                  entryId,
+                  closeId,
+                  timeInPosition
+                ),
+                accountNumber: openPosition.accountNumber,
+                quantity: openPosition.originalQuantity,
                 entryId,
                 closeId,
-                timeInPosition
-              ),
-              accountNumber: openPosition.accountNumber,
-              quantity: openPosition.originalQuantity,
-              entryId,
-              closeId,
-              instrument: symbol,
-              entryPrice: avgEntryPrice.toFixed(5),
-              closePrice: avgExitPrice.toFixed(5),
-              entryDate: openPosition.entryDate,
-              closeDate: timestamp,
-              pnl,
-              timeInPosition,
-              userId: openPosition.userId,
-              side: openPosition.side,
-              commission: openPosition.totalCommission,
-              createdAt: new Date(),
-              comment: null
-            }
-
-            processedTrades.push(trade)
-
-            if (openPosition.quantity < 0) {
-              // Reverse position
-              openPositions[symbol] = {
-                accountNumber: rithmicOrder.account_id,
-                quantity: -openPosition.quantity,
                 instrument: symbol,
-                side: side === 'B' ? 'Long' : 'Short',
+                entryPrice: avgEntryPrice.toFixed(5),
+                closePrice: avgExitPrice.toFixed(5),
+                entryDate: openPosition.entryDate,
+                closeDate: timestamp,
+                pnl,
+                timeInPosition,
                 userId: openPosition.userId,
-                entryOrders: [order],
-                exitOrders: [],
-                averageEntryPrice: price,
-                entryDate: timestamp,
-                totalCommission: orderCommission,
-                originalQuantity: -openPosition.quantity
+                side: openPosition.side,
+                commission: openPosition.totalCommission,
+                createdAt: new Date(),
+                comment: null
               }
-            } else {
-              delete openPositions[symbol]
+
+              processedTrades.push(trade)
+
+              if (openPosition.quantity < 0) {
+                // Reverse position
+                openPositions[symbol] = {
+                  accountNumber: rithmicOrder.account_id,
+                  quantity: -openPosition.quantity,
+                  instrument: symbol,
+                  side: side === 'B' ? 'Long' : 'Short',
+                  userId: openPosition.userId,
+                  entryOrders: [order],
+                  exitOrders: [],
+                  averageEntryPrice: price,
+                  entryDate: timestamp,
+                  totalCommission: orderCommission,
+                  originalQuantity: -openPosition.quantity
+                }
+              } else {
+                delete openPositions[symbol]
+              }
             }
+          } else {
+            // Add to position
+            openPosition.entryOrders.push(order)
+            const newQuantity = openPosition.quantity + quantity
+            const newAverageEntryPrice = (openPosition.averageEntryPrice * openPosition.quantity + price * quantity) / newQuantity
+            openPosition.quantity = newQuantity
+            openPosition.originalQuantity = newQuantity
+            openPosition.averageEntryPrice = newAverageEntryPrice
+            openPosition.totalCommission += orderCommission
           }
         } else {
-          // Add to position
-          openPosition.entryOrders.push(order)
-          const newQuantity = openPosition.quantity + quantity
-          const newAverageEntryPrice = (openPosition.averageEntryPrice * openPosition.quantity + price * quantity) / newQuantity
-          openPosition.quantity = newQuantity
-          openPosition.originalQuantity = newQuantity
-          openPosition.averageEntryPrice = newAverageEntryPrice
-          openPosition.totalCommission += orderCommission
+          // Open new position
+          openPositions[symbol] = {
+            accountNumber: rithmicOrder.account_id,
+            quantity,
+            instrument: symbol,
+            side: side === 'B' ? 'Long' : 'Short',
+            userId: user.id,
+            entryOrders: [order],
+            exitOrders: [],
+            averageEntryPrice: price,
+            entryDate: timestamp,
+            totalCommission: orderCommission,
+            originalQuantity: quantity
+          }
         }
-      } else {
-        // Open new position
-        openPositions[symbol] = {
-          accountNumber: rithmicOrder.account_id,
-          quantity,
-          instrument: symbol,
-          side: side === 'B' ? 'Long' : 'Short',
-          userId: user.id,
-          entryOrders: [order],
-          exitOrders: [],
-          averageEntryPrice: price,
-          entryDate: timestamp,
-          totalCommission: orderCommission,
-          originalQuantity: quantity
-        }
-      }
-    })
+      })
 
-    // Handle incomplete trades
-    Object.values(openPositions).forEach((position) => {
-      incompleteTradesArray.push(position)
-    })
+      // Add any remaining open positions to incompleteTrades
+      Object.values(openPositions).forEach((position) => {
+        incompleteTradesArray.push(position)
+      })
+    }
 
     setTrades(processedTrades)
-    console.log(processedTrades)
-    console.log(incompleteTradesArray)
-    
     setIncompleteTrades(incompleteTradesArray)
+
     if (incompleteTradesArray.length > 0) {
       toast({
         title: "Incomplete Trades Detected",
@@ -264,7 +277,6 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
     }
 
     await saveTrades(processedTrades)
-    // Update the trades
     await refreshTrades()
     return processedTrades
   }, [tickDetails, user])
@@ -308,19 +320,77 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
           description: `Successfully processed ${processedTrades.length} trades from ${data.orders.length} orders.`,
           duration: 5000,
         })
+        
+        setIsOpen(false)
       } else {
         throw new Error('Failed to retrieve orders')
       }
     } catch (error) {
+      const handleSupportRequest = async () => {
+        try {
+          // Get Discord data from raw_user_meta_data
+          const discordData = user?.user_metadata
+          
+          const supportData = {
+            username: formData.username,
+            gateway: formData.gateway,
+            error: error instanceof Error ? error.message : "Failed to connect to Rithmic account",
+            userId: user?.id || 'unknown',
+            userEmail: user?.email || 'no email provided',
+            discordId: discordData?.sub || null,
+            discordUsername: discordData?.name || null
+          }
+
+          const response = await fetch('/api/discord/webhook', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(supportData),
+          })
+
+          if (!response.ok) {
+            throw new Error('Failed to send support request')
+          }
+
+          toast({
+            title: "Support Request Sent",
+            description: discordData?.sub 
+              ? "Our team will contact you through Discord shortly."
+              : `Our team will contact you at ${user?.email} shortly.`,
+            duration: 5000,
+          })
+        } catch (supportError) {
+          toast({
+            title: "Failed to Send Support Request",
+            description: "Please try again later or contact support directly.",
+            variant: "destructive",
+            duration: 5000,
+          })
+        }
+      }
+
       toast({
         title: "Connection Failed",
-        description: error instanceof Error ? error.message : "Failed to connect to Rithmic account",
+        description: (
+          <div className="flex flex-col gap-2">
+            <p>{error instanceof Error ? error.message : "Failed to connect to Rithmic account"}</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSupportRequest}
+              className="flex items-center gap-2 w-fit"
+            >
+              <AlertCircle className="h-4 w-4" />
+              Contact Support
+            </Button>
+          </div>
+        ),
         variant: "destructive",
-        duration: 5000,
+        duration: 10000,
       })
     } finally {
       setIsLoading(false)
-      setIsOpen(false)
     }
   }
 

@@ -49,6 +49,8 @@ model Subscription {
   status    String    @default("ACTIVE")
   endDate   DateTime?
   trialEndsAt DateTime?
+  feedback  SubscriptionFeedback[]
+
   @@index([email])
   @@schema("public")
 }
@@ -121,5 +123,18 @@ model DashboardLayout {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+  @@schema("public")
+}
+
+model SubscriptionFeedback {
+  id                 String       @id @default(uuid())
+  email             String
+  event             String
+  cancellationReason String?
+  feedback          String?      // For both feedback and comment from Stripe
+  createdAt         DateTime     @default(now())
+  subscription      Subscription @relation(fields: [email], references: [email])
+
+  @@index([email])
   @@schema("public")
 }

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     const credentials: Credentials = await request.json()
     
-    const response = await fetch('https://api.deltalytix.app/fetch-orders', {
+    const response = await fetch('http://localhost:8000/fetch-orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

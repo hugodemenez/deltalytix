@@ -140,7 +140,6 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
               : "aspect-[4/3] sm:aspect-[16/9]"
           )}
         >
-          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={
@@ -199,7 +198,6 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
       </CardContent>
     </Card>

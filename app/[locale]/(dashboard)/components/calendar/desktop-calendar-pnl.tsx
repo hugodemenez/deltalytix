@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from "react"
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek } from "date-fns"
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays } from "date-fns"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,6 +15,24 @@ import { CalendarModal } from "./new-modal"
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+function getCalendarDays(monthStart: Date, monthEnd: Date) {
+  const startDate = startOfWeek(monthStart)
+  const endDate = endOfWeek(monthEnd)
+  const days = eachDayOfInterval({ start: startDate, end: endDate })
+  
+  // If we already have 42 days (6 rows × 7 days), return as is
+  if (days.length === 42) return days
+  
+  // If we have less than 42 days, add days from the next month
+  const lastDay = days[days.length - 1]
+  const additionalDays = eachDayOfInterval({
+    start: addDays(lastDay, 1),
+    end: addDays(startDate, 41) // Ensure we get exactly 6 rows
+  })
+  
+  return [...days, ...additionalDays].slice(0, 42) // Ensure exactly 42 days
+}
+
 export default function CalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -24,9 +42,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
-  const startDate = startOfWeek(monthStart)
-  const endDate = endOfWeek(monthEnd)
-  const calendarDays = eachDayOfInterval({ start: startDate, end: endDate })
+  const calendarDays = getCalendarDays(monthStart, monthEnd)
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
@@ -121,7 +137,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
               <Card
                 className={cn(
                   "h-full cursor-pointer hover:border-primary transition-colors",
-                  !isSameMonth(date, currentDate) && "opacity-50",
+                  !isSameMonth(date, currentDate) && "opacity-25",
                   dayData && dayData.pnl >= 0
                     ? "bg-green-50 dark:bg-green-900/20"
                     : dayData && dayData.pnl < 0
