@@ -6,19 +6,11 @@ import { createClient } from './auth'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
 
 export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfTradesAdded: number }> {
-    console.log('saveTrades', data)
     const prisma = new PrismaClient()
     let count = 0
     try{
-        // Standardize date format for all trades before saving
-        const formattedData = data.map(trade => ({
-            ...trade,
-            entryDate: new Date(trade.entryDate).toISOString(),
-            closeDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
-        }))
-
-        const result = await prisma.trade.createMany({data:formattedData,skipDuplicates: true})
-        count = result.count
+      const result = await prisma.trade.createMany({data:data,skipDuplicates: true})
+      count = result.count
     }catch(e){
         console.error(e)
         return {error:e, numberOfTradesAdded:0}
