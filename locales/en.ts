@@ -175,7 +175,7 @@ export default {
     'pricing.plus.description': 'For serious traders who want to unlock their full potential.',
     'pricing.plus.feature1': 'Unlimited accounts',
     'pricing.plus.feature2': 'Unlimited data storage',
-    'pricing.plus.feature3': 'Rithmic auto-sync',
+    'pricing.plus.feature3': 'Rithmic auto-sync (coming soon)',
     'pricing.plus.feature4': 'All statistics and charts',
     'pricing.pro.name': 'Pro',
     'pricing.pro.description': 'Advanced analytics and custom development for professional traders.',
