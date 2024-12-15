@@ -152,7 +152,7 @@ export default function PricingPlans({ isModal, onClose }: PricingPlansProps) {
             <Card className={`relative bg-background h-full ${plan.isComingSoon ? 'opacity-70' : ''}`}>
               {plan.isPopular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="bg-primary text-primary-foreground text-sm font-medium px-3 py-1 rounded-full">
+                  <span className="bg-primary text-primary-foreground text-sm font-medium px-3 py-1 rounded-full whitespace-nowrap">
                     {t('pricing.mostPopular')}
                   </span>
                 </div>
@@ -172,9 +172,9 @@ export default function PricingPlans({ isModal, onClose }: PricingPlansProps) {
                 </div>
                 <ul className="space-y-2">
                   {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-center">
-                      <Check className="h-5 w-5 text-green-500 mr-2" />
-                      {feature}
+                    <li key={index} className="flex items-start">
+                      <Check className="h-4 w-4 text-green-500 mr-2 mt-1 shrink-0" />
+                      <span className="text-sm">{feature}</span>
                     </li>
                   ))}
                 </ul>
