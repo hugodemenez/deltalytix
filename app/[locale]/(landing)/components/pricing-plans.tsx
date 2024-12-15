@@ -6,6 +6,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Check } from "lucide-react"
 import { useI18n } from "@/locales/client"
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 type BillingPeriod = 'yearly' | 'monthly';
 
@@ -30,9 +35,10 @@ type Plans = {
 interface PricingPlansProps {
   isModal?: boolean;
   onClose?: () => void;
+  trigger?: React.ReactNode;
 }
 
-export default function PricingPlans({ isModal, onClose }: PricingPlansProps) {
+export default function PricingPlans({ isModal, onClose, trigger }: PricingPlansProps) {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly')
   const t = useI18n()
 
@@ -110,7 +116,7 @@ export default function PricingPlans({ isModal, onClose }: PricingPlansProps) {
     )
   }
 
-  return (
+  const PricingContent = () => (
     <div>
       {/* Sticky container for mobile */}
       <div className="md:hidden sticky top-[64px] z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 border-b">
@@ -216,4 +222,19 @@ export default function PricingPlans({ isModal, onClose }: PricingPlansProps) {
       </div>
     </div>
   )
+
+  if (trigger) {
+    return (
+      <Dialog>
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+          <PricingContent />
+        </DialogContent>
+      </Dialog>
+    )
+  }
+
+  return <PricingContent />
 } 

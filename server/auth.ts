@@ -54,7 +54,6 @@ export async function signInWithDiscord(next: string | null = null) {
       redirectTo: `${websiteURL}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
     },
   })
-  console.log(error, data)
   if (data.url) {
     // Before redirecting, ensure user is created/updated in Prisma database
     redirect(data.url)
@@ -97,9 +96,6 @@ export async function signInWithEmail(email: string, next: string | null = null)
       emailRedirectTo: `${getWebsiteURL()}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
     },
   })
-  console.log(error)
-  // Note: We can't ensure user is in database here because the user hasn't actually signed in yet.
-  // This will be handled in the callback route.
 }
 
 // New function to ensure user is in Prisma database

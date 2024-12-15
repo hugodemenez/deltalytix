@@ -119,14 +119,23 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
                         case 'timeInPosition':
                             item[key] = convertTimeInPosition(cellValue);
                             break;
+                        case 'entryDate':
+                        case 'closeDate':
+                            item[key] = cellValue ? new Date(cellValue).toISOString() : undefined;
+                            break;
                         default:
                             item[key] = cellValue as any;
                     }
                 }
             });
 
+            if (!item.entryDate) {
+                console.warn('Missing required entryDate');
+                return;
+            }
+
             if (item.instrument == '') {
-                return
+                return;
             }
 
             if (item.instrument) {

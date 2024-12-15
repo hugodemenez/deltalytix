@@ -1,0 +1,18 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="255" height="255" viewBox="0 0 255 255" preserveAspectRatio="xMidYMid meet">
+  <title>Safari Pinned Tab Icon</title>
+    <defs>
+        <clipPath id="rounded">
+            <rect width="255" height="255" rx="48" ry="48"/>
+        </clipPath>
+    </defs>
+    <g clip-path="url(#rounded)">
+        <rect width="255" height="255" fill="#09090b"/>
+        <g transform="translate(25.5, 25.5) scale(0.8)">
+            <path fill-rule="evenodd" clip-rule="evenodd" fill="white" d="M159 63L127.5 0V255H255L236.5 218H159V63Z" />
+            <path fill-rule="evenodd" clip-rule="evenodd" fill="white"
+                d="M0 255L127.5 0L127.5 255L0 255ZM64 217L121 104L121 217L64 217Z" />
+        </g>
+    </g>
+</svg> 

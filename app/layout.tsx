@@ -36,6 +36,56 @@ export const metadata: Metadata = {
     description: "Next generation trading dashboard",
     images: ['/twitter-image.png'],
   },
+  icons: {
+    // Default icons
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icon.png', type: 'image/png', sizes: '32x32' },
+    ],
+    // Apple-specific icons
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    // Other platform icons
+    other: [
+      {
+        rel: 'mask-icon',
+        url: '/safari-pinned-tab.svg',
+        color: '#000000'
+      },
+      {
+        rel: 'android-chrome',
+        sizes: '192x192',
+        url: '/android-chrome-192x192.png',
+      },
+      {
+        rel: 'android-chrome',
+        sizes: '512x512',
+        url: '/android-chrome-512x512.png',
+      }
+    ]
+  },
+  // Web manifest for PWA support
+  manifest: '/site.webmanifest',
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  authors: [{ name: 'Hugo DEMENEZ' }],
+  creator: 'Hugo DEMENEZ',
+  publisher: 'Hugo DEMENEZ',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
 };
 
 export default async function RootLayout({
@@ -46,6 +96,16 @@ export default async function RootLayout({
   return (
     <html lang="en" className="h-screen w-screen">
       <head>
+        <link 
+          rel="apple-touch-icon" 
+          sizes="180x180" 
+          href="/apple-touch-icon.png" 
+        />
+        <link 
+          rel="apple-touch-icon-precomposed"
+          sizes="180x180"
+          href="/apple-touch-icon-precomposed.png"
+        />
         <Script 
           src="https://cdn.tolt.io/tolt.js" 
           data-tolt="954085db-aff4-4df2-bcc8-c71631304415"

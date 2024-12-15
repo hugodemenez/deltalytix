@@ -5,6 +5,7 @@ import { Trade } from '@prisma/client'
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react'
 import { useUser } from './user-data'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
+import { parseISO, isValid, startOfDay, endOfDay } from 'date-fns'
 
 // Inferred types
 type StatisticsProps = {
@@ -78,17 +79,21 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setIsLoading(true)
       try {
         const tradesData = await getTrades(user.id)
-        console.log('tradesData', tradesData, user.id)
         setTrades(tradesData)
 
         if (tradesData.length > 0) {
-          const dates = tradesData.map(trade => new Date(trade.entryDate))
-          const minDate = new Date(Math.min(...dates.map(date => date.getTime())))
-          const maxDate = new Date(Math.max(
-            ...dates.map(date => date.getTime()),
-            new Date().getTime()
-          ))
-          setDateRange({ from: minDate, to: maxDate })
+          const dates = tradesData
+            .map(trade => parseISO(trade.entryDate))
+            .filter(date => isValid(date))
+
+          if (dates.length > 0) {
+            const minDate = new Date(Math.min(...dates.map(date => date.getTime())))
+            const maxDate = new Date(Math.max(
+              ...dates.map(date => date.getTime()),
+              new Date().getTime()
+            ))
+            setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) })
+          }
         }
       } catch (error) {
         console.error('Error fetching trades:', error)
@@ -108,17 +113,22 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const formattedTrades = useMemo(() => {
     return trades
-      .sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime())
-      .filter((trade) => {
-        const entryDate = new Date(trade.entryDate)
-        if (isNaN(entryDate.getTime())) return false
+      .filter(trade => {
+        const entryDate = parseISO(trade.entryDate)
+        if (!isValid(entryDate)) return false
+
         if (instruments.length > 0 && !instruments.includes(trade.instrument)) return false
         if (accountNumbers.length > 0 && !accountNumbers.includes(trade.accountNumber)) return false
+        
         if (dateRange?.from && dateRange?.to) {
-          if (entryDate < dateRange.from || entryDate > dateRange.to) return false
+          const start = startOfDay(dateRange.from)
+          const end = endOfDay(dateRange.to)
+          if (entryDate < start || entryDate > end) return false
         }
+        
         return true
       })
+      .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime())
   }, [trades, instruments, accountNumbers, dateRange])
 
   const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades])

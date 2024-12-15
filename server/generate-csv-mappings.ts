@@ -9,7 +9,6 @@ export async function generateCsvMapping(
   fieldColumns: string[],
   firstRows: Record<string, string>[],
 ) {
-  console.log('AI MAPPING')
   const stream = createStreamableValue<Record<string, string | undefined>>();
 
   (async () => {

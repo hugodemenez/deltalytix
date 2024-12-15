@@ -3,6 +3,13 @@
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { format, differenceInDays } from "date-fns"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import Link from "next/link"
 
 interface SubscriptionBadgeProps {
   plan: string | null
@@ -16,16 +23,27 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
   console.log('plan', plan)
   if (!plan) {
     return (
-      <Badge 
-        variant="secondary" 
-        className={cn(
-          "px-2 py-0.5 text-xs whitespace-nowrap",
-          "bg-secondary text-secondary-foreground",
-          className
-        )}
-      >
-        Free
-      </Badge>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Link href="/pricing">
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "px-2 py-0.5 text-xs whitespace-nowrap cursor-pointer",
+                  "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                  className
+                )}
+              >
+                Free
+              </Badge>
+            </Link>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Click to upgrade your plan</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     )
   }
 

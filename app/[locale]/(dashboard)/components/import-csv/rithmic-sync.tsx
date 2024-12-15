@@ -279,7 +279,7 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
     await saveTrades(processedTrades)
     await refreshTrades()
     return processedTrades
-  }, [tickDetails, user])
+  }, [tickDetails, user, refreshTrades])
 
   if (!user) {
     return (

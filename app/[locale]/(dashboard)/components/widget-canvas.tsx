@@ -10,7 +10,7 @@ import { EllipsisVertical, BarChart, BarChart2, LineChart, Calendar, Info, Minus
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
-
+import { useCallback } from 'react'
 import EquityChart from './charts/equity-chart'
 import TickDistributionChart from './charts/tick-distribution'
 import PNLChart from './charts/pnl-bar-chart'
@@ -341,7 +341,7 @@ export default function WidgetCanvas() {
   }
 
   // Create layouts for different breakpoints
-  const generateResponsiveLayout = (widgets: Widget[]) => {
+  const generateResponsiveLayout = useCallback((widgets: Widget[]) => {
     const layouts = {
       lg: widgets.map(widget => ({
         ...widget,
@@ -371,7 +371,7 @@ export default function WidgetCanvas() {
       }))
     }
     return layouts
-  }
+  }, [])
 
   // Load widgets from database using server action
   useEffect(() => {
@@ -464,7 +464,7 @@ export default function WidgetCanvas() {
     }
 
     loadLayout()
-  }, [user?.id, isMobile])
+  }, [user?.id, isMobile, generateResponsiveLayout])
 
   // Add auto-scroll functionality for mobile
   useAutoScroll(isMobile && isCustomizing)

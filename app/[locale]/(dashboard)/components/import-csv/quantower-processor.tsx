@@ -129,8 +129,8 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
               entryPrice: openPosition.averageEntryPrice.toFixed(2),
               closePrice: (openPosition.exitOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / 
                            openPosition.exitOrders.reduce((sum, o) => sum + o.quantity, 0)).toFixed(2),
-              entryDate: openPosition.entryDate,
-              closeDate: dateTime,
+              entryDate: new Date(openPosition.entryDate).toISOString(),
+              closeDate: new Date(dateTime).toISOString(),
               pnl: pnl,
               timeInPosition: (new Date(dateTime).getTime() - new Date(openPosition.entryDate).getTime()) / 1000,
               userId: openPosition.userId,

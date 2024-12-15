@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Download, CalendarIcon } from 'lucide-react'
@@ -145,7 +145,7 @@ export default function TradeExportDialog({ trades }: Props) {
     setSelectedInstruments(selectAllInstruments ? [] : instruments)
   }
 
-  const updateFilteredTrades = () => {
+  const updateFilteredTrades = useCallback(() => {
     const filtered = trades.filter(trade => 
       selectedAccounts.includes(trade.accountNumber) &&
       selectedInstruments.includes(trade.instrument.slice(0, 2)) &&
@@ -157,11 +157,11 @@ export default function TradeExportDialog({ trades }: Props) {
       formattedCloseDate: format(new Date(trade.closeDate), 'yyyy-MM-dd HH:mm')
     }))
     setFilteredTrades(filtered)
-  }
+  }, [selectedAccounts, selectedInstruments, dateRange, trades])
 
   useEffect(() => {
     updateFilteredTrades()
-  }, [selectedAccounts, selectedInstruments, dateRange, trades])
+  }, [updateFilteredTrades])
 
   const totalPages = Math.ceil(filteredTrades.length / itemsPerPage)
   const startIndex = (currentPage - 1) * itemsPerPage

@@ -2,14 +2,23 @@
 import { PrismaClient, Trade } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { createClient } from './auth'
+import { parseISO, startOfDay, endOfDay } from 'date-fns'
 
 export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfTradesAdded: number }> {
     console.log('saveTrades', data)
     const prisma = new PrismaClient()
     let count = 0
     try{
-    const result = await prisma.trade.createMany({data:data,skipDuplicates: true})
-    count = result.count
+        // Standardize date format for all trades before saving
+        const formattedData = data.map(trade => ({
+            ...trade,
+            entryDate: new Date(trade.entryDate).toISOString(),
+            closeDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
+        }))
+
+        const result = await prisma.trade.createMany({data:formattedData,skipDuplicates: true})
+        count = result.count
     }catch(e){
         console.error(e)
         return {error:e, numberOfTradesAdded:0}
@@ -20,15 +29,51 @@ export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfT
 }
 
 export async function getTrades(userId: string): Promise<Trade[]> {
-  console.log('getTrades', userId)
-    const prisma = new PrismaClient()
-    const trades = await prisma.trade.findMany({where: {userId: userId}})
+  const prisma = new PrismaClient()
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error } = await supabase.auth.getUser()
+    
+    if (error) {
+      console.error('Error getting user:', error)
+      return []
+    }
+    
+    const email = user?.email
+    const isSubscribed = email ? await getIsSubscribed(email) : false
+    
+    let where: any = { userId }
+    
+    if (!email || !isSubscribed) {
+      const oneMonthAgo = startOfDay(new Date())
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+      
+      where.entryDate = {
+        gte: oneMonthAgo.toISOString().split('T')[0]
+      }
+    }
+    
+    const trades = await prisma.trade.findMany({ 
+      where,
+      orderBy: { entryDate: 'desc' }
+    })
+    
+    return trades.map(trade => ({
+      ...trade,
+      entryDate: new Date(trade.entryDate).toISOString(),
+      exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
+    }))
+  } catch (error) {
+    console.error('Error fetching trades:', error)
+    return []
+  } finally {
     await prisma.$disconnect()
-    return trades
+  }
 }
 
 import { CalendarEntry } from '@/types/calendar'
 import { generateAIComment } from './generate-ai-comment'
+import { getIsSubscribed } from './subscription'
 
 export async function updateTradesWithComment(dayData: CalendarEntry, dateString: string) {
     const prisma = new PrismaClient()
