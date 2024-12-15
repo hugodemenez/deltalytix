@@ -36,7 +36,7 @@ export default {
     'pricing.basic.name': 'Basic',
     'pricing.basic.description': 'Perfect for trying out Deltalytix and getting started with trading analytics.',
     'pricing.basic.feature1': '1 trading account',
-    'pricing.basic.feature2': '1 week of data storage',
+    'pricing.basic.feature2': '1 month of data storage',
     'pricing.basic.feature3': 'CSV imports',
     'pricing.basic.feature4': 'Basic charts (Calendar & Equity)',
     'pricing.premium.name': 'Premium',
