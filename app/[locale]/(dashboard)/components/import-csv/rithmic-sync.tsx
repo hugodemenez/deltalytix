@@ -134,7 +134,7 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
         .sort((a, b) => a.timestamp - b.timestamp)
 
       sortedOrders.forEach((rithmicOrder) => {
-        const symbol = rithmicOrder.ticker
+        const symbol = rithmicOrder.ticker.slice(0, -2)
         const quantity = rithmicOrder.filled_quantity
         const price = rithmicOrder.price
         const side = rithmicOrder.buy_sell_type

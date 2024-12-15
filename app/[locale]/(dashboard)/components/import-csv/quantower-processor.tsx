@@ -106,8 +106,8 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
         orderId
       }
 
-      if (openPositions[symbol]) {
-        const openPosition = openPositions[symbol]
+      if (openPositions[symbolKey]) {
+        const openPosition = openPositions[symbolKey]
         
         if ((side === 'Buy' && openPosition.side === 'short') || (side === 'Sell' && openPosition.side === 'long')) {
           // Close or reduce position
@@ -144,10 +144,10 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
 
             if (openPosition.quantity < 0) {
               // Reverse position
-              openPositions[symbol] = {
+              openPositions[symbolKey] = {
                 accountNumber: account,
                 quantity: -openPosition.quantity,
-                instrument: symbol,
+                instrument: symbolKey,
                 side: side === 'Buy' ? 'long' : 'short',
                 userId: openPosition.userId,
                 entryOrders: [newOrder],
@@ -160,7 +160,7 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
               }
             } else {
               // Full close
-              delete openPositions[symbol]
+              delete openPositions[symbolKey]
             }
           }
         } else {
@@ -175,10 +175,10 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
         }
       } else {
         // Open new position
-        openPositions[symbol] = {
+        openPositions[symbolKey] = {
           accountNumber: account,
           quantity: newOrder.quantity,
-          instrument: symbol,
+          instrument: symbolKey,
           side: side === 'Buy' ? 'long' : 'short',
           userId: '', // This should be set to the actual user ID
           entryOrders: [newOrder],
