@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from '@/hooks/use-toast'
 import { Loader2, AlertCircle } from 'lucide-react'
 import { TickDetails, Trade } from '@prisma/client'
-import { getTickDetails } from '../../../../../server/tick-details'
+import { getTickDetails } from '@/server/tick-details'
 import { saveTrades } from '@/server/database'
 import { useUser } from '@/components/context/user-data'
 import { useTrades } from '@/components/context/trades-data'
