@@ -56,9 +56,8 @@ export async function getSubscriptionDetails(email: string): Promise<Subscriptio
         if (!subscription) return null
 
         const now = new Date()
-        const isActive = (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL') &&
-                        (!subscription.endDate || subscription.endDate > now) &&
-                        (!subscription.trialEndsAt || subscription.trialEndsAt > now)
+        const isActive = subscription.status === 'ACTIVE' || 
+                        (subscription.status === 'TRIAL' && subscription.trialEndsAt != null && subscription.trialEndsAt > now)
         
         return {
             isActive,

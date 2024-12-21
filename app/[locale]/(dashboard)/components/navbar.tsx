@@ -58,7 +58,6 @@ export default function Navbar() {
           <div className='hidden md:flex gap-x-4'>
             <ImportButton />
           </div>
-          <NotificationDropdown />
           <div className="relative">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

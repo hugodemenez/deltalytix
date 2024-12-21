@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { UploadIcon } from 'lucide-react'
 import { useTrades } from '@/components/context/trades-data'
@@ -21,6 +21,7 @@ import TradezellaProcessor from './tradezella-processor'
 import NinjaTraderPerformanceProcessor from './ninjatrader-performance-processor'
 import QuantowerOrderProcessor from './quantower-processor'
 import { RithmicSync } from './rithmic-sync'
+import { cn } from '@/lib/utils'
 
 type ColumnConfig = {
   [key: string]: {
@@ -484,34 +485,100 @@ export default function ImportButton() {
   return (
     <div>
       <Button onClick={() => setIsOpen(true)} className='w-full'>
-        <UploadIcon className="sm:mr-2 h-4 w-4" /> <span className='hidden md:block'>Import Trades</span>
+        <UploadIcon className="sm:mr-2 h-4 w-4" /> 
+        <span className='hidden md:block'>Import Trades</span>
       </Button>
+      
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
+        <DialogContent className="flex flex-col max-w-[80vw] h-[80vh] p-0">
+          <DialogHeader className="flex-none p-6 border-b space-y-4">
             <DialogTitle>
               {step === 0 && "Select Import Type"}
-              {step === 1 && "Upload CSV"}
-              {step === 2 && "Select Header Row"}
+              {step === 1 && (importType === 'rithmic-sync' ? "Connect" : "Upload CSV")}
+              {step === 2 && (importType === 'rithmic-sync' ? "Synchronisation Settings" : "Select Header Row")}
               {step === 3 && (importType === 'rithmic-orders' ? "Process Rithmic Orders" : "Map Columns")}
               {step === 4 && "Select or Add Account"}
             </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {step === 0 && "Choose how you want to import your trades"}
+              {step === 1 && (importType === 'rithmic-sync' ? "Connect your Rithmic account" : "Upload your CSV file")}
+              {step === 2 && (importType === 'rithmic-sync' ? "Configure your sync settings" : "Select the row containing your column headers")}
+              {step === 3 && (importType === 'rithmic-orders' ? "Process your Rithmic orders" : "Map your CSV columns to our fields")}
+              {step === 4 && "Select an existing account or create a new one"}
+            </DialogDescription>
+            <div className="space-y-2">
+              <div className="w-full bg-secondary h-2 rounded-full">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300 ease-in-out"
+                  style={{ width: `${(step / (importType === 'rithmic-orders' ? 3 : importType === 'rithmic-sync' ? 2 : 4)) * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <div className={cn("transition-colors", step >= 0 && "text-primary font-medium")}>
+                  Import Type
+                </div>
+                {importType === 'rithmic-sync' ? (
+                  <>
+                    <div className={cn("transition-colors", step >= 1 && "text-primary font-medium")}>
+                      Connect
+                    </div>
+                    <div className={cn("transition-colors", step >= 2 && "text-primary font-medium")}>
+                      Settings
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className={cn("transition-colors", step >= 1 && "text-primary font-medium")}>
+                      Upload
+                    </div>
+                    <div className={cn("transition-colors", step >= 2 && "text-primary font-medium")}>
+                      Headers
+                    </div>
+                    <div className={cn("transition-colors", step >= 3 && "text-primary font-medium")}>
+                      {importType === 'rithmic-orders' ? 'Process' : 'Map Columns'}
+                    </div>
+                    {importType !== 'rithmic-orders' && (
+                      <div className={cn("transition-colors", step >= 4 && "text-primary font-medium")}>
+                        Account
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
           </DialogHeader>
-          <div className="flex-grow overflow-auto">
+
+          <div className="flex-1 overflow-hidden h-full w-full">
             {renderStep()}
           </div>
-          <DialogFooter className="mt-4">
-            {step > 0 && (
-              <Button variant="outline" onClick={() => setStep(step - 1)} className="mr-auto">
-                Back
-              </Button>
-            )}
-            {!(step === 0 && importType === 'rithmic-sync') && (
-              <Button onClick={handleNextStep}>
-                {isSaving ? "Saving..." : (step === 4 || (step === 3 && importType === 'rithmic-orders') ? "Save" : "Next")}
-              </Button>
-            )}
-          </DialogFooter>
+
+          <div className="flex-none p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex justify-end items-center gap-4">
+              {step > 0 && (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep(step - 1)}
+                  className="w-fit min-w-[100px]"
+                >
+                  Back
+                </Button>
+              )}
+              {!(step === 0 && importType === 'rithmic-sync') && (
+                <Button 
+                  onClick={handleNextStep}
+                  className="w-fit min-w-[100px]"
+                >
+                  {isSaving 
+                    ? "Saving..." 
+                    : (step === 4 || (step === 3 && importType === 'rithmic-orders') 
+                      ? "Save" 
+                      : "Next"
+                    )
+                  }
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -5,9 +5,10 @@ import { useDropzone } from 'react-dropzone'
 import Papa from 'papaparse'
 import { ImportType } from './import-type-selection'
 import { Progress } from "@/components/ui/progress"
-import { XIcon, FileIcon, AlertCircle } from 'lucide-react'
+import { XIcon, FileIcon, AlertCircle, Upload, ArrowUpCircle } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface FileUploadProps {
   importType: ImportType
@@ -246,30 +247,88 @@ export default function FileUpload({
   }, [parsedFiles, uploadProgress, concatenateFiles])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 w-full h-full p-8 flex flex-col items-center justify-center">
       <div 
         {...getRootProps()} 
-        className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center cursor-pointer hover:border-primary transition-colors"
+        className={cn(
+          "h-80 w-full max-w-2xl border-2 border-dashed rounded-lg p-12 text-center transition-all duration-300 ease-in-out",
+          "hover:border-primary/50 group relative",
+          isDragActive 
+            ? "border-primary bg-primary/5 scale-[0.99]" 
+            : "border-gray-300 hover:bg-gray-50/50 dark:hover:bg-gray-900/50",
+          "cursor-pointer flex items-center justify-center"
+        )}
       >
         <input {...getInputProps()} />
-        {isDragActive ? (
-          <p className="text-lg">Drop the CSV files here ...</p>
-        ) : (
-          <p className="text-lg">Drag and drop CSV files here, or click to select files</p>
-        )}
+        <div className="flex flex-col items-center gap-4">
+          <ArrowUpCircle 
+            className={cn(
+              "h-14 w-14 transition-all duration-300 ease-bounce",
+              isDragActive 
+                ? "text-primary scale-110 -translate-y-2" 
+                : "text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:-translate-y-2"
+            )} 
+          />
+          {isDragActive ? (
+            <div className="space-y-2 relative">
+              <p className="text-xl font-medium text-primary animate-in fade-in slide-in-from-bottom-2">
+                Drop your files here
+              </p>
+              <p className="text-sm text-muted-foreground animate-in fade-in slide-in-from-bottom-3">
+                We&apos;ll handle the rest
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 relative">
+              <p className="text-xl font-medium group-hover:text-primary transition-colors">
+                Drag and drop your CSV files here
+              </p>
+              <p className="text-sm text-muted-foreground">
+                or click to browse your files
+              </p>
+            </div>
+          )}
+        </div>
       </div>
+
       {uploadedFiles.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2 animate-in slide-in-from-bottom-4 duration-500 w-full max-w-2xl">
           <h3 className="text-lg font-semibold">Uploaded Files:</h3>
           {uploadedFiles.map((file, index) => (
-            <div key={index} className="flex items-center justify-between bg-gray-100 dark:bg-gray-800 p-2 rounded">
-              <div className="flex items-center space-x-2">
-                <FileIcon className="h-5 w-5 text-primary" />
-                <span className="text-sm font-medium">{file.name}</span>
+            <div 
+              key={index} 
+              className={cn(
+                "flex items-center justify-between",
+                "bg-gray-100 dark:bg-gray-800 rounded-lg",
+                "p-3 hover:bg-gray-200 dark:hover:bg-gray-700",
+                "transition-all duration-200 ease-in-out",
+                "animate-in slide-in-from-bottom fade-in",
+                "group"
+              )}
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="flex items-center space-x-3">
+                <div className="bg-primary/10 p-2 rounded-md group-hover:bg-primary/20 transition-colors">
+                  <FileIcon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{file.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </span>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Progress value={uploadProgress[file.name] || 0} className="w-24" />
-                <Button variant="ghost" size="icon" onClick={() => removeFile(index)}>
+              <div className="flex items-center space-x-3">
+                <Progress 
+                  value={uploadProgress[file.name] || 0} 
+                  className="w-24 h-2"
+                />
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => removeFile(index)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
                   <XIcon className="h-4 w-4" />
                   <span className="sr-only">Remove file</span>
                 </Button>
@@ -278,8 +337,9 @@ export default function FileUpload({
           ))}
         </div>
       )}
+
       {uploadedFiles.length > 0 && (
-        <Alert>
+        <Alert className="animate-in slide-in-from-bottom-5 duration-700 w-full max-w-2xl">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Note</AlertTitle>
           <AlertDescription>

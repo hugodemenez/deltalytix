@@ -20,7 +20,6 @@ interface SubscriptionBadgeProps {
 }
 
 export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, className }: SubscriptionBadgeProps) {
-  console.log('plan', plan)
   if (!plan) {
     return (
       <TooltipProvider>

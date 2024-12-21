@@ -1,10 +1,10 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Image from 'next/image'
 import { RithmicSync } from './rithmic-sync'
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Lock } from "lucide-react"
+import { Lock, Clock, Search, Star, Link2, FileSpreadsheet, Database, AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
@@ -14,6 +14,20 @@ import {
 } from "@/components/ui/tooltip"
 import { useUser } from '@/components/context/user-data'
 import Link from 'next/link'
+import { RithmicSyncCombined } from './rithmic-sync-new'
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@/components/ui/command"
+
+// Easy toggle between COMING_SOON and PLUS_ONLY
+const RITHMIC_SYNC_STATE: 'COMING_SOON' | 'PLUS_ONLY' = 'COMING_SOON'
 
 export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' | 'ninjatrader-performance' | 'quantower' | 'rithmic-sync'
 
@@ -23,46 +37,105 @@ interface ImportTypeSelectionProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
-const videoUrls: Record<ImportType, { url: string, details: string }> = {
-  '': {
-    url: '',
-    details: ''
-  },
-  'rithmic-performance': {
-    url:
-      process.env.NEXT_PUBLIC_RITHMIC_PERFORMANCE_TUTORIAL_VIDEO || '',
-    details: 'Remember to expand every row to see the full details during export.'
-  },
-  'rithmic-orders': {
-    url: process.env.NEXT_PUBLIC_RITHMIC_ORDER_TUTORIAL_VIDEO || '',
-    details: 'Following fields are mandatory: Account, Buy/Sell, Avg Fill Price, Limit Price, Symbol, Order Number, Update time, Qty filled, Closed profit & loss, Commission fill rate'
-  },
-  'tradezella': {
-    url: '',
-    details: ''
-  },
-  'tradovate': {
-    url: '',
-    details: ''
-  },
-  'ninjatrader-performance': {
-    url: process.env.NEXT_PUBLIC_NINJATRADER_PERFORMANCE_TUTORIAL_VIDEO || '',
-    details: ''
-  },
-  'quantower': {
-    url: '',
-    details: ''
-  },
-  'rithmic-sync': {
-    url: process.env.NEXT_PUBLIC_RITHMIC_SYNC_TUTORIAL_VIDEO || '',
-    details: 'Direct sync with your Rithmic account. Requires authentication.'
-  }
+type Category = 'Direct Account Sync' | 'Custom CSV Import' | 'Platform CSV Import'
+
+interface ImportTypeInfo {
+  type: ImportType
+  name: string
+  description: string
+  category: Category
+  videoUrl: string
+  details: string
 }
 
-const importTypes: ImportType[] = ['', 'rithmic-sync', 'rithmic-performance', 'rithmic-orders', 'tradezella', 'tradovate', 'ninjatrader-performance', 'quantower']
+const importTypeInfo: ImportTypeInfo[] = [
+  {
+    type: 'rithmic-sync',
+    name: 'Rithmic Sync',
+    description: 'Direct account sync',
+    category: 'Direct Account Sync',
+    videoUrl: process.env.NEXT_PUBLIC_RITHMIC_SYNC_TUTORIAL_VIDEO || '',
+    details: 'Direct sync with your Rithmic account. Requires authentication.'
+  },
+  {
+    type: '',
+    name: 'CSV with AI',
+    description: 'CSV file with AI mapping',
+    category: 'Custom CSV Import',
+    videoUrl: '',
+    details: ''
+  },
+  {
+    type: 'rithmic-performance',
+    name: 'Rithmic Performance',
+    description: 'Import from Rithmic',
+    category: 'Platform CSV Import',
+    videoUrl: (() => {
+      return process.env.NEXT_PUBLIC_RITHMIC_PERFORMANCE_TUTORIAL_VIDEO || ''
+    })(),
+    details: 'Remember to expand every row to see the full details during export.'
+  },
+  {
+    type: 'rithmic-orders',
+    name: 'Rithmic Orders',
+    description: 'Import from Rithmic',
+    category: 'Platform CSV Import',
+    videoUrl: (() => {
+      return process.env.NEXT_PUBLIC_RITHMIC_ORDER_TUTORIAL_VIDEO || ''
+    })(),
+    details: 'Following fields are mandatory: Account, Buy/Sell, Avg Fill Price, Limit Price, Symbol, Order Number, Update time, Qty filled, Closed profit & loss, Commission fill rate'
+  },
+  {
+    type: 'ninjatrader-performance',
+    name: 'NinjaTrader Performance',
+    description: 'Import from NinjaTrader',
+    category: 'Platform CSV Import',
+    videoUrl: process.env.NEXT_PUBLIC_NINJATRADER_PERFORMANCE_TUTORIAL_VIDEO || '',
+    details: ''
+  },
+  {
+    type: 'tradezella',
+    name: 'TradeZella',
+    description: 'Import from TradeZella',
+    category: 'Platform CSV Import',
+    videoUrl: '',
+    details: ''
+  },
+  {
+    type: 'tradovate',
+    name: 'Tradovate',
+    description: 'Import from Tradovate',
+    category: 'Platform CSV Import',
+    videoUrl: '',
+    details: ''
+  },
+  {
+    type: 'quantower',
+    name: 'Quantower',
+    description: 'Import from Quantower',
+    category: 'Platform CSV Import',
+    videoUrl: '',
+    details: ''
+  }
+]
+
+const categoryIcons: Record<Category, React.ReactNode> = {
+  'Direct Account Sync': <Link2 className="h-4 w-4" />,
+  'Custom CSV Import': <FileSpreadsheet className="h-4 w-4" />,
+  'Platform CSV Import': <Database className="h-4 w-4" />
+}
 
 export default function ImportTypeSelection({ selectedType, setSelectedType, setIsOpen }: ImportTypeSelectionProps) {
   const { isPlusUser } = useUser()
+  const [searchQuery, setSearchQuery] = useState('')
+  const [hoveredCategory, setHoveredCategory] = useState<Category | null>(null)
+  
+  // Set default selection to CSV with AI
+  useEffect(() => {
+    if (selectedType === '') {
+      setSelectedType('')  // Empty string represents CSV with AI type
+    }
+  }, [])
   
   const videoRefs = useRef<Record<ImportType, HTMLVideoElement | null>>({
     '': null,
@@ -78,9 +151,9 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   useEffect(() => {
     Object.entries(videoRefs.current).forEach(([type, videoElement]) => {
       if (videoElement) {
-        if (type === selectedType && videoUrls[type]) {
-          videoElement.play().catch(() => {
-            // Autoplay was prevented, handle as needed
+        if (type === selectedType && importTypeInfo.find(info => info.type === type)?.videoUrl) {
+          videoElement.play().catch((error) => {
+            console.error('Video playback error:', error)
           })
         } else {
           videoElement.pause()
@@ -93,88 +166,99 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
     videoRefs.current[type] = el
   }
 
+  const filteredImportTypes = importTypeInfo.filter(info => 
+    info.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    info.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    info.category.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const categories = Array.from(new Set(filteredImportTypes.map(info => info.category)))
+
   return (
-    <div className="p-2">
-      <div className="grid md:grid-cols-2 gap-6">
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {importTypes.map((type) => (
-              type === 'rithmic-sync' && !isPlusUser() ? (
-                <TooltipProvider key={type} delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => {}}
-                        variant="outline"
-                        className={cn(
-                          "h-auto py-4 px-4 justify-start text-left relative w-full",
-                          "bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10",
-                          "opacity-50 cursor-not-allowed"
-                        )}
-                      >
-                        <div className="w-full">
-                          <div className="font-semibold text-sm sm:text-base truncate flex items-center gap-2">
-                            {type.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                            <Badge variant="secondary" className="ml-2">PLUS</Badge>
-                            <Lock className="h-4 w-4" />
-                          </div>
-                          <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                            Direct account sync
-                          </div>
-                        </div>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent sideOffset={5} side="bottom" className="w-64">
-                      <div className="space-y-2">
-                        <p>Available with Plus subscription</p>
-                        <Link href="/pricing" className="w-full block">
-                          <Button 
-                            size="sm" 
-                            className="w-full"
-                            variant="default"
+    <div className="flex flex-col h-full px-4">
+      <div className="grid md:grid-cols-2 gap-6  h-full">
+        <div className="h-full">
+          <Command className="border h-full shadow-sm">
+            <CommandInput 
+            className='h-fit rounded-none'
+              placeholder="Search import types..." 
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+            />
+            <CommandList className="min-h-[calc(100%-42px)]">
+              <CommandEmpty>No import types found.</CommandEmpty>
+              {categories.map(category => {
+                const categoryTypes = filteredImportTypes.filter(info => info.category === category)
+                if (categoryTypes.length === 0) return null
+
+                return (
+                  <CommandGroup key={category} heading={
+                    <div className={cn(
+                      "flex items-center gap-2 text-muted-foreground transition-all duration-200 px-2",
+                      hoveredCategory === category ? "text-foreground scale-[1.02] translate-x-1" : "hover:text-foreground"
+                    )}>
+                      {categoryIcons[category]}
+                      <span>{category}</span>
+                    </div>
+                  }>
+                    {categoryTypes.map((info) => {
+                      const isRithmicSync = info.type === 'rithmic-sync'
+                      const isDisabled = isRithmicSync && (RITHMIC_SYNC_STATE === 'COMING_SOON' || (RITHMIC_SYNC_STATE === 'PLUS_ONLY' && !isPlusUser()))
+
+                      return (
+                        <div className={cn(
+                          isDisabled && "cursor-not-allowed"
+                        )} key={info.type}>
+                          <CommandItem
+                            key={info.type}
+                            onSelect={() => !isDisabled && setSelectedType(info.type)}
+                            onMouseEnter={() => setHoveredCategory(info.category)}
+                            onMouseLeave={() => setHoveredCategory(null)}
+                            className={cn(
+                              "flex items-center gap-2 ml-6 border-l-2 border-muted pl-4 transition-all duration-200 rounded-none",
+                              isDisabled && "opacity-50 select-none",
+                              !isDisabled && "cursor-pointer",
+                              selectedType === info.type && "border-l-primary bg-primary/5",
+                              !isDisabled && "hover:border-l-primary/50"
+                            )}
+                            disabled={isDisabled}
                           >
-                            Upgrade Now
-                          </Button>
-                        </Link>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ) : (
-                <Button
-                  key={type}
-                  onClick={() => setSelectedType(type)}
-                  variant="outline"
-                  className={cn(
-                    "h-auto py-4 px-4 justify-start text-left relative",
-                    "bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10",
-                    selectedType === type && "ring-2 ring-primary"
-                  )}
-                >
-                  <div className="w-full">
-                    <div className="font-semibold text-sm sm:text-base truncate flex items-center gap-2">
-                      {type.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                      {type === 'rithmic-sync' && (
-                        <Badge variant="secondary" className="ml-2">PLUS</Badge>
-                      )}
-                    </div>
-                    <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                      {type === '' ? 'CSV file with AI mapping' : 
-                       type === 'rithmic-sync' ? 'Direct account sync' :
-                       `Import from ${type}`}
-                    </div>
-                  </div>
-                </Button>
-              )
-            ))}
-          </div>
+                            <div className="flex-1">
+                              <div className="font-medium flex items-center gap-2">
+                                {info.name}
+                                {isDisabled && (
+                                  <>
+                                    <Badge variant="secondary" className="ml-2 transition-transform duration-200 hover:scale-105">
+                                      {RITHMIC_SYNC_STATE === 'COMING_SOON' ? 'SOON' : 'PLUS'}
+                                    </Badge>
+                                    {RITHMIC_SYNC_STATE === 'COMING_SOON' ? 
+                                      <Clock className="h-4 w-4 animate-pulse" /> : 
+                                      <Lock className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
+                                    }
+                                  </>
+                                )}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{info.description}</div>
+                            </div>
+                          </CommandItem>
+                        </div>
+                      )
+                    })}
+                  </CommandGroup>
+                )
+              })}
+            </CommandList>
+          </Command>
         </div>
 
-        <div className="space-y-4">
-          {selectedType === 'rithmic-sync' && !isPlusUser() ? (
+        <div className="space-y-4 overflow-y-auto px-2">
+          {selectedType === 'rithmic-sync' && (RITHMIC_SYNC_STATE === 'COMING_SOON' || (RITHMIC_SYNC_STATE === 'PLUS_ONLY' && !isPlusUser())) ? (
             <Alert>
               <AlertDescription>
-                Rithmic sync is a Plus feature. Please upgrade your account to use this feature.
+                {RITHMIC_SYNC_STATE === 'COMING_SOON' 
+                  ? "This feature is coming soon!"
+                  : "Rithmic sync is a Plus feature. Please upgrade your account to use this feature."
+                }
               </AlertDescription>
             </Alert>
           ) : (
@@ -183,7 +267,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                 {selectedType === 'rithmic-sync' ? (
                   <>
                     <h2 className="text-2xl font-bold">Rithmic Account Login</h2>
-                    <RithmicSync 
+                    <RithmicSyncCombined 
                       setIsOpen={setIsOpen}
                       onSync={async (data) => {
                         // Implement sync logic here
@@ -222,12 +306,13 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                 ) : (
                   <>
                     <h2 className="text-2xl font-bold">Tutorial Video</h2>
+                    <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
                     <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                      {importTypes.map((type) => (
-                        videoUrls[type].url != '' && (
+                      {importTypeInfo.map((info) => (
+                        info.videoUrl != '' && (
                           <video
-                            key={type}
-                            ref={setVideoRef(type)}
+                            key={info.type}
+                            ref={setVideoRef(info.type)}
                             height="600"
                             width="600"
                             preload="metadata"
@@ -237,10 +322,10 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                             playsInline
                             className={cn(
                               "rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover",
-                              selectedType !== type && "hidden"
+                              selectedType !== info.type && "hidden"
                             )}
                           >
-                            <source src={videoUrls[type].url} type="video/mp4" />
+                            <source src={info.videoUrl} type="video/mp4" />
                             <track
                               src="/path/to/captions.vtt"
                               kind="subtitles"
@@ -252,16 +337,25 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                         )
                       ))}
                     </div>
-                    {videoUrls[selectedType] ? (
-                      <p className="text-sm text-muted-foreground">
+                    {importTypeInfo.find(info => info.type === selectedType)?.videoUrl ? (
+                      <p className="text-sm text-muted-foreground" key={selectedType}>
                         Watch this tutorial video to learn how to import data from {selectedType.split('-').join(' ')}.
                         <br />
-                        {videoUrls[selectedType].details}
+                        {importTypeInfo.find(info => info.type === selectedType)?.details}
                       </p>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground" key={selectedType}>
                         Tutorial video for {selectedType.split('-').join(' ')} is not available.
                       </p>
+                    )}
+                    </div>
+                    {selectedType && (
+                      <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4" key="details">
+                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-500 animate-pulse" />
+                        <p>
+                          {importTypeInfo.find(info => info.type === selectedType)?.details || 'No additional details available.'}
+                        </p>
+                      </div>
                     )}
                     
                     {(selectedType === 'rithmic-performance' || selectedType === 'rithmic-orders') && (
