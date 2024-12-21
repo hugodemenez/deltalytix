@@ -3,13 +3,21 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartConfig, ChartContainer } from "@/components/ui/chart"
+import { ChartConfig } from "@/components/ui/chart"
 import { useFormattedTrades } from "@/components/context/trades-data"
 import { Trade } from "@prisma/client"
 import { cn } from "@/lib/utils"
+import { Info } from 'lucide-react'
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 
 interface TimeOfDayTradeChartProps {
-  size?: 'small' | 'medium' | 'large' | 'small-long'
+  size?: ChartSize
 }
 
 const chartConfig = {
@@ -63,131 +71,130 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-background p-2 border rounded shadow-sm">
-          <p className="font-semibold">{`${label}h - ${(label + 1) % 24}h`}</p>
-          <p className="font-bold">Avg P/L: {formatCurrency(data.avgPnl)}</p>
-          <p>Number of Trades: {data.tradeCount}</p>
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="grid gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Time
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {`${label}:00 - ${(label + 1) % 24}:00`}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Average P/L
+              </span>
+              <span className="font-bold">
+                {formatCurrency(data.avgPnl)}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Trades
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {data.tradeCount} trade{data.tradeCount !== 1 ? 's' : ''}
+              </span>
+            </div>
+          </div>
         </div>
       )
     }
     return null
   }
 
-  const getChartHeight = () => {
-    switch (size) {
-      case 'small':
-      case 'small-long':
-        return 'h-[140px]'
-      case 'medium':
-        return 'h-[240px]'
-      case 'large':
-        return 'h-[280px]'
-      default:
-        return 'h-[240px]'
-    }
-  }
-
-  const getYAxisWidth = () => {
-    const maxLength = Math.max(
-      Math.abs(minPnL).toFixed(2).length,
-      Math.abs(maxPnL).toFixed(2).length
-    );
-    return (size === 'small' || size === 'small-long')
-      ? Math.max(35, 8 * (maxLength + 1))
-      : Math.max(45, 10 * (maxLength + 1));
-  }
-
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader 
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b",
-          (size === 'small' || size === 'small-long')
-            ? "p-2" 
-            : "p-4 sm:p-6"
+          "flex flex-col items-stretch space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2" : "p-3 sm:p-4"
         )}
       >
         <div className="flex items-center justify-between">
-          <CardTitle 
-            className={cn(
-              "line-clamp-1",
-              (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
-            )}
-          >
-            Average P/L
-          </CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle 
+              className={cn(
+                "line-clamp-1",
+                size === 'small-long' ? "text-sm" : "text-base"
+              )}
+            >
+              Average P/L by Hour
+            </CardTitle>
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className={cn(
+                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
+                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                  )} />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Average profit/loss for each hour of the day</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          </div>
         </div>
-        <CardDescription 
-          className={cn(
-            (size === 'small' || size === 'small-long') ? "hidden" : "text-xs sm:text-sm"
-          )}
-        >
-          Showing average profit/loss for each hour of the day
-        </CardDescription>
       </CardHeader>
       <CardContent 
         className={cn(
-          (size === 'small' || size === 'small-long') ? "p-1" : "p-2 sm:p-6"
+          "flex-1 min-h-0",
+          size === 'small-long' ? "p-1" : "p-2 sm:p-4"
         )}
       >
-        <ChartContainer
-          config={chartConfig}
-          className={cn(
-            "w-full",
-            getChartHeight(),
-            (size === 'small' || size === 'small-long')
-              ? "aspect-[3/2]" 
-              : "aspect-[4/3] sm:aspect-[16/9]"
-          )}
-        >
+        <div className={cn(
+          "w-full h-full"
+        )}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={
-                (size === 'small' || size === 'small-long')
-                  ? { left: 10, right: 4, top: 4, bottom: 0 }
-                  : { left: 16, right: 8, top: 8, bottom: 0 }
+                size === 'small-long'
+                  ? { left: 35, right: 4, top: 4, bottom: 20 }
+                  : { left: 45, right: 8, top: 8, bottom: 24 }
               }
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
-                opacity={(size === 'small' || size === 'small-long') ? 0.5 : 1}
+                opacity={size === 'small-long' ? 0.5 : 0.8}
               />
               <XAxis
                 dataKey="hour"
                 tickLine={false}
                 axisLine={false}
-                tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
-                tick={{ fontSize: (size === 'small' || size === 'small-long') ? 10 : 12 }}
+                height={size === 'small-long' ? 20 : 24}
+                tickMargin={size === 'small-long' ? 4 : 8}
+                tick={{ 
+                  fontSize: size === 'small-long' ? 9 : 11,
+                  fill: 'currentColor'
+                }}
                 tickFormatter={(value) => `${value}h`}
-                ticks={(size === 'small' || size === 'small-long') ? [0, 6, 12, 18] : [0, 3, 6, 9, 12, 15, 18, 21]}
+                ticks={size === 'small-long' ? [0, 6, 12, 18] : [0, 3, 6, 9, 12, 15, 18, 21]}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
+                width={size === 'small-long' ? 35 : 45}
+                tickMargin={size === 'small-long' ? 2 : 4}
                 tick={{ 
-                  fontSize: (size === 'small' || size === 'small-long') ? 10 : 12,
+                  fontSize: size === 'small-long' ? 9 : 11,
                   fill: 'currentColor'
                 }}
-                width={getYAxisWidth()}
                 tickFormatter={(value) => formatCurrency(value)}
-                label={(size === 'small' || size === 'small-long') ? undefined : { 
-                  value: "P/L", 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  fontSize: 12
-                }}
               />
               <Tooltip 
                 content={<CustomTooltip />}
                 wrapperStyle={{ 
-                  fontSize: (size === 'small' || size === 'small-long') ? '10px' : '12px'
+                  fontSize: size === 'small-long' ? '10px' : '12px',
+                  zIndex: 1000
                 }} 
               />
               <Bar
                 dataKey="avgPnl"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={(size === 'small' || size === 'small-long') ? 30 : 50}
+                radius={[3, 3, 0, 0]}
+                maxBarSize={size === 'small-long' ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
               >
                 {chartData.map((entry, index) => (
@@ -198,7 +205,8 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
                 ))}
               </Bar>
             </BarChart>
-        </ChartContainer>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   )

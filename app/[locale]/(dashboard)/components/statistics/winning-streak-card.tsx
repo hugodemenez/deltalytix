@@ -1,19 +1,60 @@
+import { useTradeStatistics } from "@/components/context/trades-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Award } from "lucide-react"
-import { useTradeStatistics } from "@/components/context/trades-data"
+import { cn } from "@/lib/utils"
 
-export default function WinningStreakCard() {
+interface WinningStreakCardProps {
+  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long'
+}
+
+export default function WinningStreakCard({ size = 'medium' }: WinningStreakCardProps) {
   const { statistics: { winningStreak } } = useTradeStatistics()
 
+  if (size === 'tiny') {
+    return (
+      <Card className="h-full">
+        <div className="flex items-center justify-center h-full gap-1.5">
+          <Award className="h-3 w-3 text-yellow-500" />
+          <div className="font-medium text-sm">{winningStreak}</div>
+        </div>
+      </Card>
+    )
+  }
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">Winning Streak</CardTitle>
-        <Award className="h-4 w-4 text-muted-foreground" />
+    <Card className="h-full">
+      <CardHeader 
+        className={cn(
+          "flex flex-row items-center justify-between space-y-0",
+          (size === 'small' || size === 'small-long')
+            ? "p-2" 
+            : "p-4 sm:p-6"
+        )}
+      >
+        <CardTitle 
+          className={cn(
+            "line-clamp-1",
+            (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
+          )}
+        >
+          Winning Streak
+        </CardTitle>
+        <Award className={cn(
+          "text-muted-foreground",
+          (size === 'small' || size === 'small-long') ? "h-4 w-4" : "h-5 w-5"
+        )} />
       </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{winningStreak}</div>
-        <p className="text-xs text-muted-foreground">Current streak</p>
+      <CardContent 
+        className={cn(
+          (size === 'small' || size === 'small-long') ? "p-2" : "p-4 sm:p-6"
+        )}
+      >
+        <div className={cn(
+          "font-bold text-yellow-500",
+          (size === 'small' || size === 'small-long') ? "text-lg" : "text-2xl"
+        )}>
+          {winningStreak}
+        </div>
       </CardContent>
     </Card>
   )

@@ -14,7 +14,8 @@ export type WidgetType =
   | 'tradePerformance'
   | 'winningStreak'
   | 'statisticsWidget'
-export type WidgetSize = 'small' | 'small-long' | 'medium' | 'large'
+export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large'
+export type ChartSize = 'small-long' | 'medium' | 'large'
 
 export interface LayoutItem {
   i: string

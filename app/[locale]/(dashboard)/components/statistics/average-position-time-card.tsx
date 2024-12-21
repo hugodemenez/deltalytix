@@ -4,11 +4,22 @@ import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface AveragePositionTimeCardProps {
-  size?: 'small' | 'medium' | 'large' | 'small-long'
+  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long'
 }
 
 export default function AveragePositionTimeCard({ size = 'medium' }: AveragePositionTimeCardProps) {
   const { statistics: { averagePositionTime } } = useTradeStatistics()
+
+  if (size === 'tiny') {
+    return (
+      <Card className="h-full">
+        <div className="flex items-center justify-center h-full gap-1.5">
+          <Clock className="h-3 w-3 text-muted-foreground" />
+          <div className="font-medium text-sm">{averagePositionTime}</div>
+        </div>
+      </Card>
+    )
+  }
 
   return (
     <Card className="h-full">

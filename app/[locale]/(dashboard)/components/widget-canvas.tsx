@@ -4,9 +4,27 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from "@/components/ui/dropdown-menu"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuLabel,
+  ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
-import { EllipsisVertical, BarChart, BarChart2, LineChart, Calendar, Info, Minus, GripVertical, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award } from 'lucide-react'
+import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical } from 'lucide-react'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
@@ -25,11 +43,12 @@ import LongShortPerformanceCard from './statistics/long-short-card'
 import TradePerformanceCard from './statistics/trade-performance-card'
 import WinningStreakCard from './statistics/winning-streak-card'
 import { loadDashboardLayout, saveDashboardLayout } from '@/server/database'
-import { Widget, WidgetType, WidgetSize, Layouts, LayoutState, LayoutItem } from '../types/dashboard'
+import { Widget, WidgetType, WidgetSize, ChartSize, Layouts, LayoutState, LayoutItem } from '../types/dashboard'
 import { useAutoScroll } from '../hooks/use-auto-scroll'
 import CalendarPnl from './calendar/calendar-pnl'
 import CommissionsPnLChart from './charts/commissions-pnl'
 import StatisticsWidget from './statistics/statistics-widget'
+import { cn } from '@/lib/utils'
 
 interface WidgetOption {
   type: WidgetType
@@ -38,8 +57,7 @@ interface WidgetOption {
   size: WidgetSize
 }
 
-
-function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, size, currentType, dragHandleProps }: { 
+function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, size, currentType }: { 
   children: React.ReactNode
   onRemove: () => void
   onChangeType: (type: WidgetType) => void
@@ -47,215 +65,219 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   isCustomizing: boolean
   size: WidgetSize
   currentType: WidgetType
-  dragHandleProps?: any
 }) {
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
     if (widgetType === 'calendarWidget') {
       return size === 'medium' || size === 'large'
     }
+    if (size === 'tiny') {
+      // Allow tiny size for charts and all statistics widgets
+      return ['equityChart', 'pnlChart', 'timeOfDayChart', 'timeInPositionChart', 
+              'weekdayPnlChart', 'pnlBySideChart', 'tickDistribution', 'commissionsPnl',
+              'statisticsWidget', 'averagePositionTime', 'cumulativePnl', 'longShortPerformance',
+              'tradePerformance', 'winningStreak'].includes(widgetType)
+    }
     return true
   }
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-lg border bg-background shadow transition-all no-select">
-      {isCustomizing && (
-        <div className="absolute left-2 top-2 z-50" {...dragHandleProps}>
-          <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div className="relative h-full w-full overflow-hidden rounded-lg border bg-background shadow group">
+          <div className={cn("h-full w-full transition-all duration-200", 
+            isCustomizing && "group-hover:blur-sm"
+          )}>
+            {children}
+          </div>
+          {isCustomizing && (
+            <>
+              <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <GripVertical className="h-6 w-6" />
+                  <p className="text-sm font-medium">Drag to move</p>
+                </div>
+              </div>
+            </>
+          )}
         </div>
-      )}
-      <div className="h-full w-full">{children}</div>
-      {isCustomizing && (
-        <div className="absolute inset-0 bg-background/50 dark:bg-background/70 pointer-events-none" />
-      )}
-      {isCustomizing && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="absolute right-2 top-2 z-50 flex h-8 w-8 items-center justify-center rounded-full bg-popover/90 text-popover-foreground opacity-70 transition-opacity hover:opacity-100"
+      </ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        <ContextMenuSub>
+          <ContextMenuSubTrigger className="flex items-center">
+            <Info className="mr-2 h-4 w-4" />
+            <span>Edit Widget</span>
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent className="max-h-[400px] overflow-y-auto">
+            <ContextMenuLabel>Charts</ContextMenuLabel>
+            <ContextMenuItem 
+              onClick={() => onChangeType('equityChart')}
+              className={currentType === 'equityChart' ? 'bg-accent text-accent-foreground' : ''}
             >
-              <EllipsisVertical className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 bg-popover text-popover-foreground border-border z-50 max-h-[400px] overflow-y-auto">
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="flex items-center hover:bg-accent hover:text-accent-foreground">
-                <Info className="mr-2 h-4 w-4" />
-                <span>Edit Widget</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover text-popover-foreground border-border max-h-[400px] overflow-y-auto">
-                <DropdownMenuLabel>Charts</DropdownMenuLabel>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('equityChart')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${
-                    currentType === 'equityChart' ? 'bg-accent text-accent-foreground' : ''
-                  }`}
-                >
-                  <LineChart className="mr-2 h-4 w-4" />
-                  <span>Equity Chart</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('pnlChart')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'pnlChart' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <BarChart className="mr-2 h-4 w-4" />
-                  <span>P&L Chart</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('timeOfDayChart')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'timeOfDayChart' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  <span>Time of Day</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('timeInPositionChart')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'timeInPositionChart' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <Timer className="mr-2 h-4 w-4" />
-                  <span>Time in Position</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('weekdayPnlChart')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'weekdayPnlChart' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  <span>Weekday P&L</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('pnlBySideChart')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'pnlBySideChart' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  <span>P&L by Side</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('tickDistribution')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'tickDistribution' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <BarChart className="mr-2 h-4 w-4" />
-                  <span>Tick Distribution</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('commissionsPnl')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'commissionsPnl' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <PiggyBank className="mr-2 h-4 w-4" />
-                  <span>Commissions PnL</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border" />
-                <DropdownMenuLabel>Statistics</DropdownMenuLabel>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('averagePositionTime')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'averagePositionTime' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  <span>Average Position Time</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('cumulativePnl')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'cumulativePnl' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <PiggyBank className="mr-2 h-4 w-4" />
-                  <span>Cumulative PnL</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('longShortPerformance')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'longShortPerformance' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  <span>Long/Short Performance</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('tradePerformance')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'tradePerformance' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <BarChart className="mr-2 h-4 w-4" />
-                  <span>Trade Performance</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('winningStreak')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'winningStreak' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <Award className="mr-2 h-4 w-4" />
-                  <span>Winning Streak</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('statisticsWidget')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'statisticsWidget' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <BarChart2 className="mr-2 h-4 w-4" />
-                  <span>Statistics Overview</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border" />
-                <DropdownMenuLabel>Other</DropdownMenuLabel>
-                <DropdownMenuItem 
-                  onClick={() => onChangeType('calendarWidget')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${currentType === 'calendarWidget' ? 'bg-accent text-accent-foreground' : ''}`}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  <span>Calendar</span>
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="flex items-center hover:bg-accent hover:text-accent-foreground">
-                <Maximize2 className="mr-2 h-4 w-4" />
-                <span>Change Size</span>
-              </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="bg-popover text-popover-foreground border-border">
-                <DropdownMenuItem 
-                  onClick={() => onChangeSize('small')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${
-                    size === 'small' ? 'bg-accent text-accent-foreground' : ''
-                  } ${!isValidSize(currentType, 'small') ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!isValidSize(currentType, 'small')}
-                >
-                  <Minimize2 className="mr-2 h-4 w-4" />
-                  <span>Small (3x2)</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeSize('small-long')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${
-                    size === 'small-long' ? 'bg-accent text-accent-foreground' : ''
-                  } ${!isValidSize(currentType, 'small-long') ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  disabled={!isValidSize(currentType, 'small-long')}
-                >
-                  <ArrowLeftRight className="mr-2 h-4 w-4" />
-                  <span>Small Long (6x2)</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeSize('medium')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${
-                    size === 'medium' ? 'bg-accent text-accent-foreground' : ''
-                  }`}
-                >
-                  <Square className="mr-2 h-4 w-4" />
-                  <span>Medium (6x4)</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onChangeSize('large')}
-                  className={`hover:bg-accent hover:text-accent-foreground ${
-                    size === 'large' ? 'bg-accent text-accent-foreground' : ''
-                  }`}
-                >
-                  <Maximize2 className="mr-2 h-4 w-4" />
-                  <span>Large (12x4)</span>
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuItem 
-              onClick={onRemove}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+              <LineChart className="mr-2 h-4 w-4" />
+              <span>Equity Chart</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('pnlChart')}
+              className={currentType === 'pnlChart' ? 'bg-accent text-accent-foreground' : ''}
             >
-              <Minus className="mr-2 h-4 w-4" />
-              <span>Remove Widget</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-    </div>
+              <BarChart className="mr-2 h-4 w-4" />
+              <span>P&L Chart</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('timeOfDayChart')}
+              className={currentType === 'timeOfDayChart' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              <span>Time of Day</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('timeInPositionChart')}
+              className={currentType === 'timeInPositionChart' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <Timer className="mr-2 h-4 w-4" />
+              <span>Time in Position</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('weekdayPnlChart')}
+              className={currentType === 'weekdayPnlChart' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              <span>Weekday P&L</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('pnlBySideChart')}
+              className={currentType === 'pnlBySideChart' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              <span>P&L by Side</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('tickDistribution')}
+              className={currentType === 'tickDistribution' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <BarChart className="mr-2 h-4 w-4" />
+              <span>Tick Distribution</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('commissionsPnl')}
+              className={currentType === 'commissionsPnl' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <PiggyBank className="mr-2 h-4 w-4" />
+              <span>Commissions PnL</span>
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuLabel>Statistics</ContextMenuLabel>
+            <ContextMenuItem 
+              onClick={() => onChangeType('averagePositionTime')}
+              className={currentType === 'averagePositionTime' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              <span>Average Position Time</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('cumulativePnl')}
+              className={currentType === 'cumulativePnl' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <PiggyBank className="mr-2 h-4 w-4" />
+              <span>Cumulative PnL</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('longShortPerformance')}
+              className={currentType === 'longShortPerformance' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              <span>Long/Short Performance</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('tradePerformance')}
+              className={currentType === 'tradePerformance' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <BarChart className="mr-2 h-4 w-4" />
+              <span>Trade Performance</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('winningStreak')}
+              className={currentType === 'winningStreak' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <Award className="mr-2 h-4 w-4" />
+              <span>Winning Streak</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeType('statisticsWidget')}
+              className={currentType === 'statisticsWidget' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <BarChart2 className="mr-2 h-4 w-4" />
+              <span>Statistics Overview</span>
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuLabel>Other</ContextMenuLabel>
+            <ContextMenuItem 
+              onClick={() => onChangeType('calendarWidget')}
+              className={currentType === 'calendarWidget' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              <span>Calendar</span>
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSeparator />
+        <ContextMenuSub>
+          <ContextMenuSubTrigger className="flex items-center">
+            <Maximize2 className="mr-2 h-4 w-4" />
+            <span>Change Size</span>
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            <ContextMenuItem 
+              onClick={() => onChangeSize('tiny')}
+              className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
+              disabled={!isValidSize(currentType, 'tiny')}
+            >
+              <Minimize2 className="mr-2 h-4 w-4" />
+              <span>Tiny (3x1)</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeSize('small')}
+              className={size === 'small' ? 'bg-accent text-accent-foreground' : ''}
+              disabled={!isValidSize(currentType, 'small')}
+            >
+              <Minimize2 className="mr-2 h-4 w-4" />
+              <span>Small (3x2)</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeSize('small-long')}
+              className={size === 'small-long' ? 'bg-accent text-accent-foreground' : ''}
+              disabled={!isValidSize(currentType, 'small-long')}
+            >
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              <span>Small Long (6x2)</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeSize('medium')}
+              className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <Square className="mr-2 h-4 w-4" />
+              <span>Medium (6x4)</span>
+            </ContextMenuItem>
+            <ContextMenuItem 
+              onClick={() => onChangeSize('large')}
+              className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
+            >
+              <Maximize2 className="mr-2 h-4 w-4" />
+              <span>Large (12x4)</span>
+            </ContextMenuItem>
+          </ContextMenuSubContent>
+        </ContextMenuSub>
+        <ContextMenuSeparator />
+        <ContextMenuItem 
+          onClick={onRemove}
+          className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+        >
+          <Minus className="mr-2 h-4 w-4" />
+          <span>Remove Widget</span>
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }
 
@@ -291,6 +313,40 @@ function useIsMobile() {
   return isMobile
 }
 
+// Add custom CSS for the placeholder
+const customStyles = `
+  .react-grid-placeholder {
+    background: hsl(var(--accent) / 0.4) !important;
+    border: 2px dashed hsl(var(--accent)) !important;
+    border-radius: 0.5rem !important;
+    opacity: 1 !important;
+    transition: all 200ms ease !important;
+    backdrop-filter: blur(4px) !important;
+    box-shadow: 0 0 0 1px hsl(var(--accent) / 0.4) !important;
+  }
+  .react-grid-item.react-grid-placeholder {
+    box-shadow: 0 0 0 1px hsl(var(--accent) / 0.2) !important;
+    transform-origin: center !important;
+  }
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  .react-grid-item.react-draggable-dragging {
+    transition: none !important;
+    z-index: 100;
+    cursor: grabbing !important;
+    opacity: 0.9 !important;
+  }
+  .react-grid-item > .react-resizable-handle {
+    border-radius: 0 0 4px 0;
+  }
+`
+
 export default function WidgetCanvas() {
   const { user } = useUser()
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
@@ -312,29 +368,33 @@ export default function WidgetCanvas() {
   const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
     if (isSmallScreen) {
       switch (size) {
+        case 'tiny':
+          return { w: 12, h: 1.5 } // Only for statistics widgets
         case 'small':
-          return { w: 12, h: 2.5 }
+          return { w: 12, h: 2.5 } // Only for statistics widgets
         case 'small-long':
-          return { w: 12, h: 4 }
+          return { w: 12, h: 3.5 }
         case 'medium':
           return { w: 12, h: 4.5 }
         case 'large':
-          return { w: 12, h: 4 }
+          return { w: 12, h: 5.5 }
         default:
-          return { w: 12, h: 4 }
+          return { w: 12, h: 4.5 }
       }
     }
 
     // Desktop sizes
     switch (size) {
+      case 'tiny':
+        return { w: 3, h: 1.5 } // Only for statistics widgets
       case 'small':
-        return { w: 3, h: 2 }
+        return { w: 3, h: 2.5 } // Only for statistics widgets
       case 'small-long':
-        return { w: 6, h: 2 }
+        return { w: 6, h: 3 }
       case 'medium':
         return { w: 6, h: 4 }
       case 'large':
-        return { w: 12, h: 4 }
+        return { w: 12, h: 5 }
       default:
         return { w: 6, h: 4 }
     }
@@ -513,10 +573,16 @@ export default function WidgetCanvas() {
     }
   }
 
-  const addWidget = async (type: WidgetType, size: WidgetSize = 'small') => {
+  const addWidget = async (type: WidgetType, size: WidgetSize = 'medium') => {
     if (!user?.id) return
     
-    const effectiveSize = type === 'calendarWidget' ? 'medium' : size
+    // Determine appropriate size based on widget type
+    let effectiveSize = size
+    if (type.includes('Chart') || type === 'calendarWidget') {
+      // Charts should be at least medium size
+      effectiveSize = size === 'tiny' || size === 'small' ? 'medium' : size
+    }
+    
     const currentLayout = layoutState.layouts[layoutState.activeLayout]
     
     // Calculate position for new widget
@@ -542,8 +608,8 @@ export default function WidgetCanvas() {
       size: effectiveSize,
       x: newX,
       y: newY,
-      w: grid.w, // Add w property
-      h: grid.h  // Add h property
+      w: grid.w,
+      h: grid.h
     }
 
     // Generate new responsive layouts including the new widget
@@ -596,9 +662,20 @@ export default function WidgetCanvas() {
 
   const changeWidgetSize = async (i: string, newSize: WidgetSize) => {
     if (!user?.id) return
-    const grid = sizeToGrid(newSize)
+    
+    // Find the widget
+    const widget = layoutState.layouts[layoutState.activeLayout].find(w => w.i === i)
+    if (!widget) return
+    
+    // Prevent charts from being set to tiny or small sizes
+    let effectiveSize = newSize
+    if (widget.type.includes('Chart') && (newSize === 'tiny' || newSize === 'small')) {
+      effectiveSize = 'medium'
+    }
+    
+    const grid = sizeToGrid(effectiveSize)
     const updatedWidgets = layoutState.layouts[layoutState.activeLayout].map(widget => 
-      widget.i === i ? { ...widget, size: newSize, ...grid } : widget
+      widget.i === i ? { ...widget, size: effectiveSize, ...grid } : widget
     )
     const newLayouts = {
       ...layoutState.layouts,
@@ -612,38 +689,45 @@ export default function WidgetCanvas() {
   }
 
   const renderWidget = (widget: Widget) => {
-    // Always pass 'small' size on mobile
-    const effectiveSize = isMobile ? 'small' : widget.size
+    // For charts, ensure size is at least 'small-long'
+    const effectiveSize = (() => {
+      if (widget.type.includes('Chart') || widget.type === 'calendarWidget') {
+        if (widget.size === 'tiny' || widget.size === 'small') {
+          return 'small-long' as const
+        }
+      }
+      return isMobile && widget.size !== 'tiny' ? 'small' : widget.size
+    })()
 
     switch (widget.type) {
       case 'equityChart':
-        return <EquityChart size={effectiveSize} />
+        return <EquityChart size={effectiveSize as ChartSize} />
       case 'pnlChart':
-        return <PNLChart size={effectiveSize} />
+        return <PNLChart size={effectiveSize as ChartSize} />
       case 'timeOfDayChart':
-        return <TimeOfDayTradeChart size={effectiveSize} />
+        return <TimeOfDayTradeChart size={effectiveSize as ChartSize} />
       case 'timeInPositionChart':
-        return <TimeInPositionChart size={effectiveSize} />
+        return <TimeInPositionChart size={effectiveSize as ChartSize} />
       case 'weekdayPnlChart':
-        return <WeekdayPNLChart size={effectiveSize} />
+        return <WeekdayPNLChart size={effectiveSize as ChartSize} />
       case 'pnlBySideChart':
-        return <PnLBySideChart size={effectiveSize} />
+        return <PnLBySideChart size={effectiveSize as ChartSize} />
       case 'tickDistribution':
-        return <TickDistributionChart size={effectiveSize} />
+        return <TickDistributionChart size={effectiveSize as ChartSize} />
       case 'commissionsPnl':
-        return <CommissionsPnLChart size={effectiveSize} />
+        return <CommissionsPnLChart size={effectiveSize as ChartSize} />
       case 'calendarWidget':
         return <CalendarPnl />
       case 'averagePositionTime':
-        return <AveragePositionTimeCard />
+        return <AveragePositionTimeCard size={effectiveSize} />
       case 'cumulativePnl':
-        return <CumulativePnlCard />
+        return <CumulativePnlCard size={effectiveSize} />
       case 'longShortPerformance':
-        return <LongShortPerformanceCard />
+        return <LongShortPerformanceCard size={effectiveSize} />
       case 'tradePerformance':
-        return <TradePerformanceCard />
+        return <TradePerformanceCard size={effectiveSize} />
       case 'winningStreak':
-        return <WinningStreakCard />
+        return <WinningStreakCard size={effectiveSize} />
       case 'statisticsWidget':
         return <StatisticsWidget size={effectiveSize} />
       default:
@@ -668,7 +752,8 @@ export default function WidgetCanvas() {
   }
 
   return (
-    <div className="p-4 no-select">
+    <div className="p-4">
+      <style>{customStyles}</style>
       <div className="mb-4 flex items-center justify-between">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -818,7 +903,7 @@ export default function WidgetCanvas() {
         layouts={generateResponsiveLayout(layoutState.layouts[layoutState.activeLayout])}
         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
         cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-        rowHeight={isMobile ? 75 : 100}
+        rowHeight={isMobile ? 65 : 70}
         isDraggable={isCustomizing}
         isResizable={isCustomizing && !isMobile}
         onDragStart={() => setIsUserAction(true)}
@@ -829,14 +914,13 @@ export default function WidgetCanvas() {
         compactType="vertical"
         preventCollision={false}
         useCSSTransforms={true}
-        draggableHandle=".cursor-move"
         style={{ 
           minHeight: isMobile ? '100vh' : 'auto',
           touchAction: isCustomizing ? 'none' : 'auto'
         }}
       >
         {layoutState.layouts[layoutState.activeLayout].map((widget) => (
-          <div key={widget.i} className="bg-background">
+          <div key={widget.i} className="h-full">
             <WidgetWrapper
               onRemove={() => removeWidget(widget.i)}
               onChangeType={(type) => changeWidgetType(widget.i, type)}

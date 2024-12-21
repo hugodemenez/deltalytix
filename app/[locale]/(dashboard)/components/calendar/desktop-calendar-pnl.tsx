@@ -20,17 +20,25 @@ function getCalendarDays(monthStart: Date, monthEnd: Date) {
   const endDate = endOfWeek(monthEnd)
   const days = eachDayOfInterval({ start: startDate, end: endDate })
   
-  // If we already have 42 days (6 rows × 7 days), return as is
   if (days.length === 42) return days
   
-  // If we have less than 42 days, add days from the next month
   const lastDay = days[days.length - 1]
   const additionalDays = eachDayOfInterval({
     start: addDays(lastDay, 1),
-    end: addDays(startDate, 41) // Ensure we get exactly 6 rows
+    end: addDays(startDate, 41)
   })
   
-  return [...days, ...additionalDays].slice(0, 42) // Ensure exactly 42 days
+  return [...days, ...additionalDays].slice(0, 42)
+}
+
+const formatCurrency = (value: number) => {
+  const formatted = value.toLocaleString('en-US', { 
+    style: 'currency', 
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  })
+  return formatted
 }
 
 export default function CalendarPnl({ calendarData }: { calendarData: CalendarData }) {
@@ -101,98 +109,128 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
   const monthlyTotal = calculateMonthlyTotal()
 
   return (
-    <div className="flex flex-col h-full space-y-2 p-1">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-lg sm:text-xl font-bold">{format(currentDate, 'MMMM yyyy')}</h2>
-          <div className={cn(
-            "text-base font-bold",
-            monthlyTotal >= 0
-              ? "text-green-600 dark:text-green-400"
-              : "text-red-600 dark:text-red-400"
-          )}>
-            ${monthlyTotal.toFixed(2)}
+    <Card className="h-full flex flex-col">
+      <CardHeader className="flex flex-col items-stretch space-y-0 border-b shrink-0 p-3 sm:p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-base sm:text-lg font-semibold truncate">
+              {format(currentDate, 'MMMM yyyy')}
+            </CardTitle>
+            <div className={cn(
+              "text-sm sm:text-base font-semibold truncate",
+              monthlyTotal >= 0
+                ? "text-green-600 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
+            )}>
+              {formatCurrency(monthlyTotal)}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handlePrevMonth} 
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleNextMonth} 
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              aria-label="Next month"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" onClick={handleNextMonth} aria-label="Next month">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+      </CardHeader>
+      <CardContent className="flex-1 min-h-0 p-1.5 sm:p-4">
+        <div className="grid grid-cols-8 gap-x-[1px] mb-1">
+          {[...WEEKDAYS, 'Weekly'].map((day) => (
+            <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
+              {day}
+            </div>
+          ))}
         </div>
-      </div>
-      <div className="grid grid-cols-8 grid-rows-[auto_repeat(6,1fr)] gap-x-1 gap-y-0.5 flex-1 min-h-0">
-        {[...WEEKDAYS, 'Weekly'].map((day) => (
-          <div key={day} className="text-center font-semibold text-[10px] sm:text-xs">{day}</div>
-        ))}
-        {calendarDays.map((date, index) => {
-          const dateString = format(date, 'yyyy-MM-dd')
-          const dayData = calendarData[dateString]
-          const isLastDayOfWeek = getDay(date) === 6
+        <div className="grid grid-cols-8 auto-rows-fr gap-[1px] ring-1 ring-border/40 rounded-lg h-[calc(100%-20px)]">
+          {calendarDays.map((date, index) => {
+            const dateString = format(date, 'yyyy-MM-dd')
+            const dayData = calendarData[dateString]
+            const isLastDayOfWeek = getDay(date) === 6
+            const isCurrentMonth = isSameMonth(date, currentDate)
 
-          return (
-            <React.Fragment key={dateString}>
-              <Card
-                className={cn(
-                  "h-full cursor-pointer hover:border-primary transition-colors",
-                  !isSameMonth(date, currentDate) && "opacity-25",
-                  dayData && dayData.pnl >= 0
-                    ? "bg-green-50 dark:bg-green-900/20"
-                    : dayData && dayData.pnl < 0
-                    ? "bg-red-50 dark:bg-red-900/20"
-                    : ""
-                )}
-                onClick={() => {
-                  setSelectedDate(date)
-                  initializeComment(dayData)
-                }}
-              >
-                <CardHeader className="p-0.5">
-                  <CardTitle className="text-[10px] font-medium flex justify-between items-center">
-                    <span>{format(date, 'd')}</span>
-                    {isToday(date) && <Badge variant="outline" className="text-[8px] px-0.5">Today</Badge>}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0.5">
-                  {dayData ? (
-                    <>
+            return (
+              <React.Fragment key={dateString}>
+                <div
+                  className={cn(
+                    "h-full flex flex-col cursor-pointer transition-all rounded-none p-0.5 sm:p-1 ring-1",
+                    "hover:relative hover:ring-1 hover:ring-primary hover:z-10",
+                    !isCurrentMonth && "opacity-25",
+                    isToday(date) && "ring-2 ring-primary bg-primary/5",
+                    dayData && dayData.pnl >= 0
+                      ? "bg-green-50 dark:bg-green-900/20"
+                      : dayData && dayData.pnl < 0
+                      ? "bg-red-50 dark:bg-red-900/20"
+                      : "bg-card",
+                    !isToday(date) && "ring-primary/10",
+                    index === 0 && "rounded-tl-lg",
+                    index === 35 && "rounded-bl-lg",
+                  )}
+                  onClick={() => {
+                    setSelectedDate(date)
+                    initializeComment(dayData)
+                  }}
+                >
+                  <div className="flex justify-between items-start gap-0.5">
+                    <span className={cn(
+                      "text-[9px] sm:text-[11px] font-medium min-w-[14px] text-center",
+                      isToday(date) && "text-primary font-semibold"
+                    )}>
+                      {format(date, 'd')}
+                    </span>
+                    {dayData ? (
                       <div className={cn(
-                        "text-[10px] sm:text-xs font-bold",
+                        "text-[9px] sm:text-[11px] font-semibold truncate max-w-[70%] text-right",
                         dayData.pnl >= 0
                           ? "text-green-600 dark:text-green-400"
                           : "text-red-600 dark:text-red-400"
                       )}>
-                        ${dayData.pnl.toFixed(2)}
+                        {formatCurrency(dayData.pnl)}
                       </div>
-                      <div className="text-[8px] sm:text-[10px] text-muted-foreground">
-                        {dayData.tradeNumber} trade{dayData.tradeNumber > 1 ? 's' : ''}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-[8px] sm:text-[10px] text-muted-foreground">No trades</div>
-                  )}
-                </CardContent>
-              </Card>
-              {isLastDayOfWeek && (
-                <Card className="h-full flex items-center justify-center">
-                  <CardContent className="p-0.5 flex items-center justify-center">
+                    ) : (
+                      <div className="text-[9px] sm:text-[11px] font-semibold invisible">$0</div>
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col justify-end">
+                    <div className="text-[7px] sm:text-[9px] text-muted-foreground truncate text-center">
+                      {dayData ? `${dayData.tradeNumber} trade${dayData.tradeNumber > 1 ? 's' : ''}` : 'No trades'}
+                    </div>
+                  </div>
+                </div>
+                {isLastDayOfWeek && (
+                  <div className={cn(
+                    "h-full flex items-center justify-center rounded-none bg-card/50",
+                    index === 6 && "rounded-tr-lg",
+                    index === 41 && "rounded-br-lg"
+                  )}>
                     <div className={cn(
-                      "text-[10px] sm:text-xs font-bold",
+                      "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
                       calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
                         ? "text-green-600 dark:text-green-400"
                         : "text-red-600 dark:text-red-400"
                     )}>
-                      ${calculateWeeklyTotal(index, calendarDays, calendarData).toFixed(2)}
+                      {formatCurrency(calculateWeeklyTotal(index, calendarDays, calendarData))}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-            </React.Fragment>
-          )
-        })}
-      </div>
+                  </div>
+                )}
+              </React.Fragment>
+            )
+          })}
+        </div>
+      </CardContent>
       <CalendarModal
         isOpen={selectedDate !== null}
         onOpenChange={(open) => {
@@ -202,7 +240,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
         dayData={selectedDate ? calendarData[format(selectedDate, 'yyyy-MM-dd')] : undefined}
         isLoading={isLoading}
       />
-    </div>
+    </Card>
   )
 }
 

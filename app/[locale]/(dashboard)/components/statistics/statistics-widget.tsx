@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils"
 
 interface StatisticsWidgetProps {
-  size?: 'small' | 'medium' | 'large' | 'small-long'
+  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long'
 }
 
 function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
@@ -121,28 +121,40 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
       <CardHeader 
         className={cn(
           "flex flex-col items-stretch space-y-0 border-b",
-          (size === 'small' || size === 'small-long')
-            ? "p-2" 
-            : "p-4 sm:p-6"
+          size === 'tiny' 
+            ? "p-1"
+            : (size === 'small' || size === 'small-long')
+              ? "p-2" 
+              : "p-4 sm:p-6"
         )}
       >
         <div className="flex items-center justify-between">
           <CardTitle 
             className={cn(
               "line-clamp-1",
-              (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
+              size === 'tiny'
+                ? "text-xs"
+                : (size === 'small' || size === 'small-long') 
+                  ? "text-sm" 
+                  : "text-base sm:text-lg"
             )}
           >
             Trading Statistics
           </CardTitle>
           <BarChart className={cn(
             "text-muted-foreground",
-            (size === 'small' || size === 'small-long') ? "h-4 w-4" : "h-5 w-5"
+            size === 'tiny'
+              ? "h-3 w-3"
+              : (size === 'small' || size === 'small-long') 
+                ? "h-4 w-4" 
+                : "h-5 w-5"
           )} />
         </div>
         <CardDescription 
           className={cn(
-            (size === 'small' || size === 'small-long') ? "hidden" : "text-xs sm:text-sm"
+            (size === 'tiny' || size === 'small' || size === 'small-long') 
+              ? "hidden" 
+              : "text-xs sm:text-sm"
           )}
         >
           Overview of your trading performance
@@ -151,11 +163,13 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
       <CardContent 
         className={cn(
           "grid gap-2",
-          size === 'small' 
-            ? "p-2 grid-cols-2 grid-rows-2" 
-            : size === 'small-long'
-            ? "p-2 grid-cols-4"
-            : "p-4 sm:p-6 grid-cols-2 sm:grid-cols-4"
+          size === 'tiny'
+            ? "p-1 grid-cols-2"
+            : size === 'small' 
+              ? "p-2 grid-cols-2 grid-rows-2" 
+              : size === 'small-long'
+                ? "p-2 grid-cols-4"
+                : "p-4 sm:p-6 grid-cols-2 sm:grid-cols-4"
         )}
       >
         {/* Performance Distribution - Only show for medium and large */}

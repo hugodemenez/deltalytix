@@ -1,197 +1,224 @@
 'use client'
 
 import * as React from "react"
-import { useFormattedTrades } from '@/components/context/trades-data'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Text } from 'recharts'
-import { ChartContainer, ChartConfig } from "@/components/ui/chart"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartConfig } from "@/components/ui/chart"
+import { useFormattedTrades } from "@/components/context/trades-data"
 import { cn } from "@/lib/utils"
-
-interface ChartData {
-  name: string
-  value: number
-  color: string
-}
+import { Info } from 'lucide-react'
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 
 interface CommissionsPnLChartProps {
-  size?: 'small' | 'medium' | 'large' | 'small-long'
+  size?: ChartSize
 }
 
 const chartConfig = {
   pnl: {
-    label: "PnL Breakdown",
-    color: "hsl(var(--chart-2))",
+    label: "Net P/L",
+    color: "hsl(var(--chart-3))",
+  },
+  commissions: {
+    label: "Commissions",
+    color: "hsl(var(--chart-4))",
   },
 } satisfies ChartConfig
 
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, name, value, fontSize }: any) => {
-  const RADIAN = Math.PI / 180;
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 10) * cos;
-  const sy = cy + (outerRadius + 10) * sin;
-  const mx = cx + (outerRadius + 20) * cos;
-  const my = cy + (outerRadius + 20) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
+const formatCurrency = (value: number) =>
+  value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
-  return (
-    <g>
-      <text 
-        x={x} 
-        y={y} 
-        fill="white" 
-        textAnchor={x > cx ? 'start' : 'end'} 
-        dominantBaseline="central"
-        fontSize={fontSize}
-      >
-        {`${(percent * 100).toFixed(1)}%`}
-      </text>
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={value.color} fill="none" />
-      <circle cx={ex} cy={ey} r={2} fill={value.color} stroke="none" />
-      <text 
-        x={ex + (cos >= 0 ? 1 : -1) * 12} 
-        y={ey} 
-        textAnchor={textAnchor} 
-        className="fill-black dark:fill-white"
-        fontSize={fontSize}
-      >
-        {name}
-      </text>
-    </g>
-  );
-};
+const formatPercentage = (value: number) =>
+  `${(value * 100).toFixed(1)}%`
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
-    const data = payload[0].payload;
+    const data = payload[0].payload
     return (
-      <div className="bg-background p-2 border rounded shadow-sm">
-        <p className="font-semibold">{data.name}</p>
-        <p className="text-sm">{`$${data.value.toFixed(2)}`}</p>
+      <div className="rounded-lg border bg-background p-2 shadow-sm">
+        <div className="grid gap-2">
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              Type
+            </span>
+            <span className="font-bold text-muted-foreground">
+              {data.name}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              Amount
+            </span>
+            <span className="font-bold">
+              {formatCurrency(data.value)}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              Percentage
+            </span>
+            <span className="font-bold text-muted-foreground">
+              {formatPercentage(data.percentage)}
+            </span>
+          </div>
+        </div>
       </div>
-    );
+    )
   }
-  return null;
-};
+  return null
+}
+
+const CustomLegend = ({ payload }: any) => {
+  return (
+    <div className="flex justify-center gap-4 pt-2">
+      {payload.map((entry: any, index: number) => (
+        <div key={`legend-${index}`} className="flex items-center gap-1.5">
+          <div 
+            className="h-2.5 w-2.5 rounded-sm"
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-xs text-muted-foreground">
+            {entry.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function CommissionsPnLChart({ size = 'medium' }: CommissionsPnLChartProps) {
-  const { formattedTrades } = useFormattedTrades()
+  const { formattedTrades: trades } = useFormattedTrades()
 
-  const chartData: ChartData[] = React.useMemo(() => {
-    const totalPnL = formattedTrades.reduce((sum, trade) => sum + trade.pnl, 0);
-    const totalCommissions = formattedTrades.reduce((sum, trade) => sum + trade.commission, 0);
-    const netPnL = totalPnL - totalCommissions;
-    const grossPnL = Math.abs(netPnL) + totalCommissions;
+  const chartData = React.useMemo(() => {
+    const totalPnL = trades.reduce((sum, trade) => sum + trade.pnl, 0)
+    const totalCommissions = trades.reduce((sum, trade) => sum + trade.commission, 0)
+    const total = Math.abs(totalPnL) + Math.abs(totalCommissions)
 
     return [
-      { name: 'Net PnL', value: Math.abs(netPnL), color: 'hsl(var(--chart-2))' },
-      { name: 'Commissions', value: totalCommissions, color: 'hsl(var(--chart-1))' },
-    ];
-  }, [formattedTrades])
+      {
+        name: "Net P/L",
+        value: totalPnL,
+        percentage: totalPnL / total,
+        fill: chartConfig.pnl.color
+      },
+      {
+        name: "Commissions",
+        value: totalCommissions,
+        percentage: totalCommissions / total,
+        fill: chartConfig.commissions.color
+      }
+    ]
+  }, [trades])
 
   const getChartHeight = () => {
     switch (size) {
-      case 'small':
       case 'small-long':
-        return 'h-[140px]'
+        return 140
       case 'medium':
-        return 'h-[280px]'
+        return 200
       case 'large':
-        return 'h-[320px]'
+        return 280
       default:
-        return 'h-[280px]'
+        return 200
     }
   }
 
   const getOuterRadius = () => {
     switch (size) {
-      case 'small':
       case 'small-long':
         return 45
       case 'medium':
-        return 100
+        return 70
       case 'large':
-        return 120
-      default:
         return 100
+      default:
+        return 70
     }
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader 
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b",
-          (size === 'small' || size === 'small-long')
-            ? "p-2 min-h-[40px]" 
-            : "p-4 sm:p-6 sm:min-h-[90px]"
+          "flex flex-col items-stretch space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2" : "p-3 sm:p-4"
         )}
       >
         <div className="flex items-center justify-between">
-          <CardTitle 
-            className={cn(
-              "line-clamp-1",
-              (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
-            )}
-          >
-            PnL Breakdown
-          </CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle 
+              className={cn(
+                "line-clamp-1",
+                size === 'small-long' ? "text-sm" : "text-base"
+              )}
+            >
+              P/L vs Commissions
+            </CardTitle>
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className={cn(
+                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
+                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                  )} />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Distribution of net profit/loss versus commissions paid</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          </div>
         </div>
-        <CardDescription 
-          className={cn(
-            (size === 'small' || size === 'small-long') ? "hidden" : "text-xs sm:text-sm"
-          )}
-        >
-          Showing net PnL and commissions as a proportion of gross PnL
-        </CardDescription>
       </CardHeader>
       <CardContent 
         className={cn(
-          (size === 'small' || size === 'small-long') ? "p-1" : "p-2 sm:p-6"
+          "flex-1 min-h-0",
+          size === 'small-long' ? "p-1" : "p-2 sm:p-4"
         )}
       >
-        <ChartContainer
-          config={chartConfig}
-          className={cn(
-            "w-full",
-            getChartHeight(),
-            (size === 'small' || size === 'small-long')
-              ? "aspect-[3/2]" 
-              : "aspect-[4/3] sm:aspect-[16/9]"
-          )}
-        >
+        <div className={cn(
+          "w-full h-full"
+        )}>
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={chartData}
-                cx="50%"
-                cy="50%"
-                labelLine={!(size === 'small' || size === 'small-long')}
-                label={(props) => renderCustomizedLabel({ 
-                  ...props, 
-                  fontSize: (size === 'small' || size === 'small-long') ? 10 : 12 
-                })}
-                outerRadius={getOuterRadius()}
-                fill="#8884d8"
                 dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="45%"
+                innerRadius={getOuterRadius() * 0.6}
+                outerRadius={getOuterRadius()}
+                paddingAngle={2}
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell 
+                    key={`cell-${index}`}
+                    fill={entry.fill}
+                    className="transition-all duration-300 ease-in-out"
+                  />
                 ))}
               </Pie>
               <Tooltip 
                 content={<CustomTooltip />}
                 wrapperStyle={{ 
-                  fontSize: (size === 'small' || size === 'small-long') ? '10px' : '12px'
+                  fontSize: size === 'small-long' ? '10px' : '12px',
+                  zIndex: 1000
                 }} 
               />
-              {!(size === 'small' || size === 'small-long') && <Legend />}
+              <Legend 
+                content={<CustomLegend />}
+                verticalAlign="bottom"
+                align="center"
+              />
             </PieChart>
-        </ChartContainer>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   )

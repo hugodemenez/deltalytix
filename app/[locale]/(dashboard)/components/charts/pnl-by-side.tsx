@@ -1,222 +1,239 @@
 'use client'
 
 import * as React from "react"
-import { useFormattedTrades } from '@/components/context/trades-data'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell, TooltipProps, ReferenceLine, ResponsiveContainer } from 'recharts'
-import { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent"
-import { ChartContainer, ChartConfig } from "@/components/ui/chart"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, ReferenceLine } from "recharts"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartConfig } from "@/components/ui/chart"
+import { useFormattedTrades } from "@/components/context/trades-data"
 import { cn } from "@/lib/utils"
+import { Info } from 'lucide-react'
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Switch } from "@/components/ui/switch"
+import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 
 interface PnLBySideChartProps {
-  size?: 'small' | 'medium' | 'large' | 'small-long'
-}
-
-interface ChartData {
-  side: string
-  totalPnl: number
-  avgPnl: number
+  size?: ChartSize
 }
 
 const chartConfig = {
   pnl: {
-    label: "PnL",
-    color: "hsl(var(--chart-2))",
+    label: "P/L",
+    color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig
 
-const CustomTooltip = ({ active, payload, label }: TooltipProps<ValueType, NameType>) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-background p-2 border rounded shadow-sm">
-        <p className="font-semibold">{`${label}`}</p>
-        <p className="text-sm">{`${payload[0].name}: $${Number(payload[0].value).toFixed(2)}`}</p>
-      </div>
-    );
-  }
-  return null;
-};
+const formatCurrency = (value: number) =>
+  value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
-const getColor = (side: string) => {
-  const baseColorVar = side.toLowerCase() === 'short' ? '--chart-1' : '--chart-2';
-  return `hsl(var(${baseColorVar}))`;
-};
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-sm">
+        <div className="grid gap-2">
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              Side
+            </span>
+            <span className="font-bold text-muted-foreground">
+              {data.side}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              {data.isAverage ? 'Average' : 'Total'} P/L
+            </span>
+            <span className="font-bold">
+              {formatCurrency(data.pnl)}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              Win Rate
+            </span>
+            <span className="font-bold text-muted-foreground">
+              {((data.winCount / data.tradeCount) * 100).toFixed(1)}%
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              Trades
+            </span>
+            <span className="font-bold text-muted-foreground">
+              {data.tradeCount} trade{data.tradeCount !== 1 ? 's' : ''} ({data.winCount} win{data.winCount !== 1 ? 's' : ''})
+            </span>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  return null
+}
 
 export default function PnLBySideChart({ size = 'medium' }: PnLBySideChartProps) {
-  const { formattedTrades } = useFormattedTrades()
-  const [showTotal, setShowTotal] = React.useState(true)
+  const { formattedTrades: trades } = useFormattedTrades()
+  const [showAverage, setShowAverage] = React.useState(true)
 
-  const chartData: ChartData[] = React.useMemo(() => {
-    const pnlBySide = formattedTrades.reduce((acc, trade) => {
-      const side = (trade.side || 'unknown').toLowerCase()
-      if (!acc[side]) {
-        acc[side] = { totalPnl: 0, count: 0 }
+  const chartData = React.useMemo(() => {
+    const longTrades = trades.filter(trade => trade.side?.toLowerCase() === 'long')
+    const shortTrades = trades.filter(trade => trade.side?.toLowerCase() === 'short')
+
+    const longPnL = longTrades.reduce((sum, trade) => sum + trade.pnl, 0)
+    const shortPnL = shortTrades.reduce((sum, trade) => sum + trade.pnl, 0)
+
+    const longWins = longTrades.filter(trade => trade.pnl > 0).length
+    const shortWins = shortTrades.filter(trade => trade.pnl > 0).length
+
+    return [
+      {
+        side: 'Long',
+        pnl: showAverage ? (longTrades.length > 0 ? longPnL / longTrades.length : 0) : longPnL,
+        tradeCount: longTrades.length,
+        winCount: longWins,
+        isAverage: showAverage
+      },
+      {
+        side: 'Short',
+        pnl: showAverage ? (shortTrades.length > 0 ? shortPnL / shortTrades.length : 0) : shortPnL,
+        tradeCount: shortTrades.length,
+        winCount: shortWins,
+        isAverage: showAverage
       }
-      acc[side].totalPnl += trade.pnl
-      acc[side].count += 1
-      return acc
-    }, {} as Record<string, { totalPnl: number; count: number }>)
+    ]
+  }, [trades, showAverage])
 
-    return Object.entries(pnlBySide).map(([side, data]) => ({
-      side: side.charAt(0).toUpperCase() + side.slice(1),
-      totalPnl: Number(data.totalPnl.toFixed(2)),
-      avgPnl: Number((data.totalPnl / data.count).toFixed(2)),
-    }))
-  }, [formattedTrades])
+  const maxPnL = Math.max(...chartData.map(d => d.pnl))
+  const minPnL = Math.min(...chartData.map(d => d.pnl))
+  const absMax = Math.max(Math.abs(maxPnL), Math.abs(minPnL))
 
-  const dataKey = showTotal ? 'totalPnl' : 'avgPnl'
-  const maxPnL = Math.max(...chartData.map(d => d[dataKey]), 0)
-  const minPnL = Math.min(...chartData.map(d => d[dataKey]), 0)
-
-  const getChartHeight = () => {
-    switch (size) {
-      case 'small':
-      case 'small-long':
-        return 'h-[140px]'
-      case 'medium':
-        return 'h-[240px]'
-      case 'large':
-        return 'h-[280px]'
-      default:
-        return 'h-[240px]'
-    }
-  }
-
-  const getYAxisWidth = () => {
-    const maxLength = Math.max(
-      Math.abs(minPnL).toFixed(2).length,
-      Math.abs(maxPnL).toFixed(2).length
-    );
-    return (size === 'small' || size === 'small-long')
-      ? Math.max(35, 8 * (maxLength + 1))
-      : Math.max(45, 10 * (maxLength + 1));
+  const getColor = (value: number) => {
+    const ratio = Math.abs(value / absMax)
+    const baseColorVar = value >= 0 ? '--chart-3' : '--chart-4'
+    const intensity = Math.max(0.2, ratio)
+    return `hsl(var(${baseColorVar}) / ${intensity})`
   }
 
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader 
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b",
-          (size === 'small' || size === 'small-long')
-            ? "p-2" 
-            : "p-4 sm:p-6"
+          "flex flex-col items-stretch space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2" : "p-3 sm:p-4"
         )}
       >
         <div className="flex items-center justify-between">
-          <CardTitle 
-            className={cn(
-              "line-clamp-1",
-              (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
-            )}
-          >
-            PnL by Side
-          </CardTitle>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="pnl-toggle"
-              checked={showTotal}
-              onCheckedChange={setShowTotal}
+          <div className="flex items-center gap-1.5">
+            <CardTitle 
               className={cn(
-                (size === 'small' || size === 'small-long') ? "h-3 w-7" : "h-5 w-10",
-                (size === 'small' || size === 'small-long') ? "[&>span]:h-2 [&>span]:w-2" : "[&>span]:h-4 [&>span]:w-4"
-              )}
-            />
-            <Label 
-              htmlFor="pnl-toggle" 
-              className={cn(
-                "text-muted-foreground",
-                (size === 'small' || size === 'small-long') ? "text-[10px]" : "text-sm"
+                "line-clamp-1",
+                size === 'small-long' ? "text-sm" : "text-base"
               )}
             >
-              {showTotal ? 'Total' : 'Avg'}
-            </Label>
+              P/L by Side
+            </CardTitle>
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className={cn(
+                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
+                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                  )} />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Profit/loss comparison between long and short trades</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={cn(
+              "text-muted-foreground",
+              size === 'small-long' ? "text-xs" : "text-sm"
+            )}>
+              Show Average
+            </span>
+            <Switch
+              checked={showAverage}
+              onCheckedChange={setShowAverage}
+              className="data-[state=checked]:bg-primary"
+            />
           </div>
         </div>
-        <CardDescription 
-          className={cn(
-            (size === 'small' || size === 'small-long') ? "hidden" : "text-xs sm:text-sm"
-          )}
-        >
-          Showing {showTotal ? 'total' : 'average'} PnL for each trading side
-        </CardDescription>
       </CardHeader>
       <CardContent 
         className={cn(
-          (size === 'small' || size === 'small-long') ? "p-1" : "p-2 sm:p-6"
+          "flex-1 min-h-0",
+          size === 'small-long' ? "p-1" : "p-2 sm:p-4"
         )}
       >
-        <ChartContainer
-          config={chartConfig}
-          className={cn(
-            "w-full",
-            getChartHeight(),
-            (size === 'small' || size === 'small-long')
-              ? "aspect-[3/2]" 
-              : "aspect-[4/3] sm:aspect-[16/9]"
-          )}
-        >
+        <div className={cn(
+          "w-full h-full"
+        )}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={
-                (size === 'small' || size === 'small-long')
-                  ? { left: 10, right: 4, top: 4, bottom: 0 }
-                  : { left: 16, right: 8, top: 8, bottom: 0 }
+                size === 'small-long'
+                  ? { left: 35, right: 4, top: 4, bottom: 20 }
+                  : { left: 45, right: 8, top: 8, bottom: 24 }
               }
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
-                opacity={(size === 'small' || size === 'small-long') ? 0.5 : 1}
+                opacity={size === 'small-long' ? 0.5 : 0.8}
               />
               <XAxis
                 dataKey="side"
                 tickLine={false}
                 axisLine={false}
-                tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
-                tick={{ fontSize: (size === 'small' || size === 'small-long') ? 10 : 12 }}
+                height={size === 'small-long' ? 20 : 24}
+                tickMargin={size === 'small-long' ? 4 : 8}
+                tick={{ 
+                  fontSize: size === 'small-long' ? 9 : 11,
+                  fill: 'currentColor'
+                }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
+                width={size === 'small-long' ? 35 : 45}
+                tickMargin={size === 'small-long' ? 2 : 4}
                 tick={{ 
-                  fontSize: (size === 'small' || size === 'small-long') ? 10 : 12,
+                  fontSize: size === 'small-long' ? 9 : 11,
                   fill: 'currentColor'
                 }}
-                width={getYAxisWidth()}
-                domain={[Math.min(minPnL, 0), Math.max(maxPnL, 0)]}
-                tickFormatter={(value: number) => `$${value.toFixed(2)}`}
-                label={(size === 'small' || size === 'small-long') ? undefined : { 
-                  value: "P/L", 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  fontSize: 12
-                }}
+                tickFormatter={(value) => formatCurrency(value)}
+                domain={[Math.min(minPnL * 1.1, 0), Math.max(maxPnL * 1.1, 0)]}
               />
               <ReferenceLine y={0} stroke="hsl(var(--border))" />
               <Tooltip 
                 content={<CustomTooltip />}
                 wrapperStyle={{ 
-                  fontSize: (size === 'small' || size === 'small-long') ? '10px' : '12px'
+                  fontSize: size === 'small-long' ? '10px' : '12px',
+                  zIndex: 1000
                 }} 
               />
               <Bar
-                dataKey={dataKey}
-                name={showTotal ? 'Total PnL' : 'Average PnL'}
-                radius={[4, 4, 0, 0]}
-                maxBarSize={(size === 'small' || size === 'small-long') ? 30 : 50}
+                dataKey="pnl"
+                radius={[3, 3, 0, 0]}
+                maxBarSize={size === 'small-long' ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
               >
                 {chartData.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={getColor(entry.side)} 
+                    fill={getColor(entry.pnl)}
                   />
                 ))}
               </Bar>
             </BarChart>
-        </ChartContainer>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   )

@@ -48,7 +48,9 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
   const monthlyTotal = calculateMonthlyTotal()
 
   const getMaxPnl = () => {
-    return Math.max(...Object.values(calendarData).map(data => Math.abs(data.pnl)))
+    return Math.max(...Object.entries(calendarData)
+      .filter(([dateString]) => isSameMonth(new Date(dateString), currentDate))
+      .map(([_, data]) => Math.abs(data.pnl)))
   }
 
   const maxPnl = getMaxPnl()
@@ -74,41 +76,70 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-4">
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day) => (
           <div key={day} className="text-center text-sm font-semibold text-muted-foreground">{day}</div>
         ))}
         {calendarDays.map((date) => {
           const dateString = format(date, 'yyyy-MM-dd')
           const dayData = calendarData[dateString]
-          const pnlPercentage = dayData ? Math.min(Math.abs(dayData.pnl) / maxPnl, 1) : 0
+          const contribution = dayData && monthlyTotal !== 0 
+            ? Math.abs(dayData.pnl / monthlyTotal) 
+            : 0
+          const strokeDasharray = contribution > 0 
+            ? `${contribution * 100} ${100 - (contribution * 100)}`
+            : "0 100"
 
           return (
             <div
               key={dateString}
               className={cn(
-                "flex flex-col items-center",
+                "relative flex items-center justify-center",
                 !isSameMonth(date, currentDate) && "opacity-30"
               )}
               onClick={() => setSelectedDate(date)}
             >
+              {dayData && (
+                <svg
+                  className="absolute w-12 h-12 -rotate-90"
+                  viewBox="0 0 36 36"
+                >
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="16"
+                    fill="none"
+                    className="stroke-current opacity-10"
+                    strokeWidth="2.5"
+                  />
+                  <circle
+                    cx="18"
+                    cy="18"
+                    r="16"
+                    fill="none"
+                    className={cn(
+                      "stroke-current transition-all",
+                      dayData.pnl >= 0 ? "stroke-green-500" : "stroke-red-500"
+                    )}
+                    strokeWidth="2.5"
+                    strokeDasharray={strokeDasharray}
+                    strokeDashoffset="0"
+                  />
+                </svg>
+              )}
               <div className={cn(
-                "w-8 h-8 flex items-center justify-center mb-1",
-                isToday(date) && "bg-primary text-primary-foreground rounded-full"
+                "w-8 h-8 flex items-center justify-center rounded-full z-10",
+                isToday(date) && "bg-primary text-primary-foreground",
+                dayData && dayData.pnl !== 0 && !isToday(date) && (
+                  dayData.pnl > 0 
+                    ? "text-green-600 dark:text-green-400"
+                    : "text-red-600 dark:text-red-400"
+                )
               )}>
                 <span className="text-lg font-semibold">
                   {format(date, 'd')}
                 </span>
               </div>
-              {dayData && (
-                <div
-                  className={cn(
-                    "w-full h-1 rounded-full",
-                    dayData.pnl >= 0 ? "bg-green-500" : "bg-red-500"
-                  )}
-                  style={{ width: `${pnlPercentage * 100}%` }}
-                />
-              )}
             </div>
           )
         })}

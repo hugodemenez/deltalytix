@@ -2,213 +2,214 @@
 
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ChartConfig, ChartContainer } from "@/components/ui/chart"
-import { useFormattedTrades } from "@/components/context/trades-data"
-import { TickDetails, Trade } from "@prisma/client"
-import { useCallback, useEffect, useState } from "react"
-import { getTickDetails } from "../../../../../server/tick-details"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartConfig } from "@/components/ui/chart"
+import { useFormattedTrades } from "../../../../../components/context/trades-data"
 import { cn } from "@/lib/utils"
+import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { Info } from 'lucide-react'
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { getTickDetails } from "@/server/tick-details"
 
-interface ContractSpec {
-  tickSize: number
-  tickValue: number
+interface TickDistributionProps {
+  size?: ChartSize
 }
 
-const defaultContractSpecs: { [key: string]: ContractSpec } = {
-  NQ: { tickSize: 0.25, tickValue: 5 },
-  YM: { tickSize: 1, tickValue: 5 },
-  MYM: { tickSize: 1, tickValue: 0.5 },
-  MNQ: { tickSize: 0.25, tickValue: 0.5 },
-  ES: { tickSize: 0.25, tickValue: 12.50 },
-  MES: { tickSize: 0.25, tickValue: 1.25 },
-  ZN: { tickSize: 1 / 64, tickValue: 15.625 },
-  ZB: { tickSize: 1 / 32, tickValue: 31.25 },
-  GC: { tickSize: 0.10, tickValue: 10.00 },
-  SI: { tickSize: 0.005, tickValue: 25.00 },
-  ZC: { tickSize: 0.01, tickValue: 12.50 },
-  UB: { tickSize: 0.01, tickValue: 31.25 },
+interface ChartDataPoint {
+  ticks: string;
+  count: number;
+}
+
+interface TooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload: ChartDataPoint;
+  }>;
+  label?: string;
 }
 
 const chartConfig = {
-  tradeCount: {
-    label: "Number of Trades",
+  count: {
+    label: "Count",
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig
 
-interface TickDistributionChartProps {
-  size?: 'small' | 'medium' | 'large' | 'small-long'
-}
+const CustomTooltip = ({ active, payload }: TooltipProps) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="rounded-lg border bg-background p-2 shadow-sm">
+        <div className="grid gap-2">
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              Ticks
+            </span>
+            <span className="font-bold text-muted-foreground">
+              {data.ticks} tick{parseInt(data.ticks) !== 1 ? 's' : ''}
+            </span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[0.70rem] uppercase text-muted-foreground">
+              Trades
+            </span>
+            <span className="font-bold">
+              {data.count} trade{data.count !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
-export default function TickDistributionChart({ size = 'medium' }: TickDistributionChartProps) {
+export default function TickDistributionChart({ size = 'medium' }: TickDistributionProps) {
   const { formattedTrades: trades } = useFormattedTrades()
-  const [tickDetails, setTickDetails] = useState<TickDetails[]>([])
-  const [chartData, setChartData] = useState<{ ticks: number; tradeCount: number }[]>([])
-
-  // Fetch tick details
-  useEffect(() => {
-    const fetchTickDetails = async () => {
-      const details = await getTickDetails()
-      console.log(details)
-      setTickDetails(details)
-    }
-    fetchTickDetails()
+  const [tickDetails, setTickDetails] = React.useState<Record<string, number>>({})
+  
+  React.useEffect(() => {
+    getTickDetails().then(details => {
+      const tickMap = details.reduce((acc, detail) => {
+        acc[detail.ticker] = detail.tickValue
+        return acc
+      }, {} as Record<string, number>)
+      setTickDetails(tickMap)
+    })
   }, [])
 
-  // Calculate chart data
-  useEffect(() => {
-    const calculateChartData = () => {
-      if (!tickDetails.length || !trades.length) return
+  const chartData = React.useMemo(() => {
+    if (!trades.length || !Object.keys(tickDetails).length) return []
 
-      const tickDistribution: { [key: number]: number } = {}
+    // Get the range of ticks we want to display
+    const maxTicks = 10 // Show distribution from -10 to +10 ticks
+    const tickRange = Array.from({ length: 2 * maxTicks + 1 }, (_, i) => i - maxTicks)
+    const tickCounts = tickRange.reduce((acc, tick) => {
+      acc[tick] = 0
+      return acc
+    }, {} as Record<number, number>)
 
-      trades.forEach((trade: Trade) => {
-        const contractSpec = tickDetails.find(detail => detail.ticker === trade.instrument) || { tickSize: 1, tickValue: 1 }
-        const tickValue = Math.round(trade.pnl / trade.quantity / contractSpec.tickValue)
+    // Count trades for each tick value
+    trades.forEach(trade => {
+      // Find the matching tick details by checking if the base instrument is included in the trade symbol
+      const matchingTicker = Object.keys(tickDetails).find(ticker => 
+        trade.instrument.includes(ticker)
+      )
+      const tickValue = matchingTicker ? tickDetails[matchingTicker] : 1
+      const ticks = Math.round(trade.pnl / tickValue)
+      // Only count ticks within our display range
+      if (ticks >= -maxTicks && ticks <= maxTicks) {
+        tickCounts[ticks] = (tickCounts[ticks] || 0) + 1
+      }
+    })
 
-        if (!tickDistribution[tickValue]) {
-          tickDistribution[tickValue] = 0
-        }
-        tickDistribution[tickValue]++
-      })
-
-      const newChartData = Object.entries(tickDistribution)
-        .map(([ticks, count]) => ({
-          ticks: parseInt(ticks),
-          tradeCount: count,
-        }))
-        .sort((a, b) => a.ticks - b.ticks)
-
-      setChartData(newChartData)
-    }
-
-    calculateChartData()
+    return tickRange
+      .map(tick => ({
+        ticks: tick === 0 ? '0' : tick > 0 ? `+${tick}` : `${tick}`,
+        count: tickCounts[tick]
+      }))
   }, [trades, tickDetails])
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      return (
-        <div className="bg-background p-2 border rounded shadow-sm">
-          <p className="font-semibold">{`${label} ticks`}</p>
-          <p>Number of Trades: {data.tradeCount}</p>
-        </div>
-      )
-    }
-    return null
-  }
-
-  // Update the formatter to always return a string
-  const formatYAxisTick = (value: any): string => {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}k`
-    }
-    return value.toString()
-  }
-
-  // Update the chart height calculations
-  const getChartHeight = () => {
-    switch (size) {
-      case 'small':
-      case 'small-long':
-        return 'h-[140px]'
-      case 'medium':
-        return 'h-[280px]'
-      case 'large':
-        return 'h-[320px]'
-      default:
-        return 'h-[280px]'
-    }
-  }
-
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader 
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b",
-          (size === 'small' || size === 'small-long')
-            ? "p-2 min-h-[40px]" 
-            : "p-4 sm:p-6 sm:min-h-[90px]"
+          "flex flex-col items-stretch space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2" : "p-3 sm:p-4"
         )}
       >
         <div className="flex items-center justify-between">
-          <CardTitle 
-            className={cn(
-              "line-clamp-1",
-              (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
-            )}
-          >
-            Tick Distribution
-          </CardTitle>
+          <div className="flex items-center gap-1.5">
+            <CardTitle 
+              className={cn(
+                "line-clamp-1",
+                size === 'small-long' ? "text-sm" : "text-base"
+              )}
+            >
+              Tick Distribution
+            </CardTitle>
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className={cn(
+                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
+                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                  )} />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>Number of trades by profit/loss in ticks</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          </div>
         </div>
-        <CardDescription 
-          className={cn(
-            (size === 'small' || size === 'small-long') ? "hidden" : "text-xs sm:text-sm"
-          )}
-        >
-          Distribution of trades based on their tick value
-        </CardDescription>
       </CardHeader>
       <CardContent 
         className={cn(
-          (size === 'small' || size === 'small-long') ? "p-1" : "p-2 sm:p-6"
+          "flex-1 min-h-0",
+          size === 'small-long' ? "p-1" : "p-2 sm:p-4"
         )}
       >
-        <ChartContainer
-          config={chartConfig}
-          className={cn(
-            "w-full",
-            getChartHeight(),
-            (size === 'small' || size === 'small-long')
-              ? "aspect-[3/2]" 
-              : "aspect-[4/3] sm:aspect-[16/9]"
-          )}
-        >
+        <div className={cn(
+          "w-full h-full"
+        )}>
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={
-                (size === 'small' || size === 'small-long')
-                  ? { left: 10, right: 4, top: 4, bottom: 0 }
-                  : { left: 16, right: 8, top: 8, bottom: 0 }
+                size === 'small-long'
+                  ? { left: 35, right: 4, top: 4, bottom: 20 }
+                  : { left: 45, right: 8, top: 8, bottom: 24 }
               }
             >
               <CartesianGrid 
-                vertical={false} 
                 strokeDasharray="3 3" 
-                opacity={(size === 'small' || size === 'small-long') ? 0.5 : 1}
+                opacity={size === 'small-long' ? 0.5 : 0.8}
               />
               <XAxis
                 dataKey="ticks"
                 tickLine={false}
                 axisLine={false}
-                tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
-                tick={{ fontSize: (size === 'small' || size === 'small-long') ? 10 : 12 }}
-                interval={(size === 'small' || size === 'small-long') ? 1 : "preserveStartEnd"}
+                height={size === 'small-long' ? 20 : 24}
+                tickMargin={size === 'small-long' ? 4 : 8}
+                tick={{ 
+                  fontSize: size === 'small-long' ? 9 : 11,
+                  fill: 'currentColor'
+                }}
+                interval={size === 'small-long' ? 2 : 1}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                tickMargin={(size === 'small' || size === 'small-long') ? 4 : 8}
-                tick={{ fontSize: (size === 'small' || size === 'small-long') ? 10 : 12 }}
-                width={(size === 'small' || size === 'small-long') ? 35 : 45}
-                tickFormatter={formatYAxisTick}
+                width={size === 'small-long' ? 35 : 45}
+                tickMargin={size === 'small-long' ? 2 : 4}
+                tick={{ 
+                  fontSize: size === 'small-long' ? 9 : 11,
+                  fill: 'currentColor'
+                }}
               />
               <Tooltip 
                 content={<CustomTooltip />}
                 wrapperStyle={{ 
-                  fontSize: (size === 'small' || size === 'small-long') ? '10px' : '12px'
+                  fontSize: size === 'small-long' ? '10px' : '12px',
+                  zIndex: 1000
                 }} 
               />
               <Bar
-                dataKey="tradeCount"
+                dataKey="count"
                 fill="hsl(var(--chart-1))"
-                radius={[4, 4, 0, 0]}
-                maxBarSize={(size === 'small' || size === 'small-long') ? 30 : 50}
+                radius={[3, 3, 0, 0]}
+                maxBarSize={size === 'small-long' ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
               />
             </BarChart>
-        </ChartContainer>
+          </ResponsiveContainer>
+        </div>
       </CardContent>
     </Card>
   )
