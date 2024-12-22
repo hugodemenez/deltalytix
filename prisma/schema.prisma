@@ -27,6 +27,8 @@ model Trade {
   commission     Float    @default(0)
   createdAt      DateTime @default(now())
   comment        String?
+  tags           String[] @default([])
+  imageBase64    String?  @db.Text
 
   @@schema("public")
 }

@@ -41,6 +41,7 @@ interface TradeDataContextProps {
   setTrades: React.Dispatch<React.SetStateAction<Trade[]>>
   isLoading: boolean
   refreshTrades: () => Promise<void>
+  updateTrade: (tradeId: string, updates: Partial<Trade>) => void
 }
 
 interface FormattedTradeContextProps {
@@ -134,8 +135,16 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades])
   const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades])
 
+  const updateTrade = useCallback((tradeId: string, updates: Partial<Trade>) => {
+    setTrades(prevTrades => 
+      prevTrades.map(trade => 
+        trade.id === tradeId ? { ...trade, ...updates } : trade
+      )
+    )
+  }, [])
+
   return (
-    <TradeDataContext.Provider value={{ trades, setTrades, isLoading, refreshTrades }}>
+    <TradeDataContext.Provider value={{ trades, setTrades, isLoading, refreshTrades, updateTrade }}>
       <FormattedTradeContext.Provider value={{
         formattedTrades,
         instruments,

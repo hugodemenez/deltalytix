@@ -238,7 +238,9 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
               side: openPosition.side,
               commission: openPosition.totalCommission,
               createdAt: new Date(),
-              comment: null
+              comment: null,
+              tags: [],
+              imageBase64: null
             }
 
             processedTrades.push(trade)

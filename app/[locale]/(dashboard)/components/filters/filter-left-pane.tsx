@@ -14,6 +14,7 @@ import DateCalendarFilter from './date-calendar-filter'
 import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
 import { FilterSection } from './filter-selection'
 import { FilterItem, PropfirmGroup } from '@/types/filter'
+import { useI18n } from "@/locales/client"
 
 const propfirmGroups: PropfirmGroup[] = [
   { name: 'FastTrackTrading', prefix: 'FTT' },
@@ -22,10 +23,10 @@ const propfirmGroups: PropfirmGroup[] = [
   { name: 'Other', prefix: '' }, // Add 'Other' to the propfirmGroups
 ]
 
-
 export default function FilterLeftPane() {
   const { trades } = useTrades()
   const { accountNumbers, setAccountNumbers, instruments, setInstruments } = useFormattedTrades()
+  const t = useI18n()
   
   const [allItems, setAllItems] = useState<FilterItem[]>([])
   const [selectedItems, setSelectedItems] = useState<FilterItem[]>([])
@@ -183,7 +184,7 @@ export default function FilterLeftPane() {
     <div className='space-y-6'>
       <div className="flex items-center justify-between">
         <Label htmlFor="anonymous-mode" className="text-sm font-medium">
-          Show Account Numbers
+          {t('filters.showAccountNumbers')}
         </Label>
         <Switch
           id="anonymous-mode"
@@ -195,14 +196,14 @@ export default function FilterLeftPane() {
       <Command className="rounded-lg border min-h-[calc(100vh-20rem)]" shouldFilter={false}>
         <div className="border-b">
           <CommandInput
-            placeholder="Search..."
+            placeholder={t('filters.search')}
             value={searchTerm}
             onValueChange={setSearchTerm}
             className={`${isMobile ? "text-lg" : ""}`}
           />
         </div>
         <CommandList className="min-h-[calc(100vh-20rem)]">
-          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandEmpty>{t('filters.noResults')}</CommandEmpty>
           <CommandGroup className="divide-y">
             <FilterSection 
               items={allItems.filter(item => item.type === 'account')}
@@ -238,14 +239,14 @@ export default function FilterLeftPane() {
         </CommandList>
       </Command>
     </div>
-  ), [allItems, showAccountNumbers, searchTerm, isMobile, handleSelect, isItemDisabled, isItemSelected, handleSelectAll, anonymizeAccount])
+  ), [allItems, showAccountNumbers, searchTerm, isMobile, handleSelect, isItemDisabled, isItemSelected, handleSelectAll, anonymizeAccount, t])
 
   if (isMobile) {
     return (
       <>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="fixed bottom-6 right-6 z-50" aria-label="Open filters">
+            <Button variant="outline" size="icon" className="fixed bottom-6 right-6 z-50" aria-label={t('filters.openFilters')}>
               <Filter className="h-4 w-4" />
             </Button>
           </SheetTrigger>

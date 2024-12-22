@@ -110,7 +110,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b shrink-0 p-3 sm:p-4">
+      <CardHeader className="flex flex-col items-stretch space-y-0 border-b shrink-0 p-2 sm:p-4 line-clamp-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <CardTitle className="text-base sm:text-lg font-semibold truncate">

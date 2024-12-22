@@ -125,7 +125,7 @@ export function CalendarModal({
           </TabsContent>
 
           <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
-            {/* <Chat dayData={dayData} dateString={dateString}></Chat> */}
+            <Chat dayData={dayData} dateString={dateString}></Chat>
           </TabsContent>
           <TabsContent value="charts" className="flex-grow overflow-auto p-6 pt-2">
             <Charts dayData={dayData} />

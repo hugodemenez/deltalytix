@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
-import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical } from 'lucide-react'
+import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical, Table2 } from 'lucide-react'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
@@ -48,6 +48,7 @@ import CalendarPnl from './calendar/calendar-pnl'
 import CommissionsPnLChart from './charts/commissions-pnl'
 import StatisticsWidget from './statistics/statistics-widget'
 import { cn } from '@/lib/utils'
+import { TradeTableReview } from './tables/trade-table-review'
 
 interface WidgetOption {
   type: WidgetType
@@ -79,8 +80,8 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
         return size === 'tiny'
       }
       
-      // Calendar widget can only be large
-      if (widgetType === 'calendarWidget') {
+      // Calendar and trade table widgets can only be large
+      if (widgetType === 'calendarWidget' || widgetType === 'tradeTableReview') {
         return size === 'large'
       }
       
@@ -91,8 +92,8 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
       }
     } else {
       // Desktop view
-      // Calendar widget can only be large
-      if (widgetType === 'calendarWidget') {
+      // Calendar and trade table widgets can only be large
+      if (widgetType === 'calendarWidget' || widgetType === 'tradeTableReview') {
         return size === 'large'
       }
       
@@ -725,6 +726,10 @@ export default function WidgetCanvas() {
            'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(widget.type)) {
         return 'tiny' as const
       }
+      // Trade table and calendar are always large
+      if (widget.type === 'tradeTableReview' || widget.type === 'calendarWidget') {
+        return 'large' as const
+      }
       return isMobile && widget.size !== 'tiny' ? 'small' : widget.size
     })()
 
@@ -759,6 +764,8 @@ export default function WidgetCanvas() {
         return <WinningStreakCard size={effectiveSize} />
       case 'statisticsWidget':
         return <StatisticsWidget size={effectiveSize} />
+      case 'tradeTableReview':
+        return <TradeTableReview />
       default:
         return <PlaceholderWidget size={effectiveSize} />
     }
@@ -892,6 +899,15 @@ export default function WidgetCanvas() {
             >
               <BarChart2 className="mr-2 h-4 w-4" />
               <span>Statistics Overview</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-border" />
+            <DropdownMenuLabel>Tables</DropdownMenuLabel>
+            <DropdownMenuItem 
+              onClick={() => addWidget('tradeTableReview', 'large')}
+              className="hover:bg-accent hover:text-accent-foreground"
+            >
+              <Table2 className="mr-2 h-4 w-4" />
+              <span>Trade Review Table</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
             <DropdownMenuLabel>Other</DropdownMenuLabel>

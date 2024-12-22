@@ -191,6 +191,8 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
       entryId: entryOrder.orderId,
       closeId: exitOrder.orderId,
       comment: null,
+      tags: [],
+      imageBase64: null,
       createdAt: new Date()
     }
   }, [calculatePnL])

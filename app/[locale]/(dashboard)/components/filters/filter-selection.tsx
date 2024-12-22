@@ -4,6 +4,7 @@ import { FilterItem } from '@/types/filter'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CommandItem } from '@/components/ui/command'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useI18n } from "@/locales/client"
 
 interface FilterSectionProps {
   items: FilterItem[]
@@ -17,10 +18,12 @@ interface FilterSectionProps {
 }
 
 export function FilterSection({ type, items, searchTerm, handleSelect, isItemDisabled, isItemSelected, handleSelectAll, anonymizeAccount }: FilterSectionProps) {
+  const t = useI18n()
+  
   const selectAllText = {
-    account: 'Select all accounts',
-    propfirm: 'Select all propfirms',
-    instrument: 'Select all symbols'
+    account: t('filters.selectAllAccounts'),
+    propfirm: t('filters.selectAllPropfirms'),
+    instrument: t('filters.selectAllInstruments')
   }
 
   const filteredSectionItems = searchTerm

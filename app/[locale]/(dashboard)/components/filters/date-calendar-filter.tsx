@@ -8,12 +8,20 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 import { DateRange, SelectRangeEventHandler } from "react-day-picker"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns"
+import { fr } from 'date-fns/locale'
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useI18n } from "@/locales/client"
+import { useParams } from "next/navigation"
 
 export default function DateCalendarFilter() {
   const { dateRange, setDateRange } = useFormattedTrades()
   const [calendarOpen, setCalendarOpen] = useState(false)
   const isMobile = useMediaQuery('(max-width: 768px)')
+  const t = useI18n()
+  const params = useParams()
+  const locale = params.locale as string
+  
+  const dateLocale = locale === 'fr' ? fr : undefined
 
   const handleSelect: SelectRangeEventHandler = (range) => {
     setDateRange(range ? { from: range.from as Date, to: range.to as Date } : undefined);
@@ -22,11 +30,15 @@ export default function DateCalendarFilter() {
     }
   };
 
+  const formatDate = (date: Date) => {
+    return format(date, "LLL dd, y", { locale: dateLocale })
+  }
+
   const quickSelectors = [
-    { label: "This Week", getRange: () => ({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) }) },
-    { label: "This Month", getRange: () => ({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) }) },
-    { label: "Last 3 Months", getRange: () => ({ from: subMonths(new Date(), 3), to: new Date() }) },
-    { label: "Last 6 Months", getRange: () => ({ from: subMonths(new Date(), 6), to: new Date() }) },
+    { label: t('filters.thisWeek'), getRange: () => ({ from: startOfWeek(new Date()), to: endOfWeek(new Date()) }) },
+    { label: t('filters.thisMonth'), getRange: () => ({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) }) },
+    { label: t('filters.lastThreeMonths'), getRange: () => ({ from: subMonths(new Date(), 3), to: new Date() }) },
+    { label: t('filters.lastSixMonths'), getRange: () => ({ from: subMonths(new Date(), 6), to: new Date() }) },
   ];
 
   const DateButton = (
@@ -43,14 +55,14 @@ export default function DateCalendarFilter() {
       {dateRange?.from ? (
         dateRange.to ? (
           <>
-            {format(dateRange.from, "LLL dd, y")} -{" "}
-            {format(dateRange.to, "LLL dd, y")}
+            {formatDate(dateRange.from)} -{" "}
+            {formatDate(dateRange.to)}
           </>
         ) : (
-          format(dateRange.from, "LLL dd, y")
+          formatDate(dateRange.from)
         )
       ) : (
-        <span>Pick a date</span>
+        <span>{t('filters.pickDate')}</span>
       )}
     </Button>
   );
@@ -81,6 +93,7 @@ export default function DateCalendarFilter() {
         onSelect={handleSelect}
         numberOfMonths={isMobile ? 1 : 2}
         className="rounded-md border"
+        locale={dateLocale}
       />
     </div>
   );
@@ -88,11 +101,11 @@ export default function DateCalendarFilter() {
   if (isMobile) {
     return (
       <Sheet open={calendarOpen} onOpenChange={setCalendarOpen}>
-        <SheetTrigger asChild>{DateButton}</SheetTrigger>
-        <SheetContent side="bottom" className="h-[90vh] flex items-center justify-center">
-          <div className="w-full max-w-sm mx-auto">
-            {CalendarContent}
-          </div>
+        <SheetTrigger asChild>
+          {DateButton}
+        </SheetTrigger>
+        <SheetContent>
+          {CalendarContent}
         </SheetContent>
       </Sheet>
     );
@@ -100,7 +113,9 @@ export default function DateCalendarFilter() {
 
   return (
     <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-      <PopoverTrigger asChild>{DateButton}</PopoverTrigger>
+      <PopoverTrigger asChild>
+        {DateButton}
+      </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         {CalendarContent}
       </PopoverContent>

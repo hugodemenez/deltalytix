@@ -21,6 +21,8 @@ export interface TranslationKeys {
   'updates.milestone10.description': string;
   'updates.milestone11.title': string;
   'updates.milestone11.description': string;
+  'updates.milestone12.title': string;
+  'updates.milestone12.description': string;
   'updates.preview': string;
   'updates.inThreeWeeks': string;
   'updates.inTwoWeeks': string;

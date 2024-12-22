@@ -24,9 +24,8 @@ import { useI18n } from "@/locales/client"
 import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { useChangeLocale, useCurrentLocale } from '@/locales/client'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useCurrentLocale } from '@/locales/client'
+import { LanguageSelector } from "@/components/ui/language-selector"
 
 const ListItem = React.forwardRef<
     React.ElementRef<"a">,
@@ -76,7 +75,6 @@ export default function Component() {
     const router = useRouter()
     const pathname = usePathname()
     const currentLocale = useCurrentLocale()
-    const changeLocale = useChangeLocale()
 
     const toggleMenu = () => setIsOpen(!isOpen)
     const closeMenu = () => setIsOpen(false)
@@ -115,11 +113,6 @@ export default function Component() {
 
     const [open, setOpen] = useState(false)
     const [themeOpen, setThemeOpen] = useState(false)
-
-    const changeLanguage = (locale: string) => {
-        changeLocale(locale as "en" | "fr")
-        setOpen(false)
-    }
 
     const handleThemeChange = (value: string) => {
         setTheme(value as "light" | "dark" | "system")
@@ -204,18 +197,14 @@ export default function Component() {
                         </Command>
                     </PopoverContent>
                 </Popover>
-                <Select onValueChange={(value) => changeLanguage(value)}>
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder={t('navbar.changeLanguage')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {languages.map((language) => (
-                            <SelectItem key={language.value} value={language.value}>
-                                {language.label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                <LanguageSelector
+                    languages={languages}
+                    className="w-full"
+                    triggerClassName="w-full justify-start"
+                    onRequestNewLanguage={() => {
+                        console.log("Request new language support")
+                    }}
+                />
             </div>
         </nav>
     )
@@ -317,44 +306,14 @@ export default function Component() {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                    <Popover open={open} onOpenChange={setOpen}>
-                        <PopoverTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                className="hidden lg:flex"
-                            >
-                                <Globe className="h-5 w-5" />
-                                <span className="sr-only">{t('navbar.changeLanguage')}</span>
-                                <span className="ml-2">{currentLocale.toUpperCase()}</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
-                            <Command>
-                                <CommandInput placeholder="Search language..." />
-                                <CommandList>
-                                    <CommandEmpty>No language found.</CommandEmpty>
-                                    <CommandGroup>
-                                        {languages.map((language) => (
-                                            <CommandItem
-                                                key={language.value}
-                                                onSelect={() => changeLanguage(language.value)}
-                                                className="cursor-pointer"
-                                            >
-                                                {language.label}
-                                            </CommandItem>
-                                        ))}
-                                        <CommandItem onSelect={() => {
-                                            // Here you can implement the logic to request a new language
-                                            console.log("Request new language support")
-                                            setOpen(false)
-                                        }}>
-                                            Request new language
-                                        </CommandItem>
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                    <LanguageSelector
+                        languages={languages}
+                        className="hidden lg:flex"
+                        triggerClassName="hidden lg:flex"
+                        onRequestNewLanguage={() => {
+                            console.log("Request new language support")
+                        }}
+                    />
                     <Popover open={themeOpen} onOpenChange={setThemeOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" className="hidden lg:flex">

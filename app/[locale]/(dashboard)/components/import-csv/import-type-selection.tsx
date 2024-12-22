@@ -25,6 +25,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command"
+import { useI18n } from "@/locales/client"
 
 // Easy toggle between COMING_SOON and PLUS_ONLY
 const RITHMIC_SYNC_STATE: 'COMING_SOON' | 'PLUS_ONLY' = 'COMING_SOON'
@@ -51,68 +52,68 @@ interface ImportTypeInfo {
 const importTypeInfo: ImportTypeInfo[] = [
   {
     type: 'rithmic-sync',
-    name: 'Rithmic Sync',
-    description: 'Direct account sync',
+    name: 'import.type.rithmicSync.name',
+    description: 'import.type.rithmicSync.description',
     category: 'Direct Account Sync',
     videoUrl: process.env.NEXT_PUBLIC_RITHMIC_SYNC_TUTORIAL_VIDEO || '',
-    details: 'Direct sync with your Rithmic account. Requires authentication.'
+    details: 'import.type.rithmicSync.details'
   },
   {
     type: '',
-    name: 'CSV with AI',
-    description: 'CSV file with AI mapping',
+    name: 'import.type.csvAi.name',
+    description: 'import.type.csvAi.description',
     category: 'Custom CSV Import',
     videoUrl: '',
     details: ''
   },
   {
     type: 'rithmic-performance',
-    name: 'Rithmic Performance',
-    description: 'Import from Rithmic',
+    name: 'import.type.rithmicPerf.name',
+    description: 'import.type.rithmicPerf.description',
     category: 'Platform CSV Import',
     videoUrl: (() => {
       return process.env.NEXT_PUBLIC_RITHMIC_PERFORMANCE_TUTORIAL_VIDEO || ''
     })(),
-    details: 'Remember to expand every row to see the full details during export.'
+    details: 'import.type.rithmicPerf.details'
   },
   {
     type: 'rithmic-orders',
-    name: 'Rithmic Orders',
-    description: 'Import from Rithmic',
+    name: 'import.type.rithmicOrders.name',
+    description: 'import.type.rithmicOrders.description',
     category: 'Platform CSV Import',
     videoUrl: (() => {
       return process.env.NEXT_PUBLIC_RITHMIC_ORDER_TUTORIAL_VIDEO || ''
     })(),
-    details: 'Following fields are mandatory: Account, Buy/Sell, Avg Fill Price, Limit Price, Symbol, Order Number, Update time, Qty filled, Closed profit & loss, Commission fill rate'
+    details: 'import.type.rithmicOrders.details'
   },
   {
     type: 'ninjatrader-performance',
-    name: 'NinjaTrader Performance',
-    description: 'Import from NinjaTrader',
+    name: 'import.type.ninjaTrader.name',
+    description: 'import.type.ninjaTrader.description',
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_NINJATRADER_PERFORMANCE_TUTORIAL_VIDEO || '',
     details: ''
   },
   {
     type: 'tradezella',
-    name: 'TradeZella',
-    description: 'Import from TradeZella',
+    name: 'import.type.tradezella.name',
+    description: 'import.type.tradezella.description',
     category: 'Platform CSV Import',
     videoUrl: '',
     details: ''
   },
   {
     type: 'tradovate',
-    name: 'Tradovate',
-    description: 'Import from Tradovate',
+    name: 'import.type.tradovate.name',
+    description: 'import.type.tradovate.description',
     category: 'Platform CSV Import',
     videoUrl: '',
     details: ''
   },
   {
     type: 'quantower',
-    name: 'Quantower',
-    description: 'Import from Quantower',
+    name: 'import.type.quantower.name',
+    description: 'import.type.quantower.description',
     category: 'Platform CSV Import',
     videoUrl: '',
     details: ''
@@ -129,13 +130,14 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   const { isPlusUser } = useUser()
   const [searchQuery, setSearchQuery] = useState('')
   const [hoveredCategory, setHoveredCategory] = useState<Category | null>(null)
+  const t = useI18n()
   
   // Set default selection to CSV with AI
   useEffect(() => {
     if (selectedType === '') {
       setSelectedType('')  // Empty string represents CSV with AI type
     }
-  })
+  }, [selectedType, setSelectedType])
   
   const videoRefs = useRef<Record<ImportType, HTMLVideoElement | null>>({
     '': null,
@@ -165,28 +167,41 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   const setVideoRef = (type: ImportType) => (el: HTMLVideoElement | null) => {
     videoRefs.current[type] = el
   }
+  
+  const getTranslatedCategory = (category: Category) => {
+    switch (category) {
+      case 'Direct Account Sync':
+        return t('import.type.category.directSync')
+      case 'Custom CSV Import':
+        return t('import.type.category.customCsv')
+      case 'Platform CSV Import':
+        return t('import.type.category.platformCsv')
+      default:
+        return category
+    }
+  }
 
   const filteredImportTypes = importTypeInfo.filter(info => 
-    info.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    info.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    info.category.toLowerCase().includes(searchQuery.toLowerCase())
+    t(info.name as any, {}).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t(info.description as any, {}).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    getTranslatedCategory(info.category).toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const categories = Array.from(new Set(filteredImportTypes.map(info => info.category)))
 
   return (
     <div className="flex flex-col h-full px-4">
-      <div className="grid md:grid-cols-2 gap-6  h-full">
+      <div className="grid md:grid-cols-2 gap-6 h-full">
         <div className="h-full">
           <Command className="border h-full shadow-sm">
             <CommandInput 
-            className='h-fit rounded-none'
-              placeholder="Search import types..." 
+              className='h-fit rounded-none'
+              placeholder={t('import.type.search')}
               value={searchQuery}
               onValueChange={setSearchQuery}
             />
             <CommandList className="min-h-[calc(100%-42px)]">
-              <CommandEmpty>No import types found.</CommandEmpty>
+              <CommandEmpty>{t('import.type.noResults')}</CommandEmpty>
               {categories.map(category => {
                 const categoryTypes = filteredImportTypes.filter(info => info.category === category)
                 if (categoryTypes.length === 0) return null
@@ -198,7 +213,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                       hoveredCategory === category ? "text-foreground scale-[1.02] translate-x-1" : "hover:text-foreground"
                     )}>
                       {categoryIcons[category]}
-                      <span>{category}</span>
+                      <span>{getTranslatedCategory(category)}</span>
                     </div>
                   }>
                     {categoryTypes.map((info) => {
@@ -225,11 +240,11 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                           >
                             <div className="flex-1">
                               <div className="font-medium flex items-center gap-2">
-                                {info.name}
+                                {t(info.name as any, {})}
                                 {isDisabled && (
                                   <>
                                     <Badge variant="secondary" className="ml-2 transition-transform duration-200 hover:scale-105">
-                                      {RITHMIC_SYNC_STATE === 'COMING_SOON' ? 'SOON' : 'PLUS'}
+                                      {RITHMIC_SYNC_STATE === 'COMING_SOON' ? t('import.type.badge.soon') : t('import.type.badge.plus')}
                                     </Badge>
                                     {RITHMIC_SYNC_STATE === 'COMING_SOON' ? 
                                       <Clock className="h-4 w-4 animate-pulse" /> : 
@@ -238,7 +253,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                                   </>
                                 )}
                               </div>
-                              <div className="text-sm text-muted-foreground">{info.description}</div>
+                              <div className="text-sm text-muted-foreground">{t(info.description as any, {})}</div>
                             </div>
                           </CommandItem>
                         </div>
@@ -256,9 +271,8 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
             <Alert>
               <AlertDescription>
                 {RITHMIC_SYNC_STATE === 'COMING_SOON' 
-                  ? "This feature is coming soon!"
-                  : "Rithmic sync is a Plus feature. Please upgrade your account to use this feature."
-                }
+                  ? t('import.type.comingSoon')
+                  : t('import.type.plusFeature')}
               </AlertDescription>
             </Alert>
           ) : (
@@ -266,7 +280,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
               <>
                 {selectedType === 'rithmic-sync' ? (
                   <>
-                    <h2 className="text-2xl font-bold">Rithmic Account Login</h2>
+                    <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
                     <RithmicSyncCombined 
                       setIsOpen={setIsOpen}
                       onSync={async (data) => {
@@ -297,64 +311,64 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                           height={40}
                         />
                       </div>
-                      <p>The R | API+™ software is Copyright © 2024 by Rithmic, LLC. All rights reserved.</p>
-                      <p>The R | Protocol API™ software is Copyright © 2024 by Rithmic, LLC. All rights reserved.</p>
-                      <p>Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.</p>
-                      <p>The OMNE™ software is Copyright © 2024 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.</p>
+                      <p>{t('import.type.copyright.rithmic')}</p>
+                      <p>{t('import.type.copyright.protocol')}</p>
+                      <p>{t('import.type.copyright.platform')}</p>
+                      <p>{t('import.type.copyright.omne')}</p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <h2 className="text-2xl font-bold">Tutorial Video</h2>
+                    <h2 className="text-2xl font-bold">{t('import.type.tutorial.title')}</h2>
                     <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                      {importTypeInfo.map((info) => (
-                        info.videoUrl != '' && (
-                          <video
-                            key={info.type}
-                            ref={setVideoRef(info.type)}
-                            height="600"
-                            width="600"
-                            preload="metadata"
-                            loop
-                            muted
-                            controls
-                            playsInline
-                            className={cn(
-                              "rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover",
-                              selectedType !== info.type && "hidden"
-                            )}
-                          >
-                            <source src={info.videoUrl} type="video/mp4" />
-                            <track
-                              src="/path/to/captions.vtt"
-                              kind="subtitles"
-                              srcLang="en"
-                              label="English"
-                            />
-                            Your browser does not support the video tag.
-                          </video>
-                        )
-                      ))}
+                      <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        {importTypeInfo.map((info) => (
+                          info.videoUrl != '' && (
+                            <video
+                              key={info.type}
+                              ref={setVideoRef(info.type)}
+                              height="600"
+                              width="600"
+                              preload="metadata"
+                              loop
+                              muted
+                              controls
+                              playsInline
+                              className={cn(
+                                "rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover",
+                                selectedType !== info.type && "hidden"
+                              )}
+                            >
+                              <source src={info.videoUrl} type="video/mp4" />
+                              <track
+                                src="/path/to/captions.vtt"
+                                kind="subtitles"
+                                srcLang="en"
+                                label="English"
+                              />
+                              Your browser does not support the video tag.
+                            </video>
+                          )
+                        ))}
+                      </div>
+                      {selectedType && importTypeInfo.find(info => info.type === selectedType)?.videoUrl ? (
+                        <p className="text-sm text-muted-foreground" key={selectedType}>
+                          {t('import.type.tutorial.description', { platform: selectedType.split('-').join(' ') })}
+                          <br />
+                          {selectedType && importTypeInfo.find(info => info.type === selectedType)?.details && 
+                            t((importTypeInfo.find(info => info.type === selectedType)?.details || '') as any, {})}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground" key={selectedType}>
+                          {t('import.type.tutorial.notAvailable', { platform: selectedType.split('-').join(' ') })}
+                        </p>
+                      )}
                     </div>
-                    {importTypeInfo.find(info => info.type === selectedType)?.videoUrl ? (
-                      <p className="text-sm text-muted-foreground" key={selectedType}>
-                        Watch this tutorial video to learn how to import data from {selectedType.split('-').join(' ')}.
-                        <br />
-                        {importTypeInfo.find(info => info.type === selectedType)?.details}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground" key={selectedType}>
-                        Tutorial video for {selectedType.split('-').join(' ')} is not available.
-                      </p>
-                    )}
-                    </div>
-                    {selectedType && (
+                    
+                    {selectedType && importTypeInfo.find(info => info.type === selectedType)?.details && (
                       <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4" key="details">
                         <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-500 animate-pulse" />
-                        <p>
-                          {importTypeInfo.find(info => info.type === selectedType)?.details || 'No additional details available.'}
-                        </p>
+                        <p>{t((importTypeInfo.find(info => info.type === selectedType)?.details || '') as any, {})}</p>
                       </div>
                     )}
                     
@@ -382,8 +396,8 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                             height={40}
                           />
                         </div>
-                        <p>Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.</p>
-                        <p>The OMNE™ software is Copyright © 2024 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.</p>
+                        <p>{t('import.type.copyright.platform')}</p>
+                        <p>{t('import.type.copyright.omne')}</p>
                       </div>
                     )}
                   </>

@@ -22,6 +22,7 @@ import NinjaTraderPerformanceProcessor from './ninjatrader-performance-processor
 import QuantowerOrderProcessor from './quantower-processor'
 import { RithmicSync } from './rithmic-sync'
 import { cn } from '@/lib/utils'
+import { useI18n } from "@/locales/client"
 
 type ColumnConfig = {
   [key: string]: {
@@ -63,6 +64,7 @@ export default function ImportButton() {
   const { toast } = useToast()
   const { trades, setTrades, refreshTrades } = useTrades()
   const { user } = useUser()
+  const t = useI18n()
 
   const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
     if (typeof pnl !== 'string' || pnl.trim() === '') {
@@ -116,8 +118,8 @@ export default function ImportButton() {
   const handleSave = async () => {
     if (!user) {
       toast({
-        title: "Authentication Error",
-        description: "User not authenticated. Please log in and try again.",
+        title: t('import.error.auth'),
+        description: t('import.error.authDescription'),
         variant: "destructive",
       })
       return
@@ -250,8 +252,8 @@ export default function ImportButton() {
       const {error, numberOfTradesAdded} = await saveTrades(newTrades)
       if(error){
         toast({
-          title: "Import Failed",
-          description: "An error occurred while importing trades. Please try again.",
+          title: t('import.error.failed'),
+          description: t('import.error.failedDescription'),
           variant: "destructive",
         })
         return
@@ -260,8 +262,8 @@ export default function ImportButton() {
       await refreshTrades()
       setIsOpen(false)
       toast({
-        title: "Import Successful",
-        description: `${numberOfTradesAdded} trades have been imported.`,
+        title: t('import.success'),
+        description: t('import.successDescription', { numberOfTradesAdded }),
       })
       // Reset the import process
       setImportType('')
@@ -276,8 +278,8 @@ export default function ImportButton() {
     } catch (error) {
       console.error('Error saving trades:', error)
       toast({
-        title: "Import Failed",
-        description: "An error occurred while importing trades. Please try again.",
+        title: t('import.error.failed'),
+        description: t('import.error.failedDescription'),
         variant: "destructive",
       })
     } finally {
@@ -310,8 +312,8 @@ export default function ImportButton() {
           setStep(3)
         } else {
           toast({
-            title: "Account number required",
-            description: "Please select an existing account or enter a new one.",
+            title: t('import.error.accountRequired'),
+            description: t('import.error.accountRequiredDescription'),
             variant: "destructive",
           })
         }
@@ -345,16 +347,16 @@ export default function ImportButton() {
           if (!isRequiredFieldsMapped()) {
             const missingFields = getMissingRequiredFields()
             toast({
-              title: "Required fields not mapped",
+              title: t('import.error.requiredFields'),
               description: (
                 <div>
-                  <p>Please map the following required fields:</p>
+                  <p>{t('import.error.requiredFieldsDescription')}</p>
                   <ul className="list-disc pl-4 mt-2">
                     {missingFields.map((field: string) => (
                       <li key={field}>{field}</li>
                     ))}
                   </ul>
-                  <p className="mt-2">These fields are necessary for proper data import.</p>
+                  <p className="mt-2">{t('import.error.requiredFieldsNote')}</p>
                 </div>
               ),
               variant: "destructive",
@@ -370,11 +372,45 @@ export default function ImportButton() {
         handleSave()
       } else {
         toast({
-          title: "Account number required",
-          description: "Please select an existing account or enter a new one.",
+          title: t('import.error.accountRequired'),
+          description: t('import.error.accountRequiredDescription'),
           variant: "destructive",
         })
       }
+    }
+  }
+
+  const getDialogTitle = () => {
+    switch (step) {
+      case 0:
+        return t('import.title.selectType')
+      case 1:
+        return importType === 'rithmic-sync' ? t('import.title.connect') : t('import.title.upload')
+      case 2:
+        return importType === 'rithmic-sync' ? t('import.title.syncSettings') : t('import.title.selectHeader')
+      case 3:
+        return importType === 'rithmic-orders' ? t('import.title.processOrders') : t('import.title.mapColumns')
+      case 4:
+        return t('import.title.selectAccount')
+      default:
+        return ''
+    }
+  }
+
+  const getDialogDescription = () => {
+    switch (step) {
+      case 0:
+        return t('import.description.selectType')
+      case 1:
+        return importType === 'rithmic-sync' ? t('import.description.connect') : t('import.description.upload')
+      case 2:
+        return importType === 'rithmic-sync' ? t('import.description.syncSettings') : t('import.description.selectHeader')
+      case 3:
+        return importType === 'rithmic-orders' ? t('import.description.processOrders') : t('import.description.mapColumns')
+      case 4:
+        return t('import.description.selectAccount')
+      default:
+        return ''
     }
   }
 
@@ -486,25 +522,15 @@ export default function ImportButton() {
     <div>
       <Button onClick={() => setIsOpen(true)} className='w-full'>
         <UploadIcon className="sm:mr-2 h-4 w-4" /> 
-        <span className='hidden md:block'>Import Trades</span>
+        <span className='hidden md:block'>{t('import.button')}</span>
       </Button>
       
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="flex flex-col max-w-[80vw] h-[80vh] p-0">
           <DialogHeader className="flex-none p-6 border-b space-y-4">
-            <DialogTitle>
-              {step === 0 && "Select Import Type"}
-              {step === 1 && (importType === 'rithmic-sync' ? "Connect" : "Upload CSV")}
-              {step === 2 && (importType === 'rithmic-sync' ? "Synchronisation Settings" : "Select Header Row")}
-              {step === 3 && (importType === 'rithmic-orders' ? "Process Rithmic Orders" : "Map Columns")}
-              {step === 4 && "Select or Add Account"}
-            </DialogTitle>
+            <DialogTitle>{getDialogTitle()}</DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              {step === 0 && "Choose how you want to import your trades"}
-              {step === 1 && (importType === 'rithmic-sync' ? "Connect your Rithmic account" : "Upload your CSV file")}
-              {step === 2 && (importType === 'rithmic-sync' ? "Configure your sync settings" : "Select the row containing your column headers")}
-              {step === 3 && (importType === 'rithmic-orders' ? "Process your Rithmic orders" : "Map your CSV columns to our fields")}
-              {step === 4 && "Select an existing account or create a new one"}
+              {getDialogDescription()}
             </DialogDescription>
             <div className="space-y-2">
               <div className="w-full bg-secondary h-2 rounded-full">
@@ -515,31 +541,31 @@ export default function ImportButton() {
               </div>
               <div className="flex justify-between text-xs text-muted-foreground px-1">
                 <div className={cn("transition-colors", step >= 0 && "text-primary font-medium")}>
-                  Import Type
+                  {t('import.step.importType')}
                 </div>
                 {importType === 'rithmic-sync' ? (
                   <>
                     <div className={cn("transition-colors", step >= 1 && "text-primary font-medium")}>
-                      Connect
+                      {t('import.step.connect')}
                     </div>
                     <div className={cn("transition-colors", step >= 2 && "text-primary font-medium")}>
-                      Settings
+                      {t('import.step.settings')}
                     </div>
                   </>
                 ) : (
                   <>
                     <div className={cn("transition-colors", step >= 1 && "text-primary font-medium")}>
-                      Upload
+                      {t('import.step.upload')}
                     </div>
                     <div className={cn("transition-colors", step >= 2 && "text-primary font-medium")}>
-                      Headers
+                      {t('import.step.headers')}
                     </div>
                     <div className={cn("transition-colors", step >= 3 && "text-primary font-medium")}>
-                      {importType === 'rithmic-orders' ? 'Process' : 'Map Columns'}
+                      {importType === 'rithmic-orders' ? t('import.step.process') : t('import.step.mapColumns')}
                     </div>
                     {importType !== 'rithmic-orders' && (
                       <div className={cn("transition-colors", step >= 4 && "text-primary font-medium")}>
-                        Account
+                        {t('import.step.account')}
                       </div>
                     )}
                   </>
@@ -560,7 +586,7 @@ export default function ImportButton() {
                   onClick={() => setStep(step - 1)}
                   className="w-fit min-w-[100px]"
                 >
-                  Back
+                  {t('import.button.back')}
                 </Button>
               )}
               {!(step === 0 && importType === 'rithmic-sync') && (
@@ -569,10 +595,10 @@ export default function ImportButton() {
                   className="w-fit min-w-[100px]"
                 >
                   {isSaving 
-                    ? "Saving..." 
+                    ? t('import.button.saving')
                     : (step === 4 || (step === 3 && importType === 'rithmic-orders') 
-                      ? "Save" 
-                      : "Next"
+                      ? t('import.button.save')
+                      : t('import.button.next')
                     )
                   }
                 </Button>

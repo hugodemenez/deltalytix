@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUser } from "@/components/context/user-data"
-import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop } from "lucide-react"
+import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -29,12 +29,22 @@ import ImportButton from './import-csv/import-button'
 import { NotificationDropdown } from './notification-dropdown'
 import NavbarFilters from './filters/filters'
 import { SubscriptionBadge } from './subscription-badge'
+import { LanguageSelector } from "@/components/ui/language-selector"
+import { useI18n } from "@/locales/client"
+
 type Theme = 'light' | 'dark' | 'system'
 
 export default function Navbar() {
   const { user, subscription } = useUser()
   const [searchFocused, setSearchFocused] = useState(false)
   const { theme, toggleTheme, setTheme } = useTheme()
+  const t = useI18n()
+
+  const languages = [
+    { value: 'en', label: 'English' },
+    { value: 'fr', label: 'Français' },
+    // Add more languages here
+  ]
 
   const handleThemeChange = (value: string) => {
     setTheme(value as Theme)
@@ -69,12 +79,12 @@ export default function Navbar() {
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('dashboard.myAccount')}</DropdownMenuLabel>
                 <DropdownMenuItem asChild>
                   <Link href={process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || ""}>
                     <div className="flex w-full">
                       <CreditCard className="mr-2 h-4 w-4" />
-                      <span>Billing</span>
+                      <span>{t('dashboard.billing')}</span>
                       <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
                     </div>
                   </Link>
@@ -82,7 +92,7 @@ export default function Navbar() {
                 <Link href={"/dashboard/data"}>
                   <DropdownMenuItem>
                     <Database className="mr-2 h-4 w-4" />
-                    <span>Data</span>
+                    <span>{t('dashboard.data')}</span>
                     <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                   </DropdownMenuItem>
                 </Link>
@@ -91,17 +101,17 @@ export default function Navbar() {
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
                       <UserPlus className="mr-2 h-4 w-4" />
-                      <span>Invite users</span>
+                      <span>{t('dashboard.inviteUsers')}</span>
                     </DropdownMenuSubTrigger>
                     <DropdownMenuPortal>
                       <DropdownMenuSubContent>
                         <DropdownMenuItem>
                           <Mail className="mr-2 h-4 w-4" />
-                          <span>Email</span>
+                          <span>{t('dashboard.email')}</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem disabled>
                           <MessageSquare className="mr-2 h-4 w-4" />
-                          <span>Message</span>
+                          <span>{t('dashboard.message')}</span>
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownMenuPortal>
@@ -111,40 +121,52 @@ export default function Navbar() {
                 <Link href="/support">
                 <DropdownMenuItem>
                   <LifeBuoy className="mr-2 h-4 w-4" />
-                  <span>Support</span>
+                  <span>{t('dashboard.support')}</span>
                 </DropdownMenuItem>
                 </Link>
                 <DropdownMenuItem disabled>
                   <Cloud className="mr-2 h-4 w-4" />
-                  <span>API</span>
+                  <span>{t('dashboard.api')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <Keyboard className="mr-2 h-4 w-4" />
-                  <span>Keyboard shortcuts</span>
+                  <span>{t('dashboard.keyboardShortcuts')}</span>
                   <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel>Theme</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('dashboard.theme')}</DropdownMenuLabel>
                 <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
                   <DropdownMenuRadioItem value="light">
                     <Sun className="mr-2 h-4 w-4" />
-                    <span>Light</span>
+                    <span>{t('navbar.lightMode')}</span>
                   </DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="dark">
                     <Moon className="mr-2 h-4 w-4" />
-                    <span>Dark</span>
+                    <span>{t('navbar.darkMode')}</span>
                   </DropdownMenuRadioItem>
                   <DropdownMenuRadioItem value="system">
                     <Laptop className="mr-2 h-4 w-4" />
-                    <span>System</span>
+                    <span>{t('navbar.systemTheme')}</span>
                   </DropdownMenuRadioItem>
                 </DropdownMenuRadioGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel>{t('dashboard.language')}</DropdownMenuLabel>
+                <div className="px-2 py-1.5">
+                  <LanguageSelector
+                    languages={languages}
+                    className="w-full"
+                    triggerClassName="w-full justify-start h-8 px-2"
+                    onRequestNewLanguage={() => {
+                      console.log("Request new language support")
+                    }}
+                  />
+                </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => {
                   signOut()
                 }}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
+                  <span>{t('dashboard.logOut')}</span>
                   <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
                 </DropdownMenuItem>
               </DropdownMenuContent>
