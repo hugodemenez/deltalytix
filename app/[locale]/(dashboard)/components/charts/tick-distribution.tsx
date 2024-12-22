@@ -69,6 +69,13 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
   return null;
 };
 
+const formatCount = (value: number) => {
+  if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}k`
+  }
+  return value.toString()
+}
+
 export default function TickDistributionChart({ size = 'medium' }: TickDistributionProps) {
   const { formattedTrades: trades } = useFormattedTrades()
   const [tickDetails, setTickDetails] = React.useState<Record<string, number>>({})
@@ -163,13 +170,13 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
               data={chartData}
               margin={
                 size === 'small-long'
-                  ? { left: 35, right: 4, top: 4, bottom: 20 }
-                  : { left: 45, right: 8, top: 8, bottom: 24 }
+                  ? { left: 0, right: 4, top: 4, bottom: 20 }
+                  : { left: 0, right: 8, top: 8, bottom: 24 }
               }
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
-                opacity={size === 'small-long' ? 0.5 : 0.8}
+                className="text-border dark:opacity-[0.12] opacity-[0.2]"
               />
               <XAxis
                 dataKey="ticks"
@@ -186,12 +193,13 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={size === 'small-long' ? 35 : 45}
-                tickMargin={size === 'small-long' ? 2 : 4}
+                width={45}
+                tickMargin={4}
                 tick={{ 
                   fontSize: size === 'small-long' ? 9 : 11,
                   fill: 'currentColor'
                 }}
+                tickFormatter={formatCount}
               />
               <Tooltip 
                 content={<CustomTooltip />}

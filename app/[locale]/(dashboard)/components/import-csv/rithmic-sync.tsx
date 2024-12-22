@@ -127,6 +127,74 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
   const [rawOrders, setRawOrders] = useState<RithmicOrder[]>([])
   const [expandedTrade, setExpandedTrade] = useState<string | null>(null)
 
+  // Add helper function for PnL calculation
+  const calculatePnL = useCallback((
+    side: 'Long' | 'Short', 
+    quantity: number, 
+    entryPrice: number, 
+    exitPrice: number,
+    ticker: string
+  ): number => {
+    const contractSpec = tickDetails.find(detail => detail.ticker === ticker) || { 
+      tickSize: 1/64,
+      tickValue: 15.625
+    }
+
+    // Don't round intermediate calculations
+    const priceDifference = exitPrice - entryPrice
+    const ticks = Math.round(priceDifference / contractSpec.tickSize)
+    const rawPnL = ticks * contractSpec.tickValue * quantity
+    
+    console.error(ticks, rawPnL, quantity, contractSpec.tickSize, contractSpec.tickValue)
+    // Only round the final result
+    return Number((side === 'Long' ? rawPnL : -rawPnL).toFixed(2))
+  }, [tickDetails])
+
+  const createTrade = useCallback((
+    userId: string,
+    accountId: string,
+    instrument: string,
+    side: 'Long' | 'Short',
+    entryOrder: QueuedOrder,
+    exitOrder: QueuedOrder,
+    lotIndex: number
+  ): Trade => {
+    const timeInPosition = Math.floor(
+      (new Date(exitOrder.timestamp).getTime() - new Date(entryOrder.timestamp).getTime()) / 1000
+    )
+
+    return {
+      id: generateTradeHash(
+        userId,
+        accountId,
+        instrument,
+        entryOrder.timestamp,
+        exitOrder.timestamp,
+        1,
+        entryOrder.orderId,
+        exitOrder.orderId,
+        timeInPosition,
+        lotIndex
+      ),
+      userId,
+      accountNumber: accountId,
+      instrument,
+      quantity: 1,
+      entryPrice: entryOrder.price.toString(),
+      closePrice: exitOrder.price.toString(),
+      entryDate: entryOrder.timestamp,
+      closeDate: exitOrder.timestamp,
+      side,
+      commission: entryOrder.commission + exitOrder.commission,
+      timeInPosition,
+      pnl: calculatePnL(side, 1, entryOrder.price, exitOrder.price, instrument),
+      entryId: entryOrder.orderId,
+      closeId: exitOrder.orderId,
+      comment: null,
+      createdAt: new Date()
+    }
+  }, [calculatePnL])
+
   useEffect(() => {
     const fetchTickDetails = async () => {
       const details = await getTickDetails()
@@ -228,75 +296,11 @@ export function RithmicSync({ onSync, setIsOpen }: RithmicSyncProps) {
     }
 
     return processedTrades
-  }, [user])
+  }, [user, createTrade])
 
-  function createTrade(
-    userId: string,
-    accountId: string,
-    instrument: string,
-    side: 'Long' | 'Short',
-    entryOrder: QueuedOrder,
-    exitOrder: QueuedOrder,
-    lotIndex: number
-  ): Trade {
-    const timeInPosition = Math.floor(
-      (new Date(exitOrder.timestamp).getTime() - new Date(entryOrder.timestamp).getTime()) / 1000
-    )
 
-    return {
-      id: generateTradeHash(
-        userId,
-        accountId,
-        instrument,
-        entryOrder.timestamp,
-        exitOrder.timestamp,
-        1,
-        entryOrder.orderId,
-        exitOrder.orderId,
-        timeInPosition,
-        lotIndex
-      ),
-      userId,
-      accountNumber: accountId,
-      instrument,
-      quantity: 1,
-      entryPrice: entryOrder.price.toString(),
-      closePrice: exitOrder.price.toString(),
-      entryDate: entryOrder.timestamp,
-      closeDate: exitOrder.timestamp,
-      side,
-      commission: entryOrder.commission + exitOrder.commission,
-      timeInPosition,
-      pnl: calculatePnL(side, 1, entryOrder.price, exitOrder.price, instrument),
-      entryId: entryOrder.orderId,
-      closeId: exitOrder.orderId,
-      comment: null,
-      createdAt: new Date()
-    }
-  }
 
-  // Add helper function for PnL calculation
-  function calculatePnL(
-    side: 'Long' | 'Short', 
-    quantity: number, 
-    entryPrice: number, 
-    exitPrice: number,
-    ticker: string
-  ): number {
-    const contractSpec = tickDetails.find(detail => detail.ticker === ticker) || { 
-      tickSize: 1/64,
-      tickValue: 15.625
-    }
 
-    // Don't round intermediate calculations
-    const priceDifference = exitPrice - entryPrice
-    const ticks = Math.round(priceDifference / contractSpec.tickSize)
-    const rawPnL = ticks * contractSpec.tickValue * quantity
-    
-    console.error(ticks, rawPnL, quantity, contractSpec.tickSize, contractSpec.tickValue)
-    // Only round the final result
-    return Number((side === 'Long' ? rawPnL : -rawPnL).toFixed(2))
-  }
 
   async function handleConnect(event: React.FormEvent) {
     event.preventDefault()

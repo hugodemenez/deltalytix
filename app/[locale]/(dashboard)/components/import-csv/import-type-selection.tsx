@@ -135,7 +135,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
     if (selectedType === '') {
       setSelectedType('')  // Empty string represents CSV with AI type
     }
-  }, [])
+  })
   
   const videoRefs = useRef<Record<ImportType, HTMLVideoElement | null>>({
     '': null,

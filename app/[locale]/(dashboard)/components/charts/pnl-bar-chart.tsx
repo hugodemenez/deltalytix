@@ -41,8 +41,16 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-const formatCurrency = (value: number) =>
-  `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+const formatCurrency = (value: number) => {
+  const absValue = Math.abs(value)
+  if (absValue >= 1000000) {
+    return `${value < 0 ? '-' : ''}$${(absValue / 1000000).toFixed(1)}M`
+  }
+  if (absValue >= 1000) {
+    return `${value < 0 ? '-' : ''}$${(absValue / 1000).toFixed(1)}k`
+  }
+  return `${value < 0 ? '-' : ''}$${absValue.toFixed(0)}`
+}
 
 const positiveColor = "hsl(var(--chart-2))" // Green color
 const negativeColor = "hsl(var(--chart-1))" // Orangish color
@@ -95,27 +103,16 @@ export default function PNLChart({ size = 'medium' }: PNLChartProps) {
     }
   }
 
-  const getYAxisWidth = () => {
-    const maxLength = Math.max(
-      Math.abs(minPnL).toFixed(2).length,
-      Math.abs(maxPnL).toFixed(2).length
-    );
-    return size === 'small-long'
-      ? Math.max(35, 8 * (maxLength + 1))
-      : Math.max(45, 10 * (maxLength + 1));
-  }
-
   const getChartMargins = () => {
-    const yAxisWidth = getYAxisWidth();
     switch (size) {
       case 'small-long':
-        return { left: yAxisWidth, right: 4, top: 4, bottom: 20 }
+        return { left: 10, right: 4, top: 4, bottom: 20 }
       case 'medium':
-        return { left: yAxisWidth, right: 8, top: 8, bottom: 24 }
+        return { left: 10, right: 8, top: 8, bottom: 24 }
       case 'large':
-        return { left: yAxisWidth, right: 12, top: 12, bottom: 28 }
+        return { left: 10, right: 12, top: 12, bottom: 28 }
       default:
-        return { left: yAxisWidth, right: 8, top: 8, bottom: 24 }
+        return { left: 10, right: 8, top: 8, bottom: 24 }
     }
   }
 
@@ -169,7 +166,7 @@ export default function PNLChart({ size = 'medium' }: PNLChartProps) {
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
-                opacity={size === 'small-long' ? 0.5 : 0.8}
+                className="text-border dark:opacity-[0.12] opacity-[0.2]"
               />
               <XAxis
                 dataKey="date"
@@ -193,20 +190,13 @@ export default function PNLChart({ size = 'medium' }: PNLChartProps) {
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={getYAxisWidth()}
-                tickMargin={size === 'small-long' ? 2 : 4}
+                width={60}
+                tickMargin={4}
                 tick={{ 
                   fontSize: size === 'small-long' ? 9 : 11,
                   fill: 'currentColor'
                 }}
                 tickFormatter={formatCurrency}
-                label={size === 'small-long' ? undefined : { 
-                  value: "P/L", 
-                  angle: -90, 
-                  position: 'insideLeft',
-                  fontSize: 11,
-                  offset: -8
-                }}
               />
               <Tooltip 
                 content={<CustomTooltip />}

@@ -77,8 +77,18 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
         </div>
       </div>
       <div className="grid grid-cols-7 gap-4">
-        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day) => (
-          <div key={day} className="text-center text-sm font-semibold text-muted-foreground">{day}</div>
+        {[
+          { key: 'monday', label: 'M' },
+          { key: 'tuesday', label: 'T' },
+          { key: 'wednesday', label: 'W' },
+          { key: 'thursday', label: 'T' },
+          { key: 'friday', label: 'F' },
+          { key: 'saturday', label: 'S' },
+          { key: 'sunday', label: 'S' }
+        ].map((day) => (
+          <div key={day.key} className="text-center text-sm font-semibold text-muted-foreground">
+            {day.label}
+          </div>
         ))}
         {calendarDays.map((date) => {
           const dateString = format(date, 'yyyy-MM-dd')
@@ -101,7 +111,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
             >
               {dayData && (
                 <svg
-                  className="absolute w-12 h-12 -rotate-90"
+                  className="absolute w-10 h-10 -rotate-90"
                   viewBox="0 0 36 36"
                 >
                   <circle

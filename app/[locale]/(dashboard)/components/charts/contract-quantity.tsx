@@ -6,6 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { useFormattedTrades } from "@/components/context/trades-data"
 import { Trade } from "@prisma/client"
+import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+
+interface ContractQuantityChartProps {
+  size?: ChartSize
+}
 
 const chartConfig = {
   totalQuantity: {
@@ -14,7 +19,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export default function ContractQuantityChart() {
+export default function ContractQuantityChart({ size = 'medium' }: ContractQuantityChartProps) {
   const { formattedTrades: trades } = useFormattedTrades()
 
   const chartData = React.useMemo(() => {
@@ -83,7 +88,10 @@ export default function ContractQuantityChart() {
               bottom: 12,
             }}
           >
-            <CartesianGrid vertical={false} />
+            <CartesianGrid 
+              strokeDasharray="3 3" 
+              className="text-border dark:opacity-[0.12] opacity-[0.2]"
+            />
             <XAxis
               dataKey="hour"
               tickLine={false}

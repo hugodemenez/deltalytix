@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,7 +28,6 @@ import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minim
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
-import { useCallback } from 'react'
 import EquityChart from './charts/equity-chart'
 import TickDistributionChart from './charts/tick-distribution'
 import PNLChart from './charts/pnl-bar-chart'
@@ -57,7 +56,7 @@ interface WidgetOption {
   size: WidgetSize
 }
 
-function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, size, currentType }: { 
+function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, size, currentType, onCustomize }: { 
   children: React.ReactNode
   onRemove: () => void
   onChangeType: (type: WidgetType) => void
@@ -65,25 +64,58 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   isCustomizing: boolean
   size: WidgetSize
   currentType: WidgetType
+  onCustomize: () => void
 }) {
+  const isMobile = useIsMobile()
+
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
-    if (widgetType === 'calendarWidget') {
-      return size === 'medium' || size === 'large'
+    if (isMobile) {
+      // On mobile, only allow tiny (shown as Small), medium (shown as Medium), and large (shown as Large)
+      if (size === 'small' || size === 'small-long') return false
+      
+      // Statistics widgets can only be tiny (Small)
+      if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
+           'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(widgetType)) {
+        return size === 'tiny'
+      }
+      
+      // Calendar widget can only be large
+      if (widgetType === 'calendarWidget') {
+        return size === 'large'
+      }
+      
+      // Charts can be medium or large
+      if (widgetType.includes('Chart') || widgetType === 'tickDistribution' || 
+          widgetType === 'commissionsPnl') {
+        return size === 'medium' || size === 'large'
+      }
+    } else {
+      // Desktop view
+      // Calendar widget can only be large
+      if (widgetType === 'calendarWidget') {
+        return size === 'large'
+      }
+      
+      // Statistics widgets can only be tiny
+      if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
+           'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(widgetType)) {
+        return size === 'tiny'
+      }
+      
+      // Charts can be small, medium or large
+      if (widgetType.includes('Chart') || widgetType === 'tickDistribution' || 
+          widgetType === 'commissionsPnl') {
+        return size === 'small' || size === 'medium' || size === 'large'
+      }
     }
-    if (size === 'tiny') {
-      // Allow tiny size for charts and all statistics widgets
-      return ['equityChart', 'pnlChart', 'timeOfDayChart', 'timeInPositionChart', 
-              'weekdayPnlChart', 'pnlBySideChart', 'tickDistribution', 'commissionsPnl',
-              'statisticsWidget', 'averagePositionTime', 'cumulativePnl', 'longShortPerformance',
-              'tradePerformance', 'winningStreak'].includes(widgetType)
-    }
+    
     return true
   }
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <div className="relative h-full w-full overflow-hidden rounded-lg border bg-background shadow group">
+        <div className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group">
           <div className={cn("h-full w-full transition-all duration-200", 
             isCustomizing && "group-hover:blur-sm"
           )}>
@@ -103,124 +135,13 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-56">
-        <ContextMenuSub>
-          <ContextMenuSubTrigger className="flex items-center">
-            <Info className="mr-2 h-4 w-4" />
-            <span>Edit Widget</span>
-          </ContextMenuSubTrigger>
-          <ContextMenuSubContent className="max-h-[400px] overflow-y-auto">
-            <ContextMenuLabel>Charts</ContextMenuLabel>
-            <ContextMenuItem 
-              onClick={() => onChangeType('equityChart')}
-              className={currentType === 'equityChart' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <LineChart className="mr-2 h-4 w-4" />
-              <span>Equity Chart</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('pnlChart')}
-              className={currentType === 'pnlChart' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <BarChart className="mr-2 h-4 w-4" />
-              <span>P&L Chart</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('timeOfDayChart')}
-              className={currentType === 'timeOfDayChart' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <Clock className="mr-2 h-4 w-4" />
-              <span>Time of Day</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('timeInPositionChart')}
-              className={currentType === 'timeInPositionChart' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <Timer className="mr-2 h-4 w-4" />
-              <span>Time in Position</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('weekdayPnlChart')}
-              className={currentType === 'weekdayPnlChart' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              <span>Weekday P&L</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('pnlBySideChart')}
-              className={currentType === 'pnlBySideChart' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              <span>P&L by Side</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('tickDistribution')}
-              className={currentType === 'tickDistribution' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <BarChart className="mr-2 h-4 w-4" />
-              <span>Tick Distribution</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('commissionsPnl')}
-              className={currentType === 'commissionsPnl' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <PiggyBank className="mr-2 h-4 w-4" />
-              <span>Commissions PnL</span>
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuLabel>Statistics</ContextMenuLabel>
-            <ContextMenuItem 
-              onClick={() => onChangeType('averagePositionTime')}
-              className={currentType === 'averagePositionTime' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <Clock className="mr-2 h-4 w-4" />
-              <span>Average Position Time</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('cumulativePnl')}
-              className={currentType === 'cumulativePnl' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <PiggyBank className="mr-2 h-4 w-4" />
-              <span>Cumulative PnL</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('longShortPerformance')}
-              className={currentType === 'longShortPerformance' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              <span>Long/Short Performance</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('tradePerformance')}
-              className={currentType === 'tradePerformance' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <BarChart className="mr-2 h-4 w-4" />
-              <span>Trade Performance</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('winningStreak')}
-              className={currentType === 'winningStreak' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <Award className="mr-2 h-4 w-4" />
-              <span>Winning Streak</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeType('statisticsWidget')}
-              className={currentType === 'statisticsWidget' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <BarChart2 className="mr-2 h-4 w-4" />
-              <span>Statistics Overview</span>
-            </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuLabel>Other</ContextMenuLabel>
-            <ContextMenuItem 
-              onClick={() => onChangeType('calendarWidget')}
-              className={currentType === 'calendarWidget' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              <span>Calendar</span>
-            </ContextMenuItem>
-          </ContextMenuSubContent>
-        </ContextMenuSub>
+        <ContextMenuItem 
+          onClick={onCustomize}
+          className="hover:bg-accent hover:text-accent-foreground"
+        >
+          <GripVertical className="mr-2 h-4 w-4" />
+          <span>Move</span>
+        </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
           <ContextMenuSubTrigger className="flex items-center">
@@ -228,44 +149,69 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
             <span>Change Size</span>
           </ContextMenuSubTrigger>
           <ContextMenuSubContent>
-            <ContextMenuItem 
-              onClick={() => onChangeSize('tiny')}
-              className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
-              disabled={!isValidSize(currentType, 'tiny')}
-            >
-              <Minimize2 className="mr-2 h-4 w-4" />
-              <span>Tiny (3x1)</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeSize('small')}
-              className={size === 'small' ? 'bg-accent text-accent-foreground' : ''}
-              disabled={!isValidSize(currentType, 'small')}
-            >
-              <Minimize2 className="mr-2 h-4 w-4" />
-              <span>Small (3x2)</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeSize('small-long')}
-              className={size === 'small-long' ? 'bg-accent text-accent-foreground' : ''}
-              disabled={!isValidSize(currentType, 'small-long')}
-            >
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              <span>Small Long (6x2)</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeSize('medium')}
-              className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <Square className="mr-2 h-4 w-4" />
-              <span>Medium (6x4)</span>
-            </ContextMenuItem>
-            <ContextMenuItem 
-              onClick={() => onChangeSize('large')}
-              className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
-            >
-              <Maximize2 className="mr-2 h-4 w-4" />
-              <span>Large (12x4)</span>
-            </ContextMenuItem>
+            {isMobile ? (
+              <>
+                <ContextMenuItem 
+                  onClick={() => onChangeSize('tiny')}
+                  className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
+                  disabled={!isValidSize(currentType, 'tiny')}
+                >
+                  <Minimize2 className="mr-2 h-4 w-4" />
+                  <span>Small (12x1)</span>
+                </ContextMenuItem>
+                <ContextMenuItem 
+                  onClick={() => onChangeSize('medium')}
+                  className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
+                  disabled={!isValidSize(currentType, 'medium')}
+                >
+                  <Square className="mr-2 h-4 w-4" />
+                  <span>Medium (12x4)</span>
+                </ContextMenuItem>
+                <ContextMenuItem 
+                  onClick={() => onChangeSize('large')}
+                  className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
+                  disabled={!isValidSize(currentType, 'large')}
+                >
+                  <Maximize2 className="mr-2 h-4 w-4" />
+                  <span>Large (12x6)</span>
+                </ContextMenuItem>
+              </>
+            ) : (
+              <>
+                <ContextMenuItem 
+                  onClick={() => onChangeSize('tiny')}
+                  className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
+                  disabled={!isValidSize(currentType, 'tiny')}
+                >
+                  <Minimize2 className="mr-2 h-4 w-4" />
+                  <span>Tiny (3x1)</span>
+                </ContextMenuItem>
+                <ContextMenuItem 
+                  onClick={() => onChangeSize('small')}
+                  className={size === 'small' ? 'bg-accent text-accent-foreground' : ''}
+                  disabled={!isValidSize(currentType, 'small')}
+                >
+                  <Minimize2 className="mr-2 h-4 w-4" />
+                  <span>Small (3x4)</span>
+                </ContextMenuItem>
+                <ContextMenuItem 
+                  onClick={() => onChangeSize('medium')}
+                  className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
+                  disabled={!isValidSize(currentType, 'medium')}
+                >
+                  <Square className="mr-2 h-4 w-4" />
+                  <span>Medium (6x4)</span>
+                </ContextMenuItem>
+                <ContextMenuItem 
+                  onClick={() => onChangeSize('large')}
+                  className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
+                  disabled={!isValidSize(currentType, 'large')}
+                >
+                  <Maximize2 className="mr-2 h-4 w-4" />
+                  <span>Large (6x6)</span>
+                </ContextMenuItem>
+              </>
+            )}
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSeparator />
@@ -363,38 +309,58 @@ export default function WidgetCanvas() {
   
   // Add this state to track if the layout change is from user interaction
   const [isUserAction, setIsUserAction] = useState(false)
-  
+
+  // Add click outside handler
+  const handleOutsideClick = useCallback((e: MouseEvent) => {
+    // Check if the click is on a widget or its children
+    const isWidgetClick = (e.target as HTMLElement).closest('.react-grid-item')
+    const isContextMenuClick = (e.target as HTMLElement).closest('[role="menu"]')
+    const isCustomizationSwitchClick = (e.target as HTMLElement).closest('#customize-mode')
+
+    // If click is outside widgets and not on context menu or customization switch, turn off customization
+    if (!isWidgetClick && !isContextMenuClick && !isCustomizationSwitchClick) {
+      setIsCustomizing(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isCustomizing) {
+      document.addEventListener('click', handleOutsideClick)
+      return () => document.removeEventListener('click', handleOutsideClick)
+    }
+  }, [isCustomizing, handleOutsideClick])
+
   // Update sizeToGrid to handle responsive sizes
   const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
     if (isSmallScreen) {
       switch (size) {
         case 'tiny':
-          return { w: 12, h: 1.5 } // Only for statistics widgets
+          return { w: 12, h: 1 } // Only for statistics widgets
         case 'small':
-          return { w: 12, h: 2.5 } // Only for statistics widgets
+          return { w: 12, h: 2 } // Only for statistics widgets
         case 'small-long':
-          return { w: 12, h: 3.5 }
+          return { w: 12, h: 2 }
         case 'medium':
-          return { w: 12, h: 4.5 }
+          return { w: 12, h: 6 }
         case 'large':
-          return { w: 12, h: 5.5 }
+          return { w: 12, h: 6 }
         default:
-          return { w: 12, h: 4.5 }
+          return { w: 12, h: 4 }
       }
     }
 
     // Desktop sizes
     switch (size) {
       case 'tiny':
-        return { w: 3, h: 1.5 } // Only for statistics widgets
+        return { w: 3, h: 1 } // Only for statistics widgets
       case 'small':
-        return { w: 3, h: 2.5 } // Only for statistics widgets
+        return { w: 3, h: 4 } // Only for statistics widgets
       case 'small-long':
-        return { w: 6, h: 3 }
+        return { w: 6, h: 2 }
       case 'medium':
-        return { w: 6, h: 4 }
+        return { w: 6, h: 4 } // Increased height for calendar widget
       case 'large':
-        return { w: 12, h: 5 }
+        return { w: 6, h: 8 } // Also increased height proportionally for large size
       default:
         return { w: 6, h: 4 }
     }
@@ -449,61 +415,108 @@ export default function WidgetCanvas() {
         } else {
           // Define default widgets for desktop
           const defaultDesktopWidgets = [
-            { 
-              i: 'widget1732477563848', 
-              type: 'calendarWidget' as WidgetType, 
-              size: 'medium' as WidgetSize, 
-              x: 0, 
-              y: 0,
-              ...sizeToGrid('medium')
+            {
+              i: "widget1732477563848",
+              type: "calendarWidget" as WidgetType,
+              size: "large" as WidgetSize,
+              x: 0,
+              y: 1,
+              w: 6,
+              h: 8
             },
-            { 
-              i: 'widget1732477566865', 
-              type: 'equityChart' as WidgetType, 
-              size: 'small-long' as WidgetSize, 
-              x: 6, 
-              y: 0,
-              ...sizeToGrid('small-long')
+            {
+              i: "widget1732477566865",
+              type: "equityChart" as WidgetType,
+              size: "medium" as WidgetSize,
+              x: 6,
+              y: 1,
+              w: 6,
+              h: 4
             },
+            {
+              i: "widget1734881236127",
+              type: "pnlChart" as WidgetType,
+              size: "medium" as WidgetSize,
+              x: 6,
+              y: 5,
+              w: 6,
+              h: 4
+            },
+            {
+              i: "widget1734881247979",
+              type: "cumulativePnl" as WidgetType,
+              size: "tiny" as WidgetSize,
+              x: 0,
+              y: 0,
+              w: 3,
+              h: 1
+            },
+            {
+              i: "widget1734881251266",
+              type: "longShortPerformance" as WidgetType,
+              size: "tiny" as WidgetSize,
+              x: 3,
+              y: 0,
+              w: 3,
+              h: 1
+            },
+            {
+              i: "widget1734881254352",
+              type: "tradePerformance" as WidgetType,
+              size: "tiny" as WidgetSize,
+              x: 6,
+              y: 0,
+              w: 3,
+              h: 1
+            },
+            {
+              i: "widget1734881263452",
+              type: "averagePositionTime" as WidgetType,
+              size: "tiny" as WidgetSize,
+              x: 9,
+              y: 0,
+              w: 3,
+              h: 1
+            }
           ]
 
           // Define default widgets for mobile
           const defaultMobileWidgets = [
             {
-              i: "widget1732478863259",
+              i: "widget1732477563848",
               type: "calendarWidget" as WidgetType,
+              size: "large" as WidgetSize,
+              x: 0,
+              y: 2,
+              w: 12,
+              h: 6
+            },
+            {
+              i: "widget1732477566865",
+              type: "equityChart" as WidgetType,
               size: "medium" as WidgetSize,
+              x: 0,
+              y: 8,
+              w: 12,
+              h: 6
+            },
+            {
+              i: "widget1734881247979",
+              type: "cumulativePnl" as WidgetType,
+              size: "tiny" as WidgetSize,
               x: 0,
               y: 0,
               w: 12,
-              h: 4
+              h: 1
             },
             {
-              i: "widget1732478800633",
-              type: "equityChart" as WidgetType,
-              size: "small" as WidgetSize,
+              i: "widget1734881254352",
+              type: "tradePerformance" as WidgetType,
+              size: "tiny" as WidgetSize,
               x: 0,
-              y: 4.5,
+              y: 1,
               w: 12,
-              h: 2
-            },
-            {
-              i: "widget1732478839903",
-              type: "tickDistribution" as WidgetType,
-              size: "small" as WidgetSize,
-              x: 0,
-              y: 7,
-              w: 12,
-              h: 2
-            },
-            {
-              i: "widget1732478848667",
-              type: "pnlChart" as WidgetType,
-              size: "small" as WidgetSize,
-              x: 0,
-              y: 9.5,
-              w: 12,
-              h: 2
+              h: 1
             }
           ]
 
@@ -576,11 +589,21 @@ export default function WidgetCanvas() {
   const addWidget = async (type: WidgetType, size: WidgetSize = 'medium') => {
     if (!user?.id) return
     
-    // Determine appropriate size based on widget type
+    // Determine default size based on widget type
     let effectiveSize = size
-    if (type.includes('Chart') || type === 'calendarWidget') {
-      // Charts should be at least medium size
-      effectiveSize = size === 'tiny' || size === 'small' ? 'medium' : size
+    // Statistics widgets are always tiny
+    if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
+         'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(type)) {
+      effectiveSize = 'tiny'
+    } 
+    // Charts default to medium
+    else if (type.includes('Chart') || type === 'tickDistribution' || 
+             type === 'commissionsPnl') {
+      effectiveSize = 'medium'
+    }
+    // Calendar defaults to medium
+    else if (type === 'calendarWidget') {
+      effectiveSize = 'medium'
     }
     
     const currentLayout = layoutState.layouts[layoutState.activeLayout]
@@ -667,9 +690,9 @@ export default function WidgetCanvas() {
     const widget = layoutState.layouts[layoutState.activeLayout].find(w => w.i === i)
     if (!widget) return
     
-    // Prevent charts from being set to tiny or small sizes
+    // Prevent charts from being set to tiny size
     let effectiveSize = newSize
-    if (widget.type.includes('Chart') && (newSize === 'tiny' || newSize === 'small')) {
+    if (widget.type.includes('Chart') && newSize === 'tiny') {
       effectiveSize = 'medium'
     }
     
@@ -689,12 +712,18 @@ export default function WidgetCanvas() {
   }
 
   const renderWidget = (widget: Widget) => {
-    // For charts, ensure size is at least 'small-long'
+    // For charts, ensure size is at least small-long
     const effectiveSize = (() => {
-      if (widget.type.includes('Chart') || widget.type === 'calendarWidget') {
-        if (widget.size === 'tiny' || widget.size === 'small') {
+      if (widget.type.includes('Chart') || widget.type === 'tickDistribution' || 
+          widget.type === 'commissionsPnl') {
+        if (widget.size === 'tiny') {
           return 'small-long' as const
         }
+      }
+      // Statistics widgets are always tiny
+      if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
+           'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(widget.type)) {
+        return 'tiny' as const
       }
       return isMobile && widget.size !== 'tiny' ? 'small' : widget.size
     })()
@@ -928,6 +957,7 @@ export default function WidgetCanvas() {
               isCustomizing={isCustomizing}
               size={widget.size}
               currentType={widget.type}
+              onCustomize={() => setIsCustomizing(true)}
             >
               {renderWidget(widget)}
             </WidgetWrapper>

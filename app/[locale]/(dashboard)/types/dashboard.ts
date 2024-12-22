@@ -15,7 +15,7 @@ export type WidgetType =
   | 'winningStreak'
   | 'statisticsWidget'
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large'
-export type ChartSize = 'small-long' | 'medium' | 'large'
+export type ChartSize = 'small' | 'small-long' | 'medium' | 'large'
 
 export interface LayoutItem {
   i: string

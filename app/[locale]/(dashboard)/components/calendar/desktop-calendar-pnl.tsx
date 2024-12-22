@@ -166,16 +166,15 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
               <React.Fragment key={dateString}>
                 <div
                   className={cn(
-                    "h-full flex flex-col cursor-pointer transition-all rounded-none p-0.5 sm:p-1 ring-1",
+                    "h-full flex flex-col cursor-pointer transition-all rounded-none p-0.5 sm:p-1 ring-1 ring-border/40",
                     "hover:relative hover:ring-1 hover:ring-primary hover:z-10",
-                    !isCurrentMonth && "opacity-25",
-                    isToday(date) && "ring-2 ring-primary bg-primary/5",
                     dayData && dayData.pnl >= 0
                       ? "bg-green-50 dark:bg-green-900/20"
                       : dayData && dayData.pnl < 0
                       ? "bg-red-50 dark:bg-red-900/20"
                       : "bg-card",
-                    !isToday(date) && "ring-primary/10",
+                    !isCurrentMonth && "bg-opacity-25 dark:bg-opacity-25",
+                    isToday(date) && "ring-blue-500 bg-blue-500/5",
                     index === 0 && "rounded-tl-lg",
                     index === 35 && "rounded-bl-lg",
                   )}
@@ -187,7 +186,8 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
                   <div className="flex justify-between items-start gap-0.5">
                     <span className={cn(
                       "text-[9px] sm:text-[11px] font-medium min-w-[14px] text-center",
-                      isToday(date) && "text-primary font-semibold"
+                      isToday(date) && "text-primary font-semibold",
+                      !isCurrentMonth && "opacity-25"
                     )}>
                       {format(date, 'd')}
                     </span>
@@ -196,23 +196,30 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
                         "text-[9px] sm:text-[11px] font-semibold truncate max-w-[70%] text-right",
                         dayData.pnl >= 0
                           ? "text-green-600 dark:text-green-400"
-                          : "text-red-600 dark:text-red-400"
+                          : "text-red-600 dark:text-red-400",
+                        !isCurrentMonth && "opacity-25"
                       )}>
                         {formatCurrency(dayData.pnl)}
                       </div>
                     ) : (
-                      <div className="text-[9px] sm:text-[11px] font-semibold invisible">$0</div>
+                      <div className={cn(
+                        "text-[9px] sm:text-[11px] font-semibold invisible",
+                        !isCurrentMonth && "opacity-25"
+                      )}>$0</div>
                     )}
                   </div>
                   <div className="flex-1 flex flex-col justify-end">
-                    <div className="text-[7px] sm:text-[9px] text-muted-foreground truncate text-center">
+                    <div className={cn(
+                      "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
+                      !isCurrentMonth && "opacity-25"
+                    )}>
                       {dayData ? `${dayData.tradeNumber} trade${dayData.tradeNumber > 1 ? 's' : ''}` : 'No trades'}
                     </div>
                   </div>
                 </div>
                 {isLastDayOfWeek && (
                   <div className={cn(
-                    "h-full flex items-center justify-center rounded-none bg-card/50",
+                    "h-full flex items-center justify-center rounded-none bg-card/50 ring-1 ring-border/40",
                     index === 6 && "rounded-tr-lg",
                     index === 41 && "rounded-br-lg"
                   )}>

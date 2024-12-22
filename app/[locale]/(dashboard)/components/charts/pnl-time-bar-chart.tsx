@@ -152,13 +152,13 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
               data={chartData}
               margin={
                 size === 'small-long'
-                  ? { left: 35, right: 4, top: 4, bottom: 20 }
-                  : { left: 45, right: 8, top: 8, bottom: 24 }
+                  ? { left: 10, right: 4, top: 4, bottom: 20 }
+                  : { left: 10, right: 8, top: 8, bottom: 24 }
               }
             >
               <CartesianGrid 
                 strokeDasharray="3 3" 
-                opacity={size === 'small-long' ? 0.5 : 0.8}
+                className="text-border dark:opacity-[0.12] opacity-[0.2]"
               />
               <XAxis
                 dataKey="hour"
@@ -176,13 +176,13 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={size === 'small-long' ? 35 : 45}
-                tickMargin={size === 'small-long' ? 2 : 4}
+                width={60}
+                tickMargin={4}
                 tick={{ 
                   fontSize: size === 'small-long' ? 9 : 11,
                   fill: 'currentColor'
                 }}
-                tickFormatter={(value) => formatCurrency(value)}
+                tickFormatter={formatCurrency}
               />
               <Tooltip 
                 content={<CustomTooltip />}

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -56,35 +56,23 @@ export function RithmicSyncFeedback({ messages }: FeedbackProps) {
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
   const [showDetails, setShowDetails] = useState(false)
 
-  useEffect(() => {
-    messages.forEach(msg => {
-      try {
-        const data = JSON.parse(typeof msg === 'string' ? msg : JSON.stringify(msg))
-
-        switch (data.type) {
-          case 'log':
-            handleLogMessage(data.message)
-            break
-          case 'complete':
-            handleCompleteMessage(data)
-            break
-          case 'order':
-            handleOrderMessage(data)
-            break
-          case 'progress':
-            handleProgressMessage(data)
-            break
-          case 'date_range':
-            setDateRange({ start: data.start_date, end: data.end_date })
-            break
-        }
-      } catch (error) {
-        console.error('Error parsing message:', error, msg)
+  const updateAccountProgress = useCallback((accountId: string, ordersCount: number, isComplete: boolean) => {
+    setAccountsProgress(prev => ({
+      ...prev,
+      [accountId]: {
+        ...prev[accountId],
+        ordersProcessed: prev[accountId]?.ordersProcessed + ordersCount,
+        isComplete
       }
-    })
-  }, [messages])
+    }))
+    setProcessingStats(prev => ({
+      ...prev,
+      accountsProcessed: isComplete ? prev.accountsProcessed + 1 : prev.accountsProcessed,
+      totalOrders: prev.totalOrders + ordersCount
+    }))
+  },[])
 
-  const handleLogMessage = (message: string) => {
+  const handleLogMessage = useCallback((message: string) => {
     if (message.includes('Market Data Connection Login Complete') ||
         message.includes('Trading System Connection Login Complete')) {
       setConnectionStatus('connected')
@@ -115,9 +103,9 @@ export function RithmicSyncFeedback({ messages }: FeedbackProps) {
         updateAccountProgress(accountId, parseInt(ordersCount), true)
       }
     }
-  }
+  }, [updateAccountProgress])
 
-  const handleCompleteMessage = (data: any) => {
+  const handleCompleteMessage = useCallback((data: any) => {
     if (data.account_id) {
       updateAccountProgress(data.account_id, data.orders_count, true)
       if (data.account_number && data.total_accounts) {
@@ -129,15 +117,15 @@ export function RithmicSyncFeedback({ messages }: FeedbackProps) {
         }))
       }
     }
-  }
+  }, [updateAccountProgress])
 
-  const handleOrderMessage = (data: any) => {
+  const handleOrderMessage = useCallback((data: any) => {
     if (data.account_id) {
       updateAccountProgress(data.account_id, 1, false)
     }
-  }
+  }, [updateAccountProgress])
 
-  const handleProgressMessage = (data: any) => {
+  const handleProgressMessage = useCallback((data: any) => {
     if (data.account_id) {
       setAccountsProgress(prev => ({
         ...prev,
@@ -149,23 +137,36 @@ export function RithmicSyncFeedback({ messages }: FeedbackProps) {
         }
       }))
     }
-  }
+  }, [])
+  useEffect(() => {
+    messages.forEach(msg => {
+      try {
+        const data = JSON.parse(typeof msg === 'string' ? msg : JSON.stringify(msg))
 
-  const updateAccountProgress = (accountId: string, ordersCount: number, isComplete: boolean) => {
-    setAccountsProgress(prev => ({
-      ...prev,
-      [accountId]: {
-        ...prev[accountId],
-        ordersProcessed: prev[accountId]?.ordersProcessed + ordersCount,
-        isComplete
+        switch (data.type) {
+          case 'log':
+            handleLogMessage(data.message)
+            break
+          case 'complete':
+            handleCompleteMessage(data)
+            break
+          case 'order':
+            handleOrderMessage(data)
+            break
+          case 'progress':
+            handleProgressMessage(data)
+            break
+          case 'date_range':
+            setDateRange({ start: data.start_date, end: data.end_date })
+            break
+        }
+      } catch (error) {
+        console.error('Error parsing message:', error, msg)
       }
-    }))
-    setProcessingStats(prev => ({
-      ...prev,
-      accountsProcessed: isComplete ? prev.accountsProcessed + 1 : prev.accountsProcessed,
-      totalOrders: prev.totalOrders + ordersCount
-    }))
-  }
+    })
+  }, [messages, handleLogMessage, handleCompleteMessage, handleOrderMessage, handleProgressMessage, setDateRange])
+
+
 
   const overallProgress = processingStats.totalAccountsAvailable ? 
     (processingStats.accountsProcessed / processingStats.totalAccountsAvailable) * 100 : 0
