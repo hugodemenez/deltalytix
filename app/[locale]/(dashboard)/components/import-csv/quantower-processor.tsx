@@ -13,16 +13,280 @@ interface ContractSpec {
 }
 
 const defaultContractSpecs: { [key: string]: ContractSpec } = {
-  NQ: { tickSize: 0.25, tickValue: 5 },
-  YM: { tickSize: 1, tickValue: 5 },
-  MYM: { tickSize: 1, tickValue: 0.5 },
-  MNQ: { tickSize: 0.25, tickValue: 0.5 },
-  ES: { tickSize: 0.25, tickValue: 12.50 },
-  MES: { tickSize: 0.25, tickValue: 1.25 },
-  ZN: { tickSize: 1/64, tickValue: 15.625 },
-  ZB: { tickSize: 1/32, tickValue: 31.25 },
-  GC: { tickSize: 0.10, tickValue: 10.00 },
-  SI: { tickSize: 0.005, tickValue: 25.00 },
+  // Micro E-mini Futures
+  MES: { tickSize: 0.25, tickValue: 1.25 },    // Micro E-mini S&P 500
+  MNQ: { tickSize: 0.25, tickValue: 0.50 },    // Micro E-mini Nasdaq-100
+  MYM: { tickSize: 1.00, tickValue: 0.50 },    // Micro E-mini Dow
+  M2K: { tickSize: 0.10, tickValue: 0.50 },    // Micro E-mini Russell 2000
+  FDXS: { tickSize: 1.00, tickValue: 0.50 },   // Micro-DAX
+  FSXE: { tickSize: 1.00, tickValue: 0.50 },   // Micro-EURO STOXX 50
+
+  // Stock Index Futures
+  ES: { tickSize: 0.25, tickValue: 12.50 },    // E-mini S&P 500
+  NQ: { tickSize: 0.25, tickValue: 5.00 },     // E-mini Nasdaq-100
+  YM: { tickSize: 1.00, tickValue: 5.00 },     // E-mini Dow
+  RTY: { tickSize: 0.10, tickValue: 10.00 },   // E-mini Russell 2000
+  EMD: { tickSize: 0.10, tickValue: 10.00 },   // E-mini S&P MidCap 400
+  FDAX: { tickSize: 0.50, tickValue: 12.50 },  // DAX
+  FESX: { tickSize: 1.00, tickValue: 10.00 },  // EURO STOXX 50
+
+  // Currencies
+  '6A': { tickSize: 0.0001, tickValue: 10.00 },  // Australian Dollar
+  '6B': { tickSize: 0.0001, tickValue: 6.25 },   // British Pound
+  '6C': { tickSize: 0.0001, tickValue: 10.00 },  // Canadian Dollar
+  '6E': { tickSize: 0.0001, tickValue: 12.50 },  // Euro FX
+  '6J': { tickSize: 0.000001, tickValue: 12.50 }, // Japanese Yen
+  '6N': { tickSize: 0.0001, tickValue: 10.00 },  // New Zealand Dollar
+  '6S': { tickSize: 0.0001, tickValue: 12.50 },  // Swiss Franc
+  M6A: { tickSize: 0.00001, tickValue: 1.00 },   // Micro AUD/USD
+  M6B: { tickSize: 0.00001, tickValue: 0.62 },   // Micro GBP/USD
+  M6E: { tickSize: 0.00001, tickValue: 1.25 },   // Micro EUR/USD
+  MJY: { tickSize: 0.000001, tickValue: 1.25 },  // Micro JPY/USD
+
+  // Metals
+  GC: { tickSize: 0.10, tickValue: 10.00 },     // Gold
+  SI: { tickSize: 0.005, tickValue: 25.00 },    // Silver
+  HG: { tickSize: 0.0005, tickValue: 12.50 },   // Copper
+  MGC: { tickSize: 0.10, tickValue: 1.00 },     // Micro Gold
+  SIL: { tickSize: 0.005, tickValue: 2.50 },    // Micro Silver
+  MHG: { tickSize: 0.0005, tickValue: 1.25 },   // Micro Copper
+  PL: { tickSize: 0.10, tickValue: 5.00 },      // Platinum
+
+  // Energies
+  CL: { tickSize: 0.01, tickValue: 10.00 },     // Crude Oil
+  NG: { tickSize: 0.001, tickValue: 10.00 },    // Natural Gas
+  MCL: { tickSize: 0.01, tickValue: 1.00 },     // Micro WTI Crude Oil
+  MNG: { tickSize: 0.001, tickValue: 1.00 },    // Micro Natural Gas
+  RB: { tickSize: 0.0001, tickValue: 4.20 },    // RBOB Gasoline
+  HO: { tickSize: 0.0001, tickValue: 4.20 },    // Heating Oil
+
+  // Grains
+  ZC: { tickSize: 0.25, tickValue: 12.50 },     // Corn
+  ZW: { tickSize: 0.25, tickValue: 12.50 },     // Chicago SRW Wheat
+  ZS: { tickSize: 0.25, tickValue: 12.50 },     // Soybeans
+  ZM: { tickSize: 0.10, tickValue: 10.00 },     // Soybean Meal
+  ZL: { tickSize: 0.0001, tickValue: 6.00 },    // Soybean Oil
+  ZO: { tickSize: 0.25, tickValue: 12.50 },     // Oats
+  ZR: { tickSize: 0.005, tickValue: 10.00 },    // Rough Rice
+
+  // Interest Rates
+  ZN: { tickSize: 1/128, tickValue: 15.625 },   // 10-Year Note
+  ZB: { tickSize: 1/32, tickValue: 31.25 },     // 30-Year Bond
+  ZF: { tickSize: 1/128, tickValue: 7.8125 },   // 5-Year Note
+  ZT: { tickSize: 1/128, tickValue: 15.625 },   // 2-Year Note
+  UB: { tickSize: 1/32, tickValue: 31.25 },     // Ultra Bond
+  SR3: { tickSize: 0.0025, tickValue: 6.25 },   // 3-Month SOFR
+
+  // Softs
+  CC: { tickSize: 1.00, tickValue: 10.00 },     // Cocoa
+  KC: { tickSize: 0.05, tickValue: 18.75 },     // Coffee
+  CT: { tickSize: 0.01, tickValue: 5.00 },      // Cotton
+  SB: { tickSize: 0.01, tickValue: 11.20 },     // Sugar
+  OJ: { tickSize: 0.05, tickValue: 7.50 },      // Orange Juice
+
+  // Meats
+  LE: { tickSize: 0.025, tickValue: 10.00 },    // Live Cattle
+  GF: { tickSize: 0.025, tickValue: 12.50 },    // Feeder Cattle
+  HE: { tickSize: 0.025, tickValue: 10.00 },    // Lean Hogs
+}
+
+// Add CQG symbol mapping from AMP Futures
+const cqgSymbolMap: { [key: string]: string } = {
+  // Micro E-mini Futures
+  MES: 'MES',   // Micro E-mini S&P 500
+  MNQ: 'MNQ',   // Micro E-mini Nasdaq-100
+  MYM: 'MYM',   // Micro E-mini Dow
+  M2K: 'M2K',   // Micro E-mini Russell 2000
+  FDXS: 'FDXS', // Micro-DAX
+  FSXE: 'FSXE', // Micro-EURO STOXX 50
+
+  // Stock Index Futures
+  ES: 'EP',     // E-mini S&P 500
+  NQ: 'ENQ',    // E-mini Nasdaq-100
+  YM: 'YM',     // E-mini Dow
+  RTY: 'RTY',   // E-mini Russell 2000
+  EMD: 'EMD',   // E-mini S&P MidCap 400
+  NKD: 'NKD',   // NIKKEI 225/USD
+  FDAX: 'DD',   // DAX
+  FDXM: 'FDXM', // Mini-DAX
+  FESX: 'DSX',  // EURO STOXX 50
+  FXXP: 'FXXP', // STOXX Europe 600
+  FESB: 'ESB',  // EURO STOXX Banks
+  FSTX: 'DTX',  // STOXX Europe 50
+  FVS: 'FVS',   // VSTOXX
+  VX: 'VX',     // CBOE Volatility Index
+  VXM: 'MVI',   // Mini CBOE Volatility Index
+  Y: 'Y2',      // FTSE 250 Index
+  Z: 'QFA',     // FTSE 100 Index
+  MC225: 'MC225', // Nikkei 225 micro (Osaka)
+  MJNK: 'MJNK',  // Nikkei 225 mini (Osaka)
+  JNK: 'JNK',    // Nikkei 225 (Osaka)
+  JTPX: 'JTPX',  // TOPIX
+  JMT: 'JMT',    // Mini-TOPIX
+  J400: 'J400',  // JPX-Nikkei Index 400
+  NK: 'ZNA',     // SGX Nikkei 225 Index
+  NS: 'NS',      // SGX Mini Nikkei 225 Index
+  NU: 'ZU',      // SGX USD Nikkei 225 Index
+  TW: 'TWN',     // FTSE Taiwan Stock Index
+  AP: 'AP',      // ASX SPI200 Index
+  HSI: 'HSI',    // Hang Seng Index
+  MHI: 'MHI',    // Mini-Hang Seng Index
+  HHI: 'HHI',    // Hang Seng China Ent. Index
+  MCH: 'MCH',    // Mini-Hang-Seng China Ent. Index
+
+  // Currencies
+  '6A': 'DA6',   // Australian Dollar
+  '6B': 'BP6',   // British Pound
+  '6C': 'CA6',   // Canadian Dollar
+  '6E': 'EU6',   // Euro FX
+  '6J': 'JY6',   // Japanese Yen
+  '6N': 'NE6',   // New Zealand Dollar
+  '6S': 'SF6',   // Swiss Franc
+  E7: 'EEU',     // E-mini Euro FX
+  J7: 'EJY',     // E-mini Japanese Yen
+  M6A: 'M6A',    // Micro AUD/USD
+  M6B: 'M6B',    // Micro GBP/USD
+  MCD: 'GMCD',   // Micro CAD/USD
+  M6E: 'M6E',    // Micro EUR/USD
+  MJY: 'MJY',    // Micro JPY/USD
+  MSF: 'MSF',    // Micro CHF/USD
+  DX: 'DXE',     // Dollar Index
+
+  // Energies
+  CL: 'CLE',     // Crude Oil
+  QM: 'NQM',     // E-mini Crude Oil
+  MCL: 'MCLE',   // Micro WTI Crude Oil
+  NG: 'NGE',     // Natural Gas
+  QG: 'NQG',     // E-mini Natural Gas
+  MNG: 'MNG',    // Micro Henry Hub Natural Gas
+  RB: 'RBE',     // RBOB Gasoline
+  HO: 'HOE',     // Heating Oil
+  BRN: 'QO',     // ICE Brent Crude
+  T: 'ET',       // ICE WTI Crude
+  N: 'EN',       // ICE (RBOB) Gasoline
+  G: 'QP',       // ICE Gas Oil
+  O: 'QHO',      // ICE Heating Oil
+
+  // Metals
+  GC: 'GCE',     // Gold
+  QO: 'MQO',     // E-mini Gold
+  MGC: 'MGC',    // Micro Gold
+  HG: 'CPE',     // Copper
+  QC: 'MQC',     // E-mini Copper
+  MHG: 'MHG',    // Micro Copper
+  SI: 'SIE',     // Silver
+  QI: 'MQI',     // E-mini Silver
+  SIL: 'SIL',    // E-micro Silver
+  ZG: 'ZO',      // 100 oz Gold
+  YG: 'YG',      // Mini Gold
+  ZI: 'ZI',      // 5000 oz Silver
+  YI: 'YI',      // Mini-Silver
+  PL: 'PLE',     // Platinum
+
+  // Financials
+  UB: 'ULA',     // Ultra U.S. Treasury Bond
+  MWN: 'MWNA',   // Micro Ultra U.S. Treasury Bond
+  TN: 'TNA',     // Ultra 10-Year U.S. Treasury Note
+  MTN: 'MTNA',   // Micro Ultra 10-Year U.S. Treasury Note
+  Z3N: 'Z3N',    // 3-Year U.S. Treasury Note
+  ZB: 'USA',     // U.S. Treasury Bond
+  '30YY': 'Z30Y', // Micro 30-Year Yield
+  ZF: 'FVA',     // 5-Year U.S. Treasury Note
+  '5YY': 'Z5YY', // Micro 5-Year Yield
+  ZN: 'TYA',     // 10-Year U.S. Treasury Note
+  '10YY': 'Z10Y', // Micro 10-Year Yield
+  ZQ: 'ZQE',     // 30-Day Federal Funds
+  ZT: 'TUA',     // 2-Year U.S. Treasury Note
+  '2YY': 'Z2YY', // Micro 2-Year Yield
+  SR1: 'SR1',    // One-Month SOFR
+  SR3: 'SR3',    // Three-Month SOFR
+  FGBL: 'DB',    // Euro-Bund
+  FGBM: 'DL',    // Euro-Bobl
+  FGBS: 'DG',    // Euro-Schatz
+  FGBX: 'FGBX',  // Euro-Buxl
+  FBTP: 'FBTP',  // Long-Term Euro-BTP
+  FBTS: 'FBTS',  // Short-Term Euro-BTP
+  FOAT: 'FOAT',  // Euro-OAT
+  L: 'QSA',      // 3-Month Sterling
+  R: 'QGA',      // Long Gilt
+  JGB: 'JGB',    // 10-Year Japanese Government Bond
+  JB: 'ZT',      // SGX 10-Year Mini JGB
+  IR: 'HBS',     // ASX 90-Day Bank Bill
+  XT: 'HXS',     // ASX 10-Year Aus Treasury Bond
+  YT: 'HTS',     // ASX 3-Year Aus Interest Rate Swap
+
+  // Grains
+  ZC: 'ZCE',     // Corn
+  ZW: 'ZWA',     // Chicago SRW Wheat
+  ZS: 'ZSE',     // Soybeans
+  ZL: 'ZLE',     // Soybean Oil
+  ZM: 'ZME',     // Soybean Meal
+  ZO: 'ZOE',     // Oats
+  ZR: 'ZRE',     // Rough Rice
+  XC: 'XC',      // Mini-Corn
+  XW: 'XW',      // Mini-sized Chicago SRW Wheat
+  XK: 'XB',      // Mini Soybean
+
+  // Softs
+  DC: 'GDC',     // Class III Milk
+  LB: 'LBR',     // Lumber
+  CC: 'CCE',     // Cocoa
+  CT: 'CTE',     // Cotton
+  KC: 'KCE',     // Coffee
+  OJ: 'OJE',     // Orange Juice
+  SB: 'SBE',     // Sugar #11
+
+  // Meats
+  GF: 'GF',      // Feeder Cattle
+  HE: 'HE',      // Lean Hog
+  LE: 'GLE',     // Live Cattle
+}
+
+// Add reverse mapping for CQG to regular symbols
+const reverseCqgSymbolMap: { [key: string]: string } = Object.entries(cqgSymbolMap).reduce((acc, [key, value]) => {
+  acc[value] = key;
+  return acc;
+}, {} as { [key: string]: string });
+
+// Helper function to check if a character is a letter
+function isLetter(char: string): boolean {
+  return /[a-zA-Z]/.test(char);
+}
+
+// Helper function to check if a character is a number
+function isNumber(char: string): boolean {
+  return /[0-9]/.test(char);
+}
+
+// Helper function to parse contract month/year from symbol
+function parseContractCode(symbol: string): { baseSymbol: string, contractCode: string } {
+  if (symbol.length < 2) return { baseSymbol: symbol, contractCode: '' };
+  
+  const lastChar = symbol.charAt(symbol.length - 1);
+  const secondLastChar = symbol.charAt(symbol.length - 2);
+  
+  if (isNumber(lastChar) && isLetter(secondLastChar)) {
+    return {
+      baseSymbol: symbol.slice(0, -2),
+      contractCode: symbol.slice(-2)
+    };
+  }
+  
+  return { baseSymbol: symbol, contractCode: '' };
+}
+
+// Helper function to convert CQG symbol to regular symbol
+function convertCqgToRegularSymbol(symbol: string): string {
+  return reverseCqgSymbolMap[symbol] || symbol;
+}
+
+// Helper function to get final instrument symbol
+function getFinalInstrumentSymbol(symbol: string): string {
+  // First parse out the contract code
+  const { baseSymbol } = parseContractCode(symbol);
+  
+  // Then convert from CQG to regular symbol if needed
+  return convertCqgToRegularSymbol(baseSymbol);
 }
 
 interface QuantowerOrderProcessorProps {
@@ -90,13 +354,17 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
         return; // Skip this row
       }
 
-      const symbolKey = symbol.slice(0, -2);
-      if (!(symbolKey in contractSpecs)) {
-        unknownSymbolsSet.add(symbolKey);
-        contractSpecs[symbolKey] = { tickSize: 0.25, tickValue: 5 }; // Default values
+      // Parse the symbol and get the regular symbol for processing
+      const { baseSymbol, contractCode } = parseContractCode(symbol);
+      const regularSymbol = convertCqgToRegularSymbol(baseSymbol);
+      
+      // Use regular symbol for contract specs and position tracking
+      if (!(regularSymbol in contractSpecs)) {
+        unknownSymbolsSet.add(regularSymbol);
+        contractSpecs[regularSymbol] = { tickSize: 0.25, tickValue: 5 }; // Default values
       }
 
-      const contractSpec = contractSpecs[symbolKey];
+      const contractSpec = contractSpecs[regularSymbol];
 
       const newOrder: Order = {
         quantity: Math.abs(parseFloat(quantity)),
@@ -106,8 +374,8 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
         orderId
       }
 
-      if (openPositions[symbolKey]) {
-        const openPosition = openPositions[symbolKey]
+      if (openPositions[regularSymbol]) {
+        const openPosition = openPositions[regularSymbol]
         
         if ((side === 'Buy' && openPosition.side === 'short') || (side === 'Sell' && openPosition.side === 'long')) {
           // Close or reduce position
@@ -125,7 +393,7 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
               quantity: openPosition.originalQuantity,
               entryId: openPosition.entryOrders.map(o => o.orderId).join('-'),
               closeId: openPosition.exitOrders.map(o => o.orderId).join('-'),
-              instrument: symbol,
+              instrument: getFinalInstrumentSymbol(symbol),
               entryPrice: openPosition.averageEntryPrice.toFixed(2),
               closePrice: (openPosition.exitOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / 
                            openPosition.exitOrders.reduce((sum, o) => sum + o.quantity, 0)).toFixed(2),
@@ -146,10 +414,10 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
 
             if (openPosition.quantity < 0) {
               // Reverse position
-              openPositions[symbolKey] = {
+              openPositions[regularSymbol] = {
                 accountNumber: account,
                 quantity: -openPosition.quantity,
-                instrument: symbolKey,
+                instrument: regularSymbol,
                 side: side === 'Buy' ? 'long' : 'short',
                 userId: openPosition.userId,
                 entryOrders: [newOrder],
@@ -162,7 +430,7 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
               }
             } else {
               // Full close
-              delete openPositions[symbolKey]
+              delete openPositions[regularSymbol]
             }
           }
         } else {
@@ -177,10 +445,10 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
         }
       } else {
         // Open new position
-        openPositions[symbolKey] = {
+        openPositions[regularSymbol] = {
           accountNumber: account,
           quantity: newOrder.quantity,
-          instrument: symbolKey,
+          instrument: regularSymbol,
           side: side === 'Buy' ? 'long' : 'short',
           userId: '', // This should be set to the actual user ID
           entryOrders: [newOrder],
