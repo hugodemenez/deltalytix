@@ -88,6 +88,22 @@ const defaultContractSpecs: { [key: string]: ContractSpec } = {
   LE: { tickSize: 0.025, tickValue: 10.00 },    // Live Cattle
   GF: { tickSize: 0.025, tickValue: 12.50 },    // Feeder Cattle
   HE: { tickSize: 0.025, tickValue: 10.00 },    // Lean Hogs
+
+  // European Fixed Income
+  FGBL: { tickSize: 0.01, tickValue: 10.00 },   // Euro-Bund
+  FGBM: { tickSize: 0.01, tickValue: 10.00 },   // Euro-Bobl
+  FGBS: { tickSize: 0.005, tickValue: 5.00 },   // Euro-Schatz
+  FGBX: { tickSize: 0.02, tickValue: 20.00 },   // Euro-Buxl
+  FBTP: { tickSize: 0.01, tickValue: 10.00 },   // Long-Term Euro-BTP
+  FBTS: { tickSize: 0.01, tickValue: 10.00 },   // Short-Term Euro-BTP
+  FOAT: { tickSize: 0.01, tickValue: 10.00 },   // Euro-OAT
+  L: { tickSize: 0.005, tickValue: 6.25 },      // 3-Month Sterling (Short Sterling)
+  R: { tickSize: 0.01, tickValue: 10.00 },      // Long Gilt
+  JGB: { tickSize: 0.01, tickValue: 10000 },    // 10-Year Japanese Government Bond
+  JB: { tickSize: 0.01, tickValue: 100 },       // SGX 10-Year Mini JGB
+  IR: { tickSize: 0.01, tickValue: 24.00 },     // ASX 90-Day Bank Bill
+  XT: { tickSize: 0.005, tickValue: 47.00 },    // ASX 10-Year Aus Treasury Bond
+  YT: { tickSize: 0.01, tickValue: 30.00 },     // ASX 3-Year Aus Interest Rate Swap
 }
 
 // Add CQG symbol mapping from AMP Futures
