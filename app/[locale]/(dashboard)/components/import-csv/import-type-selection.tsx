@@ -28,7 +28,7 @@ import {
 import { useI18n } from "@/locales/client"
 
 // Easy toggle between COMING_SOON and PLUS_ONLY
-const RITHMIC_SYNC_STATE: 'COMING_SOON' | 'PLUS_ONLY' = 'COMING_SOON'
+const RITHMIC_SYNC_STATE: 'COMING_SOON' | 'PLUS_ONLY' = 'PLUS_ONLY'
 
 export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' | 'ninjatrader-performance' | 'quantower' | 'rithmic-sync'
 

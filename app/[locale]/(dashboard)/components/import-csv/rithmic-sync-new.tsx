@@ -20,7 +20,6 @@ interface RithmicCredentials {
   username: string
   password: string
   server: string
-  numDays: number
   userId: string
 }
 
@@ -51,14 +50,13 @@ interface RithmicSyncCombinedProps {
 
 export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedProps) {
   const { user } = useUser()
-  const { refreshTrades } = useTrades()
+  const { refreshTrades, trades } = useTrades()
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [isLoading, setIsLoading] = useState(false)
   const [credentials, setCredentials] = useState<RithmicCredentials>({
     username: '',
     password: '',
     server: 'PAPER',
-    numDays: 1,
     userId: user?.id || ''
   })
   const [accounts, setAccounts] = useState<RithmicAccount[]>([])
@@ -111,6 +109,27 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     }
   }
 
+  function calculateStartDate(selectedAccounts: string[]): string {
+    // Filter trades for selected accounts
+    const accountTrades = trades.filter(trade => selectedAccounts.includes(trade.accountNumber))
+    
+    if (accountTrades.length === 0) {
+      // If no trades found, return date 30 days ago
+      const date = new Date()
+      date.setDate(date.getDate() - 30)
+      return date.toISOString().slice(0, 10).replace(/-/g, '')
+    }
+
+    // Find the most recent trade date using entryDate
+    const mostRecentDate = new Date(Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime())))
+    
+    // Set to next day
+    mostRecentDate.setDate(mostRecentDate.getDate() + 1)
+    
+    // Format as YYYYMMDD
+    return mostRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+  }
+
   function handleStartProcessing() {
     setIsLoading(true)
     setStep('processing')
@@ -127,11 +146,12 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     newWs.onopen = () => {
       console.log('WebSocket opened')
       addMessage('WebSocket connected', 'status')
+      const startDate = calculateStartDate(selectedAccounts)
       const message = { 
         type: 'init',
         token: token,
         accounts: selectedAccounts,
-        num_days: credentials.numDays
+        start_date: startDate
       }
       console.log('Sending init message:', message)
       newWs.send(JSON.stringify(message))
@@ -220,25 +240,6 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
               onChange={(e) => setCredentials(prev => ({ ...prev, server: e.target.value }))}
               required 
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="numDays">Number of Days</Label>
-            <Select 
-              value={credentials.numDays.toString()} 
-              onValueChange={(value) => setCredentials(prev => ({ ...prev, numDays: parseInt(value) }))}
-            >
-              <SelectTrigger id="numDays">
-                <SelectValue placeholder="Select number of days" />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 7, 14, 30, 90].map((days) => (
-                  <SelectItem key={days} value={days.toString()}>
-                    {days} Day{days !== 1 ? 's' : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full">
