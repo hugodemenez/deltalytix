@@ -305,6 +305,55 @@ function getFinalInstrumentSymbol(symbol: string): string {
   return convertCqgToRegularSymbol(baseSymbol);
 }
 
+// Helper function to parse date string to ISO string
+function parseDateTime(dateTimeStr: string): string {
+  // First try to parse the format from Trades dec.csv: "2024-12-20 7:17:03 PM +03:00"
+  const formatOne = /(\d{4}-\d{2}-\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})\s+(AM|PM)\s+([+-]\d{2}:\d{2})/;
+  const matchOne = dateTimeStr.match(formatOne);
+  
+  if (matchOne) {
+    const [_, date, hours, minutes, seconds, ampm, timezone] = matchOne;
+    let hour = parseInt(hours);
+    
+    // Convert 12-hour to 24-hour format
+    if (ampm === 'PM' && hour !== 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    
+    // Create date string in ISO format
+    const isoString = `${date}T${hour.toString().padStart(2, '0')}:${minutes}:${seconds}${timezone}`;
+    const parsedDate = new Date(isoString);
+    
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString();
+    }
+  }
+  
+  // Then try to parse the format from Quantower.csv: "10/7/24 9:50:07 PM +01:00"
+  const formatTwo = /(\d{1,2})\/(\d{1,2})\/(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})\s+(AM|PM)\s+([+-]\d{2}:\d{2})/;
+  const matchTwo = dateTimeStr.match(formatTwo);
+  
+  if (matchTwo) {
+    const [_, month, day, year, hours, minutes, seconds, ampm, timezone] = matchTwo;
+    let hour = parseInt(hours);
+    
+    // Convert 12-hour to 24-hour format
+    if (ampm === 'PM' && hour !== 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    
+    // Create date string in ISO format with full year
+    const fullYear = parseInt(year) + 2000;
+    const isoString = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.toString().padStart(2, '0')}:${minutes}:${seconds}${timezone}`;
+    const parsedDate = new Date(isoString);
+    
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString();
+    }
+  }
+  
+  // If neither format matches, throw an error
+  throw new Error(`Invalid date format: ${dateTimeStr}`);
+}
+
 interface QuantowerOrderProcessorProps {
   csvData: string[][]
   setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>
@@ -359,8 +408,17 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
     const incompleteTradesArray: OpenPosition[] = []
     const unknownSymbolsSet = new Set<string>()
 
-    // Sort orders by Date/Time column in ascending order
-    const sortedCsvData = csvData.sort((a, b) => new Date(a[1]).getTime() - new Date(b[1]).getTime());
+    // Sort orders by Date/Time column in ascending order using parseDateTime
+    const sortedCsvData = [...csvData].sort((a, b) => {
+      try {
+        const dateA = new Date(parseDateTime(a[1]));
+        const dateB = new Date(parseDateTime(b[1]));
+        return dateA.getTime() - dateB.getTime();
+      } catch (error) {
+        console.error('Error parsing date during sort:', error);
+        return 0;  // Keep original order if date parsing fails
+      }
+    });
 
     sortedCsvData.forEach((row) => {
       const [account, dateTime, symbol, description, symbolType, expirationDate, strikePrice, side, orderType, quantity, price, grossPnL, fee, netPnL, tradeValue, tradeId, orderId, positionId] = row;
@@ -413,10 +471,10 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
               entryPrice: openPosition.averageEntryPrice.toFixed(2),
               closePrice: (openPosition.exitOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / 
                            openPosition.exitOrders.reduce((sum, o) => sum + o.quantity, 0)).toFixed(2),
-              entryDate: new Date(openPosition.entryDate).toISOString(),
-              closeDate: new Date(dateTime).toISOString(),
+              entryDate: parseDateTime(openPosition.entryDate),
+              closeDate: parseDateTime(dateTime),
               pnl: pnl,
-              timeInPosition: (new Date(dateTime).getTime() - new Date(openPosition.entryDate).getTime()) / 1000,
+              timeInPosition: (new Date(parseDateTime(dateTime)).getTime() - new Date(parseDateTime(openPosition.entryDate)).getTime()) / 1000,
               userId: openPosition.userId,
               side: openPosition.side,
               commission: openPosition.totalCommission,
@@ -565,38 +623,40 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
       )}
       <div>
         <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Instrument</TableHead>
-              <TableHead>Side</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Entry Price</TableHead>
-              <TableHead>Close Price</TableHead>
-              <TableHead>Entry Date</TableHead>
-              <TableHead>Close Date</TableHead>
-              <TableHead>PnL</TableHead>
-              <TableHead>Time in Position</TableHead>
-              <TableHead>Commission</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {trades.map((trade) => (
-              <TableRow key={trade.id}>
-                <TableCell>{trade.instrument}</TableCell>
-                <TableCell>{trade.side}</TableCell>
-                <TableCell>{trade.quantity}</TableCell>
-                <TableCell>{trade.entryPrice}</TableCell>
-                <TableCell>{trade.closePrice || '-'}</TableCell>
-                <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
-                <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                <TableCell>{trade.pnl.toFixed(2)}</TableCell>
-                <TableCell>{`${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s`}</TableCell>
-                <TableCell>{trade.commission.toFixed(2)}</TableCell>
+        <div className="border rounded-lg overflow-auto max-h-[600px]">
+          <Table>
+            <TableHeader className="sticky top-0 bg-background z-10">
+              <TableRow>
+                <TableHead className="min-w-[100px]">Instrument</TableHead>
+                <TableHead className="min-w-[80px]">Side</TableHead>
+                <TableHead className="min-w-[100px]">Quantity</TableHead>
+                <TableHead className="min-w-[100px]">Entry Price</TableHead>
+                <TableHead className="min-w-[100px]">Close Price</TableHead>
+                <TableHead className="min-w-[180px]">Entry Date</TableHead>
+                <TableHead className="min-w-[180px]">Close Date</TableHead>
+                <TableHead className="min-w-[100px]">PnL</TableHead>
+                <TableHead className="min-w-[120px]">Time in Position</TableHead>
+                <TableHead className="min-w-[100px]">Commission</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {trades.map((trade) => (
+                <TableRow key={trade.id}>
+                  <TableCell>{trade.instrument}</TableCell>
+                  <TableCell>{trade.side}</TableCell>
+                  <TableCell>{trade.quantity}</TableCell>
+                  <TableCell>{trade.entryPrice}</TableCell>
+                  <TableCell>{trade.closePrice || '-'}</TableCell>
+                  <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                  <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
+                  <TableCell>{trade.pnl.toFixed(2)}</TableCell>
+                  <TableCell>{`${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s`}</TableCell>
+                  <TableCell>{trade.commission.toFixed(2)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       <div className="flex justify-between">
         <div>
