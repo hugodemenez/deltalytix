@@ -118,16 +118,14 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const entryDate = parseISO(trade.entryDate)
         if (!isValid(entryDate)) return false
 
-        if (instruments.length > 0 && !instruments.includes(trade.instrument)) return false
-        if (accountNumbers.length > 0 && !accountNumbers.includes(trade.accountNumber)) return false
+        const matchesInstruments = instruments.length === 0 || instruments.includes(trade.instrument)
+        const matchesAccounts = accountNumbers.length === 0 || accountNumbers.includes(trade.accountNumber)
+        const matchesDateRange = !dateRange?.from || !dateRange?.to || (
+          entryDate >= startOfDay(dateRange.from) && 
+          entryDate <= endOfDay(dateRange.to)
+        )
         
-        if (dateRange?.from && dateRange?.to) {
-          const start = startOfDay(dateRange.from)
-          const end = endOfDay(dateRange.to)
-          if (entryDate < start || entryDate > end) return false
-        }
-        
-        return true
+        return matchesInstruments && matchesAccounts && matchesDateRange
       })
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime())
   }, [trades, instruments, accountNumbers, dateRange])

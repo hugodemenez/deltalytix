@@ -162,16 +162,20 @@ export default function FilterLeftPane() {
       .filter(item => item.type === 'propfirm')
       .map(item => item.value)
 
-    if (JSON.stringify(newAccountNumbers) !== JSON.stringify(accountNumbers)) {
-      setAccountNumbers(newAccountNumbers)
-    }
-    if (JSON.stringify(newInstruments) !== JSON.stringify(instruments)) {
-      setInstruments(newInstruments)
-    }
-    if (JSON.stringify(newPropfirms) !== JSON.stringify(propfirms)) {
-      setPropfirms(newPropfirms)
-    }
-  }, [selectedItems, setAccountNumbers, setInstruments, accountNumbers, instruments, propfirms])
+    const timer = setTimeout(() => {
+      if (JSON.stringify(newAccountNumbers) !== JSON.stringify(accountNumbers)) {
+        setAccountNumbers(newAccountNumbers)
+      }
+      if (JSON.stringify(newInstruments) !== JSON.stringify(instruments)) {
+        setInstruments(newInstruments)
+      }
+      if (JSON.stringify(newPropfirms) !== JSON.stringify(propfirms)) {
+        setPropfirms(newPropfirms)
+      }
+    }, 100)
+
+    return () => clearTimeout(timer)
+  }, [selectedItems, accountNumbers, instruments, propfirms])
 
   const anonymizeAccount = useCallback((account: string) => {
     if (!showAccountNumbers) {

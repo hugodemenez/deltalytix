@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUser } from "@/components/context/user-data"
-import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe } from "lucide-react"
+import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -31,6 +31,8 @@ import NavbarFilters from './filters/filters'
 import { SubscriptionBadge } from './subscription-badge'
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { useI18n } from "@/locales/client"
+import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
+import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -39,6 +41,10 @@ export default function Navbar() {
   const [searchFocused, setSearchFocused] = useState(false)
   const { theme, toggleTheme, setTheme } = useTheme()
   const t = useI18n()
+  const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
+
+  // Initialize keyboard shortcuts
+  useKeyboardShortcuts()
 
   const languages = [
     { value: 'en', label: 'English' },
@@ -80,6 +86,15 @@ export default function Navbar() {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
                 <DropdownMenuLabel>{t('dashboard.myAccount')}</DropdownMenuLabel>
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard">
+                    <div className="flex w-full">
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
+                      <span>{t('navbar.dashboard')}</span>
+                      <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
+                    </div>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href={process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || ""}>
                     <div className="flex w-full">
@@ -128,7 +143,7 @@ export default function Navbar() {
                   <Cloud className="mr-2 h-4 w-4" />
                   <span>{t('dashboard.api')}</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setShortcutsDialogOpen(true)}>
                   <Keyboard className="mr-2 h-4 w-4" />
                   <span>{t('dashboard.keyboardShortcuts')}</span>
                   <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
@@ -175,6 +190,10 @@ export default function Navbar() {
         </div>
       </nav>
       <div className="h-[88px]" /> {/* Spacer to prevent content from being hidden under the navbar */}
+      <KeyboardShortcutsDialog 
+        open={shortcutsDialogOpen} 
+        onOpenChange={setShortcutsDialogOpen} 
+      />
     </>
   )
 }

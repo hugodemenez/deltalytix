@@ -58,6 +58,7 @@
     "date-fns": "^3.6.0",
     "framer-motion": "^11.5.4",
     "fuse.js": "^7.0.0",
+    "hotkeys-js": "^3.13.9",
     "install": "^0.13.0",
     "ldrs": "^1.0.2",
     "lucide-react": "^0.437.0",
