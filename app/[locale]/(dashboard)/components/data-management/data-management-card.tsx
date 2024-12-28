@@ -393,35 +393,42 @@ export function DataManagementCard() {
               Enter a new name for the account.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="newAccountName" className="text-right">
-                New Name
-              </Label>
-              <Input
-                id="newAccountName"
-                value={newAccountName}
-                onChange={(e) => setNewAccountName(e.target.value)}
-                className="col-span-3"
-              />
+          <form onSubmit={(e) => {
+            e.preventDefault()
+            handleRenameAccount()
+          }}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newAccountName" className="text-right">
+                  New Name
+                </Label>
+                <Input
+                  id="newAccountName"
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                  className="col-span-3"
+                  autoFocus
+                  autoComplete="off"
+                  placeholder="Enter new account name"
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              onClick={handleRenameAccount}
-              disabled={renameLoading || !newAccountName}
-            >
-              {renameLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Renaming...
-                </>
-              ) : (
-                'Rename'
-              )}
-            </Button>
-          </DialogFooter>
+            <DialogFooter>
+              <Button
+                type="submit"
+                disabled={renameLoading || !newAccountName}
+              >
+                {renameLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Renaming...
+                  </>
+                ) : (
+                  'Rename'
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </Card>
