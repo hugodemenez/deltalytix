@@ -15,6 +15,7 @@ import { Trade } from '@prisma/client'
 import { saveTrades } from '@/server/database'
 import { useTrades } from '@/components/context/trades-data'
 import { RithmicSyncFeedback } from './rithmic-sync-feedback'
+import { useWebSocket } from '../context/websocket-context'
 
 interface RithmicCredentials {
   username: string
@@ -51,6 +52,7 @@ interface RithmicSyncCombinedProps {
 export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedProps) {
   const { user } = useUser()
   const { refreshTrades, trades } = useTrades()
+  const { connect, disconnect, sendMessage, isConnected } = useWebSocket()
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [isLoading, setIsLoading] = useState(false)
   const [credentials, setCredentials] = useState<RithmicCredentials>({
@@ -78,7 +80,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     setIsLoading(true)
 
     try {
-      const response = await fetch(`${window.location.protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
+      const response = await fetch(`https://${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,7 +98,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       setAccounts(data.accounts)
       setToken(data.token)
       setWsUrl(data.websocket_url.replace('ws://your-domain', 
-        `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${process.env.NEXT_PUBLIC_API_URL}`))
+        `${window.location.protocol === 'https:' ? 'wss:' : 'wss:'}//${process.env.NEXT_PUBLIC_API_URL}`))
       console.log('Token set:', data.token)
       console.log('WebSocket URL set:', data.websocket_url)
       setStep('select-accounts')
@@ -140,12 +142,20 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       return
     }
 
-    console.log('Using WebSocket URL:', wsUrl)
-    const newWs = new WebSocket(wsUrl)
+    // Add initial message for total accounts
+    addMessage(JSON.stringify({
+      type: 'init_stats',
+      message: `Processing ${selectedAccounts.length} selected accounts`,
+      total_accounts: selectedAccounts.length
+    }))
 
-    newWs.onopen = () => {
-      console.log('WebSocket opened')
-      addMessage('WebSocket connected', 'status')
+    // Connect using the WebSocket context
+    connect(wsUrl)
+  }
+
+  // Send init message when connection is established
+  useEffect(() => {
+    if (isConnected && step === 'processing') {
       const startDate = calculateStartDate(selectedAccounts)
       const message = { 
         type: 'init',
@@ -154,92 +164,75 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
         start_date: startDate
       }
       console.log('Sending init message:', message)
-      newWs.send(JSON.stringify(message))
+      sendMessage(message)
     }
+  }, [isConnected, step, token, selectedAccounts, sendMessage])
 
-    newWs.onmessage = (event) => {
-      console.log('WebSocket message received:', event.data)
-      try {
-        const message = JSON.parse(event.data)
-        let messageType = 'log'
-        
-        switch (message.type) {
-          case 'order_update':
-            messageType = 'order'
-            setOrders(prev => [...prev, message.order])
-            break
-          case 'log':
-            messageType = message.level === 'error' ? 'error' : 'log'
-            break
-          case 'status':
-            messageType = 'status'
-            break
-        }
-        
-        addMessage(JSON.stringify(message), messageType)
-      } catch (error) {
-        console.error('Error parsing message:', error)
-        addMessage(`Error parsing message: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
-      }
-    }
-
-    newWs.onclose = (event) => {
-      console.log('WebSocket closed:', event.code, event.reason)
-      addMessage(`WebSocket disconnected (${event.code}: ${event.reason || 'No reason provided'})`, 'status')
-      setIsLoading(false)
-      setWs(null)  // Clear the WebSocket reference
-    }
-
-    newWs.onerror = (error) => {
-      console.error('WebSocket error:', error)
-      addMessage(`WebSocket error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
-      setIsLoading(false)
-    }
-
-    setWs(newWs)
-  }
-
+  // Listen for connection status changes
   useEffect(() => {
-    return () => {
-      if (ws) {
-        ws.close()
-      }
+    if (isConnected) {
+      addMessage(JSON.stringify({
+        type: 'status',
+        message: 'WebSocket connected'
+      }))
     }
-  }, [ws])
+  }, [isConnected, addMessage])
+
+  // Cleanup WebSocket on unmount or when going back to previous steps
+  useEffect(() => {
+    if (step !== 'processing' && isConnected) {
+      disconnect()
+    }
+    return () => {
+      disconnect()
+    }
+  }, [step, isConnected, disconnect])
 
   return (
     <div className="space-y-6">
       {step === 'credentials' && (
-        <form onSubmit={handleConnect} className="space-y-4">
+        <form onSubmit={handleConnect} className="space-y-4" autoComplete="off">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="rithmic-username">Rithmic Username</Label>
             <Input 
-              id="username" 
+              id="rithmic-username" 
+              name="rithmic-username"
               value={credentials.username}
               onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
+              autoComplete="off"
+              spellCheck="false"
               required 
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="rithmic-password">Rithmic Password</Label>
             <Input 
-              id="password" 
+              id="rithmic-password" 
+              name="rithmic-password"
               type="password" 
               value={credentials.password}
               onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+              autoComplete="new-password"
               required 
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="server">Server</Label>
-            <Input 
-              id="server" 
+            <Label htmlFor="rithmic-server">Rithmic Server</Label>
+            <Select
+              name="rithmic-server"
               value={credentials.server}
-              onChange={(e) => setCredentials(prev => ({ ...prev, server: e.target.value }))}
-              required 
-            />
+              onValueChange={(value) => setCredentials(prev => ({ ...prev, server: value }))}
+            >
+              <SelectTrigger id="rithmic-server">
+                <SelectValue placeholder="Select Rithmic server" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="PAPER">Paper Trading</SelectItem>
+                <SelectItem value="TEST">Test Environment</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button type="submit" disabled={isLoading} className="w-full">
@@ -300,39 +293,10 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
 
       {step === 'processing' && (
         <div className="space-y-4">
-          <RithmicSyncFeedback messages={feedbackMessages} />
-          {/* <div className="rounded-md border max-h-[300px] overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Account</TableHead>
-                  <TableHead>Instrument</TableHead>
-                  <TableHead>Side</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Commission</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order, index) => (
-                  <TableRow key={`${order.order_id}-${index}`}>
-                    <TableCell>{new Date(order.timestamp * 1000).toLocaleString()}</TableCell>
-                    <TableCell>{order.order_id}</TableCell>
-                    <TableCell>{order.account_id}</TableCell>
-                    <TableCell>{order.ticker}</TableCell>
-                    <TableCell>{order.buy_sell_type}</TableCell>
-                    <TableCell>{order.order_type}</TableCell>
-                    <TableCell className="text-right">{order.filled_quantity}</TableCell>
-                    <TableCell className="text-right">{order.price.toFixed(3)}</TableCell>
-                    <TableCell className="text-right">{order.commission.toFixed(2)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div> */}
+          <RithmicSyncFeedback 
+            messages={feedbackMessages} 
+            totalAccounts={selectedAccounts.length}
+          />
         </div>
       )}
     </div>

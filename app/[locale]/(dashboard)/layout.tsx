@@ -7,6 +7,7 @@ import { I18nProviderClient } from "@/locales/client";
 import { ReactElement } from "react";
 import { AI } from "./ai";
 import Navbar from "./components/navbar";
+import { WebSocketProvider } from "./components/context/websocket-context";
 
 export default async function RootLayout({ params: { locale }, children }: { params: { locale: string }, children: ReactElement }) {
   return (
@@ -15,14 +16,16 @@ export default async function RootLayout({ params: { locale }, children }: { par
         <ThemeProvider>
           <UserDataProvider>
             <TradeDataProvider>
-            <div className="min-h-screen flex flex-col">
-              <Toaster />
-              <Navbar />
-              <div className="flex flex-1 px-2 sm:px-8">
-                {children}
-              </div>
-              <Modals />
-            </div>
+              <WebSocketProvider>
+                <div className="min-h-screen flex flex-col">
+                  <Toaster />
+                  <Navbar />
+                  <div className="flex flex-1 px-2 sm:px-8">
+                    {children}
+                  </div>
+                  <Modals />
+                </div>
+              </WebSocketProvider>
             </TradeDataProvider>
           </UserDataProvider>
         </ThemeProvider>
