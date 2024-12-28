@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUser } from "@/components/context/user-data"
-import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard } from "lucide-react"
+import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -33,6 +33,7 @@ import { LanguageSelector } from "@/components/ui/language-selector"
 import { useI18n } from "@/locales/client"
 import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
+import { useOnborda } from 'onborda'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -42,6 +43,7 @@ export default function Navbar() {
   const { theme, toggleTheme, setTheme } = useTheme()
   const t = useI18n()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
+  const { startOnborda, closeOnborda } = useOnborda();
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
@@ -147,6 +149,10 @@ export default function Navbar() {
                   <Keyboard className="mr-2 h-4 w-4" />
                   <span>{t('dashboard.keyboardShortcuts')}</span>
                   <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => startOnborda("main")}>
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  <span>{t('dashboard.startTour')}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuLabel>{t('dashboard.theme')}</DropdownMenuLabel>

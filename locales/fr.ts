@@ -200,6 +200,8 @@ export default {
     'dashboard.api': 'API',
     'dashboard.keyboardShortcuts': 'Raccourcis Clavier',
     'dashboard.keyboardShortcutsDescription': 'Raccourcis clavier pour naviguer plus rapidement',
+    'dashboard.startTour': 'Démarrer la visite',
+    'dashboard.startTourDescription': 'Faites une visite guidée du tableau de bord',
     'dashboard.theme': 'Thème',
     'dashboard.language': 'Langue',
     'dashboard.logOut': 'Se déconnecter',

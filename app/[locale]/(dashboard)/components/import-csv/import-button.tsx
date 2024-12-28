@@ -520,7 +520,7 @@ export default function ImportButton() {
 
   return (
     <div>
-      <Button onClick={() => setIsOpen(true)} className='w-full'>
+      <Button onClick={() => setIsOpen(true)} className='w-full' id="import-data">
         <UploadIcon className="sm:mr-2 h-4 w-4" /> 
         <span className='hidden md:block'>{t('import.button')}</span>
       </Button>

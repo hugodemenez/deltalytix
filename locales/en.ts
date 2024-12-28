@@ -203,6 +203,8 @@ export default {
     'dashboard.api': 'API',
     'dashboard.keyboardShortcuts': 'Keyboard Shortcuts',
     'dashboard.keyboardShortcutsDescription': 'Keyboard shortcuts to help you navigate faster',
+    'dashboard.startTour': 'Start Tour',
+    'dashboard.startTourDescription': 'Take a guided tour of the dashboard',
     'dashboard.theme': 'Theme',
     'dashboard.language': 'Language',
     'dashboard.logOut': 'Log out',
