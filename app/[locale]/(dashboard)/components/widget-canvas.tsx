@@ -792,7 +792,7 @@ export default function WidgetCanvas() {
       <style>{customStyles}</style>
       <div className="mb-4 flex items-center justify-between">
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild id="widget-canvas">
             <Button variant="outline" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Add Widget

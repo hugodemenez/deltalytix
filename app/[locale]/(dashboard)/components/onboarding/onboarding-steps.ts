@@ -17,25 +17,14 @@ const mainTour = {
     {
       icon: "🎯",
       title: "Customize Widgets",
-      content: "Drag and resize widgets to create your perfect dashboard layout",
+      content: "Add widgets to your dashboard by clicking here",
       selector: "#widget-canvas",
-      side: "right" as Side,
-      showControls: true,
-      pointerPadding: 10,
-      pointerRadius: 8,
-      nextRoute: "/dashboard"
-    },
-    {
-      icon: "👋",
-      title: "Welcome to the Dashboard",
-      content: "This is your personalized trading dashboard where you can analyze your performance",
-      selector: "#dashboard-welcome",
       side: "bottom" as Side,
       showControls: true,
       pointerPadding: 10,
       pointerRadius: 8,
       nextRoute: "/dashboard"
-    }
+    },
   ]
 }
 
