@@ -21,6 +21,7 @@ export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfT
 }
 
 export async function getTrades(userId: string): Promise<Trade[]> {
+  console.log("getTrades", userId)
   const prisma = new PrismaClient()
   try {
     const supabase = await createClient()
@@ -92,8 +93,8 @@ export async function updateTradesWithComment(dayData: CalendarEntry, dateString
 }
 
 export async function loadDashboardLayout(userId: string): Promise<Layouts | null> {
+  console.log("loadDashboardLayout", userId)
   const prisma = new PrismaClient()
-  
   try {
     const dashboard = await prisma.dashboardLayout.findUnique({
       where: { userId },

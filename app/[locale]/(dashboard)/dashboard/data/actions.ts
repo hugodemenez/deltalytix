@@ -123,15 +123,71 @@ export async function updateCommissionForGroup(accountNumber: string, instrument
 }
 
 export async function renameAccount(oldAccountNumber: string, newAccountNumber: string, userId: string): Promise<void> {
-  await prisma.trade.updateMany({
-    where: {
-      accountNumber: oldAccountNumber,
-      userId: userId
-    },
-    data: {
-      accountNumber: newAccountNumber
+  try {
+    // First check if the account exists and get its ID
+    const existingAccount = await prisma.account.findFirst({
+      where: {
+        number: oldAccountNumber,
+        userId: userId
+      }
+    })
+
+    if (!existingAccount) {
+      throw new Error('Account not found')
     }
-  })
+
+    // Check if the new account number is already in use by this user
+    const duplicateAccount = await prisma.account.findFirst({
+      where: {
+        number: newAccountNumber,
+        userId: userId
+      }
+    })
+
+    if (duplicateAccount) {
+      throw new Error('You already have an account with this number')
+    }
+
+    // Use a transaction to ensure all updates happen together
+    await prisma.$transaction(async (tx) => {
+      // Update the account number
+      await tx.account.update({
+        where: {
+          id: existingAccount.id
+        },
+        data: {
+          number: newAccountNumber
+        }
+      })
+
+      // Update trades accountNumber
+      await tx.trade.updateMany({
+        where: {
+          accountNumber: oldAccountNumber,
+          userId: userId
+        },
+        data: {
+          accountNumber: newAccountNumber
+        }
+      })
+
+      // Update payouts accountNumber
+      await tx.payout.updateMany({
+        where: {
+          accountId: existingAccount.id
+        },
+        data: {
+          accountNumber: newAccountNumber
+        }
+      })
+    })
+  } catch (error) {
+    console.error('Error renaming account:', error)
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Failed to rename account')
+  }
 }
 
 export async function deleteTradesByIds(tradeIds: string[]): Promise<void> {
@@ -154,9 +210,10 @@ export async function setupPropFirmAccount({
   trailingStopProfit,
   resetDate,
 }: SetupPropFirmAccountParams) {
-  const existingAccount = await prisma.account.findUnique({
+  const existingAccount = await prisma.account.findFirst({
     where: {
-      number: accountNumber
+      number: accountNumber,
+      userId: userId
     }
   })
 
@@ -173,7 +230,7 @@ export async function setupPropFirmAccount({
 
   if (existingAccount) {
     return await prisma.account.update({
-      where: { number: accountNumber },
+      where: { id: existingAccount.id },
       data: accountData
     })
   }
@@ -194,32 +251,23 @@ export async function getPropFirmAccounts(userId: string) {
       where: {
         userId: userId,
       },
-    })
-
-    // Then get all payouts for these accounts
-    const accountsWithPayouts = await Promise.all(
-      accounts.map(async (account) => {
-        const payouts = await prisma.payout.findMany({
-          where: {
-            accountNumber: account.number,
-          },
+      include: {
+        payouts: {
           select: {
             id: true,
             amount: true,
             date: true,
-            status: true, // Make sure we're selecting the status
-          },
-        })
-
-        return {
-          ...account,
-          number: account.number,
-          payouts: payouts,
+            status: true,
+          }
         }
-      })
-    )
+      }
+    })
 
-    return accountsWithPayouts
+    return accounts.map(account => ({
+      ...account,
+      number: account.number,
+      payouts: account.payouts,
+    }))
   } catch (error) {
     console.error('Error fetching accounts:', error)
     throw new Error('Failed to fetch accounts')
@@ -231,15 +279,32 @@ export async function addPropFirmPayout(data: {
   userId: string
   date: Date
   amount: number
-  status: string // Add status parameter
+  status: string
 }) {
   try {
+    // First find the account to get its ID
+    const account = await prisma.account.findFirst({
+      where: {
+        number: data.accountNumber,
+        userId: data.userId
+      }
+    })
+
+    if (!account) {
+      throw new Error('Account not found')
+    }
+
     const payout = await prisma.payout.create({
       data: {
         accountNumber: data.accountNumber,
         date: data.date,
         amount: data.amount,
-        status: data.status, // Include status in creation
+        status: data.status,
+        account: {
+          connect: {
+            id: account.id
+          }
+        }
       },
     })
     return payout
@@ -253,7 +318,9 @@ export async function deletePayout(payoutId: string) {
   try {
     const payout = await prisma.payout.findUnique({
       where: { id: payoutId },
-      select: { accountNumber: true }
+      include: {
+        account: true
+      }
     });
 
     if (!payout) {
@@ -267,7 +334,9 @@ export async function deletePayout(payoutId: string) {
 
     // Decrement the payoutCount on the account
     await prisma.account.update({
-      where: { number: payout.accountNumber },
+      where: { 
+        id: payout.account.id
+      },
       data: {
         payoutCount: {
           decrement: 1

@@ -151,15 +151,22 @@ export function AccountEquityChart({
         const dayTotal = dayEvents.reduce((sum, event) => sum + event.amount, 0)
         runningBalance += dayTotal
 
-        if (trailingDrawdown && trailingStopProfit > 0 &&
-          runningBalance >= stopProfitBalance) {
-          hasReachedStopProfit = true
-        }
+        // Calculate current profit relative to initial balance
+        const currentProfit = runningBalance - initialBalance
 
-        if (runningBalance > maxBalanceToDate) {
-          maxBalanceToDate = runningBalance
-          if (trailingDrawdown) {
-            maxDrawdownLevel = maxBalanceToDate - drawdownThreshold
+        if (trailingDrawdown) {
+          if (trailingStopProfit > 0 && currentProfit >= trailingStopProfit) {
+            // If we've reached stop profit, lock the drawdown level
+            if (!hasReachedStopProfit) {
+              hasReachedStopProfit = true
+              maxDrawdownLevel = initialBalance + trailingStopProfit - drawdownThreshold
+            }
+          } else if (!hasReachedStopProfit) {
+            // Only update drawdown level if we haven't reached stop profit
+            if (runningBalance > maxBalanceToDate) {
+              maxBalanceToDate = runningBalance
+              maxDrawdownLevel = maxBalanceToDate - drawdownThreshold
+            }
           }
         }
 

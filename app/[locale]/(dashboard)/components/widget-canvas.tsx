@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,7 +24,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
-import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical, Table2 } from 'lucide-react'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical, Table2, MoreVertical } from 'lucide-react'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
@@ -68,6 +69,8 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   onCustomize: () => void
 }) {
   const isMobile = useIsMobile()
+  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
+  const contextButtonRef = useRef<HTMLButtonElement>(null)
 
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
     if (isMobile) {
@@ -114,22 +117,71 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   }
 
   return (
-    <ContextMenu>
+    <ContextMenu onOpenChange={setIsContextMenuOpen}>
       <ContextMenuTrigger asChild>
         <div className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group">
           <div className={cn("h-full w-full transition-all duration-200", 
-            isCustomizing && "group-hover:blur-sm"
+            isCustomizing && "group-hover:blur-[2px]"
           )}>
             {children}
           </div>
           {isCustomizing && (
             <>
-              <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <div className="absolute inset-0 border-2 border-dashed border-transparent group-hover:border-accent group-focus-within:border-accent transition-colors duration-200" />
+              <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200" />
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 drag-handle cursor-grab active:cursor-grabbing">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <GripVertical className="h-6 w-6" />
+                  <GripVertical className="h-6 w-4" />
                   <p className="text-sm font-medium">Drag to move</p>
                 </div>
+              </div>
+              <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10">
+                <Button
+                  ref={contextButtonRef}
+                  variant="outline"
+                  size="icon"
+                  className={cn(
+                    "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+                    isContextMenuOpen && "bg-accent text-accent-foreground"
+                  )}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const rect = contextButtonRef.current?.getBoundingClientRect()
+                    if (rect) {
+                      const event = new MouseEvent('contextmenu', {
+                        bubbles: true,
+                        clientX: rect.left,
+                        clientY: rect.bottom
+                      })
+                      contextButtonRef.current?.dispatchEvent(event)
+                    }
+                  }}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will remove the widget from your dashboard. You can add it back later if needed.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={onRemove}>Remove Widget</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </>
           )}
@@ -216,13 +268,28 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSeparator />
-        <ContextMenuItem 
-          onClick={onRemove}
-          className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
-        >
-          <Minus className="mr-2 h-4 w-4" />
-          <span>Remove Widget</span>
-        </ContextMenuItem>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <ContextMenuItem 
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+            >
+              <Minus className="mr-2 h-4 w-4" />
+              <span>Remove Widget</span>
+            </ContextMenuItem>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove the widget from your dashboard. You can add it back later if needed.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={onRemove}>Remove Widget</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </ContextMenuContent>
     </ContextMenu>
   )
@@ -307,6 +374,7 @@ export default function WidgetCanvas() {
     activeLayout: 'desktop'
   })
   const [isCustomizing, setIsCustomizing] = useState(false)
+  const [isRemoveAllDialogOpen, setIsRemoveAllDialogOpen] = useState(false)
   
   // Add this state to track if the layout change is from user interaction
   const [isUserAction, setIsUserAction] = useState(false)
@@ -317,9 +385,11 @@ export default function WidgetCanvas() {
     const isWidgetClick = (e.target as HTMLElement).closest('.react-grid-item')
     const isContextMenuClick = (e.target as HTMLElement).closest('[role="menu"]')
     const isCustomizationSwitchClick = (e.target as HTMLElement).closest('#customize-mode')
+    const isDialogClick = (e.target as HTMLElement).closest('[role="dialog"]')
+    const isDialogTriggerClick = (e.target as HTMLElement).closest('[data-state="open"]')
 
-    // If click is outside widgets and not on context menu or customization switch, turn off customization
-    if (!isWidgetClick && !isContextMenuClick && !isCustomizationSwitchClick) {
+    // If click is outside widgets and not on context menu, customization switch, or dialog elements, turn off customization
+    if (!isWidgetClick && !isContextMenuClick && !isCustomizationSwitchClick && !isDialogClick && !isDialogTriggerClick) {
       setIsCustomizing(false)
     }
   }, [])
@@ -342,7 +412,7 @@ export default function WidgetCanvas() {
         case 'small-long':
           return { w: 12, h: 2 }
         case 'medium':
-          return { w: 12, h: 6 }
+          return { w: 12, h: 4 }
         case 'large':
           return { w: 12, h: 6 }
         default:
@@ -592,51 +662,121 @@ export default function WidgetCanvas() {
     
     // Determine default size based on widget type
     let effectiveSize = size
+    // Calendar and trade table widgets are always large
+    if (type === 'calendarWidget' || type === 'tradeTableReview') {
+      effectiveSize = 'large'
+    }
     // Statistics widgets are always tiny
-    if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
+    else if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
          'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(type)) {
       effectiveSize = 'tiny'
-    } 
+    }
     // Charts default to medium
     else if (type.includes('Chart') || type === 'tickDistribution' || 
              type === 'commissionsPnl') {
       effectiveSize = 'medium'
     }
-    // Calendar defaults to medium
-    else if (type === 'calendarWidget') {
-      effectiveSize = 'medium'
-    }
     
     const currentLayout = layoutState.layouts[layoutState.activeLayout]
+    const grid = sizeToGrid(effectiveSize)
     
-    // Calculate position for new widget
-    let lastRowY = 0
-    let rightmostX = 0
+    // Initialize variables for finding the best position
+    let bestX = 0
+    let bestY = 0
+    let lowestY = 0
     
+    // Find the lowest Y coordinate in the current layout
     currentLayout.forEach(widget => {
-      if (widget.y >= lastRowY) {
-        lastRowY = widget.y
-        if (widget.x + widget.w > rightmostX) {
-          rightmostX = widget.x + widget.w
-        }
+      const widgetBottom = widget.y + widget.h
+      if (widgetBottom > lowestY) {
+        lowestY = widgetBottom
       }
     })
+    
+    // First, try to find gaps in existing rows
+    for (let y = 0; y <= lowestY; y++) {
+      // Create an array representing occupied spaces at this Y level
+      const rowOccupancy = new Array(12).fill(false)
+      
+      // Mark occupied spaces
+      currentLayout.forEach(widget => {
+        if (y >= widget.y && y < widget.y + widget.h) {
+          for (let x = widget.x; x < widget.x + widget.w; x++) {
+            rowOccupancy[x] = true
+          }
+        }
+      })
+      
+      // Look for a gap large enough for the new widget
+      for (let x = 0; x <= 12 - grid.w; x++) {
+        let hasSpace = true
+        for (let wx = 0; wx < grid.w; wx++) {
+          if (rowOccupancy[x + wx]) {
+            hasSpace = false
+            break
+          }
+        }
+        
+        if (hasSpace) {
+          // Check if there's enough vertical space
+          let hasVerticalSpace = true
+          for (let wy = 0; wy < grid.h; wy++) {
+            currentLayout.forEach(widget => {
+              if (widget.x < x + grid.w && 
+                  widget.x + widget.w > x && 
+                  widget.y <= y + wy && 
+                  widget.y + widget.h > y + wy) {
+                hasVerticalSpace = false
+              }
+            })
+          }
+          
+          if (hasVerticalSpace) {
+            bestX = x
+            bestY = y
+            // Found a suitable gap, use it immediately
+            const newWidget: Widget = {
+              i: `widget${Date.now()}`,
+              type,
+              size: effectiveSize,
+              x: bestX,
+              y: bestY,
+              w: grid.w,
+              h: grid.h
+            }
 
-    const grid = sizeToGrid(effectiveSize)
-    const newX = rightmostX + (rightmostX + grid.w > 12 ? -rightmostX : 0)
-    const newY = rightmostX + grid.w > 12 ? lastRowY + grid.h : lastRowY
-
+            const updatedWidgets = [...currentLayout, newWidget]
+            const responsiveLayouts = generateResponsiveLayout(updatedWidgets)
+            
+            const newLayouts = {
+              ...layoutState.layouts,
+              desktop: responsiveLayouts.lg,
+              mobile: responsiveLayouts.sm
+            }
+            
+            setLayoutState(prev => ({
+              ...prev,
+              layouts: newLayouts
+            }))
+            
+            await saveDashboardLayout(user.id, newLayouts)
+            return
+          }
+        }
+      }
+    }
+    
+    // If no suitable gap was found, add to the bottom
     const newWidget: Widget = {
       i: `widget${Date.now()}`,
       type,
       size: effectiveSize,
-      x: newX,
-      y: newY,
+      x: 0,
+      y: lowestY,
       w: grid.w,
       h: grid.h
     }
 
-    // Generate new responsive layouts including the new widget
     const updatedWidgets = [...currentLayout, newWidget]
     const responsiveLayouts = generateResponsiveLayout(updatedWidgets)
     
@@ -656,10 +796,12 @@ export default function WidgetCanvas() {
 
   const removeWidget = async (i: string) => {
     if (!user?.id) return
-    const updatedWidgets = layoutState.layouts[layoutState.activeLayout].filter(widget => widget.i !== i)
+    const updatedDesktopWidgets = layoutState.layouts.desktop.filter(widget => widget.i !== i)
+    const updatedMobileWidgets = layoutState.layouts.mobile.filter(widget => widget.i !== i)
     const newLayouts = {
       ...layoutState.layouts,
-      [layoutState.activeLayout]: updatedWidgets
+      desktop: updatedDesktopWidgets,
+      mobile: updatedMobileWidgets
     }
     setLayoutState(prev => ({
       ...prev,
@@ -715,20 +857,21 @@ export default function WidgetCanvas() {
   const renderWidget = (widget: Widget) => {
     // For charts, ensure size is at least small-long
     const effectiveSize = (() => {
-      if (widget.type.includes('Chart') || widget.type === 'tickDistribution' || 
-          widget.type === 'commissionsPnl') {
-        if (widget.size === 'tiny') {
-          return 'small-long' as const
-        }
+      // Calendar and trade table are always large
+      if (widget.type === 'calendarWidget' || widget.type === 'tradeTableReview') {
+        return 'large' as const
       }
       // Statistics widgets are always tiny
       if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
            'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(widget.type)) {
         return 'tiny' as const
       }
-      // Trade table and calendar are always large
-      if (widget.type === 'tradeTableReview' || widget.type === 'calendarWidget') {
-        return 'large' as const
+      // Charts can be medium or large
+      if (widget.type.includes('Chart') || widget.type === 'tickDistribution' || 
+          widget.type === 'commissionsPnl') {
+        if (widget.size === 'tiny') {
+          return 'small-long' as const
+        }
       }
       return isMobile && widget.size !== 'tiny' ? 'small' : widget.size
     })()
@@ -776,7 +919,8 @@ export default function WidgetCanvas() {
     
     const newLayouts = {
       ...layoutState.layouts,
-      [layoutState.activeLayout]: []
+      desktop: [],
+      mobile: []
     }
     
     setLayoutState(prev => ({
@@ -799,6 +943,15 @@ export default function WidgetCanvas() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56 bg-popover text-popover-foreground border-border max-h-[400px] overflow-y-auto">
+            <DropdownMenuLabel>Calendar</DropdownMenuLabel>
+            <DropdownMenuItem 
+              onClick={() => addWidget('calendarWidget', 'large')}
+              className="hover:bg-accent hover:text-accent-foreground"
+            >
+              <Calendar className="mr-2 h-4 w-4" />
+              <span>Calendar View</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-border" />
             <DropdownMenuLabel>Charts</DropdownMenuLabel>
             <DropdownMenuItem 
               onClick={() => addWidget('equityChart')}
@@ -911,32 +1064,53 @@ export default function WidgetCanvas() {
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
             <DropdownMenuLabel>Other</DropdownMenuLabel>
-            <DropdownMenuItem 
-              onClick={() => addWidget('calendarWidget')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Calendar className="mr-2 h-4 w-4" />
-              <span>Calendar</span>
-            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="flex items-center gap-4">
           {isCustomizing && (
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={removeAllWidgets}
-              className="flex items-center gap-2"
-            >
-              <Minus className="h-4 w-4" />
-              Remove All
-            </Button>
+            <AlertDialog open={isRemoveAllDialogOpen} onOpenChange={setIsRemoveAllDialogOpen}>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
+                  <Minus className="h-4 w-4" />
+                  Remove All
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Remove all widgets?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will remove all widgets from your dashboard. You can add them back later if needed.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={() => {
+                      removeAllWidgets()
+                      setIsCustomizing(false)
+                      setIsRemoveAllDialogOpen(false)
+                    }}
+                  >
+                    Remove All Widgets
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           <div className="flex items-center space-x-2">
             <Switch
               id="customize-mode"
               checked={isCustomizing}
-              onCheckedChange={setIsCustomizing}
+              onCheckedChange={(checked) => {
+                setIsCustomizing(checked)
+                if (!checked) {
+                  setIsRemoveAllDialogOpen(false)
+                }
+              }}
             />
             <label htmlFor="customize-mode">{isCustomizing ? 'Done' : 'Edit'}</label>
           </div>
@@ -950,9 +1124,9 @@ export default function WidgetCanvas() {
         cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
         rowHeight={isMobile ? 65 : 70}
         isDraggable={isCustomizing}
-        isResizable={isCustomizing && !isMobile}
+        isResizable={false}
+        draggableHandle=".drag-handle"
         onDragStart={() => setIsUserAction(true)}
-        onResizeStart={() => setIsUserAction(true)}
         onLayoutChange={handleLayoutChange}
         margin={[16, 16]}
         containerPadding={[0, 0]}

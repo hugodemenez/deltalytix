@@ -11,6 +11,7 @@ interface SubscriptionInfo {
 }
 
 export async function getIsSubscribed(email: string) {
+    console.log("getIsSubscribed", email)
     if (email.endsWith('@rithmic.com')) {
       return true
     }
@@ -46,6 +47,7 @@ export async function getIsSubscribed(email: string) {
 
 // Optional: You might want to get more detailed subscription info
 export async function getSubscriptionDetails(email: string): Promise<SubscriptionInfo | null> {
+    console.log("getSubscriptionDetails", email)
     const prisma = new PrismaClient()
     
     try {

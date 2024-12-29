@@ -30,6 +30,7 @@ model Trade {
   tags           String[] @default([])
   imageBase64    String?  @db.Text
 
+  @@index([accountNumber])
   @@schema("public")
 }
 
@@ -85,7 +86,7 @@ model User {
 
 model Account {
   id                String    @id @unique @default(uuid())
-  number            String    @unique
+  number            String
   propfirm          String    @default("")
   drawdownThreshold Float     @default(0)
   trailingDrawdown  Boolean   @default(false)
@@ -98,7 +99,9 @@ model Account {
   createdAt         DateTime  @default(now())
   payoutCount       Int       @default(0)
   resetDate         DateTime?
-  
+  payouts           Payout[]
+
+  @@unique([number, userId])
   @@index([number])
   @@schema("public")
 }
@@ -108,6 +111,8 @@ model Payout {
   amount        Float
   date          DateTime
   accountNumber String    
+  account       Account   @relation(fields: [accountId], references: [id])
+  accountId     String
   createdAt     DateTime  @default(now())
   status        String    @default("PENDING")
   

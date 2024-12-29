@@ -19,6 +19,7 @@ import { useUser } from "@/components/context/user-data"
 import { setupPropFirmAccount, getPropFirmAccounts, addPropFirmPayout, deletePayout, updatePayout, checkAndResetAccounts } from "@/app/[locale]/(dashboard)/dashboard/data/actions"
 import { AccountEquityChart } from "./account-equity-chart"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Gauge } from "@/components/ui/gauge"
 
 interface PropFirmAccount {
   id: string
@@ -449,22 +450,60 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
   // Calculate average daily PnL
   const avgDailyPnl = useMemo(() => {
     if (accountTrades.length === 0) return 0
+    
+    // Get unique trading days
+    const tradingDays = new Set(
+      accountTrades.map(trade => 
+        new Date(trade.closeDate).toISOString().split('T')[0]
+      )
+    )
+    
     const totalPnl = accountTrades.reduce((sum, trade) => sum + trade.pnl, 0)
-    const firstTradeDate = new Date(accountTrades[0].entryDate)
-    const lastTradeDate = new Date(accountTrades[accountTrades.length - 1].closeDate)
-    const daysDiff = Math.max(1, Math.ceil((lastTradeDate.getTime() - firstTradeDate.getTime()) / (1000 * 60 * 60 * 24)))
-    return totalPnl / daysDiff
+    return totalPnl / tradingDays.size
   }, [accountTrades])
+
+  // Calculate total payouts
+  const totalPayouts = useMemo(() => 
+    account.payouts.reduce((sum, payout) => sum + payout.amount, 0)
+  , [account.payouts])
+
+  // Calculate total PnL from trades
+  const totalPnL = useMemo(() => 
+    accountTrades.reduce((sum, trade) => sum + trade.pnl, 0)
+  , [accountTrades])
+
+  // Calculate current profits (total PnL already includes withdrawn profits)
+  const currentProfits = totalPnL
+
+  // Calculate current balance without payouts
+  const currentBalanceWithoutPayouts = useMemo(() => 
+    account.startingBalance + totalPnL - totalPayouts
+  , [account.startingBalance, totalPnL, totalPayouts])
+
+  // Calculate remaining amount needed for next payout
+  // We need to reach profit target considering already withdrawn payouts
+  const remainingForPayout = Math.max(0, account.profitTarget - (currentProfits - totalPayouts))
 
   // Estimate next payout date based on average daily PnL
   const estimatedNextPayout = useMemo(() => {
     if (avgDailyPnl <= 0) return null
-    const remainingToTarget = account.profitTarget - account.balanceToDate
-    const daysToTarget = Math.ceil(remainingToTarget / avgDailyPnl)
-    const nextDate = new Date()
-    nextDate.setDate(nextDate.getDate() + daysToTarget)
+    const tradingDaysToTarget = Math.ceil(remainingForPayout / avgDailyPnl)
+    
+    // Calculate the next payout date considering only weekdays
+    const currentDate = new Date()
+    let nextDate = new Date(currentDate)
+    let remainingTradingDays = tradingDaysToTarget
+    
+    while (remainingTradingDays > 0) {
+      nextDate.setDate(nextDate.getDate() + 1)
+      // Skip weekends (0 = Sunday, 6 = Saturday)
+      if (nextDate.getDay() !== 0 && nextDate.getDay() !== 6) {
+        remainingTradingDays--
+      }
+    }
+    
     return nextDate
-  }, [account, avgDailyPnl])
+  }, [account, avgDailyPnl, remainingForPayout])
 
   return (
     <div className="space-y-6">
@@ -507,19 +546,60 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <h4 className="font-medium">Progress to Target</h4>
-          <Progress 
-            value={((account.balanceToDate - account.startingBalance) / 
-                   (account.profitTarget - account.startingBalance)) * 100} 
+          <Gauge 
+            value={currentBalanceWithoutPayouts - account.startingBalance}
+            max={account.profitTarget}
+            size="md"
+            type="profit"
+            label="Target Progress"
           />
+          <div className="flex justify-between text-xs text-muted-foreground mt-2">
+            <span>Profit: ${(currentBalanceWithoutPayouts - account.startingBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+            <span>Target: ${account.profitTarget.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+          </div>
         </div>
 
         <div className="space-y-2">
           <h4 className="font-medium">Drawdown Status</h4>
-          <Progress 
-            value={((account.balanceToDate - account.drawdownThreshold) / 
-                   (account.startingBalance - account.drawdownThreshold)) * 100}
-            className="bg-red-200"
-          />
+          {(() => {
+            let effectiveDrawdownThreshold = account.drawdownThreshold
+            const initialDrawdownDistance = account.startingBalance - account.drawdownThreshold
+            
+            // Calculate total payouts
+            const totalPayouts = account.payouts.reduce((sum, payout) => sum + payout.amount, 0)
+            // Current balance without payouts
+            const currentBalanceWithoutPayouts = account.balanceToDate - totalPayouts
+
+            if (account.trailingDrawdown && currentProfits > 0) {
+              if (account.trailingStopProfit && currentProfits >= account.trailingStopProfit) {
+                // If total profit is above stop profit level, lock the drawdown
+                effectiveDrawdownThreshold = account.startingBalance + account.trailingStopProfit - initialDrawdownDistance
+              } else {
+                // If we haven't reached stop profit yet, trail normally
+                effectiveDrawdownThreshold = currentBalanceWithoutPayouts - initialDrawdownDistance
+              }
+            }
+
+            const maxBalance = Math.max(account.startingBalance, currentBalanceWithoutPayouts)
+            const drawdownPercentage = ((currentBalanceWithoutPayouts - effectiveDrawdownThreshold) / 
+                                     (maxBalance - effectiveDrawdownThreshold)) * 100
+            
+            return (
+              <>
+                <Gauge 
+                  value={currentBalanceWithoutPayouts - effectiveDrawdownThreshold}
+                  max={maxBalance - effectiveDrawdownThreshold}
+                  size="md"
+                  type="drawdown"
+                  label="Drawdown Buffer"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                  <span>Current: ${currentBalanceWithoutPayouts.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                  <span>Drawdown at: ${effectiveDrawdownThreshold.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                </div>
+              </>
+            )
+          })()}
         </div>
       </div>
 
@@ -533,7 +613,11 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
             </div>
             <div className="flex justify-between">
               <dt className="text-sm text-muted-foreground">Total Payouts</dt>
-              <dd className="text-sm">{account.payouts.length}</dd>
+              <dd className="text-sm">${totalPayouts.toLocaleString(undefined, { maximumFractionDigits: 2 })}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-sm text-muted-foreground">Current Profits</dt>
+              <dd className="text-sm">${currentProfits.toLocaleString(undefined, { maximumFractionDigits: 2 })}</dd>
             </div>
           </dl>
         </div>
@@ -542,10 +626,16 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
           <h4 className="font-medium mb-2">Projections</h4>
           <dl className="space-y-1">
             {estimatedNextPayout && (
-              <div className="flex justify-between">
-                <dt className="text-sm text-muted-foreground">Est. Next Payout</dt>
-                <dd className="text-sm">{format(estimatedNextPayout, "MMM d, yyyy")}</dd>
-              </div>
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-sm text-muted-foreground">Est. Next Payout</dt>
+                  <dd className="text-sm">{format(estimatedNextPayout, "MMM d, yyyy")}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-sm text-muted-foreground">Remaining to Payout</dt>
+                  <dd className="text-sm">${remainingForPayout.toLocaleString(undefined, { maximumFractionDigits: 2 })}</dd>
+                </div>
+              </>
             )}
           </dl>
         </div>
