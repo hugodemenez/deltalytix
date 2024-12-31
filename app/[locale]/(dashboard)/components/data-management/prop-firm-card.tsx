@@ -447,41 +447,56 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
   const { trades } = useTrades()
   const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
   
+  // Calculate profits considering reset date
+  const { totalPnL, currentProfits, relevantPayouts } = useMemo(() => {
+    // Get all trades
+    const allTrades = accountTrades
+
+    // Filter trades and payouts based on reset date
+    const relevantTrades = account.resetDate 
+      ? allTrades.filter(trade => new Date(trade.closeDate) >= new Date(account.resetDate!))
+      : allTrades
+
+    const relevantPayouts = account.resetDate 
+      ? account.payouts.filter(payout => new Date(payout.date) >= new Date(account.resetDate!))
+      : account.payouts
+
+    // Calculate PnL from relevant trades including commissions
+    const totalPnL = allTrades.reduce((sum, trade) => sum + trade.pnl - (trade.commission || 0), 0)
+    const currentProfits = relevantTrades.reduce((sum, trade) => sum + trade.pnl - (trade.commission || 0), 0)
+
+    return {
+      totalPnL,
+      currentProfits,
+      relevantPayouts
+    }
+  }, [accountTrades, account.resetDate, account.payouts])
+
+  // Calculate total payouts since reset
+  const totalPayouts = useMemo(() => 
+    relevantPayouts.reduce((sum, payout) => sum + payout.amount, 0)
+  , [relevantPayouts])
+
   // Calculate average daily PnL
   const avgDailyPnl = useMemo(() => {
     if (accountTrades.length === 0) return 0
     
-    // Get unique trading days
+    // Get unique trading days since reset
     const tradingDays = new Set(
-      accountTrades.map(trade => 
-        new Date(trade.closeDate).toISOString().split('T')[0]
-      )
+      accountTrades
+        .filter(trade => !account.resetDate || new Date(trade.closeDate) >= new Date(account.resetDate!))
+        .map(trade => new Date(trade.closeDate).toISOString().split('T')[0])
     )
     
-    const totalPnl = accountTrades.reduce((sum, trade) => sum + trade.pnl, 0)
-    return totalPnl / tradingDays.size
-  }, [accountTrades])
+    return currentProfits / tradingDays.size
+  }, [accountTrades, account.resetDate, currentProfits])
 
-  // Calculate total payouts
-  const totalPayouts = useMemo(() => 
-    account.payouts.reduce((sum, payout) => sum + payout.amount, 0)
-  , [account.payouts])
-
-  // Calculate total PnL from trades
-  const totalPnL = useMemo(() => 
-    accountTrades.reduce((sum, trade) => sum + trade.pnl, 0)
-  , [accountTrades])
-
-  // Calculate current profits (total PnL already includes withdrawn profits)
-  const currentProfits = totalPnL
-
-  // Calculate current balance without payouts
+  // Calculate current balance without payouts (for display purposes)
   const currentBalanceWithoutPayouts = useMemo(() => 
-    account.startingBalance + totalPnL - totalPayouts
-  , [account.startingBalance, totalPnL, totalPayouts])
+    account.startingBalance + totalPnL - account.payouts.reduce((sum, payout) => sum + payout.amount, 0)
+  , [account.startingBalance, totalPnL, account.payouts])
 
   // Calculate remaining amount needed for next payout
-  // We need to reach profit target considering already withdrawn payouts
   const remainingForPayout = Math.max(0, account.profitTarget - (currentProfits - totalPayouts))
 
   // Estimate next payout date based on average daily PnL
@@ -503,7 +518,7 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
     }
     
     return nextDate
-  }, [account, avgDailyPnl, remainingForPayout])
+  }, [avgDailyPnl, remainingForPayout])
 
   return (
     <div className="space-y-6">
@@ -547,57 +562,84 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
         <div className="space-y-2">
           <h4 className="font-medium">Progress to Target</h4>
           <Gauge 
-            value={currentBalanceWithoutPayouts - account.startingBalance}
+            value={currentProfits - totalPayouts}
             max={account.profitTarget}
             size="md"
             type="profit"
             label="Target Progress"
           />
           <div className="flex justify-between text-xs text-muted-foreground mt-2">
-            <span>Profit: ${(currentBalanceWithoutPayouts - account.startingBalance).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+            <span>Progress: ${(currentProfits - totalPayouts).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
             <span>Target: ${account.profitTarget.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
           </div>
+          {account.resetDate && (
+            <div className="text-xs text-muted-foreground mt-1">
+              Reset on {format(new Date(account.resetDate), "MMM d, yyyy")}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
           <h4 className="font-medium">Drawdown Status</h4>
           {(() => {
-            let effectiveDrawdownThreshold = account.drawdownThreshold
-            const initialDrawdownDistance = account.startingBalance - account.drawdownThreshold
+            // Current balance calculation considering reset date but without payouts for drawdown
+            const balanceWithoutPayouts = account.startingBalance + currentProfits
+            const currentBalance = balanceWithoutPayouts - totalPayouts
             
-            // Calculate total payouts
-            const totalPayouts = account.payouts.reduce((sum, payout) => sum + payout.amount, 0)
-            // Current balance without payouts
-            const currentBalanceWithoutPayouts = account.balanceToDate - totalPayouts
+            // Initialize drawdown tracking variables exactly like the chart
+            let maxBalanceToDate = account.startingBalance
+            let maxDrawdownLevel = account.startingBalance - account.drawdownThreshold
+            let hasReachedStopProfit = false
 
-            if (account.trailingDrawdown && currentProfits > 0) {
-              if (account.trailingStopProfit && currentProfits >= account.trailingStopProfit) {
-                // If total profit is above stop profit level, lock the drawdown
-                effectiveDrawdownThreshold = account.startingBalance + account.trailingStopProfit - initialDrawdownDistance
-              } else {
-                // If we haven't reached stop profit yet, trail normally
-                effectiveDrawdownThreshold = currentBalanceWithoutPayouts - initialDrawdownDistance
+            // Calculate current profit without considering payouts
+            const currentProfit = currentProfits
+
+            if (account.trailingDrawdown && currentProfit > 0) {
+              if (account.trailingStopProfit && currentProfit >= account.trailingStopProfit) {
+                // If we've reached stop profit, lock the drawdown level
+                if (!hasReachedStopProfit) {
+                  hasReachedStopProfit = true
+                  maxDrawdownLevel = account.startingBalance + account.trailingStopProfit - account.drawdownThreshold
+                }
+              } else if (!hasReachedStopProfit) {
+                // Only update drawdown level if we haven't reached stop profit
+                if (balanceWithoutPayouts > maxBalanceToDate) {
+                  maxBalanceToDate = balanceWithoutPayouts
+                  maxDrawdownLevel = maxBalanceToDate - account.drawdownThreshold
+                }
               }
             }
 
-            const maxBalance = Math.max(account.startingBalance, currentBalanceWithoutPayouts)
-            const drawdownPercentage = ((currentBalanceWithoutPayouts - effectiveDrawdownThreshold) / 
-                                     (maxBalance - effectiveDrawdownThreshold)) * 100
+            // Simple distance calculation - this uses the actual balance with payouts
+            const distanceToDrawdown = currentBalance - maxDrawdownLevel
+            // Calculate percentage of distance relative to current balance for color coding
+            const distancePercentage = (distanceToDrawdown / currentBalance) * 100
             
             return (
-              <>
-                <Gauge 
-                  value={currentBalanceWithoutPayouts - effectiveDrawdownThreshold}
-                  max={maxBalance - effectiveDrawdownThreshold}
-                  size="md"
-                  type="drawdown"
-                  label="Drawdown Buffer"
-                />
-                <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                  <span>Current: ${currentBalanceWithoutPayouts.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                  <span>Drawdown at: ${effectiveDrawdownThreshold.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+              <div className="space-y-2 pt-2">
+                <div className="flex justify-between text-sm">
+                  <span>Current Balance</span>
+                  <span className="font-medium">${currentBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                 </div>
-              </>
+                <div className="flex justify-between text-sm">
+                  <span>Drawdown Level</span>
+                  <span className="font-medium text-destructive">${maxDrawdownLevel.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Distance to Drawdown</span>
+                  <span className={cn(
+                    "font-medium",
+                    distancePercentage > 3 ? "text-success" : distancePercentage > 1 ? "text-warning" : "text-destructive"
+                  )}>
+                    ${distanceToDrawdown.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                {account.trailingDrawdown && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Trailing Drawdown {account.trailingStopProfit ? `(Locks at $${account.trailingStopProfit.toLocaleString(undefined, { maximumFractionDigits: 2 })})` : ''}
+                  </div>
+                )}
+              </div>
             )
           })()}
         </div>
@@ -751,7 +793,7 @@ export function PropFirmCard() {
     const uniqueAccounts = new Set(trades.map(trade => trade.accountNumber))
     return Array.from(uniqueAccounts).map(accountNumber => {
       const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
-      const balance = accountTrades.reduce((total, trade) => total + trade.pnl, 0)
+      const balance = accountTrades.reduce((total, trade) => total + trade.pnl - (trade.commission || 0), 0)
       
       const dbAccount = dbAccounts.find(acc => acc.number === accountNumber)
       

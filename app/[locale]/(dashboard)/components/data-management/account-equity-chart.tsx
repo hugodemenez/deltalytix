@@ -112,7 +112,7 @@ export function AccountEquityChart({
     const allEvents: ChartEvent[] = [
       ...sortedTrades.map(trade => ({
         date: new Date(trade.entryDate),
-        amount: trade.pnl,
+        amount: trade.pnl - (trade.commission || 0),
         isPayout: false
       })),
       ...payoutPoints
