@@ -79,6 +79,7 @@ model User {
   subscriptions   Subscription?
   accounts        Account[]
   dashboardLayout DashboardLayout?
+  moods           Mood[]
 
   @@index([email])
   @@schema("public")
@@ -143,5 +144,20 @@ model SubscriptionFeedback {
   subscription      Subscription @relation(fields: [email], references: [email])
 
   @@index([email])
+  @@schema("public")
+}
+
+model Mood {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  day           DateTime
+  mood          String
+  conversation  Json?    // Stores the conversation history as JSON
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([day])
   @@schema("public")
 }

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical, Table2, MoreVertical } from 'lucide-react'
+import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical, Table2, MoreVertical, Smile } from 'lucide-react'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
@@ -50,6 +50,7 @@ import CommissionsPnLChart from './charts/commissions-pnl'
 import StatisticsWidget from './statistics/statistics-widget'
 import { cn } from '@/lib/utils'
 import { TradeTableReview } from './tables/trade-table-review'
+import { MoodSelector } from './calendar/mood-selector'
 
 interface WidgetOption {
   type: WidgetType
@@ -77,9 +78,10 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
       // On mobile, only allow tiny (shown as Small), medium (shown as Medium), and large (shown as Large)
       if (size === 'small' || size === 'small-long') return false
       
-      // Statistics widgets can only be tiny (Small)
+      // Statistics widgets and mood selector can only be tiny (Small)
       if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
-           'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(widgetType)) {
+           'longShortPerformance', 'tradePerformance', 'winningStreak',
+           'moodSelector'].includes(widgetType)) {
         return size === 'tiny'
       }
       
@@ -100,9 +102,10 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
         return size === 'large'
       }
       
-      // Statistics widgets can only be tiny
+      // Statistics widgets and mood selector can only be tiny
       if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
-           'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(widgetType)) {
+           'longShortPerformance', 'tradePerformance', 'winningStreak',
+           'moodSelector'].includes(widgetType)) {
         return size === 'tiny'
       }
       
@@ -861,9 +864,10 @@ export default function WidgetCanvas() {
       if (widget.type === 'calendarWidget' || widget.type === 'tradeTableReview') {
         return 'large' as const
       }
-      // Statistics widgets are always tiny
+      // Statistics widgets and mood selector are always tiny
       if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
-           'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(widget.type)) {
+           'longShortPerformance', 'tradePerformance', 'winningStreak',
+           'moodSelector'].includes(widget.type)) {
         return 'tiny' as const
       }
       // Charts can be medium or large
@@ -909,6 +913,8 @@ export default function WidgetCanvas() {
         return <StatisticsWidget size={effectiveSize} />
       case 'tradeTableReview':
         return <TradeTableReview />
+      case 'moodSelector':
+        return <MoodSelector onMoodSelect={(mood) => console.log('Selected mood:', mood)} />
       default:
         return <PlaceholderWidget size={effectiveSize} />
     }
@@ -1064,6 +1070,13 @@ export default function WidgetCanvas() {
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
             <DropdownMenuLabel>Other</DropdownMenuLabel>
+            <DropdownMenuItem 
+              onClick={() => addWidget('moodSelector', 'tiny')}
+              className="hover:bg-accent hover:text-accent-foreground"
+            >
+              <Smile className="mr-2 h-4 w-4" />
+              <span>Mood Selector</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="flex items-center gap-4">

@@ -325,5 +325,14 @@ export default {
         showAccountNumbers: "Show account numbers",
         hideAccountNumbers: "Hide account numbers",
         openFilters: "Open filters",
-    }
+    },
+    'mood.question': 'How are you feeling today?',
+    'mood.bad': 'Bad day',
+    'mood.okay': 'Okay day',
+    'mood.great': 'Great day',
+    'mood.saved': 'Your mood has been saved',
+    'mood.error': 'Failed to save your mood',
+    'error': 'Error',
+    'success': 'Success',
+    'auth.required': 'You need to be logged in to perform this action',
 } as const
