@@ -52,35 +52,125 @@ interface RithmicSyncCombinedProps {
 export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedProps) {
   const { user } = useUser()
   const { refreshTrades, trades } = useTrades()
-  const { connect, disconnect, sendMessage, isConnected } = useWebSocket()
+  const { 
+    connect, 
+    disconnect, 
+    isConnected, 
+    lastMessage, 
+    connectionStatus, 
+    orders: wsOrders,
+    selectedAccounts,
+    setSelectedAccounts,
+    availableAccounts,
+    setAvailableAccounts
+  } = useWebSocket()
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Check for active connection on mount
+  useEffect(() => {
+    if (isConnected && selectedAccounts.length > 0) {
+      console.log('Active connection detected, resuming processing view')
+      setStep('processing')
+    }
+  }, [isConnected, selectedAccounts])
+
   const [credentials, setCredentials] = useState<RithmicCredentials>({
     username: '',
     password: '',
     server: 'PAPER',
     userId: user?.id || ''
   })
-  const [accounts, setAccounts] = useState<RithmicAccount[]>([])
-  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
-  const [orders, setOrders] = useState<RithmicOrder[]>([])
-  const [ws, setWs] = useState<WebSocket | null>(null)
-  const [messages, setMessages] = useState<{ type: string; content: string }[]>([])
   const [token, setToken] = useState<string | null>(null)
   const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [feedbackMessages, setFeedbackMessages] = useState<string[]>([])
 
-  const addMessage = useCallback((message: string, type: string = 'log') => {
-    setMessages(prev => [...prev, { type, content: message }])
-    setFeedbackMessages(prev => [...prev, JSON.stringify({ type, message })])
-  }, [])
+  // Update feedback messages when receiving WebSocket messages
+  useEffect(() => {
+    if (lastMessage) {
+      let messageType = 'log'
+      let shouldAddMessage = true
+      let messageContent = lastMessage.message || JSON.stringify(lastMessage)
+
+      switch (lastMessage.type) {
+        case 'order_update':
+          messageType = 'order'
+          messageContent = `New order received: ${lastMessage.order?.order_id || 'Unknown'}`
+          break
+        case 'log':
+          messageType = lastMessage.level === 'error' ? 'error' : 'log'
+          messageContent = lastMessage.message || messageContent
+          break
+        case 'status':
+          messageType = 'status'
+          messageContent = lastMessage.message || messageContent
+          break
+        default:
+          shouldAddMessage = false
+      }
+
+      if (shouldAddMessage) {
+        const messageString = JSON.stringify({ type: messageType, message: messageContent })
+        setFeedbackMessages(prev => {
+          // Prevent duplicate messages
+          if (prev[prev.length - 1] === messageString) {
+            return prev
+          }
+          return [...prev, messageString]
+        })
+      }
+    }
+  }, [lastMessage])
+
+  // Update feedback messages for connection status changes
+  useEffect(() => {
+    if (connectionStatus) {
+      const messageString = JSON.stringify({ 
+        type: connectionStatus.toLowerCase().includes('error') ? 'error' : 'status',
+        message: connectionStatus 
+      })
+      setFeedbackMessages(prev => {
+        // Prevent duplicate messages
+        if (prev[prev.length - 1] === messageString) {
+          return prev
+        }
+        return [...prev, messageString]
+      })
+    }
+  }, [connectionStatus])
+
+  function handleStartProcessing() {
+    setIsLoading(true)
+    setStep('processing')
+
+    if (!token || !wsUrl) {
+      setFeedbackMessages(prev => [...prev, JSON.stringify({ 
+        type: 'error', 
+        message: 'No token or WebSocket URL available. Please reconnect.' 
+      })])
+      setIsLoading(false)
+      return
+    }
+
+    const startDate = calculateStartDate(selectedAccounts)
+    console.log('Connecting to WebSocket:', wsUrl)
+    connect(wsUrl, token, selectedAccounts, startDate)
+  }
 
   async function handleConnect(event: React.FormEvent) {
     event.preventDefault()
     setIsLoading(true)
 
+    // Disconnect existing WebSocket connection if any
+    if (isConnected) {
+      console.log('Disconnecting existing WebSocket connection before new connection attempt')
+      disconnect()
+    }
+
     try {
-      const response = await fetch(`https://${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
+      const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
+      const protocol = isLocalhost ? window.location.protocol : 'https:'
+      const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,17 +185,24 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
         throw new Error(data.message)
       }
 
-      setAccounts(data.accounts)
+      setAvailableAccounts(data.accounts)
       setToken(data.token)
+      const wsProtocol = isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
       setWsUrl(data.websocket_url.replace('ws://your-domain', 
-        `${window.location.protocol === 'https:' ? 'wss:' : 'wss:'}//${process.env.NEXT_PUBLIC_API_URL}`))
+        `${wsProtocol}//${process.env.NEXT_PUBLIC_API_URL}`))
       console.log('Token set:', data.token)
       console.log('WebSocket URL set:', data.websocket_url)
       setStep('select-accounts')
-      addMessage(`Retrieved ${data.accounts.length} accounts. Please select accounts and click "Start Processing"`, 'accounts')
+      setFeedbackMessages(prev => [...prev, JSON.stringify({ 
+        type: 'status', 
+        message: `Retrieved ${data.accounts.length} accounts. Please select accounts and click "Start Processing"` 
+      })])
     } catch (error) {
       console.error('Connection error:', error)
-      addMessage(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error')
+      setFeedbackMessages(prev => [...prev, JSON.stringify({ 
+        type: 'error', 
+        message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      })])
     } finally {
       setIsLoading(false)
     }
@@ -131,62 +228,6 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     // Format as YYYYMMDD
     return mostRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
   }
-
-  function handleStartProcessing() {
-    setIsLoading(true)
-    setStep('processing')
-
-    if (!token || !wsUrl) {
-      addMessage('No token or WebSocket URL available. Please reconnect.', 'error')
-      setIsLoading(false)
-      return
-    }
-
-    // Add initial message for total accounts
-    addMessage(JSON.stringify({
-      type: 'init_stats',
-      message: `Processing ${selectedAccounts.length} selected accounts`,
-      total_accounts: selectedAccounts.length
-    }))
-
-    // Connect using the WebSocket context
-    connect(wsUrl)
-  }
-
-  // Send init message when connection is established
-  useEffect(() => {
-    if (isConnected && step === 'processing') {
-      const startDate = calculateStartDate(selectedAccounts)
-      const message = { 
-        type: 'init',
-        token: token,
-        accounts: selectedAccounts,
-        start_date: startDate
-      }
-      console.log('Sending init message:', message)
-      sendMessage(message)
-    }
-  }, [isConnected, step, token, selectedAccounts, sendMessage])
-
-  // Listen for connection status changes
-  useEffect(() => {
-    if (isConnected) {
-      addMessage(JSON.stringify({
-        type: 'status',
-        message: 'WebSocket connected'
-      }))
-    }
-  }, [isConnected, addMessage])
-
-  // Cleanup WebSocket on unmount or when going back to previous steps
-  useEffect(() => {
-    if (step !== 'processing' && isConnected) {
-      disconnect()
-    }
-    return () => {
-      disconnect()
-    }
-  }, [step, isConnected, disconnect])
 
   return (
     <div className="space-y-6">
@@ -246,17 +287,17 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Select Accounts to Import</h3>
           <div className="space-y-2">
-            {accounts.map((account) => (
+            {availableAccounts.map((account) => (
               <div key={account.account_id} className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
                 <Checkbox
                   id={account.account_id}
                   checked={selectedAccounts.includes(account.account_id)}
                   onCheckedChange={(checked) => {
-                    setSelectedAccounts(prev => 
-                      checked 
-                        ? [...prev, account.account_id]
-                        : prev.filter(id => id !== account.account_id)
-                    )
+                    if (checked) {
+                      setSelectedAccounts([...selectedAccounts, account.account_id])
+                    } else {
+                      setSelectedAccounts(selectedAccounts.filter(id => id !== account.account_id))
+                    }
                   }}
                 />
                 <Label 
@@ -294,7 +335,6 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       {step === 'processing' && (
         <div className="space-y-4">
           <RithmicSyncFeedback 
-            messages={feedbackMessages} 
             totalAccounts={selectedAccounts.length}
           />
         </div>
@@ -302,4 +342,5 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     </div>
   )
 }
+
 

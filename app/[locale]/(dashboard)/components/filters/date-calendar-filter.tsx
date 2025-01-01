@@ -46,7 +46,7 @@ export default function DateCalendarFilter() {
       id="date"
       variant={"outline"}
       className={cn(
-        "w-full justify-start text-left font-normal",
+        "justify-start text-left font-normal",
         !dateRange && "text-muted-foreground"
       )}
       onClick={() => setCalendarOpen(true)}

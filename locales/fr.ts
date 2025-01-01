@@ -304,5 +304,23 @@ export default {
     'import.type.copyright.rithmic': 'Le logiciel R | API+™ est protégé par le droit d\'auteur © 2024 par Rithmic, LLC. Tous droits réservés.',
     'import.type.copyright.protocol': 'Le logiciel R | Protocol API™ est protégé par le droit d\'auteur © 2024 par Rithmic, LLC. Tous droits réservés.',
     'import.type.copyright.platform': 'Trading Platform by Rithmic™ est une marque déposée de Rithmic, LLC. Tous droits réservés.',
-    'import.type.copyright.omne': 'Le logiciel OMNE™ est protégé par le droit d\'auteur © 2024 par Omnesys, LLC et Omnesys Technologies, Inc. Tous droits réservés.'
+    'import.type.copyright.omne': 'Le logiciel OMNE™ est protégé par le droit d\'auteur © 2024 par Omnesys, LLC et Omnesys Technologies, Inc. Tous droits réservés.',
+    filters: {
+        search: "Rechercher...",
+        noResults: "Aucun résultat trouvé",
+        pickDate: "Choisir une période",
+        thisWeek: "Cette Semaine",
+        thisMonth: "Ce Mois",
+        lastThreeMonths: "3 Derniers Mois",
+        lastSixMonths: "6 Derniers Mois",
+        accounts: "Comptes",
+        propfirms: "Prop Firms",
+        instruments: "Instruments",
+        selectAllAccounts: "Sélectionner tous les comptes",
+        selectAllPropfirms: "Sélectionner toutes les prop firms",
+        selectAllInstruments: "Sélectionner tous les instruments",
+        showAccountNumbers: "Afficher les numéros de compte",
+        hideAccountNumbers: "Masquer les numéros de compte",
+        openFilters: "Ouvrir les filtres",
+    }
 } as const

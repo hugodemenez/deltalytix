@@ -11,6 +11,7 @@ import { WebSocketProvider } from "./components/context/websocket-context";
 import { OnbordaProvider, Onborda } from 'onborda'
 import { steps } from "./components/onboarding/onboarding-steps";
 import { TourCard } from "./components/onboarding/custom-card";
+import { WebSocketNotifications } from './components/websocket-notifications'
 
 export default async function RootLayout({ params: { locale }, children }: { params: { locale: string }, children: ReactElement }) {
   return (
@@ -20,6 +21,7 @@ export default async function RootLayout({ params: { locale }, children }: { par
           <UserDataProvider>
             <TradeDataProvider>
               <WebSocketProvider>
+                <WebSocketNotifications />
                 <div className="min-h-screen flex flex-col">
                   <OnbordaProvider>
                     <Onborda

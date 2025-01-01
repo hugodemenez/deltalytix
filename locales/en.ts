@@ -307,5 +307,23 @@ export default {
     'import.type.copyright.rithmic': 'The R | API+™ software is Copyright © 2024 by Rithmic, LLC. All rights reserved.',
     'import.type.copyright.protocol': 'The R | Protocol API™ software is Copyright © 2024 by Rithmic, LLC. All rights reserved.',
     'import.type.copyright.platform': 'Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.',
-    'import.type.copyright.omne': 'The OMNE™ software is Copyright © 2024 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.'
+    'import.type.copyright.omne': 'The OMNE™ software is Copyright © 2024 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.',
+    'filters': {
+        search: "Search...",
+        noResults: "No results found",
+        pickDate: "Pick a date range",
+        thisWeek: "This Week",
+        thisMonth: "This Month",
+        lastThreeMonths: "Last 3 Months",
+        lastSixMonths: "Last 6 Months",
+        accounts: "Accounts",
+        propfirms: "Prop Firms",
+        instruments: "Instruments",
+        selectAllAccounts: "Select all accounts",
+        selectAllPropfirms: "Select all prop firms",
+        selectAllInstruments: "Select all instruments",
+        showAccountNumbers: "Show account numbers",
+        hideAccountNumbers: "Hide account numbers",
+        openFilters: "Open filters",
+    }
 } as const

@@ -1,35 +1,16 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Progress } from "@/components/ui/progress"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2, CheckCircle2, AlertCircle, Calendar, ChevronDown, ChevronUp } from 'lucide-react'
+import { Loader2, CheckCircle2, AlertCircle, Calendar } from 'lucide-react'
+import { useWebSocket } from '../context/websocket-context'
 
 interface FeedbackProps {
-  messages: string[]
   totalAccounts: number
-}
-
-interface AccountProgress {
-  [accountId: string]: {
-    ordersProcessed: number
-    daysProcessed: number
-    totalDays: number
-    isComplete: boolean
-    error?: string
-    currentDate?: string
-    processedDates?: string[]
-  }
-}
-
-interface ProcessingStats {
-  totalAccountsAvailable: number
-  accountsProcessed: number
-  totalOrders: number
-  isComplete: boolean
 }
 
 const fadeInOut = {
@@ -39,241 +20,31 @@ const fadeInOut = {
   transition: { duration: 0.3 }
 }
 
-const slideDown = {
-  initial: { height: 0, opacity: 0 },
-  animate: { height: 'auto', opacity: 1 },
-  exit: { height: 0, opacity: 0 },
-  transition: { duration: 0.3 }
-}
-
-export function RithmicSyncFeedback({ messages, totalAccounts }: FeedbackProps) {
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'error'>('connecting')
-  const [accountsProgress, setAccountsProgress] = useState<AccountProgress>({})
-  const [currentAccount, setCurrentAccount] = useState<string | null>(null)
-  const [processingStats, setProcessingStats] = useState<ProcessingStats>({
-    totalAccountsAvailable: totalAccounts,
-    accountsProcessed: 0,
-    totalOrders: 0,
-    isComplete: false
-  })
-  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
-  const [showDetails, setShowDetails] = useState(false)
-
-  const updateAccountProgress = useCallback((accountId: string, ordersCount: number, isComplete: boolean) => {
-    setAccountsProgress(prev => ({
-      ...prev,
-      [accountId]: {
-        ...prev[accountId],
-        ordersProcessed: prev[accountId]?.ordersProcessed + ordersCount,
-        isComplete
-      }
-    }))
-    setProcessingStats(prev => ({
-      ...prev,
-      accountsProcessed: isComplete ? prev.accountsProcessed + 1 : prev.accountsProcessed,
-      totalOrders: prev.totalOrders + ordersCount
-    }))
-  },[])
-
-  const handleLogMessage = useCallback((message: string) => {
-    if (message.includes('WebSocket Connection Established')) {
-      setConnectionStatus('connected')
-    } else if (message.includes('Market Data Connection Login Complete') ||
-              message.includes('Trading System Connection Login Complete')) {
-      setConnectionStatus('connected')
-    } else if (message.includes('Processing date')) {
-      const match = message.match(/Processing date (\d+) of (\d+): (\d{8})/)
-      if (match) {
-        const [, currentDay, totalDays, date] = match
-        if (currentAccount) {
-          setAccountsProgress(prev => ({
-            ...prev,
-            [currentAccount]: {
-              ...prev[currentAccount],
-              daysProcessed: parseInt(currentDay),
-              totalDays: parseInt(totalDays),
-              currentDate: date
-            }
-          }))
-        }
-      }
-    } else if (message.includes('Successfully processed orders for date')) {
-      const date = message.match(/date (\d{8})/)?.[1]
-      if (date && currentAccount) {
-        setAccountsProgress(prev => ({
-          ...prev,
-          [currentAccount]: {
-            ...prev[currentAccount],
-            processedDates: [...(prev[currentAccount]?.processedDates || []), date]
-          }
-        }))
-      }
-    } else if (message.includes('Successfully added account')) {
-      const accountId = message.match(/account ([^"]+)/)?.[1]
-      if (accountId) {
-        setAccountsProgress(prev => ({
-          ...prev,
-          [accountId]: {
-            ordersProcessed: 0,
-            daysProcessed: 0,
-            totalDays: 0,
-            isComplete: false,
-            processedDates: []
-          }
-        }))
-      }
-    } else if (message.includes('Starting processing for account')) {
-      const accountId = message.match(/account \d+ of \d+: ([^"]+)/)?.[1]
-      if (accountId) {
-        setCurrentAccount(accountId)
-      }
-    } else if (message.includes('Completed processing account') && message.includes('collected')) {
-      const match = message.match(/account ([^,]+), collected (\d+) orders/)
-      if (match) {
-        const [, accountId, ordersStr] = match
-        const ordersCount = parseInt(ordersStr, 10)
-        setAccountsProgress(prev => ({
-          ...prev,
-          [accountId]: {
-            ...prev[accountId],
-            ordersProcessed: ordersCount,
-            isComplete: true
-          }
-        }))
-        setProcessingStats(prev => ({
-          ...prev,
-          accountsProcessed: prev.accountsProcessed + 1,
-          totalOrders: prev.totalOrders + ordersCount
-        }))
-      }
-    }
-  }, [currentAccount])
-
-  const handleCompleteMessage = useCallback((data: any) => {
-    const accountId = data.account_id
-    const ordersCount = data.orders_count || 0
-
-    if (accountId) {
-      setAccountsProgress(prev => {
-        const newProgress = {
-          ...prev,
-          [accountId]: {
-            ...prev[accountId],
-            ordersProcessed: ordersCount,
-            isComplete: true
-          }
-        }
-        
-        function isAccountProgress(acc: unknown): acc is AccountProgress[string] {
-          return acc !== null && 
-                 typeof acc === 'object' && 
-                 'isComplete' in acc && 
-                 typeof (acc as any).isComplete === 'boolean'
-        }
-        
-        const completedAccounts = Object.values(newProgress)
-          .filter(isAccountProgress)
-          .filter(acc => acc.isComplete)
-          .length
-        
-        setProcessingStats(prevStats => ({
-          ...prevStats,
-          accountsProcessed: completedAccounts,
-          totalOrders: prevStats.totalOrders + ordersCount,
-          isComplete: completedAccounts === prevStats.totalAccountsAvailable
-        }))
-
-        return newProgress
-      })
-    }
-  }, [])
-
-  const handleOrderMessage = useCallback((data: any) => {
-    if (data.account_id) {
-      updateAccountProgress(data.account_id, 1, false)
-    }
-  }, [updateAccountProgress])
-
-  const handleProgressMessage = useCallback((data: any) => {
-    if (data.account_id) {
-      setAccountsProgress(prev => ({
-        ...prev,
-        [data.account_id]: {
-          ...prev[data.account_id],
-          ordersProcessed: data.orders_processed,
-          daysProcessed: data.days_processed,
-          totalDays: data.total_days
-        }
-      }))
-    }
-  }, [])
-  useEffect(() => {
-    messages.forEach(msg => {
-      try {
-        const data = JSON.parse(typeof msg === 'string' ? msg : JSON.stringify(msg))
-
-        switch (data.type) {
-          case 'init':
-            if (data.token) {
-              // Handle initial connection with token
-              setConnectionStatus('connected')
-            }
-            break
-          case 'log':
-            handleLogMessage(data.message)
-            break
-          case 'complete':
-            handleCompleteMessage(data)
-            break
-          case 'order':
-            handleOrderMessage(data)
-            break
-          case 'progress':
-            handleProgressMessage(data)
-            break
-          case 'date_range':
-            setDateRange({ start: data.start_date, end: data.end_date })
-            break
-          case 'init_stats':
-            setProcessingStats(prev => ({
-              ...prev,
-              totalAccountsAvailable: data.total_accounts,
-              accountsProcessed: 0,
-              totalOrders: 0,
-              isComplete: false
-            }))
-            break
-          case 'status':
-            if (data.all_complete) {
-              setProcessingStats(prev => ({
-                ...prev,
-                isComplete: true,
-                totalOrders: data.total_orders || prev.totalOrders
-              }))
-            }
-            break
-        }
-      } catch (error) {
-        console.error('Error parsing message:', error, msg)
-      }
-    })
-  }, [messages, handleLogMessage, handleCompleteMessage, handleOrderMessage, handleProgressMessage])
-
-  const overallProgress = processingStats.totalAccountsAvailable ? 
-    (processingStats.accountsProcessed / processingStats.totalAccountsAvailable) * 100 : 0
+export function RithmicSyncFeedback({ totalAccounts }: FeedbackProps) {
+  const { accountsProgress, currentAccount, processingStats, dateRange, connectionStatus } = useWebSocket()
 
   // Calculate progress for a specific account
-  const getAccountProgress = useCallback((account: AccountProgress[string]) => {
+  const getAccountProgress = (account: typeof accountsProgress[string]) => {
     if (account.isComplete) return 100
     if (!account.totalDays) return 0
     return (account.daysProcessed / account.totalDays) * 100
-  }, [])
+  }
 
-  const getAccountStatus = useCallback((accountId: string, progress: AccountProgress[string]) => {
+  const getAccountStatus = (accountId: string, progress: typeof accountsProgress[string]) => {
     if (progress.isComplete) return { label: 'Complete', variant: 'default' as const }
     if (accountId === currentAccount) return { label: 'Processing', variant: 'secondary' as const }
     return { label: 'Idle', variant: 'outline' as const }
-  }, [currentAccount])
+  }
+
+  const getConnectionIcon = () => {
+    if (connectionStatus.includes('Error')) {
+      return <AlertCircle className="h-5 w-5 text-red-500" />
+    }
+    if (connectionStatus === 'Connected') {
+      return <CheckCircle2 className="h-5 w-5 text-green-500" />
+    }
+    return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+  }
 
   return (
     <Card className="w-full mx-auto overflow-hidden">
@@ -285,9 +56,7 @@ export function RithmicSyncFeedback({ messages, totalAccounts }: FeedbackProps) 
             animate={{ scale: 1 }}
             transition={{ duration: 0.3 }}
           >
-            {connectionStatus === 'connecting' && <Loader2 className="h-5 w-5 animate-spin text-blue-500" />}
-            {connectionStatus === 'connected' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
-            {connectionStatus === 'error' && <AlertCircle className="h-5 w-5 text-red-500" />}
+            {getConnectionIcon()}
           </motion.div>
         </CardTitle>
       </CardHeader>
@@ -346,6 +115,16 @@ export function RithmicSyncFeedback({ messages, totalAccounts }: FeedbackProps) 
                       <span>Days: {progress.daysProcessed} / {progress.totalDays}</span>
                       <span>Orders: {progress.ordersProcessed}</span>
                     </div>
+                    {progress.currentDate && !progress.isComplete && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Processing day {progress.currentDayNumber} - {progress.currentDate}
+                      </div>
+                    )}
+                    {progress.lastProcessedDate && (
+                      <div className="text-xs text-green-500 mt-1">
+                        Last processed: {progress.lastProcessedDate}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}

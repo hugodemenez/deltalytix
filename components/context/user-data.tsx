@@ -50,8 +50,6 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [user?.email])
 
   const isPlusUser = () => {
-    console.log("subscription?.isActive", subscription?.isActive)
-    console.log("subscription?.plan", subscription?.plan)
     return Boolean(subscription?.isActive && ['plus', 'pro'].includes(subscription?.plan?.split('_')[0].toLowerCase()||''));
   };
 

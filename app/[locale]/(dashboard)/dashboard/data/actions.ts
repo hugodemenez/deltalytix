@@ -367,13 +367,35 @@ export async function updatePayout(
       data: {
         date: data.date,
         amount: data.amount,
-        status: data.status, // Make sure we're updating the status
+        status: data.status,
       },
     })
     return updatedPayout
   } catch (error) {
     console.error('Error updating payout:', error)
     throw new Error('Failed to update payout')
+  }
+}
+
+export async function renameInstrument(accountNumber: string, oldInstrumentName: string, newInstrumentName: string, userId: string): Promise<void> {
+  try {
+    // Update all trades for this instrument in this account
+    await prisma.trade.updateMany({
+      where: {
+        accountNumber: accountNumber,
+        instrument: oldInstrumentName,
+        userId: userId
+      },
+      data: {
+        instrument: newInstrumentName
+      }
+    })
+  } catch (error) {
+    console.error('Error renaming instrument:', error)
+    if (error instanceof Error) {
+      throw error
+    }
+    throw new Error('Failed to rename instrument')
   }
 }
 

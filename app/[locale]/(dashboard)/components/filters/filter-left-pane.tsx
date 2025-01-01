@@ -186,6 +186,7 @@ export default function FilterLeftPane() {
 
   const FilterContent = useMemo(() => (
     <div className='space-y-6'>
+      <DateCalendarFilter />
       <div className="flex items-center justify-between">
         <Label htmlFor="anonymous-mode" className="text-sm font-medium">
           {t('filters.showAccountNumbers')}
@@ -196,7 +197,6 @@ export default function FilterLeftPane() {
           onCheckedChange={setShowAccountNumbers}
         />
       </div>
-      <DateCalendarFilter />
       <Command className="rounded-lg border min-h-[calc(100vh-20rem)]" shouldFilter={false}>
         <div className="border-b">
           <CommandInput
@@ -254,8 +254,8 @@ export default function FilterLeftPane() {
               <Filter className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
-            <ScrollArea className="h-full px-4 py-6">
+          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <ScrollArea className="h-full pt-2 ">
               {FilterContent}
             </ScrollArea>
           </SheetContent>
@@ -264,14 +264,5 @@ export default function FilterLeftPane() {
     )
   }
 
-  return (
-    <div 
-      ref={filterRef}
-      className="fixed top-18 left-0 h-[calc(100vh-4.5rem)] w-[300px] bg-background border-r border-border/40"
-    >
-      <ScrollArea className="h-full px-4 py-6">
-        {FilterContent}
-      </ScrollArea>
-    </div>
-  )
+  return null;
 }

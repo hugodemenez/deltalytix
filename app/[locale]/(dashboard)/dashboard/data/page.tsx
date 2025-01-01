@@ -10,9 +10,8 @@ import { PropFirmCard } from '../../components/data-management/prop-firm-card'
 export default function DashboardPage() {
   return (
 
-    <div className="flex w-full relative  min-h-screen">
-      <FilterLeftPane />
-      <div className='flex flex-1 flex-col w-full sm:pl-[300px] p-4 '>
+    <div className="flex w-full relative  min-h-screen py-8">
+      <div className='flex flex-1 flex-col w-full p-4 '>
 
         <Tabs defaultValue="accounts" className="w-full">
           <TabsList>

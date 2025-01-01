@@ -284,8 +284,6 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                     <RithmicSyncCombined 
                       setIsOpen={setIsOpen}
                       onSync={async (data) => {
-                        // Implement sync logic here
-                        console.log('Syncing with Rithmic:', data)
                       }} 
                     />
                     <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
