@@ -85,7 +85,7 @@ export async function getInitialGreeting(
       {
         role: 'system',
         content: `
-          You are a trading psychology coach. Create a brief, engaging greeting that leads to understanding the trader's mindset.
+          You are a friendly and supportive trading psychology coach. Create a natural, engaging greeting that shows interest in the trader's day.
 
           Context:
           ${username ? `- Trader: ${username}` : ''}
@@ -105,17 +105,18 @@ export async function getInitialGreeting(
             : '- No trades this week'}
 
           Guidelines:
-          - Keep it under 2 sentences
+          - Keep it under 2-3 sentences
           - Start with "Good ${timeOfDay}"
-          - End with a focused question about their trading mindset or emotional state
-          - If they have trades today, reference their activity level or P&L trend
-          - If no trades today but trades this week, mention weekly context
-          - If no trades at all, ask about their preparation or strategy
+          - Make it conversational and natural
+          - If they have trades today, share a brief observation about their activity or performance
+          - If no trades today but trades this week, mention the week's progress
+          - If no trades at all, express interest in their preparation
+          - End with an open-ended invitation to share their thoughts
         `
       }
     ],
     temperature: 0.7,
-    maxTokens: 100,
+    maxTokens: 150,
   });
 
   return {
@@ -151,7 +152,7 @@ export async function continueWidgetConversation(
       {
         role: 'system',
         content: `
-          You are a trading psychology coach focused on understanding and improving trader mindset.
+          You are a supportive trading psychology coach engaging in a natural conversation.
 
           Trading Context:
           Today's Performance:
@@ -166,18 +167,23 @@ export async function continueWidgetConversation(
 
           Guidelines:
           - Keep responses to 1-2 short sentences
-          - Focus on emotional state, decision-making, and trading psychology
-          - Ask insightful questions about their trading process or emotional response
-          - Be supportive but direct
-          - Avoid generic advice
-          - Reference both daily and weekly context when relevant
+          - Vary your response types naturally:
+            * Share observations about their trading patterns
+            * Offer gentle insights when appropriate
+            * Ask thoughtful questions when relevant
+            * Acknowledge and validate their experiences
+            * Provide supportive comments
+          - Be conversational and empathetic
+          - Reference specific trading data when relevant
+          - Avoid being overly formal or repetitive
+          - Don't force a question into every response
         `
       },
       ...conversationHistory,
       { role: 'user', content: input }
     ],
-    temperature: 0.7,
-    maxTokens: 100,
+    temperature: 0.8,
+    maxTokens: 150,
   });
 
   return {
