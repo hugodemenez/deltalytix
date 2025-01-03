@@ -16,6 +16,7 @@ import { getMoodForDay, saveMood } from '@/server/mood';
 import { generateId } from 'ai';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { Trade as PrismaTrade } from '@prisma/client';
+import { useI18n } from "@/locales/client";
 
 type MoodType = 'bad' | 'okay' | 'great';
 
@@ -62,6 +63,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const t = useI18n();
 
   const todayTrades = useMemo(() => {
     if (!trades) return [];
@@ -251,14 +253,14 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
     <Card className="h-full flex flex-col bg-background">
       <CardHeader className="flex-none p-4 border-b">
         <div className="flex justify-between items-center">
-          <CardTitle>Chat</CardTitle>
+          <CardTitle>{t('chat.title')}</CardTitle>
           <Button
             variant="ghost"
             size="icon"
             onClick={resetConversation}
             disabled={isLoading}
             className="h-8 w-8"
-            title="Reset conversation"
+            title={t('chat.resetConversation')}
           >
             <RotateCcw className="h-4 w-4" />
           </Button>
@@ -341,7 +343,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
                   disabled={isLoading}
                 >
                   <Camera className="mr-2 h-4 w-4" />
-                  Camera
+                  {t('chat.camera')}
                 </Button>
                 <Button
                   variant="ghost"
@@ -350,14 +352,14 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
                   disabled={isLoading}
                 >
                   <Folder className="mr-2 h-4 w-4" />
-                  Folder
+                  {t('chat.folder')}
                 </Button>
               </PopoverContent>
             </Popover>
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={isLoading ? "AI is thinking..." : "Write a message..."}
+              placeholder={isLoading ? t('chat.aiThinking') : t('chat.writeMessage')}
               className="flex-grow bg-background/50"
               disabled={isLoading}
             />

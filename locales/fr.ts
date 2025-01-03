@@ -331,5 +331,12 @@ export default {
         showAccountNumbers: "Afficher les numéros de compte",
         hideAccountNumbers: "Masquer les numéros de compte",
         openFilters: "Ouvrir les filtres",
-    }
+    },
+    'chat.title': 'Chat',
+    'chat.resetConversation': 'Réinitialiser la conversation',
+    'chat.camera': 'Caméra',
+    'chat.folder': 'Dossier',
+    'chat.aiThinking': 'L\'IA réfléchit...',
+    'chat.writeMessage': 'Écrivez un message...',
+    'chat.noTradesAvailable': 'Aucun trade disponible',
 } as const

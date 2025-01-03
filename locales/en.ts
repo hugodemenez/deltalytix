@@ -335,4 +335,11 @@ export default {
     'error': 'Error',
     'success': 'Success',
     'auth.required': 'You need to be logged in to perform this action',
+    'chat.title': 'Chat',
+    'chat.resetConversation': 'Reset conversation',
+    'chat.camera': 'Camera',
+    'chat.folder': 'Folder',
+    'chat.aiThinking': 'AI is thinking...',
+    'chat.writeMessage': 'Write a message...',
+    'chat.noTradesAvailable': 'No trades available',
 } as const

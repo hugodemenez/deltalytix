@@ -91,6 +91,11 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
         return size === 'large'
       }
       
+      // Chat widget can only be medium or large
+      if (widgetType === 'chatWidget') {
+        return size === 'large'
+      }
+      
       // Charts can be medium or large
       if (widgetType.includes('Chart') || widgetType === 'tickDistribution' || 
           widgetType === 'commissionsPnl') {
@@ -108,6 +113,11 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
            'longShortPerformance', 'tradePerformance', 'winningStreak',
            'moodSelector'].includes(widgetType)) {
         return size === 'tiny'
+      }
+      
+      // Chat widget can only be medium or large
+      if (widgetType === 'chatWidget') {
+        return size === 'large'
       }
       
       // Charts can be small, medium or large
@@ -433,12 +443,26 @@ export default function WidgetCanvas() {
       case 'small-long':
         return { w: 6, h: 2 }
       case 'medium':
-        return { w: 6, h: 4 } // Increased height for calendar widget
+        return { w: 6, h: 4 }
       case 'large':
-        return { w: 6, h: 8 } // Also increased height proportionally for large size
+        return { w: 6, h: 8 }
       default:
         return { w: 6, h: 4 }
     }
+  }
+
+  // Add a function to get grid dimensions based on widget type and size
+  const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
+    // Special case for chat widget - use small width but large height
+    const chatWidgetTypes: WidgetType[] = ['chatWidget'];
+    if (chatWidgetTypes.includes(type)) {
+      if (isSmallScreen) {
+        return { w: 12, h: 6 } // Full width on mobile but same height as large
+      }
+      return { w: 3, h: 8 } // Same width as small (3 columns) but same height as large on desktop
+    }
+    
+    return sizeToGrid(size, isSmallScreen)
   }
 
   // Create layouts for different breakpoints
@@ -446,28 +470,25 @@ export default function WidgetCanvas() {
     const layouts = {
       lg: widgets.map(widget => ({
         ...widget,
-        ...sizeToGrid(widget.size)
+        ...getWidgetGrid(widget.type, widget.size)
       })),
       md: widgets.map(widget => ({
         ...widget,
-        ...sizeToGrid(widget.size)
+        ...getWidgetGrid(widget.type, widget.size)
       })),
       sm: widgets.map(widget => ({
         ...widget,
-        ...sizeToGrid(widget.size, true),
-        w: 12, // Force full width
+        ...getWidgetGrid(widget.type, widget.size, true),
         x: 0 // Align to left
       })),
       xs: widgets.map(widget => ({
         ...widget,
-        ...sizeToGrid(widget.size, true),
-        w: 12, // Force full width
+        ...getWidgetGrid(widget.type, widget.size, true),
         x: 0 // Align to left
       })),
       xxs: widgets.map(widget => ({
         ...widget,
-        ...sizeToGrid(widget.size, true),
-        w: 12, // Force full width
+        ...getWidgetGrid(widget.type, widget.size, true),
         x: 0 // Align to left
       }))
     }
@@ -910,8 +931,24 @@ export default function WidgetCanvas() {
         return <TradeTableReview />
       case 'moodSelector':
         return <MoodSelector onMoodSelect={(mood) => console.log('Selected mood:', mood)} />
-      case 'chatWidget':
-        return <ChatWidget size={effectiveSize} />
+      case 'chatWidget': {
+        const containerClasses = cn(
+          "h-full w-full",
+          "flex items-center justify-center",
+          isMobile ? "px-4" : ""
+        )
+        const chatClasses = cn(
+          "h-full w-full",
+          isMobile ? "max-w-[500px]" : ""
+        )
+        return (
+          <div className={containerClasses}>
+            <div className={chatClasses}>
+              <ChatWidget size={effectiveSize} />
+            </div>
+          </div>
+        )
+      }
       default:
         return <PlaceholderWidget size={effectiveSize} />
     }

@@ -6,6 +6,7 @@ import React, { ReactNode } from 'react';
 import { generateId } from 'ai';
 import { groupBy } from '@/lib/utils';
 import { Trade as PrismaTrade } from '@prisma/client';
+import { getCurrentLocale } from '@/locales/server';
 
 export interface ServerMessage {
   role: 'user' | 'assistant' | 'system';
@@ -78,6 +79,8 @@ export async function getInitialGreeting(
   const todaySummary = generateTradeSummary(todayTrades);
   const weekSummary = generateTradeSummary(weekTrades);
   const model = openai.chat('gpt-3.5-turbo');
+  const locale = await getCurrentLocale();
+  console.error('greeting')
   
   const { text } = await generateText({
     model,
@@ -86,6 +89,7 @@ export async function getInitialGreeting(
         role: 'system',
         content: `
           You are a friendly and supportive trading psychology coach. Create a natural, engaging greeting that shows interest in the trader's day.
+          You MUST respond in ${locale} language.
 
           Context:
           ${username ? `- Trader: ${username}` : ''}
@@ -106,7 +110,7 @@ export async function getInitialGreeting(
 
           Guidelines:
           - Keep it under 2-3 sentences
-          - Start with "Good ${timeOfDay}"
+          - Start with a greeting appropriate for ${timeOfDay} in ${locale} language
           - Make it conversational and natural
           - If they have trades today, share a brief observation about their activity or performance
           - If no trades today but trades this week, mention the week's progress
@@ -145,6 +149,7 @@ export async function continueWidgetConversation(
   const todaySummary = generateTradeSummary(todayTrades);
   const weekSummary = generateTradeSummary(weekTrades);
   const model = openai.chat('gpt-3.5-turbo');
+  const locale = await getCurrentLocale();
 
   const { text } = await generateText({
     model,
@@ -153,6 +158,7 @@ export async function continueWidgetConversation(
         role: 'system',
         content: `
           You are a supportive trading psychology coach engaging in a natural conversation.
+          You MUST respond in ${locale} language.
 
           Trading Context:
           Today's Performance:
