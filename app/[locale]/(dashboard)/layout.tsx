@@ -12,6 +12,7 @@ import { OnbordaProvider, Onborda } from 'onborda'
 import { steps } from "./components/onboarding/onboarding-steps";
 import { TourCard } from "./components/onboarding/custom-card";
 import { WebSocketNotifications } from './components/websocket-notifications'
+import { MoodProvider } from '@/components/context/mood-data';
 
 export default async function RootLayout({ params: { locale }, children }: { params: { locale: string }, children: ReactElement }) {
   return (
@@ -19,30 +20,32 @@ export default async function RootLayout({ params: { locale }, children }: { par
       <AI>
         <ThemeProvider>
           <UserDataProvider>
-            <TradeDataProvider>
-              <WebSocketProvider>
-                <WebSocketNotifications />
-                <div className="min-h-screen flex flex-col">
-                  <OnbordaProvider>
-                    <Onborda
-                      steps={steps}
-                      showOnborda={true}
-                      shadowRgb="0,0,0"
-                      shadowOpacity="0.8"
-                      cardComponent={TourCard}
-                      cardTransition={{ duration: 2, type: "tween" }}
-                    >
-                      <Toaster />
-                      <Navbar />
-                      <div className="flex flex-1 px-2 sm:px-8">
-                        {children}
-                      </div>
-                      <Modals />
-                    </Onborda>
-                  </OnbordaProvider>
-                </div>
-              </WebSocketProvider>
-            </TradeDataProvider>
+            <MoodProvider>
+              <TradeDataProvider>
+                <WebSocketProvider>
+                  <WebSocketNotifications />
+                  <div className="min-h-screen flex flex-col">
+                    <OnbordaProvider>
+                      <Onborda
+                        steps={steps}
+                        showOnborda={true}
+                        shadowRgb="0,0,0"
+                        shadowOpacity="0.8"
+                        cardComponent={TourCard}
+                        cardTransition={{ duration: 2, type: "tween" }}
+                      >
+                        <Toaster />
+                        <Navbar />
+                        <div className="flex flex-1 px-2 sm:px-8">
+                          {children}
+                        </div>
+                        <Modals />
+                      </Onborda>
+                    </OnbordaProvider>
+                  </div>
+                </WebSocketProvider>
+              </TradeDataProvider>
+            </MoodProvider>
           </UserDataProvider>
         </ThemeProvider>
       </AI>

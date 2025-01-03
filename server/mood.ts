@@ -3,21 +3,23 @@
 import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 
-type Conversation = {
-  role: 'user' | 'assistant'
-  content: string
-}
+export type Conversation = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+};
 
 export async function saveMood(
   userId: string,
   mood: 'bad' | 'okay' | 'great',
-  conversation?: Conversation[]
+  conversation?: Conversation[],
+  date?: Date
 ) {
   const prisma = new PrismaClient()
   try {
     // Get current date with time set to start of day in user's timezone
     const now = new Date()
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12) // Set to noon to avoid timezone issues
+    const targetDate = date || now
+    const today = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 12) // Set to noon to avoid timezone issues
 
     // Check if mood already exists for today
     const existingMood = await prisma.mood.findFirst({

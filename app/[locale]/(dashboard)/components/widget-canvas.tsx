@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical, Table2, MoreVertical, Smile } from 'lucide-react'
+import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical, Table2, MoreVertical, Smile, MessageSquare } from 'lucide-react'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
@@ -51,6 +51,7 @@ import StatisticsWidget from './statistics/statistics-widget'
 import { cn } from '@/lib/utils'
 import { TradeTableReview } from './tables/trade-table-review'
 import { MoodSelector } from './calendar/mood-selector'
+import ChatWidget from './chat-widget'
 
 interface WidgetOption {
   type: WidgetType
@@ -915,6 +916,8 @@ export default function WidgetCanvas() {
         return <TradeTableReview />
       case 'moodSelector':
         return <MoodSelector onMoodSelect={(mood) => console.log('Selected mood:', mood)} />
+      case 'chatWidget':
+        return <ChatWidget size={effectiveSize} />
       default:
         return <PlaceholderWidget size={effectiveSize} />
     }
@@ -1076,6 +1079,15 @@ export default function WidgetCanvas() {
             >
               <Smile className="mr-2 h-4 w-4" />
               <span>Mood Selector</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-border" />
+            <DropdownMenuLabel>Communication</DropdownMenuLabel>
+            <DropdownMenuItem 
+              onClick={() => addWidget('chatWidget', 'medium')}
+              className="hover:bg-accent hover:text-accent-foreground"
+            >
+              <MessageSquare className="mr-2 h-4 w-4" />
+              <span>Chat</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

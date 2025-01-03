@@ -17,6 +17,10 @@ import { CalendarEntry } from "@/types/calendar"
 import { useTheme } from "@/components/context/theme-provider"
 import { Button } from "@/components/ui/button"
 import { FaRegSadTear, FaRegMeh, FaRegSmileBeam } from "react-icons/fa"
+import { saveMood, getMoodForDay } from '@/server/mood'
+import { useUser } from '@/components/context/user-data'
+import { useToast } from '@/hooks/use-toast'
+import { useI18n } from '@/locales/client'
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;
@@ -47,6 +51,103 @@ const formatDuration = (seconds: number) => {
 export function Charts({ dayData }: ChartsProps) {
   const { effectiveTheme } = useTheme()
   const isDarkMode = effectiveTheme === 'dark'
+  const { user } = useUser()
+  const { toast } = useToast()
+  const t = useI18n()
+  const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
+  const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
+
+  const STORAGE_KEY = 'daily_mood'
+
+  // Load mood from localStorage or fetch from server on mount
+  React.useEffect(() => {
+    const loadMood = async () => {
+      if (!user?.id || !dayData?.trades?.[0]?.entryDate) return
+
+      // Check localStorage first
+      const focusedDay = new Date(dayData.trades[0].entryDate).toISOString().split('T')[0]
+      const storedMoodData = localStorage.getItem(STORAGE_KEY)
+      
+      if (storedMoodData) {
+        const storedMood = JSON.parse(storedMoodData)
+        if (storedMood.date === focusedDay) {
+          setSelectedMood(storedMood.mood)
+          return
+        }
+      }
+
+      // If no valid localStorage data, fetch from server
+      try {
+        const mood = await getMoodForDay(user.id, new Date(dayData.trades[0].entryDate))
+        if (mood) {
+          setSelectedMood(mood.mood as 'bad' | 'okay' | 'great')
+          // Update localStorage
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            mood: mood.mood,
+            date: focusedDay
+          }))
+        }
+      } catch (error) {
+        console.error('Error loading mood:', error)
+      }
+    }
+
+    loadMood()
+  }, [user?.id, dayData?.trades])
+
+  const handleMoodSelect = async (mood: 'bad' | 'okay' | 'great') => {
+    if (!user?.id || !dayData?.trades?.[0]?.entryDate) {
+      toast({
+        title: t('error'),
+        description: t('auth.required'),
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(mood)
+    try {
+      const date = new Date(dayData.trades[0].entryDate)
+      // Set the time to noon to avoid timezone issues
+      date.setHours(12, 0, 0, 0)
+      await saveMood(user.id, mood, undefined, date)
+      setSelectedMood(mood)
+      
+      // Save to localStorage
+      const focusedDay = date.toISOString().split('T')[0]
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        mood,
+        date: focusedDay
+      }))
+
+      toast({
+        title: t('success'),
+        description: t('mood.saved'),
+      })
+    } catch (error) {
+      console.error('Error saving mood:', error)
+      toast({
+        title: t('error'),
+        description: t('mood.error'),
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(null)
+    }
+  }
+
+  const getMoodButtonStyle = (moodType: 'bad' | 'okay' | 'great') => {
+    const baseStyle = "flex flex-col items-center h-auto py-2 px-4"
+    const hoverStyle = moodType === 'bad' ? 'hover:text-red-500' : 
+                      moodType === 'okay' ? 'hover:text-yellow-500' : 
+                      'hover:text-green-500'
+    const selectedStyle = selectedMood === moodType ? 
+                         (moodType === 'bad' ? 'text-red-500' : 
+                          moodType === 'okay' ? 'text-yellow-500' : 
+                          'text-green-500') : ''
+    
+    return `${baseStyle} ${hoverStyle} ${selectedStyle}`
+  }
 
   if (!dayData?.trades?.length) {
     return (
@@ -204,31 +305,31 @@ export function Charts({ dayData }: ChartsProps) {
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center hover:text-red-500 h-auto py-2 px-4"
-                onClick={() => {/* Handle mood selection */}}
+                className={getMoodButtonStyle('bad')}
+                onClick={() => handleMoodSelect('bad')}
+                disabled={isLoading !== null}
               >
-                <FaRegSadTear className="h-6 w-6 mb-1" />
-                <span className="text-sm font-medium">Bad</span>
+                <FaRegSadTear className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
               </Button>
               
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center hover:text-yellow-500 h-auto py-2 px-4"
-                onClick={() => {/* Handle mood selection */}}
+                className={getMoodButtonStyle('okay')}
+                onClick={() => handleMoodSelect('okay')}
+                disabled={isLoading !== null}
               >
-                <FaRegMeh className="h-6 w-6 mb-1" />
-                <span className="text-sm font-medium">Okay</span>
+                <FaRegMeh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
               </Button>
               
               <Button
                 variant="ghost"
                 size="lg"
-                className="flex flex-col items-center hover:text-green-500 h-auto py-2 px-4"
-                onClick={() => {/* Handle mood selection */}}
+                className={getMoodButtonStyle('great')}
+                onClick={() => handleMoodSelect('great')}
+                disabled={isLoading !== null}
               >
-                <FaRegSmileBeam className="h-6 w-6 mb-1" />
-                <span className="text-sm font-medium">Great</span>
+                <FaRegSmileBeam className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
               </Button>
             </div>
           </CardContent>

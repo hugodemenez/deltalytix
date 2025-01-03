@@ -15,7 +15,8 @@ export type WidgetType =
   | 'winningStreak'
   | 'statisticsWidget'
   | 'tradeTableReview'
-  | 'moodSelector';
+  | 'moodSelector'
+  | 'chatWidget';
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large'
 export type ChartSize = 'small' | 'small-long' | 'medium' | 'large'
 
