@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Camera, Folder, Send } from 'lucide-react';
+import { Plus, Camera, Folder, Send, RotateCcw } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -107,7 +107,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
         );
         setMessages([{
           id: greeting.id,
-          role: greeting.role,
+          role: 'assistant',
           content: greeting.display
         }]);
       } catch (error) {
@@ -222,10 +222,47 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
     scrollArea.scrollTop += e.deltaY;
   }
 
+  const resetConversation = async () => {
+    if (!user?.id) return;
+    
+    setIsLoading(true);
+    try {
+      // Get new initial greeting
+      const greeting = await getInitialGreeting(
+        todayTrades,
+        weekTrades,
+        user?.user_metadata?.full_name || user?.email?.split('@')[0]
+      );
+      
+      // Reset messages to just the new greeting
+      setMessages([{
+        id: greeting.id,
+        role: 'assistant',
+        content: greeting.display
+      }]);
+    } catch (error) {
+      console.error('Error resetting conversation:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <Card className="h-full flex flex-col bg-background">
       <CardHeader className="flex-none p-4 border-b">
-        <CardTitle>Chat</CardTitle>
+        <div className="flex justify-between items-center">
+          <CardTitle>Chat</CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={resetConversation}
+            disabled={isLoading}
+            className="h-8 w-8"
+            title="Reset conversation"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0 p-0 relative overflow-hidden">
         <ScrollArea 
