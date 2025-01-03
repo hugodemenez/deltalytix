@@ -682,7 +682,7 @@ export default function WidgetCanvas() {
     }
     
     const currentLayout = layoutState.layouts[layoutState.activeLayout]
-    const grid = sizeToGrid(effectiveSize)
+    const grid = sizeToGrid(effectiveSize, layoutState.activeLayout === 'mobile')
     
     // Initialize variables for finding the best position
     let bestX = 0
@@ -750,12 +750,10 @@ export default function WidgetCanvas() {
             }
 
             const updatedWidgets = [...currentLayout, newWidget]
-            const responsiveLayouts = generateResponsiveLayout(updatedWidgets)
             
             const newLayouts = {
               ...layoutState.layouts,
-              desktop: responsiveLayouts.lg,
-              mobile: responsiveLayouts.sm
+              [layoutState.activeLayout]: updatedWidgets
             }
             
             setLayoutState(prev => ({
@@ -782,12 +780,10 @@ export default function WidgetCanvas() {
     }
 
     const updatedWidgets = [...currentLayout, newWidget]
-    const responsiveLayouts = generateResponsiveLayout(updatedWidgets)
     
     const newLayouts = {
       ...layoutState.layouts,
-      desktop: responsiveLayouts.lg,
-      mobile: responsiveLayouts.sm
+      [layoutState.activeLayout]: updatedWidgets
     }
     
     setLayoutState(prev => ({
@@ -800,12 +796,10 @@ export default function WidgetCanvas() {
 
   const removeWidget = async (i: string) => {
     if (!user?.id) return
-    const updatedDesktopWidgets = layoutState.layouts.desktop.filter(widget => widget.i !== i)
-    const updatedMobileWidgets = layoutState.layouts.mobile.filter(widget => widget.i !== i)
+    const updatedWidgets = layoutState.layouts[layoutState.activeLayout].filter(widget => widget.i !== i)
     const newLayouts = {
       ...layoutState.layouts,
-      desktop: updatedDesktopWidgets,
-      mobile: updatedMobileWidgets
+      [layoutState.activeLayout]: updatedWidgets
     }
     setLayoutState(prev => ({
       ...prev,
