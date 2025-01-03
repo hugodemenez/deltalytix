@@ -1,17 +1,19 @@
 'use client'
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays } from "date-fns"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Trade } from "@prisma/client"
+import { Trade, FinancialEvent } from "@prisma/client"
 import { updateTradesWithComment } from "@/server/database"
 import { toast } from "@/hooks/use-toast"
 import { CalendarEntry, CalendarData } from "@/types/calendar"
 import { CalendarModal } from "./new-modal"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { getFinancialEvents } from "@/server/financial-events"
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -41,16 +43,46 @@ const formatCurrency = (value: number) => {
   return formatted
 }
 
-export default function CalendarPnl({ calendarData }: { calendarData: CalendarData }) {
+interface CalendarPnlProps {
+  calendarData: CalendarData;
+  financialEvents?: FinancialEvent[];
+}
+
+export default function CalendarPnl({ calendarData, financialEvents = [] }: CalendarPnlProps) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [aiComment, setAiComment] = useState<string>("")
   const [aiEmotion, setAiEmotion] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
+  const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>(financialEvents)
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
   const calendarDays = getCalendarDays(monthStart, monthEnd)
+
+  // Fetch financial events when month changes
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const events = await getFinancialEvents(currentDate)
+        if (Array.isArray(events)) {
+          setMonthEvents(events)
+        } else {
+          console.error('Unexpected events format:', events)
+          setMonthEvents([])
+        }
+      } catch (error) {
+        console.error('Error fetching financial events:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load financial events.",
+          variant: "destructive",
+        })
+        setMonthEvents([])
+      }
+    }
+    fetchEvents()
+  }, [currentDate])
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
@@ -108,6 +140,45 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
 
   const monthlyTotal = calculateMonthlyTotal()
 
+  const getEventsForDate = (date: Date) => {
+    return monthEvents.filter(event => {
+      if (!event.date) return false;
+      try {
+        // Since event.date from Prisma is already a Date object, we can use it directly
+        return format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+      } catch (error) {
+        console.error('Error parsing event date:', error);
+        return false;
+      }
+    });
+  };
+
+  const getEventIcon = (eventType: string) => {
+    switch (eventType.toLowerCase()) {
+      case 'economic':
+        return <Info className="h-3 w-3" />
+      case 'earnings':
+        return <BarChart className="h-3 w-3" />
+      case 'technical':
+        return <LineChart className="h-3 w-3" />
+      default:
+        return <AlertCircle className="h-3 w-3" />
+    }
+  }
+
+  const getEventImportanceColor = (importance: string) => {
+    switch (importance.toUpperCase()) {
+      case 'HIGH':
+        return "text-red-500 dark:text-red-400"
+      case 'MEDIUM':
+        return "text-yellow-500 dark:text-yellow-400"
+      case 'LOW':
+        return "text-blue-500 dark:text-blue-400"
+      default:
+        return "text-muted-foreground"
+    }
+  }
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="flex flex-col items-stretch space-y-0 border-b shrink-0 p-2 sm:p-4 line-clamp-2">
@@ -161,6 +232,7 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
             const dayData = calendarData[dateString]
             const isLastDayOfWeek = getDay(date) === 6
             const isCurrentMonth = isSameMonth(date, currentDate)
+            const dateEvents = getEventsForDate(date)
 
             return (
               <React.Fragment key={dateString}>
@@ -191,9 +263,82 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
                     )}>
                       {format(date, 'd')}
                     </span>
+                    {dateEvents.length > 0 && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex flex-col items-end gap-0.5 max-w-[80%]">
+                              {dateEvents.map((event, idx) => {
+                                // Trim the title to show only the main part
+                                const trimmedTitle = event.title
+                                  .replace('Data Release', '')
+                                  .replace('Report', '')
+                                  .replace('Meeting', '')
+                                  .replace('Estimate', '')
+                                  .trim()
+                                return (
+                                  <div
+                                    key={event.id}
+                                    className={cn(
+                                      getEventImportanceColor(event.importance),
+                                      !isCurrentMonth && "opacity-25",
+                                      "flex items-center justify-end gap-1 text-[8px] sm:text-[9px] w-full"
+                                    )}
+                                  >
+                                    <span className="truncate text-right">{trimmedTitle}</span>
+                                    {getEventIcon(event.type)}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent align="center" className="max-w-[300px]">
+                            <div className="space-y-2">
+                              {dateEvents.map(event => (
+                                <div key={event.id} className="space-y-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={cn(
+                                      "flex items-center gap-1",
+                                      getEventImportanceColor(event.importance)
+                                    )}>
+                                      {getEventIcon(event.type)}
+                                      <Badge variant="outline" className={cn(
+                                        "text-[10px] px-1 py-0",
+                                        getEventImportanceColor(event.importance)
+                                      )}>
+                                        {event.importance}
+                                      </Badge>
+                                    </span>
+                                    <span className="font-medium text-sm">{event.title}</span>
+                                  </div>
+                                  {event.description && (
+                                    <p className="text-xs text-muted-foreground pl-5">
+                                      {event.description}
+                                    </p>
+                                  )}
+                                  {event.sourceUrl && (
+                                    <a
+                                      href={event.sourceUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 pl-5"
+                                    >
+                                      <ExternalLink className="h-3 w-3" />
+                                      View on Investing.com
+                                    </a>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                  </div>
+                  <div className="flex-1 flex flex-col justify-end gap-0.5">
                     {dayData ? (
                       <div className={cn(
-                        "text-[9px] sm:text-[11px] font-semibold truncate max-w-[70%] text-right",
+                        "text-[9px] sm:text-[11px] font-semibold truncate text-center",
                         dayData.pnl >= 0
                           ? "text-green-600 dark:text-green-400"
                           : "text-red-600 dark:text-red-400",
@@ -203,12 +348,10 @@ export default function CalendarPnl({ calendarData }: { calendarData: CalendarDa
                       </div>
                     ) : (
                       <div className={cn(
-                        "text-[9px] sm:text-[11px] font-semibold invisible",
+                        "text-[9px] sm:text-[11px] font-semibold invisible text-center",
                         !isCurrentMonth && "opacity-25"
                       )}>$0</div>
                     )}
-                  </div>
-                  <div className="flex-1 flex flex-col justify-end">
                     <div className={cn(
                       "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
                       !isCurrentMonth && "opacity-25"

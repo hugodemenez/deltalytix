@@ -52,6 +52,7 @@ import { cn } from '@/lib/utils'
 import { TradeTableReview } from './tables/trade-table-review'
 import { MoodSelector } from './calendar/mood-selector'
 import ChatWidget from './chat-widget'
+import { NewsWidget } from './market/news-widget'
 
 interface WidgetOption {
   type: WidgetType
@@ -949,6 +950,8 @@ export default function WidgetCanvas() {
           </div>
         )
       }
+      case 'newsWidget':
+        return <NewsWidget />;
       default:
         return <PlaceholderWidget size={effectiveSize} />
     }
@@ -1119,6 +1122,15 @@ export default function WidgetCanvas() {
             >
               <MessageSquare className="mr-2 h-4 w-4" />
               <span>Chat</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-border" />
+            <DropdownMenuLabel>Market Data</DropdownMenuLabel>
+            <DropdownMenuItem 
+              onClick={() => addWidget('newsWidget', 'large')}
+              className="hover:bg-accent hover:text-accent-foreground"
+            >
+              <Info className="mr-2 h-4 w-4" />
+              <span>Market News</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

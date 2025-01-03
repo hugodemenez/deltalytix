@@ -1,0 +1,111 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { useTheme } from '@/components/context/theme-provider';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface NewsWidgetProps {
+  className?: string;
+}
+
+export function NewsWidget({ className }: NewsWidgetProps) {
+  const { effectiveTheme } = useTheme();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const widgetId = useRef(`tradingview-widget-${Math.random().toString(36).substring(7)}`);
+  const initTimeoutRef = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+    setIsLoading(true);
+
+    // Clear any existing timeout
+    if (initTimeoutRef.current) {
+      clearTimeout(initTimeoutRef.current);
+    }
+
+    // Wait a bit for the container to be properly sized
+    initTimeoutRef.current = setTimeout(() => {
+      const container = document.getElementById(widgetId.current);
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      // Clean up existing content
+      container.innerHTML = '';
+
+      // Create widget container
+      const widgetContainer = document.createElement('div');
+      widgetContainer.className = 'tradingview-widget-container__widget';
+      widgetContainer.style.height = '100%';
+      container.appendChild(widgetContainer);
+
+      // Create and configure the script
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.async = true;
+      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
+      
+      script.innerHTML = JSON.stringify({
+        "width": "100%",
+        "height": "100%",
+        "colorTheme": effectiveTheme,
+        "isTransparent": true,
+        "locale": "en",
+        "importanceFilter": "-1,0,1",
+        "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,za,tr,gb,us,eu"
+      });
+
+      // Add load event listener to hide skeleton
+      script.onload = () => {
+        setIsLoading(false);
+      };
+
+      container.appendChild(script);
+    }, 100);
+
+    return () => {
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
+      const container = document.getElementById(widgetId.current);
+      if (container) {
+        container.innerHTML = '';
+      }
+    };
+  }, [effectiveTheme]);
+
+  return (
+    <Card className={`h-full w-full overflow-hidden ${className || ''}`}>
+      <CardHeader className="pb-2">
+        <CardTitle>Market News</CardTitle>
+      </CardHeader>
+      <CardContent className="relative h-[calc(100%-56px)] p-0">
+        {isLoading && (
+          <div className="absolute inset-0 z-10 p-4 space-y-4">
+            <div className="flex items-center space-x-4">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-16 ml-auto" />
+            </div>
+            <div className="flex items-center space-x-4">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-16 ml-auto" />
+            </div>
+            <div className="flex items-center space-x-4">
+              <Skeleton className="h-4 w-4 rounded-full" />
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-4 w-16 ml-auto" />
+            </div>
+          </div>
+        )}
+        <div 
+          id={widgetId.current}
+          className="tradingview-widget-container h-full w-full"
+        />
+      </CardContent>
+    </Card>
+  );
+} 

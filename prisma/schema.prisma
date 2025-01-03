@@ -161,3 +161,18 @@ model Mood {
   @@index([day])
   @@schema("public")
 }
+
+model FinancialEvent {
+  id          String   @id @default(uuid())
+  title       String
+  date        DateTime
+  importance  String   // HIGH, MEDIUM, LOW
+  type        String   // FOMC, NFP, GDP, etc.
+  description String?
+  sourceUrl   String?  // URL to the event details
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@schema("public")
+}
