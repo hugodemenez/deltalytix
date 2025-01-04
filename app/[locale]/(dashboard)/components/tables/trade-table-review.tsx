@@ -648,7 +648,10 @@ export function TradeTableReview() {
   }, [])
 
   return (
-    <div className="flex flex-col h-full rounded-md border">
+    <div 
+      className="rounded-md border h-full overflow-hidden"
+      data-scrollable="true"
+    >
       <div className="flex-1 min-h-0">
         <div className="h-full overflow-auto">
           <table className="w-full border-separate border-spacing-0">

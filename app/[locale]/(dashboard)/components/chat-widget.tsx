@@ -310,9 +310,8 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
           style={{ overscrollBehavior: 'contain' }}
         >
           <div 
-            className="p-4 space-y-4 pb-24"
-            onWheel={handleScroll}
-            onTouchMove={e => e.stopPropagation()}
+            className="flex-1 overflow-y-auto p-4"
+            data-scrollable="true"
           >
             <AnimatePresence mode="popLayout">
               {messages.map((message) => (

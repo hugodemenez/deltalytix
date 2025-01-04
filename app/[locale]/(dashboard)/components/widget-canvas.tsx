@@ -75,6 +75,14 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
   const contextButtonRef = useRef<HTMLButtonElement>(null)
 
+  // Add touch event handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isCustomizing) {
+      // Prevent default touch behavior when customizing
+      e.preventDefault()
+    }
+  }
+
   // Add check for fixed size widgets
   const hasFixedSize = currentType === 'chatWidget' || currentType === 'newsWidget'
 
@@ -137,7 +145,10 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   return (
     <ContextMenu onOpenChange={setIsContextMenuOpen}>
       <ContextMenuTrigger asChild>
-        <div className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group">
+        <div 
+          className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group"
+          onTouchStart={handleTouchStart}
+        >
           <div className={cn("h-full w-full transition-all duration-200", 
             isCustomizing && "group-hover:blur-[2px]"
           )}>
@@ -383,6 +394,25 @@ const customStyles = `
   }
   .react-grid-item > .react-resizable-handle {
     border-radius: 0 0 4px 0;
+  }
+  
+  /* Prevent text selection on mobile */
+  @media (max-width: 768px) {
+    .react-grid-item {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+      touch-action: none;
+    }
+    
+    /* Allow scrolling on content that needs it */
+    .react-grid-item [data-scrollable="true"] {
+      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+    }
   }
 `
 
