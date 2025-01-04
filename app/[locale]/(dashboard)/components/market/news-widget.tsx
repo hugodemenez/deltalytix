@@ -17,47 +17,6 @@ export function NewsWidget({ className }: NewsWidgetProps) {
   const [isLoading, setIsLoading] = useState(true);
   const widgetId = useRef(`tradingview-widget-${Math.random().toString(36).substring(7)}`);
   const initTimeoutRef = useRef<NodeJS.Timeout>();
-  const observerRef = useRef<MutationObserver | null>(null);
-
-  const initializeWidget = () => {
-    const container = document.getElementById(widgetId.current);
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-
-    // Clean up existing content
-    container.innerHTML = '';
-
-    // Create widget container
-    const widgetContainer = document.createElement('div');
-    widgetContainer.className = 'tradingview-widget-container__widget';
-    widgetContainer.style.height = '100%';
-    container.appendChild(widgetContainer);
-
-    // Create and configure the script
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    script.async = true;
-    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
-    
-    script.innerHTML = JSON.stringify({
-      "width": "100%",
-      "height": "100%",
-      "colorTheme": effectiveTheme,
-      "isTransparent": true,
-      "locale": "en",
-      "importanceFilter": "-1,0,1",
-      "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,za,tr,gb,us,eu"
-    });
-
-    // Add load event listener to hide skeleton
-    script.onload = () => {
-      setIsLoading(false);
-    };
-
-    container.appendChild(script);
-  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -69,42 +28,48 @@ export function NewsWidget({ className }: NewsWidgetProps) {
 
     // Wait a bit for the container to be properly sized
     initTimeoutRef.current = setTimeout(() => {
-      initializeWidget();
-
-      // Setup mutation observer to watch for changes
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-
       const container = document.getElementById(widgetId.current);
-      if (container) {
-        observerRef.current = new MutationObserver((mutations) => {
-          // Check if the widget was removed or emptied
-          const needsReinit = mutations.some(mutation => {
-            return mutation.type === 'childList' && 
-                   (!container.querySelector('.tradingview-widget-container__widget') ||
-                    !container.querySelector('script'));
-          });
+      if (!container) return;
 
-          if (needsReinit) {
-            setIsLoading(true);
-            initializeWidget();
-          }
-        });
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
 
-        observerRef.current.observe(container, {
-          childList: true,
-          subtree: true
-        });
-      }
+      // Clean up existing content
+      container.innerHTML = '';
+
+      // Create widget container
+      const widgetContainer = document.createElement('div');
+      widgetContainer.className = 'tradingview-widget-container__widget';
+      widgetContainer.style.height = '100%';
+      container.appendChild(widgetContainer);
+
+      // Create and configure the script
+      const script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.async = true;
+      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
+      
+      script.innerHTML = JSON.stringify({
+        "width": "100%",
+        "height": "100%",
+        "colorTheme": effectiveTheme,
+        "isTransparent": true,
+        "locale": "en",
+        "importanceFilter": "-1,0,1",
+        "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,za,tr,gb,us,eu"
+      });
+
+      // Add load event listener to hide skeleton
+      script.onload = () => {
+        setIsLoading(false);
+      };
+
+      container.appendChild(script);
     }, 100);
 
     return () => {
       if (initTimeoutRef.current) {
         clearTimeout(initTimeoutRef.current);
-      }
-      if (observerRef.current) {
-        observerRef.current.disconnect();
       }
       const container = document.getElementById(widgetId.current);
       if (container) {
