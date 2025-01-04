@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/context/theme-provider';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface NewsWidgetProps {
   className?: string;
@@ -15,6 +17,47 @@ export function NewsWidget({ className }: NewsWidgetProps) {
   const [isLoading, setIsLoading] = useState(true);
   const widgetId = useRef(`tradingview-widget-${Math.random().toString(36).substring(7)}`);
   const initTimeoutRef = useRef<NodeJS.Timeout>();
+  const observerRef = useRef<MutationObserver | null>(null);
+
+  const initializeWidget = () => {
+    const container = document.getElementById(widgetId.current);
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    // Clean up existing content
+    container.innerHTML = '';
+
+    // Create widget container
+    const widgetContainer = document.createElement('div');
+    widgetContainer.className = 'tradingview-widget-container__widget';
+    widgetContainer.style.height = '100%';
+    container.appendChild(widgetContainer);
+
+    // Create and configure the script
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.async = true;
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
+    
+    script.innerHTML = JSON.stringify({
+      "width": "100%",
+      "height": "100%",
+      "colorTheme": effectiveTheme,
+      "isTransparent": true,
+      "locale": "en",
+      "importanceFilter": "-1,0,1",
+      "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,za,tr,gb,us,eu"
+    });
+
+    // Add load event listener to hide skeleton
+    script.onload = () => {
+      setIsLoading(false);
+    };
+
+    container.appendChild(script);
+  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -26,48 +69,42 @@ export function NewsWidget({ className }: NewsWidgetProps) {
 
     // Wait a bit for the container to be properly sized
     initTimeoutRef.current = setTimeout(() => {
+      initializeWidget();
+
+      // Setup mutation observer to watch for changes
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+
       const container = document.getElementById(widgetId.current);
-      if (!container) return;
+      if (container) {
+        observerRef.current = new MutationObserver((mutations) => {
+          // Check if the widget was removed or emptied
+          const needsReinit = mutations.some(mutation => {
+            return mutation.type === 'childList' && 
+                   (!container.querySelector('.tradingview-widget-container__widget') ||
+                    !container.querySelector('script'));
+          });
 
-      const rect = container.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
+          if (needsReinit) {
+            setIsLoading(true);
+            initializeWidget();
+          }
+        });
 
-      // Clean up existing content
-      container.innerHTML = '';
-
-      // Create widget container
-      const widgetContainer = document.createElement('div');
-      widgetContainer.className = 'tradingview-widget-container__widget';
-      widgetContainer.style.height = '100%';
-      container.appendChild(widgetContainer);
-
-      // Create and configure the script
-      const script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.async = true;
-      script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-events.js';
-      
-      script.innerHTML = JSON.stringify({
-        "width": "100%",
-        "height": "100%",
-        "colorTheme": effectiveTheme,
-        "isTransparent": true,
-        "locale": "en",
-        "importanceFilter": "-1,0,1",
-        "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,za,tr,gb,us,eu"
-      });
-
-      // Add load event listener to hide skeleton
-      script.onload = () => {
-        setIsLoading(false);
-      };
-
-      container.appendChild(script);
+        observerRef.current.observe(container, {
+          childList: true,
+          subtree: true
+        });
+      }
     }, 100);
 
     return () => {
       if (initTimeoutRef.current) {
         clearTimeout(initTimeoutRef.current);
+      }
+      if (observerRef.current) {
+        observerRef.current.disconnect();
       }
       const container = document.getElementById(widgetId.current);
       if (container) {
@@ -78,8 +115,20 @@ export function NewsWidget({ className }: NewsWidgetProps) {
 
   return (
     <Card className={`h-full w-full overflow-hidden ${className || ''}`}>
-      <CardHeader className="pb-2">
-        <CardTitle>Market News</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4">
+        <div className="flex items-center gap-1.5">
+          <CardTitle className="text-base line-clamp-1">Market News</CardTitle>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                <p>Real-time market news and economic events</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </CardHeader>
       <CardContent className="relative h-[calc(100%-56px)] p-0">
         {isLoading && (
