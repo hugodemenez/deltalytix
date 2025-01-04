@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
 import {
   ColumnDef,
@@ -10,6 +10,8 @@ import {
   getPaginationRowModel,
   SortingState,
   getSortedRowModel,
+  ColumnFiltersState,
+  getFilteredRowModel,
 } from "@tanstack/react-table"
 import {
   Table,
@@ -49,6 +51,7 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -140,64 +143,109 @@ function TagInput({ tradeId, tradeTags, availableTags, onAddTag }: TagInputProps
 }
 
 interface TagFilterProps {
+  column: any
   availableTags: string[]
   onDeleteTag: (tag: string) => Promise<void>
 }
 
-function TagFilter({ availableTags, onDeleteTag }: TagFilterProps) {
+function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
   const [search, setSearch] = useState('')
+  const selectedTags = (column?.getFilterValue() as string[]) || []
 
   const filteredTags = availableTags.filter(tag => 
     tag.toLowerCase().includes(search.toLowerCase())
   )
 
+  const toggleTag = (tag: string) => {
+    const currentFilters = selectedTags
+    const newFilters = currentFilters.includes(tag)
+      ? currentFilters.filter(t => t !== tag)
+      : [...currentFilters, tag]
+    
+    column?.setFilterValue(newFilters)
+  }
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          className="h-8 group hover:bg-muted"
-        >
-          Tags
-          <Search className="ml-2 h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="start">
-        <Command>
-          <CommandInput 
-            placeholder="Search tags..." 
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            <CommandEmpty>No tags found</CommandEmpty>
-            {filteredTags.length > 0 && (
-              <CommandGroup>
-                {filteredTags.map(tag => (
-                  <CommandItem
-                    key={tag}
-                    className="flex items-center justify-between"
-                  >
-                    <span>{tag}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDeleteTag(tag)
+    <div className="flex items-center gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="-ml-3 h-8 data-[state=open]:bg-accent"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Tags
+        <ArrowUpDown className="ml-2 h-4 w-4" />
+      </Button>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-8 px-2 lg:px-3",
+              selectedTags.length > 0 && "bg-accent"
+            )}
+          >
+            <Search className="h-4 w-4" />
+            {selectedTags.length > 0 && (
+              <span className="ml-2 text-xs">
+                {selectedTags.length}
+              </span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0" align="start">
+          <Command>
+            <CommandInput 
+              placeholder="Search tags..." 
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandEmpty>No tags found</CommandEmpty>
+              {filteredTags.length > 0 && (
+                <CommandGroup>
+                  {filteredTags.map(tag => (
+                    <CommandItem
+                      key={tag}
+                      className="flex items-center justify-between cursor-pointer"
+                      onSelect={(currentValue) => {
+                        toggleTag(tag)
                       }}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                      <div className="flex items-center space-x-2 flex-1">
+                        <Checkbox 
+                          checked={selectedTags.includes(tag)}
+                          onCheckedChange={() => toggleTag(tag)}
+                          className="cursor-pointer"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <span className="flex-1 text-sm font-medium leading-none cursor-pointer">
+                          {tag}
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          onDeleteTag(tag)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
 
@@ -221,6 +269,7 @@ export function TradeTableReview() {
   const { formattedTrades } = useFormattedTrades()
   const { updateTrade } = useTrades()
   const [sorting, setSorting] = useState<SortingState>([])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [availableTags, setAvailableTags] = useState<string[]>([])
 
   // Initialize available tags from all trades with debounce
@@ -231,7 +280,7 @@ export function TradeTableReview() {
         trade.tags?.forEach(tag => allTags.add(tag))
       })
       setAvailableTags(Array.from(allTags))
-    }, 100) // Small delay to prevent rapid updates
+    }, 100)
 
     return () => clearTimeout(timer)
   }, [formattedTrades])
@@ -241,15 +290,12 @@ export function TradeTableReview() {
     if (!normalizedTag) return
 
     try {
-      // Update the database first
       await addTagToTrade(tradeId, normalizedTag)
       
-      // Then update UI state
       if (!availableTags.includes(normalizedTag)) {
         setAvailableTags(prev => [...prev, normalizedTag])
       }
 
-      // Update the trade in context
       const trade = formattedTrades.find(t => t.id === tradeId)
       if (trade) {
         updateTrade(tradeId, {
@@ -265,7 +311,6 @@ export function TradeTableReview() {
     try {
       await removeTagFromTrade(tradeId, tagToRemove)
       
-      // Update the trade in context
       const trade = formattedTrades.find(t => t.id === tradeId)
       if (trade) {
         updateTrade(tradeId, {
@@ -282,7 +327,6 @@ export function TradeTableReview() {
       await deleteTagFromAllTrades(tag)
       setAvailableTags(prev => prev.filter(t => t !== tag))
       
-      // Update all trades that had this tag
       formattedTrades
         .filter(trade => trade.tags?.includes(tag))
         .forEach(trade => {
@@ -299,7 +343,6 @@ export function TradeTableReview() {
     try {
       const base64 = await convertFileToBase64(file)
       await updateTradeImage(tradeId, base64)
-      // Update the trade in context
       updateTrade(tradeId, { imageBase64: base64 })
     } catch (error) {
       console.error('Failed to upload image:', error)
@@ -324,7 +367,6 @@ export function TradeTableReview() {
   const handleRemoveImage = async (tradeId: string) => {
     try {
       await updateTradeImage(tradeId, null)
-      // Update the trade in context
       updateTrade(tradeId, { imageBase64: null })
     } catch (error) {
       console.error('Failed to remove image:', error)
@@ -332,7 +374,6 @@ export function TradeTableReview() {
   }
 
   useEffect(() => {
-    // Add paste event listener to the document
     const handleGlobalPaste = async (e: ClipboardEvent) => {
       const activeElement = document.activeElement
       if (activeElement?.getAttribute('data-trade-id')) {
@@ -344,70 +385,68 @@ export function TradeTableReview() {
     return () => document.removeEventListener('paste', handleGlobalPaste)
   }, [])
 
-  const columns: ColumnDef<ExtendedTrade>[] = [
+  const columns = useMemo<ColumnDef<ExtendedTrade>[]>(() => [
     {
       accessorKey: "entryDate",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Entry Date
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          Entry Date
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
       cell: ({ row }) => new Date(row.getValue("entryDate")).toLocaleDateString(),
     },
     {
       accessorKey: "instrument",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Instrument
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          Instrument
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
     },
     {
       accessorKey: "direction",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Direction
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          Direction
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
     },
     {
       accessorKey: "pnl",
-      header: ({ column }) => {
-        return (
-          <div className="text-right">
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            >
-              PnL
-              <ArrowUpDown className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        )
-      },
+      header: ({ column }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="hover:bg-transparent px-0 font-medium"
+          >
+            PnL
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      ),
       cell: ({ row }) => {
         const pnl = parseFloat(row.getValue("pnl"))
         return (
-          <div className="text-right">
-            <span className={pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+          <div className="text-right font-medium">
+            <span className={cn(
+              pnl >= 0 ? 'text-green-600' : 'text-red-600'
+            )}>
               {pnl.toFixed(2)}
             </span>
           </div>
@@ -415,7 +454,31 @@ export function TradeTableReview() {
       },
     },
     {
+      accessorKey: "quantity",
+      header: ({ column }) => (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            className="hover:bg-transparent px-0 font-medium"
+          >
+            Quantity
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      ),
+      cell: ({ row }) => {
+        const quantity = parseFloat(row.getValue("quantity"))
+        return (
+          <div className="text-right font-medium">
+            {quantity.toLocaleString()}
+          </div>
+        )
+      },
+    },
+    {
       id: "image",
+      header: "Image",
       cell: ({ row }) => {
         const trade = row.original
         return (
@@ -476,12 +539,12 @@ export function TradeTableReview() {
           </div>
         )
       },
-      header: "Image",
     },
     {
       id: "tags",
-      header: () => (
+      header: ({ column }) => (
         <TagFilter 
+          column={column}
           availableTags={availableTags}
           onDeleteTag={handleDeleteTag}
         />
@@ -517,11 +580,15 @@ export function TradeTableReview() {
             />
           </div>
         )
-      }
+      },
+      filterFn: (row, id, filterValue: string[]) => {
+        const tags = row.original.tags
+        if (!filterValue.length) return true
+        return filterValue.some(tag => tags.includes(tag))
+      },
     }
-  ]
+  ], [availableTags])
 
-  // Memoize the table data
   const tableData = useMemo(() => 
     formattedTrades.map(trade => ({
       ...trade,
@@ -536,10 +603,13 @@ export function TradeTableReview() {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
     getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
     state: {
       sorting,
+      columnFilters,
     },
     initialState: {
       pagination: {
@@ -548,77 +618,142 @@ export function TradeTableReview() {
     },
   })
 
+  // Add ref for scroll sync
+  const headerRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+
+  // Add scroll sync effect
+  useEffect(() => {
+    const headerEl = headerRef.current
+    const bodyEl = bodyRef.current
+
+    if (!headerEl || !bodyEl) return
+
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLDivElement
+      if (target === bodyEl) {
+        headerEl.scrollLeft = target.scrollLeft
+      } else if (target === headerEl) {
+        bodyEl.scrollLeft = target.scrollLeft
+      }
+    }
+
+    headerEl.addEventListener('scroll', handleScroll)
+    bodyEl.addEventListener('scroll', handleScroll)
+
+    return () => {
+      headerEl.removeEventListener('scroll', handleScroll)
+      bodyEl.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
+
   return (
     <div className="flex flex-col h-full rounded-md border">
       <div className="flex-1 min-h-0">
-        <ScrollArea className="h-full">
-          <div className="min-w-max">
-            <Table>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow
-                      key={row.id}
-                      data-state={row.getIsSelected() && "selected"}
+        <div className="h-full overflow-auto">
+          <table className="w-full border-separate border-spacing-0">
+            <thead className="sticky top-0 z-20">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header, idx) => (
+                    <th
+                      key={header.id}
+                      className={cn(
+                        "h-10 px-4 py-2 border-b bg-background whitespace-nowrap text-left align-middle",
+                        idx === 0 && "sticky left-0 z-30 bg-background"
+                      )}
                     >
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
-                      No results.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </ScrollArea>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </th>
+                  ))}
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows?.length ? (
+                table.getRowModel().rows.map((row) => (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map((cell, idx) => (
+                      <td
+                        key={cell.id}
+                        className={cn(
+                          "px-4 py-2 border-b whitespace-nowrap text-left align-middle",
+                          idx === 0 && "sticky left-0 z-10 bg-background"
+                        )}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={columns.length}
+                    className="h-24 text-center"
+                  >
+                    No results.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between p-2 border-t">
-        <div className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{" "}
-          {table.getPageCount()}
+      <div className="flex flex-col sm:flex-row items-center gap-4 sm:justify-between p-2 border-t bg-background">
+        <div className="text-sm text-muted-foreground order-2 sm:order-1">
+          {table.getFilteredRowModel().rows.length} trade(s) total
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 lg:gap-8 order-1 sm:order-2">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">Rows per page</p>
+            <select
+              value={table.getState().pagination.pageSize}
+              onChange={e => {
+                table.setPageSize(Number(e.target.value))
+              }}
+              className="h-8 w-[70px] rounded-md border border-input bg-transparent"
+            >
+              {[10, 20, 30, 40, 50].map(pageSize => (
+                <option key={pageSize} value={pageSize}>
+                  {pageSize}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              {table.getPageCount()}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
