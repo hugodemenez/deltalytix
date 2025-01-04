@@ -21,6 +21,12 @@ import {
 import { useI18n } from "@/locales/client"
 import { useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
+import {
+    InputOTP,
+    InputOTPGroup,
+    InputOTPSlot,
+    InputOTPSeparator
+} from "@/components/ui/input-otp"
 
 const formSchema = z.object({
     email: z.string().email(),
@@ -239,16 +245,31 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                             control={otpForm.control}
                             name="otp"
                             render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Verification Code</FormLabel>
+                                <FormItem className="space-y-2">
+                                    <FormLabel className="text-center block">Verification Code</FormLabel>
                                     <FormControl>
-                                        <Input
-                                            placeholder="123456"
-                                            maxLength={6}
-                                            {...field}
-                                        />
+                                        <div className="flex justify-center">
+                                            <InputOTP
+                                                maxLength={6}
+                                                value={field.value}
+                                                onChange={field.onChange}
+                                                className="gap-2"
+                                            >
+                                                <InputOTPGroup>
+                                                    <InputOTPSlot index={0} />
+                                                    <InputOTPSlot index={1} />
+                                                    <InputOTPSlot index={2} />
+                                                </InputOTPGroup>
+                                                <InputOTPSeparator />
+                                                <InputOTPGroup>
+                                                    <InputOTPSlot index={3} />
+                                                    <InputOTPSlot index={4} />
+                                                    <InputOTPSlot index={5} />
+                                                </InputOTPGroup>
+                                            </InputOTP>
+                                        </div>
                                     </FormControl>
-                                    <FormMessage />
+                                    <FormMessage className="text-center" />
                                 </FormItem>
                             )}
                         />
