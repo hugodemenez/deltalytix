@@ -181,41 +181,41 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-col items-stretch space-y-0 border-b shrink-0 p-2 sm:p-4 line-clamp-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CardTitle className="text-base sm:text-lg font-semibold truncate">
-              {format(currentDate, 'MMMM yyyy')}
-            </CardTitle>
-            <div className={cn(
-              "text-sm sm:text-base font-semibold truncate",
-              monthlyTotal >= 0
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400"
-            )}>
-              {formatCurrency(monthlyTotal)}
-            </div>
+      <CardHeader 
+        className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]"
+      >
+        <div className="flex items-center gap-3">
+          <CardTitle className="text-base sm:text-lg font-semibold truncate">
+            {format(currentDate, 'MMMM yyyy')}
+          </CardTitle>
+          <div className={cn(
+            "text-sm sm:text-base font-semibold truncate",
+            monthlyTotal >= 0
+              ? "text-green-600 dark:text-green-400"
+              : "text-red-600 dark:text-red-400"
+          )}>
+            {formatCurrency(monthlyTotal)}
           </div>
-          <div className="flex items-center gap-1.5">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={handlePrevMonth} 
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={handleNextMonth} 
-              className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label="Next month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handlePrevMonth} 
+            className="h-7 w-7 sm:h-8 sm:w-8"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={handleNextMonth} 
+            className="h-7 w-7 sm:h-8 sm:w-8"
+            aria-label="Next month"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1.5 sm:p-4">

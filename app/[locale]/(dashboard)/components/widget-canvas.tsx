@@ -75,6 +75,9 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
   const contextButtonRef = useRef<HTMLButtonElement>(null)
 
+  // Add check for fixed size widgets
+  const hasFixedSize = currentType === 'chatWidget' || currentType === 'newsWidget'
+
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
     if (isMobile) {
       // On mobile, only allow tiny (shown as Small), medium (shown as Medium), and large (shown as Large)
@@ -210,78 +213,82 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
           <GripVertical className="mr-2 h-4 w-4" />
           <span>Move</span>
         </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuSub>
-          <ContextMenuSubTrigger className="flex items-center">
-            <Maximize2 className="mr-2 h-4 w-4" />
-            <span>Change Size</span>
-          </ContextMenuSubTrigger>
-          <ContextMenuSubContent>
-            {isMobile ? (
-              <>
-                <ContextMenuItem 
-                  onClick={() => onChangeSize('tiny')}
-                  className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
-                  disabled={!isValidSize(currentType, 'tiny')}
-                >
-                  <Minimize2 className="mr-2 h-4 w-4" />
-                  <span>Small (12x1)</span>
-                </ContextMenuItem>
-                <ContextMenuItem 
-                  onClick={() => onChangeSize('medium')}
-                  className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
-                  disabled={!isValidSize(currentType, 'medium')}
-                >
-                  <Square className="mr-2 h-4 w-4" />
-                  <span>Medium (12x4)</span>
-                </ContextMenuItem>
-                <ContextMenuItem 
-                  onClick={() => onChangeSize('large')}
-                  className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
-                  disabled={!isValidSize(currentType, 'large')}
-                >
-                  <Maximize2 className="mr-2 h-4 w-4" />
-                  <span>Large (12x6)</span>
-                </ContextMenuItem>
-              </>
-            ) : (
-              <>
-                <ContextMenuItem 
-                  onClick={() => onChangeSize('tiny')}
-                  className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
-                  disabled={!isValidSize(currentType, 'tiny')}
-                >
-                  <Minimize2 className="mr-2 h-4 w-4" />
-                  <span>Tiny (3x1)</span>
-                </ContextMenuItem>
-                <ContextMenuItem 
-                  onClick={() => onChangeSize('small')}
-                  className={size === 'small' ? 'bg-accent text-accent-foreground' : ''}
-                  disabled={!isValidSize(currentType, 'small')}
-                >
-                  <Minimize2 className="mr-2 h-4 w-4" />
-                  <span>Small (3x4)</span>
-                </ContextMenuItem>
-                <ContextMenuItem 
-                  onClick={() => onChangeSize('medium')}
-                  className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
-                  disabled={!isValidSize(currentType, 'medium')}
-                >
-                  <Square className="mr-2 h-4 w-4" />
-                  <span>Medium (6x4)</span>
-                </ContextMenuItem>
-                <ContextMenuItem 
-                  onClick={() => onChangeSize('large')}
-                  className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
-                  disabled={!isValidSize(currentType, 'large')}
-                >
-                  <Maximize2 className="mr-2 h-4 w-4" />
-                  <span>Large (6x6)</span>
-                </ContextMenuItem>
-              </>
-            )}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
+        {!hasFixedSize && (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="flex items-center">
+                <Maximize2 className="mr-2 h-4 w-4" />
+                <span>Change Size</span>
+              </ContextMenuSubTrigger>
+              <ContextMenuSubContent>
+                {isMobile ? (
+                  <>
+                    <ContextMenuItem 
+                      onClick={() => onChangeSize('tiny')}
+                      className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
+                      disabled={!isValidSize(currentType, 'tiny')}
+                    >
+                      <Minimize2 className="mr-2 h-4 w-4" />
+                      <span>Small (12x1)</span>
+                    </ContextMenuItem>
+                    <ContextMenuItem 
+                      onClick={() => onChangeSize('medium')}
+                      className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
+                      disabled={!isValidSize(currentType, 'medium')}
+                    >
+                      <Square className="mr-2 h-4 w-4" />
+                      <span>Medium (12x4)</span>
+                    </ContextMenuItem>
+                    <ContextMenuItem 
+                      onClick={() => onChangeSize('large')}
+                      className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
+                      disabled={!isValidSize(currentType, 'large')}
+                    >
+                      <Maximize2 className="mr-2 h-4 w-4" />
+                      <span>Large (12x6)</span>
+                    </ContextMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <ContextMenuItem 
+                      onClick={() => onChangeSize('tiny')}
+                      className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
+                      disabled={!isValidSize(currentType, 'tiny')}
+                    >
+                      <Minimize2 className="mr-2 h-4 w-4" />
+                      <span>Tiny (3x1)</span>
+                    </ContextMenuItem>
+                    <ContextMenuItem 
+                      onClick={() => onChangeSize('small')}
+                      className={size === 'small' ? 'bg-accent text-accent-foreground' : ''}
+                      disabled={!isValidSize(currentType, 'small')}
+                    >
+                      <Minimize2 className="mr-2 h-4 w-4" />
+                      <span>Small (3x4)</span>
+                    </ContextMenuItem>
+                    <ContextMenuItem 
+                      onClick={() => onChangeSize('medium')}
+                      className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
+                      disabled={!isValidSize(currentType, 'medium')}
+                    >
+                      <Square className="mr-2 h-4 w-4" />
+                      <span>Medium (6x4)</span>
+                    </ContextMenuItem>
+                    <ContextMenuItem 
+                      onClick={() => onChangeSize('large')}
+                      className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
+                      disabled={!isValidSize(currentType, 'large')}
+                    >
+                      <Maximize2 className="mr-2 h-4 w-4" />
+                      <span>Large (6x6)</span>
+                    </ContextMenuItem>
+                  </>
+                )}
+              </ContextMenuSubContent>
+            </ContextMenuSub>
+          </>
+        )}
         <ContextMenuSeparator />
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -457,9 +464,8 @@ export default function WidgetCanvas() {
 
   // Add a function to get grid dimensions based on widget type and size
   const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
-    // Special case for chat widget - use small width but large height
-    const chatWidgetTypes: WidgetType[] = ['chatWidget'];
-    if (chatWidgetTypes.includes(type)) {
+    // Special case for chat widget and news widget - use small width but large height
+    if (type === 'chatWidget' || type === 'newsWidget') {
       if (isSmallScreen) {
         return { w: 12, h: 6 } // Full width on mobile but same height as large
       }
@@ -700,6 +706,10 @@ export default function WidgetCanvas() {
          'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(type)) {
       effectiveSize = 'tiny'
     }
+    // Chat and news widgets are always medium
+    else if (['chatWidget', 'newsWidget'].includes(type)) {
+      effectiveSize = 'medium'
+    }
     // Charts default to medium
     else if (type.includes('Chart') || type === 'tickDistribution' || 
              type === 'commissionsPnl') {
@@ -935,26 +945,29 @@ export default function WidgetCanvas() {
         return <TradeTableReview />
       case 'moodSelector':
         return <MoodSelector onMoodSelect={(mood) => console.log('Selected mood:', mood)} />
-      case 'chatWidget': {
+      case 'chatWidget':
+      case 'newsWidget': {
         const containerClasses = cn(
           "h-full w-full",
           "flex items-center justify-center",
           isMobile ? "px-4" : ""
         )
-        const chatClasses = cn(
+        const widgetClasses = cn(
           "h-full w-full",
           isMobile ? "max-w-[500px]" : ""
         )
         return (
           <div className={containerClasses}>
-            <div className={chatClasses}>
-              <ChatWidget size={effectiveSize} />
+            <div className={widgetClasses}>
+              {widget.type === 'chatWidget' ? (
+                <ChatWidget size={effectiveSize} />
+              ) : (
+                <NewsWidget />
+              )}
             </div>
           </div>
         )
       }
-      case 'newsWidget':
-        return <NewsWidget />;
       default:
         return <PlaceholderWidget size={effectiveSize} />
     }

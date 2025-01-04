@@ -80,7 +80,9 @@ export function NewsWidget({ className }: NewsWidgetProps) {
 
   return (
     <Card className={`h-full w-full overflow-hidden ${className || ''}`}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4">
+      <CardHeader 
+        className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]"
+      >
         <div className="flex items-center gap-1.5">
           <CardTitle className="text-base line-clamp-1">Market News</CardTitle>
           <TooltipProvider>

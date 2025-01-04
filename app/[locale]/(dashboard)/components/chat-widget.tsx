@@ -271,20 +271,37 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
 
   return (
     <Card className="h-full flex flex-col bg-background">
-      <CardHeader className="flex-none p-4 border-b">
-        <div className="flex justify-between items-center">
-          <CardTitle>{t('chat.title')}</CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={resetConversation}
-            disabled={isLoading}
-            className="h-8 w-8"
-            title={t('chat.resetConversation')}
+      <CardHeader 
+        className={cn(
+          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
+        )}
+      >
+        <div className="flex items-center gap-1.5">
+          <CardTitle 
+            className={cn(
+              "line-clamp-1",
+              size === 'small-long' ? "text-sm" : "text-base"
+            )}
           >
-            <RotateCcw className="h-4 w-4" />
-          </Button>
+            {t('chat.title')}
+          </CardTitle>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={resetConversation}
+          disabled={isLoading}
+          className={cn(
+            "shrink-0",
+            size === 'small-long' ? "h-7 w-7" : "h-8 w-8"
+          )}
+          title={t('chat.resetConversation')}
+        >
+          <RotateCcw className={cn(
+            size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+          )} />
+        </Button>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col min-h-0 p-0 relative overflow-hidden">
         <ScrollArea 
