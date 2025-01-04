@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Camera, Folder, Send, RotateCcw } from 'lucide-react';
@@ -17,6 +17,7 @@ import { generateId } from 'ai';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { Trade as PrismaTrade } from '@prisma/client';
 import { useI18n } from "@/locales/client";
+import { debounce } from 'lodash';
 
 type MoodType = 'bad' | 'okay' | 'great';
 
@@ -64,6 +65,8 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const t = useI18n();
+  const initRef = useRef(false);
+  const [hasInitializedChat, setHasInitializedChat] = useState(false);
 
   const todayTrades = useMemo(() => {
     if (!trades) return [];
@@ -83,74 +86,87 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
     });
   }, [trades]);
 
-  // Load initial conversation and greeting
-  useEffect(() => {
-    async function loadConversation() {
-      if (!user?.id) return;
-
-      try {
-        // First try to load today's conversation from mood
-        const todayMood = await getMoodForDay(user.id, new Date());
-        if (todayMood?.conversation) {
-          const savedMessages = (todayMood.conversation as SavedMessage[]);
-          setMessages(savedMessages.map(msg => ({
-            id: Date.now().toString() + Math.random().toString(),
-            role: msg.role,
-            content: msg.content
-          })));
-          return;
-        }
-
-        // If no conversation exists, get initial greeting
-        const greeting = await getInitialGreeting(
-          todayTrades,
-          weekTrades,
-          user?.user_metadata?.full_name || user?.email?.split('@')[0]
-        );
-        setMessages([{
-          id: greeting.id,
-          role: 'assistant',
-          content: greeting.display
-        }]);
-      } catch (error) {
-        console.error('Error loading conversation:', error);
-      }
-    }
-    loadConversation();
-  }, [todayTrades, weekTrades, user]);
-
-  // Save conversation to mood whenever messages change
-  useEffect(() => {
-    async function saveConversation() {
-      if (!user?.id || messages.length === 0) return;
-
+  // Debounced save conversation function
+  const debouncedSaveConversation = useCallback(
+    debounce(async (userId: string, messages: Message[]) => {
       try {
         const conversationToSave = messages.map(msg => ({
           role: msg.role,
           content: extractTextContent(msg.content)
         }));
 
-        const todayMood = await getMoodForDay(user.id, new Date());
+        const todayMood = await getMoodForDay(userId, new Date());
         const currentMood = todayMood?.mood as MoodType || 'okay';
         
-        await saveMood(
-          user.id,
-          currentMood,
-          conversationToSave
-        );
+        await saveMood(userId, currentMood, conversationToSave);
       } catch (error) {
         console.error('Error saving conversation:', error);
       }
+    }, 1000),
+    []
+  );
+
+  // Initialize chat data
+  const initializeChat = useCallback(async () => {
+    if (!user?.id || initRef.current) return;
+    initRef.current = true;
+
+    try {
+      const todayMood = await getMoodForDay(user.id, new Date());
+      
+      if (todayMood?.conversation) {
+        const savedMessages = (todayMood.conversation as SavedMessage[]);
+        setMessages(savedMessages.map(msg => ({
+          id: generateId(),
+          role: msg.role,
+          content: msg.content
+        })));
+      } else {
+        const greeting = await getInitialGreeting(
+          todayTrades,
+          weekTrades,
+          user?.user_metadata?.full_name || user?.email?.split('@')[0]
+        );
+        const newMessage: Message = {
+          id: greeting.id,
+          role: 'assistant' as const,
+          content: greeting.display
+        };
+        setMessages([newMessage]);
+        
+        // Save initial greeting without triggering a reload
+        await saveMood(user.id, 'okay', [{
+          role: 'assistant' as const,
+          content: extractTextContent(greeting.display)
+        }]);
+      }
+      setHasInitializedChat(true);
+    } catch (error) {
+      console.error('Error initializing chat:', error);
+      initRef.current = false; // Allow retry on error
     }
-    saveConversation();
-  }, [messages, user?.id]);
+  }, [user?.id, user?.user_metadata?.full_name, user?.email, todayTrades, weekTrades]);
+
+  // Load initial conversation only once when user is available
+  useEffect(() => {
+    initializeChat();
+  }, [initializeChat]);
+
+  // Save conversation with debounce, but only for non-initial messages
+  useEffect(() => {
+    if (!user?.id || messages.length === 0 || !hasInitializedChat || messages.length === 1) return;
+    debouncedSaveConversation(user.id, messages);
+    
+    return () => {
+      debouncedSaveConversation.cancel();
+    };
+  }, [messages, user?.id, debouncedSaveConversation, hasInitializedChat]);
 
   const handleSendMessage = async (message: string) => {
     if (message.trim() === '' || isLoading) return;
 
-    // Add user message
     const newUserMessage: Message = {
-      id: Date.now().toString(),
+      id: generateId(),
       role: 'user',
       content: message
     };
@@ -160,13 +176,11 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
     setIsLoading(true);
 
     try {
-      // Convert previous messages to server format
       const conversationHistory = messages.map(msg => ({
         role: msg.role,
         content: extractTextContent(msg.content)
       }));
 
-      // Get AI response
       const response = await continueWidgetConversation(
         message, 
         todayTrades, 
@@ -181,9 +195,8 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
       }]);
     } catch (error) {
       console.error('Error getting AI response:', error);
-      // Add error message
       setMessages(prev => [...prev, {
-        id: Date.now().toString(),
+        id: generateId(),
         role: 'assistant',
         content: 'Sorry, I encountered an error. Please try again.'
       }]);
@@ -229,18 +242,25 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
     
     setIsLoading(true);
     try {
-      // Get new initial greeting
       const greeting = await getInitialGreeting(
         todayTrades,
         weekTrades,
         user?.user_metadata?.full_name || user?.email?.split('@')[0]
       );
       
-      // Reset messages to just the new greeting
-      setMessages([{
+      const newMessage: Message = {
         id: greeting.id,
-        role: 'assistant',
+        role: 'assistant' as const,
         content: greeting.display
+      };
+      
+      setMessages([newMessage]);
+      
+      // Save the reset conversation immediately
+      await debouncedSaveConversation.cancel();
+      await saveMood(user.id, 'okay', [{
+        role: 'assistant' as const,
+        content: extractTextContent(greeting.display)
       }]);
     } catch (error) {
       console.error('Error resetting conversation:', error);
