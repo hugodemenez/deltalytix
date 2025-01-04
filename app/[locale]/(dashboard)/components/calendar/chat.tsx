@@ -5,15 +5,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Plus, Camera, Image, Folder, Send, Loader2 } from 'lucide-react';
-import { ClientMessage } from '../../../../../server/actions';
+import { ClientMessage } from '@/server/actions';
 import { useActions, useUIState } from 'ai/rsc';
 import { generateId } from 'ai';
 import { cn } from "@/lib/utils";
-import { generateQuestionSuggestions } from '../../../../../server/actions';
+import { generateQuestionSuggestions } from '@/server/actions';
 import { Skeleton } from "@/components/ui/skeleton";
+import { getMoodForDay, saveMood } from '@/server/mood';
+import { useUser } from '@/components/context/user-data';
+import { debounce } from 'lodash';
 
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
+
+type MoodType = 'bad' | 'okay' | 'great';
+
+function extractTextContent(content: string | React.ReactNode): string {
+  if (typeof content === 'string') return content;
+  
+  if (React.isValidElement(content)) {
+    const element = content as React.ReactElement;
+    // If it's a chart or complex component, return a descriptive text
+    if (typeof element.type === 'function') {
+      return '[Chart Analysis]';
+    }
+    if (element.props.children) {
+      // Recursively extract text from nested elements
+      return Array.isArray(element.props.children)
+        ? element.props.children.map((child: React.ReactNode) => extractTextContent(child)).join(' ')
+        : extractTextContent(element.props.children);
+    }
+  }
+  return String(content);
+}
 
 // Custom hook for managing suggestions
 function useSuggestions(dayData: any, dateString: string) {
@@ -49,6 +73,11 @@ function useSuggestions(dayData: any, dateString: string) {
   return { suggestions, isLoading };
 }
 
+interface SavedConversation {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function Chat({ dayData, dateString }: { dayData: any, dateString: string }) {
   const [input, setInput] = useState<string>('');
   const [conversation, setConversation] = useUIState();
@@ -57,26 +86,122 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { suggestions, isLoading: isSuggestionsLoading } = useSuggestions(dayData, dateString);
+  const { user } = useUser();
+  const initRef = useRef(false);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  const handleSendMessage = useCallback(async (message: string) => {
-    if (message.trim() === '') return;
+  // Load historical chat messages for the specific day
+  useEffect(() => {
+    async function loadDayChat() {
+      if (!user?.id || initRef.current) return;
+      initRef.current = true;
+
+      try {
+        const dayMood = await getMoodForDay(user.id, new Date(dateString));
+        
+        if (dayMood?.conversation) {
+          const savedMessages = dayMood.conversation as Array<{
+            role: 'user' | 'assistant';
+            content: string;
+          }>;
+          
+          // Convert saved messages to ClientMessage format
+          const clientMessages: ClientMessage[] = savedMessages.map(msg => ({
+            id: generateId(),
+            role: msg.role,
+            display: msg.content
+          }));
+          
+          // Initialize conversation with saved messages
+          if (clientMessages.length > 0) {
+            setConversation(clientMessages);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading day chat:', error);
+        initRef.current = false;
+      } finally {
+        setIsInitializing(false);
+      }
+    }
+
+    // Reset state when date changes
+    initRef.current = false;
+    setIsInitializing(true);
+    loadDayChat();
+
+    // Cleanup function
+    return () => {
+      initRef.current = true;
+    };
+  }, [user?.id, dateString, setConversation]);
+
+  // Save conversation when it changes
+  const debouncedSaveConversation = useCallback(
+    debounce(async (userId: string, messages: ClientMessage[], date: string) => {
+      if (messages.length === 0 || isInitializing) return;
+
+      try {
+        // Convert ClientMessage to SavedConversation, ensuring content is string
+        const conversationToSave: SavedConversation[] = messages.map(msg => ({
+          role: msg.role,
+          content: extractTextContent(msg.display)
+        }));
+
+        const dayMood = await getMoodForDay(userId, new Date(date));
+        let currentMood: MoodType = 'okay';
+        if (dayMood?.mood && ['bad', 'okay', 'great'].includes(dayMood.mood)) {
+          currentMood = dayMood.mood as MoodType;
+        }
+        
+        await saveMood(userId, currentMood, conversationToSave, new Date(date));
+      } catch (error) {
+        console.error('Error saving conversation:', error);
+      }
+    }, 1000),
+    [isInitializing]
+  );
+
+  useEffect(() => {
+    if (!user?.id || conversation.length === 0) return;
+    debouncedSaveConversation(user.id, conversation, dateString);
+    
+    return () => {
+      debouncedSaveConversation.cancel();
+    };
+  }, [conversation, user?.id, dateString, debouncedSaveConversation]);
+
+  const handleSendMessage = useCallback(async (userMessage: string) => {
+    if (userMessage.trim() === '' || isMessageLoading) return;
 
     setConversation((currentConversation: ClientMessage[]) => [
       ...currentConversation,
-      { id: generateId(), role: 'user', display: message },
-    ]);
-
-    setIsMessageLoading(true);
-    const response = await continueConversation(message, dayData, dateString);
-
-    setConversation((currentConversation: ClientMessage[]) => [
-      ...currentConversation,
-      response,
+      { id: generateId(), role: 'user', display: userMessage },
     ]);
 
     setInput('');
-    setIsMessageLoading(false);
-  }, [continueConversation, dayData, dateString, setConversation]);
+    setIsMessageLoading(true);
+
+    try {
+      const response = await continueConversation(userMessage, dayData, dateString);
+      setConversation((currentConversation: ClientMessage[]) => [
+        ...currentConversation,
+        response,
+      ]);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      setConversation((currentConversation: ClientMessage[]) => [
+        ...currentConversation,
+        { 
+          id: generateId(), 
+          role: 'assistant', 
+          display: 'Sorry, I encountered an error. Please try again.' 
+        },
+      ]);
+    } finally {
+      setIsMessageLoading(false);
+    }
+  }, [continueConversation, dayData, dateString, setConversation, isMessageLoading]);
 
   const handleFileUpload = (type: 'camera' | 'photo' | 'folder') => {
     if (fileInputRef.current) {
@@ -103,7 +228,6 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
 
   const renderSuggestions = () => {
     if (isSuggestionsLoading) {
-      // Tailwind classes for different widths
       const skeletonWidths = ['w-64', 'w-80', 'w-96'];
       return (
         <>
@@ -176,8 +300,9 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Write a reply..."
+            placeholder={isMessageLoading ? "AI is thinking..." : "Write a reply..."}
             className="flex-grow"
+            disabled={isMessageLoading}
           />
           <Button type="submit" disabled={isMessageLoading} size="icon" className="shrink-0">
             {isMessageLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
