@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
-import { signInWithDiscord, signInWithEmail } from "@/server/auth"
+import { signInWithDiscord, signInWithEmail, verifyOtp } from "@/server/auth"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -19,14 +19,19 @@ import {
     FormMessage,
 } from "@/components/ui/form"
 import { useI18n } from "@/locales/client"
+import { useRouter } from "next/navigation"
+import { toast } from "@/hooks/use-toast"
 
 const formSchema = z.object({
     email: z.string().email(),
 })
 
+const otpFormSchema = z.object({
+    otp: z.string().length(6, "Verification code must be 6 digits"),
+})
+
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-// Add a type for auth method
 type AuthMethod = 'email' | 'discord' | null
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
@@ -35,8 +40,9 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [countdown, setCountdown] = React.useState<number>(0)
     const [isSubscription, setIsSubscription] = React.useState<boolean>(false)
     const [lookupKey, setLookupKey] = React.useState<string | null>(null)
-    // Add state for tracking auth method
     const [authMethod, setAuthMethod] = React.useState<AuthMethod>(null)
+    const [showOtpInput, setShowOtpInput] = React.useState<boolean>(false)
+    const router = useRouter()
     const t = useI18n()
 
     React.useEffect(() => {
@@ -61,6 +67,13 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         },
     })
 
+    const otpForm = useForm<z.infer<typeof otpFormSchema>>({
+        resolver: zodResolver(otpFormSchema),
+        defaultValues: {
+            otp: "",
+        },
+    })
+
     async function onSubmitEmail(values: z.infer<typeof formSchema>) {
         if (countdown > 0) return
         
@@ -69,10 +82,34 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         try {
             await signInWithEmail(values.email, isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
             setIsEmailSent(true)
+            setShowOtpInput(true)
             setCountdown(15)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    async function onSubmitOtp(values: z.infer<typeof otpFormSchema>) {
+        setIsLoading(true)
+        try {
+            const email = form.getValues('email')
+            await verifyOtp(email, values.otp)
+            toast({
+                title: "Success",
+                description: "Successfully verified. Redirecting...",
+            })
+            router.refresh()
+            router.push('/dashboard')
+        } catch (error) {
+            console.error(error)
+            toast({
+                title: "Error",
+                description: error instanceof Error ? error.message : "Failed to verify code",
+                variant: "destructive",
+            })
         } finally {
             setIsLoading(false)
         }
@@ -194,6 +231,40 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                     )}
                 </form>
             </Form>
+
+            {showOtpInput && (
+                <Form {...otpForm}>
+                    <form onSubmit={otpForm.handleSubmit(onSubmitOtp)} className="space-y-4">
+                        <FormField
+                            control={otpForm.control}
+                            name="otp"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Verification Code</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="123456"
+                                            maxLength={6}
+                                            {...field}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button 
+                            type="submit" 
+                            className="w-full"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? (
+                                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                            ) : null}
+                            Verify Code
+                        </Button>
+                    </form>
+                </Form>
+            )}
 
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">

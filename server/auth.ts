@@ -122,3 +122,23 @@ export async function handleAuthCallback() {
   }
   // No need to handle redirect here, as it's already managed in the route
 }
+
+export async function verifyOtp(email: string, token: string, type: 'email' | 'signup' = 'email') {
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type
+  })
+
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  // Ensure user is in database after verification
+  if (data.user) {
+    await ensureUserInDatabase(data.user)
+  }
+
+  return data
+}
