@@ -230,7 +230,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                             onMouseEnter={() => setHoveredCategory(info.category)}
                             onMouseLeave={() => setHoveredCategory(null)}
                             className={cn(
-                              "flex items-center gap-2 ml-6 border-l-2 border-muted pl-4 transition-all duration-200 rounded-none",
+                              "flex items-stretch gap-4 ml-6 border-l-2 border-muted pl-4 transition-all duration-200 rounded-none",
                               isDisabled && "opacity-50 select-none",
                               !isDisabled && "cursor-pointer",
                               selectedType === info.type && "border-l-primary bg-primary/5",
@@ -238,6 +238,53 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                             )}
                             disabled={isDisabled}
                           >
+                            <div className="flex items-center py-1">
+                              {info.type && ['rithmic-performance', 'rithmic-orders', 'rithmic-sync'].includes(info.type) && (
+                                <Image
+                                  src="/logos/rithmic.png"
+                                  alt="Rithmic Logo"
+                                  width={32}
+                                  height={32}
+                                  className="object-contain rounded-lg border border-border/50"
+                                />
+                              )}
+                              {info.type === 'tradezella' && (
+                                <Image
+                                  src="/logos/tradezella.png"
+                                  alt="Tradezella Logo"
+                                  width={32}
+                                  height={32}
+                                  className="object-contain rounded-lg border border-border/50"
+                                />
+                              )}
+                              {info.type === 'tradovate' && (
+                                <Image
+                                  src="/logos/tradovate.png"
+                                  alt="Tradovate Logo"
+                                  width={32}
+                                  height={32}
+                                  className="object-contain rounded-lg border border-border/50"
+                                />
+                              )}
+                              {info.type === 'ninjatrader-performance' && (
+                                <Image
+                                  src="/logos/ninjatrader.png"
+                                  alt="NinjaTrader Logo"
+                                  width={32}
+                                  height={32}
+                                  className="object-contain rounded-lg border border-border/50"
+                                />
+                              )}
+                              {info.type === 'quantower' && (
+                                <Image
+                                  src="/logos/quantower.png"
+                                  alt="Quantower Logo"
+                                  width={32}
+                                  height={32}
+                                  className="object-contain rounded-lg border border-border/50"
+                                />
+                              )}
+                            </div>
                             <div className="flex-1">
                               <div className="font-medium flex items-center gap-2">
                                 {t(info.name as any, {})}

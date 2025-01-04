@@ -287,6 +287,9 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
           <AlertDialogTrigger asChild>
             <ContextMenuItem 
               className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
+              onSelect={(e) => {
+                e.preventDefault()
+              }}
             >
               <Minus className="mr-2 h-4 w-4" />
               <span>Remove Widget</span>
