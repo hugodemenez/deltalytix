@@ -339,4 +339,5 @@ export default {
     'chat.aiThinking': 'L\'IA réfléchit...',
     'chat.writeMessage': 'Écrivez un message...',
     'chat.noTradesAvailable': 'Aucun trade disponible',
+    'import.type.rithmicWeekendWarning': 'Les services Rithmic ne sont pas disponibles pendant les weekends',
 } as const

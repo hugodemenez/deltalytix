@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import Image from 'next/image'
 import { RithmicSync } from './rithmic-sync'
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Lock, Clock, Search, Star, Link2, FileSpreadsheet, Database, AlertCircle } from "lucide-react"
+import { Lock, Clock, Search, Star, Link2, FileSpreadsheet, Database, AlertCircle, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
@@ -29,6 +29,12 @@ import { useI18n } from "@/locales/client"
 
 // Easy toggle between COMING_SOON and PLUS_ONLY
 const RITHMIC_SYNC_STATE: 'COMING_SOON' | 'PLUS_ONLY' = 'PLUS_ONLY'
+
+// Add function to check if it's weekend
+function isWeekend() {
+  const day = new Date().getDay()
+  return day === 0 || day === 6 // 0 is Sunday, 6 is Saturday
+}
 
 export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' | 'ninjatrader-performance' | 'quantower' | 'rithmic-sync'
 
@@ -298,6 +304,12 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                                       <Lock className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
                                     }
                                   </>
+                                )}
+                                {!isDisabled && info.type.includes('rithmic') && isWeekend() && (
+                                  <div className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 border-transparent bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 hover:bg-yellow-500/20 gap-1.5 ml-2">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    {t('import.type.rithmicWeekendWarning')}
+                                  </div>
                                 )}
                               </div>
                               <div className="text-sm text-muted-foreground">{t(info.description as any, {})}</div>
