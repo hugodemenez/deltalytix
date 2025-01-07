@@ -113,7 +113,7 @@ const importTypeInfo: ImportTypeInfo[] = [
     name: 'import.type.tradovate.name',
     description: 'import.type.tradovate.description',
     category: 'Platform CSV Import',
-    videoUrl: '',
+    videoUrl: process.env.NEXT_PUBLIC_TRADEOVATE_TUTORIAL_VIDEO || '',
     details: ''
   },
   {
