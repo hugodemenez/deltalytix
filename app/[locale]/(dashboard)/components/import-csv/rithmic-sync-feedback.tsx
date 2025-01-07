@@ -21,13 +21,53 @@ const fadeInOut = {
 }
 
 export function RithmicSyncFeedback({ totalAccounts }: FeedbackProps) {
-  const { accountsProgress, currentAccount, processingStats, dateRange, connectionStatus } = useWebSocket()
+  const { accountsProgress, currentAccount, processingStats, dateRange, connectionStatus, lastMessage } = useWebSocket()
+  const [localProgress, setLocalProgress] = React.useState<Record<string, {
+    current: number;
+    total: number;
+    ordersProcessed: number;
+    currentDate?: string;
+    currentDayNumber?: number;
+  }>>({})
+
+  // Process WebSocket messages to update progress
+  React.useEffect(() => {
+    if (lastMessage) {
+      if (lastMessage.type === 'log' && lastMessage.level === 'info') {
+        // Parse progress from processing date messages
+        const processingMatch = lastMessage.message.match(/Processing date (\d+) of (\d+): (\d+)/)
+        if (processingMatch && currentAccount) {
+          const [_, current, total, date] = processingMatch
+          // Update progress for the specific account
+          setLocalProgress(prev => ({
+            ...prev,
+            [currentAccount]: {
+              current: parseInt(current),
+              total: parseInt(total),
+              ordersProcessed: accountsProgress[currentAccount]?.ordersProcessed || 0,
+              currentDate: date,
+              currentDayNumber: parseInt(current)
+            }
+          }))
+        }
+      }
+    }
+  }, [lastMessage, currentAccount, accountsProgress])
 
   // Calculate progress for a specific account
-  const getAccountProgress = (account: typeof accountsProgress[string]) => {
+  const getAccountProgress = (accountId: string, account: typeof accountsProgress[string]) => {
+    if (!account) return 0
     if (account.isComplete) return 100
+    
+    // First try to use the local progress state which is more up-to-date
+    const localAccountProgress = localProgress[accountId]
+    if (localAccountProgress && localAccountProgress.total > 0) {
+      return Math.max(0, Math.min(100, (localAccountProgress.current / localAccountProgress.total) * 100))
+    }
+    
+    // Fall back to account progress from context
     if (!account.totalDays) return 0
-    return (account.daysProcessed / account.totalDays) * 100
+    return Math.max(0, Math.min(100, (account.daysProcessed / account.totalDays) * 100))
   }
 
   const getAccountStatus = (accountId: string, progress: typeof accountsProgress[string]) => {
@@ -108,16 +148,22 @@ export function RithmicSyncFeedback({ totalAccounts }: FeedbackProps) {
                   </div>
                   <div className="space-y-2">
                     <Progress 
-                      value={progress.isComplete ? 100 : accountId === currentAccount ? getAccountProgress(progress) : 0} 
+                      value={getAccountProgress(accountId, progress)}
                       className="w-full h-2" 
                     />
                     <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Days: {progress.daysProcessed} / {progress.totalDays}</span>
+                      <span>Days: {
+                        progress.isComplete ? 
+                          `${progress.totalDays} / ${progress.totalDays}` :
+                          localProgress[accountId] ? 
+                            `${localProgress[accountId].current} / ${localProgress[accountId].total}` :
+                            `${progress.daysProcessed} / ${progress.totalDays}`
+                      }</span>
                       <span>Orders: {progress.ordersProcessed}</span>
                     </div>
-                    {progress.currentDate && !progress.isComplete && (
+                    {((localProgress[accountId]?.currentDate && localProgress[accountId]?.currentDayNumber) || (progress.currentDate && progress.currentDayNumber)) && !progress.isComplete && (
                       <div className="text-xs text-muted-foreground mt-1">
-                        Processing day {progress.currentDayNumber} - {progress.currentDate}
+                        Processing day {localProgress[accountId]?.currentDayNumber || progress.currentDayNumber} - {localProgress[accountId]?.currentDate || progress.currentDate}
                       </div>
                     )}
                     {progress.lastProcessedDate && (

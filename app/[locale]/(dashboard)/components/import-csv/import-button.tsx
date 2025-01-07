@@ -20,7 +20,6 @@ import ColumnMapping from './column-mapping'
 import TradezellaProcessor from './tradezella-processor'
 import NinjaTraderPerformanceProcessor from './ninjatrader-performance-processor'
 import QuantowerOrderProcessor from './quantower-processor'
-import { RithmicSync } from './rithmic-sync'
 import { cn } from '@/lib/utils'
 import { useI18n } from "@/locales/client"
 

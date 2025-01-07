@@ -109,6 +109,28 @@ export function WebSocketNotifications() {
             setIsComplete(true)
           }, 5000)
         }
+      } else if (lastMessage.type === 'log' && lastMessage.level === 'info') {
+        // Parse progress from processing date messages
+        const processingMatch = lastMessage.message.match(/Processing date (\d+) of (\d+): (\d+)/)
+        if (processingMatch) {
+          const [_, current, total, date] = processingMatch
+          setNotifications(prev => ({
+            ...prev,
+            progress: {
+              ...prev.progress,
+              type: 'info',
+              message: `Processing data for ${date}`,
+              timestamp: Date.now(),
+              progress: {
+                current: parseInt(current),
+                total: parseInt(total),
+                ordersProcessed: prev.progress.progress?.ordersProcessed || 0,
+                currentDate: date,
+                currentDayNumber: parseInt(current)
+              }
+            }
+          }))
+        }
       } else if (lastMessage.type === 'error') {
         setNotifications(prev => ({
           ...prev,

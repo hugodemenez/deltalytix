@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import Image from 'next/image'
-import { RithmicSync } from './rithmic-sync'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Lock, Clock, Search, Star, Link2, FileSpreadsheet, Database, AlertCircle, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"

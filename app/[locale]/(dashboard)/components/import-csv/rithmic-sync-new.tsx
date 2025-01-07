@@ -92,6 +92,16 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       let shouldAddMessage = true
       let messageContent = lastMessage.message || JSON.stringify(lastMessage)
 
+      // Handle completion message
+      if (lastMessage.type === 'complete' && lastMessage.status === 'all_complete') {
+        console.log('Processing completed, refreshing trades and closing modal')
+        refreshTrades()
+        setTimeout(() => {
+          disconnect() // Disconnect WebSocket before closing modal
+          setIsOpen(false)
+        }, 2000) // Give user time to see completion state
+      }
+
       switch (lastMessage.type) {
         case 'order_update':
           messageType = 'order'
