@@ -155,7 +155,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
             clearTimeout(completionCheckRef.current)
           }
 
-          // Set a delay to ensure all processing is done
+          // Set a 5 second delay to ensure all processing is done
           completionCheckRef.current = setTimeout(() => {
             console.log('Executing completion actions')
             refreshTrades()
@@ -164,7 +164,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
               disconnect() // Disconnect WebSocket before closing modal
               setIsOpen(false)
             }, 1000)
-          }, 2000)
+          }, 5000) // Increased to 5 seconds
         }
 
         return newHistory
