@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,8 +20,13 @@ import { useWebSocket } from '../context/websocket-context'
 interface RithmicCredentials {
   username: string
   password: string
-  server: string
+  server_type: string
+  location: string
   userId: string
+}
+
+interface ServerConfigurations {
+  [key: string]: string[]
 }
 
 interface RithmicAccount {
@@ -66,6 +71,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
   } = useWebSocket()
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [isLoading, setIsLoading] = useState(false)
+  const [serverConfigs, setServerConfigs] = useState<ServerConfigurations>({})
   
   // Check for active connection on mount
   useEffect(() => {
@@ -78,29 +84,95 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
   const [credentials, setCredentials] = useState<RithmicCredentials>({
     username: '',
     password: '',
-    server: 'PAPER',
+    server_type: 'Rithmic Paper Trading',
+    location: 'Chicago Area',
     userId: user?.id || ''
   })
   const [token, setToken] = useState<string | null>(null)
   const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [feedbackMessages, setFeedbackMessages] = useState<string[]>([])
+  const [messageHistory, setMessageHistory] = useState<any[]>([])
+  const completionCheckRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Fetch server configurations on mount and set defaults
+  useEffect(() => {
+    async function fetchServerConfigs() {
+      try {
+        const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
+        const protocol = isLocalhost ? window.location.protocol : 'https:'
+        const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/servers`)
+        const data = await response.json()
+        
+        if (data.success) {
+          setServerConfigs(data.servers)
+          
+          // Verify if our defaults exist in the server configs
+          const hasDefaultServer = 'Rithmic Paper Trading' in data.servers
+          const hasDefaultLocation = hasDefaultServer && data.servers['Rithmic Paper Trading'].includes('Chicago Area')
+          
+          // If defaults don't exist, set to first available options
+          if (!hasDefaultServer || !hasDefaultLocation) {
+            const firstServerType = Object.keys(data.servers)[0]
+            const firstLocation = data.servers[firstServerType][0]
+            
+            setCredentials(prev => ({
+              ...prev,
+              server_type: firstServerType,
+              location: firstLocation
+            }))
+          }
+        } else {
+          throw new Error(data.message)
+        }
+      } catch (error) {
+        console.error('Failed to fetch server configurations:', error)
+        setFeedbackMessages(prev => [...prev, JSON.stringify({ 
+          type: 'error', 
+          message: `Error fetching server configurations: ${error instanceof Error ? error.message : 'Unknown error'}` 
+        })])
+      }
+    }
+    
+    fetchServerConfigs()
+  }, [])
 
   // Update feedback messages when receiving WebSocket messages
   useEffect(() => {
     if (lastMessage) {
+      // Add message to history
+      setMessageHistory(prev => {
+        const newHistory = [...prev, lastMessage]
+        
+        // Check for completion message in history
+        const hasCompletionMessage = newHistory.some(
+          msg => msg.type === 'complete' && msg.status === 'all_complete'
+        )
+
+        if (hasCompletionMessage) {
+          console.log('Completion message found in history')
+          // Clear any existing completion check
+          if (completionCheckRef.current) {
+            clearTimeout(completionCheckRef.current)
+          }
+
+          // Set a delay to ensure all processing is done
+          completionCheckRef.current = setTimeout(() => {
+            console.log('Executing completion actions')
+            refreshTrades()
+            // Add a small delay before closing to ensure trades are refreshed
+            setTimeout(() => {
+              disconnect() // Disconnect WebSocket before closing modal
+              setIsOpen(false)
+            }, 1000)
+          }, 2000)
+        }
+
+        return newHistory
+      })
+
       let messageType = 'log'
       let shouldAddMessage = true
       let messageContent = lastMessage.message || JSON.stringify(lastMessage)
-
-      // Handle completion message
-      if (lastMessage.type === 'complete' && lastMessage.status === 'all_complete') {
-        console.log('Processing completed, refreshing trades and closing modal')
-        refreshTrades()
-        setTimeout(() => {
-          disconnect() // Disconnect WebSocket before closing modal
-          setIsOpen(false)
-        }, 2000) // Give user time to see completion state
-      }
 
       switch (lastMessage.type) {
         case 'order_update':
@@ -130,7 +202,16 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
         })
       }
     }
-  }, [lastMessage])
+  }, [lastMessage, disconnect, refreshTrades, setIsOpen])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (completionCheckRef.current) {
+        clearTimeout(completionCheckRef.current)
+      }
+    }
+  }, [])
 
   // Update feedback messages for connection status changes
   useEffect(() => {
@@ -185,7 +266,13 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(credentials)
+        body: JSON.stringify({
+          username: credentials.username,
+          password: credentials.password,
+          server_type: credentials.server_type,
+          location: credentials.location,
+          user_id: credentials.userId
+        })
       })
 
       const data = await response.json()
@@ -270,23 +357,57 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="rithmic-server">Rithmic Server</Label>
+            <Label htmlFor="server-type">Server Type</Label>
             <Select
-              name="rithmic-server"
-              value={credentials.server}
-              onValueChange={(value) => setCredentials(prev => ({ ...prev, server: value }))}
+              name="server-type"
+              value={credentials.server_type}
+              onValueChange={(value) => {
+                setCredentials(prev => ({ 
+                  ...prev, 
+                  server_type: value,
+                  location: '' // Reset location when server type changes
+                }))
+              }}
             >
-              <SelectTrigger id="rithmic-server">
-                <SelectValue placeholder="Select Rithmic server" />
+              <SelectTrigger id="server-type">
+                <SelectValue placeholder="Select server type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PAPER">Paper Trading</SelectItem>
-                <SelectItem value="TEST">Test Environment</SelectItem>
+                {Object.keys(serverConfigs).map((serverType) => (
+                  <SelectItem key={serverType} value={serverType}>
+                    {serverType}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
-          <Button type="submit" disabled={isLoading} className="w-full">
+          <div className="space-y-2">
+            <Label htmlFor="location">Location</Label>
+            <Select
+              name="location"
+              value={credentials.location}
+              onValueChange={(value) => setCredentials(prev => ({ ...prev, location: value }))}
+              disabled={!credentials.server_type}
+            >
+              <SelectTrigger id="location">
+                <SelectValue placeholder="Select location" />
+              </SelectTrigger>
+              <SelectContent>
+                {credentials.server_type && serverConfigs[credentials.server_type]?.map((location) => (
+                  <SelectItem key={location} value={location}>
+                    {location}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button 
+            type="submit" 
+            disabled={isLoading || !credentials.server_type || !credentials.location} 
+            className="w-full"
+          >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Get Accounts
           </Button>
@@ -297,6 +418,25 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Select Accounts to Import</h3>
           <div className="space-y-2">
+            <div className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
+              <Checkbox
+                id="select-all"
+                checked={availableAccounts.length > 0 && selectedAccounts.length === availableAccounts.length}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setSelectedAccounts(availableAccounts.map(account => account.account_id))
+                  } else {
+                    setSelectedAccounts([])
+                  }
+                }}
+              />
+              <Label 
+                htmlFor="select-all"
+                className="flex-1 cursor-pointer font-medium"
+              >
+                Select All Accounts
+              </Label>
+            </div>
             {availableAccounts.map((account) => (
               <div key={account.account_id} className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
                 <Checkbox
