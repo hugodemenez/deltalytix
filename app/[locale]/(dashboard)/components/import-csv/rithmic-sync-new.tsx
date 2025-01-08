@@ -88,6 +88,14 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     location: 'Chicago Area',
     userId: user?.id || ''
   })
+
+  // Update userId when user changes
+  useEffect(() => {
+    if (user?.id) {
+      setCredentials(prev => ({ ...prev, userId: user.id }))
+    }
+  }, [user])
+
   const [token, setToken] = useState<string | null>(null)
   const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [feedbackMessages, setFeedbackMessages] = useState<string[]>([])
@@ -261,18 +269,21 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     try {
       const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
       const protocol = isLocalhost ? window.location.protocol : 'https:'
+      
+      const payload = {
+        username: credentials.username,
+        password: credentials.password,
+        server_type: credentials.server_type,
+        location: credentials.location,
+        userId: credentials.userId
+      }
+      
       const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          username: credentials.username,
-          password: credentials.password,
-          server_type: credentials.server_type,
-          location: credentials.location,
-          user_id: credentials.userId
-        })
+        body: JSON.stringify(payload)
       })
 
       const data = await response.json()
