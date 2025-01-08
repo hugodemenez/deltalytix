@@ -120,7 +120,7 @@ const importTypeInfo: ImportTypeInfo[] = [
     name: 'import.type.quantower.name',
     description: 'import.type.quantower.description',
     category: 'Platform CSV Import',
-    videoUrl: '',
+    videoUrl: process.env.NEXT_PUBLIC_QUANTOWER_TUTORIAL_VIDEO || '',
     details: ''
   }
 ]
