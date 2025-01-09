@@ -15,30 +15,39 @@ interface NinjaTraderPerformanceProcessorProps {
 
 const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: string } => {
   if (typeof pnl !== 'string' || pnl.trim() === '') {
-    console.warn('Invalid PNL value:', pnl);
     return { pnl: 0, error: 'Invalid PNL value' };
   }
 
   let formattedPnl = pnl.trim();
-
-  // Remove , by . and $ by nothing
   const numericValue = parseFloat(formattedPnl.replace(/[$]/g, '').replace(',', '.'));
+  
   if (isNaN(numericValue)) {
-    console.warn('Unable to parse PNL value:', pnl);
     return { pnl: 0, error: 'Unable to parse PNL value' };
   }
   return { pnl: numericValue };
 };
 
+const formatPriceValue = (price: string | undefined): { price: number, error?: string } => {
+  if (typeof price !== 'string' || price.trim() === '') {
+    return { price: 0, error: 'Invalid price value' };
+  }
+
+  let formattedPrice = price.trim();
+  const numericValue = parseFloat(formattedPrice.replace(',', '.'));
+  
+  if (isNaN(numericValue)) {
+    return { price: 0, error: 'Unable to parse price value' };
+  }
+  return { price: numericValue };
+};
 
 const generateTradeHash = (trade: Partial<Trade>, index: number): string => {
   const hashString = `${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}-${index}`
   return hashString
 }
 
-const newMappings: { [key: string]: string } = {
+const englishMappings: { [key: string]: string } = {
   "Account": "accountNumber",
-  "Commission": "commission",
   "Entry name": "entryId",
   "Entry price": "entryPrice",
   "Entry time": "entryDate",
@@ -48,30 +57,75 @@ const newMappings: { [key: string]: string } = {
   "Instrument": "instrument",
   "Market pos.": "side",
   "Profit": "pnl",
-  "Qty": "quantity"
+  "Qty": "quantity",
+  "Commission": "commission",
 }
 
+const frenchMappings: { [key: string]: string } = {
+  "Compte": "accountNumber",
+  "Nom d'entrée": "entryId",
+  "Prix d'entrée": "entryPrice",
+  "Heure d'entrée": "entryDate",
+  "Nom de la sortie": "closeId",
+  "Prix de sortie": "closePrice",
+  "Heure de sortie": "closeDate",
+  "Instrument": "instrument",
+  "Pos. marché.": "side",
+  "Qté": "quantity",
+  "Commission": "commission",
+  "Profit": "pnl",
+}
 
 export default function NinjaTraderPerformanceProcessor({ headers, csvData, setProcessedTrades }: NinjaTraderPerformanceProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
 
   const processTrades = useCallback(() => {
     const newTrades: Trade[] = [];
-    //TODO: Ask user for account number using account selection component
-    csvData.forEach((row, index) => {
-      if (row.length < 3) {
-        return
+    
+    const normalizeHeader = (header: string): string => {
+      return header.replace(/[\u2019''′`]/g, "'");
+    };
+
+    const isFrenchCSV = headers.some(header => 
+      ["Numéro d'ordre", "Compte", "Stratégie", "Pos. marché.", "Qté"].includes(header)
+    );
+    
+    const mappings = isFrenchCSV ? frenchMappings : englishMappings;
+
+    csvData.forEach((row, rowIndex) => {
+      if (row.length < 3 || row.every(cell => !cell)) {
+        return;
       }
+
       const item: Partial<Trade> = {};
       let quantity = 0;
+      let hasValidData = false;
+
       headers.forEach((header, index) => {
-        if (newMappings[header]) {
-          const key = newMappings[header] as keyof Trade;
-          const cellValue = row[index];
+        const normalizedHeader = normalizeHeader(header);
+        const mappedKey = mappings[normalizedHeader];
+        if (mappedKey) {
+          const key = mappedKey as keyof Trade;
+          const cellValue = row[index]?.trim();
+          
+          if (!cellValue) {
+            return;
+          }
+
+          hasValidData = true;
+          
           switch (key) {
             case 'quantity':
               quantity = parseFloat(cellValue) || 0;
               item[key] = quantity;
+              break;
+            case 'entryPrice':
+            case 'closePrice':
+              const { price, error: priceError } = formatPriceValue(cellValue);
+              if (priceError) {
+                return;
+              }
+              item[key] = price.toString();
               break;
             case 'pnl':
               const { pnl, error } = formatCurrencyValue(cellValue)
@@ -96,21 +150,21 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
         }
       });
 
-      if (item.instrument === '') {
+      if (!hasValidData || !item.instrument) {
         return;
       }
 
       const convertToValidDate = (dateString: string): Date | null => {
-        // Check if the date is in the format DD/MM/YYYY HH:mm:ss
+        if (!dateString) return null;
+
         const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})$/;
         const match = dateString.match(dateRegex);
 
         if (match) {
-          // If it matches, convert to YYYY-MM-DDTHH:mm:ss.000Z format
           const [, day, month, year, hours, minutes, seconds] = match;
-          return new Date(`${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`);
+          const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
+          return new Date(isoString);
         } else {
-          // If it doesn't match, try parsing it directly
           const date = new Date(dateString);
           return isNaN(date.getTime()) ? null : date;
         }
@@ -123,27 +177,22 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
         item.entryDate = entryDate.toISOString();
         item.closeDate = closeDate.toISOString();
       } else {
-        console.error('Invalid date format:', { entryDate: item.entryDate, closeDate: item.closeDate });
-        return; // Skip this trade if dates are invalid
+        return;
       }
 
-
-      // Compute time in position based on entry and close date
       if (item.entryDate && item.closeDate) {
         item.timeInPosition = (new Date(item.closeDate).getTime() - new Date(item.entryDate).getTime()) / 1000
       }
 
-      // Instrument are only first 2 characters of the symbol
       if (item.instrument) {
         item.instrument = item.instrument.slice(0, 2)
       }
 
-      // Add commission to pnl because pnl is net profit
       if (item.pnl !== undefined && item.commission !== undefined) {
         item.pnl = item.pnl + item.commission;
       }
 
-      item.id = generateTradeHash(item as Trade, index).toString();
+      item.id = generateTradeHash(item as Trade, rowIndex).toString();
       newTrades.push(item as Trade);
     })
 

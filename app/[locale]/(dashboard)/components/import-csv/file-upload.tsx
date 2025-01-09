@@ -105,24 +105,36 @@ export default function FileUpload({
 
   const processFile = useCallback((file: File, index: number) => {
     return new Promise<void>((resolve, reject) => {
-      Papa.parse(file, {
-        complete: (result) => {
-          if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-            setParsedFiles(prevFiles => {
-              const newFiles = [...prevFiles]
-              newFiles[index] = result.data as string[][]
-              return newFiles
-            })
-            setError(null)
-            resolve()
-          } else {
-            reject(new Error("The CSV file appears to be empty or invalid."))
+      // First read the first line to detect delimiter
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const firstLine = e.target?.result?.toString().split('\n')[0] || '';
+        const delimiter = firstLine.includes(';') ? ';' : ',';
+        
+        Papa.parse(file, {
+          delimiter,
+          complete: (result) => {
+            if (result.data && Array.isArray(result.data) && result.data.length > 0) {
+              setParsedFiles(prevFiles => {
+                const newFiles = [...prevFiles]
+                newFiles[index] = result.data as string[][]
+                return newFiles
+              })
+              setError(null)
+              resolve()
+            } else {
+              reject(new Error("The CSV file appears to be empty or invalid."))
+            }
+          },
+          error: (error) => {
+            reject(new Error(`Error parsing CSV: ${error.message}`))
           }
-        },
-        error: (error) => {
-          reject(new Error(`Error parsing CSV: ${error.message}`))
-        }
-      })
+        })
+      };
+      reader.onerror = () => {
+        reject(new Error("Error reading file"))
+      };
+      reader.readAsText(file);
     })
   }, [setError])
 
