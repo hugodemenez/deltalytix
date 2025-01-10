@@ -29,6 +29,7 @@ import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minim
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
+import { useI18n } from "@/locales/client"
 import EquityChart from './charts/equity-chart'
 import TickDistributionChart from './charts/tick-distribution'
 import PNLChart from './charts/pnl-bar-chart'
@@ -71,6 +72,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   currentType: WidgetType
   onCustomize: () => void
 }) {
+  const  t  = useI18n()
   const isMobile = useIsMobile()
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
   const contextButtonRef = useRef<HTMLButtonElement>(null)
@@ -161,7 +163,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
               <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 drag-handle cursor-grab active:cursor-grabbing">
                 <div className="flex flex-col items-center gap-2 text-muted-foreground">
                   <GripVertical className="h-6 w-4" />
-                  <p className="text-sm font-medium">Drag to move</p>
+                  <p className="text-sm font-medium">{t('widgets.dragToMove')}</p>
                 </div>
               </div>
               <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10">
@@ -200,14 +202,14 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                      <AlertDialogTitle>{t('widgets.removeWidgetConfirm')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will remove the widget from your dashboard. You can add it back later if needed.
+                        {t('widgets.removeWidgetDescription')}
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={onRemove}>Remove Widget</AlertDialogAction>
+                      <AlertDialogCancel>{t('widgets.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction onClick={onRemove}>{t('widgets.removeWidget')}</AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
@@ -222,7 +224,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
           className="hover:bg-accent hover:text-accent-foreground"
         >
           <GripVertical className="mr-2 h-4 w-4" />
-          <span>Move</span>
+          <span>{t('widgets.move')}</span>
         </ContextMenuItem>
         {!hasFixedSize && (
           <>
@@ -230,7 +232,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
             <ContextMenuSub>
               <ContextMenuSubTrigger className="flex items-center">
                 <Maximize2 className="mr-2 h-4 w-4" />
-                <span>Change Size</span>
+                <span>{t('widgets.changeSize')}</span>
               </ContextMenuSubTrigger>
               <ContextMenuSubContent>
                 {isMobile ? (
@@ -241,7 +243,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                       disabled={!isValidSize(currentType, 'tiny')}
                     >
                       <Minimize2 className="mr-2 h-4 w-4" />
-                      <span>Small (12x1)</span>
+                      <span>{t('widgets.size.mobile.small')}</span>
                     </ContextMenuItem>
                     <ContextMenuItem 
                       onClick={() => onChangeSize('medium')}
@@ -249,7 +251,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                       disabled={!isValidSize(currentType, 'medium')}
                     >
                       <Square className="mr-2 h-4 w-4" />
-                      <span>Medium (12x4)</span>
+                      <span>{t('widgets.size.mobile.medium')}</span>
                     </ContextMenuItem>
                     <ContextMenuItem 
                       onClick={() => onChangeSize('large')}
@@ -257,7 +259,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                       disabled={!isValidSize(currentType, 'large')}
                     >
                       <Maximize2 className="mr-2 h-4 w-4" />
-                      <span>Large (12x6)</span>
+                      <span>{t('widgets.size.mobile.large')}</span>
                     </ContextMenuItem>
                   </>
                 ) : (
@@ -268,7 +270,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                       disabled={!isValidSize(currentType, 'tiny')}
                     >
                       <Minimize2 className="mr-2 h-4 w-4" />
-                      <span>Tiny (3x1)</span>
+                      <span>{t('widgets.size.tiny')}</span>
                     </ContextMenuItem>
                     <ContextMenuItem 
                       onClick={() => onChangeSize('small')}
@@ -276,7 +278,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                       disabled={!isValidSize(currentType, 'small')}
                     >
                       <Minimize2 className="mr-2 h-4 w-4" />
-                      <span>Small (3x4)</span>
+                      <span>{t('widgets.size.small')}</span>
                     </ContextMenuItem>
                     <ContextMenuItem 
                       onClick={() => onChangeSize('medium')}
@@ -284,7 +286,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                       disabled={!isValidSize(currentType, 'medium')}
                     >
                       <Square className="mr-2 h-4 w-4" />
-                      <span>Medium (6x4)</span>
+                      <span>{t('widgets.size.medium')}</span>
                     </ContextMenuItem>
                     <ContextMenuItem 
                       onClick={() => onChangeSize('large')}
@@ -292,7 +294,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                       disabled={!isValidSize(currentType, 'large')}
                     >
                       <Maximize2 className="mr-2 h-4 w-4" />
-                      <span>Large (6x6)</span>
+                      <span>{t('widgets.size.large')}</span>
                     </ContextMenuItem>
                   </>
                 )}
@@ -310,19 +312,19 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
               }}
             >
               <Minus className="mr-2 h-4 w-4" />
-              <span>Remove Widget</span>
+              <span>{t('widgets.remove')}</span>
             </ContextMenuItem>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogTitle>{t('widgets.removeWidgetConfirm')}</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove the widget from your dashboard. You can add it back later if needed.
+                {t('widgets.removeWidgetDescription')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={onRemove}>Remove Widget</AlertDialogAction>
+              <AlertDialogCancel>{t('widgets.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={onRemove}>{t('widgets.removeWidget')}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
@@ -417,6 +419,7 @@ const customStyles = `
 `
 
 export default function WidgetCanvas() {
+  const  t = useI18n()
   const { user } = useUser()
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
   const isMobile = useIsMobile()
@@ -1028,155 +1031,155 @@ export default function WidgetCanvas() {
           <DropdownMenuTrigger asChild id="widget-canvas">
             <Button variant="outline" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              Add Widget
+              {t('widgets.addWidget')}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-56 bg-popover text-popover-foreground border-border max-h-[400px] overflow-y-auto">
-            <DropdownMenuLabel>Calendar</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('widgets.categories.calendar')}</DropdownMenuLabel>
             <DropdownMenuItem 
               onClick={() => addWidget('calendarWidget', 'large')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Calendar className="mr-2 h-4 w-4" />
-              <span>Calendar View</span>
+              <Calendar className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.calendarView')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>Charts</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('widgets.categories.charts')}</DropdownMenuLabel>
             <DropdownMenuItem 
               onClick={() => addWidget('equityChart')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <LineChart className="mr-2 h-4 w-4" />
-              <span>Equity Chart</span>
+              <LineChart className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.equityChart')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('pnlChart')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <BarChart className="mr-2 h-4 w-4" />
-              <span>P&L Chart</span>
+              <BarChart className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.pnlChart')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('timeOfDayChart')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Clock className="mr-2 h-4 w-4" />
-              <span>Time of Day</span>
+              <Clock className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.timeOfDay')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('timeInPositionChart')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Timer className="mr-2 h-4 w-4" />
-              <span>Time in Position</span>
+              <Timer className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.timeInPosition')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('weekdayPnlChart')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Calendar className="mr-2 h-4 w-4" />
-              <span>Weekday P&L</span>
+              <Calendar className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.weekdayPnl')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('pnlBySideChart')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              <span>P&L by Side</span>
+              <ArrowLeftRight className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.pnlBySide')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('tickDistribution')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <BarChart className="mr-2 h-4 w-4" />
-              <span>Tick Distribution</span>
+              <BarChart className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.tickDistribution')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('commissionsPnl')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <PiggyBank className="mr-2 h-4 w-4" />
-              <span>Commissions PnL</span>
+              <PiggyBank className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.commissionsPnl')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>Statistics</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('widgets.categories.statistics')}</DropdownMenuLabel>
             <DropdownMenuItem 
               onClick={() => addWidget('averagePositionTime')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Clock className="mr-2 h-4 w-4" />
-              <span>Average Position Time</span>
+              <Clock className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.averagePositionTime')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('cumulativePnl')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <PiggyBank className="mr-2 h-4 w-4" />
-              <span>Cumulative PnL</span>
+              <PiggyBank className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.cumulativePnl')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('longShortPerformance')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <ArrowLeftRight className="mr-2 h-4 w-4" />
-              <span>Long/Short Performance</span>
+              <ArrowLeftRight className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.longShortPerformance')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('tradePerformance')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <BarChart className="mr-2 h-4 w-4" />
-              <span>Trade Performance</span>
+              <BarChart className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.tradePerformance')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('winningStreak')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Award className="mr-2 h-4 w-4" />
-              <span>Winning Streak</span>
+              <Award className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.winningStreak')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem 
               onClick={() => addWidget('statisticsWidget')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <BarChart2 className="mr-2 h-4 w-4" />
-              <span>Statistics Overview</span>
+              <BarChart2 className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.statisticsOverview')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>Tables</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('widgets.categories.tables')}</DropdownMenuLabel>
             <DropdownMenuItem 
               onClick={() => addWidget('tradeTableReview', 'large')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Table2 className="mr-2 h-4 w-4" />
-              <span>Trade Review Table</span>
+              <Table2 className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.tradeReviewTable')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>Other</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('widgets.categories.other')}</DropdownMenuLabel>
             <DropdownMenuItem 
               onClick={() => addWidget('moodSelector', 'tiny')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Smile className="mr-2 h-4 w-4" />
-              <span>Mood Selector</span>
+              <Smile className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.moodSelector')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>Communication</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('widgets.categories.communication')}</DropdownMenuLabel>
             <DropdownMenuItem 
               onClick={() => addWidget('chatWidget', 'medium')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <MessageSquare className="mr-2 h-4 w-4" />
-              <span>Chat</span>
+              <MessageSquare className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.chat')}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>Market Data</DropdownMenuLabel>
+            <DropdownMenuLabel>{t('widgets.categories.marketData')}</DropdownMenuLabel>
             <DropdownMenuItem 
               onClick={() => addWidget('newsWidget', 'large')}
               className="hover:bg-accent hover:text-accent-foreground"
             >
-              <Info className="mr-2 h-4 w-4" />
-              <span>Market News</span>
+              <Info className="mr-2 h-4 w-4 shrink-0" />
+              <span>{t('widgets.types.marketNews')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -1190,18 +1193,18 @@ export default function WidgetCanvas() {
                   className="flex items-center gap-2"
                 >
                   <Minus className="h-4 w-4" />
-                  Remove All
+                  {t('widgets.removeAll')}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Remove all widgets?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('widgets.removeAllConfirm')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will remove all widgets from your dashboard. You can add them back later if needed.
+                    {t('widgets.removeAllDescription')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('widgets.cancel')}</AlertDialogCancel>
                   <AlertDialogAction 
                     onClick={() => {
                       removeAllWidgets()
@@ -1209,7 +1212,7 @@ export default function WidgetCanvas() {
                       setIsRemoveAllDialogOpen(false)
                     }}
                   >
-                    Remove All Widgets
+                    {t('widgets.removeAllWidgets')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -1226,7 +1229,7 @@ export default function WidgetCanvas() {
                 }
               }}
             />
-            <label htmlFor="customize-mode">{isCustomizing ? 'Done' : 'Edit'}</label>
+            <label htmlFor="customize-mode">{isCustomizing ? t('widgets.done') : t('widgets.edit')}</label>
           </div>
         </div>
       </div>
