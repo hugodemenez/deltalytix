@@ -284,7 +284,7 @@ export default {
     'import.type.rithmicPerf.details': 'N\'oubliez pas d\'étendre chaque ligne pour voir tous les détails lors de l\'export.',
     'import.type.rithmicOrders.name': 'Ordres Rithmic',
     'import.type.rithmicOrders.description': 'Import depuis Rithmic',
-    'import.type.rithmicOrders.details': 'Les champs suivants sont obligatoires : Account, Buy/Sell, Avg Fill Price, Limit Price, Symbol, Order Number, Update time, Qty filled, Closed profit & loss, Commission fill rate',
+    'import.type.rithmicOrders.details': 'Les champs suivants sont obligatoires : Account, Buy/Sell, Avg Fill Price, Symbol, Update time, Qty filled, Commission fill rate',
     'import.type.ninjaTrader.name': 'Performance NinjaTrader',
     'import.type.ninjaTrader.description': 'Import depuis NinjaTrader',
     'import.type.tradezella.name': 'TradeZella',

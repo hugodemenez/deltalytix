@@ -144,162 +144,177 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     const [cleanData, cleanHeaders] = cleanCsvData(csvData, headers);
     
     const processedTrades: Trade[] = [];
-    const openPositions: { [key: string]: OpenPosition } = {};
     const incompleteTradesArray: IncompleteTrade[] = [];
 
-    // Sort orders by Update Time column in ascending order
-    const sortedCsvData = cleanData.sort((a, b) => {
-      const timeIndex = getHeaderIndex('update time')
-      if (timeIndex === -1) return 0
-      return parseDate(a[timeIndex]).getTime() - parseDate(b[timeIndex]).getTime()
-    });
-
-    sortedCsvData.forEach((row) => {
-      if (row.length !== cleanHeaders.length) {
-        console.warn('Row length mismatch:', row);
-        return; // Skip invalid rows
+    // Group orders by account
+    const ordersByAccount = cleanData.reduce((acc, row) => {
+      const accountIndex = getHeaderIndex('Account');
+      const account = row[accountIndex];
+      if (!acc[account]) {
+        acc[account] = [];
       }
+      acc[account].push(row);
+      return acc;
+    }, {} as Record<string, string[][]>);
 
-      const order = cleanHeaders.reduce((acc, header, index) => {
-        acc[header] = row[index]?.trim() || '';
-        return acc;
-      }, {} as Record<string, string>);
+    // Process each account's orders separately
+    Object.entries(ordersByAccount).forEach(([account, accountOrders]) => {
+      const openPositions: { [key: string]: OpenPosition } = {};
 
-      // Add validation for required fields
-      const requiredFields = ["Symbol", "Qty Filled", "Avg Fill Price", "Buy/Sell"];
-      const missingFields = requiredFields.filter(field => !order[field]);
-      
-      if (missingFields.length > 0) {
-        console.warn(`Missing required fields: ${missingFields.join(', ')}`, order);
-        return; // Skip this row
-      }
-
-      const symbol = order["Symbol"].slice(0, -2)
-      const quantity = parseInt(order["Qty Filled"])
-      const price = parsePrice(order["Avg Fill Price"])
-      const side = order["Buy/Sell"]
-      const timestamp = order[cleanHeaders.find(header => 
-        header.toLowerCase().includes('update time')
-      ) || '']
-      const commissionRate = parseFloat(order["Commission Fill Rate"])
-      const orderCommission = commissionRate * quantity
-      const orderId = order["Order Number"]
-
-      console.log({
-        orderId,
-        symbol,
-        quantity,
-        price,
-        side,
-        timestamp,
-        commissionRate,
-        orderCommission,
-        openPositions,
+      // Sort orders by Update Time column in ascending order
+      const sortedAccountOrders = accountOrders.sort((a, b) => {
+        const timeIndex = getHeaderIndex('update time')
+        if (timeIndex === -1) return 0
+        return parseDate(a[timeIndex]).getTime() - parseDate(b[timeIndex]).getTime()
       });
-      
-      const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || { tickSize: 1/64, tickValue: 15.625 }
 
-      const newOrder: Order = {
-        quantity,
-        price,
-        commission: orderCommission,
-        timestamp,
-        orderId
-      }
+      sortedAccountOrders.forEach((row) => {
+        if (row.length !== cleanHeaders.length) {
+          console.warn('Row length mismatch:', row);
+          return; // Skip invalid rows
+        }
 
-      if (openPositions[symbol]) {
-        const openPosition = openPositions[symbol]
+        const order = cleanHeaders.reduce((acc, header, index) => {
+          acc[header] = row[index]?.trim() || '';
+          return acc;
+        }, {} as Record<string, string>);
+
+        // Add validation for required fields
+        const requiredFields = ["Symbol", "Qty Filled", "Avg Fill Price", "Buy/Sell"];
+        const missingFields = requiredFields.filter(field => !order[field]);
         
-        if ((side === 'B' && openPosition.side === 'Short') || (side === 'S' && openPosition.side === 'Long')) {
-          // Close or reduce position
-          openPosition.exitOrders.push(newOrder)
-          openPosition.quantity -= quantity
-          openPosition.totalCommission += orderCommission
+        if (missingFields.length > 0) {
+          console.warn(`Missing required fields: ${missingFields.join(', ')}`, order);
+          return; // Skip this row
+        }
 
-          if (openPosition.quantity <= 0) {
-            // Close position
-            const pnl = calculatePnL(openPosition.entryOrders, openPosition.exitOrders, contractSpec, openPosition.side)
+        const symbol = order["Symbol"].slice(0, -2)
+        const quantity = parseInt(order["Qty Filled"])
+        const price = parsePrice(order["Avg Fill Price"])
+        const side = order["Buy/Sell"]
+        const timestamp = order[cleanHeaders.find(header => 
+          header.toLowerCase().includes('update time')
+        ) || '']
+        const commissionRate = parseFloat(order["Commission Fill Rate"])
+        const orderCommission = commissionRate * quantity
+        const orderId = order["Order Number"]
 
-            const trade: Trade = {
-              id: `${openPosition.entryOrders.map(o => o.orderId).join('-')}-${openPosition.exitOrders.map(o => o.orderId).join('-')}`,
-              accountNumber: openPosition.accountNumber,
-              quantity: openPosition.originalQuantity,
-              entryId: openPosition.entryOrders.map(o => o.orderId).join('-'),
-              closeId: openPosition.exitOrders.map(o => o.orderId).join('-'),
-              instrument: symbol,
-              entryPrice: openPosition.averageEntryPrice.toFixed(5),
-              closePrice: (openPosition.exitOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / 
-                           openPosition.exitOrders.reduce((sum, o) => sum + o.quantity, 0)).toFixed(5),
-              entryDate: parseDate(openPosition.entryDate).toISOString(),
-              closeDate: parseDate(timestamp).toISOString(),
-              pnl: pnl,
-              timeInPosition: (parseDate(timestamp).getTime() - parseDate(openPosition.entryDate).getTime()) / 1000,
-              userId: openPosition.userId,
-              side: openPosition.side,
-              commission: openPosition.totalCommission,
-              createdAt: new Date(),
-              comment: null,
-              tags: [],
-              imageBase64: null
-            }
+        console.log({
+          orderId,
+          symbol,
+          quantity,
+          price,
+          side,
+          timestamp,
+          commissionRate,
+          orderCommission,
+          openPositions,
+        });
+        
+        const contractSpec = tickDetails.find(detail => detail.ticker === symbol) || { tickSize: 1/64, tickValue: 15.625 }
 
-            processedTrades.push(trade)
+        const newOrder: Order = {
+          quantity,
+          price,
+          commission: orderCommission,
+          timestamp,
+          orderId
+        }
 
-            if (openPosition.quantity < 0) {
-              // Reverse position
-              openPositions[symbol] = {
-                accountNumber: order["Account"],
-                quantity: -openPosition.quantity,
+        if (openPositions[symbol]) {
+          const openPosition = openPositions[symbol]
+          
+          if ((side === 'B' && openPosition.side === 'Short') || (side === 'S' && openPosition.side === 'Long')) {
+            // Close or reduce position
+            openPosition.exitOrders.push(newOrder)
+            openPosition.quantity -= quantity
+            openPosition.totalCommission += orderCommission
+
+            if (openPosition.quantity <= 0) {
+              // Close position
+              const pnl = calculatePnL(openPosition.entryOrders, openPosition.exitOrders, contractSpec, openPosition.side)
+
+              const trade: Trade = {
+                id: `${openPosition.entryOrders.map(o => o.orderId).join('-')}-${openPosition.exitOrders.map(o => o.orderId).join('-')}`,
+                accountNumber: account,
+                quantity: openPosition.originalQuantity,
+                entryId: openPosition.entryOrders.map(o => o.orderId).join('-'),
+                closeId: openPosition.exitOrders.map(o => o.orderId).join('-'),
                 instrument: symbol,
-                side: side === 'B' ? 'Long' : 'Short',
+                entryPrice: openPosition.averageEntryPrice.toFixed(5),
+                closePrice: (openPosition.exitOrders.reduce((sum, o) => sum + o.price * o.quantity, 0) / 
+                             openPosition.exitOrders.reduce((sum, o) => sum + o.quantity, 0)).toFixed(5),
+                entryDate: parseDate(openPosition.entryDate).toISOString(),
+                closeDate: parseDate(timestamp).toISOString(),
+                pnl: pnl,
+                timeInPosition: (parseDate(timestamp).getTime() - parseDate(openPosition.entryDate).getTime()) / 1000,
                 userId: openPosition.userId,
-                entryOrders: [newOrder],
-                exitOrders: [],
-                averageEntryPrice: price,
-                entryDate: timestamp,
-                totalCommission: orderCommission,
-                originalQuantity: -openPosition.quantity
+                side: openPosition.side,
+                commission: openPosition.totalCommission,
+                createdAt: new Date(),
+                comment: null,
+                tags: [],
+                imageBase64: null
               }
-            } else {
-              // Full close
-              delete openPositions[symbol]
+
+              processedTrades.push(trade)
+
+              if (openPosition.quantity < 0) {
+                // Reverse position
+                openPositions[symbol] = {
+                  accountNumber: account,
+                  quantity: -openPosition.quantity,
+                  instrument: symbol,
+                  side: side === 'B' ? 'Long' : 'Short',
+                  userId: openPosition.userId,
+                  entryOrders: [newOrder],
+                  exitOrders: [],
+                  averageEntryPrice: price,
+                  entryDate: timestamp,
+                  totalCommission: orderCommission,
+                  originalQuantity: -openPosition.quantity
+                }
+              } else {
+                // Full close
+                delete openPositions[symbol]
+              }
             }
+          } else {
+            // Add to position
+            openPosition.entryOrders.push(newOrder)
+            const newQuantity = openPosition.quantity + quantity
+            const newAverageEntryPrice = (openPosition.averageEntryPrice * openPosition.quantity + price * quantity) / newQuantity
+            openPosition.quantity = newQuantity
+            openPosition.originalQuantity = newQuantity
+            openPosition.averageEntryPrice = newAverageEntryPrice
+            openPosition.totalCommission += orderCommission
           }
         } else {
-          // Add to position
-          openPosition.entryOrders.push(newOrder)
-          const newQuantity = openPosition.quantity + quantity
-          const newAverageEntryPrice = (openPosition.averageEntryPrice * openPosition.quantity + price * quantity) / newQuantity
-          openPosition.quantity = newQuantity
-          openPosition.originalQuantity = newQuantity
-          openPosition.averageEntryPrice = newAverageEntryPrice
-          openPosition.totalCommission += orderCommission
+          // Open new position
+          openPositions[symbol] = {
+            accountNumber: account,
+            quantity: quantity,
+            instrument: symbol,
+            side: side === 'B' ? 'Long' : 'Short',
+            userId: '', // This should be set to the actual user ID
+            entryOrders: [newOrder],
+            exitOrders: [],
+            averageEntryPrice: price,
+            entryDate: timestamp,
+            totalCommission: orderCommission,
+            originalQuantity: quantity
+          }
         }
-      } else {
-        // Open new position
-        openPositions[symbol] = {
-          accountNumber: order["Account"],
-          quantity: quantity,
-          instrument: symbol,
-          side: side === 'B' ? 'Long' : 'Short',
-          userId: '', // This should be set to the actual user ID
-          entryOrders: [newOrder],
-          exitOrders: [],
-          averageEntryPrice: price,
-          entryDate: timestamp,
-          totalCommission: orderCommission,
-          originalQuantity: quantity
-        }
-      }
-    })
+      });
 
-    // Close any remaining open positions
-    Object.entries(openPositions).forEach(([symbol, position]) => {
-      const incompleteTrade: IncompleteTrade = {
-        ...position,
-        openingOrderDetails: `${position.side} ${position.quantity} @ ${position.averageEntryPrice.toFixed(2)}`
-      };
-      incompleteTradesArray.push(incompleteTrade);
+      // Process incomplete trades for this account
+      Object.entries(openPositions).forEach(([symbol, position]) => {
+        const incompleteTrade: IncompleteTrade = {
+          ...position,
+          openingOrderDetails: `${position.side} ${position.quantity} @ ${position.averageEntryPrice.toFixed(2)}`
+        };
+        incompleteTradesArray.push(incompleteTrade);
+      });
     });
 
     console.log('processedTrades', processedTrades);
@@ -344,113 +359,119 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
   const totalCommission = useMemo(() => trades.reduce((sum, trade) => sum + trade.commission, 0), [trades])
 
   return (
-    <div className="space-y-4">
-      {incompleteTrades.length > 0 && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
-          <p className="font-bold">Incomplete Trades Detected</p>
-          <p>{`${incompleteTrades.length} trade(s) were not completed and have been removed from the analysis.`}</p>
-          <ul className="list-disc list-inside mt-2">
-            {incompleteTrades.map((trade, index) => (
-              <li key={index}>
-                {`${trade.instrument}: ${trade.side} ${trade.quantity} @ ${trade.averageEntryPrice.toFixed(2)} (Opened on ${new Date(trade.entryDate).toLocaleString()})`}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Contract Specifications</h3>
-        <div className="grid grid-cols-3 gap-4">
-          {tradedTickDetails.map((detail) => (
-            <div key={detail.ticker} className="space-y-2">
-              <h4 className="font-medium">{detail.ticker}</h4>
-              <div className="flex items-center space-x-2">
-                <label className="text-sm">Tick Size:</label>
-                <Input
-                  type="number"
-                  value={detail.tickSize}
-                  onChange={(e) => handleContractSpecChange(detail.ticker, 'tickSize', e.target.value)}
-                  className="w-24"
-                />
-              </div>
-              <div className="flex items-center space-x-2">
-                <label className="text-sm">Tick Value:</label>
-                <Input
-                  type="number"
-                  value={detail.tickValue}
-                  onChange={(e) => handleContractSpecChange(detail.ticker, 'tickValue', e.target.value)}
-                  className="w-24"
-                />
-              </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex-1 overflow-auto">
+        <div className="space-y-4 p-6">
+          {incompleteTrades.length > 0 && (
+            <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
+              <p className="font-bold">Incomplete Trades Detected</p>
+              <p>{`${incompleteTrades.length} trade(s) were not completed and have been removed from the analysis.`}</p>
+              <ul className="list-disc list-inside mt-2">
+                {incompleteTrades.map((trade, index) => (
+                  <li key={index}>
+                    {`${trade.instrument}: ${trade.side} ${trade.quantity} @ ${trade.averageEntryPrice.toFixed(2)} (Opened on ${new Date(trade.entryDate).toLocaleString()})`}
+                  </li>
+                ))}
+              </ul>
             </div>
-          ))}
-        </div>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Instrument</TableHead>
-              <TableHead>Side</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Entry Price</TableHead>
-              <TableHead>Close Price</TableHead>
-              <TableHead>Entry Date</TableHead>
-              <TableHead>Close Date</TableHead>
-              <TableHead>PnL</TableHead>
-              <TableHead>Time in Position</TableHead>
-              <TableHead>Commission</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {trades.map((trade) => (
-              <TableRow key={trade.id}>
-                <TableCell>{trade.instrument}</TableCell>
-                <TableCell>{trade.side}</TableCell>
-                <TableCell>{trade.quantity}</TableCell>
-                <TableCell>{trade.entryPrice}</TableCell>
-                <TableCell>{trade.closePrice || '-'}</TableCell>
-                <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
-                <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                <TableCell>{trade.pnl.toFixed(2)}</TableCell>
-                <TableCell>{`${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s`}</TableCell>
-                <TableCell>{trade.commission.toFixed(2)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex justify-between">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-          <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {totalPnL.toFixed(2)}
-          </p>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-          <p className="text-xl font-bold text-blue-600">
-            {totalCommission.toFixed(2)}
-          </p>
-        </div>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
-        <div className="flex flex-wrap gap-2">
-          {uniqueSymbols.map((symbol) => (
-            <Button
-              key={symbol}
-              variant="outline"
-              onClick={() => toast({
-                title: "Instrument Information",
-                description: `You traded ${symbol}. For more details,
+          )}
+          <div className="px-2">
+            <h3 className="text-lg font-semibold mb-2">Contract Specifications</h3>
+            <div className="grid grid-cols-3 gap-4">
+              {tradedTickDetails.map((detail) => (
+                <div key={detail.ticker} className="space-y-2 p-4 border rounded-lg bg-muted/30">
+                  <h4 className="font-medium">{detail.ticker}</h4>
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm">Tick Size:</label>
+                    <Input
+                      type="number"
+                      value={detail.tickSize}
+                      onChange={(e) => handleContractSpecChange(detail.ticker, 'tickSize', e.target.value)}
+                      className="w-24"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <label className="text-sm">Tick Value:</label>
+                    <Input
+                      type="number"
+                      value={detail.tickValue}
+                      onChange={(e) => handleContractSpecChange(detail.ticker, 'tickValue', e.target.value)}
+                      className="w-24"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="px-2">
+            <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Account</TableHead>
+                  <TableHead>Instrument</TableHead>
+                  <TableHead>Side</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Entry Price</TableHead>
+                  <TableHead>Close Price</TableHead>
+                  <TableHead>Entry Date</TableHead>
+                  <TableHead>Close Date</TableHead>
+                  <TableHead>PnL</TableHead>
+                  <TableHead>Time in Position</TableHead>
+                  <TableHead>Commission</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {trades.map((trade) => (
+                  <TableRow key={trade.id}>
+                    <TableCell>{trade.accountNumber}</TableCell>
+                    <TableCell>{trade.instrument}</TableCell>
+                    <TableCell>{trade.side}</TableCell>
+                    <TableCell>{trade.quantity}</TableCell>
+                    <TableCell>{trade.entryPrice}</TableCell>
+                    <TableCell>{trade.closePrice || '-'}</TableCell>
+                    <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                    <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
+                    <TableCell>{trade.pnl.toFixed(2)}</TableCell>
+                    <TableCell>{`${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s`}</TableCell>
+                    <TableCell>{trade.commission.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="flex justify-between px-2 py-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
+              <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {totalPnL.toFixed(2)}
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
+              <p className="text-xl font-bold text-blue-600">
+                {totalCommission.toFixed(2)}
+              </p>
+            </div>
+          </div>
+          <div className="px-2">
+            <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
+            <div className="flex flex-wrap gap-2">
+              {uniqueSymbols.map((symbol) => (
+                <Button
+                  key={symbol}
+                  variant="outline"
+                  onClick={() => toast({
+                    title: "Instrument Information",
+                    description: `You traded ${symbol}. For more details,
  please check the trades table.`
-              })}
-            >
-              {symbol}
-            </Button>
-          ))}
+                  })}
+                >
+                  {symbol}
+                </Button>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>
