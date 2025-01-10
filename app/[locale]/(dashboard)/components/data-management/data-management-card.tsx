@@ -24,11 +24,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label"
 import { Trade } from '@prisma/client'
 import ExportButton from '@/components/export-button'
+import { useI18n } from "@/locales/client"
 
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
 
 export function DataManagementCard() {
+  const t = useI18n()
   const { trades, setTrades, refreshTrades } = useTrades()
   const [loading, setLoading] = useState(true)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -88,15 +90,15 @@ export function DataManagementCard() {
       setGroupedTrades(getGroupedTrades)
       setSelectedAccounts([])
       toast({
-        title: `Account${accountsToDelete.length > 1 ? 's' : ''} deleted successfully`,
+        title: accountsToDelete.length > 1 ? t('dataManagement.toast.accountsDeleted') : t('dataManagement.toast.accountDeleted'),
         variant: 'default',
       })
     } catch (error) {
       console.error("Failed to delete accounts:", error)
       setError(error instanceof Error ? error : new Error('Failed to delete accounts'))
       toast({
-        title: 'Failed to delete accounts',
-        description: 'Please try again later',
+        title: t('dataManagement.toast.deleteError'),
+        description: t('dataManagement.toast.deleteErrorDesc'),
         variant: 'destructive',
       })
     } finally {
@@ -112,15 +114,15 @@ export function DataManagementCard() {
       await refreshTrades()
       setGroupedTrades(getGroupedTrades)
       toast({
-        title: 'Instrument group deleted successfully',
+        title: t('dataManagement.toast.instrumentDeleted'),
         variant: 'default',
       })
     } catch (error) {
       console.error("Failed to delete instrument group:", error)
       setError(error instanceof Error ? error : new Error('Failed to delete instrument group'))
       toast({
-        title: 'Failed to delete instrument group',
-        description: 'Please try again later',
+        title: t('dataManagement.toast.instrumentDeleteError'),
+        description: t('dataManagement.toast.deleteErrorDesc'),
         variant: 'destructive',
       })
     } finally {
@@ -135,20 +137,20 @@ export function DataManagementCard() {
         await refreshTrades()
         setGroupedTrades(getGroupedTrades)
         toast({
-          title: 'Commission updated successfully',
+          title: t('dataManagement.toast.commissionUpdated'),
           variant: 'default',
         })
       } catch (error) {
         console.error("Failed to update commission:", error)
         setError(error instanceof Error ? error : new Error('Failed to update commission'))
         toast({
-          title: 'Failed to update commission',
-          description: 'Please try again later',
+          title: t('dataManagement.toast.commissionError'),
+          description: t('dataManagement.toast.deleteErrorDesc'),
           variant: 'destructive',
         })
       }
     }, 1000),
-    [refreshTrades, getGroupedTrades]
+    [refreshTrades, getGroupedTrades, t]
   )
 
   const handleUpdateCommission = useCallback((accountNumber: string, instrumentGroup: string, newCommission: number, user: User | null) => {
@@ -170,7 +172,7 @@ export function DataManagementCard() {
       await renameAccount(accountToRename, newAccountName, user.id)
       await refreshTrades()
       toast({
-        title: 'Account renamed successfully',
+        title: t('dataManagement.toast.accountRenamed'),
         variant: 'default',
       })
       setRenameDialogOpen(false)
@@ -180,8 +182,8 @@ export function DataManagementCard() {
       console.error("Failed to rename account:", error)
       setError(error instanceof Error ? error : new Error('Failed to rename account'))
       toast({
-        title: 'Failed to rename account',
-        description: 'Please try again later',
+        title: t('dataManagement.toast.renameError'),
+        description: t('dataManagement.toast.deleteErrorDesc'),
         variant: 'destructive',
       })
     } finally {
@@ -204,7 +206,7 @@ export function DataManagementCard() {
       await renameInstrument(instrumentToRename.accountNumber, instrumentToRename.currentName, newInstrumentName, user.id)
       await refreshTrades()
       toast({
-        title: 'Instrument renamed successfully',
+        title: t('dataManagement.toast.instrumentRenamed'),
         variant: 'default',
       })
       setRenameInstrumentDialogOpen(false)
@@ -214,8 +216,8 @@ export function DataManagementCard() {
       console.error("Failed to rename instrument:", error)
       setError(error instanceof Error ? error : new Error('Failed to rename instrument'))
       toast({
-        title: 'Failed to rename instrument',
-        description: error instanceof Error ? error.message : 'Please try again later',
+        title: t('dataManagement.toast.instrumentRenameError'),
+        description: error instanceof Error ? error.message : t('dataManagement.toast.deleteErrorDesc'),
         variant: 'destructive',
       })
     } finally {
@@ -234,7 +236,7 @@ export function DataManagementCard() {
     <Card>
       <CardHeader>
         <CardTitle className="flex flex-col md:flex-row gap-y-4 md:gap-y-0 justify-between items-start md:items-center">
-          <span className="text-xl md:text-2xl">Data Management Dashboard</span>
+          <span className="text-xl md:text-2xl">{t('dataManagement.title')}</span>
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
             <ExportButton trades={trades} />
             <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -252,25 +254,24 @@ export function DataManagementCard() {
                   {deleteLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
+                      {t('dataManagement.deleting')}
                     </>
                   ) : (
-                    <>Delete Selected ({selectedAccounts.length})</>
+                    <>{t('dataManagement.deleteSelected')} ({selectedAccounts.length})</>
                   )}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('dataManagement.deleteConfirm.title')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete the selected account(s)
-                    and all associated instruments and trades.
+                    {t('dataManagement.deleteConfirm.description')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('dataManagement.deleteConfirm.cancel')}</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDeleteAccounts} disabled={deleteLoading}>
-                    {deleteLoading ? 'Deleting...' : 'Continue'}
+                    {deleteLoading ? t('dataManagement.deleting') : t('dataManagement.deleteConfirm.continue')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -289,32 +290,31 @@ export function DataManagementCard() {
                   {deleteLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Deleting...
+                      {t('dataManagement.deleting')}
                     </>
                   ) : (
-                    <>Delete All</>
+                    <>{t('dataManagement.deleteAll')}</>
                   )}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('dataManagement.deleteConfirm.title')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete ALL accounts
-                    and all associated instruments and trades.
+                    {t('dataManagement.deleteConfirm.allDescription')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('dataManagement.deleteConfirm.cancel')}</AlertDialogCancel>
                   <AlertDialogAction onClick={handleDeleteAccounts} disabled={deleteLoading}>
-                    {deleteLoading ? 'Deleting...' : 'Continue'}
+                    {deleteLoading ? t('dataManagement.deleting') : t('dataManagement.deleteConfirm.continue')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           </div>
         </CardTitle>
-        <CardDescription>Manage accounts, instruments, and commissions</CardDescription>
+        <CardDescription>{t('dataManagement.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -343,7 +343,7 @@ export function DataManagementCard() {
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
                             <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">More options</span>
+                            <span className="sr-only">{t('dataManagement.moreOptions')}</span>
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -352,7 +352,7 @@ export function DataManagementCard() {
                             setRenameDialogOpen(true)
                           }}>
                             <Edit2 className="w-4 h-4 mr-2" />
-                            Rename Account
+                            {t('dataManagement.renameAccount')}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
@@ -363,7 +363,7 @@ export function DataManagementCard() {
                             }}
                           >
                             <TrashIcon className="w-4 h-4 mr-2" />
-                            Delete Account
+                            {t('dataManagement.deleteAccount')}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -381,7 +381,7 @@ export function DataManagementCard() {
                     }}
                   >
                     <Edit2 className="w-4 h-4 mr-2" />
-                    Rename
+                    {t('dataManagement.rename')}
                   </Button>
                   <Button
                     variant="outline"
@@ -394,7 +394,7 @@ export function DataManagementCard() {
                     }}
                   >
                     <TrashIcon className="w-4 h-4 mr-2" />
-                    Delete
+                    {t('dataManagement.delete')}
                   </Button>
                 </div>
               </div>
@@ -417,7 +417,7 @@ export function DataManagementCard() {
                             }}
                           >
                             <Edit2 className="h-4 w-4" />
-                            <span className="sr-only">Rename instrument</span>
+                            <span className="sr-only">{t('dataManagement.renameInstrument.title')}</span>
                           </Button>
                         </div>
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
@@ -439,21 +439,20 @@ export function DataManagementCard() {
                                 className="w-full sm:w-auto whitespace-nowrap"
                               >
                                 <TrashIcon className="w-4 h-4 mr-2" />
-                                Remove Instrument
+                                {t('dataManagement.removeInstrument')}
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogTitle>{t('dataManagement.deleteInstrument.title')}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete all trades
-                                  associated with this instrument.
+                                  {t('dataManagement.deleteInstrument.description')}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogCancel>{t('dataManagement.deleteConfirm.cancel')}</AlertDialogCancel>
                                 <AlertDialogAction onClick={() => handleDeleteInstrument(accountNumber, instrumentGroup)}>
-                                  Continue
+                                  {t('dataManagement.deleteConfirm.continue')}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -471,9 +470,9 @@ export function DataManagementCard() {
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Account</DialogTitle>
+            <DialogTitle>{t('dataManagement.renameDialog.title')}</DialogTitle>
             <DialogDescription>
-              Enter a new name for the account.
+              {t('dataManagement.renameDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={(e) => {
@@ -483,7 +482,7 @@ export function DataManagementCard() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="newAccountName" className="text-right">
-                  New Name
+                  {t('dataManagement.renameDialog.newName')}
                 </Label>
                 <Input
                   id="newAccountName"
@@ -492,7 +491,7 @@ export function DataManagementCard() {
                   className="col-span-3"
                   autoFocus
                   autoComplete="off"
-                  placeholder="Enter new account name"
+                  placeholder={t('dataManagement.renameDialog.placeholder')}
                 />
               </div>
             </div>
@@ -504,10 +503,10 @@ export function DataManagementCard() {
                 {renameLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Renaming...
+                    {t('dataManagement.renameDialog.renaming')}
                   </>
                 ) : (
-                  'Rename'
+                  t('dataManagement.rename')
                 )}
               </Button>
             </DialogFooter>
@@ -517,9 +516,9 @@ export function DataManagementCard() {
       <Dialog open={renameInstrumentDialogOpen} onOpenChange={setRenameInstrumentDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rename Instrument</DialogTitle>
+            <DialogTitle>{t('dataManagement.renameInstrument.title')}</DialogTitle>
             <DialogDescription>
-              Enter a new name for the instrument.
+              {t('dataManagement.renameInstrument.description')}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={(e) => {
@@ -529,7 +528,7 @@ export function DataManagementCard() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="newInstrumentName" className="text-right">
-                  New Name
+                  {t('dataManagement.renameInstrument.newName')}
                 </Label>
                 <Input
                   id="newInstrumentName"
@@ -538,7 +537,7 @@ export function DataManagementCard() {
                   className="col-span-3"
                   autoFocus
                   autoComplete="off"
-                  placeholder="Enter new instrument name"
+                  placeholder={t('dataManagement.renameInstrument.placeholder')}
                 />
               </div>
             </div>
@@ -550,10 +549,10 @@ export function DataManagementCard() {
                 {renameLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Renaming...
+                    {t('dataManagement.renameDialog.renaming')}
                   </>
                 ) : (
-                  'Rename'
+                  t('dataManagement.rename')
                 )}
               </Button>
             </DialogFooter>
