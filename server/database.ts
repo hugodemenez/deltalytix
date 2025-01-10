@@ -9,15 +9,46 @@ export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfT
     const prisma = new PrismaClient()
     let count = 0
     try{
-      const result = await prisma.trade.createMany({data:data,skipDuplicates: true})
+      const result = await prisma.trade.createMany({
+        data: data,
+        skipDuplicates: true
+      })
       count = result.count
-    }catch(e){
-        console.error(e)
-        return {error:e, numberOfTradesAdded:0}
+      
+      // Log potential duplicates if no trades were added
+      if (count === 0) {
+        console.log("No trades were added. This might be due to duplicates. Total trades attempted:", data.length)
+        const tradeIds = data.map(trade => trade.id)
+        const existingTrades = await prisma.trade.findMany({
+          where: {
+            id: {
+              in: tradeIds
+            }
+          },
+          select: {
+            id: true,
+            entryDate: true,
+            instrument: true
+          }
+        })
+        if (existingTrades.length > 0) {
+          console.log("Found existing trades:", existingTrades)
+          return {
+            error: "DUPLICATE_TRADES",
+            numberOfTradesAdded: 0
+          }
+        }
+      }
+    } catch(e) {
+        console.error("Error saving trades:", e)
+        return { error: e, numberOfTradesAdded: 0 }
     }
     await prisma.$disconnect()
     revalidatePath('/')
-    return {error:count===0?true:false, numberOfTradesAdded:count}
+    return {
+      error: count === 0 ? "NO_TRADES_ADDED" : false,
+      numberOfTradesAdded: count
+    }
 }
 
 export async function getTrades(userId: string): Promise<Trade[]> {

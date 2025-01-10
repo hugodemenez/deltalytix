@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
 import { useTrades } from '@/components/context/trades-data'
+import { useI18n } from '@/locales/client'
 
 interface TradovateProcessorProps {
     headers: string[];
@@ -79,6 +80,7 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
     const [trades, setTrades] = useState<Trade[]>([])
     const [missingCommissions, setMissingCommissions] = useState<{ [key: string]: number }>({})
     const [showCommissionPrompt, setShowCommissionPrompt] = useState(false)
+    const t = useI18n()
 
 
     const existingCommissions = useMemo(() => {
@@ -190,8 +192,8 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
         setProcessedTrades(updatedTrades);
         setShowCommissionPrompt(false);
         toast({
-            title: "Commissions Applied",
-            description: "The commissions have been applied to the trades."
+            title: t('import.commission.success.title'),
+            description: t('import.commission.success.description')
         });
     };
 
@@ -200,93 +202,113 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
     const uniqueInstruments = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades]);
 
     return (
-        <div className="space-y-4">
-            {showCommissionPrompt && (
-                <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4">
-                    <h3 className="font-bold">Confirm or Update Commissions</h3>
-                    <p>Please confirm or update the commission per contract for the following instruments:</p>
-                    <div className="mt-2 space-y-2">
-                        {Object.keys(missingCommissions).map(instrument => (
-                            <div key={instrument} className="flex items-center space-x-2">
-                                <label htmlFor={`commission-${instrument}`}>{instrument}:</label>
-                                <Input
-                                    id={`commission-${instrument}`}
-                                    type="number"
-                                    step="0.01"
-                                    value={missingCommissions[instrument]}
-                                    onChange={(e) => handleCommissionChange(instrument, e.target.value)}
-                                    className="w-24"
-                                />
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="flex-1 overflow-auto">
+                <div className="space-y-4 p-6">
+                    {showCommissionPrompt && (
+                        <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
+                            <p className="font-bold">{t('import.commission.title')}</p>
+                            <p>{t('import.commission.description')}</p>
+                            <p className="mt-2 text-sm">{t('import.commission.help')}</p>
+                            <p className="text-sm italic">{t('import.commission.example')}</p>
+                            <div className="mt-4 space-y-2">
+                                {Object.keys(missingCommissions).map(instrument => (
+                                    <div key={instrument} className="flex items-center space-x-2">
+                                        <label htmlFor={`commission-${instrument}`} className="min-w-[200px]">
+                                            {instrument} - {t('import.commission.perContract')}
+                                        </label>
+                                        <Input
+                                            id={`commission-${instrument}`}
+                                            type="number"
+                                            step="0.01"
+                                            value={missingCommissions[instrument]}
+                                            onChange={(e) => handleCommissionChange(instrument, e.target.value)}
+                                            className="w-24"
+                                        />
+                                    </div>
+                                ))}
                             </div>
-                        ))}
+                            <Button onClick={applyCommissions} className="mt-4">
+                                {t('import.commission.apply')}
+                            </Button>
+                        </div>
+                    )}
+                    {trades.length === 0 && (
+                        <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
+                            <p className="font-bold">{t('import.error.duplicateTrades')}</p>
+                            <p>{t('import.error.duplicateTradesDescription')}</p>
+                        </div>
+                    )}
+                    <div className="px-2">
+                        <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Account</TableHead>
+                                    <TableHead>Instrument</TableHead>
+                                    <TableHead>Side</TableHead>
+                                    <TableHead>Quantity</TableHead>
+                                    <TableHead>Entry Price</TableHead>
+                                    <TableHead>Close Price</TableHead>
+                                    <TableHead>Entry Date</TableHead>
+                                    <TableHead>Close Date</TableHead>
+                                    <TableHead>PnL</TableHead>
+                                    <TableHead>Time in Position</TableHead>
+                                    <TableHead>Commission</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {trades.map((trade) => (
+                                    <TableRow key={trade.id}>
+                                        <TableCell>{trade.accountNumber}</TableCell>
+                                        <TableCell>{trade.instrument}</TableCell>
+                                        <TableCell>{trade.side}</TableCell>
+                                        <TableCell>{trade.quantity}</TableCell>
+                                        <TableCell>{trade.entryPrice}</TableCell>
+                                        <TableCell>{trade.closePrice || '-'}</TableCell>
+                                        <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                                        <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
+                                        <TableCell className={trade.pnl && trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                            {trade.pnl?.toFixed(2)}
+                                        </TableCell>
+                                        <TableCell>{`${Math.floor((trade.timeInPosition || 0) / 60)}m ${Math.floor((trade.timeInPosition || 0) % 60)}s`}</TableCell>
+                                        <TableCell>{trade.commission?.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
-                    <Button onClick={applyCommissions} className="mt-4">Apply Commissions</Button>
-                </div>
-            )}
-            <div>
-                <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Instrument</TableHead>
-                            <TableHead>Side</TableHead>
-                            <TableHead>Quantity</TableHead>
-                            <TableHead>Entry Price</TableHead>
-                            <TableHead>Close Price</TableHead>
-                            <TableHead>Entry Date</TableHead>
-                            <TableHead>Close Date</TableHead>
-                            <TableHead>PnL</TableHead>
-                            <TableHead>Time in Position</TableHead>
-                            <TableHead>Commission</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {trades.map((trade) => (
-                            <TableRow key={trade.id}>
-                                <TableCell>{trade.instrument}</TableCell>
-                                <TableCell>{trade.side}</TableCell>
-                                <TableCell>{trade.quantity}</TableCell>
-                                <TableCell>{trade.entryPrice}</TableCell>
-                                <TableCell>{trade.closePrice || '-'}</TableCell>
-                                <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
-                                <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                                <TableCell>{trade.pnl?.toFixed(2)}</TableCell>
-                                <TableCell>{`${Math.floor((trade.timeInPosition || 0) / 60)}m ${Math.floor((trade.timeInPosition || 0) % 60)}s`}</TableCell>
-                                <TableCell>{trade.commission?.toFixed(2)}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-            <div className="flex justify-between">
-                <div>
-                    <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-                    <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {totalPnL.toFixed(2)}
-                    </p>
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-                    <p className="text-xl font-bold text-blue-600">
-                        {totalCommission.toFixed(2)}
-                    </p>
-                </div>
-            </div>
-            <div>
-                <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
-                <div className="flex flex-wrap gap-2">
-                    {uniqueInstruments.map((instrument) => (
-                        <Button
-                            key={instrument}
-                            variant="outline"
-                            onClick={() => toast({
-                                title: "Instrument Information",
-                                description: `You traded ${instrument}. For more details, please check the trades table.`
-                            })}
-                        >
-                            {instrument}
-                        </Button>
-                    ))}
+                    <div className="flex justify-between px-2 py-4">
+                        <div>
+                            <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
+                            <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {totalPnL.toFixed(2)}
+                            </p>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
+                            <p className="text-xl font-bold text-blue-600">
+                                {totalCommission.toFixed(2)}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="px-2">
+                        <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {uniqueInstruments.map((instrument) => (
+                                <Button
+                                    key={instrument}
+                                    variant="outline"
+                                    onClick={() => toast({
+                                        title: "Instrument Information",
+                                        description: `You traded ${instrument}. For more details, please check the trades table.`
+                                    })}
+                                >
+                                    {instrument}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

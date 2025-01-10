@@ -248,13 +248,27 @@ export default function ImportButton() {
           (trade.entryPrice || trade.closePrice) &&
           (trade.entryDate || trade.closeDate);
       });
-      const {error, numberOfTradesAdded} = await saveTrades(newTrades)
-      if(error){
-        toast({
-          title: t('import.error.failed'),
-          description: t('import.error.failedDescription'),
-          variant: "destructive",
-        })
+      const result = await saveTrades(newTrades)
+      if(result.error){
+        if (result.error === "DUPLICATE_TRADES") {
+          toast({
+            title: t('import.error.duplicateTrades'),
+            description: t('import.error.duplicateTradesDescription'),
+            variant: "destructive",
+          })
+        } else if (result.error === "NO_TRADES_ADDED") {
+          toast({
+            title: t('import.error.noTradesAdded'),
+            description: t('import.error.noTradesAddedDescription'),
+            variant: "destructive",
+          })
+        } else {
+          toast({
+            title: t('import.error.failed'),
+            description: t('import.error.failedDescription'),
+            variant: "destructive",
+          })
+        }
         return
       }
       // Update the trades
@@ -262,7 +276,7 @@ export default function ImportButton() {
       setIsOpen(false)
       toast({
         title: t('import.success'),
-        description: t('import.successDescription', { numberOfTradesAdded }),
+        description: t('import.successDescription', { numberOfTradesAdded: result.numberOfTradesAdded }),
       })
       // Reset the import process
       setImportType('')
