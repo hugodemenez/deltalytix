@@ -592,6 +592,7 @@ export default function ImportButton() {
                 <Button 
                   onClick={handleNextStep}
                   className="w-fit min-w-[100px]"
+                  disabled={step === 1 && csvData.length === 0}
                 >
                   {isSaving 
                     ? t('import.button.saving')
