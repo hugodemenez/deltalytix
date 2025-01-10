@@ -28,6 +28,7 @@ import {
 
 import { useFormattedTrades } from "../../../../../components/context/trades-data"
 import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { useI18n } from "@/locales/client"
 
 interface EquityChartProps {
   size?: ChartSize
@@ -54,6 +55,7 @@ const chartConfig = {
 export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   const { formattedTrades: trades } = useFormattedTrades()
   const [showDailyPnL, setShowDailyPnL] = React.useState(true)
+  const t = useI18n()
 
   const chartData = React.useMemo(() => {
     if (!trades.length) return []
@@ -116,7 +118,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
               size === 'small-long' ? "text-sm" : "text-base"
             )}
           >
-            Equity Curve
+            {t('equity.title')}
           </CardTitle>
           <TooltipProvider>
             <Tooltip>
@@ -127,7 +129,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                 )} />
               </TooltipTrigger>
               <TooltipContent side="top">
-                <p>Showing cumulative profit and loss over time</p>
+                <p>{t('equity.description')}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -145,7 +147,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                 )}
                 onClick={() => setShowDailyPnL(key==="daily")}
               >
-                {key==="daily" ? "Daily PnL" : "Per-trade PnL"}
+                {key==="daily" ? t('equity.toggle.daily') : t('equity.toggle.perTrade')}
               </button>
             ))}
           </div>
@@ -214,7 +216,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                           <div className="grid gap-2">
                             <div className="flex flex-col">
                               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Date
+                                {t('equity.tooltip.date')}
                               </span>
                               <span className="font-bold text-muted-foreground">
                                 {format(new Date(data.date), "MMM d, yyyy")}
@@ -222,7 +224,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Equity
+                                {t('equity.tooltip.equity')}
                               </span>
                               <span className="font-bold text-foreground">
                                 {formatCurrency(data.equity)}
@@ -230,7 +232,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Gross P/L
+                                {t('equity.tooltip.grossPnl')}
                               </span>
                               <span
                                 className={cn(
@@ -247,7 +249,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                             </div>
                             <div className="flex flex-col">
                               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Commissions
+                                {t('equity.tooltip.commissions')}
                               </span>
                               <span className="font-bold text-red-500">
                                 {formatCurrency(-data.dailyCommissions)}
@@ -255,7 +257,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                             </div>
                             <div className="flex flex-col border-t pt-2">
                               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                Net P/L
+                                {t('equity.tooltip.netPnl')}
                               </span>
                               <span
                                 className={cn(

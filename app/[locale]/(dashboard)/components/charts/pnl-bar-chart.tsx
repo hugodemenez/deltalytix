@@ -14,6 +14,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useI18n } from "@/locales/client"
 
 interface PNLChartProps {
   size?: ChartSize
@@ -56,6 +57,7 @@ const positiveColor = "hsl(var(--chart-2))" // Green color
 const negativeColor = "hsl(var(--chart-1))" // Orangish color
 
 const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
+  const t = useI18n()
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const date = new Date(data.date);
@@ -63,10 +65,10 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
       <div className="bg-background p-2 border rounded shadow-sm">
         <p className="font-semibold">{date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
         <p className={`font-bold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-          P/L: {formatCurrency(data.pnl)}
+          {t('pnl.tooltip.pnl')}: {formatCurrency(data.pnl)}
         </p>
-        <p>Long Trades: {data.longNumber}</p>
-        <p>Short Trades: {data.shortNumber}</p>
+        <p>{t('pnl.tooltip.longTrades')}: {data.longNumber}</p>
+        <p>{t('pnl.tooltip.shortTrades')}: {data.shortNumber}</p>
       </div>
     );
   }
@@ -75,6 +77,8 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 
 export default function PNLChart({ size = 'medium' }: PNLChartProps) {
   const { calendarData } = useCalendarData()
+  const t = useI18n()
+
   const chartData = React.useMemo(() => 
     Object.entries(calendarData)
       .map(([date, values]) => ({
@@ -132,7 +136,7 @@ export default function PNLChart({ size = 'medium' }: PNLChartProps) {
                 size === 'small-long' ? "text-sm" : "text-base"
               )}
             >
-              Daily Profit/Loss
+              {t('pnl.title')}
             </CardTitle>
             <TooltipProvider>
               <UITooltip>
@@ -143,7 +147,7 @@ export default function PNLChart({ size = 'medium' }: PNLChartProps) {
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Showing daily P/L over time</p>
+                  <p>{t('pnl.description')}</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>

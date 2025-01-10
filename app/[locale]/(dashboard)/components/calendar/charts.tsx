@@ -152,7 +152,7 @@ export function Charts({ dayData }: ChartsProps) {
   if (!dayData?.trades?.length) {
     return (
       <div className="h-full flex items-center justify-center">
-        <p className="text-muted-foreground">No trade data available for this day</p>
+        <p className="text-muted-foreground">{t('calendar.charts.noTradeData')}</p>
       </div>
     )
   }
@@ -197,7 +197,7 @@ export function Charts({ dayData }: ChartsProps) {
           </p>
           {data.account !== 'total' && (
             <p className="text-sm text-muted-foreground">
-              {percentage}% of total
+              {percentage}% {t('calendar.charts.ofTotal')}
             </p>
           )}
         </div>
@@ -213,12 +213,11 @@ export function Charts({ dayData }: ChartsProps) {
 
   return (
     <div className="space-y-6">
-      {/* Existing Doughnut Chart Card */}
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Daily P&L Distribution</CardTitle>
+          <CardTitle>{t('calendar.charts.dailyPnlDistribution')}</CardTitle>
           <CardDescription>
-            Total P&L (after commissions): {formatCurrency(totalPnL)}
+            {t('calendar.charts.totalPnlAfterComm')}: {formatCurrency(totalPnL)}
           </CardDescription>
         </CardHeader>
         <CardContent className="h-[300px]">
@@ -243,7 +242,7 @@ export function Charts({ dayData }: ChartsProps) {
                 <Bar 
                   dataKey="value" 
                   barSize={20}
-                  name={'Account P&L'}
+                  name={t('calendar.charts.accountPnl')}
                   label={{
                     position: 'right',
                     formatter: (value: number) => formatCurrency(value)
@@ -263,42 +262,42 @@ export function Charts({ dayData }: ChartsProps) {
         </CardContent>
       </Card>
 
-      {/* Three Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Daily P&L Card */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Daily P&L (after comm.)</CardTitle>
+            <CardTitle className="text-lg">{t('calendar.charts.dailyPnlAfterComm')}</CardTitle>
           </CardHeader>
           <CardContent className="pt-2">
             <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {formatCurrency(totalPnL)}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Across {Object.keys(accountPnL).length} account{Object.keys(accountPnL).length > 1 ? 's' : ''}
+              {t('calendar.charts.across')} {Object.keys(accountPnL).length} {Object.keys(accountPnL).length > 1 
+                ? t('calendar.charts.accounts') 
+                : t('calendar.charts.account')}
             </p>
           </CardContent>
         </Card>
 
-        {/* Average Time Card */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Avg Time in Position</CardTitle>
+            <CardTitle className="text-lg">{t('calendar.charts.avgTimeInPosition')}</CardTitle>
           </CardHeader>
           <CardContent className="pt-2">
             <p className="text-2xl font-bold">
               {formatDuration(avgTimeInPosition)}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              Over {dayData.trades.length} trade{dayData.trades.length > 1 ? 's' : ''}
+              {t('calendar.charts.over')} {dayData.trades.length} {dayData.trades.length > 1 
+                ? t('calendar.charts.trades') 
+                : t('calendar.charts.trade')}
             </p>
           </CardContent>
         </Card>
 
-        {/* Mood Card */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">How was your day?</CardTitle>
+            <CardTitle className="text-lg">{t('calendar.charts.howWasYourDay')}</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
             <div className="flex justify-around items-center">

@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { useI18n } from "@/locales/client"
 
 const chartConfig = {
   pnl: {
@@ -22,7 +23,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const daysOfWeek = ['weekdayPnl.days.sunday', 'weekdayPnl.days.monday', 'weekdayPnl.days.tuesday', 'weekdayPnl.days.wednesday', 'weekdayPnl.days.thursday', 'weekdayPnl.days.friday', 'weekdayPnl.days.saturday'];
 
 interface WeekdayPNLChartProps {
   size?: ChartSize
@@ -32,6 +33,7 @@ const formatCurrency = (value: number) =>
   value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
 const CustomTooltip = ({ active, payload, label }: any) => {
+  const t = useI18n()
   if (active && payload && payload.length) {
     const data = payload[0].payload
     return (
@@ -39,15 +41,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Day
+              {t('weekdayPnl.tooltip.day')}
             </span>
             <span className="font-bold text-muted-foreground">
-              {label}
+              {t(label, {})}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Average P/L
+              {t('weekdayPnl.tooltip.averagePnl')}
             </span>
             <span className="font-bold">
               {formatCurrency(data.pnl)}
@@ -55,10 +57,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           </div>
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Trades
+              {t('weekdayPnl.tooltip.trades')}
             </span>
             <span className="font-bold text-muted-foreground">
-              {data.tradeCount} trade{data.tradeCount !== 1 ? 's' : ''}
+              {data.tradeCount} {data.tradeCount !== 1 ? t('weekdayPnl.tooltip.trades_plural') : t('weekdayPnl.tooltip.trade')}
             </span>
           </div>
         </div>
@@ -71,6 +73,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProps) {
   const {calendarData} = useCalendarData()
   const [darkMode, setDarkMode] = React.useState(false)
+  const t = useI18n()
 
   React.useEffect(() => {
     const isDarkMode = document.documentElement.classList.contains('dark')
@@ -95,7 +98,7 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
     }), {} as Record<string, { total: number, count: number }>)
 
     Object.entries(calendarData).forEach(([date, entry]) => {
-      const dayOfWeek = new Date(date).toLocaleString('en-US', { weekday: 'long' })
+      const dayOfWeek = daysOfWeek[new Date(date).getDay()]
       weekdayTotals[dayOfWeek].total += entry.pnl
       weekdayTotals[dayOfWeek].count += 1
     })
@@ -135,7 +138,7 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
                 size === 'small-long' ? "text-sm" : "text-base"
               )}
             >
-              Average P/L by Day
+              {t('weekdayPnl.title')}
             </CardTitle>
             <TooltipProvider>
               <UITooltip>
@@ -146,7 +149,7 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Average profit/loss for each day of the week</p>
+                  <p>{t('weekdayPnl.description')}</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
@@ -185,7 +188,7 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
                   fontSize: size === 'small-long' ? 9 : 11,
                   fill: 'currentColor'
                 }}
-                tickFormatter={(value) => size === 'small-long' ? value.slice(0, 3) : value}
+                tickFormatter={(value) => size === 'small-long' ? t(value, {}).slice(0, 3) : t(value, {})}
               />
               <YAxis
                 tickLine={false}

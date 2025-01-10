@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays } from "date-fns"
+import { fr, enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,8 +15,19 @@ import { CalendarEntry, CalendarData } from "@/types/calendar"
 import { CalendarModal } from "./new-modal"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getFinancialEvents } from "@/server/financial-events"
+import { useI18n, useCurrentLocale } from "@/locales/client"
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+const WEEKDAYS = [
+  'calendar.weekdays.sun',
+  'calendar.weekdays.mon',
+  'calendar.weekdays.tue',
+  'calendar.weekdays.wed',
+  'calendar.weekdays.thu',
+  'calendar.weekdays.fri',
+  'calendar.weekdays.sat'
+] as const
+
 
 function getCalendarDays(monthStart: Date, monthEnd: Date) {
   const startDate = startOfWeek(monthStart)
@@ -49,6 +61,9 @@ interface CalendarPnlProps {
 }
 
 export default function CalendarPnl({ calendarData, financialEvents = [] }: CalendarPnlProps) {
+  const t = useI18n()
+  const locale = useCurrentLocale()
+  const dateLocale = locale === 'fr' ? fr : enUS
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [aiComment, setAiComment] = useState<string>("")
@@ -94,8 +109,8 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       setAiComment(result.comment)
       setAiEmotion(result.emotion)
       toast({
-        title: "Comment Generated",
-        description: "The AI comment has been generated and saved for all trades on this day.",
+        title: "Success",
+        description: t('calendar.generateComment')
       })
     } catch (error) {
       console.error("Error generating and saving comment:", error)
@@ -103,7 +118,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       setAiEmotion("Error")
       toast({
         title: "Error",
-        description: "Failed to generate and save the AI comment.",
+        description: t('calendar.commentError'),
         variant: "destructive",
       })
     } finally {
@@ -185,8 +200,8 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
         className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]"
       >
         <div className="flex items-center gap-3">
-          <CardTitle className="text-base sm:text-lg font-semibold truncate">
-            {format(currentDate, 'MMMM yyyy')}
+          <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">
+            {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
           </CardTitle>
           <div className={cn(
             "text-sm sm:text-base font-semibold truncate",
@@ -220,9 +235,9 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1.5 sm:p-4">
         <div className="grid grid-cols-8 gap-x-[1px] mb-1">
-          {[...WEEKDAYS, 'Weekly'].map((day) => (
+          {[...WEEKDAYS, 'calendar.weekdays.weekly' as const].map((day) => (
             <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
-              {day}
+              {t(day)}
             </div>
           ))}
         </div>
@@ -356,7 +371,9 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                       "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
                       !isCurrentMonth && "opacity-25"
                     )}>
-                      {dayData ? `${dayData.tradeNumber} trade${dayData.tradeNumber > 1 ? 's' : ''}` : 'No trades'}
+                      {dayData 
+                        ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}` 
+                        : t('calendar.noTrades')}
                     </div>
                   </div>
                 </div>

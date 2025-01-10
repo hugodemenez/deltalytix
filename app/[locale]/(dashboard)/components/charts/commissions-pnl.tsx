@@ -14,6 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { useI18n } from "@/locales/client"
 
 interface CommissionsPnLChartProps {
   size?: ChartSize
@@ -36,63 +37,9 @@ const formatCurrency = (value: number) =>
 const formatPercentage = (value: number) =>
   `${(value * 100).toFixed(1)}%`
 
-const CustomTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const data = payload[0].payload
-    return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm">
-        <div className="grid gap-2">
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Type
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {data.name}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Amount
-            </span>
-            <span className="font-bold">
-              {formatCurrency(data.value)}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Percentage
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {formatPercentage(data.percentage)}
-            </span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-  return null
-}
-
-const CustomLegend = ({ payload }: any) => {
-  return (
-    <div className="flex justify-center gap-4 pt-2">
-      {payload.map((entry: any, index: number) => (
-        <div key={`legend-${index}`} className="flex items-center gap-1.5">
-          <div 
-            className="h-2.5 w-2.5 rounded-sm"
-            style={{ backgroundColor: entry.color }}
-          />
-          <span className="text-xs text-muted-foreground">
-            {entry.value}
-          </span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export default function CommissionsPnLChart({ size = 'medium' }: CommissionsPnLChartProps) {
   const { formattedTrades: trades } = useFormattedTrades()
+  const t = useI18n()
 
   const chartData = React.useMemo(() => {
     const totalPnL = trades.reduce((sum, trade) => sum + trade.pnl, 0)
@@ -101,19 +48,74 @@ export default function CommissionsPnLChart({ size = 'medium' }: CommissionsPnLC
 
     return [
       {
-        name: "Net P/L",
+        name: t('commissions.legend.netPnl'),
         value: totalPnL,
         percentage: totalPnL / total,
         fill: chartConfig.pnl.color
       },
       {
-        name: "Commissions",
+        name: t('commissions.legend.commissions'),
         value: totalCommissions,
         percentage: totalCommissions / total,
         fill: chartConfig.commissions.color
       }
     ]
-  }, [trades])
+  }, [trades, t])
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="grid gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {t('commissions.tooltip.type')}
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {data.name}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {t('commissions.tooltip.amount')}
+              </span>
+              <span className="font-bold">
+                {formatCurrency(data.value)}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {t('commissions.tooltip.percentage')}
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {formatPercentage(data.percentage)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
+  const CustomLegend = ({ payload }: any) => {
+    return (
+      <div className="flex justify-center gap-4 pt-2">
+        {payload.map((entry: any, index: number) => (
+          <div key={`legend-${index}`} className="flex items-center gap-1.5">
+            <div 
+              className="h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-xs text-muted-foreground">
+              {entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   const getChartHeight = () => {
     switch (size) {
@@ -157,7 +159,7 @@ export default function CommissionsPnLChart({ size = 'medium' }: CommissionsPnLC
                 size === 'small-long' ? "text-sm" : "text-base"
               )}
             >
-              P/L vs Commissions
+              {t('commissions.title')}
             </CardTitle>
             <TooltipProvider>
               <UITooltip>
@@ -168,7 +170,7 @@ export default function CommissionsPnLChart({ size = 'medium' }: CommissionsPnLC
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Distribution of net profit/loss versus commissions paid</p>
+                  <p>{t('commissions.tooltip.description')}</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>

@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { useI18n } from "@/locales/client"
 
 interface TimeOfDayTradeChartProps {
   size?: ChartSize
@@ -32,6 +33,7 @@ const formatCurrency = (value: number) =>
 
 export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeChartProps) {
   const { formattedTrades: trades } = useFormattedTrades()
+  const t = useI18n()
 
   const chartData = React.useMemo(() => {
     const hourlyData: { [hour: string]: { totalPnl: number; count: number } } = {}
@@ -75,7 +77,7 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Time
+                {t('pnlTime.tooltip.time')}
               </span>
               <span className="font-bold text-muted-foreground">
                 {`${label}:00 - ${(label + 1) % 24}:00`}
@@ -83,7 +85,7 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Average P/L
+                {t('pnlTime.tooltip.averagePnl')}
               </span>
               <span className="font-bold">
                 {formatCurrency(data.avgPnl)}
@@ -91,10 +93,10 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Trades
+                {t('pnlTime.tooltip.trades')}
               </span>
               <span className="font-bold text-muted-foreground">
-                {data.tradeCount} trade{data.tradeCount !== 1 ? 's' : ''}
+                {data.tradeCount} {data.tradeCount === 1 ? t('pnlTime.tooltip.trade') : t('pnlTime.tooltip.trades_plural')}
               </span>
             </div>
           </div>
@@ -120,7 +122,7 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
                 size === 'small-long' ? "text-sm" : "text-base"
               )}
             >
-              Average P/L by Hour
+              {t('pnlTime.title')}
             </CardTitle>
             <TooltipProvider>
               <UITooltip>
@@ -131,7 +133,7 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Average profit/loss for each hour of the day</p>
+                  <p>{t('pnlTime.description')}</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>

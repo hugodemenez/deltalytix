@@ -15,6 +15,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { getTickDetails } from "@/server/tick-details"
+import { useI18n } from "@/locales/client"
 
 interface TickDistributionProps {
   size?: ChartSize
@@ -41,6 +42,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 const CustomTooltip = ({ active, payload }: TooltipProps) => {
+  const t = useI18n()
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -48,18 +50,18 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Ticks
+              {t('tickDistribution.tooltip.ticks')}
             </span>
             <span className="font-bold text-muted-foreground">
-              {data.ticks} tick{parseInt(data.ticks) !== 1 ? 's' : ''}
+              {data.ticks} {parseInt(data.ticks) !== 1 ? t('tickDistribution.tooltip.ticks_plural') : t('tickDistribution.tooltip.tick')}
             </span>
           </div>
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
-              Trades
+              {t('tickDistribution.tooltip.trades')}
             </span>
             <span className="font-bold">
-              {data.count} trade{data.count !== 1 ? 's' : ''}
+              {data.count} {data.count !== 1 ? t('tickDistribution.tooltip.trades_plural') : t('tickDistribution.tooltip.trade')}
             </span>
           </div>
         </div>
@@ -79,6 +81,7 @@ const formatCount = (value: number) => {
 export default function TickDistributionChart({ size = 'medium' }: TickDistributionProps) {
   const { formattedTrades: trades } = useFormattedTrades()
   const [tickDetails, setTickDetails] = React.useState<Record<string, number>>({})
+  const t = useI18n()
   
   React.useEffect(() => {
     getTickDetails().then(details => {
@@ -138,7 +141,7 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
                 size === 'small-long' ? "text-sm" : "text-base"
               )}
             >
-              Tick Distribution
+              {t('tickDistribution.title')}
             </CardTitle>
             <TooltipProvider>
               <UITooltip>
@@ -149,7 +152,7 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">
-                  <p>Number of trades by profit/loss in ticks</p>
+                  <p>{t('tickDistribution.description')}</p>
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
