@@ -75,16 +75,16 @@ export default function Modals() {
       <Dialog open={isAlreadySubscribedOpen} onOpenChange={setIsAlreadySubscribedOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Active Subscription Found</DialogTitle>
+            <DialogTitle>{t('modals.subscription.title')}</DialogTitle>
             <DialogDescription>
-              You already have an active subscription. You can manage your subscription in the customer portal.
+              {t('modals.subscription.description')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-center">
             <Button
               onClick={() => window.location.href = process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || ''}
             >
-              Manage Subscription
+              {t('modals.subscription.manage')}
             </Button>
           </div>
         </DialogContent>
@@ -93,9 +93,9 @@ export default function Modals() {
       <Dialog open={isTradesDialogOpen} onOpenChange={setIsTradesDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>No Trades Available</DialogTitle>
+            <DialogTitle>{t('modals.noTrades.title')}</DialogTitle>
             <DialogDescription>
-              There are currently no trades to display. Please add some trades to see the dashboard content.
+              {t('modals.noTrades.description')}
             </DialogDescription>
           </DialogHeader>
           <ImportButton />
@@ -121,7 +121,7 @@ export default function Modals() {
 
           <div className="mt-4 text-center">
             <Button variant='link' onClick={async()=> await signOut()}>
-              Change account
+              {t('modals.changeAccount')}
             </Button>
           </div>
         </DialogContent>

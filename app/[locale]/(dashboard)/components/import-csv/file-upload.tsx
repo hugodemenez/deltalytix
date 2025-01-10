@@ -9,6 +9,7 @@ import { XIcon, FileIcon, AlertCircle, Upload, ArrowUpCircle } from 'lucide-reac
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/locales/client"
 
 interface FileUploadProps {
   importType: ImportType
@@ -30,6 +31,7 @@ export default function FileUpload({
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({})
   const [parsedFiles, setParsedFiles] = useState<string[][][]>([])
+  const t = useI18n()
 
   const processRithmicPerformanceCsv = useCallback((data: string[][]) => {
     const processedData: string[][] = [];
@@ -284,19 +286,19 @@ export default function FileUpload({
           {isDragActive ? (
             <div className="space-y-2 relative">
               <p className="text-xl font-medium text-primary animate-in fade-in slide-in-from-bottom-2">
-                Drop your files here
+                {t('import.upload.dropHere')}
               </p>
               <p className="text-sm text-muted-foreground animate-in fade-in slide-in-from-bottom-3">
-                We&apos;ll handle the rest
+                {t('import.upload.weWillHandle')}
               </p>
             </div>
           ) : (
             <div className="space-y-2 relative">
               <p className="text-xl font-medium group-hover:text-primary transition-colors">
-                Drag and drop your CSV files here
+                {t('import.upload.dragAndDrop')}
               </p>
               <p className="text-sm text-muted-foreground">
-                or click to browse your files
+                {t('import.upload.clickToBrowse')}
               </p>
             </div>
           )}
@@ -305,7 +307,7 @@ export default function FileUpload({
 
       {uploadedFiles.length > 0 && (
         <div className="space-y-2 animate-in slide-in-from-bottom-4 duration-500 w-full max-w-2xl">
-          <h3 className="text-lg font-semibold">Uploaded Files:</h3>
+          <h3 className="text-lg font-semibold">{t('import.upload.uploadedFiles')}</h3>
           {uploadedFiles.map((file, index) => (
             <div 
               key={index} 
@@ -326,7 +328,7 @@ export default function FileUpload({
                 <div className="flex flex-col">
                   <span className="text-sm font-medium">{file.name}</span>
                   <span className="text-xs text-muted-foreground">
-                    {(file.size / 1024).toFixed(1)} KB
+                    {t('import.upload.fileSize', { size: (file.size / 1024).toFixed(1) })}
                   </span>
                 </div>
               </div>
@@ -342,7 +344,7 @@ export default function FileUpload({
                   className="opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <XIcon className="h-4 w-4" />
-                  <span className="sr-only">Remove file</span>
+                  <span className="sr-only">{t('import.upload.removeFile')}</span>
                 </Button>
               </div>
             </div>
@@ -353,9 +355,9 @@ export default function FileUpload({
       {uploadedFiles.length > 0 && (
         <Alert className="animate-in slide-in-from-bottom-5 duration-700 w-full max-w-2xl">
           <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Note</AlertTitle>
+          <AlertTitle>{t('import.upload.note')}</AlertTitle>
           <AlertDescription>
-            All uploaded files will be processed using the selected import type.
+            {t('import.upload.noteDescription')}
           </AlertDescription>
         </Alert>
       )}
