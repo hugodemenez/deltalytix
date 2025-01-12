@@ -120,10 +120,10 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
     <div>
       {/* Sticky container for mobile */}
       <div className="md:hidden sticky top-[64px] z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 border-b">
-        <Tabs defaultValue="yearly" className="w-full max-w-3xl mx-auto">
+        <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)} className="w-full max-w-3xl mx-auto">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="yearly" onClick={() => setBillingPeriod('yearly')}>{t('pricing.yearly')}</TabsTrigger>
-            <TabsTrigger value="monthly" onClick={() => setBillingPeriod('monthly')}>{t('pricing.monthly')}</TabsTrigger>
+            <TabsTrigger value="yearly">{t('pricing.yearly')}</TabsTrigger>
+            <TabsTrigger value="monthly">{t('pricing.monthly')}</TabsTrigger>
           </TabsList>
           <p className="text-sm text-center text-gray-500 mt-2">
             {billingPeriod === 'yearly' ? t('pricing.yearlySavings') : t('pricing.monthlyFlexibility')}
@@ -133,10 +133,10 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
 
       {/* Desktop version */}
       <div className="hidden md:block">
-        <Tabs defaultValue="yearly" className="w-full max-w-3xl mx-auto mb-12">
+        <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)} className="w-full max-w-3xl mx-auto mb-12">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="yearly" onClick={() => setBillingPeriod('yearly')}>{t('pricing.yearly')}</TabsTrigger>
-            <TabsTrigger value="monthly" onClick={() => setBillingPeriod('monthly')}>{t('pricing.monthly')}</TabsTrigger>
+            <TabsTrigger value="yearly">{t('pricing.yearly')}</TabsTrigger>
+            <TabsTrigger value="monthly">{t('pricing.monthly')}</TabsTrigger>
           </TabsList>
           <p className="text-sm text-center text-gray-500 mt-2">
             {billingPeriod === 'yearly' ? t('pricing.yearlySavings') : t('pricing.monthlyFlexibility')}
