@@ -150,8 +150,9 @@ export default function Component() {
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
                             <MobileNavItem href="https://github.com/hugodemenez/deltalytix" onClick={onLinkClick}>{t('navbar.openSource')}</MobileNavItem>
-                            <MobileNavItem href="/docs" onClick={onLinkClick}>{t('navbar.documentation')}</MobileNavItem>
+                            <MobileNavItem href="https://www.youtube.com/@hugodemenez" onClick={onLinkClick}>YouTube</MobileNavItem>
                             <MobileNavItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} onClick={onLinkClick}>{t('navbar.joinCommunity')}</MobileNavItem>
+                            <MobileNavItem href="/docs" onClick={onLinkClick}>{t('navbar.documentation')}</MobileNavItem>
                             <MobileNavItem href="/api" onClick={onLinkClick}>{t('navbar.api')}</MobileNavItem>
                         </ul>
                     </AccordionContent>
@@ -248,7 +249,7 @@ export default function Component() {
                                             {t('navbar.dailyPerformanceDescription')}
                                         </ListItem>
                                         <div className='col-span-2'>
-                                            <ListItem href="/#ai-journaling" title={t('navbar.aiJournaling')} icon={<BookOpen className="h-4 w-4" />} >
+                                            <ListItem href="/#ai-journaling" title={t('navbar.aiJournaling')} icon={<BookOpen className="h-4 w-4" />}>
                                                 {t('navbar.aiJournalingDescription')}
                                             </ListItem>
                                         </div>
@@ -276,11 +277,17 @@ export default function Component() {
                                         <ListItem href="https://github.com/hugodemenez/deltalytix" title={t('navbar.openSource')} icon={<Github className="h-4 w-4" />}>
                                             {t('navbar.openSourceDescription')}
                                         </ListItem>
-                                        <ListItem href="#documentation" title={t('navbar.documentation')} icon={<FileText className="h-4 w-4" />}>
+                                        <ListItem href="https://www.youtube.com/@hugodemenez" title="YouTube" icon={<FileText className="h-4 w-4" />}>
+                                            {t('navbar.youtubeDescription')}
+                                        </ListItem>
+                                        <ListItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} title={t('navbar.joinCommunity')} icon={<Users className="h-4 w-4" />}>
+                                            {t('navbar.joinCommunityDescription')}
+                                        </ListItem>
+                                        <ListItem href="/docs" title={t('navbar.documentation')} icon={<FileText className="h-4 w-4" />}>
                                             {t('navbar.documentationDescription')}
                                         </ListItem>
-                                        <ListItem href="https://discord.gg/a5YVF5Ec2n" title={t('navbar.joinCommunity')} icon={<Users className="h-4 w-4" />}>
-                                            {t('navbar.joinCommunityDescription')}
+                                        <ListItem href="/api" title={t('navbar.api')} icon={<Cpu className="h-4 w-4" />}>
+                                            {t('navbar.apiDescription')}
                                         </ListItem>
                                         <li className="row-span-3 md:col-span-2">
                                             <NavigationMenuLink asChild>

@@ -45,13 +45,14 @@ import {
   deleteTagFromAllTrades,
   updateTradeImage,
 } from '@/server/trades'
-import { cn } from '@/lib/utils'
+import { cn, parsePositionTime } from '@/lib/utils'
 import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useI18n } from '@/locales/client'
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -70,6 +71,7 @@ interface TagInputProps {
 function TagInput({ tradeId, tradeTags, availableTags, onAddTag }: TagInputProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
+  const t = useI18n()
 
   return (
     <Popover 
@@ -84,7 +86,7 @@ function TagInput({ tradeId, tradeTags, availableTags, onAddTag }: TagInputProps
       <PopoverContent className="p-0" side="right" align="start">
         <Command shouldFilter={false}>
           <CommandInput 
-            placeholder="Type a tag..." 
+            placeholder={t('trade-table.searchTags')}
             value={inputValue}
             onValueChange={setInputValue}
             onKeyDown={(e) => {
@@ -108,11 +110,11 @@ function TagInput({ tradeId, tradeTags, availableTags, onAddTag }: TagInputProps
                   })
                 }}
               >
-                Add tag &ldquo;{inputValue.trim()}&rdquo;
+                {t('trade-table.addTag', { tag: inputValue.trim() })}
               </CommandItem>
             )}
             {availableTags.length > 0 && (
-              <CommandGroup heading="Existing Tags">
+              <CommandGroup heading={t('trade-table.existingTags')}>
                 {availableTags
                   .filter(tag => !tradeTags.includes(tag))
                   .filter(tag => {
@@ -135,6 +137,7 @@ function TagInput({ tradeId, tradeTags, availableTags, onAddTag }: TagInputProps
                   ))}
               </CommandGroup>
             )}
+            <CommandEmpty>{t('trade-table.noTagsFound')}</CommandEmpty>
           </CommandList>
         </Command>
       </PopoverContent>
@@ -151,6 +154,7 @@ interface TagFilterProps {
 function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
   const [search, setSearch] = useState('')
   const selectedTags = (column?.getFilterValue() as string[]) || []
+  const t = useI18n()
 
   const filteredTags = availableTags.filter(tag => 
     tag.toLowerCase().includes(search.toLowerCase())
@@ -173,7 +177,7 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
         className="-ml-3 h-8 data-[state=open]:bg-accent"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Tags
+        {t('trade-table.tags')}
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
       <Popover>
@@ -197,14 +201,14 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
         <PopoverContent className="w-80 p-0" align="start">
           <Command>
             <CommandInput 
-              placeholder="Search tags..." 
+              placeholder={t('trade-table.searchTags')}
               value={search}
               onValueChange={setSearch}
             />
             <CommandList>
-              <CommandEmpty>No tags found</CommandEmpty>
+              <CommandEmpty>{t('trade-table.noTagsFound')}</CommandEmpty>
               {filteredTags.length > 0 && (
-                <CommandGroup>
+                <CommandGroup heading={t('trade-table.existingTags')}>
                   {filteredTags.map(tag => (
                     <CommandItem
                       key={tag}
@@ -266,6 +270,7 @@ function convertFileToBase64(file: File): Promise<string> {
 }
 
 export function TradeTableReview() {
+  const t = useI18n()
   const { formattedTrades } = useFormattedTrades()
   const { updateTrade } = useTrades()
   const [sorting, setSorting] = useState<SortingState>([])
@@ -394,7 +399,7 @@ export function TradeTableReview() {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="hover:bg-transparent px-0 font-medium"
         >
-          Entry Date
+          {t('trade-table.entryDate')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
@@ -408,7 +413,7 @@ export function TradeTableReview() {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="hover:bg-transparent px-0 font-medium"
         >
-          Instrument
+          {t('trade-table.instrument')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
@@ -421,10 +426,63 @@ export function TradeTableReview() {
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="hover:bg-transparent px-0 font-medium"
         >
-          Direction
+          {t('trade-table.direction')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
+    },
+    {
+      accessorKey: "timeInPosition",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          {t('trade-table.positionTime')}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const timeInPosition = parseFloat(row.getValue("timeInPosition") as string) || 0
+        return <div>{parsePositionTime(timeInPosition)}</div>
+      },
+    },
+    {
+      accessorKey: "entryDate",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          {t('trade-table.entryTime')}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const dateStr = row.getValue("entryDate") as string
+        const date = new Date(dateStr)
+        return <div>{date.toLocaleTimeString()}</div>
+      },
+    },
+    {
+      accessorKey: "closeDate",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          {t('trade-table.exitTime')}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const dateStr = row.getValue("closeDate") as string
+        const date = new Date(dateStr)
+        return <div>{date.toLocaleTimeString()}</div>
+      },
     },
     {
       accessorKey: "pnl",
@@ -435,7 +493,7 @@ export function TradeTableReview() {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="hover:bg-transparent px-0 font-medium"
           >
-            PnL
+            {t('trade-table.pnl')}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -462,7 +520,7 @@ export function TradeTableReview() {
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
             className="hover:bg-transparent px-0 font-medium"
           >
-            Quantity
+            {t('trade-table.quantity')}
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         </div>
@@ -478,7 +536,7 @@ export function TradeTableReview() {
     },
     {
       id: "image",
-      header: "Image",
+      header: t('trade-table.image'),
       cell: ({ row }) => {
         const trade = row.original
         return (
@@ -587,7 +645,7 @@ export function TradeTableReview() {
         return filterValue.some(tag => tags.includes(tag))
       },
     }
-  ], [availableTags])
+  ], [availableTags, t])
 
   const tableData = useMemo(() => 
     formattedTrades.map(trade => ({
@@ -649,22 +707,22 @@ export function TradeTableReview() {
 
   return (
     <div 
-      className="rounded-md border h-full overflow-hidden"
-      data-scrollable="true"
+      className="flex flex-col h-full w-full border rounded-md overflow-hidden"
     >
       <div className="flex-1 min-h-0">
-        <div className="h-full overflow-auto">
+        <div className="relative w-full h-full overflow-auto">
           <table className="w-full border-separate border-spacing-0">
-            <thead className="sticky top-0 z-20">
+            <thead className="sticky top-0 z-20 bg-background">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header, idx) => (
                     <th
                       key={header.id}
                       className={cn(
-                        "h-10 px-4 py-2 border-b bg-background whitespace-nowrap text-left align-middle",
+                        "h-12 px-4 text-left align-middle border-b bg-background whitespace-nowrap",
                         idx === 0 && "sticky left-0 z-30 bg-background"
                       )}
+                      style={{ minWidth: idx === 0 ? '150px' : 'auto' }}
                     >
                       {header.isPlaceholder
                         ? null
@@ -685,9 +743,10 @@ export function TradeTableReview() {
                       <td
                         key={cell.id}
                         className={cn(
-                          "px-4 py-2 border-b whitespace-nowrap text-left align-middle",
+                          "px-4 py-2 border-b whitespace-nowrap align-middle",
                           idx === 0 && "sticky left-0 z-10 bg-background"
                         )}
+                        style={{ minWidth: idx === 0 ? '150px' : 'auto' }}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -701,7 +760,7 @@ export function TradeTableReview() {
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="h-24 text-center"
+                    className="h-24 text-center align-middle text-muted-foreground"
                   >
                     No results.
                   </td>
@@ -712,19 +771,19 @@ export function TradeTableReview() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 sm:justify-between p-2 border-t bg-background">
+      <div className="flex flex-col sm:flex-row items-center gap-4 sm:justify-between p-4 border-t bg-background">
         <div className="text-sm text-muted-foreground order-2 sm:order-1">
-          {table.getFilteredRowModel().rows.length} trade(s) total
+          {t('trade-table.totalTrades', { count: table.getFilteredRowModel().rows.length })}
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 lg:gap-8 order-1 sm:order-2">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-medium">Rows per page</p>
+            <p className="text-sm font-medium">{t('trade-table.rowsPerPage')}</p>
             <select
               value={table.getState().pagination.pageSize}
               onChange={e => {
                 table.setPageSize(Number(e.target.value))
               }}
-              className="h-8 w-[70px] rounded-md border border-input bg-transparent"
+              className="h-8 w-[70px] rounded-md border border-input bg-transparent px-2"
             >
               {[10, 20, 30, 40, 50].map(pageSize => (
                 <option key={pageSize} value={pageSize}>
@@ -735,8 +794,10 @@ export function TradeTableReview() {
           </div>
           <div className="flex items-center gap-2">
             <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
-              {table.getPageCount()}
+              {t('trade-table.page', { 
+                current: table.getState().pagination.pageIndex + 1,
+                total: table.getPageCount()
+              })}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -745,7 +806,7 @@ export function TradeTableReview() {
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
-                Previous
+                {t('trade-table.previous')}
               </Button>
               <Button
                 variant="outline"
@@ -753,7 +814,7 @@ export function TradeTableReview() {
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >
-                Next
+                {t('trade-table.next')}
               </Button>
             </div>
           </div>

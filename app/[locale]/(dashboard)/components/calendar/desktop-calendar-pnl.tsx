@@ -79,7 +79,8 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const events = await getFinancialEvents(currentDate)
+        // const events = await getFinancialEvents(currentDate)
+        const events: FinancialEvent[] = []
         if (Array.isArray(events)) {
           setMonthEvents(events)
         } else {
