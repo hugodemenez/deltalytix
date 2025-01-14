@@ -39,7 +39,7 @@ interface PricingPlansProps {
 }
 
 export default function PricingPlans({ isModal, onClose, trigger }: PricingPlansProps) {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly')
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('monthly')
   const t = useI18n()
 
   const plans: Plans = {
@@ -122,8 +122,8 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       <div className="md:hidden sticky top-[64px] z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 border-b">
         <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)} className="w-full max-w-3xl mx-auto">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="yearly">{t('pricing.yearly')}</TabsTrigger>
             <TabsTrigger value="monthly">{t('pricing.monthly')}</TabsTrigger>
+            <TabsTrigger value="yearly">{t('pricing.yearly')}</TabsTrigger>
           </TabsList>
           <p className="text-sm text-center text-gray-500 mt-2">
             {billingPeriod === 'yearly' ? t('pricing.yearlySavings') : t('pricing.monthlyFlexibility')}
@@ -135,8 +135,8 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       <div className="hidden md:block">
         <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)} className="w-full max-w-3xl mx-auto mb-12">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="yearly">{t('pricing.yearly')}</TabsTrigger>
             <TabsTrigger value="monthly">{t('pricing.monthly')}</TabsTrigger>
+            <TabsTrigger value="yearly">{t('pricing.yearly')}</TabsTrigger>
           </TabsList>
           <p className="text-sm text-center text-gray-500 mt-2">
             {billingPeriod === 'yearly' ? t('pricing.yearlySavings') : t('pricing.monthlyFlexibility')}
