@@ -505,6 +505,7 @@ export default {
     'equity.tooltip.grossPnl': 'Gross P/L',
     'equity.tooltip.commissions': 'Commissions',
     'equity.tooltip.netPnl': 'Net P/L',
+    'equity.tooltip.noPnL': 'No P/L',
     'equity.toggle.individual': 'Individual',
     'pnl.title': 'Daily Profit/Loss',
     'pnl.description': 'Showing daily P/L over time',

@@ -503,6 +503,7 @@ export default {
     'equity.tooltip.grossPnl': 'P&L Brut',
     'equity.tooltip.commissions': 'Commissions',
     'equity.tooltip.netPnl': 'P&L Net',
+    'equity.tooltip.noPnL': 'Pas de P&L',
     'pnl.title': 'Profits/Pertes Quotidiens',
     'pnl.description': 'Affichage des P&L quotidiens dans le temps',
     'pnl.tooltip.date': 'Date',
