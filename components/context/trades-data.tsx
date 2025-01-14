@@ -42,6 +42,11 @@ interface TickRange {
   max: number | undefined
 }
 
+interface PnlRange {
+  min: number | undefined
+  max: number | undefined
+}
+
 interface TradeDataContextProps {
   trades: Trade[]
   setTrades: React.Dispatch<React.SetStateAction<Trade[]>>
@@ -60,6 +65,8 @@ interface FormattedTradeContextProps {
   setDateRange: React.Dispatch<React.SetStateAction<DateRange | undefined>>
   tickRange: TickRange
   setTickRange: React.Dispatch<React.SetStateAction<TickRange>>
+  pnlRange: PnlRange
+  setPnlRange: React.Dispatch<React.SetStateAction<PnlRange>>
 }
 
 interface StatisticsContextProps {
@@ -89,6 +96,7 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [tickDetails, setTickDetails] = useState<Record<string, number>>({})
   const [tickRange, setTickRange] = useState<TickRange>({ min: undefined, max: undefined })
+  const [pnlRange, setPnlRange] = useState<PnlRange>({ min: undefined, max: undefined })
 
   const fetchTrades = useCallback(async () => {
     if (user) {
@@ -149,11 +157,15 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           entryDate >= startOfDay(dateRange.from) && 
           entryDate <= endOfDay(dateRange.to)
         )
+        const matchesPnlRange = (
+          (pnlRange.min === undefined || trade.pnl >= pnlRange.min) &&
+          (pnlRange.max === undefined || trade.pnl <= pnlRange.max)
+        )
         
-        return matchesInstruments && matchesAccounts && matchesDateRange
+        return matchesInstruments && matchesAccounts && matchesDateRange && matchesPnlRange
       })
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime())
-  }, [trades, instruments, accountNumbers, dateRange])
+  }, [trades, instruments, accountNumbers, dateRange, pnlRange])
 
   const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades])
   const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades])
@@ -177,7 +189,9 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         dateRange,
         setDateRange,
         tickRange,
-        setTickRange
+        setTickRange,
+        pnlRange,
+        setPnlRange
       }}>
         <StatisticsContext.Provider value={{ statistics }}>
           <CalendarDataContext.Provider value={{ calendarData }}>

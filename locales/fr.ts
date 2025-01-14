@@ -333,6 +333,13 @@ export default {
         showAccountNumbers: "Afficher les numéros de compte",
         hideAccountNumbers: "Masquer les numéros de compte",
         openFilters: "Ouvrir les filtres",
+        pnl: "PnL",
+        allTrades: "Tous les trades",
+        profitableTrades: "Trades gagnants",
+        losingTrades: "Trades perdants",
+        min: "Min",
+        max: "Max",
+        apply: "Appliquer"
     },
     'chat.title': 'Chat',
     'chat.resetConversation': 'Réinitialiser la conversation',

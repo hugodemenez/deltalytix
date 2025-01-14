@@ -327,6 +327,13 @@ export default {
         showAccountNumbers: "Show account numbers",
         hideAccountNumbers: "Hide account numbers",
         openFilters: "Open filters",
+        pnl: "PnL",
+        allTrades: "All trades",
+        profitableTrades: "Profitable trades",
+        losingTrades: "Losing trades",
+        min: "Min",
+        max: "Max",
+        apply: "Apply"
     },
     'mood.question': 'How are you feeling today?',
     'mood.bad': 'Bad day',

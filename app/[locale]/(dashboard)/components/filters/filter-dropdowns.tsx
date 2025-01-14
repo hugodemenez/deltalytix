@@ -13,6 +13,7 @@ import { FilterItem, PropfirmGroup } from "@/types/filter"
 import { useState, useEffect } from "react"
 import { ChevronDown, Eye, EyeOff } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
+import { PnlRangeFilter } from "./pnl-range-filter"
 
 const propfirmGroups: PropfirmGroup[] = [
   { name: 'FastTrackTrading', prefix: 'FTT' },
@@ -291,6 +292,7 @@ export function FilterDropdowns({ showAccountNumbers }: FilterDropdownsProps) {
         isItemDisabled={isItemDisabled}
         isItemSelected={isItemSelected}
       />
+      <PnlRangeFilter />
     </div>
   )
 } 
