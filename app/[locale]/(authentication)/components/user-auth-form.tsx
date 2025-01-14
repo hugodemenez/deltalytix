@@ -140,7 +140,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         const domain = email.split('@')[1]?.toLowerCase()
 
         if (domain?.includes('gmail.com')) {
-            window.open('https://mail.google.com', '_blank')
+            window.open('https://mail.google.com', '_blank', 'noopener,noreferrer')
         } else if (
             domain?.includes('outlook.com') || 
             domain?.includes('hotmail.com') || 
@@ -148,25 +148,25 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             domain?.includes('msn.com') ||
             domain?.includes('office365.com')
         ) {
-            window.open('https://outlook.live.com', '_blank')
+            window.open('https://outlook.live.com', '_blank', 'noopener,noreferrer')
         } else if (
             domain?.includes('proton.me') || 
             domain?.includes('protonmail.com') || 
             domain?.includes('pm.me')
         ) {
-            window.open('https://mail.proton.me', '_blank')
+            window.open('https://mail.proton.me', '_blank', 'noopener,noreferrer')
         } else if (
             domain?.includes('icloud.com') || 
             domain?.includes('me.com') || 
             domain?.includes('mac.com')
         ) {
-            window.open('https://www.icloud.com/mail', '_blank')
+            window.open('https://www.icloud.com/mail', '_blank', 'noopener,noreferrer')
         } else if (domain?.includes('yahoo.com')) {
-            window.open('https://mail.yahoo.com', '_blank')
+            window.open('https://mail.yahoo.com', '_blank', 'noopener,noreferrer')
         } else if (domain?.includes('aol.com')) {
-            window.open('https://mail.aol.com', '_blank')
+            window.open('https://mail.aol.com', '_blank', 'noopener,noreferrer')
         } else if (domain?.includes('zoho.com')) {
-            window.open('https://mail.zoho.com', '_blank')
+            window.open('https://mail.zoho.com', '_blank', 'noopener,noreferrer')
         } else {
             // Default to mailto: for unknown domains
             window.location.href = `mailto:${email}`
