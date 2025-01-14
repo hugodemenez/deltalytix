@@ -26,8 +26,6 @@ import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import { useTheme } from '@/components/context/theme-provider'
 import ImportButton from './import-csv/import-button'
-import { NotificationDropdown } from './notification-dropdown'
-import NavbarFilters from './filters/filters'
 import { SubscriptionBadge } from './subscription-badge'
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { useI18n } from "@/locales/client"

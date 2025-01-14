@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { GitBranchIcon, UsersIcon, BookOpenIcon, ShieldCheckIcon, StarIcon } from 'lucide-react'
+import { GitBranchIcon, UsersIcon, BookOpenIcon, StarIcon } from 'lucide-react'
 import { MdOutlineBrightness1, MdBalance, MdOutlineAdjust } from 'react-icons/md'
 import { LuGitFork } from 'react-icons/lu'
 import { ChartSSR } from './chart-ssr'
@@ -187,17 +187,6 @@ export default function GitHubRepoCard() {
                   <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
                     <Link href="/updates">{t('open-source.accordion.open-roadmap.button')}</Link>
                   </Button>
-                </AccordionContent>
-              </AccordionItem>
-              <AccordionItem value="security">
-                <AccordionTrigger className="flex items-center justify-between text-primary">
-                  <div className="flex items-center space-x-2">
-                    <ShieldCheckIcon className="h-5 w-5 md:h-6 md:w-6" />
-                    <span className="text-sm md:text-base lg:text-lg">{t('open-source.accordion.security.title')}</span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="text-xs md:text-sm text-muted-foreground">
-                  <p>{t('open-source.accordion.security.description')}</p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
