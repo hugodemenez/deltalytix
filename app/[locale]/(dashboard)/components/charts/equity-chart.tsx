@@ -184,63 +184,49 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
     <Card className="h-full flex flex-col">
       <CardHeader 
         className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
+          "flex flex-col items-stretch space-y-0 border-b shrink-0 h-[56px]",
+          size === 'small' ? "p-2" : "p-3 sm:p-4"
         )}
       >
-        <div className="flex items-center gap-1.5">
-          <CardTitle 
-            className={cn(
-              "line-clamp-1",
-              size === 'small' ? "text-sm" : "text-base"
-            )}
-          >
-            {t('equity.title')}
-          </CardTitle>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className={cn(
-                  "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                  size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
-                )} />
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <p>{t('equity.description')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-        {size !== 'small' && (
-          <div className="flex shrink-0 gap-4 items-center">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="view-mode"
-                checked={showIndividual}
-                onCheckedChange={setShowIndividual}
-              />
-              <Label htmlFor="view-mode" className="text-sm">
-                {t('equity.toggle.individual')}
-              </Label>
-            </div>
-            <div className="flex shrink-0 gap-1">
-              {["daily", "per-trade"].map((key) => (
-                <button
-                  key={key}
-                  data-active={showDailyPnL === (key==="daily")}
-                  className={cn(
-                    "relative px-2.5 py-1 text-sm rounded-md transition-colors",
-                    "hover:bg-muted",
-                    "data-[active=true]:bg-muted"
-                  )}
-                  onClick={() => setShowDailyPnL(key==="daily")}
-                >
-                  {key==="daily" ? t('equity.toggle.daily') : t('equity.toggle.perTrade')}
-                </button>
-              ))}
-            </div>
+        <div className="flex items-center justify-between h-full">
+          <div className="flex items-center gap-1.5">
+            <CardTitle 
+              className={cn(
+                "line-clamp-1",
+                size === 'small-long' ? "text-sm" : "text-base"
+              )}
+            >
+              {t('equity.title')}
+            </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className={cn(
+                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
+                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                  )} />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{t('equity.description')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
-        )}
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="view-mode"
+              checked={showIndividual}
+              onCheckedChange={setShowIndividual}
+              className="shrink-0"
+            />
+            <Label 
+              htmlFor="view-mode" 
+              className="text-sm"
+            >
+              {t('equity.toggle.individual')}
+            </Label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent 
         className={cn(
