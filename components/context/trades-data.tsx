@@ -2,6 +2,7 @@
 
 import { getTrades } from '@/server/database'
 import { Trade } from '@prisma/client'
+import { getTickDetails } from '@/server/tick-details'
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react'
 import { useUser } from './user-data'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
@@ -36,6 +37,11 @@ interface DateRange {
   to: Date
 }
 
+interface TickRange {
+  min: number | undefined
+  max: number | undefined
+}
+
 interface TradeDataContextProps {
   trades: Trade[]
   setTrades: React.Dispatch<React.SetStateAction<Trade[]>>
@@ -52,6 +58,8 @@ interface FormattedTradeContextProps {
   setAccountNumbers: React.Dispatch<React.SetStateAction<string[]>>
   dateRange: DateRange | undefined
   setDateRange: React.Dispatch<React.SetStateAction<DateRange | undefined>>
+  tickRange: TickRange
+  setTickRange: React.Dispatch<React.SetStateAction<TickRange>>
 }
 
 interface StatisticsContextProps {
@@ -60,6 +68,11 @@ interface StatisticsContextProps {
 
 interface CalendarDataContextProps {
   calendarData: CalendarData
+}
+
+interface TickDetail {
+  ticker: string
+  tickValue: number
 }
 
 const TradeDataContext = createContext<TradeDataContextProps | undefined>(undefined)
@@ -74,6 +87,8 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [instruments, setInstruments] = useState<string[]>([])
   const [accountNumbers, setAccountNumbers] = useState<string[]>([])
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
+  const [tickDetails, setTickDetails] = useState<Record<string, number>>({})
+  const [tickRange, setTickRange] = useState<TickRange>({ min: undefined, max: undefined })
 
   const fetchTrades = useCallback(async () => {
     if (user) {
@@ -107,6 +122,16 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   useEffect(() => {
     fetchTrades()
   }, [fetchTrades])
+
+  React.useEffect(() => {
+    getTickDetails().then((details: TickDetail[]) => {
+      const tickMap = details.reduce((acc: Record<string, number>, detail: TickDetail) => {
+        acc[detail.ticker] = detail.tickValue
+        return acc
+      }, {})
+      setTickDetails(tickMap)
+    })
+  }, [])
 
   const refreshTrades = useCallback(async () => {
     await fetchTrades()
@@ -150,7 +175,9 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         accountNumbers,
         setAccountNumbers,
         dateRange,
-        setDateRange
+        setDateRange,
+        tickRange,
+        setTickRange
       }}>
         <StatisticsContext.Provider value={{ statistics }}>
           <CalendarDataContext.Provider value={{ calendarData }}>

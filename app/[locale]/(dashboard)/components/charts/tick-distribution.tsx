@@ -9,6 +9,12 @@ import { cn } from "@/lib/utils"
 import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { Info } from 'lucide-react'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   Tooltip as UITooltip,
   TooltipContent,
   TooltipProvider,
@@ -16,6 +22,11 @@ import {
 } from "@/components/ui/tooltip"
 import { getTickDetails } from "@/server/tick-details"
 import { useI18n } from "@/locales/client"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { X } from "lucide-react"
+import { TradeTableReview } from "../tables/trade-table-review"
+import { Trade } from "@prisma/client"
 
 interface TickDistributionProps {
   size?: ChartSize
@@ -78,9 +89,36 @@ const formatCount = (value: number) => {
   return value.toString()
 }
 
+interface TickModalProps {
+  isOpen: boolean
+  onClose: () => void
+  tickValue: string
+  trades: Trade[]
+}
+
+function TickModal({ isOpen, onClose, tickValue, trades }: TickModalProps) {
+  const t = useI18n()
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-[90vw] w-[1200px] h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>
+            {`${trades.length} ${t('trade-table.trades')} @ ${tickValue} ${t('tickDistribution.tooltip.ticks')}`}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 min-h-0 -mx-6">
+          <TradeTableReview trades={trades} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function TickDistributionChart({ size = 'medium' }: TickDistributionProps) {
-  const { formattedTrades: trades } = useFormattedTrades()
+  const { formattedTrades: trades, tickRange } = useFormattedTrades()
   const [tickDetails, setTickDetails] = React.useState<Record<string, number>>({})
+  const [selectedTick, setSelectedTick] = React.useState<string | null>(null)
+  const [modalTrades, setModalTrades] = React.useState<Trade[]>([])
   const t = useI18n()
   
   React.useEffect(() => {
@@ -96,132 +134,155 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
   const chartData = React.useMemo(() => {
     if (!trades.length || !Object.keys(tickDetails).length) return []
 
-    // Get the range of ticks we want to display
-    const maxTicks = 10 // Show distribution from -10 to +10 ticks
-    const tickRange = Array.from({ length: 2 * maxTicks + 1 }, (_, i) => i - maxTicks)
-    const tickCounts = tickRange.reduce((acc, tick) => {
-      acc[tick] = 0
-      return acc
-    }, {} as Record<number, number>)
+    // Create a map to store tick counts
+    const tickCounts: Record<number, number> = {}
 
     // Count trades for each tick value
     trades.forEach(trade => {
-      // Find the matching tick details by checking if the base instrument is included in the trade symbol
       const matchingTicker = Object.keys(tickDetails).find(ticker => 
         trade.instrument.includes(ticker)
       )
       const tickValue = matchingTicker ? tickDetails[matchingTicker] : 1
-      const ticks = Math.round(trade.pnl / tickValue)
-      // Only count ticks within our display range
-      if (ticks >= -maxTicks && ticks <= maxTicks) {
-        tickCounts[ticks] = (tickCounts[ticks] || 0) + 1
-      }
+      // Calculate PnL per contract first
+      const pnlPerContract = Number(trade.pnl) / Number(trade.quantity)
+      const ticks = Math.round(pnlPerContract / tickValue)
+      tickCounts[ticks] = (tickCounts[ticks] || 0) + 1
     })
 
-    return tickRange
-      .map(tick => ({
-        ticks: tick === 0 ? '0' : tick > 0 ? `+${tick}` : `${tick}`,
-        count: tickCounts[tick]
+    // Convert the tick counts to sorted chart data
+    return Object.entries(tickCounts)
+      .map(([tick, count]) => ({
+        ticks: tick === '0' ? '0' : Number(tick) > 0 ? `+${tick}` : `${tick}`,
+        count
       }))
+      .sort((a, b) => Number(a.ticks.replace('+', '')) - Number(b.ticks.replace('+', '')))
+
   }, [trades, tickDetails])
 
+  const handleBarClick = (data: any) => {
+    if (!data || !trades.length || !Object.keys(tickDetails).length) return
+
+    const clickedTicks = Number(data.ticks.replace('+', ''))
+    const filteredTrades = trades.filter(trade => {
+      const matchingTicker = Object.keys(tickDetails).find(ticker => 
+        trade.instrument.includes(ticker)
+      )
+      const tickValue = matchingTicker ? tickDetails[matchingTicker] : 1
+      // Calculate PnL per contract first
+      const pnlPerContract = Number(trade.pnl) / Number(trade.quantity)
+      const tradeTicks = Math.round(pnlPerContract / tickValue)
+      return tradeTicks === clickedTicks
+    })
+
+    setSelectedTick(data.ticks)
+    setModalTrades(filteredTrades)
+  }
+
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader 
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
-        )}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <CardTitle 
-              className={cn(
-                "line-clamp-1",
-                size === 'small-long' ? "text-sm" : "text-base"
-              )}
-            >
-              {t('tickDistribution.title')}
-            </CardTitle>
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info className={cn(
-                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
-                  )} />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t('tickDistribution.description')}</p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
+    <>
+      <Card className="h-full flex flex-col">
+        <CardHeader 
+          className={cn(
+            "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
+            size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
+          )}
+        >
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-1.5">
+              <CardTitle 
+                className={cn(
+                  "line-clamp-1",
+                  size === 'small-long' ? "text-sm" : "text-base"
+                )}
+              >
+                {t('tickDistribution.title')}
+              </CardTitle>
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <Info className={cn(
+                      "text-muted-foreground hover:text-foreground transition-colors cursor-help",
+                      size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                    )} />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{t('tickDistribution.description')}</p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent 
-        className={cn(
-          "flex-1 min-h-0",
-          size === 'small-long' ? "p-1" : "p-2 sm:p-4"
-        )}
-      >
-        <div className={cn(
-          "w-full h-full"
-        )}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={
-                size === 'small-long'
-                  ? { left: 0, right: 4, top: 4, bottom: 20 }
-                  : { left: 0, right: 8, top: 8, bottom: 24 }
-              }
-            >
-              <CartesianGrid 
-                strokeDasharray="3 3" 
-                className="text-border dark:opacity-[0.12] opacity-[0.2]"
-              />
-              <XAxis
-                dataKey="ticks"
-                tickLine={false}
-                axisLine={false}
-                height={size === 'small-long' ? 20 : 24}
-                tickMargin={size === 'small-long' ? 4 : 8}
-                tick={{ 
-                  fontSize: size === 'small-long' ? 9 : 11,
-                  fill: 'currentColor'
-                }}
-                interval={size === 'small-long' ? 2 : 1}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                width={45}
-                tickMargin={4}
-                tick={{ 
-                  fontSize: size === 'small-long' ? 9 : 11,
-                  fill: 'currentColor'
-                }}
-                tickFormatter={formatCount}
-              />
-              <Tooltip 
-                content={<CustomTooltip />}
-                wrapperStyle={{ 
-                  fontSize: size === 'small-long' ? '10px' : '12px',
-                  zIndex: 1000
-                }} 
-              />
-              <Bar
-                dataKey="count"
-                fill="hsl(var(--chart-1))"
-                radius={[3, 3, 0, 0]}
-                maxBarSize={size === 'small-long' ? 25 : 40}
-                className="transition-all duration-300 ease-in-out"
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent 
+          className={cn(
+            "flex-1 min-h-0",
+            size === 'small-long' ? "p-1" : "p-2 sm:p-4"
+          )}
+        >
+          <div className={cn("w-full h-full")}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={
+                  size === 'small-long'
+                    ? { left: 0, right: 4, top: 4, bottom: 20 }
+                    : { left: 0, right: 8, top: 8, bottom: 24 }
+                }
+                onClick={(e) => e?.activePayload && handleBarClick(e.activePayload[0].payload)}
+              >
+                <CartesianGrid 
+                  strokeDasharray="3 3" 
+                  className="text-border dark:opacity-[0.12] opacity-[0.2]"
+                />
+                <XAxis
+                  dataKey="ticks"
+                  tickLine={false}
+                  axisLine={false}
+                  height={size === 'small-long' ? 20 : 24}
+                  tickMargin={size === 'small-long' ? 4 : 8}
+                  tick={{ 
+                    fontSize: size === 'small-long' ? 9 : 11,
+                    fill: 'currentColor'
+                  }}
+                  interval={size === 'small-long' ? 2 : 1}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  width={45}
+                  tickMargin={4}
+                  tick={{ 
+                    fontSize: size === 'small-long' ? 9 : 11,
+                    fill: 'currentColor'
+                  }}
+                  tickFormatter={formatCount}
+                />
+                <Tooltip 
+                  content={<CustomTooltip />}
+                  wrapperStyle={{ 
+                    fontSize: size === 'small-long' ? '10px' : '12px',
+                    zIndex: 1000
+                  }} 
+                />
+                <Bar
+                  dataKey="count"
+                  fill="hsl(var(--chart-1))"
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={size === 'small-long' ? 25 : 40}
+                  className="transition-all duration-300 ease-in-out cursor-pointer hover:opacity-80"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      <TickModal 
+        isOpen={!!selectedTick}
+        onClose={() => setSelectedTick(null)}
+        tickValue={selectedTick || ''}
+        trades={modalTrades}
+      />
+    </>
   )
 }

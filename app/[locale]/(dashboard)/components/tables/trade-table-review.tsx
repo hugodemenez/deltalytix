@@ -269,26 +269,32 @@ function convertFileToBase64(file: File): Promise<string> {
   })
 }
 
-export function TradeTableReview() {
+interface TradeTableReviewProps {
+  trades?: Trade[]
+}
+
+export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) {
   const t = useI18n()
-  const { formattedTrades } = useFormattedTrades()
+  const { formattedTrades: contextTrades } = useFormattedTrades()
   const { updateTrade } = useTrades()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [availableTags, setAvailableTags] = useState<string[]>([])
 
+  const trades = propTrades || contextTrades
+
   // Initialize available tags from all trades with debounce
   useEffect(() => {
     const timer = setTimeout(() => {
       const allTags = new Set<string>()
-      formattedTrades.forEach(trade => {
+      trades.forEach(trade => {
         trade.tags?.forEach(tag => allTags.add(tag))
       })
       setAvailableTags(Array.from(allTags))
     }, 100)
 
     return () => clearTimeout(timer)
-  }, [formattedTrades])
+  }, [trades])
 
   const handleAddTag = async (tradeId: string, tag: string) => {
     const normalizedTag = tag.trim().toLowerCase()
@@ -301,7 +307,7 @@ export function TradeTableReview() {
         setAvailableTags(prev => [...prev, normalizedTag])
       }
 
-      const trade = formattedTrades.find(t => t.id === tradeId)
+      const trade = trades.find(t => t.id === tradeId)
       if (trade) {
         updateTrade(tradeId, {
           tags: [...(trade.tags || []), normalizedTag]
@@ -316,7 +322,7 @@ export function TradeTableReview() {
     try {
       await removeTagFromTrade(tradeId, tagToRemove)
       
-      const trade = formattedTrades.find(t => t.id === tradeId)
+      const trade = trades.find(t => t.id === tradeId)
       if (trade) {
         updateTrade(tradeId, {
           tags: trade.tags?.filter(tag => tag !== tagToRemove) || []
@@ -332,7 +338,7 @@ export function TradeTableReview() {
       await deleteTagFromAllTrades(tag)
       setAvailableTags(prev => prev.filter(t => t !== tag))
       
-      formattedTrades
+      trades
         .filter(trade => trade.tags?.includes(tag))
         .forEach(trade => {
           updateTrade(trade.id, {
@@ -648,12 +654,12 @@ export function TradeTableReview() {
   ], [availableTags, t])
 
   const tableData = useMemo(() => 
-    formattedTrades.map(trade => ({
+    trades.map(trade => ({
       ...trade,
       imageUrl: undefined,
       direction: trade.side as string,
       tags: trade.tags || [],
-    })), [formattedTrades]
+    })), [trades]
   )
 
   const table = useReactTable({

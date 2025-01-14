@@ -527,11 +527,11 @@ export default {
     'pnlTime.tooltip.trade': 'trade',
     'pnlTime.tooltip.trades_plural': 'trades',
     'tickDistribution.title': 'Distribution des Ticks',
-    'tickDistribution.description': 'Nombre de trades par profit/perte en ticks',
-    'tickDistribution.tooltip.ticks': 'Ticks',
+    'tickDistribution.description': 'Distribution des trades par valeur de tick (PnL par contrat)',
+    'tickDistribution.tooltip.ticks': 'tick',
     'tickDistribution.tooltip.tick': 'tick',
     'tickDistribution.tooltip.ticks_plural': 'ticks',
-    'tickDistribution.tooltip.trades': 'Trades',
+    'tickDistribution.tooltip.trades': 'trade',
     'tickDistribution.tooltip.trade': 'trade',
     'tickDistribution.tooltip.trades_plural': 'trades',
     'timeInPosition.title': 'Temps Moyen en Position',
@@ -614,7 +614,7 @@ export default {
     'trade-table.noTagsFound': 'Aucun tag trouvé',
     'trade-table.addTag': 'Ajouter le tag "{tag}"',
     'trade-table.existingTags': 'Tags existants',
-    equity: {
+    'equity': {
         title: "Profits",
         description: "Suivez vos profits dans le temps",
         toggle: {
@@ -637,4 +637,6 @@ export default {
             noPnL: "Pas de P&L"
         }
     },
+    'trade-table.trades': 'trade',
+    'trade-table.trades_plural': 'trades',
 } as const
