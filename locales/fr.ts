@@ -493,12 +493,13 @@ export default {
     'contracts.tooltip.totalContracts': 'Total des Contrats',
     'contracts.tooltip.numberOfTrades': 'Nombre de Trades',
     'contracts.axis.contracts': 'Contrats',
-    'equity.title': 'Courbe de P&L',
-    'equity.description': 'Affichage des profits et pertes cumulés dans le temps',
+    'equity.title': 'Profits',
+    'equity.description': 'Suivez vos profits dans le temps',
     'equity.toggle.daily': 'P&L quotidien',
     'equity.toggle.perTrade': 'P&L par trade',
     'equity.tooltip.date': 'Date',
     'equity.tooltip.equity': 'P&L',
+    'equity.toggle.individual': 'Individuel',
     'equity.tooltip.grossPnl': 'P&L Brut',
     'equity.tooltip.commissions': 'Commissions',
     'equity.tooltip.netPnl': 'P&L Net',
@@ -612,4 +613,27 @@ export default {
     'trade-table.noTagsFound': 'Aucun tag trouvé',
     'trade-table.addTag': 'Ajouter le tag "{tag}"',
     'trade-table.existingTags': 'Tags existants',
+    equity: {
+        title: "Profits",
+        description: "Suivez vos profits dans le temps",
+        toggle: {
+            individual: "Individuel",
+            grouped: "Groupé",
+            daily: "Journalier",
+            perTrade: "Par Trade"
+        },
+        tooltip: {
+            date: "Date",
+            totalEquity: "Profits Totaux",
+            accountSummary: "Résumé des Comptes",
+            topPerformers: "Meilleurs Comptes",
+            otherAccounts: "Autres Comptes",
+            totalAccounts: "Total des Comptes",
+            averageEquity: "Profits Moyens",
+            medianEquity: "Profits Médians",
+            highestEquity: "Plus Haut",
+            lowestEquity: "Plus Bas",
+            noPnL: "Pas de P&L"
+        }
+    },
 } as const

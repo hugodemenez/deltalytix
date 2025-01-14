@@ -505,6 +505,7 @@ export default {
     'equity.tooltip.grossPnl': 'Gross P/L',
     'equity.tooltip.commissions': 'Commissions',
     'equity.tooltip.netPnl': 'Net P/L',
+    'equity.toggle.individual': 'Individual',
     'pnl.title': 'Daily Profit/Loss',
     'pnl.description': 'Showing daily P/L over time',
     'pnl.tooltip.date': 'Date',
@@ -615,4 +616,28 @@ export default {
     'trade-table.noTagsFound': 'No tags found',
     'trade-table.addTag': 'Add tag "{tag}"',
     'trade-table.existingTags': 'Existing Tags',
+    equity: {
+        title: "Equity",
+        description: "Track your equity curve over time",
+        toggle: {
+            individual: "Individual",
+            grouped: "Grouped",
+            daily: "Daily",
+            perTrade: "Per Trade"
+        },
+        tooltip: {
+            date: "Date",
+            totalEquity: "Total Equity",
+            accountSummary: "Account Summary",
+            topPerformers: "Top Performers",
+            otherAccounts: "Other Accounts",
+            showAll: "Show All",
+            showLess: "Show Less",
+            totalAccounts: "Total Accounts",
+            averageEquity: "Average Equity",
+            medianEquity: "Median Equity",
+            highestEquity: "Highest",
+            lowestEquity: "Lowest",
+        }
+    },
 } as const
