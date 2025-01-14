@@ -2,9 +2,10 @@ import { useTradeStatistics } from "@/components/context/trades-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Award } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { WidgetSize } from '../../types/dashboard'
 
 interface WinningStreakCardProps {
-  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long'
+  size?: WidgetSize
 }
 
 export default function WinningStreakCard({ size = 'medium' }: WinningStreakCardProps) {

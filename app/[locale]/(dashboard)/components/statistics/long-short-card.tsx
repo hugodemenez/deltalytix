@@ -4,9 +4,10 @@ import { useCalendarData } from '@/components/context/trades-data'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { ArrowLeftRight, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { WidgetSize } from '../../types/dashboard'
 
 interface LongShortPerformanceCardProps {
-  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long'
+  size?: WidgetSize
 }
 
 export default function LongShortPerformanceCard({ size = 'medium' }: LongShortPerformanceCardProps) {

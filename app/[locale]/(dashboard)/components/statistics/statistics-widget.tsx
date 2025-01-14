@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils"
 
 interface StatisticsWidgetProps {
-  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long'
+  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long' | 'extra-large'
 }
 
 function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {

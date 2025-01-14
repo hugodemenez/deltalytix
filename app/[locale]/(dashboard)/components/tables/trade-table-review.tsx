@@ -425,6 +425,19 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       ),
     },
     {
+      accessorKey: "accountNumber",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          {t('trade-table.accountNumber')}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+    },
+    {
       accessorKey: "direction",
       header: ({ column }) => (
         <Button

@@ -18,7 +18,7 @@ export type WidgetType =
   | 'moodSelector'
   | 'chatWidget'
   | 'newsWidget';
-export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large'
+export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 export type ChartSize = 'small' | 'small-long' | 'medium' | 'large'
 
 export interface LayoutItem {

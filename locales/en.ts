@@ -398,6 +398,7 @@ export default {
     'widgets.size.small': 'Small (3x4)',
     'widgets.size.medium': 'Medium (6x4)',
     'widgets.size.large': 'Large (6x6)',
+    'widgets.size.extra-large': 'Extra Large (12x6)',
     'widgets.size.mobile.small': 'Small (12x1)',
     'widgets.size.mobile.medium': 'Medium (12x4)',
     'widgets.size.mobile.large': 'Large (12x6)',
@@ -606,6 +607,7 @@ export default {
     'dataManagement.toast.instrumentRenameError': 'Failed to rename instrument',
     'trade-table.entryDate': 'Entry Date',
     'trade-table.instrument': 'Instrument',
+    'trade-table.accountNumber': 'Account',
     'trade-table.direction': 'Direction',
     'trade-table.positionTime': 'Position Time',
     'trade-table.entryTime': 'Entry Time',
@@ -648,6 +650,11 @@ export default {
             medianEquity: "Median Equity",
             highestEquity: "Highest",
             lowestEquity: "Lowest",
+            activeAccounts: "Active Accounts",
+            averageDailyPnL: "Average Daily P/L",
+            highestDailyPnL: "Highest Daily P/L",
+            lowestDailyPnL: "Lowest Daily P/L",
+            noActivity: "No Trading Activity"
         }
     },
 } as const

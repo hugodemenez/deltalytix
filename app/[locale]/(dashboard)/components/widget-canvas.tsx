@@ -100,9 +100,9 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
         return size === 'tiny'
       }
       
-      // Calendar and trade table widgets can only be large
+      // Calendar and trade table widgets can only be large or extra large
       if (widgetType === 'calendarWidget' || widgetType === 'tradeTableReview') {
-        return size === 'large'
+        return size === 'large' || size === 'extra-large'
       }
       
       // Chat widget can only be medium or large
@@ -117,9 +117,9 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
       }
     } else {
       // Desktop view
-      // Calendar and trade table widgets can only be large
+      // Calendar and trade table widgets can only be large or extra large
       if (widgetType === 'calendarWidget' || widgetType === 'tradeTableReview') {
-        return size === 'large'
+        return size === 'large' || size === 'extra-large'
       }
       
       // Statistics widgets and mood selector can only be tiny
@@ -295,6 +295,14 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                     >
                       <Maximize2 className="mr-2 h-4 w-4" />
                       <span>{t('widgets.size.large')}</span>
+                    </ContextMenuItem>
+                    <ContextMenuItem 
+                      onClick={() => onChangeSize('extra-large')}
+                      className={size === 'extra-large' ? 'bg-accent text-accent-foreground' : ''}
+                      disabled={!isValidSize(currentType, 'extra-large')}
+                    >
+                      <Maximize2 className="mr-2 h-4 w-4" />
+                      <span>{t('widgets.size.extra-large')}</span>
                     </ContextMenuItem>
                   </>
                 )}
@@ -472,6 +480,7 @@ export default function WidgetCanvas() {
         case 'medium':
           return { w: 12, h: 4 }
         case 'large':
+        case 'extra-large':
           return { w: 12, h: 6 }
         default:
           return { w: 12, h: 4 }
@@ -490,6 +499,8 @@ export default function WidgetCanvas() {
         return { w: 6, h: 4 }
       case 'large':
         return { w: 6, h: 8 }
+      case 'extra-large':
+        return { w: 12, h: 8 } // Full width, same height as large
       default:
         return { w: 6, h: 4 }
     }
@@ -730,9 +741,11 @@ export default function WidgetCanvas() {
     
     // Determine default size based on widget type
     let effectiveSize = size
-    // Calendar and trade table widgets are always large
-    if (type === 'calendarWidget' || type === 'tradeTableReview') {
+    // Calendar widget is always large, trade table is always extra large
+    if (type === 'calendarWidget') {
       effectiveSize = 'large'
+    } else if (type === 'tradeTableReview') {
+      effectiveSize = 'extra-large'
     }
     // Statistics widgets are always tiny
     else if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
@@ -923,9 +936,12 @@ export default function WidgetCanvas() {
   const renderWidget = (widget: Widget) => {
     // For charts, ensure size is at least small-long
     const effectiveSize = (() => {
-      // Calendar and trade table are always large
-      if (widget.type === 'calendarWidget' || widget.type === 'tradeTableReview') {
+      // Calendar is always large, trade table is always extra large
+      if (widget.type === 'calendarWidget') {
         return 'large' as const
+      }
+      if (widget.type === 'tradeTableReview') {
+        return 'extra-large' as const
       }
       // Statistics widgets and mood selector are always tiny
       if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 

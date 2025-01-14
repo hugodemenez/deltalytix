@@ -67,7 +67,7 @@ export function CalendarModal({
           <TabsList className="px-6">
             <TabsTrigger value="table">{t('calendar.modal.table')}</TabsTrigger>
             <TabsTrigger value="charts">{t('calendar.modal.charts')}</TabsTrigger>
-            <TabsTrigger value="reflection">{t('calendar.modal.reflection')}</TabsTrigger>
+            {/* <TabsTrigger value="reflection">{t('calendar.modal.reflection')}</TabsTrigger> */}
           </TabsList>
           <TabsContent value="table" className="flex-grow overflow-auto p-6 pt-2">
             <ScrollArea className="h-full">
@@ -129,9 +129,9 @@ export function CalendarModal({
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
+          {/* <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
             <Chat dayData={dayData} dateString={dateString}></Chat>
-          </TabsContent>
+          </TabsContent> */}
           <TabsContent value="charts" className="flex-grow overflow-auto p-6 pt-2">
             <Charts dayData={dayData} />
           </TabsContent>

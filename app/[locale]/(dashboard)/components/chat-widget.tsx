@@ -18,6 +18,7 @@ import { startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval } from '
 import { Trade as PrismaTrade } from '@prisma/client';
 import { useI18n } from "@/locales/client";
 import { debounce } from 'lodash';
+import { WidgetSize } from '../types/dashboard';
 
 type MoodType = 'bad' | 'okay' | 'great';
 
@@ -33,7 +34,7 @@ interface Message {
 }
 
 interface ChatWidgetProps {
-  size?: 'tiny' | 'small' | 'small-long' | 'medium' | 'large';
+  size?: WidgetSize;
 }
 
 function extractTextContent(content: string | React.ReactNode): string {
@@ -317,7 +318,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
               {messages.map((message) => (
                 <motion.div 
                   key={message.id} 
-                  className="flex w-full"
+                  className="flex w-full mb-3 last:mb-20"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}

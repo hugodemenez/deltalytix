@@ -4,9 +4,10 @@ import { useTradeStatistics } from "@/components/context/trades-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { BarChart, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { WidgetSize } from '../../types/dashboard'
 
 interface TradePerformanceCardProps {
-  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long'
+  size?: WidgetSize
 }
 
 export default function TradePerformanceCard({ size = 'medium' }: TradePerformanceCardProps) {

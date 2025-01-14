@@ -2,9 +2,10 @@ import { useTradeStatistics } from "@/components/context/trades-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { WidgetSize } from '../../types/dashboard'
 
 interface AveragePositionTimeCardProps {
-  size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long'
+  size?: WidgetSize
 }
 
 export default function AveragePositionTimeCard({ size = 'medium' }: AveragePositionTimeCardProps) {

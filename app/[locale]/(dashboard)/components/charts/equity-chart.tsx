@@ -49,8 +49,10 @@ interface ChartDataPoint {
 interface AccountEquityInfo {
   accountNumber: string
   equity: number
+  dailyPnL: number
   color: string
-  rank?: number
+  distance?: number
+  hadActivity?: boolean
 }
 
 const formatCurrency = (value: number) =>
@@ -319,32 +321,59 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                         .sort()
                         .map((accountNumber, index) => {
                           const equity = data[`equity_${accountNumber}`] as number
+                          // Find the previous day's data point
+                          const currentIndex = chartData.findIndex(d => d.date === data.date)
+                          const previousDayData = currentIndex > 0 ? chartData[currentIndex - 1] : null
+                          const previousEquity = previousDayData ? previousDayData[`equity_${accountNumber}`] as number : 0
+                          const hadActivity = equity !== previousEquity
+                          const dailyPnL = equity - previousEquity
+
                           return {
                             accountNumber,
                             equity,
+                            dailyPnL,
                             color: generateAccountColor(index),
-                            distance: Math.abs(equity - (cursorValue || equity))
+                            distance: Math.abs(equity - (cursorValue || equity)),
+                            hadActivity
                           }
                         })
-                        .filter(acc => selectedAccounts.has(acc.accountNumber) && acc.equity !== 0) // Filter out zero PnL
+                        .filter(acc => {
+                          // Only show accounts that had activity on this specific day
+                          return selectedAccounts.has(acc.accountNumber) && acc.hadActivity
+                        })
                         .sort((a, b) => a.distance - b.distance) // Sort by distance to cursor value
                         .slice(0, 5) // Take only the 5 closest accounts
 
-                      // Calculate statistics for all non-zero accounts
+                      // Calculate statistics for all accounts with activity this day
                       const allAccountEquities = [...accountNumbers]
                         .sort()
-                        .map((accountNumber, index) => ({
-                          accountNumber,
-                          equity: data[`equity_${accountNumber}`] as number,
-                          color: generateAccountColor(index)
-                        }))
-                        .filter(acc => selectedAccounts.has(acc.accountNumber) && acc.equity !== 0) // Filter out zero PnL
+                        .map((accountNumber, index) => {
+                          const equity = data[`equity_${accountNumber}`] as number
+                          // Find the previous day's data point
+                          const currentIndex = chartData.findIndex(d => d.date === data.date)
+                          const previousDayData = currentIndex > 0 ? chartData[currentIndex - 1] : null
+                          const previousEquity = previousDayData ? previousDayData[`equity_${accountNumber}`] as number : 0
+                          const hadActivity = equity !== previousEquity
+                          const dailyPnL = equity - previousEquity
+
+                          return {
+                            accountNumber,
+                            equity,
+                            dailyPnL,
+                            color: generateAccountColor(index),
+                            hadActivity
+                          }
+                        })
+                        .filter(acc => {
+                          // Only include accounts with activity on this specific day
+                          return selectedAccounts.has(acc.accountNumber) && acc.hadActivity
+                        })
 
                       const totalAccounts = allAccountEquities.length
-                      const totalEquity = allAccountEquities.reduce((sum, acc) => sum + acc.equity, 0)
-                      const averageEquity = totalEquity / totalAccounts
-                      const highestEquity = Math.max(...allAccountEquities.map(acc => acc.equity))
-                      const lowestEquity = Math.min(...allAccountEquities.map(acc => acc.equity))
+                      const totalDailyPnL = allAccountEquities.reduce((sum, acc) => sum + acc.dailyPnL, 0)
+                      const averageDailyPnL = totalDailyPnL / totalAccounts
+                      const highestDailyPnL = Math.max(...allAccountEquities.map(acc => acc.dailyPnL))
+                      const lowestDailyPnL = Math.min(...allAccountEquities.map(acc => acc.dailyPnL))
 
                       // Show "No PnL" message if no accounts with PnL are found
                       if (accountEquities.length === 0) {
@@ -362,7 +391,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.noPnL')}
+                                  {t('equity.tooltip.noActivity')}
                                 </span>
                               </div>
                             </div>
@@ -387,14 +416,19 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
 
                               {/* Closest Accounts */}
                               <div className="grid grid-cols-1 gap-1.5">
-                                {accountEquities.map(({ accountNumber, equity, color }) => (
+                                {accountEquities.map(({ accountNumber, equity, dailyPnL, color }) => (
                                   <div key={accountNumber} className="flex justify-between items-center gap-2">
                                     <span className="text-[0.70rem] uppercase text-muted-foreground whitespace-nowrap">
                                       {accountNumber}
                                     </span>
-                                    <span className="font-bold text-xs" style={{ color }}>
-                                      {formatCurrency(equity)}
-                                    </span>
+                                    <div className="flex flex-col items-end">
+                                      <span className="font-bold text-xs" style={{ color }}>
+                                        {formatCurrency(equity)}
+                                      </span>
+                                      <span className="text-[0.70rem] text-muted-foreground">
+                                        {dailyPnL >= 0 ? '+' : ''}{formatCurrency(dailyPnL)}
+                                      </span>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -421,27 +455,27 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                             <div className="grid grid-cols-2 gap-2 border-t pt-2">
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.totalAccounts')}
+                                  {t('equity.tooltip.activeAccounts')}
                                 </span>
                                 <span className="font-bold">{totalAccounts}</span>
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.averageEquity')}
+                                  {t('equity.tooltip.averageDailyPnL')}
                                 </span>
-                                <span className="font-bold">{formatCurrency(averageEquity)}</span>
+                                <span className="font-bold">{formatCurrency(averageDailyPnL)}</span>
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.highestEquity')}
+                                  {t('equity.tooltip.highestDailyPnL')}
                                 </span>
-                                <span className="font-bold">{formatCurrency(highestEquity)}</span>
+                                <span className="font-bold">{formatCurrency(highestDailyPnL)}</span>
                               </div>
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.lowestEquity')}
+                                  {t('equity.tooltip.lowestDailyPnL')}
                                 </span>
-                                <span className="font-bold">{formatCurrency(lowestEquity)}</span>
+                                <span className="font-bold">{formatCurrency(lowestDailyPnL)}</span>
                               </div>
                             </div>
 
@@ -451,13 +485,16 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                                 {t('equity.tooltip.accountSummary')}
                               </span>
                               <div className="grid grid-cols-2 gap-2">
-                                {accountEquities.map(({ accountNumber, equity, color }) => (
+                                {accountEquities.map(({ accountNumber, equity, dailyPnL, color }) => (
                                   <div key={accountNumber} className="flex flex-col">
                                     <span className="text-[0.70rem] uppercase text-muted-foreground">
                                       Account {accountNumber}
                                     </span>
                                     <span className="font-bold" style={{ color }}>
                                       {formatCurrency(equity)}
+                                    </span>
+                                    <span className="text-[0.70rem] text-muted-foreground">
+                                      {dailyPnL >= 0 ? '+' : ''}{formatCurrency(dailyPnL)}
                                     </span>
                                   </div>
                                 ))}
