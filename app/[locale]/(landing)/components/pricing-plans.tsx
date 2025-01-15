@@ -48,10 +48,8 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       description: t('pricing.basic.description'),
       price: { yearly: 0, monthly: 0 },
       features: [
-        t('pricing.basic.feature1'),
         t('pricing.basic.feature2'),
         t('pricing.basic.feature3'),
-        t('pricing.basic.feature4'),
       ]
     },
     plus: {
@@ -90,30 +88,21 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       return t('pricing.free')
     }
 
-    if (billingPeriod === 'monthly') {
-      return (
-        <>
-          €{plan.price.monthly}
-          <span className="text-lg font-normal text-gray-500">
-            /{t('pricing.month')}
-          </span>
-        </>
-      )
-    }
-
-    // For yearly plans, show monthly price with yearly total
-    const monthlyFromYearly = (plan.price.yearly / 12).toFixed(2)
-    return (
+    const priceDisplay = (
       <>
-        €{monthlyFromYearly}
+        €{billingPeriod === 'monthly' ? plan.price.monthly : (plan.price.yearly / 12).toFixed(2)}
         <span className="text-lg font-normal text-gray-500">
           /{t('pricing.month')}
         </span>
-        <div className="text-sm font-normal text-gray-500 mt-1">
-          {t('pricing.billedYearly', { total: plan.price.yearly })}
-        </div>
+        {billingPeriod === 'yearly' && (
+          <div className="text-sm font-normal text-gray-500 mt-1">
+            {t('pricing.billedYearly', { total: plan.price.yearly })}
+          </div>
+        )}
       </>
     )
+
+    return priceDisplay
   }
 
   const PricingContent = () => (
@@ -211,7 +200,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                   }}>
                     <input type="hidden" name="lookup_key" value={`${key}_${billingPeriod}`} />
                     <Button type="submit" className="w-full">
-                      {t('pricing.subscribe')}
+                      {key === 'plus' ? t('pricing.trialPeriod') : t('pricing.subscribe')}
                     </Button>
                   </form>
                 )}

@@ -176,7 +176,7 @@ export default {
     'pricing.plus.description': 'Pour les traders sérieux qui veulent libérer leur plein potentiel.',
     'pricing.plus.feature1': 'Comptes illimités',
     'pricing.plus.feature2': 'Stockage de données illimité',
-    'pricing.plus.feature3': 'Synchronisation auto avec Rithmic (bientôt disponible)',
+    'pricing.plus.feature3': 'Connexion directe Rithmic',
     'pricing.plus.feature4': 'Toutes les statistiques et graphiques',
     'pricing.pro.name': 'Pro',
     'pricing.pro.description': 'Analyses avancées et développement personnalisé pour traders professionnels.',
@@ -659,4 +659,6 @@ export default {
     },
     'trade-table.trades': 'trade',
     'trade-table.trades_plural': 'trades',
+    'pricing.trialPeriod': '7 jours d\'essai gratuit',
+    'pricing.trialDescription': 'Essayez toutes les fonctionnalités pendant 7 jours, sans carte bancaire',
 } as const
