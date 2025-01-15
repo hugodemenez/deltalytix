@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, CheckCircle2, AlertCircle, Calendar } from 'lucide-react'
 import { useWebSocket } from '../context/websocket-context'
+import { cn } from "@/lib/utils"
 
-interface FeedbackProps {
+interface RithmicSyncFeedbackProps {
   totalAccounts: number
 }
 
@@ -20,60 +21,33 @@ const fadeInOut = {
   transition: { duration: 0.3 }
 }
 
-export function RithmicSyncFeedback({ totalAccounts }: FeedbackProps) {
-  const { accountsProgress, currentAccount, processingStats, dateRange, connectionStatus, lastMessage } = useWebSocket()
-  const [localProgress, setLocalProgress] = React.useState<Record<string, {
-    current: number;
-    total: number;
-    ordersProcessed: number;
-    currentDate?: string;
-    currentDayNumber?: number;
-  }>>({})
-
-  // Process WebSocket messages to update progress
-  React.useEffect(() => {
-    if (lastMessage) {
-      if (lastMessage.type === 'log' && lastMessage.level === 'info') {
-        // Parse progress from processing date messages
-        const processingMatch = lastMessage.message.match(/Processing date (\d+) of (\d+): (\d+)/)
-        if (processingMatch && currentAccount) {
-          const [_, current, total, date] = processingMatch
-          // Update progress for the specific account
-          setLocalProgress(prev => ({
-            ...prev,
-            [currentAccount]: {
-              current: parseInt(current),
-              total: parseInt(total),
-              ordersProcessed: accountsProgress[currentAccount]?.ordersProcessed || 0,
-              currentDate: date,
-              currentDayNumber: parseInt(current)
-            }
-          }))
-        }
-      }
-    }
-  }, [lastMessage, currentAccount, accountsProgress])
+export function RithmicSyncFeedback({ totalAccounts }: RithmicSyncFeedbackProps) {
+  const { 
+    accountsProgress, 
+    currentAccount, 
+    processingStats, 
+    dateRange, 
+    connectionStatus,
+    messageHistory
+  } = useWebSocket()
 
   // Calculate progress for a specific account
   const getAccountProgress = (accountId: string, account: typeof accountsProgress[string]) => {
     if (!account) return 0
     if (account.isComplete) return 100
-    
-    // First try to use the local progress state which is more up-to-date
-    const localAccountProgress = localProgress[accountId]
-    if (localAccountProgress && localAccountProgress.total > 0) {
-      return Math.max(0, Math.min(100, (localAccountProgress.current / localAccountProgress.total) * 100))
+    if (account.total > 0) {
+      // Ensure progress never decreases by using max with previous value
+      const progress = Math.max(0, Math.min(100, (account.current / account.total) * 100))
+      return Math.floor(progress) // Use floor to avoid floating point issues
     }
-    
-    // Fall back to account progress from context
-    if (!account.totalDays) return 0
-    return Math.max(0, Math.min(100, (account.daysProcessed / account.totalDays) * 100))
+    return 0
   }
 
   const getAccountStatus = (accountId: string, progress: typeof accountsProgress[string]) => {
+    if (!progress) return { label: 'Pending', variant: 'outline' as const }
     if (progress.isComplete) return { label: 'Complete', variant: 'default' as const }
-    if (accountId === currentAccount) return { label: 'Processing', variant: 'secondary' as const }
-    return { label: 'Idle', variant: 'outline' as const }
+    if (accountId === currentAccount && progress.current > 0) return { label: 'Processing', variant: 'secondary' as const }
+    return { label: 'Queued', variant: 'outline' as const }
   }
 
   const getConnectionIcon = () => {
@@ -86,11 +60,42 @@ export function RithmicSyncFeedback({ totalAccounts }: FeedbackProps) {
     return <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
   }
 
+  const getLatestMessage = (accountId: string) => {
+    // Filter and get the latest valid message for the account
+    const validMessages = messageHistory
+      .filter(msg => {
+        if (typeof msg === 'string') {
+          try {
+            msg = JSON.parse(msg)
+          } catch {
+            return false
+          }
+        }
+        const message = typeof msg === 'string' ? JSON.parse(msg).message : msg.message
+        
+        // Only show important messages, not progress updates
+        return message?.includes(`[${accountId}]`) && 
+               !message?.includes('undefined') && 
+               !message?.includes('NaN') &&
+               !message?.includes('Processing date') && // Filter out progress messages
+               (
+                 message?.includes('Successfully processed orders') ||
+                 message?.includes('Completed processing account') ||
+                 message?.includes('Starting processing for account') ||
+                 message?.includes('error') ||
+                 message?.includes('Error')
+               )
+      })
+      .map(msg => typeof msg === 'string' ? JSON.parse(msg) : msg)
+      
+    return validMessages[validMessages.length - 1]
+  }
+
   return (
     <Card className="w-full mx-auto overflow-hidden">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Connection Status
+          Rithmic Data Sync
           <motion.div
             initial={{ scale: 0.5 }}
             animate={{ scale: 1 }}
@@ -102,78 +107,63 @@ export function RithmicSyncFeedback({ totalAccounts }: FeedbackProps) {
       </CardHeader>
       <CardContent>
         <motion.div className="space-y-4" layout>
-          <AnimatePresence>
-            {dateRange && (
-              <motion.div
-                className="flex items-center gap-2 text-sm text-muted-foreground"
-                {...fadeInOut}
-              >
-                <Calendar className="h-4 w-4" />
-                <span>Processing orders from {dateRange.start} to {dateRange.end}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <div className="flex items-center justify-between text-sm">
+            <span>Total Accounts: {totalAccounts}</span>
+            <span>Processed: {processingStats.accountsProcessed}</span>
+          </div>
 
-          <motion.div 
-            className="text-sm space-y-1"
-            {...fadeInOut}
-          >
-            <div className="flex justify-between">
-              <p>Total Orders: {processingStats.totalOrders}</p>
-              {currentAccount && !processingStats.isComplete && (
-                <p>Currently Processing: {currentAccount}</p>
-              )}
-            </div>
-          </motion.div>
-          
-          <ScrollArea className="h-[300px]">
-            <motion.div className="space-y-3">
-              {Object.entries(accountsProgress).map(([accountId, progress]) => (
-                <motion.div
-                  key={accountId}
-                  className="flex flex-col gap-2 p-3 rounded-lg border"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{accountId}</p>
-                    <Badge 
-                      variant={getAccountStatus(accountId, progress).variant}
-                      className="ml-2"
-                    >
-                      {getAccountStatus(accountId, progress).label}
-                    </Badge>
-                  </div>
-                  <div className="space-y-2">
+          <ScrollArea className="h-[400px] pr-4">
+            <motion.div className="space-y-4">
+              {Object.entries(accountsProgress).map(([accountId, progress]) => {
+                const latestMessage = getLatestMessage(accountId)
+                const progressValue = getAccountProgress(accountId, progress)
+                
+                return (
+                  <motion.div
+                    key={accountId}
+                    className="flex flex-col gap-2 p-4 rounded-lg border"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">{accountId}</p>
+                      <Badge 
+                        variant={getAccountStatus(accountId, progress).variant}
+                        className="ml-2"
+                      >
+                        {getAccountStatus(accountId, progress).label}
+                      </Badge>
+                    </div>
+                    
                     <Progress 
-                      value={getAccountProgress(accountId, progress)}
+                      value={progressValue}
                       className="w-full h-2" 
                     />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Days: {
-                        progress.isComplete ? 
-                          `${progress.totalDays} / ${progress.totalDays}` :
-                          localProgress[accountId] ? 
-                            `${localProgress[accountId].current} / ${localProgress[accountId].total}` :
-                            `${progress.daysProcessed} / ${progress.totalDays}`
-                      }</span>
-                      <span>Orders: {progress.ordersProcessed}</span>
+                    
+                    <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                      <div>Days: {progress?.current || 0} / {progress?.total || 0}</div>
                     </div>
-                    {((localProgress[accountId]?.currentDate && localProgress[accountId]?.currentDayNumber) || (progress.currentDate && progress.currentDayNumber)) && !progress.isComplete && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        Processing day {localProgress[accountId]?.currentDayNumber || progress.currentDayNumber} - {localProgress[accountId]?.currentDate || progress.currentDate}
+
+                    {progress?.currentDate && progress.current > 0 && !progress.isComplete && (
+                      <div className="text-xs text-muted-foreground">
+                        Processing: {progress.currentDate}
                       </div>
                     )}
-                    {progress.lastProcessedDate && (
-                      <div className="text-xs text-green-500 mt-1">
-                        Last processed: {progress.lastProcessedDate}
+
+                    {latestMessage && (
+                      <div className={cn(
+                        "text-xs mt-1 truncate",
+                        latestMessage.message?.toLowerCase().includes('error') ? 
+                          "text-red-500" : 
+                          "text-muted-foreground"
+                      )}>
+                        {latestMessage.message}
                       </div>
                     )}
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                )
+              })}
             </motion.div>
           </ScrollArea>
         </motion.div>

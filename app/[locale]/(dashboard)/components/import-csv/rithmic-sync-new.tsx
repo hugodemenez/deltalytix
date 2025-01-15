@@ -56,7 +56,7 @@ interface RithmicSyncCombinedProps {
 
 export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedProps) {
   const { user } = useUser()
-  const { refreshTrades, trades } = useTrades()
+  const { trades } = useTrades()
   const { 
     connect, 
     disconnect, 
@@ -67,20 +67,19 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     selectedAccounts,
     setSelectedAccounts,
     availableAccounts,
-    setAvailableAccounts
+    setAvailableAccounts,
+    processingStats,
+    resetProcessingState,
+    feedbackMessages,
+    messageHistory,
+    handleMessage
   } = useWebSocket()
+
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [isLoading, setIsLoading] = useState(false)
   const [serverConfigs, setServerConfigs] = useState<ServerConfigurations>({})
-  
-  // Check for active connection on mount
-  useEffect(() => {
-    if (isConnected && selectedAccounts.length > 0) {
-      console.log('Active connection detected, resuming processing view')
-      setStep('processing')
-    }
-  }, [isConnected, selectedAccounts])
-
+  const [token, setToken] = useState<string | null>(null)
+  const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [credentials, setCredentials] = useState<RithmicCredentials>({
     username: '',
     password: '',
@@ -89,18 +88,47 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     userId: user?.id || ''
   })
 
+  // Reset state when component mounts (modal opens)
+  useEffect(() => {
+    resetProcessingState()
+    setStep('credentials')
+    setIsLoading(false)
+    setToken(null)
+    setWsUrl(null)
+    setCredentials({
+      username: '',
+      password: '',
+      server_type: 'Rithmic Paper Trading',
+      location: 'Chicago Area',
+      userId: user?.id || ''
+    })
+  }, [resetProcessingState, user?.id])
+
+  // Close modal when processing is complete
+  useEffect(() => {
+    if (processingStats.isComplete) {
+      const timeoutId = setTimeout(() => {
+        disconnect()
+        setIsOpen(false)
+      }, 500)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [processingStats.isComplete, setIsOpen, disconnect])
+
+  // Check for active connection on mount
+  useEffect(() => {
+    if (isConnected && selectedAccounts.length > 0) {
+      console.log('Active connection detected, resuming processing view')
+      setStep('processing')
+    }
+  }, [isConnected, selectedAccounts])
+
   // Update userId when user changes
   useEffect(() => {
     if (user?.id) {
       setCredentials(prev => ({ ...prev, userId: user.id }))
     }
   }, [user])
-
-  const [token, setToken] = useState<string | null>(null)
-  const [wsUrl, setWsUrl] = useState<string | null>(null)
-  const [feedbackMessages, setFeedbackMessages] = useState<string[]>([])
-  const [messageHistory, setMessageHistory] = useState<any[]>([])
-  const completionCheckRef = useRef<NodeJS.Timeout | null>(null)
 
   // Fetch server configurations on mount and set defaults
   useEffect(() => {
@@ -134,119 +162,17 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
         }
       } catch (error) {
         console.error('Failed to fetch server configurations:', error)
-        setFeedbackMessages(prev => [...prev, JSON.stringify({ 
-          type: 'error', 
-          message: `Error fetching server configurations: ${error instanceof Error ? error.message : 'Unknown error'}` 
-        })])
       }
     }
     
     fetchServerConfigs()
   }, [])
 
-  // Update feedback messages when receiving WebSocket messages
-  useEffect(() => {
-    if (lastMessage) {
-      // Add message to history
-      setMessageHistory(prev => {
-        const newHistory = [...prev, lastMessage]
-        
-        // Check for completion message in history
-        const hasCompletionMessage = newHistory.some(
-          msg => msg.type === 'complete' && msg.status === 'all_complete'
-        )
-
-        if (hasCompletionMessage) {
-          console.log('Completion message found in history')
-          // Clear any existing completion check
-          if (completionCheckRef.current) {
-            clearTimeout(completionCheckRef.current)
-          }
-
-          // Set a 5 second delay to ensure all processing is done
-          completionCheckRef.current = setTimeout(() => {
-            console.log('Executing completion actions')
-            refreshTrades()
-            // Add a small delay before closing to ensure trades are refreshed
-            setTimeout(() => {
-              disconnect() // Disconnect WebSocket before closing modal
-              setIsOpen(false)
-            }, 1000)
-          }, 5000) // Increased to 5 seconds
-        }
-
-        return newHistory
-      })
-
-      let messageType = 'log'
-      let shouldAddMessage = true
-      let messageContent = lastMessage.message || JSON.stringify(lastMessage)
-
-      switch (lastMessage.type) {
-        case 'order_update':
-          messageType = 'order'
-          messageContent = `New order received: ${lastMessage.order?.order_id || 'Unknown'}`
-          break
-        case 'log':
-          messageType = lastMessage.level === 'error' ? 'error' : 'log'
-          messageContent = lastMessage.message || messageContent
-          break
-        case 'status':
-          messageType = 'status'
-          messageContent = lastMessage.message || messageContent
-          break
-        default:
-          shouldAddMessage = false
-      }
-
-      if (shouldAddMessage) {
-        const messageString = JSON.stringify({ type: messageType, message: messageContent })
-        setFeedbackMessages(prev => {
-          // Prevent duplicate messages
-          if (prev[prev.length - 1] === messageString) {
-            return prev
-          }
-          return [...prev, messageString]
-        })
-      }
-    }
-  }, [lastMessage, disconnect, refreshTrades, setIsOpen])
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (completionCheckRef.current) {
-        clearTimeout(completionCheckRef.current)
-      }
-    }
-  }, [])
-
-  // Update feedback messages for connection status changes
-  useEffect(() => {
-    if (connectionStatus) {
-      const messageString = JSON.stringify({ 
-        type: connectionStatus.toLowerCase().includes('error') ? 'error' : 'status',
-        message: connectionStatus 
-      })
-      setFeedbackMessages(prev => {
-        // Prevent duplicate messages
-        if (prev[prev.length - 1] === messageString) {
-          return prev
-        }
-        return [...prev, messageString]
-      })
-    }
-  }, [connectionStatus])
-
   function handleStartProcessing() {
     setIsLoading(true)
     setStep('processing')
 
     if (!token || !wsUrl) {
-      setFeedbackMessages(prev => [...prev, JSON.stringify({ 
-        type: 'error', 
-        message: 'No token or WebSocket URL available. Please reconnect.' 
-      })])
       setIsLoading(false)
       return
     }
@@ -301,16 +227,23 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       console.log('Token set:', data.token)
       console.log('WebSocket URL set:', data.websocket_url)
       setStep('select-accounts')
-      setFeedbackMessages(prev => [...prev, JSON.stringify({ 
-        type: 'status', 
-        message: `Retrieved ${data.accounts.length} accounts. Please select accounts and click "Start Processing"` 
-      })])
-    } catch (error) {
+      
+      // Send success message
+      handleMessage({
+        type: 'log',
+        level: 'info',
+        message: `Retrieved ${data.accounts.length} accounts. Please select accounts and click "Start Processing"`
+      })
+    } catch (error: unknown) {
       console.error('Connection error:', error)
-      setFeedbackMessages(prev => [...prev, JSON.stringify({ 
-        type: 'error', 
-        message: `Error: ${error instanceof Error ? error.message : 'Unknown error'}` 
-      })])
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      
+      // Send error message
+      handleMessage({
+        type: 'log',
+        level: 'error',
+        message: `Connection error: ${errorMessage}`
+      })
     } finally {
       setIsLoading(false)
     }
