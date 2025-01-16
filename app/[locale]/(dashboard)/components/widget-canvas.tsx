@@ -49,6 +49,7 @@ import { NewsWidget } from './market/news-widget'
 import { AddWidgetSheet } from './add-widget-sheet'
 import { SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import FilterLeftPane from './filters/filter-left-pane'
 
 interface WidgetOption {
   type: WidgetType
@@ -429,8 +430,8 @@ function DashboardSidebar({ onAddWidget, isCustomizing, onEditToggle }: {
   const t = useI18n()
   return (
     <TooltipProvider>
-      <div className="fixed bottom-0 right-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-50">
-        <div className="flex flex-row md:flex-col gap-2 p-2 bg-background border-t md:border md:rounded-l-lg shadow-sm w-full md:w-auto">
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:bottom-auto md:right-0 md:top-1/2 md:-translate-y-1/2 md:translate-x-0 z-50">
+        <div className="flex flex-row md:flex-col gap-2 p-2 bg-background border rounded-lg md:rounded-l-lg md:rounded-r-none shadow-sm">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -459,6 +460,8 @@ function DashboardSidebar({ onAddWidget, isCustomizing, onEditToggle }: {
               <p>{t('widgets.addWidget')}</p>
             </TooltipContent>
           </Tooltip>
+
+      <FilterLeftPane />
         </div>
       </div>
     </TooltipProvider>

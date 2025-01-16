@@ -250,7 +250,7 @@ export default function FilterLeftPane() {
       <>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="fixed bottom-6 right-6 z-50" aria-label={t('filters.openFilters')}>
+            <Button variant="ghost" size="icon" className="h-10 w-10" aria-label={t('filters.openFilters')}>
               <Filter className="h-4 w-4" />
             </Button>
           </SheetTrigger>
