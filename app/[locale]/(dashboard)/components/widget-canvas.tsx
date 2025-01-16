@@ -15,17 +15,9 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { BarChart, BarChart2, LineChart, Calendar, Info, Minus, Maximize2, Minimize2, Square, Plus, Clock, Timer, ArrowLeftRight, PiggyBank, Award, GripVertical, Table2, MoreVertical, Smile, MessageSquare } from 'lucide-react'
+import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, Pencil } from 'lucide-react'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
@@ -54,6 +46,9 @@ import { TradeTableReview } from './tables/trade-table-review'
 import { MoodSelector } from './calendar/mood-selector'
 import ChatWidget from './chat-widget'
 import { NewsWidget } from './market/news-widget'
+import { AddWidgetSheet } from './add-widget-sheet'
+import { SheetTrigger } from "@/components/ui/sheet"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface WidgetOption {
   type: WidgetType
@@ -425,6 +420,50 @@ const customStyles = `
     }
   }
 `
+
+function DashboardSidebar({ onAddWidget, isCustomizing, onEditToggle }: { 
+  onAddWidget: (type: WidgetType, size?: WidgetSize) => void
+  isCustomizing: boolean
+  onEditToggle: () => void 
+}) {
+  const t = useI18n()
+  return (
+    <TooltipProvider>
+      <div className="fixed bottom-0 right-0 md:bottom-auto md:top-1/2 md:-translate-y-1/2 z-50">
+        <div className="flex flex-row md:flex-col gap-2 p-2 bg-background border-t md:border md:rounded-l-lg shadow-sm w-full md:w-auto">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={isCustomizing ? "secondary" : "ghost"}
+                size="icon"
+                onClick={onEditToggle}
+                className="h-10 w-10"
+              >
+                <Pencil className={cn(
+                  "h-4 w-4",
+                  isCustomizing && "text-primary fill-primary"
+                )} />
+                <span className="sr-only">Edit Dashboard</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center">
+              <p>{isCustomizing ? t('widgets.done') : t('widgets.edit')}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center">
+              <p>{t('widgets.addWidget')}</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+    </TooltipProvider>
+  )
+}
 
 export default function WidgetCanvas() {
   const  t = useI18n()
@@ -1040,215 +1079,12 @@ export default function WidgetCanvas() {
   }
 
   return (
-    <div className="p-4">
-      <style>{customStyles}</style>
-      <div className="mb-4 flex items-center justify-between">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild id="widget-canvas">
-            <Button variant="outline" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              {t('widgets.addWidget')}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 bg-popover text-popover-foreground border-border max-h-[400px] overflow-y-auto">
-            <DropdownMenuLabel>{t('widgets.categories.calendar')}</DropdownMenuLabel>
-            <DropdownMenuItem 
-              onClick={() => addWidget('calendarWidget', 'large')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Calendar className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.calendarView')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>{t('widgets.categories.charts')}</DropdownMenuLabel>
-            <DropdownMenuItem 
-              onClick={() => addWidget('equityChart')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <LineChart className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.equityChart')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('pnlChart')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <BarChart className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.pnlChart')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('timeOfDayChart')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Clock className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.timeOfDay')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('timeInPositionChart')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Timer className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.timeInPosition')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('weekdayPnlChart')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Calendar className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.weekdayPnl')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('pnlBySideChart')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <ArrowLeftRight className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.pnlBySide')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('tickDistribution')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <BarChart className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.tickDistribution')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('commissionsPnl')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <PiggyBank className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.commissionsPnl')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>{t('widgets.categories.statistics')}</DropdownMenuLabel>
-            <DropdownMenuItem 
-              onClick={() => addWidget('averagePositionTime')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Clock className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.averagePositionTime')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('cumulativePnl')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <PiggyBank className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.cumulativePnl')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('longShortPerformance')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <ArrowLeftRight className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.longShortPerformance')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('tradePerformance')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <BarChart className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.tradePerformance')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('winningStreak')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Award className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.winningStreak')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => addWidget('statisticsWidget')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <BarChart2 className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.statisticsOverview')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>{t('widgets.categories.tables')}</DropdownMenuLabel>
-            <DropdownMenuItem 
-              onClick={() => addWidget('tradeTableReview', 'large')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Table2 className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.tradeReviewTable')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>{t('widgets.categories.other')}</DropdownMenuLabel>
-            <DropdownMenuItem 
-              onClick={() => addWidget('moodSelector', 'tiny')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Smile className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.moodSelector')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>{t('widgets.categories.communication')}</DropdownMenuLabel>
-            <DropdownMenuItem 
-              onClick={() => addWidget('chatWidget', 'medium')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <MessageSquare className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.chat')}</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-border" />
-            <DropdownMenuLabel>{t('widgets.categories.marketData')}</DropdownMenuLabel>
-            <DropdownMenuItem 
-              onClick={() => addWidget('newsWidget', 'large')}
-              className="hover:bg-accent hover:text-accent-foreground"
-            >
-              <Info className="mr-2 h-4 w-4 shrink-0" />
-              <span>{t('widgets.types.marketNews')}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="flex items-center gap-4">
-          {isCustomizing && (
-            <AlertDialog open={isRemoveAllDialogOpen} onOpenChange={setIsRemoveAllDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  className="flex items-center gap-2"
-                >
-                  <Minus className="h-4 w-4" />
-                  {t('widgets.removeAll')}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t('widgets.removeAllConfirm')}</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t('widgets.removeAllDescription')}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t('widgets.cancel')}</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={() => {
-                      removeAllWidgets()
-                      setIsCustomizing(false)
-                      setIsRemoveAllDialogOpen(false)
-                    }}
-                  >
-                    {t('widgets.removeAllWidgets')}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          )}
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="customize-mode"
-              checked={isCustomizing}
-              onCheckedChange={(checked) => {
-                setIsCustomizing(checked)
-                if (!checked) {
-                  setIsRemoveAllDialogOpen(false)
-                }
-              }}
-            />
-            <label htmlFor="customize-mode">{isCustomizing ? t('widgets.done') : t('widgets.edit')}</label>
-          </div>
-        </div>
-      </div>
+    <div className="relative mt-6">
+      <DashboardSidebar 
+        onAddWidget={addWidget}
+        isCustomizing={isCustomizing}
+        onEditToggle={() => setIsCustomizing(!isCustomizing)}
+      />
 
       <ResponsiveGridLayout
         className="layout"
@@ -1287,6 +1123,8 @@ export default function WidgetCanvas() {
           </div>
         ))}
       </ResponsiveGridLayout>
+
+      <style jsx global>{customStyles}</style>
     </div>
   )
 }

@@ -392,6 +392,7 @@ export default {
     'widgets.removeWidgetDescription': 'Cela supprimera le widget de votre tableau de bord. Vous pourrez le rajouter plus tard si nécessaire.',
     'widgets.dragToMove': 'Glisser pour déplacer',
     'widgets.changeSize': 'Changer la taille',
+    'widgets.clickToAdd': 'Cliquer pour ajouter',
     'widgets.size.tiny': 'Très petit (3x1)',
     'widgets.size.small': 'Petit (3x4)',
     'widgets.size.medium': 'Moyen (6x4)',

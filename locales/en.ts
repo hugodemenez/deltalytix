@@ -395,6 +395,7 @@ export default {
     'widgets.removeWidgetDescription': 'This will remove the widget from your dashboard. You can add it back later if needed.',
     'widgets.dragToMove': 'Drag to move',
     'widgets.changeSize': 'Change Size',
+    'widgets.clickToAdd': 'Click to add',
     'widgets.size.tiny': 'Tiny (3x1)',
     'widgets.size.small': 'Small (3x4)',
     'widgets.size.medium': 'Medium (6x4)',
