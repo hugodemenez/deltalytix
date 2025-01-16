@@ -231,17 +231,17 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                         )} key={info.type}>
                           <CommandItem
                             key={info.type}
-                            onSelect={() => !isDisabled && setSelectedType(info.type)}
+                            onSelect={() => !isDisabled && info.type !== 'ninjatrader-performance' && setSelectedType(info.type)}
                             onMouseEnter={() => setHoveredCategory(info.category)}
                             onMouseLeave={() => setHoveredCategory(null)}
                             className={cn(
                               "flex items-stretch gap-4 ml-6 border-l-2 border-muted pl-4 transition-all duration-200 rounded-none",
-                              isDisabled && "opacity-50 select-none",
-                              !isDisabled && "cursor-pointer",
+                              (isDisabled || info.type === 'ninjatrader-performance') && "opacity-50 select-none",
+                              !isDisabled && info.type !== 'ninjatrader-performance' && "cursor-pointer",
                               selectedType === info.type && "border-l-primary bg-primary/5",
-                              !isDisabled && "hover:border-l-primary/50"
+                              !isDisabled && info.type !== 'ninjatrader-performance' && "hover:border-l-primary/50"
                             )}
-                            disabled={isDisabled}
+                            disabled={isDisabled || info.type === 'ninjatrader-performance'}
                           >
                             <div className="flex items-center py-1">
                               {info.type && ['rithmic-performance', 'rithmic-orders', 'rithmic-sync'].includes(info.type) && (
@@ -302,6 +302,14 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                                       <Clock className="h-4 w-4 animate-pulse" /> : 
                                       <Lock className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
                                     }
+                                  </>
+                                )}
+                                {info.type === 'ninjatrader-performance' && (
+                                  <>
+                                    <Badge variant="secondary" className="ml-2 transition-transform duration-200 hover:scale-105">
+                                      {t('import.type.badge.maintenance')}
+                                    </Badge>
+                                    <AlertTriangle className="h-4 w-4 text-yellow-500 animate-pulse" />
                                   </>
                                 )}
                                 {!isDisabled && info.type.includes('rithmic') && isWeekend() && (
