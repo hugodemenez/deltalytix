@@ -17,7 +17,8 @@ export type WidgetType =
   | 'tradeTableReview'
   | 'moodSelector'
   | 'chatWidget'
-  | 'newsWidget';
+  | 'newsWidget'
+  | 'tradeDistribution';
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 export type ChartSize = 'small' | 'small-long' | 'medium' | 'large'
 

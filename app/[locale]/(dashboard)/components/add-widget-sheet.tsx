@@ -30,6 +30,7 @@ import { MoodSelector } from './calendar/mood-selector'
 import ChatWidget from './chat-widget'
 import { NewsWidget } from './market/news-widget'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import TradeDistributionChart from './charts/trade-distribution'
 
 interface AddWidgetSheetProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
@@ -82,6 +83,12 @@ export function AddWidgetSheet({ onAddWidget }: AddWidgetSheetProps) {
       title: t('widgets.types.equityChart'),
       defaultSize: 'medium',
       component: <EquityChart size="small" />
+    },
+    {
+      type: 'tradeDistribution',
+      title: t('widgets.types.tradeDistribution'),
+      defaultSize: 'medium',
+      component: <TradeDistributionChart size="small" />
     },
     {
       type: 'pnlChart',

@@ -17,7 +17,8 @@ import {
 } from "@/components/ui/context-menu"
 import { Switch } from "@/components/ui/switch"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, Pencil } from 'lucide-react'
+import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, Pencil, Camera } from 'lucide-react'
+import html2canvas from 'html2canvas'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
@@ -50,6 +51,7 @@ import { AddWidgetSheet } from './add-widget-sheet'
 import { SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import FilterLeftPane from './filters/filter-left-pane'
+import TradeDistributionChart from './charts/trade-distribution'
 
 interface WidgetOption {
   type: WidgetType
@@ -58,20 +60,357 @@ interface WidgetOption {
   size: WidgetSize
 }
 
-function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, size, currentType, onCustomize }: { 
+// Add ScreenshotOverlay component
+function ScreenshotOverlay({ onScreenshot }: { onScreenshot: () => void }) {
+  return (
+    <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+      <Button
+        variant="secondary"
+        size="icon"
+        onClick={(e) => {
+          e.stopPropagation()
+          onScreenshot()
+        }}
+        className="h-10 w-10 bg-background/90 hover:bg-background/100"
+      >
+        <Camera className="h-4 w-4" />
+        <span className="sr-only">Take Screenshot</span>
+      </Button>
+    </div>
+  )
+}
+
+function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, isScreenshotMode, size, currentType, onCustomize }: { 
   children: React.ReactNode
   onRemove: () => void
   onChangeType: (type: WidgetType) => void
   onChangeSize: (size: WidgetSize) => void
   isCustomizing: boolean
+  isScreenshotMode: boolean
   size: WidgetSize
   currentType: WidgetType
   onCustomize: () => void
 }) {
-  const  t  = useI18n()
+  const t = useI18n()
   const isMobile = useIsMobile()
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
   const contextButtonRef = useRef<HTMLButtonElement>(null)
+  const widgetRef = useRef<HTMLDivElement>(null)
+
+  const handleScreenshot = async () => {
+    if (!widgetRef.current) return
+    
+    try {
+      // Get background color for consistent rendering
+      const bgColor = getComputedStyle(document.body).backgroundColor
+      const fontFamily = getComputedStyle(document.body).fontFamily
+    
+      // Regular HTML content with SVG handling
+      const canvas = await html2canvas(widgetRef.current, {
+        backgroundColor: bgColor,
+        scale: 2,
+        logging: false,
+        allowTaint: true,
+        useCORS: true,
+        onclone: async (clonedDoc, element) => {
+          // Get the actual computed font family from the document root
+          const rootStyles = window.getComputedStyle(document.documentElement)
+          const computedFontFamily = rootStyles.getPropertyValue('--font-sans').trim() || 'Inter'
+          const fontFamily = computedFontFamily
+
+          // Function to deeply apply text styles
+          const applyTextStyles = (el: Element) => {
+            if (el instanceof HTMLElement) {
+              const style = window.getComputedStyle(el)
+              const rect = el.getBoundingClientRect()
+              
+              // Copy all text-related styles
+              const textStyles = {
+                // Font styles
+                'font-family': style.fontFamily || fontFamily,
+                'font-size': style.fontSize,
+                'font-weight': style.fontWeight,
+                'font-style': style.fontStyle,
+                'letter-spacing': style.letterSpacing,
+                'line-height': style.lineHeight,
+                'text-align': style.textAlign,
+                'text-transform': style.textTransform,
+                'text-decoration': style.textDecoration,
+                'white-space': style.whiteSpace,
+                'word-break': style.wordBreak,
+                'word-wrap': style.wordWrap,
+                'text-overflow': style.textOverflow,
+                
+                // Colors and backgrounds
+                'color': style.color,
+                'background-color': style.backgroundColor,
+                'opacity': style.opacity,
+                
+                // Box model
+                'padding': style.padding,
+                'margin': style.margin,
+                'border': style.border,
+                'border-radius': style.borderRadius,
+                
+                // Positioning and dimensions
+                'display': style.display,
+                'position': style.position === 'static' ? 'relative' : style.position,
+                'left': style.left,
+                'top': style.top,
+                'right': style.right,
+                'bottom': style.bottom,
+                'width': `${rect.width}px`,
+                'height': `${rect.height}px`,
+                'min-width': style.minWidth,
+                'min-height': style.minHeight,
+                'max-width': style.maxWidth,
+                'max-height': style.maxHeight,
+                
+                // Flexbox properties
+                'align-items': style.alignItems,
+                'justify-content': style.justifyContent,
+                'flex': style.flex,
+                'flex-direction': style.flexDirection,
+                'flex-wrap': style.flexWrap,
+                'gap': style.gap,
+                
+                // Grid properties
+                'grid-template-columns': style.gridTemplateColumns,
+                'grid-template-rows': style.gridTemplateRows,
+                'grid-gap': style.gridGap,
+                
+                // Transforms and transitions
+                'transform': style.transform,
+                'transform-origin': style.transformOrigin,
+                'transition': 'none',
+                
+                // Overflow and visibility
+                'overflow': 'visible',
+                'visibility': style.visibility,
+                'z-index': style.zIndex,
+                
+                // Text rendering
+                '-webkit-font-smoothing': 'antialiased',
+                'text-rendering': 'optimizeLegibility',
+                'font-smooth': 'always'
+              }
+
+              // Apply all styles at once
+              Object.entries(textStyles).forEach(([property, value]) => {
+                if (value && value !== 'none' && value !== '0px') {
+                  el.style.setProperty(property, value, 'important')
+                }
+              })
+            }
+
+            // Recursively apply to all child elements
+            el.childNodes.forEach(child => {
+              if (child instanceof Element) {
+                applyTextStyles(child)
+              }
+            })
+          }
+
+          // Apply styles to the entire element tree
+          applyTextStyles(element)
+
+          // Handle SVG elements
+          element.querySelectorAll('svg').forEach(svg => {
+            // Get computed styles and actual dimensions
+            const svgStyle = window.getComputedStyle(svg)
+            const rect = svg.getBoundingClientRect()
+            
+            // Get the computed dimensions including any transformations
+            const computedWidth = rect.width
+            const computedHeight = rect.height
+            
+            // Get the original viewBox if it exists
+            const originalViewBox = svg.getAttribute('viewBox')
+            const viewBoxValues = originalViewBox ? originalViewBox.split(' ').map(Number) : null
+            
+            // Calculate the aspect ratio
+            const aspectRatio = viewBoxValues 
+              ? viewBoxValues[2] / viewBoxValues[3]
+              : computedWidth / computedHeight
+            
+            // Set explicit dimensions while preserving aspect ratio
+            svg.style.width = `${computedWidth}px`
+            svg.style.height = `${computedHeight}px`
+            svg.setAttribute('width', `${computedWidth}`)
+            svg.setAttribute('height', `${computedHeight}`)
+            
+            // If there was no original viewBox, create one based on computed dimensions
+            if (!viewBoxValues) {
+              svg.setAttribute('viewBox', `0 0 ${computedWidth} ${computedHeight}`)
+            }
+            
+            // Preserve the aspect ratio
+            svg.setAttribute('preserveAspectRatio', 'xMidYMid meet')
+            
+            // Ensure the SVG container preserves dimensions
+            svg.style.display = 'block'
+            svg.style.position = svgStyle.position === 'static' ? 'relative' : svgStyle.position
+            svg.style.minWidth = `${computedWidth}px`
+            svg.style.minHeight = `${computedHeight}px`
+            svg.style.overflow = 'visible'
+
+            // Copy all relevant SVG styles
+            const relevantStyles = [
+              'transform',
+              'transform-origin',
+              'fill',
+              'stroke',
+              'stroke-width',
+              'opacity',
+              'filter',
+              'vector-effect'
+            ]
+            
+            relevantStyles.forEach(style => {
+              const value = svgStyle.getPropertyValue(style)
+              if (value) svg.style.setProperty(style, value)
+            })
+
+            // Process all text elements in the SVG
+            svg.querySelectorAll('text').forEach(textEl => {
+              const textStyle = window.getComputedStyle(textEl)
+              const bbox = textEl.getBBox()
+              
+              // Special handling for Recharts axis labels
+              const isAxisLabel = textEl.closest('.recharts-cartesian-axis-tick-value')
+              if (isAxisLabel) {
+                // Preserve original position attributes
+                const x = textEl.getAttribute('x')
+                const y = textEl.getAttribute('y')
+                const textAnchor = textEl.getAttribute('text-anchor')
+                const orientation = textEl.getAttribute('orientation')
+                const fontSize = textEl.getAttribute('font-size')
+                
+                // Apply font styles while preserving positioning
+                textEl.style.setProperty('font-family', fontFamily, 'important')
+                textEl.style.fontSize = fontSize || '11px'
+                textEl.style.fill = 'currentColor'
+                
+                // Apply font family to all tspans within this axis label
+                textEl.querySelectorAll('tspan').forEach(tspan => {
+                  tspan.style.setProperty('font-family', fontFamily, 'important')
+                  tspan.style.fontSize = fontSize || '11px'
+                })
+                
+                // Restore original positioning
+                if (x) textEl.setAttribute('x', x)
+                if (y) textEl.setAttribute('y', y)
+                if (textAnchor) textEl.setAttribute('text-anchor', textAnchor)
+                if (orientation) textEl.setAttribute('orientation', orientation)
+                
+                // Ensure proper text rendering
+                textEl.style.setProperty('-webkit-font-smoothing', 'antialiased')
+                textEl.style.setProperty('text-rendering', 'optimizeLegibility')
+              } else {
+                // Regular text element handling
+                const parentStyle = window.getComputedStyle(textEl.parentElement || document.body)
+                
+                textEl.style.fontFamily = textStyle.fontFamily || parentStyle.fontFamily || fontFamily
+                textEl.style.fontSize = textStyle.fontSize || parentStyle.fontSize
+                textEl.style.fontWeight = textStyle.fontWeight || parentStyle.fontWeight
+                textEl.style.fill = textStyle.fill || textStyle.color || parentStyle.color || 'currentColor'
+                
+                // Ensure proper text positioning
+                textEl.setAttribute('x', bbox.x.toString())
+                textEl.setAttribute('y', (bbox.y + bbox.height).toString())
+                textEl.setAttribute('text-anchor', textStyle.textAnchor || 'start')
+                textEl.setAttribute('dominant-baseline', textStyle.dominantBaseline || 'auto')
+                
+                // Add text rendering improvements
+                textEl.style.setProperty('-webkit-font-smoothing', 'antialiased')
+                textEl.style.setProperty('text-rendering', 'optimizeLegibility')
+              }
+            })
+
+            // Update tspan handling
+            svg.querySelectorAll('tspan').forEach(tspan => {
+              const parentText = tspan.closest('text')
+              if (!parentText) return
+              
+              const isAxisLabel = parentText.closest('.recharts-cartesian-axis-tick-value')
+              if (isAxisLabel) {
+                tspan.style.setProperty('font-family', fontFamily, 'important')
+                tspan.style.fill = 'currentColor'
+              } else {
+                const parentStyle = window.getComputedStyle(parentText)
+                tspan.style.setProperty('font-family', parentStyle.fontFamily || fontFamily, 'important')
+                tspan.style.fontSize = parentStyle.fontSize
+                tspan.style.fontWeight = parentStyle.fontWeight
+                tspan.style.fill = parentStyle.fill || 'currentColor'
+              }
+            })
+          })
+          
+          // Handle text elements (h1, h2, h3, p, span, etc.)
+          element.querySelectorAll('h1, h2, h3, p, span').forEach((textEl: Element) => {
+            if (textEl instanceof HTMLElement) {
+              // Get computed styles and actual dimensions
+              const textStyle = window.getComputedStyle(textEl)
+              const rect = textEl.getBoundingClientRect()
+              
+              // Get the computed dimensions including any transformations
+              const computedWidth = rect.width
+              const computedHeight = rect.height
+              
+              // Set explicit dimensions
+              textEl.style.width = `${computedWidth}px`
+              textEl.style.height = `${computedHeight}px`
+              textEl.style.minWidth = `${computedWidth}px`
+              textEl.style.minHeight = `${computedHeight}px`
+              
+              // Copy all text-related styles
+              const textStyles = {
+                'font-family': textStyle.fontFamily || fontFamily,
+                'font-size': textStyle.fontSize,
+                'font-weight': textStyle.fontWeight,
+                'letter-spacing': textStyle.letterSpacing,
+                'line-height': textStyle.lineHeight,
+                'text-align': textStyle.textAlign,
+                'text-transform': textStyle.textTransform,
+                'text-decoration': textStyle.textDecoration,
+                'white-space': textStyle.whiteSpace,
+                'word-break': textStyle.wordBreak,
+                'word-wrap': textStyle.wordWrap,
+                'text-overflow': textStyle.textOverflow,
+                'color': textStyle.color,
+                'fill': textStyle.fill || 'currentColor',
+                'opacity': textStyle.opacity
+              }
+              
+              // Apply all text styles
+              Object.entries(textStyles).forEach(([property, value]) => {
+                if (value) textEl.style.setProperty(property, value)
+              })
+              
+              // Ensure proper text rendering
+              textEl.style.setProperty('-webkit-font-smoothing', 'antialiased')
+              textEl.style.setProperty('text-rendering', 'optimizeLegibility')
+            }
+          })
+        }
+      })
+    
+      // Create final screenshot
+      canvas.toBlob((blob: Blob | null) => {
+        if (!blob) return
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `widget-${currentType}-${Date.now()}.png`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }, 'image/png')
+    } catch (error) {
+      console.error('Error taking screenshot:', error)
+    }
+  }
 
   // Add touch event handlers for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -132,7 +471,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
       
       // Charts can be small, medium or large
       if (widgetType.includes('Chart') || widgetType === 'tickDistribution' || 
-          widgetType === 'commissionsPnl') {
+          widgetType === 'commissionsPnl' || widgetType === 'tradeDistribution') {
         return size === 'small' || size === 'medium' || size === 'large'
       }
     }
@@ -144,11 +483,12 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
     <ContextMenu onOpenChange={setIsContextMenuOpen}>
       <ContextMenuTrigger asChild>
         <div 
+          ref={widgetRef}
           className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group"
           onTouchStart={handleTouchStart}
         >
           <div className={cn("h-full w-full transition-all duration-200", 
-            isCustomizing && "group-hover:blur-[2px]"
+            (isCustomizing || isScreenshotMode) && "group-hover:blur-[2px]"
           )}>
             {children}
           </div>
@@ -211,6 +551,9 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                 </AlertDialog>
               </div>
             </>
+          )}
+          {isScreenshotMode && (
+            <ScreenshotOverlay onScreenshot={handleScreenshot} />
           )}
         </div>
       </ContextMenuTrigger>
@@ -422,10 +765,12 @@ const customStyles = `
   }
 `
 
-function DashboardSidebar({ onAddWidget, isCustomizing, onEditToggle }: { 
+function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEditToggle, onScreenshotToggle }: { 
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
   isCustomizing: boolean
-  onEditToggle: () => void 
+  isScreenshotMode: boolean
+  onEditToggle: () => void
+  onScreenshotToggle: () => void
 }) {
   const t = useI18n()
   return (
@@ -454,6 +799,26 @@ function DashboardSidebar({ onAddWidget, isCustomizing, onEditToggle }: {
 
           <Tooltip>
             <TooltipTrigger asChild>
+              <Button
+                variant={isScreenshotMode ? "secondary" : "ghost"}
+                size="icon"
+                onClick={onScreenshotToggle}
+                className="h-10 w-10"
+              >
+                <Camera className={cn(
+                  "h-4 w-4",
+                  isScreenshotMode && "text-primary fill-primary"
+                )} />
+                <span className="sr-only">Screenshot Mode</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center">
+              <p>{isScreenshotMode ? t('widgets.doneScreenshot') : t('widgets.screenshot')}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
               <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
             </TooltipTrigger>
             <TooltipContent side="left" align="center">
@@ -461,7 +826,7 @@ function DashboardSidebar({ onAddWidget, isCustomizing, onEditToggle }: {
             </TooltipContent>
           </Tooltip>
 
-      <FilterLeftPane />
+          <FilterLeftPane />
         </div>
       </div>
     </TooltipProvider>
@@ -469,7 +834,7 @@ function DashboardSidebar({ onAddWidget, isCustomizing, onEditToggle }: {
 }
 
 export default function WidgetCanvas() {
-  const  t = useI18n()
+  const t = useI18n()
   const { user } = useUser()
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
   const isMobile = useIsMobile()
@@ -482,6 +847,7 @@ export default function WidgetCanvas() {
     activeLayout: 'desktop'
   })
   const [isCustomizing, setIsCustomizing] = useState(false)
+  const [isScreenshotMode, setIsScreenshotMode] = useState(false)
   const [isRemoveAllDialogOpen, setIsRemoveAllDialogOpen] = useState(false)
   
   // Add this state to track if the layout change is from user interaction
@@ -1059,6 +1425,8 @@ export default function WidgetCanvas() {
           </div>
         )
       }
+      case 'tradeDistribution':
+        return <TradeDistributionChart size={effectiveSize as ChartSize} />
       default:
         return <PlaceholderWidget size={effectiveSize} />
     }
@@ -1086,7 +1454,15 @@ export default function WidgetCanvas() {
       <DashboardSidebar 
         onAddWidget={addWidget}
         isCustomizing={isCustomizing}
-        onEditToggle={() => setIsCustomizing(!isCustomizing)}
+        isScreenshotMode={isScreenshotMode}
+        onEditToggle={() => {
+          setIsCustomizing(!isCustomizing)
+          if (isScreenshotMode) setIsScreenshotMode(false)
+        }}
+        onScreenshotToggle={() => {
+          setIsScreenshotMode(!isScreenshotMode)
+          if (isCustomizing) setIsCustomizing(false)
+        }}
       />
 
       <ResponsiveGridLayout
@@ -1117,6 +1493,7 @@ export default function WidgetCanvas() {
               onChangeType={(type) => changeWidgetType(widget.i, type)}
               onChangeSize={(size) => changeWidgetSize(widget.i, size)}
               isCustomizing={isCustomizing}
+              isScreenshotMode={isScreenshotMode}
               size={widget.size}
               currentType={widget.type}
               onCustomize={() => setIsCustomizing(true)}

@@ -659,4 +659,52 @@ export default {
             noActivity: "No Trading Activity"
         }
     },
+    'widgets.screenshot': 'Screenshot Mode',
+    'widgets.doneScreenshot': 'Exit Screenshot Mode',
+    'widgets.takeScreenshot': 'Take Screenshot',
+    tradeDistribution: {
+        title: "Trade Distribution",
+        description: "Distribution of winning, losing, and breakeven trades",
+        win: "Winning Trades",
+        loss: "Losing Trades",
+        breakeven: "Breakeven Trades",
+        tooltip: {
+            type: "Type",
+            percentage: "Percentage"
+        }
+    },
+    widgets: {
+        addWidget: "Add Widget",
+        categories: {
+            charts: "Charts",
+            statistics: "Statistics",
+            tables: "Tables",
+            other: "Other"
+        },
+        types: {
+            equityChart: "Equity Chart",
+            pnlChart: "PnL Chart",
+            timeOfDay: "Time of Day",
+            timeInPosition: "Time in Position",
+            weekdayPnl: "Weekday PnL",
+            pnlBySide: "PnL by Side",
+            tickDistribution: "Tick Distribution",
+            commissionsPnl: "Commissions PnL",
+            averagePositionTime: "Average Position Time",
+            cumulativePnl: "Cumulative PnL",
+            longShortPerformance: "Long/Short Performance",
+            tradePerformance: "Trade Performance",
+            winningStreak: "Winning Streak",
+            tradeReviewTable: "Trade Review Table",
+            calendarView: "Calendar View",
+            moodSelector: "Mood Selector",
+            chat: "Chat",
+            marketNews: "Market News",
+            tradeDistribution: "Trade Distribution"
+        },
+        clickToAdd: "Click to add",
+        screenshot: "Screenshot Mode",
+        doneScreenshot: "Exit Screenshot Mode",
+        takeScreenshot: "Take Screenshot"
+    },
 } as const
