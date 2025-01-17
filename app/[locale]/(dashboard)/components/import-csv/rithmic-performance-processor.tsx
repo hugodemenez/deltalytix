@@ -39,8 +39,9 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
             const item: Partial<Trade> = {};
             let quantity = 0;
             headers.forEach((header, index) => {
-                if (newMappings[header]) {
-                    const key = newMappings[header] as keyof Trade;
+                const mappingKey = Object.keys(newMappings).find(key => header.includes(key));
+                if (mappingKey) {
+                    const key = newMappings[mappingKey] as keyof Trade;
                     const cellValue = row[index];
                     switch (key) {
                         case 'quantity':
