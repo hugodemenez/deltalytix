@@ -1,7 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Label } from "recharts"
+import type { Props } from 'recharts/types/component/Label'
+import type { PolarViewBox } from 'recharts/types/util/types'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useTradeStatistics } from "@/components/context/trades-data"
 import { cn } from "@/lib/utils"
@@ -145,6 +147,40 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
                     className="transition-all duration-300 ease-in-out hover:opacity-80 dark:brightness-90"
                   />
                 ))}
+                <Label
+                  position="center"
+                  content={(props: Props) => {
+                    if (!props.viewBox) return null;
+                    const viewBox = props.viewBox as PolarViewBox;
+                    if (!viewBox.cx || !viewBox.cy) return null;
+                    const cx = viewBox.cx;
+                    const cy = viewBox.cy;
+
+                    // Use a percentage of the distance from center to edge for label positioning
+                    const labelRadius = Math.min(cx, cy) * (size === 'small-long' ? 0.95 : 1.1); // Position labels at 95% or 100% of available space
+
+                    return chartData.map((entry, index) => {
+                      const angle = -90 + (360 * (entry.value / 100) / 2) + (360 * chartData.slice(0, index).reduce((acc, curr) => acc + curr.value, 0) / 100);
+                      const x = cx + labelRadius * Math.cos((angle * Math.PI) / 180);
+                      const y = cy + labelRadius * Math.sin((angle * Math.PI) / 180);
+                      return (
+                        <text
+                          key={index}
+                          x={x}
+                          y={y}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          className="fill-muted-foreground font-medium"
+                          style={{ 
+                            fontSize: size === 'small-long' ? '10px' : '12px'
+                          }}
+                        >
+                          {entry.value > 5 ? `${Math.round(entry.value)}%` : ''}
+                        </text>
+                      );
+                    });
+                  }}
+                />
               </Pie>
               <Legend 
                 verticalAlign="bottom"
