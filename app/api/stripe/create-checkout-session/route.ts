@@ -58,6 +58,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         subscription_data: trialDays > 0 ? {
             trial_period_days: trialDays,
         } : undefined,
+        payment_method_collection: trialDays > 0 ? 'if_required' : 'always',
         allow_promotion_codes: true,
         success_url: `${websiteURL}dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
