@@ -170,7 +170,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
                           y={y}
                           textAnchor="middle"
                           dominantBaseline="middle"
-                          className="fill-muted-foreground font-medium"
+                          className="fill-muted-foreground font-medium translate-y-2"
                           style={{ 
                             fontSize: size === 'small-long' ? '10px' : '12px'
                           }}
