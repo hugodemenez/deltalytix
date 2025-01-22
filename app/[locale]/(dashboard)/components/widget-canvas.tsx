@@ -52,6 +52,7 @@ import { SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import FilterLeftPane from './filters/filter-left-pane'
 import TradeDistributionChart from './charts/trade-distribution'
+import { ShareButton } from './share-button'
 
 interface WidgetOption {
   type: WidgetType
@@ -765,12 +766,16 @@ const customStyles = `
   }
 `
 
-function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEditToggle, onScreenshotToggle }: { 
+function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEditToggle, onScreenshotToggle, currentLayout }: { 
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
   isCustomizing: boolean
   isScreenshotMode: boolean
   onEditToggle: () => void
   onScreenshotToggle: () => void
+  currentLayout: {
+    desktop: any[]
+    mobile: any[]
+  }
 }) {
   const t = useI18n()
   return (
@@ -814,6 +819,15 @@ function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEdit
             </TooltipTrigger>
             <TooltipContent side="left" align="center">
               <p>{isScreenshotMode ? t('widgets.doneScreenshot') : t('widgets.screenshot')}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <ShareButton currentLayout={currentLayout} />
+            </TooltipTrigger>
+            <TooltipContent side="left" align="center">
+              <p>{t('share.tooltip')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -1462,6 +1476,10 @@ export default function WidgetCanvas() {
         onScreenshotToggle={() => {
           setIsScreenshotMode(!isScreenshotMode)
           if (isCustomizing) setIsCustomizing(false)
+        }}
+        currentLayout={{
+          desktop: layoutState.layouts.desktop,
+          mobile: layoutState.layouts.mobile
         }}
       />
 

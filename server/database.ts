@@ -51,8 +51,7 @@ export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfT
     }
 }
 
-export async function getTrades(userId: string): Promise<Trade[]> {
-  console.log("getTrades", userId)
+export async function getTrades(): Promise<Trade[]> {
   const prisma = new PrismaClient()
   try {
     const supabase = await createClient()
@@ -65,8 +64,9 @@ export async function getTrades(userId: string): Promise<Trade[]> {
     
     const email = user?.email
     const isSubscribed = email ? await getIsSubscribed(email) : false
+
     
-    let where: any = { userId }
+    let where: any = { userId: user?.id }
     
     if (!email || !isSubscribed) {
       const oneMonthAgo = startOfDay(new Date())

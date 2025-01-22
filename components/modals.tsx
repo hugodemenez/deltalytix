@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button"
 import { useUser } from '@/components/context/user-data'
 import { getIsSubscribed } from '@/server/subscription'
 import { useTrades } from '@/components/context/trades-data'
-import LoadingOverlay from './loading-overlay'
-import ImportButton from './import-csv/import-button'
+import LoadingOverlay from '../app/[locale]/(dashboard)/components/loading-overlay'
+import ImportButton from '../app/[locale]/(dashboard)/components/import-csv/import-button'
 import { useI18n } from "@/locales/client"
 import { signOut } from '@/server/auth'
 import PricingPlans from '@/app/[locale]/(landing)/components/pricing-plans'
@@ -16,10 +16,10 @@ import { useSearchParams } from 'next/navigation'
 const PAYWALL_COOLDOWN = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 export default function Modals() {
-  const { user } = useUser()
+  const { user, isLoading: userLoading } = useUser()
   const [isPaywallOpen, setIsPaywallOpen] = useState(false)
   const [isAlreadySubscribedOpen, setIsAlreadySubscribedOpen] = useState(false)
-  const { trades, isLoading } = useTrades()
+  const { trades, isLoading: tradesLoading } = useTrades()
   const [isTradesDialogOpen, setIsTradesDialogOpen] = useState(false)
   const t = useI18n()
   const searchParams = useSearchParams()
@@ -53,14 +53,14 @@ export default function Modals() {
   }, [searchParams])
 
   useEffect(() => {
-    if (!isLoading && !isPaywallOpen) {
+    if (!userLoading && !tradesLoading && !isPaywallOpen) {
       if (!trades) {
         console.warn('No trades available. Please add some trades to see the dashboard content.');
         return
       }
       setIsTradesDialogOpen(trades?.length === 0)
     }
-  }, [isLoading, trades, isPaywallOpen])
+  }, [userLoading, tradesLoading, trades, isPaywallOpen])
 
   const handlePaywallClose = useCallback(() => {
     setIsPaywallOpen(false);
@@ -70,7 +70,7 @@ export default function Modals() {
 
   return (
     <>
-      {isLoading && <LoadingOverlay />}
+      {(userLoading || tradesLoading) && <LoadingOverlay />}
       
       <Dialog open={isAlreadySubscribedOpen} onOpenChange={setIsAlreadySubscribedOpen}>
         <DialogContent>

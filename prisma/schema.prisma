@@ -162,6 +162,27 @@ model Mood {
   @@schema("public")
 }
 
+model Shared{
+  id            String   @id @default(uuid())
+  userId        String   // The user who shared the trades
+  slug          String   @unique // Unique identifier for the share URL
+  title         String?  // Optional title for the shared trades
+  description   String?  // Optional description
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime? // Optional expiration date
+  isPublic      Boolean  @default(true)
+  viewCount     Int      @default(0)
+  accountNumbers String[] // List of account numbers included
+  dateRange     Json     // { from: string, to: string }
+  desktop       Json     @default("[]") // Desktop layout configuration
+  mobile        Json     @default("[]") // Mobile layout configuration
+
+  @@index([userId])
+  @@index([slug])
+  @@schema("public")
+}
+
+
 model FinancialEvent {
   id          String   @id @default(uuid())
   title       String

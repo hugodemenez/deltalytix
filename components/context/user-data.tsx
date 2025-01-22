@@ -17,6 +17,7 @@ interface UserDataContextType {
     trialEndsAt: Date | null
   } | null
   isPlusUser: () => boolean
+  isLoading: boolean
 }
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
@@ -26,17 +27,16 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [subscription, setSubscription] = useState<UserDataContextType['subscription']>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     const getUser = async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (!user) {
-        // router.push('/authentication');
-      }
       if (error) {
         console.error('Error fetching user:', error);
       } else {
         setUser(user);
+        setIsLoading(false);
       }
     };
 
@@ -54,7 +54,7 @@ export const UserDataProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   return (
-    <UserDataContext.Provider value={{ user, subscription, isPlusUser }}>
+    <UserDataContext.Provider value={{ user, subscription, isPlusUser, isLoading }}>
       {children}
     </UserDataContext.Provider>
   );

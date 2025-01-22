@@ -4,9 +4,10 @@ import { getTrades } from '@/server/database'
 import { Trade } from '@prisma/client'
 import { getTickDetails } from '@/server/tick-details'
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react'
-import { useUser } from './user-data'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
 import { parseISO, isValid, startOfDay, endOfDay } from 'date-fns'
+import { getShared, SharedParams } from '@/server/shared'
+import { useParams } from 'next/navigation'
 
 // Inferred types
 type StatisticsProps = {
@@ -47,12 +48,16 @@ interface PnlRange {
   max: number | undefined
 }
 
+
+
 interface TradeDataContextProps {
   trades: Trade[]
   setTrades: React.Dispatch<React.SetStateAction<Trade[]>>
   isLoading: boolean
   refreshTrades: () => Promise<void>
   updateTrade: (tradeId: string, updates: Partial<Trade>) => void
+  isSharedView: boolean
+  sharedParams: SharedParams | null
 }
 
 interface FormattedTradeContextProps {
@@ -90,20 +95,38 @@ const CalendarDataContext = createContext<CalendarDataContextProps | undefined>(
 export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [trades, setTrades] = useState<Trade[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const { user } = useUser()
   const [instruments, setInstruments] = useState<string[]>([])
   const [accountNumbers, setAccountNumbers] = useState<string[]>([])
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
   const [tickDetails, setTickDetails] = useState<Record<string, number>>({})
   const [tickRange, setTickRange] = useState<TickRange>({ min: undefined, max: undefined })
   const [pnlRange, setPnlRange] = useState<PnlRange>({ min: undefined, max: undefined })
+  const [isSharedView, setIsSharedView] = useState(false)
+  const [sharedParams, setSharedParams] = useState<SharedParams | null>(null)
+  const [sharedTrades, setSharedTrades] = useState<Trade[]>([])
+  const params = useParams()
 
   const fetchTrades = useCallback(async () => {
-    if (user) {
-      setIsLoading(true)
-      try {
-        const tradesData = await getTrades(user.id)
-        setTrades(tradesData)
+    setIsLoading(true)
+    try {
+      // Check if we're on a shared page
+      if (params?.slug) {
+        console.log("fetching shared trades")
+        const sharedData = await getShared(params.slug as string)
+        if (sharedData) {
+          console.log('sharedData', sharedData)
+          setSharedTrades(sharedData.trades)
+          setTrades(sharedData.trades)
+          setSharedParams(sharedData.params as SharedParams)
+          setIsSharedView(true)
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // Regular user trades fetch
+      const tradesData = await getTrades()
+      setTrades(tradesData)
 
         if (tradesData.length > 0) {
           const dates = tradesData
@@ -119,13 +142,13 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) })
           }
         }
-      } catch (error) {
-        console.error('Error fetching trades:', error)
-      } finally {
-        setIsLoading(false)
-      }
+      
+    } catch (error) {
+      console.error('Error fetching trades:', error)
+    } finally {
+      setIsLoading(false)
     }
-  }, [user])
+  }, [params?.slug])
 
   useEffect(() => {
     fetchTrades()
@@ -146,11 +169,19 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [fetchTrades])
 
   const formattedTrades = useMemo(() => {
+    if(isSharedView) {
+      return sharedTrades.filter(trade => 
+        accountNumbers.length === 0 || accountNumbers.includes(trade.accountNumber)
+      )
+    }
+
     return trades
       .filter(trade => {
         const entryDate = parseISO(trade.entryDate)
         if (!isValid(entryDate)) return false
 
+
+        // Regular filtering
         const matchesInstruments = instruments.length === 0 || instruments.includes(trade.instrument)
         const matchesAccounts = accountNumbers.length === 0 || accountNumbers.includes(trade.accountNumber)
         const matchesDateRange = !dateRange?.from || !dateRange?.to || (
@@ -165,7 +196,7 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return matchesInstruments && matchesAccounts && matchesDateRange && matchesPnlRange
       })
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime())
-  }, [trades, instruments, accountNumbers, dateRange, pnlRange])
+  }, [trades, instruments, accountNumbers, dateRange, pnlRange, isSharedView, sharedParams])
 
   const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades])
   const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades])
@@ -179,7 +210,15 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, [])
 
   return (
-    <TradeDataContext.Provider value={{ trades, setTrades, isLoading, refreshTrades, updateTrade }}>
+    <TradeDataContext.Provider value={{ 
+      trades, 
+      setTrades, 
+      isLoading, 
+      refreshTrades, 
+      updateTrade,
+      isSharedView,
+      sharedParams
+    }}>
       <FormattedTradeContext.Provider value={{
         formattedTrades,
         instruments,

@@ -1,11 +1,11 @@
 import { ThemeProvider } from "@/components/context/theme-provider";
 import { TradeDataProvider } from "@/components/context/trades-data";
 import { UserDataProvider } from "@/components/context/user-data";
-import Modals from "./components/modals";
+import Modals from "@/components/modals";
 import { Toaster } from "@/components/ui/toaster";
 import { I18nProviderClient } from "@/locales/client";
 import { ReactElement } from "react";
-import { AI } from "./ai";
+import { AI } from "@/components/ai";
 import Navbar from "./components/navbar";
 import { WebSocketProvider } from "./components/context/websocket-context";
 import { OnbordaProvider, Onborda } from 'onborda'

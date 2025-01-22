@@ -1,5 +1,5 @@
 import { createAI } from 'ai/rsc';
-import { ServerMessage, ClientMessage, continueConversation } from '../../../server/actions';
+import { ServerMessage, ClientMessage, continueConversation } from '../server/actions';
 
 export const AI = createAI<ServerMessage[], ClientMessage[]>({
   actions: {

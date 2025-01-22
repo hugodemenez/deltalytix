@@ -107,6 +107,9 @@
   body {
     @apply bg-background text-foreground;
   }
+  img {
+    @apply inline-block;
+  } 
 }
 
 .no-select {
