@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { useCalendarData } from "../../../../../components/context/trades-data"
 import { cn } from "@/lib/utils"
-import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { Info } from 'lucide-react'
 import {
   Tooltip as UITooltip,
@@ -17,7 +17,7 @@ import {
 import { useI18n } from "@/locales/client"
 
 interface PNLChartProps {
-  size?: ChartSize
+  size?: WidgetSize
 }
 
 interface ChartDataPoint {

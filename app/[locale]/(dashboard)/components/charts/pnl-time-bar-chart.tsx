@@ -14,11 +14,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 
 interface TimeOfDayTradeChartProps {
-  size?: ChartSize
+  size?: WidgetSize
 }
 
 const chartConfig = {

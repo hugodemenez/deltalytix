@@ -6,11 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
 import { useFormattedTrades } from "@/components/context/trades-data"
 import { Trade } from "@prisma/client"
-import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 
 interface ContractQuantityChartProps {
-  size?: ChartSize
+  size?: WidgetSize
 }
 
 const chartConfig = {

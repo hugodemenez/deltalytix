@@ -760,12 +760,12 @@ export default {
             pnlChart: "PnL Chart",
             timeOfDay: "Time of Day",
             timeInPosition: "Time in Position",
-            weekdayPnl: "Weekday PnL",
-            pnlBySide: "PnL by Side",
+            weekdayPnl: "P&L by Day",
+            pnlBySide: "P&L by Side",
             tickDistribution: "Tick Distribution",
-            commissionsPnl: "Commissions PnL",
+            commissionsPnl: "P&L and Commissions",
             averagePositionTime: "Average Position Time",
-            cumulativePnl: "Cumulative PnL",
+            cumulativePnl: "Cumulative P&L",
             longShortPerformance: "Long/Short Performance",
             tradePerformance: "Trade Performance",
             winningStreak: "Winning Streak",
@@ -774,11 +774,75 @@ export default {
             moodSelector: "Mood Selector",
             chat: "Chat",
             marketNews: "Market News",
-            tradeDistribution: "Trade Distribution"
+            tradeDistribution: "Trade Distribution",
+            consistencyTable: "Consistency Analysis"
         },
         clickToAdd: "Click to add",
         screenshot: "Screenshot Mode",
         doneScreenshot: "Exit Screenshot Mode",
         takeScreenshot: "Take Screenshot"
     },
+    consistency: {
+        title: 'Trading Consistency',
+        description: 'Monitor your trading consistency by ensuring no single day exceeds the configured percentage of total profit',
+        tooltip: 'A consistent trader should maintain balanced daily profits relative to their total profit',
+        account: 'Account',
+        maxAllowedDailyProfit: 'Maximum Allowed Daily Profit',
+        highestDailyProfit: 'Highest Daily Profit',
+        status: 'Status',
+        insufficientData: 'Insufficient data',
+        consistent: 'Consistent',
+        inconsistent: 'Inconsistent (Exceeds Maximum)',
+        unprofitable: 'No Profitable Data',
+        threshold_settings: {
+            title: 'Consistency Threshold',
+            description: 'Maximum percentage of total profit allowed in a single day',
+            currentValue: '{value}% of total profit'
+        },
+        modal: {
+            title: 'Inconsistent Days for Account {account}',
+            description: 'Days where profit exceeded the maximum allowed daily profit',
+            date: 'Date',
+            pnl: 'P&L',
+            percentageOfTotal: '% of Total Profit'
+        }
+    },
+    statistics: {
+        title: 'Trading Statistics',
+        description: 'Overview of your trading performance metrics',
+        tooltip: 'Key performance indicators for your trading activity',
+        profitLoss: {
+            title: 'Profit/Loss',
+            net: 'Net P&L',
+            gross: 'Gross P&L',
+            fees: 'Total Fees'
+        },
+        performance: {
+            title: 'Performance',
+            winRate: 'Win Rate',
+            avgWin: 'Avg. Win',
+            avgLoss: 'Avg. Loss',
+            profitFactor: 'Profit Factor',
+            bestTrade: 'Best Trade',
+            worstTrade: 'Worst Trade'
+        },
+        activity: {
+            title: 'Activity',
+            totalTrades: 'Total Trades',
+            winningTrades: 'Winning Trades',
+            losingTrades: 'Losing Trades',
+            breakeven: 'Breakeven',
+            avgDuration: 'Avg. Duration',
+            longestTrade: 'Longest Trade',
+            shortestTrade: 'Shortest Trade'
+        },
+        distribution: {
+            title: 'Trade Distribution',
+            long: 'Long',
+            short: 'Short',
+            longRate: 'Long Rate',
+            shortRate: 'Short Rate',
+            winningStreak: 'Best Streak'
+        }
+    }
 } as const

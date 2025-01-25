@@ -14,11 +14,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Switch } from "@/components/ui/switch"
-import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 
 interface PnLBySideChartProps {
-  size?: ChartSize
+  size?: WidgetSize
 }
 
 const chartConfig = {

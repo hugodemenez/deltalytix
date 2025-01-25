@@ -18,7 +18,8 @@ export type WidgetType =
   | 'moodSelector'
   | 'chatWidget'
   | 'newsWidget'
-  | 'tradeDistribution';
+  | 'tradeDistribution'
+  | 'consistencyTable';
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 export type ChartSize = 'small' | 'small-long' | 'medium' | 'large'
 

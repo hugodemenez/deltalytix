@@ -3,9 +3,11 @@
 import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useTradeStatistics, useCalendarData } from "@/components/context/trades-data"
-import { Clock, PiggyBank, Award, BarChart } from "lucide-react"
+import { Clock, PiggyBank, Award, BarChart, Info } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
+import { useI18n } from "@/locales/client"
+import { Progress } from "@/components/ui/progress"
 
 interface StatisticsWidgetProps {
   size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long' | 'extra-large'
@@ -26,6 +28,7 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
   const [isTouch, setIsTouch] = React.useState(false)
   const cardRef = React.useRef<HTMLDivElement>(null)
   const lastTouchTime = React.useRef(0)
+  const t = useI18n()
 
   // Calculate statistics
   const { 
@@ -72,27 +75,6 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
     { name: 'Short', value: shortRate, color: negativeColor, number: shortNumber },
   ]
 
-  // Tooltip handlers
-  const handleTooltipToggle = React.useCallback((name: string) => {
-    setActiveTooltip(prev => prev === name ? null : name)
-  }, [])
-
-  const debouncedTooltipToggle = React.useMemo(
-    () => debounce((name: string) => {
-      handleTooltipToggle(name)
-    }, 300),
-    [handleTooltipToggle]
-  )
-
-  const handleTouchStart = React.useCallback((name: string, e: React.TouchEvent) => {
-    e.preventDefault()
-    const now = Date.now()
-    if (now - lastTouchTime.current > 300) {
-      debouncedTooltipToggle(name)
-      lastTouchTime.current = now
-    }
-  }, [debouncedTooltipToggle])
-
   // Touch event handlers
   React.useEffect(() => {
     const handleOutsideClick = (event: MouseEvent | TouchEvent) => {
@@ -117,206 +99,159 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
   }, [])
 
   return (
-    <Card className="h-full" ref={cardRef}>
+    <Card className="h-full flex flex-col" ref={cardRef}>
       <CardHeader 
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b",
+          "flex-none border-b",
           size === 'tiny' 
-            ? "p-1"
+            ? "py-1 px-2"
             : (size === 'small' || size === 'small-long')
-              ? "p-2" 
-              : "p-4 sm:p-6"
+              ? "py-2 px-3" 
+              : "py-3 px-4"
         )}
       >
         <div className="flex items-center justify-between">
-          <CardTitle 
-            className={cn(
-              "line-clamp-1",
-              size === 'tiny'
-                ? "text-xs"
-                : (size === 'small' || size === 'small-long') 
-                  ? "text-sm" 
-                  : "text-base sm:text-lg"
-            )}
-          >
-            Trading Statistics
-          </CardTitle>
-          <BarChart className={cn(
-            "text-muted-foreground",
-            size === 'tiny'
-              ? "h-3 w-3"
-              : (size === 'small' || size === 'small-long') 
-                ? "h-4 w-4" 
-                : "h-5 w-5"
-          )} />
+          <div className="flex items-center gap-2">
+            <CardTitle 
+              className={cn(
+                "line-clamp-1",
+                size === 'tiny'
+                  ? "text-xs"
+                  : (size === 'small' || size === 'small-long') 
+                    ? "text-sm" 
+                    : "text-base"
+              )}
+            >
+              {t('statistics.title')}
+            </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{t('statistics.tooltip')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <BarChart className="h-3.5 w-3.5 text-muted-foreground" />
         </div>
-        <CardDescription 
-          className={cn(
-            (size === 'tiny' || size === 'small' || size === 'small-long') 
-              ? "hidden" 
-              : "text-xs sm:text-sm"
-          )}
-        >
-          Overview of your trading performance
-        </CardDescription>
       </CardHeader>
-      <CardContent 
-        className={cn(
-          "grid gap-2",
-          size === 'tiny'
-            ? "p-1 grid-cols-2"
-            : size === 'small' 
-              ? "p-2 grid-cols-2 grid-rows-2" 
-              : size === 'small-long'
-                ? "p-2 grid-cols-4"
-                : "p-4 sm:p-6 grid-cols-2 sm:grid-cols-4"
-        )}
-      >
-        {/* Performance Distribution - Only show for medium and large */}
-        {size !== 'small' && size !== 'small-long' && (
-          <div className="col-span-2">
-            <TooltipProvider delayDuration={0}>
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Performance Distribution</div>
-                <div className="relative h-4">
-                  {performanceData.map((entry, index) => {
-                    const prevTotal = performanceData.slice(0, index).reduce((sum, d) => sum + d.value, 0)
-                    return (
-                      <Tooltip key={entry.name} open={activeTooltip === `perf-${entry.name}`}>
-                        <TooltipTrigger asChild>
-                          <div
-                            className={`absolute top-0 h-4 cursor-pointer transition-opacity ${index === 0 ? 'rounded-l-sm' : ''} ${index === performanceData.length - 1 ? 'rounded-r-sm' : ''}`}
-                            style={{
-                              left: `${prevTotal}%`,
-                              width: `${entry.value}%`,
-                              backgroundColor: entry.color,
-                            }}
-                            onClick={() => !isTouch && handleTooltipToggle(`perf-${entry.name}`)}
-                            onMouseEnter={() => !isTouch && setActiveTooltip(`perf-${entry.name}`)}
-                            onMouseLeave={() => !isTouch && setActiveTooltip(null)}
-                            onTouchStart={(e) => handleTouchStart(`perf-${entry.name}`, e)}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{entry.name}: {entry.value.toFixed(2)}%</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
-                </div>
+      <CardContent className="flex-1 p-0">
+        <div className="grid h-full grid-cols-2">
+          {/* Profit/Loss Section */}
+          <div className={cn(
+            "flex flex-col border-r border-b",
+            size === 'tiny' ? "p-1.5" : "p-3"
+          )}>
+            <h3 className="text-xs font-medium mb-1.5">{t('statistics.profitLoss.title')}</h3>
+            <div className="flex-1 flex flex-col justify-center gap-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.net')}</span>
+                <span className={cn(
+                  "text-sm font-medium",
+                  cumulativePnl - cumulativeFees > 0 ? "text-green-500" : "text-red-500"
+                )}>
+                  ${(cumulativePnl - cumulativeFees).toFixed(2)}
+                </span>
               </div>
-            </TooltipProvider>
-          </div>
-        )}
-
-        {/* Long/Short Distribution - Only show for medium and large */}
-        {size !== 'small' && size !== 'small-long' && (
-          <div className="col-span-2">
-            <TooltipProvider delayDuration={0}>
-              <div className="space-y-2">
-                <div className="text-sm font-medium">Long/Short Distribution</div>
-                <div className="relative h-4">
-                  {sideData.map((entry, index) => {
-                    const prevTotal = sideData.slice(0, index).reduce((sum, d) => sum + d.value, 0)
-                    return (
-                      <Tooltip key={entry.name} open={activeTooltip === `side-${entry.name}`}>
-                        <TooltipTrigger asChild>
-                          <div
-                            className={`absolute top-0 h-4 cursor-pointer transition-opacity ${index === 0 ? 'rounded-l-sm' : ''} ${index === sideData.length - 1 ? 'rounded-r-sm' : ''}`}
-                            style={{
-                              left: `${prevTotal}%`,
-                              width: `${entry.value}%`,
-                              backgroundColor: entry.color,
-                            }}
-                            onClick={() => !isTouch && handleTooltipToggle(`side-${entry.name}`)}
-                            onMouseEnter={() => !isTouch && setActiveTooltip(`side-${entry.name}`)}
-                            onMouseLeave={() => !isTouch && setActiveTooltip(null)}
-                            onTouchStart={(e) => handleTouchStart(`side-${entry.name}`, e)}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{entry.name}: {entry.value.toFixed(2)}% ({entry.number} trades)</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    )
-                  })}
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.gross')}</span>
+                <span className="text-sm font-medium">${cumulativePnl.toFixed(2)}</span>
               </div>
-            </TooltipProvider>
+              {size !== 'tiny' && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.fees')}</span>
+                  <span className="text-sm font-medium text-red-500">-${cumulativeFees.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
           </div>
-        )}
 
-        {/* Key Metrics - 2x2 grid for small size */}
-        <div className={cn(
-          "space-y-1",
-          size === 'small' ? "col-span-1" : size === 'small-long' ? "col-span-1" : "col-span-1"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className={cn(
-              "font-medium",
-              (size === 'small' || size === 'small-long') ? "text-xs" : "text-sm"
-            )}>P/L</div>
-          </div>
+          {/* Performance Section */}
           <div className={cn(
-            "font-bold",
-            (size === 'small' || size === 'small-long') ? "text-sm" : "text-xl"
+            "flex flex-col border-b",
+            size === 'tiny' ? "p-1.5" : "p-3"
           )}>
-            ${(cumulativePnl - cumulativeFees).toFixed(2)}
+            <h3 className="text-xs font-medium mb-1.5">{t('statistics.performance.title')}</h3>
+            <div className="flex-1 flex flex-col justify-center gap-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">{t('statistics.performance.winRate')}</span>
+                <span className="text-sm font-medium">{winRate}%</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">{t('statistics.performance.avgWin')}</span>
+                <span className="text-sm font-medium text-green-500">${(cumulativePnl / nbWin).toFixed(2)}</span>
+              </div>
+              {size !== 'tiny' && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs">{t('statistics.performance.avgLoss')}</span>
+                  <span className="text-sm font-medium text-red-500">-${Math.abs(cumulativePnl / nbLoss).toFixed(2)}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className={cn(
-          "space-y-1",
-          size === 'small' ? "col-span-1" : size === 'small-long' ? "col-span-1" : "col-span-1"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className={cn(
-              "font-medium",
-              (size === 'small' || size === 'small-long') ? "text-xs" : "text-sm"
-            )}>Win Rate</div>
-          </div>
+          {/* Activity Section */}
           <div className={cn(
-            "font-bold",
-            (size === 'small' || size === 'small-long') ? "text-sm" : "text-xl"
+            "flex flex-col border-r",
+            size === 'tiny' ? "p-1.5" : "p-3"
           )}>
-            {winRate}%
+            <h3 className="text-xs font-medium mb-1.5">{t('statistics.activity.title')}</h3>
+            <div className="flex-1 flex flex-col justify-center gap-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">{t('statistics.activity.totalTrades')}</span>
+                <span className="text-sm font-medium">{nbTrades}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">{t('statistics.activity.winningTrades')}</span>
+                <span className="text-sm font-medium text-green-500">{nbWin}</span>
+              </div>
+              {size !== 'tiny' && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs">{t('statistics.activity.avgDuration')}</span>
+                  <span className="text-sm font-medium">{averagePositionTime}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Show these metrics for both small and other sizes now */}
-        <div className={cn(
-          "space-y-1",
-          size === 'small' ? "col-span-1" : size === 'small-long' ? "col-span-1" : "col-span-1"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className={cn(
-              "font-medium",
-              (size === 'small' || size === 'small-long') ? "text-xs" : "text-sm"
-            )}>Avg Time</div>
-          </div>
+          {/* Distribution Section */}
           <div className={cn(
-            "font-bold",
-            (size === 'small' || size === 'small-long') ? "text-sm" : "text-xl"
+            "flex flex-col",
+            size === 'tiny' ? "p-1.5" : "p-3"
           )}>
-            {averagePositionTime}
-          </div>
-        </div>
-
-        <div className={cn(
-          "space-y-1",
-          size === 'small' ? "col-span-1" : size === 'small-long' ? "col-span-1" : "col-span-1"
-        )}>
-          <div className="flex items-center justify-between">
-            <div className={cn(
-              "font-medium",
-              (size === 'small' || size === 'small-long') ? "text-xs" : "text-sm"
-            )}>Trades</div>
-          </div>
-          <div className={cn(
-            "font-bold",
-            (size === 'small' || size === 'small-long') ? "text-sm" : "text-xl"
-          )}>
-            {nbTrades}
+            <h3 className="text-xs font-medium mb-1.5">{t('statistics.distribution.title')}</h3>
+            <div className="flex-1 flex flex-col justify-center gap-1.5">
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs">{t('statistics.distribution.long')}</span>
+                  <span className="text-sm font-medium">{longRate}%</span>
+                </div>
+                <Progress value={longRate} className="h-1" />
+              </div>
+              {size !== 'tiny' ? (
+                <>
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground text-xs">{t('statistics.distribution.short')}</span>
+                      <span className="text-sm font-medium">{shortRate}%</span>
+                    </div>
+                    <Progress value={shortRate} className="h-1" />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground text-xs">{t('statistics.distribution.winningStreak')}</span>
+                    <span className="text-sm font-medium">{winningStreak}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground text-xs">{t('statistics.distribution.winningStreak')}</span>
+                  <span className="text-sm font-medium">{winningStreak}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

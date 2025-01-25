@@ -15,7 +15,6 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import { Switch } from "@/components/ui/switch"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, Pencil, Camera } from 'lucide-react'
 import html2canvas from 'html2canvas'
@@ -23,43 +22,15 @@ import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
 import { useI18n } from "@/locales/client"
-import EquityChart from './charts/equity-chart'
-import TickDistributionChart from './charts/tick-distribution'
-import PNLChart from './charts/pnl-bar-chart'
-import TimeOfDayTradeChart from './charts/pnl-time-bar-chart'
-import TimeInPositionChart from './charts/time-in-position'
-import WeekdayPNLChart from './charts/weekday-pnl'
-import PnLBySideChart from './charts/pnl-by-side'
-import { CalendarSection } from './sections/calendar-section'
-import AveragePositionTimeCard from './statistics/average-position-time-card'
-import CumulativePnlCard from './statistics/cumulative-pnl-card'
-import LongShortPerformanceCard from './statistics/long-short-card'
-import TradePerformanceCard from './statistics/trade-performance-card'
-import WinningStreakCard from './statistics/winning-streak-card'
 import { loadDashboardLayout, saveDashboardLayout } from '@/server/database'
 import { Widget, WidgetType, WidgetSize, ChartSize, Layouts, LayoutState, LayoutItem } from '../types/dashboard'
 import { useAutoScroll } from '../hooks/use-auto-scroll'
-import CalendarPnl from './calendar/calendar-pnl'
-import CommissionsPnLChart from './charts/commissions-pnl'
-import StatisticsWidget from './statistics/statistics-widget'
 import { cn } from '@/lib/utils'
-import { TradeTableReview } from './tables/trade-table-review'
-import { MoodSelector } from './calendar/mood-selector'
-import ChatWidget from './chat-widget'
-import { NewsWidget } from './market/news-widget'
 import { AddWidgetSheet } from './add-widget-sheet'
-import { SheetTrigger } from "@/components/ui/sheet"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import FilterLeftPane from './filters/filter-left-pane'
-import TradeDistributionChart from './charts/trade-distribution'
 import { ShareButton } from './share-button'
-
-interface WidgetOption {
-  type: WidgetType
-  label: string
-  icon: React.ReactNode
-  size: WidgetSize
-}
+import { WIDGET_REGISTRY, getWidgetComponent } from '../config/widget-registry'
 
 // Add ScreenshotOverlay component
 function ScreenshotOverlay({ onScreenshot }: { onScreenshot: () => void }) {
@@ -421,63 +392,15 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
     }
   }
 
-  // Add check for fixed size widgets
-  const hasFixedSize = currentType === 'chatWidget' || currentType === 'newsWidget'
 
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
+    const config = WIDGET_REGISTRY[widgetType]
     if (isMobile) {
       // On mobile, only allow tiny (shown as Small), medium (shown as Medium), and large (shown as Large)
       if (size === 'small' || size === 'small-long') return false
-      
-      // Statistics widgets and mood selector can only be tiny (Small)
-      if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
-           'longShortPerformance', 'tradePerformance', 'winningStreak',
-           'moodSelector'].includes(widgetType)) {
-        return size === 'tiny'
-      }
-      
-      // Calendar and trade table widgets can only be large or extra large
-      if (widgetType === 'calendarWidget' || widgetType === 'tradeTableReview') {
-        return size === 'large' || size === 'extra-large'
-      }
-      
-      // Chat widget can only be medium or large
-      if (widgetType === 'chatWidget') {
-        return size === 'large'
-      }
-      
-      // Charts can be medium or large
-      if (widgetType.includes('Chart') || widgetType === 'tickDistribution' || 
-          widgetType === 'commissionsPnl') {
-        return size === 'medium' || size === 'large'
-      }
-    } else {
-      // Desktop view
-      // Calendar and trade table widgets can only be large or extra large
-      if (widgetType === 'calendarWidget' || widgetType === 'tradeTableReview') {
-        return size === 'large' || size === 'extra-large'
-      }
-      
-      // Statistics widgets and mood selector can only be tiny
-      if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
-           'longShortPerformance', 'tradePerformance', 'winningStreak',
-           'moodSelector'].includes(widgetType)) {
-        return size === 'tiny'
-      }
-      
-      // Chat widget can only be medium or large
-      if (widgetType === 'chatWidget') {
-        return size === 'large'
-      }
-      
-      // Charts can be small, medium or large
-      if (widgetType.includes('Chart') || widgetType === 'tickDistribution' || 
-          widgetType === 'commissionsPnl' || widgetType === 'tradeDistribution') {
-        return size === 'small' || size === 'medium' || size === 'large'
-      }
+      return config.allowedSizes.includes(size)
     }
-    
-    return true
+    return config.allowedSizes.includes(size)
   }
 
   return (
@@ -566,8 +489,6 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
           <GripVertical className="mr-2 h-4 w-4" />
           <span>{t('widgets.move')}</span>
         </ContextMenuItem>
-        {!hasFixedSize && (
-          <>
             <ContextMenuSeparator />
             <ContextMenuSub>
               <ContextMenuSubTrigger className="flex items-center">
@@ -648,8 +569,6 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
                 )}
               </ContextMenuSubContent>
             </ContextMenuSub>
-          </>
-        )}
         <ContextMenuSeparator />
         <AlertDialog>
           <AlertDialogTrigger asChild>
@@ -894,9 +813,9 @@ export default function WidgetCanvas() {
     if (isSmallScreen) {
       switch (size) {
         case 'tiny':
-          return { w: 12, h: 1 } // Only for statistics widgets
+          return { w: 12, h: 1 }
         case 'small':
-          return { w: 12, h: 2 } // Only for statistics widgets
+          return { w: 12, h: 2 }
         case 'small-long':
           return { w: 12, h: 2 }
         case 'medium':
@@ -912,9 +831,9 @@ export default function WidgetCanvas() {
     // Desktop sizes
     switch (size) {
       case 'tiny':
-        return { w: 3, h: 1 } // Only for statistics widgets
+        return { w: 3, h: 1 }
       case 'small':
-        return { w: 3, h: 4 } // Only for statistics widgets
+        return { w: 3, h: 4 }
       case 'small-long':
         return { w: 6, h: 2 }
       case 'medium':
@@ -922,7 +841,7 @@ export default function WidgetCanvas() {
       case 'large':
         return { w: 6, h: 8 }
       case 'extra-large':
-        return { w: 12, h: 8 } // Full width, same height as large
+        return { w: 12, h: 8 }
       default:
         return { w: 6, h: 4 }
     }
@@ -930,15 +849,12 @@ export default function WidgetCanvas() {
 
   // Add a function to get grid dimensions based on widget type and size
   const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
-    // Special case for chat widget and news widget - use small width but large height
-    if (type === 'chatWidget' || type === 'newsWidget') {
-      if (isSmallScreen) {
-        return { w: 12, h: 6 } // Full width on mobile but same height as large
-      }
-      return { w: 3, h: 8 } // Same width as small (3 columns) but same height as large on desktop
+    const config = WIDGET_REGISTRY[type]
+    if (isSmallScreen) {
+      return { w: 12, h: config.requiresFullWidth ? 6 : 4 }
     }
-    
-    return sizeToGrid(size, isSmallScreen)
+    const grid = sizeToGrid(size)
+    return config.requiresFullWidth ? { ...grid, w: 12 } : grid
   }
 
   // Create layouts for different breakpoints
@@ -1356,94 +1272,22 @@ export default function WidgetCanvas() {
   }
 
   const renderWidget = (widget: Widget) => {
+    const config = WIDGET_REGISTRY[widget.type]
     // For charts, ensure size is at least small-long
     const effectiveSize = (() => {
-      // Calendar is always large, trade table is always extra large
-      if (widget.type === 'calendarWidget') {
-        return 'large' as const
+      if (config.requiresFullWidth) {
+        return config.defaultSize
       }
-      if (widget.type === 'tradeTableReview') {
-        return 'extra-large' as const
+      if (config.allowedSizes.length === 1) {
+        return config.allowedSizes[0]
       }
-      // Statistics widgets and mood selector are always tiny
-      if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
-           'longShortPerformance', 'tradePerformance', 'winningStreak',
-           'moodSelector'].includes(widget.type)) {
-        return 'tiny' as const
+      if (isMobile && widget.size !== 'tiny') {
+        return 'small'
       }
-      // Charts can be medium or large
-      if (widget.type.includes('Chart') || widget.type === 'tickDistribution' || 
-          widget.type === 'commissionsPnl') {
-        if (widget.size === 'tiny') {
-          return 'small-long' as const
-        }
-      }
-      return isMobile && widget.size !== 'tiny' ? 'small' : widget.size
+      return widget.size
     })()
 
-    switch (widget.type) {
-      case 'equityChart':
-        return <EquityChart size={effectiveSize as ChartSize} />
-      case 'pnlChart':
-        return <PNLChart size={effectiveSize as ChartSize} />
-      case 'timeOfDayChart':
-        return <TimeOfDayTradeChart size={effectiveSize as ChartSize} />
-      case 'timeInPositionChart':
-        return <TimeInPositionChart size={effectiveSize as ChartSize} />
-      case 'weekdayPnlChart':
-        return <WeekdayPNLChart size={effectiveSize as ChartSize} />
-      case 'pnlBySideChart':
-        return <PnLBySideChart size={effectiveSize as ChartSize} />
-      case 'tickDistribution':
-        return <TickDistributionChart size={effectiveSize as ChartSize} />
-      case 'commissionsPnl':
-        return <CommissionsPnLChart size={effectiveSize as ChartSize} />
-      case 'calendarWidget':
-        return <CalendarPnl />
-      case 'averagePositionTime':
-        return <AveragePositionTimeCard size={effectiveSize} />
-      case 'cumulativePnl':
-        return <CumulativePnlCard size={effectiveSize} />
-      case 'longShortPerformance':
-        return <LongShortPerformanceCard size={effectiveSize} />
-      case 'tradePerformance':
-        return <TradePerformanceCard size={effectiveSize} />
-      case 'winningStreak':
-        return <WinningStreakCard size={effectiveSize} />
-      case 'statisticsWidget':
-        return <StatisticsWidget size={effectiveSize} />
-      case 'tradeTableReview':
-        return <TradeTableReview />
-      case 'moodSelector':
-        return <MoodSelector onMoodSelect={(mood) => console.log('Selected mood:', mood)} />
-      case 'chatWidget':
-      case 'newsWidget': {
-        const containerClasses = cn(
-          "h-full w-full",
-          "flex items-center justify-center",
-          isMobile ? "px-4" : ""
-        )
-        const widgetClasses = cn(
-          "h-full w-full",
-          isMobile ? "max-w-[500px]" : ""
-        )
-        return (
-          <div className={containerClasses}>
-            <div className={widgetClasses}>
-              {widget.type === 'chatWidget' ? (
-                <ChatWidget size={effectiveSize} />
-              ) : (
-                <NewsWidget />
-              )}
-            </div>
-          </div>
-        )
-      }
-      case 'tradeDistribution':
-        return <TradeDistributionChart size={effectiveSize as ChartSize} />
-      default:
-        return <PlaceholderWidget size={effectiveSize} />
-    }
+    return getWidgetComponent(widget.type, effectiveSize)
   }
 
   const removeAllWidgets = async () => {

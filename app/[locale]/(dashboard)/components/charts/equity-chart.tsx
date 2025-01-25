@@ -5,7 +5,7 @@ import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tool
 import { format, parseISO, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns'
 import { Info, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
-
+import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import {
   Card,
   CardContent,
@@ -30,11 +30,10 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 
 import { useFormattedTrades } from "../../../../../components/context/trades-data"
-import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 
 interface EquityChartProps {
-  size?: ChartSize
+  size?: WidgetSize
 }
 
 interface ChartDataPoint {

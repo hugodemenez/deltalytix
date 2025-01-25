@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
 import { useFormattedTrades } from "../../../../../components/context/trades-data"
 import { cn } from "@/lib/utils"
-import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { Info } from 'lucide-react'
 import {
   Dialog,
@@ -29,7 +29,7 @@ import { TradeTableReview } from "../tables/trade-table-review"
 import { Trade } from "@prisma/client"
 
 interface TickDistributionProps {
-  size?: ChartSize
+  size?: WidgetSize
 }
 
 interface ChartDataPoint {

@@ -13,7 +13,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 
 const chartConfig = {
@@ -26,7 +26,7 @@ const chartConfig = {
 const daysOfWeek = ['weekdayPnl.days.sunday', 'weekdayPnl.days.monday', 'weekdayPnl.days.tuesday', 'weekdayPnl.days.wednesday', 'weekdayPnl.days.thursday', 'weekdayPnl.days.friday', 'weekdayPnl.days.saturday'];
 
 interface WeekdayPNLChartProps {
-  size?: ChartSize
+  size?: WidgetSize
 }
 
 const formatCurrency = (value: number) =>

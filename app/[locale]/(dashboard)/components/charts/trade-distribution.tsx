@@ -7,7 +7,7 @@ import type { PolarViewBox } from 'recharts/types/util/types'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useTradeStatistics } from "@/components/context/trades-data"
 import { cn } from "@/lib/utils"
-import { ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { Info } from 'lucide-react'
 import {
   Tooltip as UITooltip,
@@ -18,7 +18,7 @@ import {
 import { useI18n } from "@/locales/client"
 
 interface TradeDistributionProps {
-  size?: ChartSize
+  size?: WidgetSize
 }
 
 interface ChartDataPoint {

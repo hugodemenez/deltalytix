@@ -698,6 +698,7 @@ export default {
             chat: "Chat",
             marketNews: "Actualités marché",
             tradeDistribution: "Distribution des trades",
+            consistencyTable: "Analyse de cohérence"
         },
     },
     'share.button': 'Partager les trades',
@@ -774,4 +775,67 @@ export default {
         one: 'Trades partagés pour {count} compte',
         other: 'Trades partagés pour {count} comptes'
     },
+    consistency: {
+        title: 'Cohérence du Trading',
+        description: 'Surveillez votre cohérence en vous assurant qu\'aucune journée ne dépasse le pourcentage configuré du profit total',
+        tooltip: 'Un trader cohérent doit maintenir des profits journaliers équilibrés par rapport à son profit total',
+        account: 'Compte',
+        maxAllowedDailyProfit: 'Profit Journalier Maximum Autorisé',
+        highestDailyProfit: 'Plus Haut Profit Journalier',
+        status: 'Statut',
+        insufficientData: 'Données insuffisantes',
+        consistent: 'Cohérent',
+        inconsistent: 'Incohérent (Dépasse le Maximum)',
+        unprofitable: 'Aucun Profit',
+        threshold_settings: {
+            title: 'Seuil de Cohérence',
+            description: 'Pourcentage maximum du profit total autorisé en une journée',
+            currentValue: '{value}% du profit total'
+        },
+        modal: {
+            title: 'Jours Incohérents pour le Compte {account}',
+            description: 'Jours où le profit a dépassé le profit journalier maximum autorisé',
+            date: 'Date',
+            pnl: 'P&L',
+            percentageOfTotal: '% du Profit Total'
+        }
+    },
+    statistics: {
+        title: 'Statistiques de Trading',
+        description: 'Aperçu de vos métriques de performance de trading',
+        tooltip: 'Indicateurs clés de performance pour votre activité de trading',
+        profitLoss: {
+            title: 'Profits/Pertes',
+            net: 'P&L Net',
+            gross: 'P&L Brut',
+            fees: 'Frais Totaux'
+        },
+        performance: {
+            title: 'Performance',
+            winRate: 'Taux de Réussite',
+            avgWin: 'Gain Moyen',
+            avgLoss: 'Perte Moyenne',
+            profitFactor: 'Facteur de Profit',
+            bestTrade: 'Meilleur Trade',
+            worstTrade: 'Pire Trade'
+        },
+        activity: {
+            title: 'Activité',
+            totalTrades: 'Total des Trades',
+            winningTrades: 'Trades Gagnants',
+            losingTrades: 'Trades Perdants',
+            breakeven: 'Équilibre',
+            avgDuration: 'Durée Moyenne',
+            longestTrade: 'Trade le Plus Long',
+            shortestTrade: 'Trade le Plus Court'
+        },
+        distribution: {
+            title: 'Distribution des Trades',
+            long: 'Long',
+            short: 'Short',
+            longRate: 'Taux de Long',
+            shortRate: 'Taux de Short',
+            winningStreak: 'Meilleure Série'
+        }
+    }
 } as const
