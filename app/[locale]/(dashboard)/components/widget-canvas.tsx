@@ -674,6 +674,10 @@ const customStyles = `
       -moz-user-select: none;
       -ms-user-select: none;
       user-select: none;
+    }
+
+    /* Only disable touch events when customizing */
+    .react-grid-item[data-customizing="true"] {
       touch-action: none;
     }
     
@@ -851,7 +855,7 @@ export default function WidgetCanvas() {
   const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
     const config = WIDGET_REGISTRY[type]
     if (isSmallScreen) {
-      return { w: 12, h: config.requiresFullWidth ? 6 : 4 }
+      return sizeToGrid(size, true)
     }
     const grid = sizeToGrid(size)
     return config.requiresFullWidth ? { ...grid, w: 12 } : grid
@@ -1308,7 +1312,7 @@ export default function WidgetCanvas() {
   }
 
   return (
-    <div className="relative mt-6">
+    <div className="relative mt-6 pb-16">
       <DashboardSidebar 
         onAddWidget={addWidget}
         isCustomizing={isCustomizing}
@@ -1349,7 +1353,7 @@ export default function WidgetCanvas() {
         }}
       >
         {layoutState.layouts[layoutState.activeLayout].map((widget) => (
-          <div key={widget.i} className="h-full">
+          <div key={widget.i} className="h-full" data-customizing={isCustomizing}>
             <WidgetWrapper
               onRemove={() => removeWidget(widget.i)}
               onChangeType={(type) => changeWidgetType(widget.i, type)}
