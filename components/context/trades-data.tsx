@@ -8,6 +8,7 @@ import { calculateStatistics, formatCalendarData } from '@/lib/utils'
 import { parseISO, isValid, startOfDay, endOfDay } from 'date-fns'
 import { getShared, SharedParams } from '@/server/shared'
 import { useParams } from 'next/navigation'
+import { formatInTimeZone } from 'date-fns-tz'
 
 // Inferred types
 type StatisticsProps = {
@@ -180,13 +181,20 @@ export const TradeDataProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const entryDate = parseISO(trade.entryDate)
         if (!isValid(entryDate)) return false
 
+        // Get user's timezone
+        const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+        // Convert the dates to the user's timezone for comparison
+        const entryDateInUserTz = new Date(formatInTimeZone(entryDate, userTimeZone, 'yyyy-MM-dd HH:mm:ssXXX'))
+        const fromDateInUserTz = dateRange?.from ? new Date(formatInTimeZone(dateRange.from, userTimeZone, 'yyyy-MM-dd HH:mm:ssXXX')) : null
+        const toDateInUserTz = dateRange?.to ? new Date(formatInTimeZone(dateRange.to, userTimeZone, 'yyyy-MM-dd HH:mm:ssXXX')) : null
 
         // Regular filtering
         const matchesInstruments = instruments.length === 0 || instruments.includes(trade.instrument)
         const matchesAccounts = accountNumbers.length === 0 || accountNumbers.includes(trade.accountNumber)
-        const matchesDateRange = !dateRange?.from || !dateRange?.to || (
-          entryDate >= startOfDay(dateRange.from) && 
-          entryDate <= endOfDay(dateRange.to)
+        const matchesDateRange = !fromDateInUserTz || !toDateInUserTz || (
+          entryDateInUserTz >= startOfDay(fromDateInUserTz) && 
+          entryDateInUserTz <= endOfDay(toDateInUserTz)
         )
         const matchesPnlRange = (
           (pnlRange.min === undefined || trade.pnl >= pnlRange.min) &&
