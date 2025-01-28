@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from "react"
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, endOfWeek } from "date-fns"
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, endOfWeek, addDays, getDay } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from "lucide-react"
@@ -22,6 +22,22 @@ function formatCurrency(value: number): string {
   return value.toFixed(0);
 }
 
+function getCalendarDays(monthStart: Date, monthEnd: Date) {
+  const startDate = startOfWeek(monthStart, { weekStartsOn: 1 })
+  const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 })
+  const days = eachDayOfInterval({ start: startDate, end: endDate })
+  
+  if (days.length === 42) return days
+  
+  const lastDay = days[days.length - 1]
+  const additionalDays = eachDayOfInterval({
+    start: addDays(lastDay, 1),
+    end: addDays(startDate, 41)
+  })
+  
+  return [...days, ...additionalDays].slice(0, 42)
+}
+
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -29,9 +45,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
-  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1, locale: enUS })
-  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1, locale: enUS })
-  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+  const calendarDays = getCalendarDays(monthStart, monthEnd)
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
@@ -81,13 +95,13 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
       </div>
       <div className="grid grid-cols-7 gap-4">
         {[
+          { key: 'sunday', label: 'S' },
           { key: 'monday', label: 'M' },
           { key: 'tuesday', label: 'T' },
           { key: 'wednesday', label: 'W' },
           { key: 'thursday', label: 'T' },
           { key: 'friday', label: 'F' },
-          { key: 'saturday', label: 'S' },
-          { key: 'sunday', label: 'S' }
+          { key: 'saturday', label: 'S' }
         ].map((day) => (
           <div key={day.key} className="text-center text-sm font-semibold text-muted-foreground">
             {day.label}
