@@ -8,7 +8,7 @@ import 'react-resizable/css/styles.css'
 import { useI18n } from "@/locales/client"
 import EquityChart from '@/app/[locale]/(dashboard)/components/charts/equity-chart'
 import PNLChart from '@/app/[locale]/(dashboard)/components/charts/pnl-bar-chart'
-import { Widget, WidgetType, WidgetSize, ChartSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { Widget, WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import CalendarPnl from '@/app/[locale]/(dashboard)/components/calendar/calendar-pnl'
 import CumulativePnlCard from '@/app/[locale]/(dashboard)/components/statistics/cumulative-pnl-card'
 import TradePerformanceCard from '@/app/[locale]/(dashboard)/components/statistics/trade-performance-card'
@@ -187,9 +187,9 @@ export function SharedWidgetCanvas({ layout }: SharedWidgetCanvasProps) {
 
     switch (widget.type) {
       case 'equityChart':
-        return <EquityChart size={effectiveSize as ChartSize} />
+        return <EquityChart size={effectiveSize} />
       case 'pnlChart':
-        return <PNLChart size={effectiveSize as ChartSize} />
+        return <PNLChart size={effectiveSize} />
       case 'calendarWidget':
         return <CalendarPnl />
       case 'cumulativePnl':

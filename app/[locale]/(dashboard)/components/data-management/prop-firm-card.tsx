@@ -858,23 +858,23 @@ export function PropFirmCard() {
     const userId = user.id
 
     try {
-      if (selectedPayout) {
-        // Update existing payout
-        await updatePayout(selectedPayout.id, {
-          date: payout.date,
-          amount: payout.amount,
-          status: payout.status
-        })
-      } else {
-        // Create new payout
-        await addPropFirmPayout({
-          accountNumber: selectedAccountForPayout,
-          userId,
-          date: payout.date,
-          amount: payout.amount,
-          status: payout.status
-        })
-      }
+    //   if (selectedPayout) {
+    //     // Update existing payout
+    //     await updatePayout(selectedPayout.id, {
+    //       date: payout.date,
+    //       amount: payout.amount,
+    //       status: payout.status
+    //     })
+    //   } else {
+    //     // Create new payout
+    //     await addPropFirmPayout({
+    //       accountNumber: selectedAccountForPayout,
+    //       userId,
+    //       date: payout.date,
+    //       amount: payout.amount,
+    //       status: payout.status
+    //     })
+    //   }
 
       // Refresh the accounts data
       const accounts = await getPropFirmAccounts(userId)

@@ -101,6 +101,7 @@ model Account {
   payoutCount       Int       @default(0)
   resetDate         DateTime?
   payouts           Payout[]
+  consistencyPercentage Float? @default(30)
 
   @@unique([number, userId])
   @@index([number])

@@ -94,7 +94,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-screen w-screen">
+    <html lang="en" className="h-screen w-screen bg-background">
       <head>
         <link 
           rel="apple-touch-icon" 
@@ -105,11 +105,6 @@ export default async function RootLayout({
           rel="apple-touch-icon-precomposed"
           sizes="180x180"
           href="/apple-touch-icon-precomposed.png"
-        />
-        <Script 
-          src="https://cdn.tolt.io/tolt.js" 
-          data-tolt="954085db-aff4-4df2-bcc8-c71631304415"
-          strategy="afterInteractive"
         />
       </head>
       <body className={inter.className + " h-screen w-screen overflow-x-hidden"}>

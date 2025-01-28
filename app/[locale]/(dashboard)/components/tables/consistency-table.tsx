@@ -160,7 +160,7 @@ export function ConsistencyTable() {
               <table className="w-full border-separate border-spacing-0">
                 <thead className="sticky top-0 z-20 bg-background">
                   <tr>
-                    <th className="h-12 px-4 text-left align-middle border-b bg-background whitespace-normal sticky left-0 z-30 bg-background text-sm font-medium" style={{ minWidth: '150px' }}>
+                    <th className="h-12 px-4 text-left align-middle border-b  whitespace-normal sticky left-0 z-30 bg-background text-sm font-medium" style={{ minWidth: '150px' }}>
                       {t('consistency.account')}
                     </th>
                     <th className="h-12 px-4 text-right align-middle border-b bg-background whitespace-normal text-sm font-medium" style={{ maxWidth: '120px' }}>

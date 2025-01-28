@@ -423,7 +423,7 @@ export default {
     'widgets.types.equityChart': 'Courbe des profits et pertes',
     'widgets.types.pnlChart': 'Graphique des profits et pertes journaliers',
     'widgets.types.timeOfDay': 'Profits et pertes en fonction de l\'heure',
-    'widgets.types.timeInPosition': 'Temps en position en fonction de l\'heure',
+    'widgets.types.timeInPosition': 'Temps en position',
     'widgets.types.weekdayPnl': 'Profits et pertes par jour',
     'widgets.types.pnlBySide': 'Profits et pertes par direction',
     'widgets.types.tickDistribution': 'Distribution des ticks',
@@ -700,6 +700,11 @@ export default {
             tradeDistribution: "Distribution des trades",
             consistencyTable: "Analyse de cohérence"
         },
+        deprecated: {
+            title: "Widget Obsolète",
+            description: "Ce type de widget n'est plus pris en charge",
+            remove: "Supprimer le Widget"
+        },
     },
     'share.button': 'Partager les trades',
     'share.success': 'Trades partagés avec succès',
@@ -837,5 +842,128 @@ export default {
             shortRate: 'Taux de Short',
             winningStreak: 'Meilleure Série'
         }
+    },
+    propFirm: {
+        title: 'Comptes Prop Firm',
+        description: 'Gérez vos comptes prop firm et suivez vos performances.',
+        tabs: {
+            overview: 'Aperçu',
+            consistency: 'Cohérence'
+        },
+        balance: 'Solde',
+        target: 'Objectif',
+        drawdown: 'Drawdown',
+        accountSize: 'Taille du Compte',
+        coherence: 'Cohérence',
+        startingBalance: 'Solde Initial',
+        beforeReset: 'Avant Réinitialisation',
+        afterReset: 'Après Réinitialisation',
+        globalPnl: 'P&L Global',
+        accountName: 'Nom du Compte',
+        resetDate: {
+            cleared: 'La date de réinitialisation a été supprimée',
+            title: 'Date de Réinitialisation',
+            description: 'Sélectionnez une date pour réinitialiser le solde du compte',
+            clear: 'Supprimer la date de réinitialisation',
+            set: 'Définir la date de réinitialisation',
+            label: 'Date de Réinitialisation',
+            noDate: 'Pas de date de réinitialisation',
+            info: 'La date à laquelle le solde du compte sera réinitialisé'
+        },
+        noResetDate: 'Pas de date de réinitialisation',
+        resetDateDescription: 'La date à laquelle le solde du compte sera réinitialisé',
+        payout: {
+            add: 'Ajouter un Retrait',
+            edit: 'Modifier le Retrait',
+            addDescription: 'Ajouter un nouveau retrait pour le compte',
+            editDescription: 'Modifier le retrait pour le compte',
+            date: 'Date du Retrait',
+            amount: 'Montant',
+            status: 'Statut',
+            statuses: {
+                pending: 'En Attente',
+                validated: 'Validé',
+                refused: 'Refusé',
+                paid: 'Payé'
+            },
+            delete: 'Supprimer le Retrait',
+            save: 'Enregistrer le Retrait',
+            update: 'Mettre à Jour le Retrait',
+            success: 'Retrait enregistré',
+            successDescription: 'Le retrait a été enregistré avec succès',
+            error: 'Échec de l\'enregistrement du retrait',
+            errorDescription: 'Une erreur est survenue lors de l\'enregistrement du retrait',
+            deleteSuccess: 'Retrait supprimé',
+            deleteSuccessDescription: 'Le retrait a été supprimé avec succès',
+            deleteError: 'Échec de la suppression du retrait',
+            deleteErrorDescription: 'Une erreur est survenue lors de la suppression du retrait',
+            updateSuccess: 'Retrait mis à jour',
+            updateSuccessDescription: 'Le retrait a été mis à jour avec succès',
+            updateError: 'Échec de la mise à jour du retrait',
+            updateErrorDescription: 'Une erreur est survenue lors de la mise à jour du retrait',
+            deleteConfirm: 'Supprimer le retrait',
+            deleteConfirmDescription: 'Êtes-vous sûr de vouloir supprimer ce retrait ? Cette action ne peut pas être annulée.',
+            deleteConfirmButton: 'Oui, supprimer',
+            deleteCancel: 'Annuler'
+        },
+        dailyStats: {
+            title: 'Performance Journalière',
+            date: 'Date',
+            pnl: 'P&L',
+            balance: 'Solde',
+            target: '% de l\'Objectif',
+            status: 'Statut',
+            payout: 'Payout',
+            payoutAmount: 'Montant du Payout',
+            payoutStatus: 'Statut du Payout'
+        },
+        setup: {
+            button: 'Configurer',
+            message: 'Cliquez pour configurer le compte',
+            success: 'Compte mis à jour',
+            error: 'Échec de la mise à jour du compte',
+            validation: {
+                required: 'Veuillez remplir tous les champs requis',
+                positive: 'Toutes les valeurs numériques doivent être positives'
+            },
+            configureFirst: {
+                title: 'Configuration requise',
+                description: 'Veuillez configurer votre compte prop firm pour voir les statistiques détaillées.'
+            },
+            saveFirst: {
+                title: 'Enregistrement requis',
+                description: 'Veuillez enregistrer vos modifications pour voir les statistiques mises à jour.'
+            }
+        },
+        status: {
+            unprofitable: 'Non rentable - Pas de vérification de cohérence',
+            insufficient: 'Données insuffisantes',
+            consistent: 'Trading cohérent',
+            inconsistent: 'Trading incohérent'
+        },
+        toast: {
+            setupSuccess: 'Configuration du compte réussie',
+            setupSuccessDescription: 'Votre compte prop firm a été configuré avec succès',
+            setupError: 'Échec de la configuration du compte',
+            setupErrorDescription: 'Une erreur est survenue lors de la configuration de votre compte prop firm',
+            updateSuccess: 'Compte mis à jour',
+            updateSuccessDescription: 'Votre compte prop firm a été mis à jour avec succès',
+            updateError: 'Échec de la mise à jour',
+            updateErrorDescription: 'Une erreur est survenue lors de la mise à jour de votre compte prop firm',
+            resetDateCleared: 'Date de réinitialisation supprimée',
+            resetDateClearedDescription: 'La date de réinitialisation a été supprimée avec succès',
+            resetDateError: 'Erreur de date de réinitialisation',
+            resetDateErrorDescription: 'Une erreur est survenue lors de la mise à jour de la date de réinitialisation',
+            validationPositive: 'Toutes les valeurs numériques doivent être positives'
+        }
+    },
+    common: {
+        add: 'Ajouter',
+        cancel: 'Annuler',
+        save: 'Enregistrer',
+        saving: 'Enregistrement...',
+        delete: 'Supprimer',
+        edit: 'Modifier',
+        close: 'Fermer'
     }
 } as const

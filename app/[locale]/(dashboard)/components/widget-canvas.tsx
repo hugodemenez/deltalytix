@@ -23,7 +23,7 @@ import 'react-resizable/css/styles.css'
 import { useUser } from '@/components/context/user-data'
 import { useI18n } from "@/locales/client"
 import { loadDashboardLayout, saveDashboardLayout } from '@/server/database'
-import { Widget, WidgetType, WidgetSize, ChartSize, Layouts, LayoutState, LayoutItem } from '../types/dashboard'
+import { Widget, WidgetType, WidgetSize, Layouts, LayoutState, LayoutItem } from '../types/dashboard'
 import { useAutoScroll } from '../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
 import { AddWidgetSheet } from './add-widget-sheet'
@@ -31,6 +31,25 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import FilterLeftPane from './filters/filter-left-pane'
 import { ShareButton } from './share-button'
 import { WIDGET_REGISTRY, getWidgetComponent } from '../config/widget-registry'
+
+function DeprecatedWidget({ onRemove }: { onRemove: () => void }) {
+  const t = useI18n()
+  return (
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>{t('widgets.deprecated.title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col items-center justify-center space-y-4">
+        <p className="text-muted-foreground text-center">
+          {t('widgets.deprecated.description')}
+        </p>
+        <Button variant="destructive" onClick={onRemove}>
+          {t('widgets.deprecated.remove')}
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
 
 // Add ScreenshotOverlay component
 function ScreenshotOverlay({ onScreenshot }: { onScreenshot: () => void }) {
@@ -395,6 +414,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
 
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
     const config = WIDGET_REGISTRY[widgetType]
+    if (!config) return true // Allow any size for deprecated widgets
     if (isMobile) {
       // On mobile, only allow tiny (shown as Small), medium (shown as Medium), and large (shown as Large)
       if (size === 'small' || size === 'small-long') return false
@@ -854,11 +874,14 @@ export default function WidgetCanvas() {
   // Add a function to get grid dimensions based on widget type and size
   const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
     const config = WIDGET_REGISTRY[type]
+    if (!config) {
+      // Return a default medium size grid for deprecated widgets
+      return isSmallScreen ? { w: 12, h: 4 } : { w: 6, h: 4 }
+    }
     if (isSmallScreen) {
       return sizeToGrid(size, true)
     }
-    const grid = sizeToGrid(size)
-    return config.requiresFullWidth ? { ...grid, w: 12 } : grid
+    return sizeToGrid(size)
   }
 
   // Create layouts for different breakpoints
@@ -1277,6 +1300,24 @@ export default function WidgetCanvas() {
 
   const renderWidget = (widget: Widget) => {
     const config = WIDGET_REGISTRY[widget.type]
+    if (!config) {
+      return (
+        <WidgetWrapper
+          key={widget.i}
+          onRemove={() => removeWidget(widget.i)}
+          onChangeType={() => {}} // No-op for deprecated widgets
+          onChangeSize={() => {}} // No-op for deprecated widgets
+          isCustomizing={isCustomizing}
+          isScreenshotMode={isScreenshotMode}
+          size={widget.size}
+          currentType={widget.type}
+          onCustomize={() => {}}
+        >
+          <DeprecatedWidget onRemove={() => removeWidget(widget.i)} />
+        </WidgetWrapper>
+      )
+    }
+
     // For charts, ensure size is at least small-long
     const effectiveSize = (() => {
       if (config.requiresFullWidth) {

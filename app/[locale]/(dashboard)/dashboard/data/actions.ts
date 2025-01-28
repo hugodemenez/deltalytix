@@ -37,7 +37,8 @@ interface SetupPropFirmAccountParams {
   isPerformance: boolean
   trailingDrawdown: boolean
   trailingStopProfit?: number
-  resetDate?: Date
+  resetDate?: Date | null 
+  consistencyPercentage?: number
 }
 
 export async function fetchGroupedTrades(userId: string): Promise<FetchTradesResult> {
@@ -209,6 +210,7 @@ export async function setupPropFirmAccount({
   trailingDrawdown,
   trailingStopProfit,
   resetDate,
+  consistencyPercentage = 30,
 }: SetupPropFirmAccountParams) {
   const existingAccount = await prisma.account.findFirst({
     where: {
@@ -226,6 +228,7 @@ export async function setupPropFirmAccount({
     trailingDrawdown: trailingDrawdown,
     trailingStopProfit: trailingStopProfit,
     resetDate: resetDate,
+    consistencyPercentage: consistencyPercentage,
   }
 
   if (existingAccount) {
@@ -351,18 +354,16 @@ export async function deletePayout(payoutId: string) {
   }
 }
 
-export async function updatePayout(
-  payoutId: string,
-  data: {
-    date: Date
-    amount: number
-    status: string
-  }
-) {
+export async function updatePayout(data: {
+  id: string
+  date: Date
+  amount: number
+  status: string
+}) {
   try {
     const updatedPayout = await prisma.payout.update({
       where: {
-        id: payoutId,
+        id: data.id,
       },
       data: {
         date: data.date,

@@ -777,6 +777,11 @@ export default {
             tradeDistribution: "Trade Distribution",
             consistencyTable: "Consistency Analysis"
         },
+        deprecated: {
+            title: "Deprecated Widget",
+            description: "This widget type is no longer supported",
+            remove: "Remove Widget"
+        },
         clickToAdd: "Click to add",
         screenshot: "Screenshot Mode",
         doneScreenshot: "Exit Screenshot Mode",
@@ -844,5 +849,128 @@ export default {
             shortRate: 'Short Rate',
             winningStreak: 'Best Streak'
         }
+    },
+    propFirm: {
+        title: 'Prop Firm Accounts',
+        description: 'Manage your prop firm accounts and track your performance.',
+        tabs: {
+            overview: 'Overview',
+            consistency: 'Consistency'
+        },
+        balance: 'Balance',
+        target: 'Target',
+        drawdown: 'Drawdown',
+        accountSize: 'Account Size',
+        coherence: 'Coherence',
+        startingBalance: 'Starting Balance',
+        beforeReset: 'Before Reset',
+        afterReset: 'After Reset',
+        globalPnl: 'Global P&L',
+        accountName: 'Account Name',
+        resetDate: {
+            cleared: 'Reset date has been cleared',
+            title: 'Reset Date',
+            description: 'Select a date to reset the account balance',
+            clear: 'Clear reset date',
+            set: 'Set reset date',
+            label: 'Reset Date',
+            noDate: 'No reset date',
+            info: 'The date when the account balance will be reset'
+        },
+        noResetDate: 'No reset date',
+        resetDateDescription: 'The date when the account balance will be reset',
+        payout: {
+            add: 'Add Payout',
+            edit: 'Edit Payout',
+            addDescription: 'Add a new payout for account',
+            editDescription: 'Edit payout for account',
+            date: 'Payout Date',
+            amount: 'Amount',
+            status: 'Status',
+            statuses: {
+                pending: 'Pending',
+                validated: 'Validated',
+                refused: 'Refused',
+                paid: 'Paid'
+            },
+            delete: 'Delete Payout',
+            save: 'Save Payout',
+            update: 'Update Payout',
+            success: 'Payout saved',
+            successDescription: 'The payout has been saved successfully',
+            error: 'Failed to save payout',
+            errorDescription: 'There was an error saving the payout',
+            deleteSuccess: 'Payout deleted',
+            deleteSuccessDescription: 'The payout has been deleted successfully',
+            deleteError: 'Failed to delete payout',
+            deleteErrorDescription: 'There was an error deleting the payout',
+            updateSuccess: 'Payout Updated',
+            updateSuccessDescription: 'The payout has been updated successfully',
+            updateError: 'Failed to update payout',
+            updateErrorDescription: 'There was an error updating the payout',
+            deleteConfirm: 'Delete Payout',
+            deleteConfirmDescription: 'Are you sure you want to delete this payout? This action cannot be undone.',
+            deleteConfirmButton: 'Yes, delete',
+            deleteCancel: 'Cancel'
+        },
+        dailyStats: {
+            title: 'Daily Performance',
+            date: 'Date',
+            pnl: 'P&L',
+            balance: 'Balance',
+            target: '% of Target',
+            status: 'Status',
+            payout: 'Payout',
+            payoutAmount: 'Payout Amount',
+            payoutStatus: 'Payout Status'
+        },
+        setup: {
+            button: 'Configure',
+            message: 'Click to setup account',
+            success: 'Account updated',
+            error: 'Failed to update account',
+            validation: {
+                required: 'Please fill in all required fields',
+                positive: 'All numeric values must be positive'
+            },
+            configureFirst: {
+                title: 'Configuration Required',
+                description: 'Please configure your prop firm account to see detailed statistics.'
+            },
+            saveFirst: {
+                title: 'Save Changes Required',
+                description: 'Please save your changes to see updated statistics.'
+            }
+        },
+        status: {
+            unprofitable: 'Unprofitable',
+            insufficient: 'Insufficient Data',
+            consistent: 'Consistent',
+            inconsistent: 'Inconsistent'
+        },
+        toast: {
+            setupSuccess: 'Account setup successful',
+            setupSuccessDescription: 'Your prop firm account has been configured successfully',
+            setupError: 'Account setup failed',
+            setupErrorDescription: 'There was an error setting up your prop firm account',
+            updateSuccess: 'Account updated',
+            updateSuccessDescription: 'Your prop firm account has been updated successfully',
+            updateError: 'Update failed',
+            updateErrorDescription: 'There was an error updating your prop firm account',
+            resetDateCleared: 'Reset date cleared',
+            resetDateClearedDescription: 'The reset date has been cleared successfully',
+            resetDateError: 'Reset date error',
+            resetDateErrorDescription: 'There was an error updating the reset date',
+            validationPositive: 'All numeric values must be positive'
+        }
+    },
+    common: {
+        add: 'Add',
+        cancel: 'Cancel',
+        save: 'Save Changes',
+        saving: 'Saving...',
+        delete: 'Delete',
+        edit: 'Edit',
+        close: 'Close'
     }
 } as const

@@ -22,6 +22,8 @@ import TradeDistributionChart from '../components/charts/trade-distribution'
 import { ConsistencyTable } from '../components/tables/consistency-table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { PropFirmCard } from '../components/data-management/prop-firm-card'
+import { PropFirmOverview } from '../components/data-management/prop-firm-overview'
 
 export interface WidgetConfig {
   type: WidgetType
@@ -265,6 +267,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 400,
     getComponent: () => <ConsistencyTable />,
     getPreview: () => <ConsistencyTable />
+  },
+  propFirm: {
+    type: 'propFirm',
+    defaultSize: 'extra-large',
+    allowedSizes: ['medium', 'large', 'extra-large'],
+    category: 'tables',
+    previewHeight: 400,
+    getComponent: ({ size }) => <PropFirmOverview size={size} />,
+    getPreview: () => <PropFirmOverview size="medium" />
   }
 }
 
