@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip"
 import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
+import { formatInTimeZone } from 'date-fns-tz'
 
 interface TimeInPositionChartProps {
   size?: WidgetSize
@@ -49,9 +50,9 @@ export default function TimeInPositionChart({ size = 'medium' }: TimeInPositionC
       hourlyData[i.toString()] = { totalTime: 0, count: 0 }
     }
 
-    // Sum up time in position and count trades for each hour
+    // Sum up time in position and count trades for each hour in UTC
     trades.forEach((trade: Trade) => {
-      const hour = new Date(trade.entryDate).getHours().toString()
+      const hour = formatInTimeZone(new Date(trade.entryDate), 'UTC', 'H')
       hourlyData[hour].totalTime += trade.timeInPosition / 60 // Convert seconds to minutes
       hourlyData[hour].count++
     })

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays } from "date-fns"
+import { formatInTimeZone } from 'date-fns-tz'
 import { fr, enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -146,13 +147,13 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
 
   const calculateMonthlyTotal = () => {
     return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
-      const date = new Date(dateString);
+      const date = new Date(dateString)
       if (isSameMonth(date, currentDate)) {
-        return total + dayData.pnl;
+        return total + dayData.pnl
       }
-      return total;
-    }, 0);
-  };
+      return total
+    }, 0)
+  }
 
   const monthlyTotal = calculateMonthlyTotal()
 
@@ -160,8 +161,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
     return monthEvents.filter(event => {
       if (!event.date) return false;
       try {
-        // Since event.date from Prisma is already a Date object, we can use it directly
-        return format(event.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+        return formatInTimeZone(event.date, 'UTC', 'yyyy-MM-dd') === formatInTimeZone(date, 'UTC', 'yyyy-MM-dd');
       } catch (error) {
         console.error('Error parsing event date:', error);
         return false;
@@ -202,7 +202,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       >
         <div className="flex items-center gap-3">
           <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">
-            {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
+            {formatInTimeZone(currentDate, 'UTC', 'MMMM yyyy', { locale: dateLocale })}
           </CardTitle>
           <div className={cn(
             "text-sm sm:text-base font-semibold truncate",
@@ -416,7 +416,7 @@ function calculateWeeklyTotal(index: number, calendarDays: Date[], calendarData:
   const startOfWeekIndex = index - 6
   const weekDays = calendarDays.slice(startOfWeekIndex, index + 1)
   return weekDays.reduce((total, day) => {
-    const dayData = calendarData[format(day, 'yyyy-MM-dd')]
+    const dayData = calendarData[formatInTimeZone(day, 'UTC', 'yyyy-MM-dd')]
     return total + (dayData ? dayData.pnl : 0)
   }, 0)
 }

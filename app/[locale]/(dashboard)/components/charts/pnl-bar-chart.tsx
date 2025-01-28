@@ -60,10 +60,17 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   const t = useI18n()
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    const date = new Date(data.date);
+    const date = new Date(data.date + 'T00:00:00Z');
     return (
       <div className="bg-background p-2 border rounded shadow-sm">
-        <p className="font-semibold">{date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+        <p className="font-semibold">
+          {date.toLocaleDateString("en-US", { 
+            month: "short", 
+            day: "numeric", 
+            year: "numeric",
+            timeZone: 'UTC'
+          })}
+        </p>
         <p className={`font-bold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
           {t('pnl.tooltip.pnl')}: {formatCurrency(data.pnl)}
         </p>
@@ -184,10 +191,11 @@ export default function PNLChart({ size = 'medium' }: PNLChartProps) {
                 }}
                 minTickGap={size === 'small-long' ? 30 : 50}
                 tickFormatter={(value) => {
-                  const date = new Date(value)
+                  const date = new Date(value + 'T00:00:00Z')
                   return date.toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
+                    timeZone: 'UTC'
                   })
                 }}
               />

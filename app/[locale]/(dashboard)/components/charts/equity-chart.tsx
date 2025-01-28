@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps } from "recharts"
 import { format, parseISO, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { Info, ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
@@ -121,15 +122,18 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   const chartData = React.useMemo(() => {
     if (!trades.length) return []
 
-    // Find the global start date (earliest trade)
-    const startDate = startOfDay(new Date(Math.min(...trades.map(t => new Date(t.entryDate).getTime()))))
-    const endDate = endOfDay(new Date(Math.max(...trades.map(t => new Date(t.entryDate).getTime()))))
-    const allDates = eachDayOfInterval({ start: startDate, end: endDate })
+    // Find the global start date (earliest trade) in UTC
+    const startDate = new Date(Math.min(...trades.map(t => new Date(t.entryDate).getTime())))
+    const endDate = new Date(Math.max(...trades.map(t => new Date(t.entryDate).getTime())))
+    const allDates = eachDayOfInterval({ 
+      start: startOfDay(startDate), 
+      end: endOfDay(endDate) 
+    })
 
     // Initialize the result with all dates and accounts
     const dateMap = new Map<string, ChartDataPoint>()
     allDates.forEach(date => {
-      const dateStr = format(date, 'yyyy-MM-dd')
+      const dateStr = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
       const point: ChartDataPoint = {
         date: dateStr,
         equity: 0
@@ -149,16 +153,16 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       if (!accountTrades.length) return
 
       let accountEquity = 0
-      const accountStartDate = startOfDay(new Date(Math.min(...accountTrades.map(t => new Date(t.entryDate).getTime()))))
+      const accountStartDate = new Date(Math.min(...accountTrades.map(t => new Date(t.entryDate).getTime())))
 
       allDates.forEach(date => {
-        const dateStr = format(date, 'yyyy-MM-dd')
-        const dayStart = startOfDay(date)
-        const dayEnd = endOfDay(date)
+        const dateStr = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
+        const dayStart = new Date(formatInTimeZone(startOfDay(date), 'UTC', "yyyy-MM-dd'T'00:00:00'Z'"))
+        const dayEnd = new Date(formatInTimeZone(endOfDay(date), 'UTC', "yyyy-MM-dd'T'23:59:59.999'Z'"))
 
         const point = dateMap.get(dateStr)!
 
-        // Get all trades for this day
+        // Get all trades for this day using UTC boundaries
         const dayTrades = accountTrades.filter(trade => {
           const tradeDate = new Date(trade.entryDate)
           return tradeDate >= dayStart && tradeDate <= dayEnd

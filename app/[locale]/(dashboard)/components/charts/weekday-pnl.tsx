@@ -98,7 +98,7 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
     }), {} as Record<string, { total: number, count: number }>)
 
     Object.entries(calendarData).forEach(([date, entry]) => {
-      const dayOfWeek = daysOfWeek[new Date(date).getDay()]
+      const dayOfWeek = daysOfWeek[new Date(date + 'T00:00:00Z').getUTCDay()]
       weekdayTotals[dayOfWeek].total += entry.pnl
       weekdayTotals[dayOfWeek].count += 1
     })

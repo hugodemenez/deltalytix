@@ -2,6 +2,7 @@
 
 import React, { useState } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, endOfWeek } from "date-fns"
+import { formatInTimeZone } from 'date-fns-tz'
 import { enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -59,7 +60,9 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
     <Card className="space-y-4 p-4 h-full">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-bold">{format(currentDate, 'MMMM')}</h2>
+          <h2 className="text-2xl font-bold">
+            {formatInTimeZone(currentDate, 'UTC', 'MMMM')}
+          </h2>
           <span className={cn(
             "text-xl font-semibold",
             monthlyTotal >= 0 ? "text-green-500" : "text-red-500"
@@ -91,7 +94,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
           </div>
         ))}
         {calendarDays.map((date) => {
-          const dateString = format(date, 'yyyy-MM-dd')
+          const dateString = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
           const dayData = calendarData[dateString]
           const contribution = dayData && monthlyTotal !== 0 
             ? Math.abs(dayData.pnl / monthlyTotal) 
@@ -147,7 +150,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
                 )
               )}>
                 <span className="text-lg font-semibold">
-                  {format(date, 'd')}
+                  {formatInTimeZone(date, 'UTC', 'd')}
                 </span>
               </div>
             </div>
