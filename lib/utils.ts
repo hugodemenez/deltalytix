@@ -2,6 +2,7 @@ import { Trade } from "@prisma/client"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { format } from "date-fns"
+import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/types/statistics"
 
 export function cn(...inputs: ClassValue[]) {
@@ -71,15 +72,22 @@ export function calculateStatistics(formattedTrades: Trade[]): StatisticsProps {
 }
 
 export function formatCalendarData(trades: Trade[]) {
+  // Get user's timezone
+  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
   return trades.reduce((acc: any, trade: Trade) => {
-    const date = format(new Date(trade.entryDate), 'yyyy-MM-dd')
+    const date = formatInTimeZone(new Date(trade.entryDate), userTimeZone, 'yyyy-MM-dd')
+    
     if (!acc[date]) {
       acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0, trades: [] }
     }
     acc[date].tradeNumber++
     acc[date].pnl += trade.pnl-trade.commission;
 
-    const isLong = trade.side ? (trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' || trade.side.toLowerCase() === 'b') : (new Date(trade.entryDate) < new Date(trade.closeDate))
+    const isLong = trade.side 
+      ? (trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' || trade.side.toLowerCase() === 'b') 
+      : (formatInTimeZone(new Date(trade.entryDate), userTimeZone, 'T') < formatInTimeZone(new Date(trade.closeDate), userTimeZone, 'T'))
+    
     acc[date].longNumber += isLong ? 1 : 0
     acc[date].shortNumber += isLong ? 0 : 1
     acc[date].trades.push(trade)
