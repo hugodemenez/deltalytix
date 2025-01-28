@@ -72,11 +72,9 @@ export function calculateStatistics(formattedTrades: Trade[]): StatisticsProps {
 }
 
 export function formatCalendarData(trades: Trade[]) {
-  // Get user's timezone
-  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-
   return trades.reduce((acc: any, trade: Trade) => {
-    const date = formatInTimeZone(new Date(trade.entryDate), userTimeZone, 'yyyy-MM-dd')
+    // Parse the date and format it in UTC to ensure consistency across timezones
+    const date = formatInTimeZone(new Date(trade.entryDate), 'UTC', 'yyyy-MM-dd')
     
     if (!acc[date]) {
       acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0, trades: [] }
@@ -86,7 +84,7 @@ export function formatCalendarData(trades: Trade[]) {
 
     const isLong = trade.side 
       ? (trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' || trade.side.toLowerCase() === 'b') 
-      : (formatInTimeZone(new Date(trade.entryDate), userTimeZone, 'T') < formatInTimeZone(new Date(trade.closeDate), userTimeZone, 'T'))
+      : (new Date(trade.entryDate).getTime() < new Date(trade.closeDate).getTime())
     
     acc[date].longNumber += isLong ? 1 : 0
     acc[date].shortNumber += isLong ? 0 : 1
