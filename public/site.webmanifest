@@ -4,8 +4,6 @@
   "description": "Next generation trading dashboard",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#000000",
   "orientation": "portrait-primary",
   "icons": [
     {
