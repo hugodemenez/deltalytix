@@ -240,11 +240,27 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
                   axisLine={false}
                   height={size === 'small-long' ? 20 : 24}
                   tickMargin={size === 'small-long' ? 4 : 8}
-                  tick={{ 
-                    fontSize: size === 'small-long' ? 9 : 11,
-                    fill: 'currentColor'
+                  tick={(props) => {
+                    const { x, y, payload } = props;
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text
+                          x={0}
+                          y={0}
+                          dy={size === 'small-long' ? 8 : 4}
+                          textAnchor={size === 'small-long' ? 'end' : 'middle'}
+                          fill="currentColor"
+                          fontSize={size === 'small-long' ? 9 : 11}
+                          transform={size === 'small-long' ? 'rotate(-45)' : 'rotate(0)'}
+                        >
+                          {payload.value}
+                        </text>
+                      </g>
+                    );
                   }}
-                  interval={size === 'small-long' ? 2 : 1}
+                  interval="preserveStartEnd"
+                  allowDataOverflow={true}
+                  minTickGap={size === 'small-long' ? 15 : 30}
                 />
                 <YAxis
                   tickLine={false}
