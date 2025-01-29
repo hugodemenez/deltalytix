@@ -59,7 +59,6 @@ interface ConsistencyMetrics {
   maxAllowedDailyProfit: number | null
   highestProfitDay: number
   isConsistent: boolean
-  hasEnoughData: boolean
   hasProfitableData: boolean
   dailyPnL: { [key: string]: number }
   totalProfitableDays: number
@@ -364,7 +363,6 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
         dailyPnL[date] += trade.pnl - (trade.commission || 0)
       })
 
-      const hasEnoughData = Object.keys(dailyPnL).length >= 5
       const highestProfitDay = Math.max(...Object.values(dailyPnL))
       
       // Only calculate consistency metrics if we have profitable data
@@ -378,7 +376,6 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
           maxAllowedDailyProfit,
           highestProfitDay,
           isConsistent,
-          hasEnoughData,
           hasProfitableData,
           dailyPnL,
           totalProfitableDays: Object.values(dailyPnL).filter(pnl => pnl > 0).length
@@ -392,7 +389,6 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
         maxAllowedDailyProfit: null,
         highestProfitDay,
         isConsistent: false,
-        hasEnoughData,
         hasProfitableData,
         dailyPnL,
         totalProfitableDays: Object.values(dailyPnL).filter(pnl => pnl > 0).length
@@ -630,7 +626,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                               <CardTitle className="text-sm truncate flex items-center gap-2">
                                <div className={cn(
                               "h-2 w-2 rounded-full",
-                              !metrics?.hasEnoughData || !metrics?.hasProfitableData ? "bg-muted" :
+                              !metrics?.hasProfitableData ? "bg-muted" :
                               !metrics?.isConsistent ? "bg-destructive" : "bg-green-500"
                             )} />
                                 {account.propfirm || "Unnamed Account"}
@@ -711,8 +707,8 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                   </TableHeader>
                   <TableBody>
                     {consistencyMetrics.map(metrics => {
-                      const shouldHighlight = metrics.hasEnoughData && !metrics.isConsistent
-                      const isInsufficientData = !metrics.hasEnoughData
+                      const shouldHighlight = metrics.hasProfitableData && !metrics.isConsistent
+                      const isInsufficientData = !metrics.hasProfitableData
                       const isUnprofitable = !metrics.hasProfitableData
                       const highestProfitPercentage = metrics.totalProfit > 0 
                         ? (metrics.highestProfitDay / metrics.totalProfit) * 100 
@@ -723,8 +719,8 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                           key={metrics.accountNumber}
                           className={cn(
                             "cursor-pointer hover:bg-muted/50",
-                            shouldHighlight && "bg-destructive/5",
-                            (isInsufficientData || isUnprofitable) && "bg-muted/30"
+                            !metrics.isConsistent && metrics.hasProfitableData && "bg-destructive/5",
+                            !metrics.hasProfitableData && "bg-muted/30"
                           )}
                           onClick={() => setSelectedAccount(metrics)}
                         >
@@ -732,7 +728,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                             <div className="flex items-center gap-2">
                               <div className={cn(
                                 "h-2 w-2 rounded-full",
-                                isInsufficientData || isUnprofitable ? "bg-muted" : 
+                                isUnprofitable ? "bg-muted" : 
                                 shouldHighlight ? "bg-destructive" : "bg-green-500"
                               )} />
                               {metrics.accountNumber}
@@ -749,12 +745,10 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                           </TableCell>
                           <TableCell className={cn(
                             "text-right font-medium",
-                            isInsufficientData ? "text-muted-foreground italic" : 
                             isUnprofitable ? "text-muted-foreground italic" :
                             !metrics.isConsistent ? "text-destructive" : "text-green-500"
                           )}>
-                            {!metrics?.hasEnoughData ? t('propFirm.status.insufficient') :
-                              !metrics?.hasProfitableData ? t('propFirm.status.unprofitable') :
+                            {!metrics?.hasProfitableData ? t('propFirm.status.unprofitable') :
                               metrics?.isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
                           </TableCell>
                         </TableRow>
