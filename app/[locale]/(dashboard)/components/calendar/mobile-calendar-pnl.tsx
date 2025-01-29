@@ -38,6 +38,11 @@ function getCalendarDays(monthStart: Date, monthEnd: Date) {
   return [...days, ...additionalDays].slice(0, 42)
 }
 
+function isDateToday(date: Date): boolean {
+  const today = new Date()
+  return formatInTimeZone(date, 'UTC', 'yyyy-MM-dd') === formatInTimeZone(today, 'UTC', 'yyyy-MM-dd')
+}
+
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -156,8 +161,8 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
               )}
               <div className={cn(
                 "w-8 h-8 flex items-center justify-center rounded-full z-10",
-                isToday(date) && "bg-primary text-primary-foreground",
-                dayData && dayData.pnl !== 0 && !isToday(date) && (
+                isDateToday(date) && "bg-primary text-primary-foreground",
+                dayData && dayData.pnl !== 0 && !isDateToday(date) && (
                   dayData.pnl > 0 
                     ? "text-green-600 dark:text-green-400"
                     : "text-red-600 dark:text-red-400"
