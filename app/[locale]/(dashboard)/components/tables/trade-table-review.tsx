@@ -451,6 +451,48 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       ),
     },
     {
+      accessorKey: "entryPrice",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          {t('trade-table.entryPrice')}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const entryPrice = parseFloat(row.getValue("entryPrice"))
+        return (
+          <div className="text-right font-medium">
+            ${entryPrice.toFixed(2)}
+          </div>
+        )
+      },
+    },
+    {
+      accessorKey: "closePrice",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium"
+        >
+          {t('trade-table.exitPrice')}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const exitPrice = parseFloat(row.getValue("closePrice"))
+        return (
+          <div className="text-right font-medium">
+            ${exitPrice.toFixed(2)}
+          </div>
+        )
+      },
+    },
+    {
       accessorKey: "timeInPosition",
       header: ({ column }) => (
         <Button
@@ -781,7 +823,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
                     colSpan={columns.length}
                     className="h-24 text-center align-middle text-muted-foreground"
                   >
-                    No results.
+                    {t('trade-table.noResults')}
                   </td>
                 </tr>
               )}
