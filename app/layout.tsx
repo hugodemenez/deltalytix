@@ -78,6 +78,9 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
+  other:{
+    'google':'notranslate',
+  },
   authors: [{ name: 'Hugo DEMENEZ' }],
   creator: 'Hugo DEMENEZ',
   publisher: 'Hugo DEMENEZ',
