@@ -71,7 +71,7 @@ function ScreenshotOverlay({ onScreenshot }: { onScreenshot: () => void }) {
   )
 }
 
-function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, isScreenshotMode, size, currentType, onCustomize }: { 
+function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, isScreenshotMode, size, currentType, onCustomize, onScreenshotToggle }: { 
   children: React.ReactNode
   onRemove: () => void
   onChangeType: (type: WidgetType) => void
@@ -81,6 +81,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   size: WidgetSize
   currentType: WidgetType
   onCustomize: () => void
+  onScreenshotToggle: () => void
 }) {
   const t = useI18n()
   const isMobile = useIsMobile()
@@ -397,6 +398,8 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
         a.click()
         document.body.removeChild(a)
         URL.revokeObjectURL(url)
+        // Exit screenshot mode after taking the screenshot
+        onScreenshotToggle()
       }, 'image/png')
     } catch (error) {
       console.error('Error taking screenshot:', error)
@@ -1312,6 +1315,7 @@ export default function WidgetCanvas() {
           size={widget.size}
           currentType={widget.type}
           onCustomize={() => {}}
+          onScreenshotToggle={() => setIsScreenshotMode(false)}
         >
           <DeprecatedWidget onRemove={() => removeWidget(widget.i)} />
         </WidgetWrapper>
@@ -1404,6 +1408,7 @@ export default function WidgetCanvas() {
               size={widget.size}
               currentType={widget.type}
               onCustomize={() => setIsCustomizing(true)}
+              onScreenshotToggle={() => setIsScreenshotMode(false)}
             >
               {renderWidget(widget)}
             </WidgetWrapper>
