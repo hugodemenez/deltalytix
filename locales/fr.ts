@@ -476,6 +476,8 @@ export default {
     'calendar.modal.timeInPosition': 'Temps en position',
     'calendar.modal.total': 'Total',
     'calendar.modal.noTrades': 'Aucun trade pour cette journée.',
+    'calendar.modal.entryPrice': 'Prix d\'entrée',
+    'calendar.modal.exitPrice': 'Prix de sortie',
     'calendar.charts.dailyPnlDistribution': 'Distribution des P&L quotidiens',
     'calendar.charts.totalPnlAfterComm': 'P&L total (après commissions)',
     'calendar.charts.dailyPnlAfterComm': 'P&L quotidien (après comm.)',
@@ -490,6 +492,9 @@ export default {
     'calendar.charts.noTradeData': 'Aucune donnée de trade disponible pour cette journée',
     'calendar.charts.accountPnl': 'P&L du compte',
     'calendar.charts.ofTotal': 'du total',
+    'calendar.charts.equityVariation': 'Variation des profits',
+    'calendar.charts.finalBalance': 'Solde final',
+    'calendar.charts.balance': 'Solde',
     'commissions.title': 'P&L vs Commissions',
     'commissions.tooltip.description': 'Distribution des profits/pertes nets par rapport aux commissions payées',
     'commissions.tooltip.type': 'Type',
@@ -964,6 +969,53 @@ export default {
         saving: 'Enregistrement...',
         delete: 'Supprimer',
         edit: 'Modifier',
-        close: 'Fermer'
+        close: 'Fermer',
+        back: "Retour"
+    },
+    rithmic: {
+        savedCredentials: "Identifiants Sauvegardés",
+        addNew: "Ajouter",
+        username: "Nom d'utilisateur",
+        serverType: "Type de Serveur",
+        location: "Localisation",
+        lastSync: "Dernière Synchro",
+        nextSync: "Prochaine Synchro",
+        actions: "Actions",
+        noSavedCredentials: "Aucun identifiant sauvegardé",
+        deleteCredentials: "Supprimer les Identifiants",
+        deleteCredentialsConfirm: "Êtes-vous sûr de vouloir supprimer ces identifiants ? Cette action ne peut pas être annulée.",
+        sync: {
+            title: "Synchronisation Rithmic",
+            totalAccounts: "Total des Comptes",
+            processed: "Traités",
+            days: "Jours",
+            processing: "En cours",
+            status: {
+                pending: "En attente",
+                complete: "Terminé",
+                processing: "En cours",
+                queued: "En file d'attente"
+            }
+        },
+        editCredentials: "Modifier les Identifiants",
+        addNewCredentials: "Ajouter de Nouveaux Identifiants",
+        backToList: "Retour à la Liste",
+        usernameLabel: "Nom d'utilisateur Rithmic",
+        passwordLabel: "Mot de passe Rithmic",
+        serverTypeLabel: "Type de Serveur",
+        locationLabel: "Localisation",
+        selectServerType: "Sélectionner le type de serveur",
+        selectLocation: "Sélectionner la localisation",
+        updateSavedCredentials: "Mettre à jour les identifiants sauvegardés",
+        saveForNextLogin: "Sauvegarder les identifiants pour la prochaine connexion",
+        getAccounts: "Obtenir les Comptes",
+        selectAccountsTitle: "Sélectionner les Comptes à Importer",
+        selectAllAccounts: "Sélectionner Tous les Comptes",
+        fcmId: "ID FCM",
+        rememberSelectedAccounts: "Mémoriser les comptes sélectionnés pour la prochaine synchronisation",
+        startProcessing: {
+            one: "Démarrer le Traitement de {{count}} Compte",
+            other: "Démarrer le Traitement de {{count}} Comptes"
+        }
     }
 } as const

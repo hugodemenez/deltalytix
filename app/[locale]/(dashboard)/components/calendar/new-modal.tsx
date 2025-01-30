@@ -48,7 +48,7 @@ export function CalendarModal({
   const t = useI18n()
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
-  const [activeTab, setActiveTab] = useState("table")
+  const [activeTab, setActiveTab] = useState("charts")
 
   if (!selectedDate) return null;
 
@@ -82,6 +82,8 @@ export function CalendarModal({
                             <TableHead className="sticky top-0 bg-background z-10">{t('calendar.modal.instrument')}</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">{t('calendar.modal.side')}</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">{t('calendar.modal.quantity')}</TableHead>
+                            <TableHead className="sticky top-0 bg-background z-10">{t('calendar.modal.entryPrice')}</TableHead>
+                            <TableHead className="sticky top-0 bg-background z-10">{t('calendar.modal.exitPrice')}</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">{t('calendar.modal.pnl')}</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">{t('calendar.modal.commission')}</TableHead>
                             <TableHead className="sticky top-0 bg-background z-10">{t('calendar.modal.timeInPosition')}</TableHead>
@@ -93,6 +95,8 @@ export function CalendarModal({
                               <TableCell>{trade.instrument}</TableCell>
                               <TableCell>{trade.side}</TableCell>
                               <TableCell>{trade.quantity}</TableCell>
+                              <TableCell>${trade.entryPrice}</TableCell>
+                              <TableCell>${trade.closePrice}</TableCell>
                               <TableCell className={cn(
                                 trade.pnl >= 0
                                   ? "text-green-600 dark:text-green-400"
@@ -105,7 +109,7 @@ export function CalendarModal({
                             </TableRow>
                           ))}
                           <TableRow className="font-medium">
-                            <TableCell colSpan={3}>{t('calendar.modal.total')}</TableCell>
+                            <TableCell colSpan={5}>{t('calendar.modal.total')}</TableCell>
                             <TableCell className={cn(
                               trades.reduce((sum, trade) => sum + trade.pnl, 0) >= 0
                                 ? "text-green-600 dark:text-green-400"

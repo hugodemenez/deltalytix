@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer, Legend, XAxis, YAxis } from "recharts"
+import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer, Legend, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts"
 import {
   Card,
   CardContent,
@@ -30,6 +30,10 @@ const chartConfig = {
   pnl: {
     label: "P&L Distribution",
     color: "hsl(var(--chart-1))",
+  },
+  equity: {
+    label: "Equity Variation",
+    color: "hsl(var(--chart-2))",
   },
 } satisfies ChartConfig
 
@@ -149,6 +153,46 @@ export function Charts({ dayData }: ChartsProps) {
     return `${baseStyle} ${hoverStyle} ${selectedStyle}`
   }
 
+  const equityChartData = React.useMemo(() => {
+    if (!dayData?.trades?.length) return []
+
+    // Sort trades by entry time
+    const sortedTrades = [...dayData.trades].sort((a, b) => 
+      new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
+    )
+
+    // Calculate running balance
+    let runningBalance = 0
+    return sortedTrades.map((trade, index) => {
+      runningBalance += (trade.pnl - (trade.commission || 0))
+      return {
+        time: new Date(trade.entryDate).toLocaleTimeString(),
+        balance: runningBalance,
+        pnl: trade.pnl - (trade.commission || 0),
+        tradeNumber: index + 1,
+      }
+    })
+  }, [dayData?.trades])
+
+  const CustomEquityTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="bg-background p-2 border rounded shadow-sm">
+          <p className="text-sm font-medium">{`Time: ${data.time}`}</p>
+          <p className="text-sm font-medium">{`Trade #: ${data.tradeNumber}`}</p>
+          <p className={`text-sm font-medium ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {`Trade P&L: ${formatCurrency(data.pnl)}`}
+          </p>
+          <p className={`text-sm font-medium ${data.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {`Balance: ${formatCurrency(data.balance)}`}
+          </p>
+        </div>
+      )
+    }
+    return null
+  }
+
   if (!dayData?.trades?.length) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -257,6 +301,47 @@ export function Charts({ dayData }: ChartsProps) {
                   ))}
                 </Bar>
               </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>{t('calendar.charts.equityVariation')}</CardTitle>
+          <CardDescription>
+            {t('calendar.charts.finalBalance')}: {formatCurrency(equityChartData[equityChartData.length - 1]?.balance || 0)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px]">
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={equityChartData}
+                margin={{ top: 20, right: 40, left: 40, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="time"
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  tickFormatter={(time) => time.split(':').slice(0, 2).join(':')}
+                />
+                <YAxis
+                  tickFormatter={(value) => formatCurrency(value)}
+                />
+                <Tooltip content={<CustomEquityTooltip />} />
+                <Line
+                  type="stepAfter"
+                  dataKey="balance"
+                  stroke={chartConfig.equity.color}
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                  name={t('calendar.charts.balance')}
+                />
+              </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
         </CardContent>

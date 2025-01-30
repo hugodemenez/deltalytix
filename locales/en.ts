@@ -479,6 +479,8 @@ export default {
     'calendar.modal.timeInPosition': 'Time in Position',
     'calendar.modal.total': 'Total',
     'calendar.modal.noTrades': 'No trades for this day.',
+    'calendar.modal.entryPrice': 'Entry Price',
+    'calendar.modal.exitPrice': 'Exit Price',
     'calendar.charts.dailyPnlDistribution': 'Daily P&L Distribution',
     'calendar.charts.totalPnlAfterComm': 'Total P&L (after commissions)',
     'calendar.charts.dailyPnlAfterComm': 'Daily P&L (after comm.)',
@@ -493,6 +495,9 @@ export default {
     'calendar.charts.noTradeData': 'No trade data available for this day',
     'calendar.charts.accountPnl': 'Account P&L',
     'calendar.charts.ofTotal': 'of total',
+    'calendar.charts.equityVariation': 'Equity Variation',
+    'calendar.charts.finalBalance': 'Final Balance',
+    'calendar.charts.balance': 'Balance',
     'commissions.title': 'P/L vs Commissions',
     'commissions.tooltip.description': 'Distribution of net profit/loss versus commissions paid',
     'commissions.tooltip.type': 'Type',
@@ -971,6 +976,53 @@ export default {
         saving: 'Saving...',
         delete: 'Delete',
         edit: 'Edit',
-        close: 'Close'
+        close: 'Close',
+        back: "Back"
+    },
+    rithmic: {
+        savedCredentials: "Saved Credentials",
+        addNew: "Add New",
+        username: "Username",
+        serverType: "Server Type",
+        location: "Location",
+        lastSync: "Last Sync",
+        nextSync: "Next Sync",
+        actions: "Actions",
+        noSavedCredentials: "No saved credentials found",
+        deleteCredentials: "Delete Credentials",
+        deleteCredentialsConfirm: "Are you sure you want to delete these credentials? This action cannot be undone.",
+        sync: {
+            title: "Rithmic Data Sync",
+            totalAccounts: "Total Accounts",
+            processed: "Processed",
+            days: "Days",
+            processing: "Processing",
+            status: {
+                pending: "Pending",
+                complete: "Complete",
+                processing: "Processing",
+                queued: "Queued"
+            }
+        },
+        editCredentials: "Edit Credentials",
+        addNewCredentials: "Add New Credentials",
+        backToList: "Back to List",
+        usernameLabel: "Rithmic Username",
+        passwordLabel: "Rithmic Password",
+        serverTypeLabel: "Server Type",
+        locationLabel: "Location",
+        selectServerType: "Select server type",
+        selectLocation: "Select location",
+        updateSavedCredentials: "Update saved credentials",
+        saveForNextLogin: "Save credentials for next login",
+        getAccounts: "Get Accounts",
+        selectAccountsTitle: "Select Accounts to Import",
+        selectAllAccounts: "Select All Accounts",
+        fcmId: "FCM ID",
+        rememberSelectedAccounts: "Remember selected accounts for next sync",
+        startProcessing: {
+            one: "Start Processing {{count}} Account",
+            other: "Start Processing {{count}} Accounts"
+        }
     }
 } as const
