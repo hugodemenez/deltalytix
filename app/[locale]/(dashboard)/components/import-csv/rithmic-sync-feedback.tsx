@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, CheckCircle2, AlertCircle, Calendar } from 'lucide-react'
 import { useWebSocket } from '../context/websocket-context'
 import { cn } from "@/lib/utils"
+import { useI18n } from '@/locales/client'
 
 interface RithmicSyncFeedbackProps {
   totalAccounts: number
@@ -30,6 +31,7 @@ export function RithmicSyncFeedback({ totalAccounts }: RithmicSyncFeedbackProps)
     connectionStatus,
     messageHistory
   } = useWebSocket()
+  const t = useI18n()
 
   // Calculate progress for a specific account
   const getAccountProgress = (accountId: string, account: typeof accountsProgress[string]) => {
@@ -44,10 +46,10 @@ export function RithmicSyncFeedback({ totalAccounts }: RithmicSyncFeedbackProps)
   }
 
   const getAccountStatus = (accountId: string, progress: typeof accountsProgress[string]) => {
-    if (!progress) return { label: 'Pending', variant: 'outline' as const }
-    if (progress.isComplete) return { label: 'Complete', variant: 'default' as const }
-    if (accountId === currentAccount && progress.current > 0) return { label: 'Processing', variant: 'secondary' as const }
-    return { label: 'Queued', variant: 'outline' as const }
+    if (!progress) return { label: t('rithmic.sync.status.pending'), variant: 'outline' as const }
+    if (progress.isComplete) return { label: t('rithmic.sync.status.complete'), variant: 'default' as const }
+    if (accountId === currentAccount && progress.current > 0) return { label: t('rithmic.sync.status.processing'), variant: 'secondary' as const }
+    return { label: t('rithmic.sync.status.queued'), variant: 'outline' as const }
   }
 
   const getConnectionIcon = () => {
@@ -95,7 +97,7 @@ export function RithmicSyncFeedback({ totalAccounts }: RithmicSyncFeedbackProps)
     <Card className="w-full mx-auto overflow-hidden">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          Rithmic Data Sync
+          {t('rithmic.sync.title')}
           <motion.div
             initial={{ scale: 0.5 }}
             animate={{ scale: 1 }}
@@ -108,8 +110,8 @@ export function RithmicSyncFeedback({ totalAccounts }: RithmicSyncFeedbackProps)
       <CardContent>
         <motion.div className="space-y-4" layout>
           <div className="flex items-center justify-between text-sm">
-            <span>Total Accounts: {totalAccounts}</span>
-            <span>Processed: {processingStats.accountsProcessed}</span>
+            <span>{t('rithmic.sync.totalAccounts')}: {totalAccounts}</span>
+            <span>{t('rithmic.sync.processed')}: {processingStats.accountsProcessed}</span>
           </div>
 
           <ScrollArea className="h-[400px] pr-4">
@@ -142,12 +144,12 @@ export function RithmicSyncFeedback({ totalAccounts }: RithmicSyncFeedbackProps)
                     />
                     
                     <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                      <div>Days: {progress?.current || 0} / {progress?.total || 0}</div>
+                      <div>{t('rithmic.sync.days')}: {progress?.current || 0} / {progress?.total || 0}</div>
                     </div>
 
                     {progress?.currentDate && progress.current > 0 && !progress.isComplete && (
                       <div className="text-xs text-muted-foreground">
-                        Processing: {progress.currentDate}
+                        {t('rithmic.sync.processing')}: {progress.currentDate}
                       </div>
                     )}
 

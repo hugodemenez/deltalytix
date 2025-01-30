@@ -14,8 +14,6 @@ interface Notification {
   title: string
   message: string
   timestamp: number
-  count?: number
-  details?: string[]
   progress?: {
     current: number
     total: number
@@ -38,15 +36,6 @@ export function WebSocketNotifications() {
         total: 0,
         ordersProcessed: 0
       }
-    },
-    error: {
-      id: 'error',
-      type: 'error',
-      title: 'Errors',
-      message: 'No errors',
-      timestamp: Date.now(),
-      count: 0,
-      details: []
     }
   })
   const [isComplete, setIsComplete] = useState(false)
@@ -100,14 +89,18 @@ export function WebSocketNotifications() {
 
   useEffect(() => {
     if (lastMessage) {
-      if (lastMessage.type === 'status') {
-        if (lastMessage.all_complete) {
+      if (lastMessage.type === 'status' || lastMessage.type === 'processing_complete') {
+        if (lastMessage.all_complete || lastMessage.type === 'processing_complete') {
           setIsComplete(true)
-        } else if (lastMessage.level === 'info' && lastMessage.message === 'Process completed successfully') {
-          // Set complete flag and hide notifications after delay
-          setTimeout(() => {
-            setIsComplete(true)
-          }, 5000)
+          setNotifications(prev => ({
+            ...prev,
+            progress: {
+              ...prev.progress,
+              type: 'success',
+              message: 'Processing completed successfully',
+              timestamp: Date.now()
+            }
+          }))
         }
       } else if (lastMessage.type === 'log' && lastMessage.level === 'info') {
         // Parse progress from processing date messages
@@ -131,17 +124,42 @@ export function WebSocketNotifications() {
             }
           }))
         }
-      } else if (lastMessage.type === 'error') {
+      } else if (lastMessage.type === 'order_update') {
+        // Update orders processed count
         setNotifications(prev => ({
           ...prev,
-          error: {
-            ...prev.error,
-            message: lastMessage.message,
-            count: (prev.error.count || 0) + 1,
+          progress: {
+            ...prev.progress,
             timestamp: Date.now(),
-            details: [...(prev.error.details || []), lastMessage.message].slice(-5)
+            progress: {
+              ...prev.progress.progress!,
+              ordersProcessed: (prev.progress.progress?.ordersProcessed || 0) + 1,
+              current: prev.progress.progress?.current || 0,
+              total: prev.progress.progress?.total || 0
+            }
           }
         }))
+      } else if (lastMessage.type === 'progress') {
+        const progressMatch = lastMessage.message.match(/\[(.*?)\] Processing date (\d+)\/(\d+)(?:: (\d{8}))?/)
+        if (progressMatch) {
+          const [, accountId, current, total, date] = progressMatch
+          setNotifications(prev => ({
+            ...prev,
+            progress: {
+              ...prev.progress,
+              type: 'info',
+              message: `Processing account ${accountId}`,
+              timestamp: Date.now(),
+              progress: {
+                current: parseInt(current),
+                total: parseInt(total),
+                ordersProcessed: prev.progress.progress?.ordersProcessed || 0,
+                currentDate: date,
+                currentDayNumber: parseInt(current)
+              }
+            }
+          }))
+        }
       }
     }
   }, [lastMessage, refreshTrades])
@@ -154,13 +172,16 @@ export function WebSocketNotifications() {
         const updated = { ...prev }
         Object.keys(updated).forEach(key => {
           if (updated[key].timestamp < fiveMinutesAgo) {
-            // Reset notifications to default state instead of removing them
+            // Reset notifications to default state
             updated[key] = {
               ...updated[key],
               type: 'info',
-              message: key === 'progress' ? 'No account being processed' : 'No errors',
-              count: 0,
-              details: []
+              message: 'No account being processed',
+              progress: {
+                current: 0,
+                total: 0,
+                ordersProcessed: 0
+              }
             }
           }
         })
@@ -195,69 +216,47 @@ export function WebSocketNotifications() {
   }, [lastMessage, refreshTrades])
 
   // Don't render if process is complete or no active notifications
-  if (isComplete || !Object.values(notifications).some(notification => 
-    notification.message !== 'No errors' &&
-    notification.message !== 'No account being processed'
-  )) {
+  if (isComplete || notifications.progress.message === 'No account being processed') {
     return null
   }
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full">
-      {Object.values(notifications)
-        .filter(notification => 
-          notification.message !== 'No errors' &&
-          notification.message !== 'No account being processed'
-        )
-        .map(notification => (
-          <Alert
-            key={notification.id}
-            className={cn(
-              "transition-all duration-300 hover:translate-x-[-5px]",
-              notification.type === 'error' && "border-destructive",
-              notification.type === 'success' && "border-green-500",
-            )}
-          >
-            <div className="flex items-start gap-2">
-              {notification.type === 'error' && <XCircle className="h-4 w-4 text-destructive" />}
-              {notification.type === 'success' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-              {notification.type === 'info' && <Info className="h-4 w-4 text-blue-500" />}
-              <div className="space-y-1 w-full">
-                <AlertTitle className="flex justify-between">
-                  {notification.title}
-                  {notification.count ? <span className="text-sm text-muted-foreground">({notification.count})</span> : null}
-                </AlertTitle>
-                <AlertDescription>
-                  <div>{notification.message}</div>
-                  {notification.progress && notification.progress.total > 0 && (
-                    <div className="mt-2 space-y-2">
-                      <Progress 
-                        value={(notification.progress.current / notification.progress.total) * 100} 
-                        className="w-full h-2" 
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Days: {notification.progress.current} / {notification.progress.total}</span>
-                        <span>Orders: {notification.progress.ordersProcessed}</span>
-                      </div>
-                      {notification.progress.currentDate && notification.progress.currentDayNumber && (
-                        <div className="text-xs text-muted-foreground">
-                          Processing day {notification.progress.currentDayNumber} - {notification.progress.currentDate}
-                        </div>
-                      )}
+      <Alert
+        key={notifications.progress.id}
+        className={cn(
+          "transition-all duration-300 hover:translate-x-[-5px]",
+          notifications.progress.type === 'success' && "border-green-500"
+        )}
+      >
+        <div className="flex items-start gap-2">
+          {notifications.progress.type === 'success' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+          {notifications.progress.type === 'info' && <Info className="h-4 w-4 text-blue-500" />}
+          <div className="space-y-1 w-full">
+            <AlertTitle>{notifications.progress.title}</AlertTitle>
+            <AlertDescription>
+              <div>{notifications.progress.message}</div>
+              {notifications.progress.progress && notifications.progress.progress.total > 0 && (
+                <div className="mt-2 space-y-2">
+                  <Progress 
+                    value={(notifications.progress.progress.current / notifications.progress.progress.total) * 100} 
+                    className="w-full h-2" 
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Days: {notifications.progress.progress.current} / {notifications.progress.progress.total}</span>
+                    <span>Orders: {notifications.progress.progress.ordersProcessed}</span>
+                  </div>
+                  {notifications.progress.progress.currentDate && notifications.progress.progress.currentDayNumber && (
+                    <div className="text-xs text-muted-foreground">
+                      Processing day {notifications.progress.progress.currentDayNumber} - {notifications.progress.progress.currentDate}
                     </div>
                   )}
-                  {notification.details && notification.details.length > 0 && (
-                    <div className="mt-2 text-sm text-muted-foreground">
-                      {notification.details.map((detail, i) => (
-                        <div key={i} className="truncate">{detail}</div>
-                      ))}
-                    </div>
-                  )}
-                </AlertDescription>
-              </div>
-            </div>
-          </Alert>
-        ))}
+                </div>
+              )}
+            </AlertDescription>
+          </div>
+        </div>
+      </Alert>
     </div>
   )
 } 

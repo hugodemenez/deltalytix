@@ -16,6 +16,9 @@ import { saveTrades } from '@/server/database'
 import { useTrades } from '@/components/context/trades-data'
 import { RithmicSyncFeedback } from './rithmic-sync-feedback'
 import { useWebSocket } from '../context/websocket-context'
+import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
+import { RithmicCredentialsManager } from './rithmic-credentials-manager'
+import { useI18n } from '@/locales/client'
 
 interface RithmicCredentials {
   username: string
@@ -72,14 +75,16 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     resetProcessingState,
     feedbackMessages,
     messageHistory,
-    handleMessage
+    handleMessage,
+    step,
+    setStep
   } = useWebSocket()
 
-  const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [isLoading, setIsLoading] = useState(false)
   const [serverConfigs, setServerConfigs] = useState<ServerConfigurations>({})
   const [token, setToken] = useState<string | null>(null)
   const [wsUrl, setWsUrl] = useState<string | null>(null)
+  const [shouldAutoConnect, setShouldAutoConnect] = useState(false)
   const [credentials, setCredentials] = useState<RithmicCredentials>({
     username: '',
     password: '',
@@ -87,6 +92,171 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     location: 'Chicago Area',
     userId: user?.id || ''
   })
+  const [shouldSaveCredentials, setShouldSaveCredentials] = useState(true)
+  const [showCredentialsManager, setShowCredentialsManager] = useState(true)
+  const [currentCredentialId, setCurrentCredentialId] = useState<string | null>(null)
+  const t = useI18n()
+
+  const handleConnect = useCallback(async (event: React.FormEvent, isAutoConnect: boolean = false) => {
+    event.preventDefault()
+    setIsLoading(true)
+
+    // Disconnect existing WebSocket connection if any
+    if (isConnected) {
+      console.log('Disconnecting existing WebSocket connection before new connection attempt')
+      disconnect()
+    }
+
+    try {
+      const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
+      const protocol = isLocalhost ? window.location.protocol : 'https:'
+      
+      const payload = {
+        username: credentials.username,
+        password: credentials.password,
+        server_type: credentials.server_type,
+        location: credentials.location,
+        userId: credentials.userId
+      }
+
+      // Create AbortController for timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 seconds timeout
+
+      const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      const data = await response.json()
+      console.log('Account response:', data)
+
+      if (!data.success) {
+        throw new Error(data.message || t('rithmic.error.invalidCredentials'))
+      }
+
+      setAvailableAccounts(data.accounts)
+      setToken(data.token)
+      const wsProtocol = isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
+      setWsUrl(data.websocket_url.replace('ws://your-domain', 
+        `${wsProtocol}//${process.env.NEXT_PUBLIC_API_URL}`))
+      console.log('Token set:', data.token)
+      console.log('WebSocket URL set:', data.websocket_url)
+      
+      // Always go to account selection when editing credentials
+      setStep('select-accounts')
+      
+      // Send success message
+      handleMessage({
+        type: 'log',
+        level: 'info',
+        message: `Retrieved ${data.accounts.length} accounts. Please select accounts and click "Start Processing"`
+      })
+    } catch (error: unknown) {
+      console.error('Connection error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      
+      // Show error toast
+      toast({
+        title: t('rithmic.error.connectionFailed'),
+        description: error instanceof DOMException && error.name === 'AbortError' 
+          ? t('rithmic.error.timeout')
+          : errorMessage,
+        variant: "destructive"
+      })
+
+      // Reset form if it's a timeout or invalid credentials
+      if (error instanceof DOMException && error.name === 'AbortError' || 
+          errorMessage.includes('invalid credentials')) {
+        setCredentials({
+          username: '',
+          password: '',
+          server_type: 'Rithmic Paper Trading',
+          location: 'Chicago Area',
+          userId: user?.id || ''
+        })
+      }
+
+      handleMessage({
+        type: 'log',
+        level: 'error',
+        message: `Connection error: ${errorMessage}`
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [
+    credentials, 
+    isConnected, 
+    disconnect, 
+    t, 
+    selectedAccounts, 
+    connect, 
+    handleMessage, 
+    calculateStartDate, 
+    user?.id
+  ])
+
+  // Handle selecting a credential from the manager
+  const handleSelectCredential = useCallback((credential: RithmicCredentialSet) => {
+    setCredentials({
+      ...credential.credentials,
+      password: credential.credentials.password,
+      userId: user?.id || ''
+    })
+    setSelectedAccounts(credential.selectedAccounts)
+    setCurrentCredentialId(credential.id)
+    setShouldSaveCredentials(true)
+    setShowCredentialsManager(false)
+    setShouldAutoConnect(true)
+  }, [user?.id])
+
+  // Effect to handle auto-connect only when editing from credentials manager
+  useEffect(() => {
+    if (shouldAutoConnect && credentials.username && credentials.password) {
+      setShouldAutoConnect(false)
+      handleConnect(new Event('submit') as any, false)
+    }
+  }, [shouldAutoConnect, credentials, handleConnect])
+
+  // Load saved data on mount
+  useEffect(() => {
+    const allData = getAllRithmicData()
+    const lastCredential = Object.values(allData)[0] // Get first saved credential
+    if (lastCredential && user?.id) {
+      setCredentials({
+        ...lastCredential.credentials,
+        userId: user.id
+      })
+      setSelectedAccounts(lastCredential.selectedAccounts)
+      setShouldSaveCredentials(true)
+    }
+  }, [user?.id])
+
+  // Update the saveCredentialsAndAccounts function to use the current credential ID
+  const saveCredentialsAndAccounts = useCallback(() => {
+    if (shouldSaveCredentials) {
+      const dataToSave = {
+        id: currentCredentialId || generateCredentialId(),
+        credentials: {
+          username: credentials.username,
+          password: credentials.password,
+          server_type: credentials.server_type,
+          location: credentials.location
+        },
+        selectedAccounts,
+        lastSyncTime: new Date().toISOString()
+      }
+      saveRithmicData(dataToSave)
+      setCurrentCredentialId(dataToSave.id)
+    }
+  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId])
 
   // Reset state when component mounts (modal opens)
   useEffect(() => {
@@ -95,6 +265,8 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     setIsLoading(false)
     setToken(null)
     setWsUrl(null)
+    setShouldAutoConnect(false)
+    setShowCredentialsManager(true)
     setCredentials({
       username: '',
       password: '',
@@ -114,14 +286,6 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       return () => clearTimeout(timeoutId)
     }
   }, [processingStats.isComplete, setIsOpen, disconnect])
-
-  // Check for active connection on mount
-  useEffect(() => {
-    if (isConnected && selectedAccounts.length > 0) {
-      console.log('Active connection detected, resuming processing view')
-      setStep('processing')
-    }
-  }, [isConnected, selectedAccounts])
 
   // Update userId when user changes
   useEffect(() => {
@@ -168,6 +332,14 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     fetchServerConfigs()
   }, [])
 
+  // Update effect to use context step
+  useEffect(() => {
+    if (isConnected && selectedAccounts.length > 0) {
+      console.log('Active connection detected, resuming processing view')
+      setStep('processing')
+    }
+  }, [isConnected, selectedAccounts, setStep])
+
   function handleStartProcessing() {
     setIsLoading(true)
     setStep('processing')
@@ -177,76 +349,10 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       return
     }
 
+    saveCredentialsAndAccounts()
     const startDate = calculateStartDate(selectedAccounts)
     console.log('Connecting to WebSocket:', wsUrl)
     connect(wsUrl, token, selectedAccounts, startDate)
-  }
-
-  async function handleConnect(event: React.FormEvent) {
-    event.preventDefault()
-    setIsLoading(true)
-
-    // Disconnect existing WebSocket connection if any
-    if (isConnected) {
-      console.log('Disconnecting existing WebSocket connection before new connection attempt')
-      disconnect()
-    }
-
-    try {
-      const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
-      const protocol = isLocalhost ? window.location.protocol : 'https:'
-      
-      const payload = {
-        username: credentials.username,
-        password: credentials.password,
-        server_type: credentials.server_type,
-        location: credentials.location,
-        userId: credentials.userId
-      }
-      
-      const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
-      })
-
-      const data = await response.json()
-      console.log('Account response:', data)
-
-      if (!data.success) {
-        throw new Error(data.message)
-      }
-
-      setAvailableAccounts(data.accounts)
-      setToken(data.token)
-      const wsProtocol = isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
-      setWsUrl(data.websocket_url.replace('ws://your-domain', 
-        `${wsProtocol}//${process.env.NEXT_PUBLIC_API_URL}`))
-      console.log('Token set:', data.token)
-      console.log('WebSocket URL set:', data.websocket_url)
-      setStep('select-accounts')
-      
-      // Send success message
-      handleMessage({
-        type: 'log',
-        level: 'info',
-        message: `Retrieved ${data.accounts.length} accounts. Please select accounts and click "Start Processing"`
-      })
-    } catch (error: unknown) {
-      console.error('Connection error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      
-      // Send error message
-      handleMessage({
-        type: 'log',
-        level: 'error',
-        message: `Connection error: ${errorMessage}`
-      })
-    } finally {
-      setIsLoading(false)
-    }
   }
 
   function calculateStartDate(selectedAccounts: string[]): string {
@@ -254,184 +360,258 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     const accountTrades = trades.filter(trade => selectedAccounts.includes(trade.accountNumber))
     
     if (accountTrades.length === 0) {
-      // If no trades found, return date 30 days ago
+      // If no trades found, return date 90 days ago
       const date = new Date()
-      date.setDate(date.getDate() - 30)
+      date.setDate(date.getDate() - 91)
       return date.toISOString().slice(0, 10).replace(/-/g, '')
     }
 
-    // Find the most recent trade date using entryDate
-    const mostRecentDate = new Date(Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime())))
+    // Find the most recent trade date for each account
+    const accountDates = selectedAccounts.map(accountId => {
+      const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
+      if (accountTrades.length === 0) return null
+      return Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
+    }).filter(Boolean) as number[]
+
+    // Get the oldest most recent date across all accounts
+    const oldestRecentDate = new Date(Math.min(...accountDates))
     
     // Set to next day
-    mostRecentDate.setDate(mostRecentDate.getDate() + 1)
+    oldestRecentDate.setDate(oldestRecentDate.getDate() + 1)
     
     // Format as YYYYMMDD
-    return mostRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+    return oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
   }
 
   return (
     <div className="space-y-6">
-      {step === 'credentials' && (
-        <form onSubmit={handleConnect} className="space-y-4" autoComplete="off">
-          <div className="space-y-2">
-            <Label htmlFor="rithmic-username">Rithmic Username</Label>
-            <Input 
-              id="rithmic-username" 
-              name="rithmic-username"
-              value={credentials.username}
-              onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
-              autoComplete="off"
-              spellCheck="false"
-              required 
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="rithmic-password">Rithmic Password</Label>
-            <Input 
-              id="rithmic-password" 
-              name="rithmic-password"
-              type="password" 
-              value={credentials.password}
-              onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-              autoComplete="new-password"
-              required 
-            />
-          </div>
+      {showCredentialsManager ? (
+        <RithmicCredentialsManager
+          onSelectCredential={handleSelectCredential}
+          onAddNew={() => {
+            setShowCredentialsManager(false)
+            setSelectedAccounts([])
+            setAvailableAccounts([])
+            setCredentials({
+              username: '',
+              password: '',
+              server_type: 'Rithmic Paper Trading',
+              location: 'Chicago Area',
+              userId: user?.id || ''
+            })
+            setCurrentCredentialId(null)
+          }}
+        />
+      ) : (
+        <>
+          {step === 'credentials' && (
+            <form onSubmit={(e) => handleConnect(e, false)} className="space-y-4" autoComplete="off">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold">
+                  {currentCredentialId ? t('rithmic.editCredentials') : t('rithmic.addNewCredentials')}
+                </h2>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCredentialsManager(true)}
+                >
+                  {t('rithmic.backToList')}
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="rithmic-username">{t('rithmic.usernameLabel')}</Label>
+                <Input 
+                  id="rithmic-username" 
+                  name="rithmic-username"
+                  value={credentials.username}
+                  onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
+                  autoComplete="off"
+                  spellCheck="false"
+                  required 
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="rithmic-password">{t('rithmic.passwordLabel')}</Label>
+                <Input 
+                  id="rithmic-password" 
+                  name="rithmic-password"
+                  type="password" 
+                  value={credentials.password}
+                  onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
+                  autoComplete="new-password"
+                  required 
+                />
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="server-type">Server Type</Label>
-            <Select
-              name="server-type"
-              value={credentials.server_type}
-              onValueChange={(value) => {
-                setCredentials(prev => ({ 
-                  ...prev, 
-                  server_type: value,
-                  location: '' // Reset location when server type changes
-                }))
-              }}
-            >
-              <SelectTrigger id="server-type">
-                <SelectValue placeholder="Select server type" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(serverConfigs).map((serverType) => (
-                  <SelectItem key={serverType} value={serverType}>
-                    {serverType}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Select
-              name="location"
-              value={credentials.location}
-              onValueChange={(value) => setCredentials(prev => ({ ...prev, location: value }))}
-              disabled={!credentials.server_type}
-            >
-              <SelectTrigger id="location">
-                <SelectValue placeholder="Select location" />
-              </SelectTrigger>
-              <SelectContent>
-                {credentials.server_type && serverConfigs[credentials.server_type]?.map((location) => (
-                  <SelectItem key={location} value={location}>
-                    {location}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button 
-            type="submit" 
-            disabled={isLoading || !credentials.server_type || !credentials.location} 
-            className="w-full"
-          >
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Get Accounts
-          </Button>
-        </form>
-      )}
-
-      {step === 'select-accounts' && (
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Select Accounts to Import</h3>
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
-              <Checkbox
-                id="select-all"
-                checked={availableAccounts.length > 0 && selectedAccounts.length === availableAccounts.length}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    setSelectedAccounts(availableAccounts.map(account => account.account_id))
-                  } else {
-                    setSelectedAccounts([])
-                  }
-                }}
-              />
-              <Label 
-                htmlFor="select-all"
-                className="flex-1 cursor-pointer font-medium"
-              >
-                Select All Accounts
-              </Label>
-            </div>
-            {availableAccounts.map((account) => (
-              <div key={account.account_id} className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
-                <Checkbox
-                  id={account.account_id}
-                  checked={selectedAccounts.includes(account.account_id)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedAccounts([...selectedAccounts, account.account_id])
-                    } else {
-                      setSelectedAccounts(selectedAccounts.filter(id => id !== account.account_id))
-                    }
+              <div className="space-y-2">
+                <Label htmlFor="server-type">{t('rithmic.serverTypeLabel')}</Label>
+                <Select
+                  name="server-type"
+                  value={credentials.server_type}
+                  onValueChange={(value) => {
+                    setCredentials(prev => ({ 
+                      ...prev, 
+                      server_type: value,
+                      location: '' // Reset location when server type changes
+                    }))
                   }}
+                >
+                  <SelectTrigger id="server-type">
+                    <SelectValue placeholder={t('rithmic.selectServerType')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(serverConfigs).map((serverType) => (
+                      <SelectItem key={serverType} value={serverType}>
+                        {serverType}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">{t('rithmic.locationLabel')}</Label>
+                <Select
+                  name="location"
+                  value={credentials.location}
+                  onValueChange={(value) => setCredentials(prev => ({ ...prev, location: value }))}
+                  disabled={!credentials.server_type}
+                >
+                  <SelectTrigger id="location">
+                    <SelectValue placeholder={t('rithmic.selectLocation')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {credentials.server_type && serverConfigs[credentials.server_type]?.map((location) => (
+                      <SelectItem key={location} value={location}>
+                        {location}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center space-x-2 py-2">
+                <Checkbox
+                  id="save-credentials"
+                  checked={shouldSaveCredentials}
+                  onCheckedChange={(checked) => setShouldSaveCredentials(checked as boolean)}
                 />
                 <Label 
-                  htmlFor={account.account_id}
-                  className="flex-1 cursor-pointer"
+                  htmlFor="save-credentials"
+                  className="text-sm text-muted-foreground cursor-pointer"
                 >
-                  {account.account_id} 
-                  <span className="text-sm text-muted-foreground ml-2">
-                    (FCM ID: {account.fcm_id})
-                  </span>
+                  {currentCredentialId ? t('rithmic.updateSavedCredentials') : t('rithmic.saveForNextLogin')}
                 </Label>
               </div>
-            ))}
-          </div>
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              onClick={() => setStep('credentials')}
-              disabled={isLoading}
-            >
-              Back
-            </Button>
-            <Button
-              onClick={handleStartProcessing}
-              disabled={isLoading || selectedAccounts.length === 0}
-              className="flex-1"
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Start Processing {selectedAccounts.length} Account{selectedAccounts.length !== 1 ? 's' : ''}
-            </Button>
-          </div>
-        </div>
-      )}
 
-      {step === 'processing' && (
-        <div className="space-y-4">
-          <RithmicSyncFeedback 
-            totalAccounts={selectedAccounts.length}
-          />
-        </div>
+              <div className="flex justify-between">
+                <Button 
+                  type="submit" 
+                  disabled={isLoading || !credentials.server_type || !credentials.location} 
+                  className="w-full"
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {t('rithmic.getAccounts')}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {step === 'select-accounts' && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium">{t('rithmic.selectAccountsTitle')}</h3>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
+                  <Checkbox
+                    id="select-all"
+                    checked={availableAccounts.length > 0 && selectedAccounts.length === availableAccounts.length}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedAccounts(availableAccounts.map(account => account.account_id))
+                      } else {
+                        setSelectedAccounts([])
+                      }
+                    }}
+                  />
+                  <Label 
+                    htmlFor="select-all"
+                    className="flex-1 cursor-pointer font-medium"
+                  >
+                    {t('rithmic.selectAllAccounts')}
+                  </Label>
+                </div>
+                {availableAccounts.map((account) => (
+                  <div key={account.account_id} className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
+                    <Checkbox
+                      id={account.account_id}
+                      checked={selectedAccounts.includes(account.account_id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedAccounts([...selectedAccounts, account.account_id])
+                        } else {
+                          setSelectedAccounts(selectedAccounts.filter(id => id !== account.account_id))
+                        }
+                      }}
+                    />
+                    <Label 
+                      htmlFor={account.account_id}
+                      className="flex-1 cursor-pointer"
+                    >
+                      {account.account_id} 
+                      <span className="text-sm text-muted-foreground ml-2">
+                        ({t('rithmic.fcmId')}: {account.fcm_id})
+                      </span>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center space-x-2 py-2">
+                <Checkbox
+                  id="save-accounts"
+                  checked={shouldSaveCredentials}
+                  onCheckedChange={(checked) => setShouldSaveCredentials(checked as boolean)}
+                />
+                <Label 
+                  htmlFor="save-accounts"
+                  className="text-sm text-muted-foreground cursor-pointer"
+                >
+                  {t('rithmic.rememberSelectedAccounts')}
+                </Label>
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStep('credentials')
+                    setSelectedAccounts([])
+                    setAvailableAccounts([])
+                  }}
+                  disabled={isLoading}
+                >
+                  {t('common.back')}
+                </Button>
+                <Button
+                  onClick={handleStartProcessing}
+                  disabled={isLoading || selectedAccounts.length === 0}
+                  className="flex-1"
+                >
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {t(`rithmic.startProcessing.${selectedAccounts.length === 1 ? 'one' : 'other'}`, { count: selectedAccounts.length })}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {step === 'processing' && (
+            <div className="space-y-4">
+              <RithmicSyncFeedback 
+                totalAccounts={selectedAccounts.length}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   )

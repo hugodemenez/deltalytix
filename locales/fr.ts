@@ -999,6 +999,11 @@ export default {
                 queued: "En file d'attente"
             }
         },
+        error: {
+            connectionFailed: "Échec de la Connexion",
+            timeout: "La connexion a expiré. Veuillez vérifier vos identifiants et réessayer.",
+            invalidCredentials: "Identifiants invalides. Veuillez vérifier votre nom d'utilisateur et votre mot de passe."
+        },
         editCredentials: "Modifier les Identifiants",
         addNewCredentials: "Ajouter de Nouveaux Identifiants",
         backToList: "Retour à la Liste",
@@ -1015,9 +1020,7 @@ export default {
         selectAllAccounts: "Sélectionner Tous les Comptes",
         fcmId: "ID FCM",
         rememberSelectedAccounts: "Mémoriser les comptes sélectionnés pour la prochaine synchronisation",
-        startProcessing: {
-            one: "Démarrer le Traitement de {{count}} Compte",
-            other: "Démarrer le Traitement de {{count}} Comptes"
-        }
+        'startProcessing.one': "Démarrer le Traitement de {count} Compte",
+        'startProcessing.other': "Démarrer le Traitement de {count} Comptes"
     }
 } as const

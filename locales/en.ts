@@ -990,11 +990,11 @@ export default {
         lastSync: "Last Sync",
         nextSync: "Next Sync",
         actions: "Actions",
-        noSavedCredentials: "No saved credentials found",
+        noSavedCredentials: "No saved credentials",
         deleteCredentials: "Delete Credentials",
         deleteCredentialsConfirm: "Are you sure you want to delete these credentials? This action cannot be undone.",
         sync: {
-            title: "Rithmic Data Sync",
+            title: "Rithmic Synchronization",
             totalAccounts: "Total Accounts",
             processed: "Processed",
             days: "Days",
@@ -1005,6 +1005,11 @@ export default {
                 processing: "Processing",
                 queued: "Queued"
             }
+        },
+        error: {
+            connectionFailed: "Connection Failed",
+            timeout: "Connection timed out. Please check your credentials and try again.",
+            invalidCredentials: "Invalid credentials. Please check your username and password."
         },
         editCredentials: "Edit Credentials",
         addNewCredentials: "Add New Credentials",
@@ -1022,9 +1027,7 @@ export default {
         selectAllAccounts: "Select All Accounts",
         fcmId: "FCM ID",
         rememberSelectedAccounts: "Remember selected accounts for next sync",
-        startProcessing: {
-            one: "Start Processing {{count}} Account",
-            other: "Start Processing {{count}} Accounts"
-        }
+        'startProcessing.one': "Start Processing {count} Account",
+        'startProcessing.other': "Start Processing {count} Accounts"
     }
 } as const

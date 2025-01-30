@@ -1,7 +1,9 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react'
 import { useTrades } from '@/components/context/trades-data'
+import { getRithmicData, getAllRithmicData, updateLastSyncTime } from '@/lib/rithmic-storage'
+import { useUser } from '@/components/context/user-data'
 
 interface AccountProgress {
   ordersProcessed: number
@@ -44,6 +46,12 @@ interface WebSocketContextType {
   messageHistory: any[]
   handleMessage: (message: any) => void
   clearAllState: () => void
+  lastSyncTime: Date | null
+  isAutoSyncing: boolean
+  activeCredentialIds: string[]
+  step: 'credentials' | 'select-accounts' | 'processing'
+  setStep: (step: 'credentials' | 'select-accounts' | 'processing') => void
+  performAutoSyncForCredential: (credentialId: string) => Promise<void>
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
@@ -60,7 +68,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [availableAccounts, setAvailableAccounts] = useState<{ account_id: string; fcm_id: string }[]>([])
   const [feedbackMessages, setFeedbackMessages] = useState<string[]>([])
   const [messageHistory, setMessageHistory] = useState<any[]>([])
-  const { refreshTrades } = useTrades()
+  const { refreshTrades, trades } = useTrades()
   const [processingStats, setProcessingStats] = useState<ProcessingStats>({
     totalAccountsAvailable: 0,
     accountsProcessed: 0,
@@ -68,6 +76,61 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     isComplete: false
   })
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
+  const { user } = useUser()
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
+  const [isAutoSyncing, setIsAutoSyncing] = useState(false)
+  const syncIntervalRef = useRef<NodeJS.Timeout>()
+  const [activeCredentialIds, setActiveCredentialIds] = useState<string[]>([])
+  const activityTimeoutRef = useRef<NodeJS.Timeout>()
+  const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
+
+  const resetProcessingState = useCallback(() => {
+    setProcessingStats({
+      totalAccountsAvailable: 0,
+      accountsProcessed: 0,
+      totalOrders: 0,
+      isComplete: false
+    })
+    setOrders([])
+    setAccountsProgress({})
+    setCurrentAccount(null)
+    setDateRange(null)
+    setFeedbackMessages([])
+  }, [])
+
+  const disconnect = useCallback(() => {
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current)
+    }
+    if (ws) {
+      console.log('Disconnecting WebSocket')
+      ws.close()
+      setWs(null)
+      setIsConnected(false)
+      setConnectionStatus('Disconnected')
+      resetProcessingState()
+    }
+  }, [ws, resetProcessingState])
+
+  const resetActivityTimeout = useCallback(() => {
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current)
+    }
+    
+    activityTimeoutRef.current = setTimeout(() => {
+      console.log('WebSocket inactive for 15 seconds, closing connection')
+      handleMessage({
+        type: 'log',
+        level: 'warning',
+        message: 'Connection timeout: No activity for 15 seconds'
+      })
+      disconnect()
+      setIsConnected(false)
+      setConnectionStatus('Disconnected: Timeout')
+      resetProcessingState()
+      setStep('credentials')
+    }, 15000)
+  }, [disconnect, resetProcessingState])
 
   const handleMessage = useCallback((message: any) => {
     if (!message) return
@@ -371,22 +434,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         return [...prev, messageString]
       })
     }
-  }, [refreshTrades, currentAccount, setCurrentAccount])
-
-  const resetProcessingState = useCallback(() => {
-    setProcessingStats({
-      totalAccountsAvailable: 0,
-      accountsProcessed: 0,
-      totalOrders: 0,
-      isComplete: false
-    })
-    setOrders([])
-    setAccountsProgress({})
-    setCurrentAccount(null)
-    setDateRange(null)
-    setFeedbackMessages([])
-    // Don't reset message history here
-  }, [])
+  }, [currentAccount, setCurrentAccount])
 
   const clearAllState = useCallback(() => {
     resetProcessingState()
@@ -434,6 +482,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       console.log('WebSocket connection established')
       setIsConnected(true)
       setConnectionStatus('Connected')
+      
+      // Start activity timeout as soon as connection opens
+      resetActivityTimeout()
+      
       handleMessage({ 
         type: 'connection_status', 
         status: 'Connected',
@@ -455,6 +507,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       console.log('Received WebSocket message:', event.data)
       try {
         const message = JSON.parse(event.data)
+        // Reset timeout before processing message
+        resetActivityTimeout()
         handleMessage(message)
       } catch (error) {
         console.error('Error parsing WebSocket message:', error)
@@ -476,6 +530,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         status: 'WebSocket error occurred',
         message: 'WebSocket connection error occurred' 
       })
+      // Close connection on error
+      disconnect()
     }
 
     newWs.onclose = (event) => {
@@ -489,21 +545,146 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         status,
         message: `WebSocket disconnected: ${closeMessage}` 
       })
+      // Clear timeout on close
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current)
+      }
     }
 
     setWs(newWs)
-  }, [ws, handleMessage, resetProcessingState])
+  }, [ws, handleMessage, resetActivityTimeout, disconnect, resetProcessingState])
 
-  const disconnect = useCallback(() => {
-    if (ws) {
-      console.log('Disconnecting WebSocket')
-      ws.close()
-      setWs(null)
-      setIsConnected(false)
-      setConnectionStatus('Disconnected')
-      resetProcessingState()
+  // Function to perform automatic sync for a single credential set
+  const performAutoSyncForCredential = useCallback(async (credentialId: string) => {
+    if (!user?.id || isAutoSyncing) return
+
+    const savedData = getRithmicData(credentialId)
+    if (!savedData) return
+
+    setIsAutoSyncing(true)
+    
+    try {
+      const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
+      const protocol = isLocalhost ? window.location.protocol : 'https:'
+      
+      const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...savedData.credentials,
+          userId: user.id
+        })
+      })
+
+      const data = await response.json()
+      
+      if (!data.success) {
+        throw new Error(data.message)
+      }
+
+      setAvailableAccounts(data.accounts)
+      const wsProtocol = isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
+      const wsUrl = data.websocket_url.replace('ws://your-domain', 
+        `${wsProtocol}//${process.env.NEXT_PUBLIC_API_URL}`)
+
+      // Calculate start date based on existing trades
+      const accountTrades = trades.filter(trade => savedData.selectedAccounts.includes(trade.accountNumber))
+      let startDate: string
+
+      if (accountTrades.length === 0) {
+        // If no trades found, return date 90 days ago
+        const date = new Date()
+        date.setDate(date.getDate() - 91)
+        startDate = date.toISOString().slice(0, 10).replace(/-/g, '')
+      } else {
+        // Find the most recent trade date for each account
+        const accountDates = savedData.selectedAccounts.map(accountId => {
+          const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
+          if (accountTrades.length === 0) return null
+          return Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
+        }).filter(Boolean) as number[]
+
+        // Get the oldest most recent date across all accounts
+        const oldestRecentDate = new Date(Math.min(...accountDates))
+        
+        // Set to next day
+        oldestRecentDate.setDate(oldestRecentDate.getDate() + 1)
+        
+        // Format as YYYYMMDD
+        startDate = oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+      }
+
+      // Connect and start syncing
+      connect(wsUrl, data.token, savedData.selectedAccounts, startDate)
+      updateLastSyncTime(credentialId)
+      
+      handleMessage({
+        type: 'log',
+        level: 'info',
+        message: `Starting automatic background sync for ${savedData.name || savedData.credentials.username}`
+      })
+    } catch (error) {
+      console.error('Auto-sync error:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      handleMessage({
+        type: 'log',
+        level: 'error',
+        message: `Auto-sync error for credential set ${credentialId}: ${errorMessage}`
+      })
+    } finally {
+      setIsAutoSyncing(false)
     }
-  }, [ws, resetProcessingState])
+  }, [user?.id, isAutoSyncing, connect, handleMessage, trades])
+
+  // Function to check and sync all credentials
+  const performAutoSync = useCallback(async () => {
+    const allData = getAllRithmicData()
+    const now = new Date().getTime()
+
+    for (const [id, data] of Object.entries(allData)) {
+      const lastSync = new Date(data.lastSyncTime).getTime()
+      const hoursSinceLastSync = (now - lastSync) / (1000 * 60 * 60)
+      
+      if (hoursSinceLastSync >= 1) {
+        await performAutoSyncForCredential(id)
+      }
+    }
+  }, [performAutoSyncForCredential])
+
+  // Set up automatic sync interval
+  useEffect(() => {
+    // Initial check on mount
+    performAutoSync()
+
+    // Set up interval for future checks
+    syncIntervalRef.current = setInterval(() => {
+      performAutoSync()
+    }, 60 * 1000) // Check every minute
+
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current)
+      }
+    }
+  }, [performAutoSync])
+
+  // Clear interval when user changes
+  useEffect(() => {
+    if (!user?.id && syncIntervalRef.current) {
+      clearInterval(syncIntervalRef.current)
+    }
+  }, [user?.id])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (activityTimeoutRef.current) {
+        clearTimeout(activityTimeoutRef.current)
+      }
+    }
+  }, [])
 
   return (
     <WebSocketContext.Provider value={{ 
@@ -525,7 +706,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       feedbackMessages,
       messageHistory,
       handleMessage,
-      clearAllState
+      clearAllState,
+      lastSyncTime,
+      isAutoSyncing,
+      activeCredentialIds,
+      step,
+      setStep,
+      performAutoSyncForCredential
     }}>
       {children}
     </WebSocketContext.Provider>
