@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer, Legend, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts"
+import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer, Legend, XAxis, YAxis, CartesianGrid, LineChart, Line, ComposedChart, ReferenceLine } from "recharts"
 import {
   Card,
   CardContent,
@@ -29,7 +29,7 @@ interface ChartsProps {
 const chartConfig = {
   pnl: {
     label: "P&L Distribution",
-    color: "hsl(var(--chart-1))",
+    color: "hsl(var(--success))",
   },
   equity: {
     label: "Equity Variation",
@@ -255,105 +255,44 @@ export function Charts({ dayData }: ChartsProps) {
     ? dayData.trades.reduce((sum, trade) => sum + trade.timeInPosition, 0) / dayData.trades.length
     : 0
 
+  // Calculate common Y-axis domain for both charts
+  const calculateCommonDomain = React.useMemo(() => {
+    if (!dayData?.trades?.length) return [0, 0];
+    
+    // Get min/max from P&L distribution
+    const distributionValues = Object.values(accountPnL);
+    const distributionMin = Math.min(...distributionValues);
+    const distributionMax = Math.max(...distributionValues);
+
+    // Get min/max from equity chart
+    const equityMin = Math.min(
+      ...equityChartData.map(d => Math.min(d.pnl, d.balance))
+    );
+    const equityMax = Math.max(
+      ...equityChartData.map(d => Math.max(d.pnl, d.balance))
+    );
+
+    // Get the overall min/max
+    const overallMin = Math.min(distributionMin, equityMin);
+    const overallMax = Math.max(distributionMax, equityMax);
+    
+    // Add some padding (10%)
+    const padding = (overallMax - overallMin) * 0.1;
+    return [
+      Math.floor((overallMin - padding) / 100) * 100,
+      Math.ceil((overallMax + padding) / 100) * 100
+    ];
+  }, [dayData?.trades, accountPnL, equityChartData]);
+
   return (
     <div className="space-y-6">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>{t('calendar.charts.dailyPnlDistribution')}</CardTitle>
-          <CardDescription>
-            {t('calendar.charts.totalPnlAfterComm')}: {formatCurrency(totalPnL)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="h-[300px]">
-          <ChartContainer config={chartConfig} className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={chartData}
-                margin={{ top: 20, right: 40, left: 40, bottom: 5 }}
-                layout="vertical"
-              >
-                <YAxis 
-                  type="category" 
-                  dataKey="name" 
-                  hide 
-                />
-                <XAxis 
-                  type="number"
-                  tickFormatter={(value) => formatCurrency(value)}
-                  domain={['auto', 'auto']}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar 
-                  dataKey="value" 
-                  barSize={20}
-                  name={t('calendar.charts.accountPnl')}
-                  label={{
-                    position: 'right',
-                    formatter: (value: number) => formatCurrency(value)
-                  }}
-                >
-                  {chartData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={colors[index % colors.length]}
-                      className="transition-all duration-300 ease-in-out hover:opacity-80"
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>{t('calendar.charts.equityVariation')}</CardTitle>
-          <CardDescription>
-            {t('calendar.charts.finalBalance')}: {formatCurrency(equityChartData[equityChartData.length - 1]?.balance || 0)}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="h-[300px]">
-          <ChartContainer config={chartConfig} className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={equityChartData}
-                margin={{ top: 20, right: 40, left: 40, bottom: 20 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis 
-                  dataKey="time"
-                  angle={-45}
-                  textAnchor="end"
-                  height={60}
-                  tickFormatter={(time) => time.split(':').slice(0, 2).join(':')}
-                />
-                <YAxis
-                  tickFormatter={(value) => formatCurrency(value)}
-                />
-                <Tooltip content={<CustomEquityTooltip />} />
-                <Line
-                  type="stepAfter"
-                  dataKey="balance"
-                  stroke={chartConfig.equity.color}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name={t('calendar.charts.balance')}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2 flex-1">
             <CardTitle className="text-lg">{t('calendar.charts.dailyPnlAfterComm')}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-2">
-            <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <CardContent className="pt-2 mt-auto">
+            <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'}`}>
               {formatCurrency(totalPnL)}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
@@ -364,11 +303,11 @@ export function Charts({ dayData }: ChartsProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2 flex-1">
             <CardTitle className="text-lg">{t('calendar.charts.avgTimeInPosition')}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-2">
+          <CardContent className="pt-2 mt-auto">
             <p className="text-2xl font-bold">
               {formatDuration(avgTimeInPosition)}
             </p>
@@ -380,11 +319,11 @@ export function Charts({ dayData }: ChartsProps) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="flex flex-col">
+          <CardHeader className="pb-2 flex-1">
             <CardTitle className="text-lg">{t('calendar.charts.howWasYourDay')}</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-2 mt-auto">
             <div className="flex justify-around items-center">
               <Button
                 variant="ghost"
@@ -419,6 +358,136 @@ export function Charts({ dayData }: ChartsProps) {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>{t('calendar.charts.equityVariation')}</CardTitle>
+          <CardDescription>
+            {t('calendar.charts.finalBalance')}: {formatCurrency(equityChartData[equityChartData.length - 1]?.balance || 0)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="h-[300px]">
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
+                data={equityChartData}
+                margin={{ top: 20, right: 40, left: 60, bottom: 20 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="time"
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  tickFormatter={(time) => time.split(':').slice(0, 2).join(':')}
+                />
+                <YAxis
+                  yAxisId="left"
+                  tickFormatter={(value) => formatCurrency(value)}
+                  domain={calculateCommonDomain}
+                />
+                <YAxis
+                  yAxisId="right"
+                  orientation="right"
+                  tickFormatter={(value) => formatCurrency(value)}
+                  domain={calculateCommonDomain}
+                />
+                <Tooltip content={<CustomEquityTooltip />} />
+                <Bar
+                  yAxisId="left"
+                  dataKey="pnl"
+                  name={t('calendar.charts.tradePnl')}
+                  opacity={0.8}
+                >
+                  {equityChartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.pnl >= 0 ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
+                      className="transition-all duration-300 ease-in-out hover:opacity-70"
+                    />
+                  ))}
+                </Bar>
+                <Line
+                  yAxisId="right"
+                  type="stepAfter"
+                  dataKey="balance"
+                  stroke={chartConfig.equity.color}
+                  strokeWidth={2}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                  name={t('calendar.charts.balance')}
+                />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>{t('calendar.charts.dailyPnlDistribution')}</CardTitle>
+          <CardDescription>
+            {t('calendar.charts.totalPnlAfterComm')}: {formatCurrency(totalPnL)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="min-h-[400px] h-full pb-24">
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={chartData}
+                margin={{ top: 20, right: 40, left: 60, bottom: 100 }}
+                barCategoryGap={8}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis 
+                  type="category" 
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  height={100}
+                  interval={0}
+                  tick={(props) => {
+                    const { x, y, payload } = props;
+                    return (
+                      <g transform={`translate(${x},${y})`}>
+                        <text
+                          dy={8}
+                          dx={-8}
+                          textAnchor="end"
+                          transform="rotate(-45)"
+                          className="text-[10px] fill-current"
+                        >
+                          {payload.value}
+                        </text>
+                      </g>
+                    );
+                  }}
+                />
+                <YAxis 
+                  type="number"
+                  tickFormatter={(value) => formatCurrency(value)}
+                  domain={calculateCommonDomain}
+                />
+                <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar 
+                  dataKey="value" 
+                  barSize={20}
+                  name={t('calendar.charts.accountPnl')}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.value >= 0 ? colors[index % colors.length] : `hsl(var(--destructive))`}
+                      className="transition-all duration-300 ease-in-out hover:opacity-80"
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     </div>
   )
 }

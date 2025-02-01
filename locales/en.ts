@@ -509,6 +509,7 @@ export default {
     'calendar.charts.equityVariation': 'Equity Variation',
     'calendar.charts.finalBalance': 'Final Balance',
     'calendar.charts.balance': 'Balance',
+    'calendar.charts.tradePnl': 'Trade P&L',
     'commissions.title': 'P/L vs Commissions',
     'commissions.tooltip.description': 'Distribution of net profit/loss versus commissions paid',
     'commissions.tooltip.type': 'Type',
