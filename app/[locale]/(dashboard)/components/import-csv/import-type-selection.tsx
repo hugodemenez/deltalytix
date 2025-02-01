@@ -35,7 +35,7 @@ function isWeekend() {
   return day === 0 || day === 6 // 0 is Sunday, 6 is Saturday
 }
 
-export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' | 'ninjatrader-performance' | 'quantower' | 'rithmic-sync'
+export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' | 'ninjatrader-performance' | 'quantower' | 'rithmic-sync' | 'topstep'
 
 interface ImportTypeSelectionProps {
   selectedType: ImportType
@@ -122,6 +122,14 @@ const importTypeInfo: ImportTypeInfo[] = [
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_QUANTOWER_TUTORIAL_VIDEO || '',
     details: ''
+  },
+  {
+    type: 'topstep',
+    name: 'import.type.topstep.name',
+    description: 'import.type.topstep.description',
+    category: 'Platform CSV Import',
+    videoUrl: process.env.NEXT_PUBLIC_TOPSTEP_TUTORIAL_VIDEO || '',
+    details: 'import.type.topstep.details'
   }
 ]
 
@@ -153,6 +161,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
     'ninjatrader-performance': null,
     'quantower': null,
     'rithmic-sync': null,
+    'topstep': null,
   })
 
   useEffect(() => {
@@ -284,6 +293,15 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                                 <Image
                                   src="/logos/quantower.png"
                                   alt="Quantower Logo"
+                                  width={32}
+                                  height={32}
+                                  className="object-contain rounded-lg border border-border/50"
+                                />
+                              )}
+                              {info.type === 'topstep' && (
+                                <Image
+                                  src="/logos/topstep.png"
+                                  alt="Topstep Logo"
                                   width={32}
                                   height={32}
                                   className="object-contain rounded-lg border border-border/50"

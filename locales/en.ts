@@ -311,6 +311,9 @@ export default {
     'import.type.copyright.protocol': 'The R | Protocol API™ software is Copyright © 2024 by Rithmic, LLC. All rights reserved.',
     'import.type.copyright.platform': 'Trading Platform by Rithmic™ is a trademark of Rithmic, LLC. All rights reserved.',
     'import.type.copyright.omne': 'The OMNE™ software is Copyright © 2024 by Omnesys, LLC and Omnesys Technologies, Inc. All rights reserved.',
+    'import.type.topstep.name': 'Topstep',
+    'import.type.topstep.description': 'Import trades from Topstep funded trader account exports',
+    'import.type.topstep.details': 'Make sure to export your trades in CSV format from your Topstep funded trader account dashboard.',
     'filters': {
         search: "Search...",
         noResults: "No results found",

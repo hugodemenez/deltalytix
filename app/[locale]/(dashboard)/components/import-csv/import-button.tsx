@@ -20,6 +20,7 @@ import ColumnMapping from './column-mapping'
 import TradezellaProcessor from './tradezella-processor'
 import NinjaTraderPerformanceProcessor from './ninjatrader-performance-processor'
 import QuantowerOrderProcessor from './quantower-processor'
+import TopstepProcessor from './topstep-processor'
 import { cn } from '@/lib/utils'
 import { useI18n } from "@/locales/client"
 
@@ -168,6 +169,13 @@ export default function ImportButton() {
           newTrades = processedTrades.map(trade => ({
             ...trade,
             id: `${user.id}-${trade.id}`,
+            userId: user.id,
+          }))
+          break
+        case 'topstep':
+          newTrades = processedTrades.map(trade => ({
+            ...trade,
+            id: generateTradeHash(trade),
             userId: user.id,
           }))
           break
@@ -356,6 +364,9 @@ export default function ImportButton() {
         case 'rithmic-sync':
           handleSave()
           break
+        case 'topstep':
+          handleSave()
+          break
         default:
           if (!isRequiredFieldsMapped()) {
             const missingFields = getMissingRequiredFields()
@@ -501,6 +512,14 @@ export default function ImportButton() {
           case 'ninjatrader-performance':
             return (
               <NinjaTraderPerformanceProcessor
+                csvData={csvData}
+                headers={headers}
+                setProcessedTrades={setProcessedTrades}
+              />
+            )
+          case 'topstep':
+            return (
+              <TopstepProcessor
                 csvData={csvData}
                 headers={headers}
                 setProcessedTrades={setProcessedTrades}

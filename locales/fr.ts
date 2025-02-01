@@ -1030,5 +1030,8 @@ export default {
         rememberSelectedAccounts: "Mémoriser les comptes sélectionnés pour la prochaine synchronisation",
         'startProcessing.one': "Démarrer le Traitement de {count} Compte",
         'startProcessing.other': "Démarrer le Traitement de {count} Comptes"
-    }
+    },
+    'import.type.topstep.name': 'Topstep',
+    'import.type.topstep.description': 'Importer les trades depuis les exports de compte Topstep funded trader',
+    'import.type.topstep.details': 'Assurez-vous d\'exporter vos trades au format CSV depuis votre tableau de bord Topstep funded trader.'
 } as const
