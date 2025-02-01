@@ -125,9 +125,16 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
     // Find the global start date (earliest trade) in UTC
     const startDate = new Date(Math.min(...trades.map(t => new Date(t.entryDate).getTime())))
     const endDate = new Date(Math.max(...trades.map(t => new Date(t.entryDate).getTime())))
+    
+    // Convert start and end dates to UTC dates and ensure we capture the full day range
+    const startUTCDate = new Date(formatInTimeZone(startDate, 'UTC', 'yyyy-MM-dd'))
+    // Add one day to ensure we include all trades from the last day
+    const endUTCDate = new Date(formatInTimeZone(endDate, 'UTC', 'yyyy-MM-dd'))
+    endUTCDate.setDate(endUTCDate.getDate() + 1)
+    
     const allDates = eachDayOfInterval({ 
-      start: startOfDay(startDate), 
-      end: endOfDay(endDate) 
+      start: startUTCDate,
+      end: endUTCDate
     })
 
     // Initialize the result with all dates and accounts
@@ -153,19 +160,19 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       if (!accountTrades.length) return
 
       let accountEquity = 0
-      const accountStartDate = new Date(Math.min(...accountTrades.map(t => new Date(t.entryDate).getTime())))
 
       allDates.forEach(date => {
         const dateStr = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
-        const dayStart = new Date(formatInTimeZone(startOfDay(date), 'UTC', "yyyy-MM-dd'T'00:00:00'Z'"))
-        const dayEnd = new Date(formatInTimeZone(endOfDay(date), 'UTC', "yyyy-MM-dd'T'23:59:59.999'Z'"))
 
         const point = dateMap.get(dateStr)!
 
         // Get all trades for this day using UTC boundaries
         const dayTrades = accountTrades.filter(trade => {
           const tradeDate = new Date(trade.entryDate)
-          return tradeDate >= dayStart && tradeDate <= dayEnd
+          // Convert both dates to UTC and compare only the date components
+          const tradeUTCDate = formatInTimeZone(tradeDate, 'UTC', 'yyyy-MM-dd')
+          const dayUTCDate = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
+          return tradeUTCDate === dayUTCDate
         })
 
         // Calculate daily PnL and update equity
