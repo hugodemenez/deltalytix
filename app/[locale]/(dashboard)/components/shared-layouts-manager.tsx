@@ -119,88 +119,93 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="mr-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {t('share.backToShare')}
-          </Button>
-          <h2 className="text-2xl font-bold">{t('share.mySharedLayouts')}</h2>
+    <div className="flex flex-col h-full">
+      <div className="flex-shrink-0 px-4 sm:px-6 py-4 border-b">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onBack}
+              className="mr-2"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              {t('share.backToShare')}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {sharedLayouts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center p-6">
-            <p className="text-muted-foreground text-center">
-              {t('share.noLayouts')}
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {sharedLayouts.map((layout) => (
-            <Card key={layout.slug} className="flex flex-col">
-              <CardHeader>
-                <CardTitle>{layout.title || t('share.untitledLayout')}</CardTitle>
-                <CardDescription>{layout.description || t('share.noDescription')}</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>
-                      {format(new Date(layout.dateRange.from), 'PP')}
-                      {layout.dateRange.to && ` - ${format(new Date(layout.dateRange.to), 'PP')}`}
-                    </span>
+      <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-6">
+        {sharedLayouts.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center p-6">
+              <p className="text-muted-foreground text-center">
+                {t('share.noLayouts')}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {sharedLayouts.map((layout) => (
+              <Card key={layout.slug} className="flex flex-col">
+                <CardHeader>
+                  <CardTitle className="text-lg">{layout.title || t('share.untitledLayout')}</CardTitle>
+                  <CardDescription className="line-clamp-2">{layout.description || t('share.noDescription')}</CardDescription>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {format(new Date(layout.dateRange.from), 'PP')}
+                        {layout.dateRange.to && ` - ${format(new Date(layout.dateRange.to), 'PP')}`}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {layout.accountNumbers.length} {t('share.accounts')}
+                      </span>
+                    </div>
+                    {layout.viewCount > 0 && (
+                      <p className="text-muted-foreground">
+                        {t('share.viewCount', { count: layout.viewCount })}
+                      </p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    <span>
-                      {layout.accountNumbers.length} {t('share.accounts')}
-                    </span>
-                  </div>
-                  {layout.viewCount > 0 && (
-                    <p className="text-muted-foreground">
-                      {t('share.viewCount', { count: layout.viewCount })}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyShareLink(layout.slug)}
-                >
-                  <Link className="h-4 w-4 mr-2" />
-                  {t('share.copyUrl')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSelectedLayout(layout)
-                    setDeleteDialogOpen(true)
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  {t('share.delete')}
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      )}
+                </CardContent>
+                <CardFooter className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => copyShareLink(layout.slug)}
+                    className="w-full sm:w-auto"
+                  >
+                    <Link className="h-4 w-4 mr-2" />
+                    {t('share.copyUrl')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedLayout(layout)
+                      setDeleteDialogOpen(true)
+                    }}
+                    className="w-full sm:w-auto"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t('share.delete')}
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] sm:max-h-[85vh] w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle>{t('share.deleteConfirmTitle')}</DialogTitle>
             <DialogDescription>

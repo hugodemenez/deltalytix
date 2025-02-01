@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Share, Check, ChevronsUpDown, Copy, Layout } from "lucide-react"
+import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { SharedLayoutsManager } from "./shared-layouts-manager"
 import { cn } from "@/lib/utils"
+import confetti from 'canvas-confetti'
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -62,6 +63,49 @@ function useIsMobile() {
   }, [])
 
   return isMobile
+}
+
+function triggerConfetti() {
+  const count = 200
+  const defaults = {
+    origin: { y: 0.7 },
+    zIndex: 9999,
+  }
+
+  function fire(particleRatio: number, opts: confetti.Options) {
+    confetti({
+      ...defaults,
+      ...opts,
+      particleCount: Math.floor(count * particleRatio),
+    })
+  }
+
+  fire(0.25, {
+    spread: 26,
+    startVelocity: 55,
+  })
+
+  fire(0.2, {
+    spread: 60,
+  })
+
+  fire(0.35, {
+    spread: 100,
+    decay: 0.91,
+    scalar: 0.8,
+  })
+
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 25,
+    decay: 0.92,
+    scalar: 1.2,
+  })
+
+  fire(0.1, {
+    spread: 120,
+    startVelocity: 45,
+  })
 }
 
 export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
@@ -297,8 +341,14 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         setShareUrl(url)
 
         toast({
-          title: t('share.success'),
+          title: t('share.shareSuccess'),
+          description: t('share.shareSuccessDescription'),
         })
+
+        // Trigger confetti animation
+        setTimeout(() => {
+          triggerConfetti()
+        }, 1000)
       } catch (error) {
         console.error('Error sharing trades:', error)
         toast({
@@ -337,7 +387,14 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     }
 
     return (
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen)
+        if (!isOpen) {
+          setShowManager(false)
+          setShareUrl("")
+          setShareTitle("")
+        }
+      }}>
         <DialogTrigger asChild>
           <Button 
             ref={ref}
@@ -355,40 +412,59 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             )}
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-4xl sm:max-h-[95vh] max-h-[100dvh] w-full h-full sm:h-auto sm:w-[95vw] p-0">
-          <div className="h-full flex flex-col overflow-hidden">
-            <DialogHeader className="p-6 pb-0 shrink-0">
+        <DialogContent className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw] ">
+          <div className="h-full flex flex-col overflow-y-hidden">
+            <DialogHeader className="shrink-0">
               <DialogTitle>{t("share.title")}</DialogTitle>
               <DialogDescription>
                 {t("share.description")}
               </DialogDescription>
             </DialogHeader>
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <div className="grid gap-4 p-6">
+            <div className="flex-1 overflow-y-auto">
+              <div className="h-full overflow-y-hidden">
                 {showManager ? (
                   <SharedLayoutsManager onBack={() => setShowManager(false)} />
                 ) : shareUrl ? (
-                  <div className="grid gap-2">
-                    <Label>{t("share.shareUrl")}</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        readOnly
-                        value={shareUrl}
-                        className="font-mono text-sm"
-                      />
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyUrl}
-                        className="shrink-0"
-                      >
-                        <Copy className="h-4 w-4" />
-                        <span className="sr-only">{t("share.copyUrl")}</span>
-                      </Button>
+                  <div className="h-full flex items-center justify-center">
+                    <div className="w-full max-w-xl space-y-6 -mt-20">
+                      <div className="text-center space-y-2">
+                        <h3 className="text-lg font-semibold">{t("share.shareSuccess")}</h3>
+                        <p className="text-muted-foreground">{t("share.shareSuccessDescription")}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-center block">{t("share.shareUrl")}</Label>
+                        <div className="relative">
+                          <Input
+                            readOnly
+                            value={shareUrl}
+                            className="pr-24 font-mono text-sm bg-muted text-center"
+                          />
+                          <div className="absolute right-0 top-0 h-full flex items-center gap-1 pr-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={handleCopyUrl}
+                              className="h-7 w-7"
+                            >
+                              <Copy className="h-4 w-4" />
+                              <span className="sr-only">{t("share.copyUrl")}</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => window.open(shareUrl, '_blank')}
+                              className="h-7 w-7"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              <span className="sr-only">{t("share.openInNewTab")}</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ) : (
-                  <>
+                  <div className="grid gap-4 h-full overflow-y-auto py-2">
                     <div className="flex justify-end">
                       <Button
                         variant="outline"
@@ -522,7 +598,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                         </div>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
