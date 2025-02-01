@@ -63,6 +63,82 @@ export function Charts({ dayData }: ChartsProps) {
 
   const STORAGE_KEY = 'daily_mood'
 
+  // Calculate data for charts
+  const { accountPnL, equityChartData, chartData, totalPnL, calculateCommonDomain } = React.useMemo(() => {
+    if (!dayData?.trades?.length) {
+      return {
+        accountPnL: {},
+        equityChartData: [],
+        chartData: [],
+        totalPnL: 0,
+        calculateCommonDomain: [0, 0] as [number, number]
+      };
+    }
+
+    // Calculate P&L for each account
+    const accountPnL = dayData.trades.reduce((acc, trade) => {
+      const accountNumber = trade.accountNumber || 'Unknown'
+      const totalPnL = trade.pnl - (trade.commission || 0)
+      acc[accountNumber] = (acc[accountNumber] || 0) + totalPnL
+      return acc
+    }, {} as Record<string, number>);
+
+    // Convert to chart data format and sort
+    const chartData = Object.entries(accountPnL)
+      .map(([account, pnl]) => ({
+        name: `Account ${account}`,
+        value: pnl,
+        account,
+      }))
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+
+    const totalPnL = chartData.reduce((sum, item) => sum + item.value, 0);
+
+    // Calculate equity chart data
+    const equityChartData = [...dayData.trades]
+      .sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime())
+      .map((trade, index) => {
+        const runningBalance = dayData.trades
+          .slice(0, index + 1)
+          .reduce((sum, t) => sum + (t.pnl - (t.commission || 0)), 0);
+        return {
+          time: new Date(trade.entryDate).toLocaleTimeString(),
+          balance: runningBalance,
+          pnl: trade.pnl - (trade.commission || 0),
+          tradeNumber: index + 1,
+        }
+      });
+
+    // Calculate common domain
+    const distributionValues = Object.values(accountPnL);
+    const distributionMin = Math.min(...distributionValues);
+    const distributionMax = Math.max(...distributionValues);
+
+    const equityMin = Math.min(
+      ...equityChartData.map(d => Math.min(d.pnl, d.balance))
+    );
+    const equityMax = Math.max(
+      ...equityChartData.map(d => Math.max(d.pnl, d.balance))
+    );
+
+    const overallMin = Math.min(distributionMin, equityMin);
+    const overallMax = Math.max(distributionMax, equityMax);
+    
+    const padding = (overallMax - overallMin) * 0.1;
+    const calculateCommonDomain = [
+      Math.floor((overallMin - padding) / 100) * 100,
+      Math.ceil((overallMax + padding) / 100) * 100
+    ] as [number, number];
+
+    return {
+      accountPnL,
+      equityChartData,
+      chartData,
+      totalPnL,
+      calculateCommonDomain
+    };
+  }, [dayData?.trades]);
+
   // Load mood from localStorage or fetch from server on mount
   React.useEffect(() => {
     const loadMood = async () => {
@@ -153,27 +229,6 @@ export function Charts({ dayData }: ChartsProps) {
     return `${baseStyle} ${hoverStyle} ${selectedStyle}`
   }
 
-  const equityChartData = React.useMemo(() => {
-    if (!dayData?.trades?.length) return []
-
-    // Sort trades by entry time
-    const sortedTrades = [...dayData.trades].sort((a, b) => 
-      new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
-    )
-
-    // Calculate running balance
-    let runningBalance = 0
-    return sortedTrades.map((trade, index) => {
-      runningBalance += (trade.pnl - (trade.commission || 0))
-      return {
-        time: new Date(trade.entryDate).toLocaleTimeString(),
-        balance: runningBalance,
-        pnl: trade.pnl - (trade.commission || 0),
-        tradeNumber: index + 1,
-      }
-    })
-  }, [dayData?.trades])
-
   const CustomEquityTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
@@ -200,27 +255,6 @@ export function Charts({ dayData }: ChartsProps) {
       </div>
     )
   }
-
-  // Calculate final P&L for each account (including commissions)
-  const accountPnL = dayData.trades.reduce((acc, trade) => {
-    const accountNumber = trade.accountNumber || 'Unknown'
-    // Add commission to P&L calculation
-    const totalPnL = trade.pnl - (trade.commission || 0)
-    acc[accountNumber] = (acc[accountNumber] || 0) + totalPnL
-    return acc
-  }, {} as Record<string, number>)
-
-  // Convert to chart data format
-  const chartData = Object.entries(accountPnL).map(([account, pnl]) => ({
-    name: `Account ${account}`,
-    value: pnl,
-    account,
-  }))
-
-  // Sort by absolute value for better visualization
-  chartData.sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-
-  const totalPnL = chartData.reduce((sum, item) => sum + item.value, 0)
 
   // Generate colors based on theme
   const colors = isDarkMode 
@@ -254,35 +288,6 @@ export function Charts({ dayData }: ChartsProps) {
   const avgTimeInPosition = dayData?.trades?.length
     ? dayData.trades.reduce((sum, trade) => sum + trade.timeInPosition, 0) / dayData.trades.length
     : 0
-
-  // Calculate common Y-axis domain for both charts
-  const calculateCommonDomain = React.useMemo(() => {
-    if (!dayData?.trades?.length) return [0, 0];
-    
-    // Get min/max from P&L distribution
-    const distributionValues = Object.values(accountPnL);
-    const distributionMin = Math.min(...distributionValues);
-    const distributionMax = Math.max(...distributionValues);
-
-    // Get min/max from equity chart
-    const equityMin = Math.min(
-      ...equityChartData.map(d => Math.min(d.pnl, d.balance))
-    );
-    const equityMax = Math.max(
-      ...equityChartData.map(d => Math.max(d.pnl, d.balance))
-    );
-
-    // Get the overall min/max
-    const overallMin = Math.min(distributionMin, equityMin);
-    const overallMax = Math.max(distributionMax, equityMax);
-    
-    // Add some padding (10%)
-    const padding = (overallMax - overallMin) * 0.1;
-    return [
-      Math.floor((overallMin - padding) / 100) * 100,
-      Math.ceil((overallMax + padding) / 100) * 100
-    ];
-  }, [dayData?.trades, accountPnL, equityChartData]);
 
   return (
     <div className="space-y-6">
