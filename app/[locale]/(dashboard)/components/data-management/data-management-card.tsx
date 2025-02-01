@@ -13,8 +13,7 @@ import {
   renameInstrument 
 } from "../../dashboard/data/actions"
 import debounce from 'lodash/debounce'
-import { useUser } from '@/components/context/user-data'
-import { useTrades } from '@/components/context/trades-data'
+import { useUserData } from '@/components/context/user-data'
 import { toast } from '@/hooks/use-toast'
 import { User } from '@supabase/supabase-js'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -31,12 +30,11 @@ type GroupedTrades = Record<string, Record<string, Trade[]>>
 
 export function DataManagementCard() {
   const t = useI18n()
-  const { trades, setTrades, refreshTrades } = useTrades()
+  const { trades, setTrades, refreshTrades, user } = useUserData()
   const [loading, setLoading] = useState(true)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [renameLoading, setRenameLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-  const { user } = useUser()
   const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({})
   const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [renameInstrumentDialogOpen, setRenameInstrumentDialogOpen] = useState(false)

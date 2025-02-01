@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
-import { useFormattedTrades } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { Trade } from "@prisma/client"
 import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
@@ -39,7 +39,7 @@ const formatTime = (minutes: number) => {
 }
 
 export default function TimeInPositionChart({ size = 'medium' }: TimeInPositionChartProps) {
-  const { formattedTrades: trades } = useFormattedTrades()
+  const { formattedTrades: trades } = useUserData()
   const t = useI18n()
 
   const chartData = React.useMemo(() => {

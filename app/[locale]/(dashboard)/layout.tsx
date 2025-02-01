@@ -1,5 +1,4 @@
 import { ThemeProvider } from "@/components/context/theme-provider";
-import { TradeDataProvider } from "@/components/context/trades-data";
 import { UserDataProvider } from "@/components/context/user-data";
 import Modals from "@/components/modals";
 import { Toaster } from "@/components/ui/toaster";
@@ -21,10 +20,9 @@ export default async function RootLayout({ params: { locale }, children }: { par
         <ThemeProvider>
           <UserDataProvider>
             <MoodProvider>
-              <TradeDataProvider>
-                <WebSocketProvider>
-                  <WebSocketNotifications />
-                  <div className="min-h-screen flex flex-col">
+              <WebSocketProvider>
+                <WebSocketNotifications />
+                <div className="min-h-screen flex flex-col">
                     <OnbordaProvider>
                       <Onborda
                         steps={steps}
@@ -44,10 +42,9 @@ export default async function RootLayout({ params: { locale }, children }: { par
                     </OnbordaProvider>
                   </div>
                 </WebSocketProvider>
-              </TradeDataProvider>
-            </MoodProvider>
-          </UserDataProvider>
-        </ThemeProvider>
+              </MoodProvider>
+            </UserDataProvider>
+          </ThemeProvider>
       </AI>
     </I18nProviderClient>
   );

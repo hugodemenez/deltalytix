@@ -10,8 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from 'framer-motion';
 import { getInitialGreeting, continueWidgetConversation } from '@/server/chat-widget-actions';
-import { useUser } from '@/components/context/user-data';
-import { useTrades } from '@/components/context/trades-data';
+import { useUserData } from '@/components/context/user-data';
 import { getMoodForDay, saveMood } from '@/server/mood';
 import { generateId } from 'ai';
 import { startOfDay, endOfDay, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
@@ -58,8 +57,7 @@ function filterTrades(trades: PrismaTrade[], interval: { start: Date, end: Date 
 }
 
 export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
-  const { user } = useUser();
-  const { trades } = useTrades();
+  const { user, trades } = useUserData();
   const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);

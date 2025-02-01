@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
-import { useTrades } from '@/components/context/trades-data'
+import { useUserData } from '@/components/context/user-data'
 import { useI18n } from '@/locales/client'
 
 interface TradovateProcessorProps {
@@ -76,7 +76,7 @@ const newMappings: { [key: string]: string } = {
 
 
 export default function TradovateProcessor({ headers, csvData, setProcessedTrades, accountNumber }: TradovateProcessorProps) {
-    const { trades: existingTrades } = useTrades()
+    const { trades: existingTrades } = useUserData()
     const [trades, setTrades] = useState<Trade[]>([])
     const [missingCommissions, setMissingCommissions] = useState<{ [key: string]: number }>({})
     const [showCommissionPrompt, setShowCommissionPrompt] = useState(false)

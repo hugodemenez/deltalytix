@@ -1,5 +1,8 @@
 // locales/en.ts
+import { sharedTranslations } from './shared-translations'
+
 export default {
+    ...sharedTranslations,
     'landing.title': 'Master your trading journey.',
     'landing.description': 'Deltalytix is a web dashboard for traders to store, explore and understand their track-record.',
     'landing.cta': 'Get Started',
@@ -523,17 +526,34 @@ export default {
     'contracts.tooltip.totalContracts': 'Total Contracts',
     'contracts.tooltip.numberOfTrades': 'Number of Trades',
     'contracts.axis.contracts': 'Contracts',
-    'equity.title': 'Equity Curve',
-    'equity.description': 'Showing cumulative profit and loss over time',
-    'equity.toggle.daily': 'Daily PnL',
-    'equity.toggle.perTrade': 'Per-trade PnL',
-    'equity.tooltip.date': 'Date',
-    'equity.tooltip.equity': 'Equity',
-    'equity.tooltip.grossPnl': 'Gross P/L',
-    'equity.tooltip.commissions': 'Commissions',
-    'equity.tooltip.netPnl': 'Net P/L',
-    'equity.tooltip.noPnL': 'No P/L',
-    'equity.toggle.individual': 'Individual',
+    'equity': {
+        title: 'Equity',
+        description: 'Track your equity over time',
+        toggle: {
+            individual: 'Individual',
+            grouped: 'Grouped',
+            daily: 'Daily',
+            perTrade: 'Per Trade'
+        },
+        tooltip: {
+            date: 'Date',
+            totalEquity: 'Total Equity',
+            accountSummary: 'Account Summary',
+            topPerformers: 'Top Performers',
+            otherAccounts: 'Other Accounts',
+            totalAccounts: 'Total Accounts',
+            averageEquity: 'Average Equity',
+            medianEquity: 'Median Equity',
+            highestEquity: 'Highest',
+            lowestEquity: 'Lowest',
+            noPnL: 'No P&L',
+            activeAccounts: 'Active Accounts',
+            averageDailyPnL: 'Average Daily P&L',
+            highestDailyPnL: 'Highest Daily P&L',
+            lowestDailyPnL: 'Lowest Daily P&L',
+            noActivity: 'No Trading Activity'
+        }
+    },
     'pnl.title': 'Daily Profit/Loss',
     'pnl.description': 'Showing daily P/L over time',
     'pnl.tooltip.date': 'Date',
@@ -695,10 +715,12 @@ export default {
     'share.copyUrl': 'Copy URL',
     'share.urlCopied': 'URL copied to clipboard',
     'share.openInNewTab': 'Open in new tab',
+    'share.visit': 'Visit',
     'share.shareSuccess': 'Your trades have been shared!',
     'share.shareSuccessDescription': 'You can now share this link with others to view your trades.',
     'share.mySharedLayouts': 'My Shared Layouts',
     'share.noLayouts': 'You haven\'t shared any layouts yet',
+    'share.startSharing': 'Start sharing your trades with others to see them here',
     'share.untitledLayout': 'Untitled Layout',
     'share.noDescription': 'No description provided',
     'share.viewCount': '{count} view(s)',
@@ -715,8 +737,9 @@ export default {
     'share.quit': 'Quit',
     'share.manageLayouts': 'Manage shared layouts',
     'share.backToShare': 'Back to share',
-    'shared.title': 'Shared Trading Performance',
-    'shared.description': 'Detailed analysis of trading activity and performance metrics',
+    'shared.loading': 'Loading your shared trades...',
+    'shared.notFound': 'Share Not Found',
+    'shared.notFoundDescription': 'The shared trades you are looking for could not be found.',
     'shared.expired': 'Share Expired',
     'shared.expiredDescription': 'This shared trades link has expired.',
     'shared.error': 'Error',
@@ -728,116 +751,54 @@ export default {
     'shared.deselectAll': 'Deselect All',
     'shared.createAccount': 'Create Free Account',
     'shared.tagline': 'Your trading performance in one place',
+    'shared.title': 'Shared Trading Performance',
+    'shared.description': 'Detailed analysis of trading activity and performance metrics',
     'shared.accountCount': {
         one: 'Shared trades for {count} account',
         other: 'Shared trades for {count} accounts'
     },
-    equity: {
-        title: "Equity",
-        description: "Track your equity curve over time",
-        toggle: {
-            individual: "Individual",
-            grouped: "Grouped",
-            daily: "Daily",
-            perTrade: "Per Trade"
-        },
-        tooltip: {
-            date: "Date",
-            totalEquity: "Total Equity",
-            accountSummary: "Account Summary",
-            topPerformers: "Top Performers",
-            otherAccounts: "Other Accounts",
-            showAll: "Show All",
-            showLess: "Show Less",
-            totalAccounts: "Total Accounts",
-            averageEquity: "Average Equity",
-            medianEquity: "Median Equity",
-            highestEquity: "Highest",
-            lowestEquity: "Lowest",
-            activeAccounts: "Active Accounts",
-            averageDailyPnL: "Average Daily P/L",
-            highestDailyPnL: "Highest Daily P/L",
-            lowestDailyPnL: "Lowest Daily P/L",
-            noActivity: "No Trading Activity"
-        }
-    },
-    'widgets.screenshot': 'Screenshot Mode',
-    'widgets.doneScreenshot': 'Exit Screenshot Mode',
+    'widgets.screenshot': 'Screenshot',
+    'widgets.doneScreenshot': 'Done',
     'widgets.takeScreenshot': 'Take Screenshot',
+    'widgets.share': 'Share',
+    'widgets.add': 'Add',
+    'widgets.filter': 'Filter',
+    'widgets.deprecated': {
+        'title': 'Deprecated Widget',
+        'description': 'This widget type is no longer supported',
+        'remove': 'Remove Widget'
+    },
     tradeDistribution: {
         title: "Trade Distribution",
         description: "Distribution of winning, losing, and breakeven trades",
-        win: "Winning Trades",
-        loss: "Losing Trades",
-        breakeven: "Breakeven Trades",
+        win: "Winning trades",
+        loss: "Losing trades",
+        breakeven: "Breakeven trades",
         tooltip: {
             type: "Type",
             percentage: "Percentage"
         }
     },
-    widgets: {
-        addWidget: "Add Widget",
-        categories: {
-            charts: "Charts",
-            statistics: "Statistics",
-            tables: "Tables",
-            other: "Other"
-        },
-        types: {
-            equityChart: "Equity Chart",
-            pnlChart: "PnL Chart",
-            timeOfDay: "Time of Day",
-            timeInPosition: "Time in Position",
-            weekdayPnl: "P&L by Day",
-            pnlBySide: "P&L by Side",
-            tickDistribution: "Tick Distribution",
-            commissionsPnl: "P&L and Commissions",
-            averagePositionTime: "Average Position Time",
-            cumulativePnl: "Cumulative P&L",
-            longShortPerformance: "Long/Short Performance",
-            tradePerformance: "Trade Performance",
-            winningStreak: "Winning Streak",
-            tradeReviewTable: "Trade Review Table",
-            calendarView: "Calendar View",
-            moodSelector: "Mood Selector",
-            chat: "Chat",
-            marketNews: "Market News",
-            tradeDistribution: "Trade Distribution",
-            consistencyTable: "Consistency Analysis"
-        },
-        deprecated: {
-            title: "Deprecated Widget",
-            description: "This widget type is no longer supported",
-            remove: "Remove Widget"
-        },
-        clickToAdd: "Click to add",
-        screenshot: "Screenshot",
-        doneScreenshot: "Exit Screenshot",
-        takeScreenshot: "Take Screenshot",
-        share: "Share",
-        add: "Add Widget",
-        filter: "Filter"
-    },
     consistency: {
         title: 'Trading Consistency',
-        description: 'Monitor your trading consistency by ensuring no single day exceeds the configured percentage of total profit',
-        tooltip: 'A consistent trader should maintain balanced daily profits relative to their total profit',
+        description: 'Monitor your consistency by ensuring no day exceeds the configured percentage of total profit',
+        tooltip: 'A consistent trader should maintain balanced daily profits relative to total profit',
         account: 'Account',
         maxAllowedDailyProfit: 'Maximum Allowed Daily Profit',
         highestDailyProfit: 'Highest Daily Profit',
         status: 'Status',
-        insufficientData: 'Insufficient data',
+        insufficientData: 'Insufficient Data',
         consistent: 'Consistent',
         inconsistent: 'Inconsistent (Exceeds Maximum)',
-        unprofitable: 'No Profitable Data',
+        unprofitable: 'No Profit',
         threshold_settings: {
             title: 'Consistency Threshold',
-            description: 'Maximum percentage of total profit allowed in a single day',
+            description: 'Maximum percentage of total profit allowed in one day',
             currentValue: '{value}% of total profit'
         },
         modal: {
             title: 'Inconsistent Days for Account {account}',
-            description: 'Days where profit exceeded the maximum allowed daily profit',
+            description: 'Days where profit exceeded maximum allowed daily profit',
             date: 'Date',
             pnl: 'P&L',
             percentageOfTotal: '% of Total Profit'
@@ -856,8 +817,8 @@ export default {
         performance: {
             title: 'Performance',
             winRate: 'Win Rate',
-            avgWin: 'Avg. Win',
-            avgLoss: 'Avg. Loss',
+            avgWin: 'Average Win',
+            avgLoss: 'Average Loss',
             profitFactor: 'Profit Factor',
             bestTrade: 'Best Trade',
             worstTrade: 'Worst Trade'
@@ -868,7 +829,7 @@ export default {
             winningTrades: 'Winning Trades',
             losingTrades: 'Losing Trades',
             breakeven: 'Breakeven',
-            avgDuration: 'Avg. Duration',
+            avgDuration: 'Average Duration',
             longestTrade: 'Longest Trade',
             shortestTrade: 'Shortest Trade'
         },
@@ -913,8 +874,8 @@ export default {
         payout: {
             add: 'Add Payout',
             edit: 'Edit Payout',
-            addDescription: 'Add a new payout for account',
-            editDescription: 'Edit payout for account',
+            addDescription: 'Add a new payout for the account',
+            editDescription: 'Edit payout for the account',
             date: 'Payout Date',
             amount: 'Amount',
             status: 'Status',
@@ -930,16 +891,16 @@ export default {
             success: 'Payout saved',
             successDescription: 'The payout has been saved successfully',
             error: 'Failed to save payout',
-            errorDescription: 'There was an error saving the payout',
+            errorDescription: 'An error occurred while saving the payout',
             deleteSuccess: 'Payout deleted',
             deleteSuccessDescription: 'The payout has been deleted successfully',
             deleteError: 'Failed to delete payout',
-            deleteErrorDescription: 'There was an error deleting the payout',
-            updateSuccess: 'Payout Updated',
+            deleteErrorDescription: 'An error occurred while deleting the payout',
+            updateSuccess: 'Payout updated',
             updateSuccessDescription: 'The payout has been updated successfully',
             updateError: 'Failed to update payout',
-            updateErrorDescription: 'There was an error updating the payout',
-            deleteConfirm: 'Delete Payout',
+            updateErrorDescription: 'An error occurred while updating the payout',
+            deleteConfirm: 'Delete payout',
             deleteConfirmDescription: 'Are you sure you want to delete this payout? This action cannot be undone.',
             deleteConfirmButton: 'Yes, delete',
             deleteCancel: 'Cancel'
@@ -956,7 +917,7 @@ export default {
             payoutStatus: 'Payout Status'
         },
         setup: {
-            button: 'Configure',
+            button: 'Setup',
             message: 'Click to setup account',
             success: 'Account updated',
             error: 'Failed to update account',
@@ -969,43 +930,31 @@ export default {
                 description: 'Please configure your prop firm account to see detailed statistics.'
             },
             saveFirst: {
-                title: 'Save Changes Required',
+                title: 'Save Required',
                 description: 'Please save your changes to see updated statistics.'
             }
         },
         status: {
-            unprofitable: 'Unprofitable',
-            insufficient: 'Insufficient Data',
-            consistent: 'Consistent',
-            inconsistent: 'Inconsistent'
+            unprofitable: 'Unprofitable - No consistency check',
+            insufficient: 'Insufficient data',
+            consistent: 'Consistent trading',
+            inconsistent: 'Inconsistent trading'
         },
         toast: {
             setupSuccess: 'Account setup successful',
-            setupSuccessDescription: 'Your prop firm account has been configured successfully',
-            setupError: 'Account setup failed',
-            setupErrorDescription: 'There was an error setting up your prop firm account',
+            setupSuccessDescription: 'Your prop firm account has been set up successfully',
+            setupError: 'Failed to setup account',
+            setupErrorDescription: 'An error occurred while setting up your prop firm account',
             updateSuccess: 'Account updated',
             updateSuccessDescription: 'Your prop firm account has been updated successfully',
-            updateError: 'Update failed',
-            updateErrorDescription: 'There was an error updating your prop firm account',
+            updateError: 'Failed to update',
+            updateErrorDescription: 'An error occurred while updating your prop firm account',
             resetDateCleared: 'Reset date cleared',
             resetDateClearedDescription: 'The reset date has been cleared successfully',
             resetDateError: 'Reset date error',
-            resetDateErrorDescription: 'There was an error updating the reset date',
+            resetDateErrorDescription: 'An error occurred while updating the reset date',
             validationPositive: 'All numeric values must be positive'
         }
-    },
-    common: {
-        add: 'Add',
-        cancel: 'Cancel',
-        save: 'Save',
-        saving: 'Saving...',
-        clear: 'Clear',
-        done: 'Done',
-        delete: 'Delete',
-        edit: 'Edit',
-        close: 'Close',
-        back: "Back"
     },
     rithmic: {
         savedCredentials: "Saved Credentials",

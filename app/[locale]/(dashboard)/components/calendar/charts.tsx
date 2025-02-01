@@ -18,7 +18,7 @@ import { useTheme } from "@/components/context/theme-provider"
 import { Button } from "@/components/ui/button"
 import { FaRegSadTear, FaRegMeh, FaRegSmileBeam } from "react-icons/fa"
 import { saveMood, getMoodForDay } from '@/server/mood'
-import { useUser } from '@/components/context/user-data'
+import { useUserData } from '@/components/context/user-data'
 import { useToast } from '@/hooks/use-toast'
 import { useI18n } from '@/locales/client'
 
@@ -55,7 +55,7 @@ const formatDuration = (seconds: number) => {
 export function Charts({ dayData }: ChartsProps) {
   const { effectiveTheme } = useTheme()
   const isDarkMode = effectiveTheme === 'dark'
-  const { user } = useUser()
+  const { user } = useUserData()
   const { toast } = useToast()
   const t = useI18n()
   const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)

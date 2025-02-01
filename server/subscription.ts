@@ -2,6 +2,9 @@
 
 import { PrismaClient } from "@prisma/client"
 
+// Create a single PrismaClient instance to be reused
+const prisma = new PrismaClient()
+
 interface SubscriptionInfo {
     isActive: boolean;
     plan: string | null;
@@ -10,56 +13,57 @@ interface SubscriptionInfo {
     trialEndsAt: Date | null;
 }
 
-export async function getIsSubscribed(email: string) {
-    console.log("getIsSubscribed", email)
-    if (email.endsWith('@rithmic.com')) {
-      return true
-    }
-    const prisma = new PrismaClient()
-    
-    try {
-        const subscription = await prisma.subscription.findUnique({
-            where: { email }
-        })
-
-        if (!subscription) return false
-
-        const now = new Date()
-        
-        // Check if subscription is active based on status and dates
-        const isActive = 
-            // Must have ACTIVE or TRIAL status
-            (subscription.status === 'ACTIVE' || subscription.status === 'TRIAL') ||
-            // If there's an endDate, it must be in the future
-            (!subscription.endDate || subscription.endDate > now) ||
-            // If there's a trial end date, it must be in the future
-            (!subscription.trialEndsAt || subscription.trialEndsAt > now)
-
-        return isActive
-
-    } catch (error) {
-        console.error('Error checking subscription status:', error)
-        return false
-    } finally {
-        await prisma.$disconnect()
-    }
+// Validate email to prevent SQL injection and invalid queries
+function isValidEmail(email: string): boolean {
+    if (!email || typeof email !== 'string') return false
+    // Basic email validation regex
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-// Optional: You might want to get more detailed subscription info
 export async function getSubscriptionDetails(email: string): Promise<SubscriptionInfo | null> {
-    console.log("getSubscriptionDetails", email)
-    const prisma = new PrismaClient()
+    // Input validation
+    if (!isValidEmail(email)) {
+        console.error('[getSubscriptionDetails] Invalid email format:', email)
+        return null
+    }
+
+    // Normalize email to lowercase to ensure consistent lookups
+    const normalizedEmail = email.toLowerCase().trim()
+
+    if (normalizedEmail.endsWith('@rithmic.com')) {
+        return {
+            isActive: true,
+            plan: 'ENTERPRISE',
+            status: 'ACTIVE',
+            endDate: null,
+            trialEndsAt: null
+        }
+    }
+
+    console.log("[getSubscriptionDetails] Fetching details for", normalizedEmail)
     
     try {
         const subscription = await prisma.subscription.findUnique({
-            where: { email }
+            where: { email: normalizedEmail },
+            // Only select the fields we need
+            select: {
+                status: true,
+                plan: true,
+                endDate: true,
+                trialEndsAt: true
+            }
         })
 
         if (!subscription) return null
 
         const now = new Date()
-        const isActive = subscription.status === 'ACTIVE' || 
-                        (subscription.status === 'TRIAL' && subscription.trialEndsAt != null && subscription.trialEndsAt > now)
+        
+        // Ensure isActive is always boolean
+        const isActive = Boolean(
+            subscription.status === 'ACTIVE' || 
+            (subscription.status === 'TRIAL' && subscription.trialEndsAt && subscription.trialEndsAt > now) ||
+            (subscription.endDate && subscription.endDate > now)
+        )
         
         return {
             isActive,
@@ -70,9 +74,10 @@ export async function getSubscriptionDetails(email: string): Promise<Subscriptio
         }
 
     } catch (error) {
-        console.error('Error fetching subscription details:', error)
+        console.error('[getSubscriptionDetails] Database error:', {
+            email: normalizedEmail,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        })
         return null
-    } finally {
-        await prisma.$disconnect()
     }
 }

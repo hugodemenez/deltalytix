@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/navigation-menu"
 import { useTheme } from '@/components/context/theme-provider'
 import { cn } from '@/lib/utils'
-import { useUser } from '@/components/context/user-data'
+import { useUserData } from '@/components/context/user-data'
 import { useI18n } from "@/locales/client"
 import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -65,7 +65,7 @@ const MobileNavItem = ({ href, children, onClick, className }: { href: string; c
 )
 
 export default function Component() {
-    const { user } = useUser()
+    const { user } = useUserData()
     const { theme, setTheme } = useTheme()
     const [isOpen, setIsOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)

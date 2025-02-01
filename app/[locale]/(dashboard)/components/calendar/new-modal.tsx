@@ -52,8 +52,6 @@ export function CalendarModal({
 
   if (!selectedDate) return null;
 
-  const dateString = format(selectedDate, 'yyyy-MM-dd');
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full h-[100dvh] sm:h-[90vh] p-0 flex flex-col">

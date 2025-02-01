@@ -1,4 +1,4 @@
-import { useTradeStatistics } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -9,7 +9,7 @@ interface AveragePositionTimeCardProps {
 }
 
 export default function AveragePositionTimeCard({ size = 'medium' }: AveragePositionTimeCardProps) {
-  const { statistics: { averagePositionTime } } = useTradeStatistics()
+  const { statistics: { averagePositionTime } } = useUserData()
 
   if (size === 'tiny') {
     return (

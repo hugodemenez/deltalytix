@@ -20,17 +20,105 @@ import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, 
 import html2canvas from 'html2canvas'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
-import { useUser } from '@/components/context/user-data'
+import { useUserData } from '@/components/context/user-data'
 import { useI18n } from "@/locales/client"
-import { loadDashboardLayout, saveDashboardLayout } from '@/server/database'
-import { Widget, WidgetType, WidgetSize, Layouts, LayoutState, LayoutItem } from '../types/dashboard'
+import { WIDGET_REGISTRY, getWidgetComponent } from '../config/widget-registry'
 import { useAutoScroll } from '../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
 import { AddWidgetSheet } from './add-widget-sheet'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import FilterLeftPane from './filters/filter-left-pane'
 import { ShareButton } from './share-button'
-import { WIDGET_REGISTRY, getWidgetComponent } from '../config/widget-registry'
+import { Widget, WidgetType, WidgetSize } from '../types/dashboard'
+import type { LayoutItem as ServerLayoutItem, Layouts } from '@/server/user-data'
+
+// Add type for our local LayoutItem that extends the server one
+type LayoutItem = Omit<ServerLayoutItem, 'type' | 'size'> & {
+  type: string
+  size: string
+}
+
+// Update sizeToGrid to handle responsive sizes
+const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
+  if (isSmallScreen) {
+    switch (size) {
+      case 'tiny':
+        return { w: 12, h: 1 }
+      case 'small':
+        return { w: 12, h: 2 }
+      case 'small-long':
+        return { w: 12, h: 2 }
+      case 'medium':
+        return { w: 12, h: 4 }
+      case 'large':
+      case 'extra-large':
+        return { w: 12, h: 6 }
+      default:
+        return { w: 12, h: 4 }
+    }
+  }
+
+  // Desktop sizes
+  switch (size) {
+    case 'tiny':
+      return { w: 3, h: 1 }
+    case 'small':
+      return { w: 3, h: 4 }
+    case 'small-long':
+      return { w: 6, h: 2 }
+    case 'medium':
+      return { w: 6, h: 4 }
+    case 'large':
+      return { w: 6, h: 8 }
+    case 'extra-large':
+      return { w: 12, h: 8 }
+    default:
+      return { w: 6, h: 4 }
+  }
+}
+
+// Add a function to get grid dimensions based on widget type and size
+const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
+  const config = WIDGET_REGISTRY[type]
+  if (!config) {
+    // Return a default medium size grid for deprecated widgets
+    return isSmallScreen ? { w: 12, h: 4 } : { w: 6, h: 4 }
+  }
+  if (isSmallScreen) {
+    return sizeToGrid(size, true)
+  }
+  return sizeToGrid(size)
+}
+
+// Create layouts for different breakpoints
+const generateResponsiveLayout = (widgets: LayoutItem[]) => {
+  const layouts = {
+    lg: widgets.map(widget => ({
+      ...widget,
+      ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize)
+    })),
+    md: widgets.map(widget => ({
+      ...widget,
+      ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize)
+    })),
+    sm: widgets.map(widget => ({
+      ...widget,
+      ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, true),
+      x: 0 // Align to left
+    })),
+    xs: widgets.map(widget => ({
+      ...widget,
+      ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, true),
+      x: 0 // Align to left
+    })),
+    xxs: widgets.map(widget => ({
+      ...widget,
+      ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, true),
+      x: 0 // Align to left
+    }))
+  }
+  return layouts
+}
 
 function DeprecatedWidget({ onRemove }: { onRemove: () => void }) {
   const t = useI18n()
@@ -84,7 +172,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   onScreenshotToggle: () => void
 }) {
   const t = useI18n()
-  const isMobile = useIsMobile()
+  const { isMobile } = useUserData()
   const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
   const contextButtonRef = useRef<HTMLButtonElement>(null)
   const widgetRef = useRef<HTMLDivElement>(null)
@@ -623,37 +711,6 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   )
 }
 
-function PlaceholderWidget({ size }: { size: WidgetSize }) {
-  return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Placeholder Widget ({size})</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-full bg-gray-200 flex items-center justify-center">
-          This is a {size} placeholder widget
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-// Add a hook to track screen size
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false)
-
-  useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 768) // matches our 'sm' breakpoint
-    }
-
-    checkIsMobile()
-    window.addEventListener('resize', checkIsMobile)
-    return () => window.removeEventListener('resize', checkIsMobile)
-  }, [])
-
-  return isMobile
-}
 
 // Update the customStyles string to remove scrollbar handling
 const customStyles = `
@@ -725,7 +782,7 @@ function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEdit
   }
 }) {
   const t = useI18n()
-  const isMobile = useIsMobile()
+  const { isMobile } = useUserData()
 
   return (
     <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center">
@@ -786,24 +843,15 @@ function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEdit
 }
 
 export default function WidgetCanvas() {
-  const t = useI18n()
-  const { user } = useUser()
+  const { user, isMobile, layouts, setLayouts, saveLayouts } = useUserData()
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
-  const isMobile = useIsMobile()
   
-  const [layoutState, setLayoutState] = useState<LayoutState>({
-    layouts: {
-      desktop: [],
-      mobile: []
-    },
-    activeLayout: 'desktop'
-  })
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isScreenshotMode, setIsScreenshotMode] = useState(false)
-  const [isRemoveAllDialogOpen, setIsRemoveAllDialogOpen] = useState(false)
-  
-  // Add this state to track if the layout change is from user interaction
   const [isUserAction, setIsUserAction] = useState(false)
+
+  // Add this state to track if the layout change is from user interaction
+  const activeLayout = isMobile ? 'mobile' : 'desktop'
 
   // Add click outside handler
   const handleOutsideClick = useCallback((e: MouseEvent) => {
@@ -827,277 +875,57 @@ export default function WidgetCanvas() {
     }
   }, [isCustomizing, handleOutsideClick])
 
-  // Update sizeToGrid to handle responsive sizes
-  const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
-    if (isSmallScreen) {
-      switch (size) {
-        case 'tiny':
-          return { w: 12, h: 1 }
-        case 'small':
-          return { w: 12, h: 2 }
-        case 'small-long':
-          return { w: 12, h: 2 }
-        case 'medium':
-          return { w: 12, h: 4 }
-        case 'large':
-        case 'extra-large':
-          return { w: 12, h: 6 }
-        default:
-          return { w: 12, h: 4 }
-      }
-    }
-
-    // Desktop sizes
-    switch (size) {
-      case 'tiny':
-        return { w: 3, h: 1 }
-      case 'small':
-        return { w: 3, h: 4 }
-      case 'small-long':
-        return { w: 6, h: 2 }
-      case 'medium':
-        return { w: 6, h: 4 }
-      case 'large':
-        return { w: 6, h: 8 }
-      case 'extra-large':
-        return { w: 12, h: 8 }
-      default:
-        return { w: 6, h: 4 }
-    }
-  }
-
-  // Add a function to get grid dimensions based on widget type and size
-  const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
-    const config = WIDGET_REGISTRY[type]
-    if (!config) {
-      // Return a default medium size grid for deprecated widgets
-      return isSmallScreen ? { w: 12, h: 4 } : { w: 6, h: 4 }
-    }
-    if (isSmallScreen) {
-      return sizeToGrid(size, true)
-    }
-    return sizeToGrid(size)
-  }
-
-  // Create layouts for different breakpoints
-  const generateResponsiveLayout = useCallback((widgets: Widget[]) => {
-    const layouts = {
-      lg: widgets.map(widget => ({
-        ...widget,
-        ...getWidgetGrid(widget.type, widget.size)
-      })),
-      md: widgets.map(widget => ({
-        ...widget,
-        ...getWidgetGrid(widget.type, widget.size)
-      })),
-      sm: widgets.map(widget => ({
-        ...widget,
-        ...getWidgetGrid(widget.type, widget.size, true),
-        x: 0 // Align to left
-      })),
-      xs: widgets.map(widget => ({
-        ...widget,
-        ...getWidgetGrid(widget.type, widget.size, true),
-        x: 0 // Align to left
-      })),
-      xxs: widgets.map(widget => ({
-        ...widget,
-        ...getWidgetGrid(widget.type, widget.size, true),
-        x: 0 // Align to left
-      }))
-    }
-    return layouts
-  }, [])
-
-  // Load widgets from database using server action
-  useEffect(() => {
-    async function loadLayout() {
-      if (!user?.id) return
-      
-      try {
-        const savedLayouts = await loadDashboardLayout(user.id)
-        
-        if (savedLayouts) {
-          setLayoutState({
-            layouts: savedLayouts as Layouts,
-            activeLayout: isMobile ? 'mobile' : 'desktop'
-          })
-        } else {
-          // Define default widgets for desktop
-          const defaultDesktopWidgets = [
-            {
-              i: "widget1732477563848",
-              type: "calendarWidget" as WidgetType,
-              size: "large" as WidgetSize,
-              x: 0,
-              y: 1,
-              w: 6,
-              h: 8
-            },
-            {
-              i: "widget1732477566865",
-              type: "equityChart" as WidgetType,
-              size: "medium" as WidgetSize,
-              x: 6,
-              y: 1,
-              w: 6,
-              h: 4
-            },
-            {
-              i: "widget1734881236127",
-              type: "pnlChart" as WidgetType,
-              size: "medium" as WidgetSize,
-              x: 6,
-              y: 5,
-              w: 6,
-              h: 4
-            },
-            {
-              i: "widget1734881247979",
-              type: "cumulativePnl" as WidgetType,
-              size: "tiny" as WidgetSize,
-              x: 0,
-              y: 0,
-              w: 3,
-              h: 1
-            },
-            {
-              i: "widget1734881251266",
-              type: "longShortPerformance" as WidgetType,
-              size: "tiny" as WidgetSize,
-              x: 3,
-              y: 0,
-              w: 3,
-              h: 1
-            },
-            {
-              i: "widget1734881254352",
-              type: "tradePerformance" as WidgetType,
-              size: "tiny" as WidgetSize,
-              x: 6,
-              y: 0,
-              w: 3,
-              h: 1
-            },
-            {
-              i: "widget1734881263452",
-              type: "averagePositionTime" as WidgetType,
-              size: "tiny" as WidgetSize,
-              x: 9,
-              y: 0,
-              w: 3,
-              h: 1
-            }
-          ]
-
-          // Define default widgets for mobile
-          const defaultMobileWidgets = [
-            {
-              i: "widget1732477563848",
-              type: "calendarWidget" as WidgetType,
-              size: "large" as WidgetSize,
-              x: 0,
-              y: 2,
-              w: 12,
-              h: 6
-            },
-            {
-              i: "widget1732477566865",
-              type: "equityChart" as WidgetType,
-              size: "medium" as WidgetSize,
-              x: 0,
-              y: 8,
-              w: 12,
-              h: 6
-            },
-            {
-              i: "widget1734881247979",
-              type: "cumulativePnl" as WidgetType,
-              size: "tiny" as WidgetSize,
-              x: 0,
-              y: 0,
-              w: 12,
-              h: 1
-            },
-            {
-              i: "widget1734881254352",
-              type: "tradePerformance" as WidgetType,
-              size: "tiny" as WidgetSize,
-              x: 0,
-              y: 1,
-              w: 12,
-              h: 1
-            }
-          ]
-
-          // Generate responsive layouts for desktop
-          const responsiveDesktopLayouts = generateResponsiveLayout(defaultDesktopWidgets)
-          
-          setLayoutState({
-            layouts: {
-              desktop: responsiveDesktopLayouts.lg,
-              mobile: defaultMobileWidgets
-            },
-            activeLayout: isMobile ? 'mobile' : 'desktop'
-          })
-        }
-      } catch (error) {
-        console.error('Error loading dashboard layout:', error)
-      }
-    }
-
-    loadLayout()
-  }, [user?.id, isMobile, generateResponsiveLayout])
-
   // Add auto-scroll functionality for mobile
   useAutoScroll(isMobile && isCustomizing)
 
-  // Update handleLayoutChange
-  const handleLayoutChange = async (layout: LayoutItem[], layouts: any) => {
-    if (!user?.id || !isCustomizing) return
+  // Update handleLayoutChange with proper type handling
+  const handleLayoutChange = useCallback(async (layout: LayoutItem[], allLayouts: any) => {
+    if (!user?.id || !isCustomizing || !setLayouts || !layouts) return;
 
-    const currentLayout = isMobile ? 'mobile' : 'desktop'
-    const updatedWidgets = layoutState.layouts[currentLayout].map(widget => {
-      const layoutItem = layout.find(item => item.i === widget.i)
-      if (layoutItem) {
-        if (isMobile) {
-          return {
-            ...widget,
-            y: layoutItem.y,
-            x: 0,
-            w: 12,
-          }
-        }
-        return {
-          ...widget,
-          x: layoutItem.x,
-          y: layoutItem.y,
-          w: layoutItem.w,
-          h: layoutItem.h,
-        }
+    try {
+      // Keep the existing layouts for the non-active layout
+      const updatedLayouts = {
+        ...layouts,
+        [activeLayout]: layout.map(item => {
+          // Find the existing widget to preserve its type and size
+          const existingWidget = layouts[activeLayout].find(w => w.i === item.i);
+          if (!existingWidget) return null;
+
+          // Create updated widget with proper type assertions
+          const updatedWidget = {
+            ...existingWidget,
+            x: isMobile ? 0 : item.x,
+            y: item.y,
+            w: isMobile ? 12 : item.w,
+            h: item.h,
+          };
+
+          return updatedWidget;
+        }).filter((item): item is NonNullable<typeof item> => item !== null)
+      };
+
+      // Update the state first
+      setLayouts(updatedLayouts);
+      
+      // Only save to database if it's a user action (drag/drop)
+      if (isUserAction) {
+        await saveLayouts(updatedLayouts);
+        setIsUserAction(false);
       }
-      return widget
-    })
-
-    const newLayouts = {
-      ...layoutState.layouts,
-      [currentLayout]: updatedWidgets
+    } catch (error) {
+      console.error('Error updating layout:', error);
+      // Revert to previous layout on error
+      setLayouts(layouts);
     }
+  }, [user?.id, isCustomizing, setLayouts, layouts, activeLayout, isMobile, isUserAction, saveLayouts]);
 
-    setLayoutState(prev => ({
-      ...prev,
-      layouts: newLayouts
-    }))
-    
-    // Only save to database if it's a user action (drag/drop)
-    if (isUserAction) {
-      await saveDashboardLayout(user.id, newLayouts)
-      setIsUserAction(false) // Reset the flag
-    }
+  // Don't render anything until layouts are loaded
+  if (!layouts) {
+    return null;
   }
 
   const addWidget = async (type: WidgetType, size: WidgetSize = 'medium') => {
-    if (!user?.id) return
+    if (!user?.id || !layouts) return
     
     // Determine default size based on widget type
     let effectiveSize = size
@@ -1122,8 +950,8 @@ export default function WidgetCanvas() {
       effectiveSize = 'medium'
     }
     
-    const currentLayout = layoutState.layouts[layoutState.activeLayout]
-    const grid = sizeToGrid(effectiveSize, layoutState.activeLayout === 'mobile')
+    const currentLayout = layouts[activeLayout]
+    const grid = sizeToGrid(effectiveSize, activeLayout === 'mobile')
     
     // Initialize variables for finding the best position
     let bestX = 0
@@ -1193,16 +1021,12 @@ export default function WidgetCanvas() {
             const updatedWidgets = [...currentLayout, newWidget]
             
             const newLayouts = {
-              ...layoutState.layouts,
-              [layoutState.activeLayout]: updatedWidgets
+              ...layouts,
+              [activeLayout]: updatedWidgets
             }
             
-            setLayoutState(prev => ({
-              ...prev,
-              layouts: newLayouts
-            }))
-            
-            await saveDashboardLayout(user.id, newLayouts)
+            setLayouts(newLayouts)
+            await saveLayouts(newLayouts)
             return
           }
         }
@@ -1223,53 +1047,43 @@ export default function WidgetCanvas() {
     const updatedWidgets = [...currentLayout, newWidget]
     
     const newLayouts = {
-      ...layoutState.layouts,
-      [layoutState.activeLayout]: updatedWidgets
+      ...layouts,
+      [activeLayout]: updatedWidgets
     }
     
-    setLayoutState(prev => ({
-      ...prev,
-      layouts: newLayouts
-    }))
-    
-    await saveDashboardLayout(user.id, newLayouts)
+    setLayouts(newLayouts)
+    await saveLayouts(newLayouts)
   }
 
   const removeWidget = async (i: string) => {
-    if (!user?.id) return
-    const updatedWidgets = layoutState.layouts[layoutState.activeLayout].filter(widget => widget.i !== i)
+    if (!user?.id || !layouts) return
+    const updatedWidgets = layouts[activeLayout].filter(widget => widget.i !== i)
     const newLayouts = {
-      ...layoutState.layouts,
-      [layoutState.activeLayout]: updatedWidgets
+      ...layouts,
+      [activeLayout]: updatedWidgets
     }
-    setLayoutState(prev => ({
-      ...prev,
-      layouts: newLayouts
-    }))
-    await saveDashboardLayout(user.id, newLayouts)
+    setLayouts(newLayouts)
+    await saveLayouts(newLayouts)
   }
 
   const changeWidgetType = async (i: string, newType: WidgetType) => {
-    if (!user?.id) return
-    const updatedWidgets = layoutState.layouts[layoutState.activeLayout].map(widget => 
+    if (!user?.id || !layouts) return
+    const updatedWidgets = layouts[activeLayout].map(widget => 
       widget.i === i ? { ...widget, type: newType } : widget
     )
     const newLayouts = {
-      ...layoutState.layouts,
-      [layoutState.activeLayout]: updatedWidgets
+      ...layouts,
+      [activeLayout]: updatedWidgets
     }
-    setLayoutState(prev => ({
-      ...prev,
-      layouts: newLayouts
-    }))
-    await saveDashboardLayout(user.id, newLayouts)
+    setLayouts(newLayouts)
+    await saveLayouts(newLayouts)
   }
 
   const changeWidgetSize = async (i: string, newSize: WidgetSize) => {
-    if (!user?.id) return
+    if (!user?.id || !layouts) return
     
     // Find the widget
-    const widget = layoutState.layouts[layoutState.activeLayout].find(w => w.i === i)
+    const widget = layouts[activeLayout].find(w => w.i === i)
     if (!widget) return
     
     // Prevent charts from being set to tiny size
@@ -1279,23 +1093,20 @@ export default function WidgetCanvas() {
     }
     
     const grid = sizeToGrid(effectiveSize)
-    const updatedWidgets = layoutState.layouts[layoutState.activeLayout].map(widget => 
+    const updatedWidgets = layouts[activeLayout].map(widget => 
       widget.i === i ? { ...widget, size: effectiveSize, ...grid } : widget
     )
     const newLayouts = {
-      ...layoutState.layouts,
-      [layoutState.activeLayout]: updatedWidgets
+      ...layouts,
+      [activeLayout]: updatedWidgets
     }
-    setLayoutState(prev => ({
-      ...prev,
-      layouts: newLayouts
-    }))
-    await saveDashboardLayout(user.id, newLayouts)
+    setLayouts(newLayouts)
+    await saveLayouts(newLayouts)
   }
 
-  const renderWidget = (widget: Widget) => {
-    const config = WIDGET_REGISTRY[widget.type]
-    if (!config) {
+  const renderWidget = (widget: LayoutItem) => {
+    // Ensure widget.type is a valid WidgetType
+    if (!Object.keys(WIDGET_REGISTRY).includes(widget.type)) {
       return (
         <WidgetWrapper
           key={widget.i}
@@ -1304,8 +1115,8 @@ export default function WidgetCanvas() {
           onChangeSize={() => {}} // No-op for deprecated widgets
           isCustomizing={isCustomizing}
           isScreenshotMode={isScreenshotMode}
-          size={widget.size}
-          currentType={widget.type}
+          size={widget.size as WidgetSize}
+          currentType={widget.type as WidgetType}
           onCustomize={() => {}}
           onScreenshotToggle={() => setIsScreenshotMode(false)}
         >
@@ -1313,6 +1124,8 @@ export default function WidgetCanvas() {
         </WidgetWrapper>
       )
     }
+
+    const config = WIDGET_REGISTRY[widget.type as keyof typeof WIDGET_REGISTRY]
 
     // For charts, ensure size is at least small-long
     const effectiveSize = (() => {
@@ -1323,29 +1136,25 @@ export default function WidgetCanvas() {
         return config.allowedSizes[0]
       }
       if (isMobile && widget.size !== 'tiny') {
-        return 'small'
+        return 'small' as WidgetSize
       }
-      return widget.size
+      return widget.size as WidgetSize
     })()
 
-    return getWidgetComponent(widget.type, effectiveSize)
+    return getWidgetComponent(widget.type as WidgetType, effectiveSize)
   }
 
   const removeAllWidgets = async () => {
-    if (!user?.id) return
+    if (!user?.id || !layouts) return
     
     const newLayouts = {
-      ...layoutState.layouts,
+      ...layouts,
       desktop: [],
       mobile: []
     }
     
-    setLayoutState(prev => ({
-      ...prev,
-      layouts: newLayouts
-    }))
-    
-    await saveDashboardLayout(user.id, newLayouts)
+    setLayouts(newLayouts)
+    await saveLayouts(newLayouts)
   }
 
   return (
@@ -1362,51 +1171,54 @@ export default function WidgetCanvas() {
           setIsScreenshotMode(!isScreenshotMode)
           if (isCustomizing) setIsCustomizing(false)
         }}
-        currentLayout={{
-          desktop: layoutState.layouts.desktop,
-          mobile: layoutState.layouts.mobile
-        }}
+        currentLayout={layouts || { desktop: [], mobile: [] }}
       />
 
-      <ResponsiveGridLayout
-        className="layout"
-        layouts={generateResponsiveLayout(layoutState.layouts[layoutState.activeLayout])}
-        breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-        cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-        rowHeight={isMobile ? 65 : 70}
-        isDraggable={isCustomizing}
-        isResizable={false}
-        draggableHandle=".drag-handle"
-        onDragStart={() => setIsUserAction(true)}
-        onLayoutChange={handleLayoutChange}
-        margin={[16, 16]}
-        containerPadding={[0, 0]}
-        compactType="vertical"
-        preventCollision={false}
-        useCSSTransforms={true}
-        style={{ 
-          minHeight: isMobile ? '100vh' : 'auto',
-          touchAction: isCustomizing ? 'none' : 'auto'
-        }}
-      >
-        {layoutState.layouts[layoutState.activeLayout].map((widget) => (
-          <div key={widget.i} className="h-full" data-customizing={isCustomizing}>
-            <WidgetWrapper
-              onRemove={() => removeWidget(widget.i)}
-              onChangeType={(type) => changeWidgetType(widget.i, type)}
-              onChangeSize={(size) => changeWidgetSize(widget.i, size)}
-              isCustomizing={isCustomizing}
-              isScreenshotMode={isScreenshotMode}
-              size={widget.size}
-              currentType={widget.type}
-              onCustomize={() => setIsCustomizing(true)}
-              onScreenshotToggle={() => setIsScreenshotMode(false)}
-            >
-              {renderWidget(widget)}
-            </WidgetWrapper>
-          </div>
-        ))}
-      </ResponsiveGridLayout>
+      {layouts && (
+        <ResponsiveGridLayout
+          className="layout"
+          layouts={generateResponsiveLayout(layouts[activeLayout] as unknown as LayoutItem[])}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
+          rowHeight={isMobile ? 65 : 70}
+          isDraggable={isCustomizing}
+          isResizable={false}
+          draggableHandle=".drag-handle"
+          onDragStart={() => setIsUserAction(true)}
+          onLayoutChange={handleLayoutChange}
+          margin={[16, 16]}
+          containerPadding={[0, 0]}
+          compactType="vertical"
+          preventCollision={false}
+          useCSSTransforms={true}
+          style={{ 
+            minHeight: isMobile ? '100vh' : 'auto',
+            touchAction: isCustomizing ? 'none' : 'auto'
+          }}
+        >
+          {layouts[activeLayout].map((widget) => {
+            // Cast the widget to our local LayoutItem type
+            const typedWidget = widget as unknown as LayoutItem
+            return (
+              <div key={typedWidget.i} className="h-full" data-customizing={isCustomizing}>
+                <WidgetWrapper
+                  onRemove={() => removeWidget(typedWidget.i)}
+                  onChangeType={(type) => changeWidgetType(typedWidget.i, type)}
+                  onChangeSize={(size) => changeWidgetSize(typedWidget.i, size)}
+                  isCustomizing={isCustomizing}
+                  isScreenshotMode={isScreenshotMode}
+                  size={typedWidget.size as WidgetSize}
+                  currentType={typedWidget.type as WidgetType}
+                  onCustomize={() => setIsCustomizing(true)}
+                  onScreenshotToggle={() => setIsScreenshotMode(false)}
+                >
+                  {renderWidget(typedWidget)}
+                </WidgetWrapper>
+              </div>
+            )
+          })}
+        </ResponsiveGridLayout>
+      )}
 
       <style jsx global>{customStyles}</style>
     </div>

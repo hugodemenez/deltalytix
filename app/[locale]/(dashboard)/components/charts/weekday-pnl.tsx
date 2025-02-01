@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
-import { useCalendarData } from "../../../../../components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
 import {
@@ -71,7 +71,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProps) {
-  const {calendarData} = useCalendarData()
+  const {calendarData} = useUserData()
   const [darkMode, setDarkMode] = React.useState(false)
   const t = useI18n()
 

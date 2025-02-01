@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { XCircle, CheckCircle2, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Progress } from "@/components/ui/progress"
-import { useTrades } from '@/components/context/trades-data'
+import { useUserData } from '@/components/context/user-data'
 
 interface Notification {
   id: string
@@ -40,7 +40,7 @@ export function WebSocketNotifications() {
   })
   const [isComplete, setIsComplete] = useState(false)
   const { lastMessage, isConnected, accountsProgress, currentAccount } = useWebSocket()
-  const { refreshTrades } = useTrades()
+  const { refreshTrades } = useUserData()
   const refreshTimeoutRef = useRef<NodeJS.Timeout>()
 
   // Reset complete state when connection is established

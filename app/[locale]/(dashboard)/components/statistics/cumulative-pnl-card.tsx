@@ -1,4 +1,4 @@
-import { useTradeStatistics } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { PiggyBank } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -9,7 +9,7 @@ interface CumulativePnlCardProps {
 }
 
 export default function CumulativePnlCard({ size = 'medium' }: CumulativePnlCardProps) {
-  const { statistics: { cumulativePnl, cumulativeFees } } = useTradeStatistics()
+  const { statistics: { cumulativePnl, cumulativeFees } } = useUserData()
   const totalPnl = cumulativePnl - cumulativeFees
   const isPositive = totalPnl > 0
 

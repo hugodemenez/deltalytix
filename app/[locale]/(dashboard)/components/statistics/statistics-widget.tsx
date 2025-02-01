@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useTradeStatistics, useCalendarData } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { Clock, PiggyBank, Award, BarChart, Info } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -22,8 +22,7 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (.
 }
 
 export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetProps) {
-  const { statistics } = useTradeStatistics()
-  const { calendarData } = useCalendarData()
+  const { statistics, calendarData } = useUserData()
   const [activeTooltip, setActiveTooltip] = React.useState<string | null>(null)
   const [isTouch, setIsTouch] = React.useState(false)
   const cardRef = React.useRef<HTMLDivElement>(null)

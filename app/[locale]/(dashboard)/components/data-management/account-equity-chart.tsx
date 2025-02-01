@@ -3,7 +3,6 @@
 import * as React from "react"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps, ReferenceLine } from "recharts"
 import { format, isValid, startOfDay } from 'date-fns'
-import { Trade } from "@prisma/client"
 import {
   ChartConfig,
   ChartContainer,

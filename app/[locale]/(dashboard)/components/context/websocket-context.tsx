@@ -1,9 +1,8 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react'
-import { useTrades } from '@/components/context/trades-data'
 import { getRithmicData, getAllRithmicData, updateLastSyncTime } from '@/lib/rithmic-storage'
-import { useUser } from '@/components/context/user-data'
+import { useUserData } from '@/components/context/user-data'
 
 interface AccountProgress {
   ordersProcessed: number
@@ -68,7 +67,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [availableAccounts, setAvailableAccounts] = useState<{ account_id: string; fcm_id: string }[]>([])
   const [feedbackMessages, setFeedbackMessages] = useState<string[]>([])
   const [messageHistory, setMessageHistory] = useState<any[]>([])
-  const { refreshTrades, trades } = useTrades()
+  const { refreshTrades, trades, user } = useUserData()
   const [processingStats, setProcessingStats] = useState<ProcessingStats>({
     totalAccountsAvailable: 0,
     accountsProcessed: 0,
@@ -76,13 +75,18 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     isComplete: false
   })
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
-  const { user } = useUser()
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
   const syncIntervalRef = useRef<NodeJS.Timeout>()
   const [activeCredentialIds, setActiveCredentialIds] = useState<string[]>([])
   const activityTimeoutRef = useRef<NodeJS.Timeout>()
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
+
+  // Helper function to check if it's a weekday
+  const isWeekday = () => {
+    const day = new Date().getDay()
+    return day !== 0 && day !== 6 // 0 is Sunday, 6 is Saturday
+  }
 
   const resetProcessingState = useCallback(() => {
     setProcessingStats({
@@ -596,7 +600,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       if (accountTrades.length === 0) {
         // If no trades found, return date 90 days ago
         const date = new Date()
-        date.setDate(date.getDate() - 91)
+        date.setDate(date.getDate() - 200)
         startDate = date.toISOString().slice(0, 10).replace(/-/g, '')
       } else {
         // Find the most recent trade date for each account
@@ -640,6 +644,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   // Function to check and sync all credentials
   const performAutoSync = useCallback(async () => {
+    // Skip auto-sync during weekends
+    if (!isWeekday()) {
+      console.log('Skipping auto-sync during weekend')
+      return
+    }
+
     const allData = getAllRithmicData()
     const now = new Date().getTime()
 

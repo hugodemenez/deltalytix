@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, ReferenceLine } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
-import { useFormattedTrades } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
 import {
@@ -78,7 +78,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function PnLBySideChart({ size = 'medium' }: PnLBySideChartProps) {
-  const { formattedTrades: trades } = useFormattedTrades()
+  const { formattedTrades: trades } = useUserData()
   const [showAverage, setShowAverage] = React.useState(true)
   const t = useI18n()
 

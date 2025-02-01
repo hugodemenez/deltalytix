@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { generateQuestionSuggestions } from '@/server/actions';
 import { Skeleton } from "@/components/ui/skeleton";
 import { getMoodForDay, saveMood } from '@/server/mood';
-import { useUser } from '@/components/context/user-data';
+import { useUserData } from '@/components/context/user-data';
 import { debounce } from 'lodash';
 
 // Allow streaming responses up to 30 seconds
@@ -86,7 +86,7 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { suggestions, isLoading: isSuggestionsLoading } = useSuggestions(dayData, dateString);
-  const { user } = useUser();
+  const { user } = useUserData();
   const initRef = useRef(false);
   const [isInitializing, setIsInitializing] = useState(true);
 

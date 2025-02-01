@@ -11,7 +11,7 @@ import { ArrowUpDown, Trash, ChevronLeft, ChevronRight } from "lucide-react"
 import { saveTrades } from '@/server/database'
 import { useToast } from "@/hooks/use-toast"
 import { deleteTradesByIds } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
-import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
+import { useUserData } from '@/components/context/user-data'
 
 type SortConfig = {
   key: keyof Trade
@@ -19,8 +19,7 @@ type SortConfig = {
 }
 
 export default function TradeTable() {
-  const { formattedTrades } = useFormattedTrades()
-  const { refreshTrades } = useTrades()
+  const { refreshTrades, formattedTrades } = useUserData()
   const [filterValue, setFilterValue] = useState('')
   const [filterKey, setFilterKey] = useState<keyof Trade>('instrument')
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'entryDate', direction: 'desc' })

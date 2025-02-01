@@ -12,10 +12,9 @@ import { CalendarIcon } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useTrades } from "@/components/context/trades-data"
 import { useMemo, useState, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
-import { useUser } from "@/components/context/user-data"
+import { useUserData } from "@/components/context/user-data"
 import { setupPropFirmAccount, getPropFirmAccounts, addPropFirmPayout, deletePayout, updatePayout, checkAndResetAccounts } from "@/app/[locale]/(dashboard)/dashboard/data/actions"
 import { AccountEquityChart } from "./account-equity-chart"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -444,7 +443,7 @@ interface AccountTabProps {
 }
 
 function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEditAccount }: AccountTabProps) {
-  const { trades } = useTrades()
+  const { trades } = useUserData()
   const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
   
   // Calculate profits considering reset date
@@ -752,8 +751,7 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
 }
 
 export function PropFirmCard() {
-  const { trades } = useTrades()
-  const { user } = useUser()
+  const { trades, user } = useUserData()
   const [setupDialogOpen, setSetupDialogOpen] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<string>('')
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false)

@@ -7,14 +7,14 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { useFormattedTrades } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
 import { useState } from "react"
 import { ChevronDown } from "lucide-react"
 
 export function PnlRangeFilter() {
   const t = useI18n()
-  const { pnlRange, setPnlRange } = useFormattedTrades()
+  const { pnlRange, setPnlRange } = useUserData()
   const [customMin, setCustomMin] = useState<string>("")
   const [customMax, setCustomMax] = useState<string>("")
   const [open, setOpen] = useState(false)

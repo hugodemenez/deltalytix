@@ -7,12 +7,11 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useFormattedTrades, useTrades } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
 import { FilterItem, PropfirmGroup } from "@/types/filter"
 import { useState, useEffect } from "react"
-import { ChevronDown, Eye, EyeOff } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
+import { ChevronDown } from "lucide-react"
 import { PnlRangeFilter } from "./pnl-range-filter"
 
 const propfirmGroups: PropfirmGroup[] = [
@@ -66,14 +65,9 @@ function FilterDropdown({
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="flex gap-2">
-          {buttonText[type]}
-          <ChevronDown className="h-4 w-4" />
-          {selectedItems?.length > 0 && (
-            <span className="ml-1 rounded-full bg-primary/10 px-2 text-xs">
-              {selectedItems.length}
-            </span>
-          )}
+        <Button variant="outline" className="flex items-center">
+          <span className="flex-1 text-left">{buttonText[type]}</span>
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[200px]" align="start">
@@ -130,13 +124,13 @@ interface FilterDropdownsProps {
 }
 
 export function FilterDropdowns({ showAccountNumbers }: FilterDropdownsProps) {
-  const { trades = [] } = useTrades()
+  const { trades = [] } = useUserData()
   const { 
     accountNumbers = [], 
     setAccountNumbers, 
     instruments = [], 
     setInstruments,
-  } = useFormattedTrades()
+  } = useUserData()
   const [allItems, setAllItems] = useState<FilterItem[]>([])
   const [propfirms, setPropfirms] = useState<string[]>([])
   const t = useI18n()

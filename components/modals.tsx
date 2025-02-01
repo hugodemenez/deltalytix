@@ -3,9 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { useUser } from '@/components/context/user-data'
-import { getIsSubscribed } from '@/server/subscription'
-import { useTrades } from '@/components/context/trades-data'
+import { useUserData } from '@/components/context/user-data'
 import LoadingOverlay from '../app/[locale]/(dashboard)/components/loading-overlay'
 import ImportButton from '../app/[locale]/(dashboard)/components/import-csv/import-button'
 import { useI18n } from "@/locales/client"
@@ -16,34 +14,42 @@ import { useSearchParams } from 'next/navigation'
 const PAYWALL_COOLDOWN = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 export default function Modals() {
-  const { user, isLoading: userLoading } = useUser()
+  const { user, subscription, isLoading: userLoading, trades, isLoading: tradesLoading } = useUserData()
   const [isPaywallOpen, setIsPaywallOpen] = useState(false)
   const [isAlreadySubscribedOpen, setIsAlreadySubscribedOpen] = useState(false)
-  const { trades, isLoading: tradesLoading } = useTrades()
   const [isTradesDialogOpen, setIsTradesDialogOpen] = useState(false)
   const t = useI18n()
   const searchParams = useSearchParams()
 
-  const checkSubscription = useCallback(async () => {
-    if (user?.email) {
-      const isSubscribed = await getIsSubscribed(user.email);
+  const checkSubscription = useCallback(() => {
+    if (user?.email && !subscription?.isActive) {
+      // Check last shown timestamp from localStorage
+      const lastShown = localStorage.getItem('paywall_last_shown');
+      const currentTime = Date.now();
       
-      if (!isSubscribed) {
-        // Check last shown timestamp from localStorage
-        const lastShown = localStorage.getItem('paywall_last_shown');
-        const currentTime = Date.now();
-        
-        if (!lastShown || (currentTime - parseInt(lastShown)) > PAYWALL_COOLDOWN) {
-          setIsPaywallOpen(true);
-          localStorage.setItem('paywall_last_shown', currentTime.toString());
-        }
+      if (!lastShown || (currentTime - parseInt(lastShown)) > PAYWALL_COOLDOWN) {
+        console.log('[Modals] Showing paywall - User not subscribed:', { 
+          email: user.email,
+          plan: subscription?.plan,
+          status: subscription?.status 
+        });
+        setIsPaywallOpen(true);
+        localStorage.setItem('paywall_last_shown', currentTime.toString());
       }
+    } else if (subscription?.isActive) {
+      console.log('[Modals] User has active subscription:', {
+        email: user?.email,
+        plan: subscription.plan,
+        status: subscription.status
+      });
     }
-  }, [user?.email]);
+  }, [user?.email, subscription]);
 
   useEffect(() => {
-    checkSubscription();
-  }, [checkSubscription]);
+    if (!userLoading) {
+      checkSubscription();
+    }
+  }, [checkSubscription, userLoading]);
 
   useEffect(() => {
     const error = searchParams.get('error')

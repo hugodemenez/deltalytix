@@ -9,13 +9,13 @@ import GitHubRepoCard from './components/open-source'
 import PricingPage from './pricing/page'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/locales/client'
-import { useUser } from '@/components/context/user-data'
+import { useUserData } from '@/components/context/user-data'
 
 
 export default function LandingPage() {
     const t = useI18n()
     const { theme, effectiveTheme } = useTheme();
-    const { user } = useUser();
+    const { user } = useUserData();
     const [videoLoaded, setVideoLoaded] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);

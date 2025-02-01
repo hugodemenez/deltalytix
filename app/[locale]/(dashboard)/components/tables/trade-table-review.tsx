@@ -1,7 +1,7 @@
-'use client'
+
 
 import React, { useState, useEffect, useMemo, useRef, Fragment } from 'react'
-import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
+import { useUserData } from '@/components/context/user-data'
 import {
   ColumnDef,
   flexRender,
@@ -291,8 +291,7 @@ interface TradeTableReviewProps {
 
 export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) {
   const t = useI18n()
-  const { formattedTrades: contextTrades } = useFormattedTrades()
-  const { updateTrade } = useTrades()
+  const { formattedTrades: contextTrades, updateTrade } = useUserData()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [availableTags, setAvailableTags] = useState<string[]>([])

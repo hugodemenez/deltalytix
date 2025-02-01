@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { UploadIcon } from 'lucide-react'
-import { useTrades } from '@/components/context/trades-data'
 import { Trade } from '@prisma/client'
 import { getTrades, saveTrades } from '@/server/database'
 import ImportTypeSelection, { ImportType } from './import-type-selection'
 import FileUpload from './file-upload'
 import HeaderSelection from './header-selection'
 import AccountSelection from './account-selection'
-import { useUser } from '@/components/context/user-data'
+import { useUserData } from '@/components/context/user-data'
 import RithmicOrderProcessor from './rithmic-order-processor-new'
 import RithmicPerformanceProcessor from './rithmic-performance-processor'
 import TradovateProcessor from './tradovate-processor'
@@ -62,8 +61,7 @@ export default function ImportButton() {
   const [processedTrades, setProcessedTrades] = useState<Trade[]>([])
 
   const { toast } = useToast()
-  const { trades, setTrades, refreshTrades } = useTrades()
-  const { user } = useUser()
+  const { trades, setTrades, refreshTrades, user } = useUserData()
   const t = useI18n()
 
   const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {

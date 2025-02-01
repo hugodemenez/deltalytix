@@ -1,5 +1,5 @@
 import { ThemeProvider } from "@/components/context/theme-provider";
-import { TradeDataProvider } from "@/components/context/trades-data";
+import { UserDataProvider } from "@/components/context/user-data";
 import { Toaster } from "@/components/ui/toaster";
 import { I18nProviderClient } from "@/locales/client";
 import { ReactElement } from "react";
@@ -11,16 +11,16 @@ export default async function RootLayout({ params: { locale }, children }: { par
     <I18nProviderClient locale={locale}>
       <AI>
         <ThemeProvider>
-            <MoodProvider>
-              <TradeDataProvider>
-                  <div className="min-h-screen flex flex-col">
-                        <Toaster />
-                        <div className="flex flex-1 px-2 sm:px-8">
-                          {children}
-                        </div>
-                  </div>
-              </TradeDataProvider>
-            </MoodProvider>
+          <MoodProvider>
+            <UserDataProvider isSharedView>
+              <div className="min-h-screen flex flex-col bg-background">
+                <Toaster />
+                <div className="flex-1">
+                  {children}
+                </div>
+              </div>
+            </UserDataProvider>
+          </MoodProvider>
         </ThemeProvider>
       </AI>
     </I18nProviderClient>

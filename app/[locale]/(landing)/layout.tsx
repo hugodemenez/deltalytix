@@ -1,4 +1,3 @@
-import { TradeDataProvider } from "@/components/context/trades-data";
 import { UserDataProvider } from "@/components/context/user-data";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./components/landing-navbar";

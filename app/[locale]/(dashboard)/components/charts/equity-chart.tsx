@@ -30,7 +30,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 
-import { useFormattedTrades } from "../../../../../components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
 
 interface EquityChartProps {
@@ -58,8 +58,8 @@ interface AccountEquityInfo {
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-// Generate a deterministic color based on account index
-function generateAccountColor(accountIndex: number): string {
+// Move account color generation outside component
+const ACCOUNT_COLORS = Array.from({ length: 24 }, (_, index) => {
   const baseColors = [
     { h: "var(--chart-1)", color: "hsl(var(--chart-1))" },
     { h: "var(--chart-2)", color: "hsl(var(--chart-2))" },
@@ -70,26 +70,45 @@ function generateAccountColor(accountIndex: number): string {
     { h: "var(--chart-7)", color: "hsl(var(--chart-7))" },
     { h: "var(--chart-8)", color: "hsl(var(--chart-8))" },
   ]
-  const opacities = [1, 0.7, 0.4] // Different opacity levels for shades
-  
-  // First cycle through all colors
-  const baseColorIndex = accountIndex % baseColors.length
+  const opacities = [1, 0.7, 0.4]
+  const baseColorIndex = index % baseColors.length
   const baseColor = baseColors[baseColorIndex]
-  
-  // Only use opacity variations after cycling through all colors
-  const opacityIndex = Math.floor(accountIndex / baseColors.length)
+  const opacityIndex = Math.floor(index / baseColors.length)
   const opacity = opacityIndex < opacities.length ? opacities[opacityIndex] : opacities[opacityIndex % opacities.length]
-
-  // Return HSL color with opacity
   return `hsl(${baseColor.h} / ${opacity})`
+})
+
+function getAccountColor(index: number): string {
+  return ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]
 }
 
 export default function EquityChart({ size = 'medium' }: EquityChartProps) {
-  const { formattedTrades: trades } = useFormattedTrades()
+  const { formattedTrades: trades } = useUserData()
   const [showDailyPnL, setShowDailyPnL] = React.useState(true)
   const [showIndividual, setShowIndividual] = React.useState(false)
   const yAxisRef = React.useRef<any>(null)
   const t = useI18n()
+
+  // Memoize date boundaries
+  const { startDate, endDate, allDates } = React.useMemo(() => {
+    if (!trades.length) return { startDate: null, endDate: null, allDates: [] }
+
+    // Use the pre-computed UTC dates
+    const dates = trades.map(t => t.utcDateStr)
+    const startDate = dates.reduce((min, date) => date < min ? date : min)
+    const endDate = dates.reduce((max, date) => date > max ? date : max)
+    
+    // Create array of dates between start and end
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    end.setDate(end.getDate() + 1) // Include the end date
+    
+    return {
+      startDate,
+      endDate,
+      allDates: eachDayOfInterval({ start, end })
+    }
+  }, [trades])
 
   // Get unique account numbers
   const accountNumbers = React.useMemo(() => {
@@ -99,6 +118,24 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   // State for selected accounts - now managed by the parent component through filters
   const selectedAccounts = React.useMemo(() => new Set(accountNumbers), [accountNumbers])
 
+  // Memoize trades by account
+  const tradesByAccount = React.useMemo(() => {
+    return accountNumbers.reduce((acc, accountNumber) => {
+      acc[accountNumber] = trades.filter(t => t.accountNumber === accountNumber)
+      return acc
+    }, {} as Record<string, typeof trades>)
+  }, [trades, accountNumbers])
+
+  // Pre-compute date strings for all dates - now just YYYY-MM-DD format
+  const dateStringsMap = React.useMemo(() => {
+    const map = new Map<Date, string>()
+    allDates.forEach(date => {
+      map.set(date, format(date, 'yyyy-MM-dd'))
+    })
+    return map
+  }, [allDates])
+
+  // Memoize chart config
   const chartConfig = React.useMemo(() => {
     if (!showIndividual) {
       return {
@@ -108,89 +145,137 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
         }
       } as ChartConfig
     }
-    // Ensure consistent order of accounts
     const sortedAccounts = [...accountNumbers].sort()
     return sortedAccounts.reduce((acc, accountNumber, index) => {
       acc[`equity_${accountNumber}`] = {
         label: `Account ${accountNumber}`,
-        color: generateAccountColor(index),
+        color: getAccountColor(index),
       }
       return acc
     }, {} as ChartConfig)
   }, [accountNumbers, showIndividual])
 
-  const chartData = React.useMemo(() => {
-    if (!trades.length) return []
+  // Memoize initial data points map
+  const initialDateMap = React.useMemo(() => {
+    if (!allDates.length) return new Map<string, ChartDataPoint>()
 
-    // Find the global start date (earliest trade) in UTC
-    const startDate = new Date(Math.min(...trades.map(t => new Date(t.entryDate).getTime())))
-    const endDate = new Date(Math.max(...trades.map(t => new Date(t.entryDate).getTime())))
-    
-    // Convert start and end dates to UTC dates and ensure we capture the full day range
-    const startUTCDate = new Date(formatInTimeZone(startDate, 'UTC', 'yyyy-MM-dd'))
-    // Add one day to ensure we include all trades from the last day
-    const endUTCDate = new Date(formatInTimeZone(endDate, 'UTC', 'yyyy-MM-dd'))
-    endUTCDate.setDate(endUTCDate.getDate() + 1)
-    
-    const allDates = eachDayOfInterval({ 
-      start: startUTCDate,
-      end: endUTCDate
-    })
-
-    // Initialize the result with all dates and accounts
     const dateMap = new Map<string, ChartDataPoint>()
     allDates.forEach(date => {
-      const dateStr = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
+      const dateStr = dateStringsMap.get(date)!
       const point: ChartDataPoint = {
         date: dateStr,
         equity: 0
       }
-      // Initialize all account equities to null to ensure proper line rendering
       accountNumbers.forEach(acc => {
         point[`equity_${acc}`] = 0
       })
       dateMap.set(dateStr, point)
     })
+    return dateMap
+  }, [allDates, accountNumbers, dateStringsMap])
 
-    // Process trades by account
-    accountNumbers.forEach(accountNumber => {
-      if (!selectedAccounts.has(accountNumber)) return
+  // Memoize chart data calculation
+  const chartData = React.useMemo(() => {
+    if (!trades.length || !initialDateMap.size) return []
 
-      const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
-      if (!accountTrades.length) return
+    const dateMap = new Map(initialDateMap)
 
-      let accountEquity = 0
+    // Create a map to store cumulative equity for each account
+    const accountEquities = new Map<string, number>()
+    accountNumbers.forEach(acc => accountEquities.set(acc, 0))
 
-      allDates.forEach(date => {
-        const dateStr = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
+    // Process trades chronologically
+    const sortedDates = Array.from(dateMap.keys()).sort()
+    
+    sortedDates.forEach(dateStr => {
+      const point = dateMap.get(dateStr)!
+      let totalEquity = 0
 
-        const point = dateMap.get(dateStr)!
+      // Get all trades for this date
+      const dateTrades = trades.filter(trade => 
+        trade.utcDateStr === dateStr && 
+        selectedAccounts.has(trade.accountNumber)
+      )
 
-        // Get all trades for this day using UTC boundaries
-        const dayTrades = accountTrades.filter(trade => {
-          const tradeDate = new Date(trade.entryDate)
-          // Convert both dates to UTC and compare only the date components
-          const tradeUTCDate = formatInTimeZone(tradeDate, 'UTC', 'yyyy-MM-dd')
-          const dayUTCDate = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
-          return tradeUTCDate === dayUTCDate
-        })
+      // Process each account
+      accountNumbers.forEach(accountNumber => {
+        if (!selectedAccounts.has(accountNumber)) return
 
-        // Calculate daily PnL and update equity
-        const dailyPnL = dayTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0)
+        // Get current account equity
+        let accountEquity = accountEquities.get(accountNumber) || 0
+
+        // Calculate daily PnL for this account
+        const accountDayTrades = dateTrades.filter(t => t.accountNumber === accountNumber)
+        const dailyPnL = accountDayTrades.reduce(
+          (sum, trade) => sum + (trade.pnl - (trade.commission || 0)),
+          0
+        )
+
+        // Update account equity
         accountEquity += dailyPnL
+        accountEquities.set(accountNumber, accountEquity)
 
-        // Update the data point
+        // Update point data
         if (showIndividual) {
           point[`equity_${accountNumber}`] = accountEquity
-        } else {
-          point.equity = (point.equity || 0) + accountEquity
         }
+        totalEquity += accountEquity
       })
+
+      // Set total equity if not showing individual accounts
+      if (!showIndividual) {
+        point.equity = totalEquity
+      }
     })
 
-    return Array.from(dateMap.values())
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-  }, [trades, accountNumbers, selectedAccounts, showIndividual])
+    return sortedDates.map(date => dateMap.get(date)!)
+  }, [trades, initialDateMap, accountNumbers, selectedAccounts, showIndividual])
+
+  // Memoize tooltip data preparation with pre-computed values
+  const tooltipDataCache = React.useRef(new Map<string, AccountEquityInfo[]>())
+  
+  const getTooltipData = React.useCallback((data: ChartDataPoint, cursorValue?: number) => {
+    if (!showIndividual) return null
+
+    // Check cache first
+    const cacheKey = `${data.date}-${cursorValue}`
+    if (tooltipDataCache.current.has(cacheKey)) {
+      return tooltipDataCache.current.get(cacheKey)!
+    }
+
+    const accountEquities: AccountEquityInfo[] = [...accountNumbers]
+      .sort()
+      .map((accountNumber, index) => {
+        const equity = data[`equity_${accountNumber}`] as number
+        const currentIndex = chartData.findIndex(d => d.date === data.date)
+        const previousDayData = currentIndex > 0 ? chartData[currentIndex - 1] : null
+        const previousEquity = previousDayData ? previousDayData[`equity_${accountNumber}`] as number : 0
+        const hadActivity = equity !== previousEquity
+        const dailyPnL = equity - previousEquity
+
+        return {
+          accountNumber,
+          equity,
+          dailyPnL,
+          color: getAccountColor(index),
+          distance: cursorValue ? Math.abs(equity - cursorValue) : 0,
+          hadActivity
+        }
+      })
+      .filter(acc => selectedAccounts.has(acc.accountNumber) && acc.hadActivity)
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, 5)
+
+    // Cache the result
+    tooltipDataCache.current.set(cacheKey, accountEquities)
+    
+    // Clear cache if it gets too large
+    if (tooltipDataCache.current.size > 1000) {
+      tooltipDataCache.current.clear()
+    }
+
+    return accountEquities
+  }, [accountNumbers, selectedAccounts, showIndividual, chartData])
 
   return (
     <Card className="h-full flex flex-col">
@@ -327,66 +412,10 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                       const cursorValue = yScale?.invert?.(coordinate.y)
 
                       // Get all account equities and find closest to cursor
-                      const accountEquities: AccountEquityInfo[] = [...accountNumbers]
-                        .sort()
-                        .map((accountNumber, index) => {
-                          const equity = data[`equity_${accountNumber}`] as number
-                          // Find the previous day's data point
-                          const currentIndex = chartData.findIndex(d => d.date === data.date)
-                          const previousDayData = currentIndex > 0 ? chartData[currentIndex - 1] : null
-                          const previousEquity = previousDayData ? previousDayData[`equity_${accountNumber}`] as number : 0
-                          const hadActivity = equity !== previousEquity
-                          const dailyPnL = equity - previousEquity
-
-                          return {
-                            accountNumber,
-                            equity,
-                            dailyPnL,
-                            color: generateAccountColor(index),
-                            distance: Math.abs(equity - (cursorValue || equity)),
-                            hadActivity
-                          }
-                        })
-                        .filter(acc => {
-                          // Only show accounts that had activity on this specific day
-                          return selectedAccounts.has(acc.accountNumber) && acc.hadActivity
-                        })
-                        .sort((a, b) => a.distance - b.distance) // Sort by distance to cursor value
-                        .slice(0, 5) // Take only the 5 closest accounts
-
-                      // Calculate statistics for all accounts with activity this day
-                      const allAccountEquities = [...accountNumbers]
-                        .sort()
-                        .map((accountNumber, index) => {
-                          const equity = data[`equity_${accountNumber}`] as number
-                          // Find the previous day's data point
-                          const currentIndex = chartData.findIndex(d => d.date === data.date)
-                          const previousDayData = currentIndex > 0 ? chartData[currentIndex - 1] : null
-                          const previousEquity = previousDayData ? previousDayData[`equity_${accountNumber}`] as number : 0
-                          const hadActivity = equity !== previousEquity
-                          const dailyPnL = equity - previousEquity
-
-                          return {
-                            accountNumber,
-                            equity,
-                            dailyPnL,
-                            color: generateAccountColor(index),
-                            hadActivity
-                          }
-                        })
-                        .filter(acc => {
-                          // Only include accounts with activity on this specific day
-                          return selectedAccounts.has(acc.accountNumber) && acc.hadActivity
-                        })
-
-                      const totalAccounts = allAccountEquities.length
-                      const totalDailyPnL = allAccountEquities.reduce((sum, acc) => sum + acc.dailyPnL, 0)
-                      const averageDailyPnL = totalDailyPnL / totalAccounts
-                      const highestDailyPnL = Math.max(...allAccountEquities.map(acc => acc.dailyPnL))
-                      const lowestDailyPnL = Math.min(...allAccountEquities.map(acc => acc.dailyPnL))
+                      const accountEquities = getTooltipData(data, cursorValue)
 
                       // Show "No PnL" message if no accounts with PnL are found
-                      if (accountEquities.length === 0) {
+                      if (!accountEquities || accountEquities.length === 0) {
                         return (
                           <div className="rounded-lg border bg-background p-2 shadow-sm min-w-[200px]">
                             <div className="grid gap-2">
@@ -408,6 +437,12 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                           </div>
                         )
                       }
+
+                      const totalAccounts = accountEquities.length
+                      const totalDailyPnL = accountEquities.reduce((sum, acc) => sum + acc.dailyPnL, 0)
+                      const averageDailyPnL = totalDailyPnL / totalAccounts
+                      const highestDailyPnL = Math.max(...accountEquities.map(acc => acc.dailyPnL))
+                      const lowestDailyPnL = Math.min(...accountEquities.map(acc => acc.dailyPnL))
 
                       // For small size, show a compact version
                       if (size === 'small') {
@@ -520,7 +555,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                 {showIndividual ? (
                   [...accountNumbers].sort().map((accountNumber, index) => {
                     if (!selectedAccounts.has(accountNumber)) return null
-                    const color = generateAccountColor(index)
+                    const color = getAccountColor(index)
                     return (
                       <Line
                         key={accountNumber}

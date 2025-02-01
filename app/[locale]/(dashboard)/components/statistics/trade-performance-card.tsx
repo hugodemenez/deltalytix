@@ -1,6 +1,6 @@
 'use client'
 
-import { useTradeStatistics } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { BarChart, TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -11,7 +11,7 @@ interface TradePerformanceCardProps {
 }
 
 export default function TradePerformanceCard({ size = 'medium' }: TradePerformanceCardProps) {
-  const { statistics: { nbWin, nbLoss, nbBe, nbTrades } } = useTradeStatistics()
+  const { statistics: { nbWin, nbLoss, nbBe, nbTrades } } = useUserData()
 
   // Calculate rates
   const winRate = Number((nbWin / nbTrades * 100).toFixed(2))

@@ -1,80 +1,98 @@
 'use server'
-import { PrismaClient, Trade } from '@prisma/client'
+import { PrismaClient, Trade, Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { createClient } from './auth'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
+import { CalendarEntry } from '@/types/calendar'
+import { generateAIComment } from './generate-ai-comment'
+import { getSubscriptionDetails } from './subscription'
 
-export async function saveTrades(data: Trade[]): Promise<{ error: any, numberOfTradesAdded: number }> {
-    const prisma = new PrismaClient()
-    let count = 0
-    try{
+// Create a single PrismaClient instance to be reused
+const prisma = new PrismaClient()
+
+type TradeError = 
+  | 'DUPLICATE_TRADES'
+  | 'NO_TRADES_ADDED'
+  | 'DATABASE_ERROR'
+  | 'INVALID_DATA'
+
+interface TradeResponse {
+  error: TradeError | false
+  numberOfTradesAdded: number
+  details?: unknown
+}
+
+export async function saveTrades(data: Trade[]): Promise<TradeResponse> {
+    if (!Array.isArray(data) || data.length === 0) {
+      return {
+        error: 'INVALID_DATA',
+        numberOfTradesAdded: 0,
+        details: 'No trades provided'
+      }
+    }
+
+    try {
       const result = await prisma.trade.createMany({
-        data: data,
+        data,
         skipDuplicates: true
       })
-      count = result.count
       
       // Log potential duplicates if no trades were added
-      if (count === 0) {
-        console.log("No trades were added. This might be due to duplicates. Total trades attempted:", data.length)
+      if (result.count === 0) {
+        console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
         const tradeIds = data.map(trade => trade.id)
         const existingTrades = await prisma.trade.findMany({
-          where: {
-            id: {
-              in: tradeIds
-            }
-          },
+          where: { id: { in: tradeIds } },
           select: {
             id: true,
             entryDate: true,
             instrument: true
           }
         })
+
         if (existingTrades.length > 0) {
-          console.log("Found existing trades:", existingTrades)
+          console.log('[saveTrades] Found existing trades:', existingTrades)
           return {
-            error: "DUPLICATE_TRADES",
-            numberOfTradesAdded: 0
+            error: 'DUPLICATE_TRADES',
+            numberOfTradesAdded: 0,
+            details: existingTrades
           }
         }
       }
-    } catch(e) {
-        console.error("Error saving trades:", e)
-        return { error: e, numberOfTradesAdded: 0 }
-    }
-    await prisma.$disconnect()
-    revalidatePath('/')
-    return {
-      error: count === 0 ? "NO_TRADES_ADDED" : false,
-      numberOfTradesAdded: count
+
+      revalidatePath('/')
+      return {
+        error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
+        numberOfTradesAdded: result.count
+      }
+    } catch(error) {
+      console.error('[saveTrades] Database error:', error)
+      return { 
+        error: 'DATABASE_ERROR', 
+        numberOfTradesAdded: 0,
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }
     }
 }
 
-export async function getTrades(): Promise<Trade[]> {
-  const prisma = new PrismaClient()
+export async function getTrades(userId: string, isSubscribed: boolean): Promise<Trade[]> {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error } = await supabase.auth.getUser()
+    const where: Prisma.TradeWhereInput = { userId }
     
-    if (error) {
-      console.error('Error getting user:', error)
-      return []
-    }
-    
-    const email = user?.email
-    const isSubscribed = email ? await getIsSubscribed(email) : false
-
-    
-    let where: any = { userId: user?.id }
-    
-    if (!email || !isSubscribed) {
+    // If not subscribed, limit to last month's trades
+    if (!isSubscribed) {
       const oneMonthAgo = startOfDay(new Date())
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
       
       where.entryDate = {
         gte: oneMonthAgo.toISOString().split('T')[0]
       }
+
+      console.log('[getTrades] Limiting to last month for non-subscribed user:', { 
+        userId,
+        fromDate: oneMonthAgo.toISOString()
+      })
     }
     
     const trades = await prisma.trade.findMany({ 
@@ -88,43 +106,30 @@ export async function getTrades(): Promise<Trade[]> {
       exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
     }))
   } catch (error) {
-    console.error('Error fetching trades:', error)
+    console.error('[getTrades] Database error:', error)
     return []
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
-import { CalendarEntry } from '@/types/calendar'
-import { generateAIComment } from './generate-ai-comment'
-import { getIsSubscribed } from './subscription'
-
 export async function updateTradesWithComment(dayData: CalendarEntry, dateString: string) {
-    const prisma = new PrismaClient()
   try {
     const { comment, emotion } = await generateAIComment(dayData, dateString)
+    const tradeIds = dayData.trades.map(trade => trade.id)
 
     // Update all trades for the day with the generated comment
     await prisma.trade.updateMany({
-      where: {
-        id: {
-          in: dayData.trades.map(trade => trade.id)
-        }
-      },
-      data: {
-        comment: `${comment} (Emotion: ${emotion})`
-      }
+      where: { id: { in: tradeIds } },
+      data: { comment: `${comment} (Emotion: ${emotion})` }
     })
 
     return { comment, emotion }
   } catch (error) {
-    console.error("Error updating trades with comment:", error)
+    console.error("[updateTradesWithComment] Database error:", error)
     throw error
   }
 }
 
 export async function updateTradeComment(tradeId: string, comment: string | null) {
-  const prisma = new PrismaClient()
   try {
     await prisma.trade.update({
       where: { id: tradeId },
@@ -132,15 +137,19 @@ export async function updateTradeComment(tradeId: string, comment: string | null
     })
     revalidatePath('/')
   } catch (error) {
-    console.error("Error updating trade comment:", error)
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error("[updateTradeComment] Known database error:", {
+        code: error.code,
+        message: error.message
+      })
+    } else {
+      console.error("[updateTradeComment] Unknown error:", error)
+    }
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
 export async function updateTradeVideoUrl(tradeId: string, videoUrl: string | null) {
-  const prisma = new PrismaClient()
   try {
     await prisma.trade.update({
       where: { id: tradeId },
@@ -148,47 +157,54 @@ export async function updateTradeVideoUrl(tradeId: string, videoUrl: string | nu
     })
     revalidatePath('/')
   } catch (error) {
-    console.error("Error updating trade video URL:", error)
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error("[updateTradeVideoUrl] Known database error:", {
+        code: error.code,
+        message: error.message
+      })
+    } else {
+      console.error("[updateTradeVideoUrl] Unknown error:", error)
+    }
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
 export async function loadDashboardLayout(userId: string): Promise<Layouts | null> {
-  console.log("loadDashboardLayout", userId)
-  const prisma = new PrismaClient()
   try {
     const dashboard = await prisma.dashboardLayout.findUnique({
       where: { userId },
     })
     
-    await prisma.$disconnect()
-
-    if (!dashboard) return null
+    if (!dashboard) {
+      console.log('[loadDashboardLayout] No layout found for user:', userId)
+      return null
+    }
 
     // Safely parse JSON with fallback to empty arrays
-    const parseJsonSafely = (jsonString: any) => {
+    const parseJsonSafely = (jsonString: any): Widget[] => {
       try {
         return typeof jsonString === 'string' ? JSON.parse(jsonString) : []
-      } catch (e) {
+      } catch (error) {
+        console.error('[loadDashboardLayout] JSON parse error:', error)
         return []
       }
     }
 
     return {
-      desktop: parseJsonSafely(dashboard.desktop) as Widget[],
-      mobile: parseJsonSafely(dashboard.mobile) as Widget[]
+      desktop: parseJsonSafely(dashboard.desktop),
+      mobile: parseJsonSafely(dashboard.mobile)
     }
   } catch (error) {
-    console.error('Error loading dashboard layout:', error)
-    await prisma.$disconnect()
+    console.error('[loadDashboardLayout] Database error:', error)
     return null
   }
 }
 
-export async function saveDashboardLayout(userId: string, layouts: Layouts) {
-  const prisma = new PrismaClient()
+export async function saveDashboardLayout(userId: string, layouts: Layouts): Promise<Layouts | null> {
+  if (!userId || !layouts) {
+    console.error('[saveDashboardLayout] Invalid input:', { userId, hasLayouts: !!layouts })
+    return null
+  }
 
   try {
     // Ensure layouts are valid arrays before stringifying
@@ -209,15 +225,12 @@ export async function saveDashboardLayout(userId: string, layouts: Layouts) {
       },
     })
     
-    await prisma.$disconnect()
-    
     return {
       desktop: JSON.parse(dashboard.desktop as string) as Widget[],
       mobile: JSON.parse(dashboard.mobile as string) as Widget[]
     }
   } catch (error) {
-    console.error('Error saving dashboard layout:', error)
-    await prisma.$disconnect()
+    console.error('[saveDashboardLayout] Database error:', error)
     return null
   }
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useUser } from "@/components/context/user-data"
+import { useUserData } from "@/components/context/user-data"
 import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -36,12 +36,12 @@ import DateCalendarFilter from './filters/date-calendar-filter'
 import { FilterDropdowns } from './filters/filter-dropdowns'
 import { ActiveFilterTags } from './filters/active-filter-tags'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { motion, AnimatePresence } from 'framer-motion'
 
 type Theme = 'light' | 'dark' | 'system'
 
 export default function Navbar() {
-  const { user, subscription } = useUser()
-  const [searchFocused, setSearchFocused] = useState(false)
+  const { user, subscription } = useUserData()
   const { theme, toggleTheme, setTheme } = useTheme()
   const t = useI18n()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
@@ -63,8 +63,8 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-sm w-screen">
-        <div className="flex items-center justify-between px-10 py-6 gap-x-4">
+      <nav className="fixed py-2 top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-sm w-screen">
+        <div className="flex items-center justify-between px-10 h-16">
           <div className="flex items-center gap-x-2">
             <Link href="/dashboard">
               <Logo className='fill-black h-6 w-6 dark:fill-white' />
@@ -222,11 +222,11 @@ export default function Navbar() {
             </div>
           </div>
         </div>
-        <div className="px-10 pb-2">
+        <AnimatePresence>
           <ActiveFilterTags showAccountNumbers={showAccountNumbers} />
-        </div>
+        </AnimatePresence>
       </nav>
-      <div className="h-[88px]" /> {/* Adjust the spacer height if needed */}
+      <div className="h-[72px]" /> {/* Adjusted spacer height for more compact layout */}
       <KeyboardShortcutsDialog 
         open={shortcutsDialogOpen} 
         onOpenChange={setShortcutsDialogOpen} 

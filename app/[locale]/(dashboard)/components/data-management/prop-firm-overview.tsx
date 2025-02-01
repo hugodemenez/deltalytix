@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -13,22 +12,15 @@ import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, T
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn } from "@/lib/utils"
-import { useTrades } from "@/components/context/trades-data"
-import { useUser } from "@/components/context/user-data"
+import { useUserData } from "@/components/context/user-data"
 import { setupPropFirmAccount, getPropFirmAccounts, addPropFirmPayout, deletePayout, updatePayout } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
-import { AccountEquityChart } from "./account-equity-chart"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Gauge } from "@/components/ui/gauge"
-import { Slider } from "@/components/ui/slider"
 import { useI18n } from "@/locales/client"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AccountTable } from './account-table'
 import { toast } from "@/hooks/use-toast"
 import { WidgetSize } from '../../types/dashboard'
 import { enUS, fr } from 'date-fns/locale'
 import { useParams } from 'next/navigation'
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 interface PropFirmAccount {
   id: string
@@ -282,8 +274,7 @@ function getDisplayDate(pendingChanges: PendingChanges | null, selectedAccount: 
 }
 
 export function PropFirmOverview({ size }: { size: WidgetSize }) {
-  const { trades } = useTrades()
-  const { user } = useUser()
+  const { trades, user } = useUserData()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string

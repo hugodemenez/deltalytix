@@ -5,7 +5,7 @@ import { format } from "date-fns"
 import { fr, enUS } from 'date-fns/locale'
 import { Trade } from "@prisma/client"
 import { getShared } from "@/server/shared"
-import { TradeDataProvider, useFormattedTrades, useTrades } from "@/components/context/trades-data"
+import { useUserData, UserDataProvider } from "@/components/context/user-data"
 import { SharedWidgetCanvas } from "./shared-widget-canvas"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
@@ -24,12 +24,12 @@ interface SharedPageProps {
 
 // Create a client component for the accounts selection
 function AccountsSelector({ accounts }: { accounts: string[] }) {
-  const { accountNumbers, setAccountNumbers } = useFormattedTrades()
+  const { accountNumbers, setAccountNumbers } = useUserData()
   const t = useI18n()
 
   const toggleAccount = (account: string) => {
     if (accountNumbers.includes(account)) {
-      setAccountNumbers(accountNumbers.filter(a => a !== account))
+      setAccountNumbers(accountNumbers.filter((a: string) => a !== account))
     } else {
       setAccountNumbers([...accountNumbers, account])
     }
@@ -86,8 +86,8 @@ function AccountsSelector({ accounts }: { accounts: string[] }) {
 
 function TopBanner({ languages, t }: { languages: { value: string; label: string }[]; t: any }) {
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b shadow-sm">
-      <div className="container mx-auto py-3 px-4 md:px-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
+    <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b shadow-sm h-[60px]">
+      <div className="w-full mx-auto h-full py-3 px-4 md:px-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
         <div className="flex items-center gap-x-4">
           <Logo className="fill-black h-6 w-6 dark:fill-white" />
           <div className="flex flex-col">
@@ -113,7 +113,7 @@ function TopBanner({ languages, t }: { languages: { value: string; label: string
 }
 
 // Main page component
-export default async function SharedPage({ params }: SharedPageProps) {
+export default function SharedPage({ params }: SharedPageProps) {
   const languages = [
     { value: 'en', label: 'English' },
     { value: 'fr', label: 'Français' },
@@ -123,27 +123,47 @@ export default async function SharedPage({ params }: SharedPageProps) {
   const routeParams = useParams()
   const locale = (routeParams?.locale as string) || 'en'
   const dateLocale = locale === 'fr' ? fr : enUS
-  const { isLoading, sharedParams } = useTrades()
+  const { isLoading, sharedParams } = useUserData()
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen w-screen">
-        <Loader2 className="h-4 w-4 animate-spin" />
+      <div className="flex flex-col min-h-screen">
+        <TopBanner languages={languages} t={t} />
+        <div className="w-full mx-auto flex-1 flex items-center justify-center pt-[60px]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">{t('shared.loading')}</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!sharedParams) {
-    notFound()
+    return (
+      <div className="flex flex-col min-h-screen">
+        <TopBanner languages={languages} t={t} />
+        <div className="w-full mx-auto flex-1 flex items-center justify-center p-4 pt-[76px]">
+          <Card className="max-w-lg w-full">
+            <CardHeader>
+              <CardTitle>{t('shared.notFound')}</CardTitle>
+              <CardDescription>
+                {t('shared.notFoundDescription')}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   // Check if the share has expired
   if (sharedParams.expiresAt && new Date() > new Date(sharedParams.expiresAt)) {
     return (
-      <>
+      <div className="flex flex-col min-h-screen">
         <TopBanner languages={languages} t={t} />
-        <div className="pt-24 sm:pt-20 container mx-auto px-4 md:px-10 py-6">
-          <Card>
+        <div className="w-full mx-auto flex-1 flex items-center justify-center p-4 pt-[76px]">
+          <Card className="max-w-lg w-full">
             <CardHeader>
               <CardTitle>{t('shared.expired')}</CardTitle>
               <CardDescription>
@@ -152,17 +172,17 @@ export default async function SharedPage({ params }: SharedPageProps) {
             </CardHeader>
           </Card>
         </div>
-      </>
+      </div>
     )
   }
 
   const dateRange = sharedParams.dateRange as { from: Date; to: Date }
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <TopBanner languages={languages} t={t} />
-      <TradeDataProvider>
-        <div className="pt-24 sm:pt-20 container mx-auto px-4 md:px-10 py-6">
+      <div className="w-full mx-auto px-8 flex-1 pt-[60px]">
+        <main className="w-full py-6 lg:py-8">
           <Card className="mb-6">
             <CardHeader className="space-y-3">
               <div className="flex flex-col space-y-2">
@@ -202,14 +222,12 @@ export default async function SharedPage({ params }: SharedPageProps) {
             </CardContent>
           </Card>
 
-          <div className="flex flex-col gap-4">
-            <SharedWidgetCanvas layout={{
-              desktop: sharedParams.desktop || [],
-              mobile: sharedParams.mobile || []
-            }} />
-          </div>
-        </div>
-      </TradeDataProvider>
-    </>
+          <SharedWidgetCanvas layout={{
+            desktop: sharedParams.desktop || [],
+            mobile: sharedParams.mobile || []
+          }} />
+        </main>
+      </div>
+    </div>
   )
 }

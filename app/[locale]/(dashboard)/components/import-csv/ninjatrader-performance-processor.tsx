@@ -5,7 +5,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
-import { getDomainOfItemsWithSameAxis } from 'recharts/types/util/ChartUtils'
 
 interface NinjaTraderPerformanceProcessorProps {
   headers: string[];

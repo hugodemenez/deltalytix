@@ -1,6 +1,6 @@
 import { X, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { useFormattedTrades } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
 import { format } from "date-fns"
 import { fr } from 'date-fns/locale'
@@ -8,9 +8,10 @@ import { useParams } from "next/navigation"
 import { useRef, useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { motion, AnimatePresence } from 'framer-motion'
 
 export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: boolean }) {
-  const { accountNumbers, instruments, dateRange, setAccountNumbers, setInstruments, setDateRange } = useFormattedTrades()
+  const { accountNumbers, instruments, setAccountNumbers, setInstruments } = useUserData()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
@@ -50,7 +51,7 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
       const { scrollWidth, clientWidth } = scrollRef.current
       setCanScroll(scrollWidth > clientWidth)
     }
-  }, [accountNumbers, instruments, dateRange])
+  }, [accountNumbers, instruments])
 
   const scrollToNext = () => {
     if (!scrollRef.current) return
@@ -79,10 +80,6 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     }
   }
 
-  const formatDate = (date: Date) => {
-    return format(date, "LLL dd, y", { locale: dateLocale })
-  }
-
   const anonymizeAccount = (account: string) => {
     if (!showAccountNumbers) {
       const prefix = account.slice(0, 3)
@@ -92,7 +89,7 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     return account
   }
 
-  const handleRemoveFilter = (type: 'account' | 'instrument' | 'date', value?: string) => {
+  const handleRemoveFilter = (type: 'account' | 'instrument', value: string) => {
     switch (type) {
       case 'account':
         setAccountNumbers(accountNumbers.filter(a => a !== value))
@@ -100,65 +97,85 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
       case 'instrument':
         setInstruments(instruments.filter(i => i !== value))
         break
-      case 'date':
-        setDateRange(undefined)
-        break
     }
   }
 
-  if (!accountNumbers?.length && !instruments?.length && !dateRange) {
+  if (!accountNumbers?.length && !instruments?.length) {
     return null
   }
 
   return (
-    <div className="relative flex items-center overflow-hidden">
-      <div 
-        ref={scrollRef}
-        className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar pb-2 pr-8"
-      >
-        {dateRange && (
-          <Badge variant="secondary" className="gap-1 shrink-0 badge">
-            {formatDate(dateRange.from)} - {formatDate(dateRange.to)}
-            <X 
-              className="h-3 w-3 cursor-pointer" 
-              onClick={() => handleRemoveFilter('date')}
-            />
-          </Badge>
-        )}
-        {accountNumbers?.map(account => (
-          <Badge key={account} variant="secondary" className="gap-1 shrink-0 badge">
-            {anonymizeAccount(account)}
-            <X 
-              className="h-3 w-3 cursor-pointer" 
-              onClick={() => handleRemoveFilter('account', account)}
-            />
-          </Badge>
-        ))}
-        {instruments?.map(instrument => (
-          <Badge key={instrument} variant="secondary" className="gap-1 shrink-0 badge">
-            {instrument}
-            <X 
-              className="h-3 w-3 cursor-pointer" 
-              onClick={() => handleRemoveFilter('instrument', instrument)}
-            />
-          </Badge>
-        ))}
+    <motion.div
+      initial={{ height: 0, opacity: 0 }}
+      animate={{ height: "auto", opacity: 1 }}
+      exit={{ height: 0, opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="border-t border-border/40 bg-background/50 overflow-hidden"
+    >
+      <div className="px-10 py-2">
+        <div className="relative flex items-center overflow-hidden">
+          <div 
+            ref={scrollRef}
+            className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar pr-8"
+          >
+            <AnimatePresence mode="popLayout">
+              {accountNumbers?.map(account => (
+                <motion.div
+                  key={account}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15 }}
+                  layout
+                >
+                  <Badge variant="secondary" className="gap-1 shrink-0 badge">
+                    {anonymizeAccount(account)}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => handleRemoveFilter('account', account)}
+                    />
+                  </Badge>
+                </motion.div>
+              ))}
+              {instruments?.map(instrument => (
+                <motion.div
+                  key={instrument}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15 }}
+                  layout
+                >
+                  <Badge variant="secondary" className="gap-1 shrink-0 badge">
+                    {instrument}
+                    <X 
+                      className="h-3 w-3 cursor-pointer" 
+                      onClick={() => handleRemoveFilter('instrument', instrument)}
+                    />
+                  </Badge>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
+          <motion.div 
+            className={cn(
+              "absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent flex items-center justify-end"
+            )}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: canScroll ? 1 : 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-full w-8 p-0"
+              onClick={scrollToNext}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </motion.div>
+        </div>
       </div>
-      <div 
-        className={cn(
-          "absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent flex items-center justify-end",
-          !canScroll && "hidden"
-        )}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-full w-8 p-0"
-          onClick={scrollToNext}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
+    </motion.div>
   )
 } 

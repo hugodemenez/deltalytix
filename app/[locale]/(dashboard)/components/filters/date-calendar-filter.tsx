@@ -2,7 +2,7 @@ import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { useFormattedTrades } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
@@ -14,7 +14,7 @@ import { useI18n } from "@/locales/client"
 import { useParams } from "next/navigation"
 
 export default function DateCalendarFilter() {
-  const { dateRange, setDateRange } = useFormattedTrades()
+  const { dateRange, setDateRange } = useUserData()
   const [calendarOpen, setCalendarOpen] = useState(false)
   const isMobile = useMediaQuery('(max-width: 768px)')
   const t = useI18n()

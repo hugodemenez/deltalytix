@@ -13,8 +13,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { useTrades } from "@/components/context/trades-data"
-import { useUser } from "@/components/context/user-data"
+import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
 import { addDays, startOfDay, endOfDay, format } from "date-fns"
 import { createShared } from "@/server/shared"
@@ -113,8 +112,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const t = useI18n()
     const isMobile = useIsMobile()
     const { toast } = useToast()
-    const { user } = useUser()
-    const { trades } = useTrades()
+    const { user, trades } = useUserData()
     const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
     const [open, setOpen] = useState(false)
     const [comboboxOpen, setComboboxOpen] = useState(false)

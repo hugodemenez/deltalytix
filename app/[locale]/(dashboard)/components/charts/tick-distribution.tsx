@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
-import { useFormattedTrades } from "../../../../../components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { Info } from 'lucide-react'
@@ -115,7 +115,7 @@ function TickModal({ isOpen, onClose, tickValue, trades }: TickModalProps) {
 }
 
 export default function TickDistributionChart({ size = 'medium' }: TickDistributionProps) {
-  const { formattedTrades: trades, tickRange } = useFormattedTrades()
+  const { formattedTrades: trades } = useUserData()
   const [tickDetails, setTickDetails] = React.useState<Record<string, number>>({})
   const [selectedTick, setSelectedTick] = React.useState<string | null>(null)
   const [modalTrades, setModalTrades] = React.useState<Trade[]>([])

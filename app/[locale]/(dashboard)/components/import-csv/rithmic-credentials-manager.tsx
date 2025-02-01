@@ -2,8 +2,6 @@
 
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Loader2, Trash2, Plus, Edit2, RefreshCw } from 'lucide-react'
 import { getAllRithmicData, clearRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import {

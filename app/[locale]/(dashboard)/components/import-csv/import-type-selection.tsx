@@ -11,8 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useUser } from '@/components/context/user-data'
-import Link from 'next/link'
+import { useUserData } from '@/components/context/user-data'
 import { RithmicSyncCombined } from './rithmic-sync-new'
 import {
   Command,
@@ -140,7 +139,7 @@ const categoryIcons: Record<Category, React.ReactNode> = {
 }
 
 export default function ImportTypeSelection({ selectedType, setSelectedType, setIsOpen }: ImportTypeSelectionProps) {
-  const { isPlusUser } = useUser()
+  const { isPlusUser } = useUserData()
   const [searchQuery, setSearchQuery] = useState('')
   const [hoveredCategory, setHoveredCategory] = useState<Category | null>(null)
   const t = useI18n()

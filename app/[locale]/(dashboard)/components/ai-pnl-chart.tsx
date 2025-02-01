@@ -3,7 +3,7 @@
 import React from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useFormattedTrades } from '@/components/context/trades-data';
+import { useUserData } from '@/components/context/user-data';
 
 interface AIPNLChartProps {
   instrument: string;
@@ -32,7 +32,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 export default function AIPNLChart({ instrument, accountNumber, date }: AIPNLChartProps) {
-  const { formattedTrades } = useFormattedTrades();
+  const { formattedTrades } = useUserData();
 
   const relevantTrades = formattedTrades.filter(trade => 
     trade.instrument === instrument &&

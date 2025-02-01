@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -11,7 +10,7 @@ import { Filter } from "lucide-react"
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { Switch } from "@/components/ui/switch"
 import DateCalendarFilter from './date-calendar-filter'
-import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
+import { useUserData } from '@/components/context/user-data'
 import { FilterSection } from './filter-selection'
 import { FilterItem, PropfirmGroup } from '@/types/filter'
 import { useI18n } from "@/locales/client"
@@ -24,8 +23,7 @@ const propfirmGroups: PropfirmGroup[] = [
 ]
 
 export default function FilterLeftPane() {
-  const { trades } = useTrades()
-  const { accountNumbers, setAccountNumbers, instruments, setInstruments } = useFormattedTrades()
+  const { accountNumbers, setAccountNumbers, instruments, setInstruments, trades } = useUserData()
   const t = useI18n()
   
   const [allItems, setAllItems] = useState<FilterItem[]>([])

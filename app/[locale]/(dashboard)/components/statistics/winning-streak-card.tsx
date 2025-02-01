@@ -1,4 +1,4 @@
-import { useTradeStatistics } from "@/components/context/trades-data"
+import { useUserData } from "@/components/context/user-data"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Award } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -9,7 +9,7 @@ interface WinningStreakCardProps {
 }
 
 export default function WinningStreakCard({ size = 'medium' }: WinningStreakCardProps) {
-  const { statistics: { winningStreak } } = useTradeStatistics()
+  const { statistics: { winningStreak } } = useUserData()
 
   if (size === 'tiny') {
     return (

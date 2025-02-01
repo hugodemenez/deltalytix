@@ -5,15 +5,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Loader2 } from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
-import { cn } from "@/lib/utils"
-import { useUser } from '@/components/context/user-data'
+import { useUserData } from '@/components/context/user-data'
 import { toast } from '@/hooks/use-toast'
-import { Trade } from '@prisma/client'
-import { saveTrades } from '@/server/database'
-import { useTrades } from '@/components/context/trades-data'
 import { RithmicSyncFeedback } from './rithmic-sync-feedback'
 import { useWebSocket } from '../context/websocket-context'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
@@ -58,8 +53,7 @@ interface RithmicSyncCombinedProps {
 }
 
 export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedProps) {
-  const { user } = useUser()
-  const { trades } = useTrades()
+  const { user, trades } = useUserData()
   const { 
     connect, 
     disconnect, 
