@@ -123,6 +123,38 @@ export async function updateTradesWithComment(dayData: CalendarEntry, dateString
   }
 }
 
+export async function updateTradeComment(tradeId: string, comment: string | null) {
+  const prisma = new PrismaClient()
+  try {
+    await prisma.trade.update({
+      where: { id: tradeId },
+      data: { comment }
+    })
+    revalidatePath('/')
+  } catch (error) {
+    console.error("Error updating trade comment:", error)
+    throw error
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
+export async function updateTradeVideoUrl(tradeId: string, videoUrl: string | null) {
+  const prisma = new PrismaClient()
+  try {
+    await prisma.trade.update({
+      where: { id: tradeId },
+      data: { videoUrl }
+    })
+    revalidatePath('/')
+  } catch (error) {
+    console.error("Error updating trade video URL:", error)
+    throw error
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
 export async function loadDashboardLayout(userId: string): Promise<Layouts | null> {
   console.log("loadDashboardLayout", userId)
   const prisma = new PrismaClient()

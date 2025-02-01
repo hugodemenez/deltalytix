@@ -27,6 +27,7 @@ model Trade {
   commission     Float    @default(0)
   createdAt      DateTime @default(now())
   comment        String?
+  videoUrl       String?  @db.Text
   tags           String[] @default([])
   imageBase64    String?  @db.Text
 

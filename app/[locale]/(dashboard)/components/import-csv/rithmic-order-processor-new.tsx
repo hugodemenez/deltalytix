@@ -253,6 +253,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
                 commission: openPosition.totalCommission,
                 createdAt: new Date(),
                 comment: null,
+                videoUrl: null,
                 tags: [],
                 imageBase64: null
               }

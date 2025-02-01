@@ -480,6 +480,7 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
               commission: openPosition.totalCommission,
               createdAt: new Date(),
               comment: null,
+              videoUrl: null,
               tags: [],
               imageBase64: null
             }

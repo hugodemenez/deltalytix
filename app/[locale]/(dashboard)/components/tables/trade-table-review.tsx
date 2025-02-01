@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, Fragment } from 'react'
 import { useFormattedTrades, useTrades } from '@/components/context/trades-data'
 import {
   ColumnDef,
@@ -13,19 +13,10 @@ import {
   ColumnFiltersState,
   getFilteredRowModel,
 } from "@tanstack/react-table"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Upload, ArrowUpDown, Plus, Search, Trash2, X } from 'lucide-react'
+import { Upload, ArrowUpDown, Plus, Search, Trash2, X, ChevronRight, ChevronDown } from 'lucide-react'
 import Image from 'next/image'
 import { Trade } from '@prisma/client'
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Command,
   CommandEmpty,
@@ -53,12 +44,23 @@ import {
 } from "@/components/ui/hover-card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useI18n } from '@/locales/client'
+import { TradeComment } from './trade-comment'
+import { TradeVideoUrl } from './trade-video-url'
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
   direction: string
   tags: string[]
   imageBase64: string | null
+  comment: string | null
+  videoUrl: string | null
+}
+
+interface AccountGroup {
+  accountNumber: string
+  isExpanded: boolean
+  trades: ExtendedTrade[]
+  isLoading: boolean
 }
 
 interface TagInputProps {
@@ -253,6 +255,19 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
   )
 }
 
+  // Add this function to handle scroll events
+  function handleScroll(e: React.WheelEvent<HTMLDivElement>) {
+    const target = e.currentTarget;
+    const isAtTop = target.scrollTop === 0;
+    const isAtBottom = target.scrollHeight - target.scrollTop === target.clientHeight;
+    
+    // Prevent scroll propagation at boundaries
+    if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
 // Add image handling functions
 function convertFileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -280,8 +295,72 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [availableTags, setAvailableTags] = useState<string[]>([])
+  const [accountGroups, setAccountGroups] = useState<AccountGroup[]>([])
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
 
   const trades = propTrades || contextTrades
+
+  // Initialize account groups on mount
+  useEffect(() => {
+    const uniqueAccounts = Array.from(new Set(trades.map(t => t.accountNumber)))
+    if (uniqueAccounts.length === 0) return
+
+    // Initialize with first account expanded and its trades loaded
+    const firstAccountTrades = trades.filter(t => t.accountNumber === uniqueAccounts[0])
+    const extendedFirstTrades: ExtendedTrade[] = firstAccountTrades.map(trade => ({
+      ...trade,
+      direction: trade.side || '',
+      tags: trade.tags || [],
+      imageUrl: undefined,
+      comment: trade.comment || null,
+      videoUrl: trade.videoUrl || null
+    }))
+
+    setAccountGroups(uniqueAccounts.map(accountNumber => ({
+      accountNumber,
+      isExpanded: accountNumber === uniqueAccounts[0],
+      trades: accountNumber === uniqueAccounts[0] ? extendedFirstTrades : [],
+      isLoading: false
+    })))
+  }, [trades])
+
+  // Function to toggle account expansion and load trades
+  const toggleAccount = async (accountNumber: string) => {
+    const group = accountGroups.find(g => g.accountNumber === accountNumber)
+    if (!group) return
+
+    // If already expanded, just collapse
+    if (group.isExpanded) {
+      setAccountGroups(prev => prev.map(g => 
+        g.accountNumber === accountNumber ? { ...g, isExpanded: false } : g
+      ))
+      return
+    }
+
+    // If trades not loaded yet, load them first
+    if (group.trades.length === 0) {
+      const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
+      const extendedTrades: ExtendedTrade[] = accountTrades.map(trade => ({
+        ...trade,
+        direction: trade.side || '',
+        tags: trade.tags || [],
+        imageUrl: undefined,
+        comment: trade.comment || null,
+        videoUrl: trade.videoUrl || null
+      }))
+
+      setAccountGroups(prev => prev.map(g => 
+        g.accountNumber === accountNumber 
+          ? { ...g, trades: extendedTrades, isExpanded: true, isLoading: false }
+          : g
+      ))
+    } else {
+      // If trades already loaded, just expand
+      setAccountGroups(prev => prev.map(g => 
+        g.accountNumber === accountNumber ? { ...g, isExpanded: true } : g
+      ))
+    }
+  }
 
   // Initialize available tags from all trades with debounce
   useEffect(() => {
@@ -403,13 +482,14 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.entryDate')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => new Date(row.getValue("entryDate")).toLocaleDateString(),
+      size: 120,
     },
     {
       accessorKey: "instrument",
@@ -417,25 +497,13 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.instrument')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-    },
-    {
-      accessorKey: "accountNumber",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
-        >
-          {t('trade-table.accountNumber')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      ),
+      size: 120,
     },
     {
       accessorKey: "direction",
@@ -443,12 +511,13 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.direction')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
+      size: 100,
     },
     {
       accessorKey: "entryPrice",
@@ -456,7 +525,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
+          className="hover:bg-transparent px-0 font-medium w-full justify-end"
         >
           {t('trade-table.entryPrice')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -470,6 +539,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           </div>
         )
       },
+      size: 100,
     },
     {
       accessorKey: "closePrice",
@@ -477,7 +547,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
+          className="hover:bg-transparent px-0 font-medium w-full justify-end"
         >
           {t('trade-table.exitPrice')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -491,6 +561,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           </div>
         )
       },
+      size: 100,
     },
     {
       accessorKey: "timeInPosition",
@@ -498,7 +569,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.positionTime')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -508,24 +579,27 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         const timeInPosition = parseFloat(row.getValue("timeInPosition") as string) || 0
         return <div>{parsePositionTime(timeInPosition)}</div>
       },
+      size: 120,
     },
     {
-      accessorKey: "entryDate",
+      accessorKey: "entryTime",
+      accessorFn: (row) => row.entryDate,
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.entryTime')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => {
-        const dateStr = row.getValue("entryDate") as string
+        const dateStr = row.getValue("entryTime") as string
         const date = new Date(dateStr)
         return <div>{date.toLocaleTimeString()}</div>
       },
+      size: 100,
     },
     {
       accessorKey: "closeDate",
@@ -533,7 +607,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="hover:bg-transparent px-0 font-medium"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.exitTime')}
           <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -544,6 +618,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         const date = new Date(dateStr)
         return <div>{date.toLocaleTimeString()}</div>
       },
+      size: 100,
     },
     {
       accessorKey: "pnl",
@@ -552,7 +627,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="hover:bg-transparent px-0 font-medium"
+            className="hover:bg-transparent px-0 font-medium w-full justify-end"
           >
             {t('trade-table.pnl')}
             <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -571,6 +646,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           </div>
         )
       },
+      size: 100,
     },
     {
       accessorKey: "quantity",
@@ -579,7 +655,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="hover:bg-transparent px-0 font-medium"
+            className="hover:bg-transparent px-0 font-medium w-full justify-end"
           >
             {t('trade-table.quantity')}
             <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -593,6 +669,23 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
             {quantity.toLocaleString()}
           </div>
         )
+      },
+      size: 100,
+    },
+    {
+      accessorKey: "comment",
+      header: t('trade-table.comment'),
+      cell: ({ row }) => {
+        const trade = row.original
+        return <TradeComment tradeId={trade.id} comment={trade.comment} />
+      },
+    },
+    {
+      accessorKey: "videoUrl",
+      header: t('trade-table.videoUrl'),
+      cell: ({ row }) => {
+        const trade = row.original
+        return <TradeVideoUrl tradeId={trade.id} videoUrl={trade.videoUrl} />
       },
     },
     {
@@ -708,20 +801,15 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     }
   ], [availableTags, t])
 
-  const tableData = useMemo(() => 
-    trades.map(trade => ({
-      ...trade,
-      imageUrl: undefined,
-      direction: trade.side as string,
-      tags: trade.tags || [],
-    })), [trades]
-  )
-
   const table = useReactTable({
-    data: tableData,
+    data: useMemo(() => 
+      accountGroups
+        .filter(group => group.isExpanded)
+        .flatMap(group => group.trades),
+      [accountGroups]
+    ),
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onSortingChange: setSorting,
@@ -730,155 +818,130 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       sorting,
       columnFilters,
     },
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
+    defaultColumn: {
+      minSize: 80,
+      size: 100,
+      maxSize: 400,
     },
   })
 
-  // Add ref for scroll sync
-  const headerRef = useRef<HTMLDivElement>(null)
-  const bodyRef = useRef<HTMLDivElement>(null)
-
-  // Add scroll sync effect
-  useEffect(() => {
-    const headerEl = headerRef.current
-    const bodyEl = bodyRef.current
-
-    if (!headerEl || !bodyEl) return
-
-    const handleScroll = (e: Event) => {
-      const target = e.target as HTMLDivElement
-      if (target === bodyEl) {
-        headerEl.scrollLeft = target.scrollLeft
-      } else if (target === headerEl) {
-        bodyEl.scrollLeft = target.scrollLeft
-      }
-    }
-
-    headerEl.addEventListener('scroll', handleScroll)
-    bodyEl.addEventListener('scroll', handleScroll)
-
-    return () => {
-      headerEl.removeEventListener('scroll', handleScroll)
-      bodyEl.removeEventListener('scroll', handleScroll)
-    }
-  }, [])
-
   return (
-    <div 
-      className="flex flex-col h-full w-full border rounded-md overflow-hidden"
-    >
-      <div className="flex-1 min-h-0">
-        <div className="relative w-full h-full overflow-auto">
-          <table className="w-full border-separate border-spacing-0">
-            <thead className="sticky top-0 z-20 bg-background">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header, idx) => (
-                    <th
-                      key={header.id}
-                      className={cn(
-                        "h-12 px-4 text-left align-middle border-b bg-background whitespace-nowrap",
-                        idx === 0 && "sticky left-0 z-30 bg-background"
-                      )}
-                      style={{ minWidth: idx === 0 ? '150px' : 'auto' }}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <tr key={row.id}>
-                    {row.getVisibleCells().map((cell, idx) => (
-                      <td
-                        key={cell.id}
-                        className={cn(
-                          "px-4 py-2 border-b whitespace-nowrap align-middle",
-                          idx === 0 && "sticky left-0 z-10 bg-background"
+    <div className="flex flex-col h-full w-full border rounded-md overflow-hidden">
+      <div 
+        className="flex-1 overflow-y-auto"
+        onWheel={handleScroll}
+        style={{ overscrollBehavior: 'contain' }}
+      >
+        <table className="w-full border-separate border-spacing-0">
+          <thead className="sticky top-0 z-30 bg-background">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className="h-12 px-4 text-left align-middle border-b bg-background whitespace-nowrap"
+                    style={{
+                      width: header.getSize(),
+                      maxWidth: header.getSize(),
+                    }}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
                         )}
-                        style={{ minWidth: idx === 0 ? '150px' : 'auto' }}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                ))
-              ) : (
-                <tr>
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody>
+            {accountGroups.map((group) => (
+              <Fragment key={group.accountNumber}>
+                {/* Account Header Row */}
+                <tr 
+                  className={cn(
+                    "hover:bg-muted/50 cursor-pointer sticky z-20",
+                    group.isExpanded && "bg-muted/50"
+                  )}
+                  style={{ top: "48px" }}
+                  onClick={() => toggleAccount(group.accountNumber)}
+                >
                   <td
                     colSpan={columns.length}
-                    className="h-24 text-center align-middle text-muted-foreground"
+                    className={cn(
+                      "px-4 py-2 font-medium border-b bg-background",
+                      group.isExpanded && "bg-muted"
+                    )}
                   >
-                    {t('trade-table.noResults')}
+                    <div className="flex items-center gap-2">
+                      {group.isExpanded ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                      {t('trade-table.account')}: {group.accountNumber}
+                      {group.isLoading && (
+                        <div className="ml-2 animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                      )}
+                    </div>
                   </td>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                {/* Trade Rows - Only render if expanded */}
+                {group.isExpanded && (
+                  <tr>
+                    <td colSpan={columns.length} className="p-0">
+                      <table className="w-full">
+                        <tbody>
+                          {group.trades.map((trade) => {
+                            const row = table.getRowModel().rows.find(r => r.original.id === trade.id)
+                            if (!row) return null
+                            
+                            return (
+                              <tr key={trade.id}>
+                                {row.getAllCells().map((cell, idx: number) => (
+                                  <td
+                                    key={cell.id}
+                                    className="px-4 py-2 border-b whitespace-nowrap align-middle bg-background"
+                                    style={{
+                                      width: cell.column.getSize(),
+                                      maxWidth: cell.column.getSize(),
+                                    }}
+                                  >
+                                    {flexRender(
+                                      cell.column.columnDef.cell,
+                                      cell.getContext()
+                                    )}
+                                  </td>
+                                ))}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+            {accountGroups.length === 0 && (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="h-24 text-center align-middle text-muted-foreground"
+                >
+                  {t('trade-table.noResults')}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-4 sm:justify-between p-4 border-t bg-background">
-        <div className="text-sm text-muted-foreground order-2 sm:order-1">
+      <div className="flex items-center justify-end p-4 border-t bg-background">
+        <div className="text-sm text-muted-foreground">
           {t('trade-table.totalTrades', { count: table.getFilteredRowModel().rows.length })}
-        </div>
-        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 lg:gap-8 order-1 sm:order-2">
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-medium">{t('trade-table.rowsPerPage')}</p>
-            <select
-              value={table.getState().pagination.pageSize}
-              onChange={e => {
-                table.setPageSize(Number(e.target.value))
-              }}
-              className="h-8 w-[70px] rounded-md border border-input bg-transparent px-2"
-            >
-              {[10, 20, 30, 40, 50].map(pageSize => (
-                <option key={pageSize} value={pageSize}>
-                  {pageSize}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-              {t('trade-table.page', { 
-                current: table.getState().pagination.pageIndex + 1,
-                total: table.getPageCount()
-              })}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-              >
-                {t('trade-table.previous')}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-              >
-                {t('trade-table.next')}
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
