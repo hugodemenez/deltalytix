@@ -655,8 +655,9 @@ function useIsMobile() {
   return isMobile
 }
 
-// Add custom CSS for the placeholder
+// Update the customStyles string to remove scrollbar handling
 const customStyles = `
+  /* Existing styles */
   .react-grid-placeholder {
     background: hsl(var(--accent) / 0.4) !important;
     border: 2px dashed hsl(var(--accent)) !important;
@@ -724,72 +725,63 @@ function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEdit
   }
 }) {
   const t = useI18n()
+  const isMobile = useIsMobile()
+
   return (
-    <TooltipProvider>
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 md:left-auto md:bottom-auto md:right-0 md:top-1/2 md:-translate-y-1/2 md:translate-x-0 z-50">
-        <div className="flex flex-row md:flex-col gap-2 p-2 bg-background border rounded-lg md:rounded-l-lg md:rounded-r-none shadow-sm">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={isCustomizing ? "secondary" : "ghost"}
-                size="icon"
-                onClick={onEditToggle}
-                className="h-10 w-10"
-              >
-                <Pencil className={cn(
-                  "h-4 w-4",
-                  isCustomizing && "text-primary fill-primary"
-                )} />
-                <span className="sr-only">Edit Dashboard</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left" align="center">
-              <p>{isCustomizing ? t('widgets.done') : t('widgets.edit')}</p>
-            </TooltipContent>
-          </Tooltip>
+    <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center">
+      <div className="mx-auto flex items-center justify-around gap-4 p-3 bg-background/80 backdrop-blur-md border rounded-full shadow-lg">
+        <Button
+          variant={isCustomizing ? "default" : "ghost"}
+          onClick={onEditToggle}
+          className={cn(
+            "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
+            isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
+          )}
+        >
+          <Pencil className={cn(
+            "h-4 w-4 shrink-0",
+            isCustomizing && "text-background"
+          )} />
+          {!isMobile && (
+            <span className="text-sm font-medium">
+              {isCustomizing ? t('widgets.done') : t('widgets.edit')}
+            </span>
+          )}
+        </Button>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={isScreenshotMode ? "secondary" : "ghost"}
-                size="icon"
-                onClick={onScreenshotToggle}
-                className="h-10 w-10"
-              >
-                <Camera className={cn(
-                  "h-4 w-4",
-                  isScreenshotMode && "text-primary fill-primary"
-                )} />
-                <span className="sr-only">Screenshot Mode</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="left" align="center">
-              <p>{isScreenshotMode ? t('widgets.doneScreenshot') : t('widgets.screenshot')}</p>
-            </TooltipContent>
-          </Tooltip>
+        <Button
+          variant={isScreenshotMode ? "default" : "ghost"}
+          onClick={onScreenshotToggle}
+          className={cn(
+            "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
+            isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
+          )}
+        >
+          <Camera className={cn(
+            "h-4 w-4 shrink-0",
+            isScreenshotMode && "text-background"
+          )} />
+          {!isMobile && (
+            <span className="text-sm font-medium">
+              {isScreenshotMode ? t('widgets.doneScreenshot') : t('widgets.screenshot')}
+            </span>
+          )}
+        </Button>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <ShareButton currentLayout={currentLayout} />
-            </TooltipTrigger>
-            <TooltipContent side="left" align="center">
-              <p>{t('share.tooltip')}</p>
-            </TooltipContent>
-          </Tooltip>
+        <ShareButton currentLayout={currentLayout} />
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
-            </TooltipTrigger>
-            <TooltipContent side="left" align="center">
-              <p>{t('widgets.addWidget')}</p>
-            </TooltipContent>
-          </Tooltip>
+        <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
 
-          <FilterLeftPane />
-        </div>
+        {isMobile && (
+          <Button
+            variant="ghost"
+            className="h-10 w-10 p-0 rounded-full flex items-center justify-center transition-transform active:scale-95"
+          >
+            <FilterLeftPane />
+          </Button>
+        )}
       </div>
-    </TooltipProvider>
+    </div>
   )
 }
 

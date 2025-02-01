@@ -259,15 +259,6 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     getComponent: () => <TradeTableReview />,
     getPreview: () => createTablePreview('tradeTableReview')
   },
-  consistencyTable: {
-    type: 'consistencyTable',
-    defaultSize: 'large',
-    allowedSizes: ['medium', 'large', 'extra-large'],
-    category: 'tables',
-    previewHeight: 400,
-    getComponent: () => <ConsistencyTable />,
-    getPreview: () => <ConsistencyTable />
-  },
   propFirm: {
     type: 'propFirm',
     defaultSize: 'extra-large',

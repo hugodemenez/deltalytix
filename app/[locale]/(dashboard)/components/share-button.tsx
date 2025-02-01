@@ -37,6 +37,7 @@ import { DateRange } from "react-day-picker"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
 import { SharedLayoutsManager } from "./shared-layouts-manager"
+import { cn } from "@/lib/utils"
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -47,9 +48,26 @@ interface ShareButtonProps {
   }
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkIsMobile()
+    window.addEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [])
+
+  return isMobile
+}
+
 export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
   ({ variant = "ghost", size = "icon", currentLayout }, ref) => {
     const t = useI18n()
+    const isMobile = useIsMobile()
     const { toast } = useToast()
     const { user } = useUser()
     const { trades } = useTrades()
@@ -321,9 +339,20 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     return (
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button ref={ref} variant={variant} size={size}>
-            <Share className="h-4 w-4" />
-            <span className="sr-only">{t("share.button")}</span>
+          <Button 
+            ref={ref}
+            variant={variant}
+            className={cn(
+              "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
+              isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
+            )}
+          >
+            <Share className="h-4 w-4 shrink-0" />
+            {!isMobile && (
+              <span className="text-sm font-medium">
+                {t("share.button")}
+              </span>
+            )}
           </Button>
         </DialogTrigger>
         <DialogContent className="max-w-4xl sm:max-h-[95vh] max-h-[100dvh] w-full h-full sm:h-auto sm:w-[95vw] p-0">

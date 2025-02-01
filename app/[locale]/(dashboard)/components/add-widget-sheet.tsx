@@ -1,6 +1,6 @@
 "use client"
 
-import React, { forwardRef } from 'react'
+import React, { forwardRef, useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -14,6 +14,22 @@ import { getWidgetsByCategory, WIDGET_REGISTRY, getWidgetPreview } from '../conf
 interface AddWidgetSheetProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
   isCustomizing: boolean
+}
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkIsMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+
+    checkIsMobile()
+    window.addEventListener('resize', checkIsMobile)
+    return () => window.removeEventListener('resize', checkIsMobile)
+  }, [])
+
+  return isMobile
 }
 
 interface PreviewCardProps {
@@ -47,6 +63,7 @@ PreviewCard.displayName = "PreviewCard"
 export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>(
   ({ onAddWidget, isCustomizing }, ref) => {
     const t = useI18n()
+    const isMobile = useIsMobile()
     const [isOpen, setIsOpen] = React.useState(false)
 
     const handleAddWidget = (type: WidgetType) => {
@@ -80,11 +97,17 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
           <Button
             ref={ref}
             variant="ghost"
-            size="icon"
-            className="h-10 w-10"
+            className={cn(
+              "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
+              isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
+            )}
           >
-            <Plus className="h-4 w-4" />
-            <span className="sr-only">{t('widgets.addWidget')}</span>
+            <Plus className="h-4 w-4 shrink-0" />
+            {!isMobile && (
+              <span className="text-sm font-medium">
+                {t('widgets.addWidget')}
+              </span>
+            )}
           </Button>
         </SheetTrigger>
         <SheetContent side="right" className="w-[90vw] sm:max-w-[640px]">

@@ -12,6 +12,7 @@ import {
   getSortedRowModel,
   ColumnFiltersState,
   getFilteredRowModel,
+  sortingFns,
 } from "@tanstack/react-table"
 import { Button } from '@/components/ui/button'
 import { Upload, ArrowUpDown, Plus, Search, Trash2, X, ChevronRight, ChevronDown } from 'lucide-react'
@@ -489,18 +490,21 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         </Button>
       ),
       cell: ({ row }) => new Date(row.getValue("entryDate")).toLocaleDateString(),
+      sortingFn: (rowA, rowB, columnId) => {
+        const a = new Date(rowA.getValue(columnId)).getTime();
+        const b = new Date(rowB.getValue(columnId)).getTime();
+        return a < b ? -1 : a > b ? 1 : 0;
+      },
       size: 120,
     },
     {
       accessorKey: "instrument",
-      header: ({ column }) => (
+      header: () => (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.instrument')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       size: 120,
@@ -579,6 +583,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         const timeInPosition = parseFloat(row.getValue("timeInPosition") as string) || 0
         return <div>{parsePositionTime(timeInPosition)}</div>
       },
+      sortingFn: "basic",
       size: 120,
     },
     {
@@ -623,16 +628,14 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     {
       accessorKey: "pnl",
       header: ({ column }) => (
-        <div className="text-right">
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="hover:bg-transparent px-0 font-medium w-full justify-end"
-          >
-            {t('trade-table.pnl')}
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium w-full justify-end"
+        >
+          {t('trade-table.pnl')}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
       ),
       cell: ({ row }) => {
         const pnl = parseFloat(row.getValue("pnl"))
@@ -646,21 +649,20 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           </div>
         )
       },
+      sortingFn: "basic",
       size: 100,
     },
     {
       accessorKey: "quantity",
       header: ({ column }) => (
-        <div className="text-right">
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            className="hover:bg-transparent px-0 font-medium w-full justify-end"
-          >
-            {t('trade-table.quantity')}
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium w-full justify-end"
+        >
+          {t('trade-table.quantity')}
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
       ),
       cell: ({ row }) => {
         const quantity = parseFloat(row.getValue("quantity"))
@@ -670,11 +672,19 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           </div>
         )
       },
+      sortingFn: "basic",
       size: 100,
     },
     {
       accessorKey: "comment",
-      header: t('trade-table.comment'),
+      header: () => (
+        <Button
+          variant="ghost"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
+        >
+          {t('trade-table.comment')}
+        </Button>
+      ),
       cell: ({ row }) => {
         const trade = row.original
         return <TradeComment tradeId={trade.id} comment={trade.comment} />
@@ -682,7 +692,14 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     },
     {
       accessorKey: "videoUrl",
-      header: t('trade-table.videoUrl'),
+      header: () => (
+        <Button
+          variant="ghost"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
+        >
+          {t('trade-table.videoUrl')}
+        </Button>
+      ),
       cell: ({ row }) => {
         const trade = row.original
         return <TradeVideoUrl tradeId={trade.id} videoUrl={trade.videoUrl} />
@@ -690,7 +707,14 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     },
     {
       id: "image",
-      header: t('trade-table.image'),
+      header: () => (
+        <Button
+          variant="ghost"
+          className="hover:bg-transparent px-0 font-medium w-full justify-start"
+        >
+          {t('trade-table.image')}
+        </Button>
+      ),
       cell: ({ row }) => {
         const trade = row.original
         return (
@@ -801,29 +825,80 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     }
   ], [availableTags, t])
 
+  // Update the getSortedAccountGroups function to handle all sortable columns
+  const getSortedAccountGroups = useMemo(() => {
+    return accountGroups.map(group => {
+      if (!group.isExpanded) return group;
+      
+      const sortedTrades = [...group.trades].sort((a, b) => {
+        for (const sort of sorting) {
+          switch (sort.id) {
+            case 'entryDate':
+              const aDate = new Date(a.entryDate).getTime();
+              const bDate = new Date(b.entryDate).getTime();
+              return sort.desc ? bDate - aDate : aDate - bDate;
+            
+            case 'pnl':
+              const aPnl = Number(a.pnl) || 0;
+              const bPnl = Number(b.pnl) || 0;
+              return sort.desc ? bPnl - aPnl : aPnl - bPnl;
+            
+            case 'quantity':
+              const aQty = Number(a.quantity) || 0;
+              const bQty = Number(b.quantity) || 0;
+              return sort.desc ? bQty - aQty : aQty - bQty;
+            
+            case 'direction':
+              const aDir = a.direction || '';
+              const bDir = b.direction || '';
+              return sort.desc 
+                ? bDir.localeCompare(aDir)
+                : aDir.localeCompare(bDir);
+            
+            case 'timeInPosition':
+              const aTime = Number(a.timeInPosition) || 0;
+              const bTime = Number(b.timeInPosition) || 0;
+              return sort.desc ? bTime - aTime : aTime - bTime;
+          }
+        }
+        return 0;
+      });
+
+      return {
+        ...group,
+        trades: sortedTrades
+      }
+    })
+  }, [accountGroups, sorting])
+
   const table = useReactTable({
     data: useMemo(() => 
-      accountGroups
+      getSortedAccountGroups
         .filter(group => group.isExpanded)
         .flatMap(group => group.trades),
-      [accountGroups]
+      [getSortedAccountGroups]
     ),
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onSortingChange: setSorting,
     state: {
-      sorting,
       columnFilters,
+      sorting,
     },
+    enableSorting: true,
     defaultColumn: {
       minSize: 80,
       size: 100,
       maxSize: 400,
     },
   })
+
+  // Add a debug log to check sorting state
+  useEffect(() => {
+    console.log('Current sorting state:', sorting);
+  }, [sorting]);
 
   return (
     <div className="flex flex-col h-full w-full border rounded-md overflow-hidden">
@@ -857,7 +932,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
             ))}
           </thead>
           <tbody>
-            {accountGroups.map((group) => (
+            {getSortedAccountGroups.map((group) => (
               <Fragment key={group.accountNumber}>
                 {/* Account Header Row */}
                 <tr 
@@ -900,7 +975,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
                             
                             return (
                               <tr key={trade.id}>
-                                {row.getAllCells().map((cell, idx: number) => (
+                                {row.getAllCells().map((cell) => (
                                   <td
                                     key={cell.id}
                                     className="px-4 py-2 border-b whitespace-nowrap align-middle bg-background"
@@ -925,7 +1000,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
                 )}
               </Fragment>
             ))}
-            {accountGroups.length === 0 && (
+            {getSortedAccountGroups.length === 0 && (
               <tr>
                 <td
                   colSpan={columns.length}

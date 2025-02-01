@@ -19,7 +19,6 @@ export type WidgetType =
   | 'chatWidget'
   | 'newsWidget'
   | 'tradeDistribution'
-  | 'consistencyTable'
   | 'propFirm'
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 

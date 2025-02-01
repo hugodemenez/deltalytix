@@ -400,8 +400,8 @@ export default {
     'import.error.duplicateTradesDescription': 'These trades appear to have already been imported. Please check your existing trades or try importing different data.',
     'import.error.noTradesAdded': 'No Trades Added',
     'import.error.noTradesAddedDescription': 'No trades were added. Please check your data and try again.',
-    'widgets.addWidget': 'Add Widget',
-    'widgets.removeWidget': 'Remove Widget',
+    'widgets.addWidget': 'Add',
+    'widgets.removeWidget': 'Remove',
     'widgets.removeWidgetConfirm': 'Are you sure?',
     'widgets.removeWidgetDescription': 'This will remove the widget from your dashboard. You can add it back later if needed.',
     'widgets.dragToMove': 'Drag to move',
@@ -807,9 +807,12 @@ export default {
             remove: "Remove Widget"
         },
         clickToAdd: "Click to add",
-        screenshot: "Screenshot Mode",
-        doneScreenshot: "Exit Screenshot Mode",
-        takeScreenshot: "Take Screenshot"
+        screenshot: "Screenshot",
+        doneScreenshot: "Exit Screenshot",
+        takeScreenshot: "Take Screenshot",
+        share: "Share",
+        add: "Add Widget",
+        filter: "Filter"
     },
     consistency: {
         title: 'Trading Consistency',
