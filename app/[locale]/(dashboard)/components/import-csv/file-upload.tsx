@@ -247,7 +247,14 @@ export default function FileUpload({
       setRawCsvData([headers, ...concatenatedData])
       setCsvData(concatenatedData)
       setHeaders(headers)
-      setStep(importType === 'rithmic-performance' || importType === 'rithmic-orders' || importType === 'quantower' ? 3 : 2)
+      setStep(
+        importType === 'rithmic-performance' || 
+        importType === 'rithmic-orders' || 
+        importType === 'quantower' ||
+        importType === 'topstep' 
+          ? 3 
+          : 2
+      )
       setError(null)
     } catch (error) {
       setError((error as Error).message)

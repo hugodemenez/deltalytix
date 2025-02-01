@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
+import { Button } from "@/components/ui/button"
 
 interface TopstepProcessorProps {
     headers: string[];
@@ -32,34 +33,67 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
         csvData.forEach(row => {
             const item: Partial<Trade> = {};
             let quantity = 0;
+            let isValidTrade = true;
+
             headers.forEach((header, index) => {
                 const mappingKey = Object.keys(mappings).find(key => header.includes(key));
                 if (mappingKey) {
                     const key = mappings[mappingKey] as keyof Trade;
                     const cellValue = row[index];
+
+                    // Skip trades with undefined values for required fields
+                    if (!cellValue && ['instrument', 'quantity', 'entryPrice', 'closePrice', 'entryDate', 'closeDate'].includes(key)) {
+                        isValidTrade = false;
+                        return;
+                    }
+
                     switch (key) {
                         case 'quantity':
                             quantity = parseFloat(cellValue) || 0;
+                            if (quantity <= 0) {
+                                isValidTrade = false;
+                                return;
+                            }
                             item[key] = quantity;
                             break;
                         case 'pnl':
-                            const pnl = parseFloat(cellValue) || 0;
+                            const pnl = parseFloat(cellValue);
+                            if (isNaN(pnl)) {
+                                isValidTrade = false;
+                                return;
+                            }
                             item[key] = pnl;
                             break;
                         case 'commission':
-                            item[key] = parseFloat(cellValue) || 0;
+                            const commission = parseFloat(cellValue) || 0;
+                            if (commission < 0) {
+                                isValidTrade = false;
+                                return;
+                            }
+                            item[key] = commission;
                             break;
                         case 'side':
-                            // The Type column in Topstep CSV already contains "Long" or "Short"
-                            item[key] = cellValue ? cellValue.toLowerCase() : 'long';
+                            if (!cellValue) {
+                                isValidTrade = false;
+                                return;
+                            }
+                            item[key] = cellValue.toLowerCase();
                             break;
                         case 'entryPrice':
                         case 'closePrice':
-                            item[key] = (parseFloat(cellValue) || 0).toString();
+                            const price = parseFloat(cellValue);
+                            if (isNaN(price) || price <= 0) {
+                                isValidTrade = false;
+                                return;
+                            }
+                            item[key] = price.toString();
                             break;
                         case 'instrument':
-                            // Trim the last two characters from the instrument symbol (e.g., "MESH5" -> "MES")
-                            item[key] = cellValue ? cellValue.slice(0, -2) : cellValue;
+                            if (!cellValue) {
+                                isValidTrade = false;
+                                return;
+                            }
+                            item[key] = cellValue.slice(0, -2);
                             break;
                         default:
                             item[key] = cellValue as any;
@@ -70,16 +104,23 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
             // Ensure time values are stored as ISO strings
             try {
                 if (item.entryDate) {
-                    item.entryDate = new Date(item.entryDate).toISOString();
+                    const entryDate = new Date(item.entryDate);
+                    if (isNaN(entryDate.getTime())) {
+                        isValidTrade = false;
+                        return;
+                    }
+                    item.entryDate = entryDate.toISOString();
                 }
                 if (item.closeDate) {
-                    item.closeDate = new Date(item.closeDate).toISOString();
+                    const closeDate = new Date(item.closeDate);
+                    if (isNaN(closeDate.getTime())) {
+                        isValidTrade = false;
+                        return;
+                    }
+                    item.closeDate = closeDate.toISOString();
                 }
             } catch (e) {
-                toast({
-                    title: "Error",
-                    description: "There was an error processing the trades. Please check the data and try again."
-                })
+                isValidTrade = false;
                 return;
             }
 
@@ -88,16 +129,27 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
                 const entryTime = new Date(item.entryDate).getTime();
                 const closeTime = new Date(item.closeDate).getTime();
                 item.timeInPosition = Math.round((closeTime - entryTime) / 1000);
+            } else {
+                isValidTrade = false;
+                return;
             }
 
-            // This is going to be set later
-            item.userId = ''
-            if (!item.accountNumber) {
+            // Only add valid trades
+            if (isValidTrade) {
+                item.userId = '';
                 item.accountNumber = accountNumber;
+                item.id = `${item.entryId}-${item.closeId}`;
+                newTrades.push(item as Trade);
             }
-            item.id = `${item.entryId}-${item.closeId}`;
-            newTrades.push(item as Trade);
         });
+
+        if (newTrades.length < csvData.length) {
+            toast({
+                title: "Invalid Trades Filtered",
+                description: `${csvData.length - newTrades.length} trade(s) were filtered out due to invalid or missing data.`,
+                variant: "default",
+            });
+        }
 
         setTrades(newTrades);
         setProcessedTrades(newTrades);
@@ -112,54 +164,75 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
     const uniqueInstruments = Array.from(new Set(trades.map(trade => trade.instrument)));
 
     return (
-        <div className="space-y-4 p-4">
-            <div>
-                <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Instrument</TableHead>
-                            <TableHead>Side</TableHead>
-                            <TableHead>Quantity</TableHead>
-                            <TableHead>Entry Price</TableHead>
-                            <TableHead>Close Price</TableHead>
-                            <TableHead>Entry Date</TableHead>
-                            <TableHead>Close Date</TableHead>
-                            <TableHead>PnL</TableHead>
-                            <TableHead>Commission</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {trades.map((trade) => (
-                            <TableRow key={trade.id}>
-                                <TableCell>{trade.instrument}</TableCell>
-                                <TableCell>{trade.side}</TableCell>
-                                <TableCell>{trade.quantity}</TableCell>
-                                <TableCell>{trade.entryPrice}</TableCell>
-                                <TableCell>{trade.closePrice}</TableCell>
-                                <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
-                                <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                                <TableCell className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
-                                    {trade.pnl?.toFixed(2)}
-                                </TableCell>
-                                <TableCell>{trade.commission?.toFixed(2)}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </div>
-            <div className="flex justify-between">
-                <div>
-                    <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-                    <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {totalPnL.toFixed(2)}
-                    </p>
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-                    <p className="text-xl font-bold text-blue-600">
-                        {totalCommission.toFixed(2)}
-                    </p>
+        <div className="flex flex-col h-full overflow-hidden">
+            <div className="flex-1 overflow-auto">
+                <div className="space-y-4 p-6">
+                    <div>
+                        <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Instrument</TableHead>
+                                    <TableHead>Side</TableHead>
+                                    <TableHead>Quantity</TableHead>
+                                    <TableHead>Entry Price</TableHead>
+                                    <TableHead>Close Price</TableHead>
+                                    <TableHead>Entry Date</TableHead>
+                                    <TableHead>Close Date</TableHead>
+                                    <TableHead>PnL</TableHead>
+                                    <TableHead>Commission</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {trades.map((trade) => (
+                                    <TableRow key={trade.id}>
+                                        <TableCell>{trade.instrument}</TableCell>
+                                        <TableCell>{trade.side}</TableCell>
+                                        <TableCell>{trade.quantity}</TableCell>
+                                        <TableCell>{trade.entryPrice}</TableCell>
+                                        <TableCell>{trade.closePrice}</TableCell>
+                                        <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                                        <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
+                                        <TableCell className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                            {trade.pnl?.toFixed(2)}
+                                        </TableCell>
+                                        <TableCell>{trade.commission?.toFixed(2)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                    <div className="flex justify-between">
+                        <div>
+                            <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
+                            <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {totalPnL.toFixed(2)}
+                            </p>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
+                            <p className="text-xl font-bold text-blue-600">
+                                {totalCommission.toFixed(2)}
+                            </p>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
+                        <div className="flex flex-wrap gap-2">
+                            {uniqueInstruments.map((instrument) => (
+                                <Button
+                                    key={instrument}
+                                    variant="outline"
+                                    onClick={() => toast({
+                                        title: "Instrument Information",
+                                        description: `You traded ${instrument}. For more details, please check the trades table.`
+                                    })}
+                                >
+                                    {instrument}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
