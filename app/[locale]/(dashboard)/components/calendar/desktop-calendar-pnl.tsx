@@ -17,6 +17,7 @@ import { CalendarModal } from "./new-modal"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { getFinancialEvents } from "@/server/financial-events"
 import { useI18n, useCurrentLocale } from "@/locales/client"
+import { WeeklyModal } from "./weekly-modal"
 
 
 const WEEKDAYS = [
@@ -71,6 +72,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const [aiEmotion, setAiEmotion] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>(financialEvents)
+  const [selectedWeekDate, setSelectedWeekDate] = useState<Date | null>(null)
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -379,11 +381,14 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                   </div>
                 </div>
                 {isLastDayOfWeek && (
-                  <div className={cn(
-                    "h-full flex items-center justify-center rounded-none bg-card/50 ring-1 ring-border/40",
-                    index === 6 && "rounded-tr-lg",
-                    index === 41 && "rounded-br-lg"
-                  )}>
+                  <div 
+                    className={cn(
+                      "h-full flex items-center justify-center rounded-none bg-card/50 ring-1 ring-border/40 cursor-pointer hover:bg-accent/50",
+                      index === 6 && "rounded-tr-lg",
+                      index === 41 && "rounded-br-lg"
+                    )}
+                    onClick={() => setSelectedWeekDate(date)}
+                  >
                     <div className={cn(
                       "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
                       calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
@@ -406,6 +411,15 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
         }}
         selectedDate={selectedDate}
         dayData={selectedDate ? calendarData[format(selectedDate, 'yyyy-MM-dd')] : undefined}
+        isLoading={isLoading}
+      />
+      <WeeklyModal
+        isOpen={selectedWeekDate !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedWeekDate(null)
+        }}
+        selectedDate={selectedWeekDate}
+        calendarData={calendarData}
         isLoading={isLoading}
       />
     </Card>

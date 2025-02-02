@@ -20,10 +20,12 @@ import { FaRegSadTear, FaRegMeh, FaRegSmileBeam } from "react-icons/fa"
 import { saveMood, getMoodForDay } from '@/server/mood'
 import { useUserData } from '@/components/context/user-data'
 import { useToast } from '@/hooks/use-toast'
-import { useI18n } from '@/locales/client'
+import { useI18n, useCurrentLocale } from '@/locales/client'
+import { fr, enUS } from 'date-fns/locale'
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;
+  isWeekly?: boolean;
 }
 
 const chartConfig = {
@@ -52,12 +54,14 @@ const formatDuration = (seconds: number) => {
   return `${remainingSeconds}s`
 }
 
-export function Charts({ dayData }: ChartsProps) {
+export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const { effectiveTheme } = useTheme()
   const isDarkMode = effectiveTheme === 'dark'
   const { user } = useUserData()
   const { toast } = useToast()
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const dateLocale = locale === 'fr' ? fr : enUS
   const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
   const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
 
@@ -102,7 +106,12 @@ export function Charts({ dayData }: ChartsProps) {
           .slice(0, index + 1)
           .reduce((sum, t) => sum + (t.pnl - (t.commission || 0)), 0);
         return {
-          time: new Date(trade.entryDate).toLocaleTimeString(),
+          time: new Date(trade.entryDate).toLocaleTimeString(locale),
+          date: new Date(trade.entryDate).toLocaleDateString(locale, { 
+            weekday: 'short', 
+            month: 'short', 
+            day: 'numeric',
+          }),
           balance: runningBalance,
           pnl: trade.pnl - (trade.commission || 0),
           tradeNumber: index + 1,
@@ -234,13 +243,18 @@ export function Charts({ dayData }: ChartsProps) {
       const data = payload[0].payload
       return (
         <div className="bg-background p-2 border rounded shadow-sm">
-          <p className="text-sm font-medium">{`Time: ${data.time}`}</p>
-          <p className="text-sm font-medium">{`Trade #: ${data.tradeNumber}`}</p>
+          <p className="text-sm font-medium">
+            {isWeekly 
+              ? `${t('calendar.charts.date')}: ${data.date}`
+              : `${t('calendar.charts.time')}: ${data.time}`
+            }
+          </p>
+          <p className="text-sm font-medium">{`${t('calendar.charts.tradeNumber')}: ${data.tradeNumber}`}</p>
           <p className={`text-sm font-medium ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {`Trade P&L: ${formatCurrency(data.pnl)}`}
+            {`${t('calendar.charts.tradePnl')}: ${formatCurrency(data.pnl)}`}
           </p>
           <p className={`text-sm font-medium ${data.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {`Balance: ${formatCurrency(data.balance)}`}
+            {`${t('calendar.charts.balance')}: ${formatCurrency(data.balance)}`}
           </p>
         </div>
       )
@@ -294,7 +308,9 @@ export function Charts({ dayData }: ChartsProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="flex flex-col">
           <CardHeader className="pb-2 flex-1">
-            <CardTitle className="text-lg">{t('calendar.charts.dailyPnlAfterComm')}</CardTitle>
+            <CardTitle className="text-lg">
+              {isWeekly ? t('calendar.charts.weeklyPnlAfterComm') : t('calendar.charts.dailyPnlAfterComm')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-2 mt-auto">
             <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'}`}>
@@ -310,7 +326,9 @@ export function Charts({ dayData }: ChartsProps) {
 
         <Card className="flex flex-col">
           <CardHeader className="pb-2 flex-1">
-            <CardTitle className="text-lg">{t('calendar.charts.avgTimeInPosition')}</CardTitle>
+            <CardTitle className="text-lg">
+              {isWeekly ? t('calendar.charts.weeklyAvgTimeInPosition') : t('calendar.charts.avgTimeInPosition')}
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-2 mt-auto">
             <p className="text-2xl font-bold">
@@ -326,47 +344,60 @@ export function Charts({ dayData }: ChartsProps) {
 
         <Card className="flex flex-col">
           <CardHeader className="pb-2 flex-1">
-            <CardTitle className="text-lg">{t('calendar.charts.howWasYourDay')}</CardTitle>
+            <CardTitle className="text-lg">
+              {isWeekly ? t('calendar.charts.weeklyMood') : t('calendar.charts.howWasYourDay')}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="pt-2 mt-auto">
-            <div className="flex justify-around items-center">
-              <Button
-                variant="ghost"
-                size="lg"
-                className={getMoodButtonStyle('bad')}
-                onClick={() => handleMoodSelect('bad')}
-                disabled={isLoading !== null}
-              >
-                <FaRegSadTear className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="lg"
-                className={getMoodButtonStyle('okay')}
-                onClick={() => handleMoodSelect('okay')}
-                disabled={isLoading !== null}
-              >
-                <FaRegMeh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="lg"
-                className={getMoodButtonStyle('great')}
-                onClick={() => handleMoodSelect('great')}
-                disabled={isLoading !== null}
-              >
-                <FaRegSmileBeam className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
-              </Button>
-            </div>
-          </CardContent>
+          {!isWeekly && (
+            <CardContent className="pt-2 mt-auto">
+              <div className="flex justify-around items-center">
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className={getMoodButtonStyle('bad')}
+                  onClick={() => handleMoodSelect('bad')}
+                  disabled={isLoading !== null}
+                >
+                  <FaRegSadTear className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className={getMoodButtonStyle('okay')}
+                  onClick={() => handleMoodSelect('okay')}
+                  disabled={isLoading !== null}
+                >
+                  <FaRegMeh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className={getMoodButtonStyle('great')}
+                  onClick={() => handleMoodSelect('great')}
+                  disabled={isLoading !== null}
+                >
+                  <FaRegSmileBeam className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
+                </Button>
+              </div>
+            </CardContent>
+          )}
+          {isWeekly && (
+            <CardContent className="pt-2 mt-auto">
+              <p className="text-sm text-muted-foreground">
+                {t('calendar.charts.weeklyMoodNotAvailable')}
+              </p>
+            </CardContent>
+          )}
         </Card>
       </div>
 
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>{t('calendar.charts.equityVariation')}</CardTitle>
+          <CardTitle>
+            {isWeekly ? t('calendar.charts.weeklyEquityVariation') : t('calendar.charts.equityVariation')}
+          </CardTitle>
           <CardDescription>
             {t('calendar.charts.finalBalance')}: {formatCurrency(equityChartData[equityChartData.length - 1]?.balance || 0)}
           </CardDescription>
@@ -380,11 +411,18 @@ export function Charts({ dayData }: ChartsProps) {
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis 
-                  dataKey="time"
+                  dataKey={isWeekly ? "date" : "time"}
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tickFormatter={(time) => time.split(':').slice(0, 2).join(':')}
+                  tickFormatter={(value) => {
+                    if (isWeekly) {
+                      return value;
+                    }
+                    // Pour le format horaire, on garde HH:mm
+                    const [hours, minutes] = value.split(':');
+                    return `${hours}:${minutes}`;
+                  }}
                 />
                 <YAxis
                   yAxisId="left"
@@ -418,8 +456,8 @@ export function Charts({ dayData }: ChartsProps) {
                   dataKey="balance"
                   stroke={chartConfig.equity.color}
                   strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
+                  dot={false}
+                  activeDot={false}
                   name={t('calendar.charts.balance')}
                 />
               </ComposedChart>
@@ -430,9 +468,11 @@ export function Charts({ dayData }: ChartsProps) {
 
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>{t('calendar.charts.dailyPnlDistribution')}</CardTitle>
+          <CardTitle>
+            {isWeekly ? t('calendar.charts.weeklyPnlDistribution') : t('calendar.charts.dailyPnlDistribution')}
+          </CardTitle>
           <CardDescription>
-            {t('calendar.charts.totalPnlAfterComm')}: {formatCurrency(totalPnL)}
+            {isWeekly ? t('calendar.charts.weeklyTotalPnlAfterComm') : t('calendar.charts.totalPnlAfterComm')}: {formatCurrency(totalPnL)}
           </CardDescription>
         </CardHeader>
         <CardContent className="min-h-[400px] h-full pb-24">

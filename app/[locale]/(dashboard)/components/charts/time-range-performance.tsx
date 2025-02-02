@@ -33,6 +33,21 @@ function getTimeRangeKey(timeInPosition: number): string {
   return 'over5hours'
 }
 
+function getTimeRangeLabel(range: string): string {
+  const labels: Record<string, string> = {
+    under1min: '< 1m',
+    '1to5min': '1-5m',
+    '5to10min': '5-10m',
+    '10to15min': '10-15m',
+    '15to30min': '15-30m',
+    '30to60min': '30-60m',
+    '1to2hours': '1-2h',
+    '2to5hours': '2-5h',
+    over5hours: '> 5h'
+  }
+  return labels[range] || range
+}
+
 function getColorByWinRate(winRate: number): string {
   if (winRate === 0) return "hsl(var(--muted-foreground))"
   return winRate >= 50 ? "hsl(var(--success))" : "hsl(var(--destructive))"
@@ -94,7 +109,7 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
                 {t('timeRangePerformance.tooltip.timeRange')}
               </span>
               <span className="font-bold text-muted-foreground">
-                {t(`timeRangePerformance.ranges.${label}`)}
+                {getTimeRangeLabel(label)}
               </span>
             </div>
             <div className="flex flex-col">
@@ -115,10 +130,13 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('timeRangePerformance.tooltip.trades')}
+                {t('timeRangePerformance.tooltip.trades.one', { count: data.trades })}
               </span>
               <span className="font-bold text-muted-foreground">
-                {data.trades} {data.trades !== 1 ? t('timeRangePerformance.tooltip.trades_plural') : t('timeRangePerformance.tooltip.trade')}
+                {data.trades === 1 
+                  ? t('timeRangePerformance.tooltip.trades.one', { count: data.trades })
+                  : t('timeRangePerformance.tooltip.trades.other', { count: data.trades })
+                }
               </span>
             </div>
           </div>
@@ -192,7 +210,7 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
                   fontSize: size === 'small-long' ? 9 : 11,
                   fill: 'currentColor'
                 }}
-                tickFormatter={(value) => t(`timeRangePerformance.ranges.${value}`)}
+                tickFormatter={getTimeRangeLabel}
               />
               <YAxis
                 tickLine={false}
