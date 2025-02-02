@@ -15,6 +15,7 @@ import {
 import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 import { Trade } from "@prisma/client"
+import { Button } from "@/components/ui/button"
 
 interface TimeRangePerformanceChartProps {
   size?: WidgetSize
@@ -200,12 +201,14 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
             </TooltipProvider>
           </div>
           {timeRange.range && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 lg:px-3"
               onClick={() => setTimeRange({ range: null })}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
               {t('timeRangePerformance.clearFilter')}
-            </button>
+            </Button>
           )}
         </div>
       </CardHeader>

@@ -584,14 +584,19 @@ export default {
     'pnlTime.tooltip.trades': 'Trades',
     'pnlTime.tooltip.trade': 'trade',
     'pnlTime.tooltip.trades_plural': 'trades',
-    'tickDistribution.title': 'Tick Distribution',
-    'tickDistribution.description': 'Distribution of trades by tick value (PnL per contract)',
-    'tickDistribution.tooltip.ticks': 'tick',
-    'tickDistribution.tooltip.tick': 'tick',
-    'tickDistribution.tooltip.ticks_plural': 'ticks',
-    'tickDistribution.tooltip.trades': 'trades',
-    'tickDistribution.tooltip.trade': 'trade',
-    'tickDistribution.tooltip.trades_plural': 'trades',
+    'tickDistribution': {
+        title: "Tick Distribution",
+        description: "Distribution of trades by tick value (PnL per contract)",
+        tooltip: {
+            ticks: "ticks",
+            tick: "tick",
+            ticks_plural: "ticks",
+            trades: "trades",
+            trade: "trade",
+            trades_plural: "trades"
+        },
+        clearFilter: "Clear filter"
+    },
     'timeInPosition.title': 'Average Time in Position',
     'timeInPosition.description': 'Average time in position for each hour of the day',
     'timeInPosition.tooltip.time': 'Time',

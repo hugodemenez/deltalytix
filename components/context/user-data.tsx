@@ -74,6 +74,11 @@ interface LayoutItem extends ServerLayoutItem {}
 
 interface Layouts extends ServerLayouts {}
 
+// Add new interface for tick filter
+interface TickFilter {
+  value: string | null
+}
+
 // Add after the interfaces and before the UserDataContext
 const defaultLayouts: Layouts = {
   desktop: [
@@ -232,6 +237,10 @@ interface UserDataContextType {
   // Time range related
   timeRange: TimeRange
   setTimeRange: React.Dispatch<React.SetStateAction<TimeRange>>
+
+  // Tick filter related
+  tickFilter: TickFilter
+  setTickFilter: React.Dispatch<React.SetStateAction<TickFilter>>
 }
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
@@ -289,6 +298,9 @@ export const UserDataProvider: React.FC<{
 
   // Time range state
   const [timeRange, setTimeRange] = useState<TimeRange>({ range: null });
+
+  // Add tick filter state
+  const [tickFilter, setTickFilter] = useState<TickFilter>({ value: null });
 
   // Update the fetchData function to handle shared views
   const fetchData = useCallback(async () => {
@@ -471,13 +483,28 @@ export const UserDataProvider: React.FC<{
     );
   }, [dateFiltered, pnlRange]);
 
-  // Memoize filtered trades by time range
+  // Add tick filter to filtering chain
+  const tickFiltered = useMemo(() => {
+    if (!tickFilter?.value) return pnlFiltered;
+    return pnlFiltered.filter(trade => {
+      const matchingTicker = Object.keys(tickDetails).find(ticker => 
+        trade.instrument.includes(ticker)
+      );
+      const tickValue = matchingTicker ? tickDetails[matchingTicker] : 1;
+      const pnlPerContract = Number(trade.pnl) / Number(trade.quantity);
+      const tradeTicks = Math.round(pnlPerContract / tickValue);
+      const filterValue = tickFilter.value;
+      return filterValue ? tradeTicks === Number(filterValue.replace('+', '')) : false;
+    });
+  }, [pnlFiltered, tickFilter?.value, tickDetails]);
+
+  // Update timeRangeFiltered to use tickFiltered
   const timeRangeFiltered = useMemo(() => {
-    if (!timeRange.range) return pnlFiltered;
-    return pnlFiltered.filter(trade => 
+    if (!timeRange.range) return tickFiltered;
+    return tickFiltered.filter(trade => 
       getTimeRangeKey(trade.timeInPosition) === timeRange.range
     );
-  }, [pnlFiltered, timeRange]);
+  }, [tickFiltered, timeRange]);
 
   // Update formattedTrades to use timeRangeFiltered
   const formattedTrades = useMemo(() => {
@@ -559,6 +586,10 @@ export const UserDataProvider: React.FC<{
     // Time range related
     timeRange,
     setTimeRange,
+
+    // Tick filter related
+    tickFilter,
+    setTickFilter,
   };
 
   return (
