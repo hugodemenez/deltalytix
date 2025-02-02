@@ -4,11 +4,12 @@ import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useState } from 'react'
 import { toast } from '@/hooks/use-toast'
+import { Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
   isLoading: boolean
   isAuthenticated: boolean
-  session: any | null
+  session: Session | null
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,7 +20,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
-  const [session, setSession] = useState<any | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const router = useRouter()
 
   useEffect(() => {
