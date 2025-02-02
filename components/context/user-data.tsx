@@ -199,6 +199,9 @@ interface UserDataContextType {
   updateTrade: (tradeId: string, updates: Partial<TradeWithUTC>) => void
   sharedParams: SharedParams | null
   
+  // Tick details
+  tickDetails: Record<string, number>
+  
   // Formatted trades and filters
   formattedTrades: TradeWithUTC[]
   instruments: string[]
@@ -261,6 +264,7 @@ export const UserDataProvider: React.FC<{
   const [user, setUser] = useState<User | null>(null);
   const [subscription, setSubscription] = useState<UserDataContextType['subscription']>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [tickDetails, setTickDetails] = useState<Record<string, number>>({});
 
   // Trades state
   const [trades, setTrades] = useState<TradeWithUTC[]>([]);
@@ -299,6 +303,11 @@ export const UserDataProvider: React.FC<{
           } else {
             setLayouts(defaultLayouts);
           }
+
+          // Set tick details from shared data if available
+          if (sharedData.params.tickDetails) {
+            setTickDetails(sharedData.params.tickDetails);
+          }
         }
       } else if (!isSharedView) {
         // Only load user data if not in shared view
@@ -324,6 +333,11 @@ export const UserDataProvider: React.FC<{
           } else {
             // No layouts found, use defaults
             setLayouts(defaultLayouts);
+          }
+
+          // Set tick details from initial data
+          if (data.tickDetails) {
+            setTickDetails(data.tickDetails);
           }
 
           const processedTrades = data.trades.map(trade => ({
@@ -496,6 +510,9 @@ export const UserDataProvider: React.FC<{
     refreshTrades,
     updateTrade,
     sharedParams,
+
+    // Tick details
+    tickDetails,
 
     // Formatted trades and filters
     formattedTrades,

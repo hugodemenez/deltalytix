@@ -20,7 +20,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { getTickDetails } from "@/server/tick-details"
 import { useI18n } from "@/locales/client"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -115,24 +114,13 @@ function TickModal({ isOpen, onClose, tickValue, trades }: TickModalProps) {
 }
 
 export default function TickDistributionChart({ size = 'medium' }: TickDistributionProps) {
-  const { formattedTrades: trades } = useUserData()
-  const [tickDetails, setTickDetails] = React.useState<Record<string, number>>({})
+  const { formattedTrades: trades, tickDetails } = useUserData()
   const [selectedTick, setSelectedTick] = React.useState<string | null>(null)
   const [modalTrades, setModalTrades] = React.useState<Trade[]>([])
   const t = useI18n()
-  
-  React.useEffect(() => {
-    getTickDetails().then(details => {
-      const tickMap = details.reduce((acc, detail) => {
-        acc[detail.ticker] = detail.tickValue
-        return acc
-      }, {} as Record<string, number>)
-      setTickDetails(tickMap)
-    })
-  }, [])
 
   const chartData = React.useMemo(() => {
-    if (!trades.length || !Object.keys(tickDetails).length) return []
+    if (!trades.length) return []
 
     // Create a map to store tick counts
     const tickCounts: Record<number, number> = {}
@@ -160,7 +148,7 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
   }, [trades, tickDetails])
 
   const handleBarClick = (data: any) => {
-    if (!data || !trades.length || !Object.keys(tickDetails).length) return
+    if (!data || !trades.length) return
 
     const clickedTicks = Number(data.ticks.replace('+', ''))
     const filteredTrades = trades.filter(trade => {

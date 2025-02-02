@@ -9,8 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Trade, FinancialEvent } from "@prisma/client"
-import { updateTradesWithComment } from "@/server/database"
+import { FinancialEvent } from "@prisma/client"
 import { toast } from "@/hooks/use-toast"
 import { CalendarEntry, CalendarData } from "@/types/calendar"
 import { CalendarModal } from "./new-modal"
@@ -106,29 +105,6 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
 
-  const handleGenerateComment = async (dayData: CalendarEntry, dateString: string) => {
-    setIsLoading(true)
-    try {
-      const result = await updateTradesWithComment(dayData, dateString)
-      setAiComment(result.comment)
-      setAiEmotion(result.emotion)
-      toast({
-        title: "Success",
-        description: t('calendar.generateComment')
-      })
-    } catch (error) {
-      console.error("Error generating and saving comment:", error)
-      setAiComment("Failed to generate and save comment")
-      setAiEmotion("Error")
-      toast({
-        title: "Error",
-        description: t('calendar.commentError'),
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const initializeComment = (dayData: CalendarEntry | undefined) => {
     if (dayData && dayData.trades.length > 0) {

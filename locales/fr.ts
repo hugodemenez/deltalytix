@@ -883,6 +883,8 @@ export default {
     'shared.errorDescription': 'Une erreur est survenue lors du chargement des trades partagés. Veuillez réessayer plus tard.',
     'shared.sharedOn': 'Partagé le',
     'shared.dateRange': 'Période',
+    'shared.since': 'Depuis',
+    'shared.period': 'Période',
     'shared.tradingAccounts': 'Comptes de Trading',
     'shared.selectAll': 'Tout sélectionner',
     'shared.deselectAll': 'Tout désélectionner',

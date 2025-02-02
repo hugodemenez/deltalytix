@@ -203,14 +203,18 @@ export default function SharedPage({ params }: SharedPageProps) {
                   </p>
                 </Card>
                 <Card className="p-4 border-none shadow-none bg-muted/50">
-                  <p className="text-sm font-medium mb-1">{t('shared.dateRange')}</p>
+                  <p className="text-sm font-medium mb-1">
+                    {dateRange.to ? t('shared.period') : t('shared.since')}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(dateRange.from), "PPP", { locale: dateLocale })}
-                    {dateRange.to && (
+                    {dateRange.to ? (
                       <>
+                        {format(new Date(dateRange.from), "PPP", { locale: dateLocale })}
                         {" - "}
                         {format(new Date(dateRange.to), "PPP", { locale: dateLocale })}
                       </>
+                    ) : (
+                      format(new Date(dateRange.from), "PPP", { locale: dateLocale })
                     )}
                   </p>
                 </Card>

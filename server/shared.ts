@@ -20,10 +20,16 @@ export interface SharedParams {
   expiresAt?: Date
   viewCount?: number
   createdAt?: Date
+  tickDetails?: Record<string, number>
 }
 
+interface DateRange {
+  from: string;
+  to?: string;
+}
 
 export async function createShared(data: SharedParams): Promise<string> {
+  const prisma = new PrismaClient()
   try {
     // Validate date range
     if (!data.dateRange?.from) {
@@ -39,7 +45,6 @@ export async function createShared(data: SharedParams): Promise<string> {
     let slug = generateSlug()
     let attempts = 0
     const maxAttempts = 5
-    const prisma = new PrismaClient()
 
     // Keep trying to find a unique slug
     while (attempts < maxAttempts) {
@@ -82,89 +87,91 @@ export async function createShared(data: SharedParams): Promise<string> {
       throw new Error(`Failed to share trades: ${error.message}`)
     }
     throw new Error('An unexpected error occurred while sharing trades')
+  } finally {
+    await prisma.$disconnect()
   }
 }
 
 export async function getShared(slug: string): Promise<{params: SharedParams, trades: Trade[]} | null> {
   const prisma = new PrismaClient()
   try {
-    const shared = await prisma.shared.findUnique({
-      where: { slug },
-    })
+    const result = await prisma.$transaction(async (tx) => {
+      const shared = await tx.shared.findUnique({
+        where: { slug },
+      })
 
-    if (!shared) {
-      return null
-    }
-
-    // Update view count
-    await prisma.shared.update({
-      where: { slug },
-      data: {
-        viewCount: {
-          increment: 1,
-        },
-      },
-    })
-
-    // Parse the date range from the shared data
-    const dateRange = shared.dateRange as { from: string; to?: string | undefined }
-    const fromDate = new Date(dateRange.from)
-    // Only create toDate if it exists in the database
-    const toDate = dateRange.to ? new Date(dateRange.to) : undefined
-
-    // Fetch trades based on the stored parameters
-    const trades = await prisma.trade.findMany({
-      where: {
-        userId: shared.userId,
-        accountNumber: {
-          in: shared.accountNumbers,
-        },
-        entryDate: {
-          gte: fromDate.toISOString(),
-          ...(toDate && { lte: toDate.toISOString() })
-        }
-      },
-      orderBy: {
-        entryDate: 'desc',
-      },
-    })
-
-    if (trades.length > 0) {
-      const dates = trades
-        .map(trade => parseISO(trade.entryDate))
-        .filter(date => isValid(date))
-
-      if (dates.length > 0) {
-        const minDate = new Date(Math.min(...dates.map(date => date.getTime())))
-        const maxDate = new Date(Math.max(
-          ...dates.map(date => date.getTime()),
-          new Date().getTime()
-        ))
+      if (!shared) {
+        return null
       }
-    }
 
-    console.log('Found trades:', trades.length)
-
-    return {
-      params: {
-        userId: shared.userId,
-        title: shared.title || undefined,
-        description: shared.description || undefined,
-        isPublic: shared.isPublic,
-        accountNumbers: shared.accountNumbers,
-        dateRange: {
-          from: fromDate,
-          ...(toDate && { to: toDate })
+      // Update view count
+      await tx.shared.update({
+        where: { slug },
+        data: {
+          viewCount: {
+            increment: 1,
+          },
         },
-        desktop: shared.desktop as any[],
-        mobile: shared.mobile as any[],
-        expiresAt: shared.expiresAt || undefined,
-      },
-      trades: trades,  // No need to filter trades again since we did it in the query
-    }
+      })
+
+      // Parse the date range
+      const dateRange = shared.dateRange as unknown as DateRange
+      const fromDate = new Date(dateRange.from)
+      const toDate = dateRange.to ? new Date(dateRange.to) : undefined
+
+      // Parallel fetch of trades and tick details
+      const [trades, tickDetailsData] = await Promise.all([
+        tx.trade.findMany({
+          where: {
+            userId: shared.userId,
+            accountNumber: {
+              in: shared.accountNumbers,
+            },
+            entryDate: {
+              gte: fromDate.toISOString(),
+              ...(toDate && { lte: toDate.toISOString() })
+            }
+          },
+          orderBy: {
+            entryDate: 'desc',
+          },
+        }),
+        tx.tickDetails.findMany()
+      ])
+
+      const tickDetails = tickDetailsData.reduce((acc, detail) => {
+        acc[detail.ticker] = detail.tickValue
+        return acc
+      }, {} as Record<string, number>)
+
+      return {
+        params: {
+          userId: shared.userId,
+          title: shared.title || undefined,
+          description: shared.description || undefined,
+          isPublic: shared.isPublic,
+          accountNumbers: shared.accountNumbers,
+          dateRange: {
+            from: fromDate,
+            ...(toDate && { to: toDate })
+          },
+          desktop: shared.desktop as any[],
+          mobile: shared.mobile as any[],
+          expiresAt: shared.expiresAt || undefined,
+          tickDetails,
+        },
+        trades,
+      }
+    })
+
+    if (!result) return null
+    return result
+
   } catch (error) {
     console.error('Error getting shared trades:', error)
     throw error
+  } finally {
+    await prisma.$disconnect()
   }
 }
 

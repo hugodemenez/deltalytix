@@ -577,6 +577,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                           <div className="border rounded-lg p-3 bg-card">
                             <Calendar
                               mode="single"
+                              selected={selectedDateRange.to}
                               onSelect={(date) =>
                                 setSelectedDateRange((prev) => ({
                                   ...prev,
