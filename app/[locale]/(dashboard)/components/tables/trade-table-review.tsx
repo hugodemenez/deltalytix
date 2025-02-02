@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useMemo, useRef, Fragment } from 'react'
 import { useUserData } from '@/components/context/user-data'
 import {
@@ -258,15 +256,15 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
 
   // Add this function to handle scroll events
   function handleScroll(e: React.WheelEvent<HTMLDivElement>) {
-    const target = e.currentTarget;
-    const isAtTop = target.scrollTop === 0;
-    const isAtBottom = target.scrollHeight - target.scrollTop === target.clientHeight;
+    // const target = e.currentTarget;
+    // const isAtTop = target.scrollTop === 0;
+    // const isAtBottom = target.scrollHeight - target.scrollTop === target.clientHeight;
     
-    // Prevent scroll propagation at boundaries
-    if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    // // Prevent scroll propagation at boundaries
+    // if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+    //   e.preventDefault();
+    //   e.stopPropagation();
+    // }
   }
 
 // Add image handling functions
@@ -305,21 +303,10 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     const uniqueAccounts = Array.from(new Set(trades.map(t => t.accountNumber)))
     if (uniqueAccounts.length === 0) return
 
-    // Initialize with first account expanded and its trades loaded
-    const firstAccountTrades = trades.filter(t => t.accountNumber === uniqueAccounts[0])
-    const extendedFirstTrades: ExtendedTrade[] = firstAccountTrades.map(trade => ({
-      ...trade,
-      direction: trade.side || '',
-      tags: trade.tags || [],
-      imageUrl: undefined,
-      comment: trade.comment || null,
-      videoUrl: trade.videoUrl || null
-    }))
-
     setAccountGroups(uniqueAccounts.map(accountNumber => ({
       accountNumber,
-      isExpanded: accountNumber === uniqueAccounts[0],
-      trades: accountNumber === uniqueAccounts[0] ? extendedFirstTrades : [],
+      isExpanded: false,
+      trades: [],
       isLoading: false
     })))
   }, [trades])
@@ -903,8 +890,8 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     <div className="flex flex-col h-full w-full border rounded-md overflow-hidden">
       <div 
         className="flex-1 overflow-y-auto"
-        onWheel={handleScroll}
-        style={{ overscrollBehavior: 'contain' }}
+        // onWheel={handleScroll}
+        // style={{ overscrollBehavior: 'contain' }}
       >
         <table className="w-full border-separate border-spacing-0">
           <thead className="sticky top-0 z-30 bg-background">
