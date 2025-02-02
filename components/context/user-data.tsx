@@ -91,10 +91,46 @@ const defaultLayouts: Layouts = {
       h: 4
     },
     {
+      i: "widget1734881236127",
+      type: "pnlChart" as WidgetType,
+      size: "medium" as WidgetSize,
+      x: 6,
+      y: 5,
+      w: 6,
+      h: 4
+    },
+    {
       i: "widget1734881247979",
       type: "cumulativePnl" as WidgetType,
       size: "tiny" as WidgetSize,
       x: 0,
+      y: 0,
+      w: 3,
+      h: 1
+    },
+    {
+      i: "widget1734881251266",
+      type: "longShortPerformance" as WidgetType,
+      size: "tiny" as WidgetSize,
+      x: 3,
+      y: 0,
+      w: 3,
+      h: 1
+    },
+    {
+      i: "widget1734881254352",
+      type: "tradePerformance" as WidgetType,
+      size: "tiny" as WidgetSize,
+      x: 6,
+      y: 0,
+      w: 3,
+      h: 1
+    },
+    {
+      i: "widget1734881263452",
+      type: "averagePositionTime" as WidgetType,
+      size: "tiny" as WidgetSize,
+      x: 9,
       y: 0,
       w: 3,
       h: 1
@@ -117,7 +153,7 @@ const defaultLayouts: Layouts = {
       x: 0,
       y: 8,
       w: 12,
-      h: 4
+      h: 6
     },
     {
       i: "widget1734881247979",
@@ -125,6 +161,15 @@ const defaultLayouts: Layouts = {
       size: "tiny" as WidgetSize,
       x: 0,
       y: 0,
+      w: 12,
+      h: 1
+    },
+    {
+      i: "widget1734881254352",
+      type: "tradePerformance" as WidgetType,
+      size: "tiny" as WidgetSize,
+      x: 0,
+      y: 1,
       w: 12,
       h: 1
     }
