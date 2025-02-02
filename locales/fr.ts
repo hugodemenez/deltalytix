@@ -396,6 +396,8 @@ export default {
     'widgets.dragToMove': 'Glisser pour déplacer',
     'widgets.changeSize': 'Changer la taille',
     'widgets.clickToAdd': 'Cliquer pour ajouter',
+    'widgets.widgetAdded': 'Widget ajouté',
+    'widgets.widgetAddedDescription': 'Le widget a été ajouté à votre tableau de bord',
     'widgets.size.tiny': 'Minuscule (3x1)',
     'widgets.size.small': 'Petit (3x4)',
     'widgets.size.medium': 'Moyen (6x4)',

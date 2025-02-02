@@ -410,6 +410,8 @@ export default {
     'widgets.dragToMove': 'Drag to move',
     'widgets.changeSize': 'Change Size',
     'widgets.clickToAdd': 'Click to add',
+    'widgets.widgetAdded': 'Widget Added',
+    'widgets.widgetAddedDescription': 'The widget has been added to your dashboard',
     'widgets.size.tiny': 'Tiny (3x1)',
     'widgets.size.small': 'Small (3x4)',
     'widgets.size.medium': 'Medium (6x4)',

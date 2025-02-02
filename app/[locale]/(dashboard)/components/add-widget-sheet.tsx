@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { WidgetType, WidgetSize } from '../types/dashboard'
 import { getWidgetsByCategory, WIDGET_REGISTRY, getWidgetPreview } from '../config/widget-registry'
 import { useUserData } from '@/components/context/user-data'
+import { toast } from "sonner"
 
 interface AddWidgetSheetProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
@@ -57,7 +58,9 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
     const handleAddWidget = (type: WidgetType) => {
       const config = WIDGET_REGISTRY[type]
       onAddWidget(type, config.defaultSize)
-      setIsOpen(false)
+      toast(t('widgets.widgetAdded'), {
+        description: t('widgets.widgetAddedDescription'),
+      })
     }
 
     const renderWidgetsByCategory = (category: 'charts' | 'statistics' | 'tables' | 'other') => {
