@@ -1037,7 +1037,8 @@ export default {
             '1to2hours': '1-2h',
             '2to5hours': '2-5h',
             over5hours: 'Over 5h'
-        }
+        },
+        clearFilter: 'Clear Filter'
     },
     'calendar.modal.weeklyDetails': 'Trade details and performance analysis for this week.',
     'calendar.charts.weeklyPnlAfterComm': 'Weekly P&L (after comm.)',

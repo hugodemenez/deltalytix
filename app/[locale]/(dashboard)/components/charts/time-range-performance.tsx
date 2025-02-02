@@ -54,8 +54,9 @@ function getColorByWinRate(winRate: number): string {
 }
 
 export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRangePerformanceChartProps) {
-  const { formattedTrades: trades } = useUserData()
+  const { formattedTrades: trades, timeRange, setTimeRange } = useUserData()
   const t = useI18n()
+  const [activeRange, setActiveRange] = React.useState<string | null>(null)
 
   const chartData = React.useMemo(() => {
     const timeRangeData: Record<string, {
@@ -98,7 +99,24 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
     })
   }, [trades])
 
+  const handleClick = React.useCallback(() => {
+    if (!activeRange) return
+    if (timeRange.range === activeRange) {
+      setTimeRange({ range: null })
+    } else {
+      setTimeRange({ range: activeRange })
+    }
+  }, [activeRange, timeRange.range, setTimeRange])
+
   const CustomTooltip = ({ active, payload, label }: any) => {
+    React.useEffect(() => {
+      if (active && payload && payload.length) {
+        setActiveRange(payload[0].payload.range)
+      } else {
+        setActiveRange(null)
+      }
+    }, [active, payload])
+
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -108,7 +126,10 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
               <span className="text-[0.70rem] uppercase text-muted-foreground">
                 {t('timeRangePerformance.tooltip.timeRange')}
               </span>
-              <span className="font-bold text-muted-foreground">
+              <span className={cn(
+                "font-bold",
+                timeRange.range === data.range ? "text-primary" : "text-muted-foreground"
+              )}>
                 {getTimeRangeLabel(label)}
               </span>
             </div>
@@ -178,6 +199,14 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
               </UITooltip>
             </TooltipProvider>
           </div>
+          {timeRange.range && (
+            <button
+              onClick={() => setTimeRange({ range: null })}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t('timeRangePerformance.clearFilter')}
+            </button>
+          )}
         </div>
       </CardHeader>
       <CardContent 
@@ -186,7 +215,10 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
           size === 'small-long' ? "p-1" : "p-2 sm:p-4"
         )}
       >
-        <div className="w-full h-full">
+        <div 
+          className="w-full h-full cursor-pointer" 
+          onClick={handleClick}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
@@ -236,7 +268,11 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
                 className="transition-all duration-300 ease-in-out"
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.color}
+                    opacity={timeRange.range && timeRange.range !== entry.range ? 0.3 : 1}
+                  />
                 ))}
               </Bar>
             </BarChart>

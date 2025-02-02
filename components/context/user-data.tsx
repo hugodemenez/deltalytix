@@ -61,6 +61,11 @@ interface TickDetail {
   tickValue: number
 }
 
+// Add new interface for time range
+interface TimeRange {
+  range: string | null
+}
+
 interface TradeWithUTC extends PrismaTrade {
   utcDateStr: string;
 }
@@ -223,6 +228,10 @@ interface UserDataContextType {
   layouts: Layouts
   setLayouts: React.Dispatch<React.SetStateAction<Layouts>>
   saveLayouts: (newLayouts: Layouts) => Promise<void>
+
+  // Time range related
+  timeRange: TimeRange
+  setTimeRange: React.Dispatch<React.SetStateAction<TimeRange>>
 }
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
@@ -277,6 +286,9 @@ export const UserDataProvider: React.FC<{
 
   // Initialize layouts with default layouts for shared views
   const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
+
+  // Time range state
+  const [timeRange, setTimeRange] = useState<TimeRange>({ range: null });
 
   // Update the fetchData function to handle shared views
   const fetchData = useCallback(async () => {
@@ -459,15 +471,23 @@ export const UserDataProvider: React.FC<{
     );
   }, [dateFiltered, pnlRange]);
 
-  // Remove processedTrades memo since we now process them at load time
+  // Memoize filtered trades by time range
+  const timeRangeFiltered = useMemo(() => {
+    if (!timeRange.range) return pnlFiltered;
+    return pnlFiltered.filter(trade => 
+      getTimeRangeKey(trade.timeInPosition) === timeRange.range
+    );
+  }, [pnlFiltered, timeRange]);
+
+  // Update formattedTrades to use timeRangeFiltered
   const formattedTrades = useMemo(() => {
     if(isSharedView) {
-      return trades.filter(trade => 
+      return timeRangeFiltered.filter(trade => 
         accountNumbers.length === 0 || accountNumbers.includes(trade.accountNumber)
       );
     }
 
-    return trades
+    return timeRangeFiltered
       .filter(trade => {
         const entryDate = parseISO(trade.entryDate);
         if (!isValid(entryDate)) return false;
@@ -486,7 +506,7 @@ export const UserDataProvider: React.FC<{
         return matchesInstruments && matchesAccounts && matchesDateRange && matchesPnlRange;
       })
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime());
-  }, [trades, instruments, accountNumbers, dateRange, pnlRange, isSharedView]);
+  }, [timeRangeFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView]);
 
   const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades]);
   const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades]);
@@ -535,6 +555,10 @@ export const UserDataProvider: React.FC<{
     layouts,
     setLayouts,
     saveLayouts,
+
+    // Time range related
+    timeRange,
+    setTimeRange,
   };
 
   return (
@@ -551,3 +575,17 @@ export const useUserData = () => {
   }
   return context;
 };
+
+// Add getTimeRangeKey function at the top level
+function getTimeRangeKey(timeInPosition: number): string {
+  const minutes = timeInPosition / 60 // Convert seconds to minutes
+  if (minutes < 1) return 'under1min'
+  if (minutes >= 1 && minutes < 5) return '1to5min'
+  if (minutes >= 5 && minutes < 10) return '5to10min'
+  if (minutes >= 10 && minutes < 15) return '10to15min'
+  if (minutes >= 15 && minutes < 30) return '15to30min'
+  if (minutes >= 30 && minutes < 60) return '30to60min'
+  if (minutes >= 60 && minutes < 120) return '1to2hours'
+  if (minutes >= 120 && minutes < 300) return '2to5hours'
+  return 'over5hours'
+}
