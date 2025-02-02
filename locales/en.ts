@@ -1009,5 +1009,29 @@ export default {
         rememberSelectedAccounts: "Remember selected accounts for next sync",
         'startProcessing.one': "Start Processing {count} Account",
         'startProcessing.other': "Start Processing {count} Accounts"
+    },
+    timeRangePerformance: {
+        title: 'Time Range Performance',
+        description: 'Win rate and loss rate distribution across different time ranges',
+        tooltip: {
+            timeRange: 'Time Range',
+            avgPnl: 'Average P&L',
+            winRate: 'Win Rate',
+            lossRate: 'Loss Rate',
+            trades: 'Trades',
+            trade: 'trade',
+            trades_plural: 'trades'
+        },
+        ranges: {
+            'under1min': 'Under 1m',
+            '1to5min': '1-5m',
+            '5to10min': '5-10m',
+            '10to15min': '10-15m',
+            '15to30min': '15-30m',
+            '30to60min': '30-60m',
+            '1to2hours': '1-2h',
+            '2to5hours': '2-5h',
+            'over5hours': 'Over 5h'
+        }
     }
 } as const

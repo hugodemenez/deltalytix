@@ -1006,5 +1006,29 @@ export default {
     'dataManagement.deleteAll': 'Tout Supprimer',
     'dataManagement.exportTrades': 'Exporter les Trades',
     'dataManagement.rename': 'Renommer',
-    'dataManagement.delete': 'Supprimer'
+    'dataManagement.delete': 'Supprimer',
+    timeRangePerformance: {
+        title: 'Performance par Durée',
+        description: 'Distribution des taux de réussite et d\'échec selon différentes durées',
+        tooltip: {
+            timeRange: 'Durée',
+            avgPnl: 'P&L Moyen',
+            winRate: 'Taux de Réussite',
+            lossRate: 'Taux d\'Échec',
+            trades: 'Trades',
+            trade: 'trade',
+            trades_plural: 'trades'
+        },
+        ranges: {
+            'under1min': 'Moins d\'1m',
+            '1to5min': '1-5m',
+            '5to10min': '5-10m',
+            '10to15min': '10-15m',
+            '15to30min': '15-30m',
+            '30to60min': '30-60m',
+            '1to2hours': '1-2h',
+            '2to5hours': '2-5h',
+            'over5hours': 'Plus de 5h'
+        }
+    }
 } as const

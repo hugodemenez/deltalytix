@@ -20,6 +20,7 @@ export type WidgetType =
   | 'newsWidget'
   | 'tradeDistribution'
   | 'propFirm'
+  | 'timeRangePerformance'
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 
 export interface LayoutItem {

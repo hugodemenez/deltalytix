@@ -4,6 +4,7 @@ import TickDistributionChart from '../components/charts/tick-distribution'
 import PNLChart from '../components/charts/pnl-bar-chart'
 import TimeOfDayTradeChart from '../components/charts/pnl-time-bar-chart'
 import TimeInPositionChart from '../components/charts/time-in-position'
+import TimeRangePerformanceChart from '../components/charts/time-range-performance'
 import WeekdayPNLChart from '../components/charts/weekday-pnl'
 import PnLBySideChart from '../components/charts/pnl-by-side'
 import AveragePositionTimeCard from '../components/statistics/average-position-time-card'
@@ -266,6 +267,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 400,
     getComponent: ({ size }) => <PropFirmOverview size={size} />,
     getPreview: () => <PropFirmOverview size="medium" />
+  },
+  timeRangePerformance: {
+    type: 'timeRangePerformance',
+    defaultSize: 'medium',
+    allowedSizes: ['small', 'small-long', 'medium', 'large'],
+    category: 'charts',
+    previewHeight: 300,
+    getComponent: ({ size }) => <TimeRangePerformanceChart size={size} />,
+    getPreview: () => <TimeRangePerformanceChart size="small" />
   }
 }
 
