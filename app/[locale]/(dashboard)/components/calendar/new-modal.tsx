@@ -3,6 +3,7 @@
 import React, { useState } from "react"
 import { format } from "date-fns"
 import { fr, enUS } from 'date-fns/locale'
+import { formatInTimeZone } from 'date-fns-tz'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -56,7 +57,7 @@ export function CalendarModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full h-[100dvh] sm:h-[90vh] p-0 flex flex-col">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle>{format(selectedDate, 'MMMM d, yyyy', { locale: dateLocale })}</DialogTitle>
+          <DialogTitle>{formatInTimeZone(selectedDate, 'UTC', 'MMMM d, yyyy', { locale: dateLocale })}</DialogTitle>
           <DialogDescription>
             {t('calendar.modal.tradeDetails')}
           </DialogDescription>

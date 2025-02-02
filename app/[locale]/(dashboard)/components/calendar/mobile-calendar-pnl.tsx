@@ -182,7 +182,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
           if (!open) setSelectedDate(null)
         }}
         selectedDate={selectedDate}
-        dayData={selectedDate ? calendarData[format(selectedDate, 'yyyy-MM-dd')] : undefined}
+        dayData={selectedDate ? calendarData[formatInTimeZone(selectedDate, 'UTC', 'yyyy-MM-dd')] : undefined}
         isLoading={isLoading}
       />
     </Card>
