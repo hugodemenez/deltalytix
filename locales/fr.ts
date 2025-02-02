@@ -999,5 +999,12 @@ export default {
     'weekdayPnl.days.wednesday': 'Mercredi',
     'weekdayPnl.days.thursday': 'Jeudi',
     'weekdayPnl.days.friday': 'Vendredi',
-    'weekdayPnl.days.saturday': 'Samedi'
+    'weekdayPnl.days.saturday': 'Samedi',
+    'dataManagement.title': 'Gestion des Données',
+    'dataManagement.description': 'Gérer les comptes, instruments et commissions',
+    'dataManagement.deleteSelected': 'Supprimer la Sélection',
+    'dataManagement.deleteAll': 'Tout Supprimer',
+    'dataManagement.exportTrades': 'Exporter les Trades',
+    'dataManagement.rename': 'Renommer',
+    'dataManagement.delete': 'Supprimer'
 } as const
