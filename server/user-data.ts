@@ -65,6 +65,35 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
   console.log('[loadInitialData] Starting data load', { email })
   try {
     const supabase = await getSupabaseClient()
+    
+    // First try to get the session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    if (sessionError) {
+      console.error('[loadInitialData] Session error:', sessionError)
+      return {
+        user: null,
+        subscription: null,
+        trades: [],
+        tickDetails: {},
+        layouts: null,
+        error: 'Session not found'
+      }
+    }
+
+    if (!session) {
+      console.log('[loadInitialData] No session found')
+      return {
+        user: null,
+        subscription: null,
+        trades: [],
+        tickDetails: {},
+        layouts: null,
+        error: 'No active session'
+      }
+    }
+
+    // Now get the user from the session
     const { data: { user }, error: userError } = await supabase.auth.getUser()
 
     if (userError) {

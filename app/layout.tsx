@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
+import { AuthProvider } from "@/components/providers/auth-provider";
 import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] });
@@ -159,10 +160,12 @@ export default async function RootLayout({
         </style>
       </head>
       <body className={inter.className + " min-h-screen overflow-x-hidden w-screen"}>
-        <SpeedInsights />
-        <Analytics />
-        <Toaster />
-        {children}
+        <AuthProvider>
+          <SpeedInsights />
+          <Analytics />
+          <Toaster />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
