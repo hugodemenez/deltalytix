@@ -527,6 +527,8 @@ export default {
             date: 'Date',
             totalEquity: 'Profits Totaux',
             accountSummary: 'Résumé du Compte',
+            accountDetails: 'Détails du Compte',
+            totalDailyPnL: 'P&L Quotidien Total',
             topPerformers: 'Meilleurs Performeurs',
             otherAccounts: 'Autres Comptes',
             totalAccounts: 'Total des Comptes',
@@ -539,7 +541,8 @@ export default {
             averageDailyPnL: 'P&L Quotidien Moyen',
             highestDailyPnL: 'P&L Quotidien le Plus Haut',
             lowestDailyPnL: 'P&L Quotidien le Plus Bas',
-            noActivity: 'Aucune Activité de Trading'
+            noActivity: 'Aucune Activité de Trading',
+            showingTopAccounts: 'Affichage de {count} sur {total} comptes'
         }
     },
     'pricing.trialPeriod': '7 jours d\'essai gratuit',

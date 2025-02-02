@@ -8,17 +8,6 @@ import { getShared } from './shared'
 import { Trade } from '@prisma/client'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 
-// Initialize supabase client at module level
-let supabaseClient: Awaited<ReturnType<typeof createClient>> | null = null;
-
-// Function to ensure we have an initialized client
-async function getSupabaseClient() {
-  if (!supabaseClient) {
-    supabaseClient = await createClient()
-  }
-  return supabaseClient
-}
-
 // Update the interface declarations to export them
 export interface LayoutItem {
   i: string
@@ -64,7 +53,8 @@ export type SharedDataResponse = {
 export async function loadInitialData(email?: string): Promise<InitialDataResponse> {
   console.log('[loadInitialData] Starting data load', { email })
   try {
-    const supabase = await getSupabaseClient()
+    // Create a new client for each request
+    const supabase = await createClient()
     
     // First try to get the session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession()

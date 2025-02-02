@@ -414,77 +414,148 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                       // Get all account equities and find closest to cursor
                       const accountEquities = getTooltipData(data, cursorValue)
 
-                      // Show "No PnL" message if no accounts with PnL are found
-                      if (!accountEquities || accountEquities.length === 0) {
-                        return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm min-w-[200px]">
-                            <div className="grid gap-2">
-                              {/* Date */}
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.date')}
-                                </span>
-                                <span className="font-bold text-muted-foreground text-xs">
-                                  {format(new Date(data.date), "MMM d, yyyy")}
-                                </span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.noActivity')}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      }
+                      // Calculate summary statistics for all accounts
+                      const allAccountEquities = [...accountNumbers]
+                        .filter(acc => selectedAccounts.has(acc))
+                        .map((accountNumber, index) => {
+                          const equity = data[`equity_${accountNumber}`] as number
+                          const currentIndex = chartData.findIndex(d => d.date === data.date)
+                          const previousDayData = currentIndex > 0 ? chartData[currentIndex - 1] : null
+                          const previousEquity = previousDayData ? previousDayData[`equity_${accountNumber}`] as number : 0
+                          const dailyPnL = equity - previousEquity
+                          return { 
+                            accountNumber, 
+                            equity, 
+                            dailyPnL,
+                            color: getAccountColor(index),
+                            hadActivity: dailyPnL !== 0
+                          }
+                        })
+                        // Sort by activity first, then by equity
+                        .sort((a, b) => {
+                          if (a.hadActivity !== b.hadActivity) {
+                            return b.hadActivity ? 1 : -1 // Active accounts first
+                          }
+                          return b.equity - a.equity // Then by equity descending
+                        })
+                        .slice(0, 5) // Take only top 5 accounts
 
-                      const totalAccounts = accountEquities.length
-                      const totalDailyPnL = accountEquities.reduce((sum, acc) => sum + acc.dailyPnL, 0)
+                      const totalEquity = allAccountEquities.reduce((sum, acc) => sum + acc.equity, 0)
+                      const totalDailyPnL = allAccountEquities.reduce((sum, acc) => sum + acc.dailyPnL, 0)
+                      const totalAccounts = allAccountEquities.length
                       const averageDailyPnL = totalDailyPnL / totalAccounts
-                      const highestDailyPnL = Math.max(...accountEquities.map(acc => acc.dailyPnL))
-                      const lowestDailyPnL = Math.min(...accountEquities.map(acc => acc.dailyPnL))
 
-                      // For small size, show a compact version
-                      if (size === 'small') {
+                      // For small size, show a minimal version with only essential info
+                      if (size === 'small' || size === 'tiny') {
                         return (
-                          <div className="rounded-lg border bg-background p-2 shadow-sm min-w-[200px]">
-                            <div className="grid gap-2">
+                          <div className="rounded-lg border bg-background p-1.5 shadow-sm min-w-[160px]">
+                            <div className="grid gap-1">
                               {/* Date */}
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.date')}
-                                </span>
-                                <span className="font-bold text-muted-foreground text-xs">
-                                  {format(new Date(data.date), "MMM d, yyyy")}
+                              <div className="flex items-center justify-between">
+                                <span className="text-[0.65rem] text-muted-foreground">
+                                  {format(new Date(data.date), "MMM d")}
                                 </span>
                               </div>
 
-                              {/* Closest Accounts */}
-                              <div className="grid grid-cols-1 gap-1.5">
-                                {accountEquities.map(({ accountNumber, equity, dailyPnL, color }) => (
-                                  <div key={accountNumber} className="flex justify-between items-center gap-2">
-                                    <span className="text-[0.70rem] uppercase text-muted-foreground whitespace-nowrap">
-                                      {accountNumber}
-                                    </span>
-                                    <div className="flex flex-col items-end">
-                                      <span className="font-bold text-xs" style={{ color }}>
-                                        {formatCurrency(equity)}
-                                      </span>
-                                      <span className="text-[0.70rem] text-muted-foreground">
-                                        {dailyPnL >= 0 ? '+' : ''}{formatCurrency(dailyPnL)}
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
+                              {/* Summary */}
+                              <div className="flex items-center justify-between">
+                                <span className="text-[0.65rem] text-muted-foreground">
+                                  {t('equity.tooltip.totalEquity')}
+                                </span>
+                                <span className="text-xs font-medium">
+                                  {formatCurrency(totalEquity)}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between border-t pt-1">
+                                <span className="text-[0.65rem] text-muted-foreground">
+                                  {t('equity.tooltip.totalDailyPnL')}
+                                </span>
+                                <span className={cn(
+                                  "text-xs font-medium",
+                                  totalDailyPnL > 0 ? "text-green-500" : totalDailyPnL < 0 ? "text-red-500" : "text-muted-foreground"
+                                )}>
+                                  {totalDailyPnL >= 0 ? '+' : ''}{formatCurrency(totalDailyPnL)}
+                                </span>
                               </div>
                             </div>
                           </div>
                         )
                       }
 
-                      // Regular size tooltip
+                      // Medium size - show more details but still compact
+                      if (size === 'small-long' || size === 'medium') {
+                        return (
+                          <div className="rounded-lg border bg-background p-1.5 shadow-sm min-w-[240px]">
+                            <div className="grid gap-1.5">
+                              {/* Date and Total Equity */}
+                              <div className="flex items-center justify-between">
+                                <span className="text-[0.65rem] text-muted-foreground">
+                                  {format(new Date(data.date), "MMM d, yyyy")}
+                                </span>
+                                <span className="text-xs font-medium">
+                                  {formatCurrency(totalEquity)}
+                                </span>
+                              </div>
+
+                              {/* Daily PnL */}
+                              <div className="flex items-center justify-between border-t pt-1">
+                                <span className="text-[0.65rem] text-muted-foreground">
+                                  {t('equity.tooltip.totalDailyPnL')}
+                                </span>
+                                <span className={cn(
+                                  "text-xs font-medium",
+                                  totalDailyPnL > 0 ? "text-green-500" : totalDailyPnL < 0 ? "text-red-500" : "text-foreground"
+                                )}>
+                                  {totalDailyPnL >= 0 ? '+' : ''}{formatCurrency(totalDailyPnL)}
+                                </span>
+                              </div>
+
+                              {/* Account Details */}
+                              {showIndividual && allAccountEquities.length > 0 && (
+                                <div className="border-t pt-1">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-[0.65rem] text-muted-foreground">
+                                      {t('equity.tooltip.accountDetails')}
+                                    </span>
+                                    {totalAccounts > 5 && (
+                                      <span className="text-[0.60rem] text-muted-foreground">
+                                        {t('equity.tooltip.showingTopAccounts', { count: Math.min(5, allAccountEquities.length), total: totalAccounts })}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="grid gap-1">
+                                    {allAccountEquities.map(({ accountNumber, equity, dailyPnL, color, hadActivity }) => (
+                                      <div key={accountNumber} className="flex justify-between items-center">
+                                        <span className={cn(
+                                          "text-[0.65rem]",
+                                          hadActivity ? "text-foreground" : "text-muted-foreground"
+                                        )}>
+                                          {accountNumber}
+                                        </span>
+                                        <div className="flex gap-2 items-center">
+                                          <span className="text-[0.65rem] font-medium" style={{ color }}>
+                                            {formatCurrency(equity)}
+                                          </span>
+                                          <span className={cn(
+                                            "text-[0.60rem]",
+                                            dailyPnL > 0 ? "text-green-500" : dailyPnL < 0 ? "text-red-500" : "text-muted-foreground"
+                                          )}>
+                                            {dailyPnL >= 0 ? '+' : ''}{formatCurrency(dailyPnL)}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      }
+
+                      // Large size - show full details
                       return (
-                        <div className="rounded-lg border bg-background p-2 shadow-sm min-w-[280px]">
+                        <div className="rounded-lg border bg-background p-2 shadow-sm min-w-[320px]">
                           <div className="grid gap-3">
                             {/* Date */}
                             <div className="flex flex-col">
@@ -496,11 +567,28 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                               </span>
                             </div>
 
-                            {/* Summary Statistics */}
+                            {/* Portfolio Summary */}
                             <div className="grid grid-cols-2 gap-2 border-t pt-2">
                               <div className="flex flex-col">
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.activeAccounts')}
+                                  {t('equity.tooltip.totalEquity')}
+                                </span>
+                                <span className="font-bold">{formatCurrency(totalEquity)}</span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  {t('equity.tooltip.totalDailyPnL')}
+                                </span>
+                                <span className={cn(
+                                  "font-bold",
+                                  totalDailyPnL > 0 ? "text-green-500" : totalDailyPnL < 0 ? "text-red-500" : "text-foreground"
+                                )}>
+                                  {totalDailyPnL >= 0 ? '+' : ''}{formatCurrency(totalDailyPnL)}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                  {t('equity.tooltip.totalAccounts')}
                                 </span>
                                 <span className="font-bold">{totalAccounts}</span>
                               </div>
@@ -508,43 +596,53 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                                 <span className="text-[0.70rem] uppercase text-muted-foreground">
                                   {t('equity.tooltip.averageDailyPnL')}
                                 </span>
-                                <span className="font-bold">{formatCurrency(averageDailyPnL)}</span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.highestDailyPnL')}
+                                <span className={cn(
+                                  "font-bold",
+                                  averageDailyPnL > 0 ? "text-green-500" : averageDailyPnL < 0 ? "text-red-500" : "text-foreground"
+                                )}>
+                                  {averageDailyPnL >= 0 ? '+' : ''}{formatCurrency(averageDailyPnL)}
                                 </span>
-                                <span className="font-bold">{formatCurrency(highestDailyPnL)}</span>
-                              </div>
-                              <div className="flex flex-col">
-                                <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                  {t('equity.tooltip.lowestDailyPnL')}
-                                </span>
-                                <span className="font-bold">{formatCurrency(lowestDailyPnL)}</span>
                               </div>
                             </div>
 
-                            {/* Closest Accounts */}
-                            <div className="border-t pt-2">
-                              <span className="text-[0.70rem] uppercase text-muted-foreground mb-1.5 block">
-                                {t('equity.tooltip.accountSummary')}
-                              </span>
-                              <div className="grid grid-cols-2 gap-2">
-                                {accountEquities.map(({ accountNumber, equity, dailyPnL, color }) => (
-                                  <div key={accountNumber} className="flex flex-col">
-                                    <span className="text-[0.70rem] uppercase text-muted-foreground">
-                                      Account {accountNumber}
+                            {/* All Accounts Details (max 5) */}
+                            {showIndividual && allAccountEquities.length > 0 && (
+                              <div className="border-t pt-2">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-[0.70rem] uppercase text-muted-foreground">
+                                    {t('equity.tooltip.accountDetails')}
+                                  </span>
+                                  {totalAccounts > 5 && (
+                                    <span className="text-[0.65rem] text-muted-foreground">
+                                      {t('equity.tooltip.showingTopAccounts', { count: Math.min(5, allAccountEquities.length), total: totalAccounts })}
                                     </span>
-                                    <span className="font-bold" style={{ color }}>
-                                      {formatCurrency(equity)}
-                                    </span>
-                                    <span className="text-[0.70rem] text-muted-foreground">
-                                      {dailyPnL >= 0 ? '+' : ''}{formatCurrency(dailyPnL)}
-                                    </span>
-                                  </div>
-                                ))}
+                                  )}
+                                </div>
+                                <div className="grid gap-2">
+                                  {allAccountEquities.map(({ accountNumber, equity, dailyPnL, color, hadActivity }) => (
+                                    <div key={accountNumber} className="flex justify-between items-center">
+                                      <span className={cn(
+                                        "text-[0.70rem] uppercase",
+                                        hadActivity ? "text-foreground" : "text-muted-foreground"
+                                      )}>
+                                        {accountNumber}
+                                      </span>
+                                      <div className="flex flex-col items-end">
+                                        <span className="font-bold" style={{ color }}>
+                                          {formatCurrency(equity)}
+                                        </span>
+                                        <span className={cn(
+                                          "text-[0.70rem]",
+                                          dailyPnL > 0 ? "text-green-500" : dailyPnL < 0 ? "text-red-500" : "text-muted-foreground"
+                                        )}>
+                                          {dailyPnL >= 0 ? '+' : ''}{formatCurrency(dailyPnL)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         </div>
                       )

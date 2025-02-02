@@ -541,6 +541,8 @@ export default {
             date: 'Date',
             totalEquity: 'Total Equity',
             accountSummary: 'Account Summary',
+            accountDetails: 'Account Details',
+            totalDailyPnL: 'Total Daily P&L',
             topPerformers: 'Top Performers',
             otherAccounts: 'Other Accounts',
             totalAccounts: 'Total Accounts',
@@ -553,7 +555,8 @@ export default {
             averageDailyPnL: 'Average Daily P&L',
             highestDailyPnL: 'Highest Daily P&L',
             lowestDailyPnL: 'Lowest Daily P&L',
-            noActivity: 'No Trading Activity'
+            noActivity: 'No Trading Activity',
+            showingTopAccounts: 'Showing {count} of {total} accounts'
         }
     },
     'pnl.title': 'Daily Profit/Loss',
