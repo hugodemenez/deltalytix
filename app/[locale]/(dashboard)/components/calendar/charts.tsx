@@ -90,7 +90,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     // Convert to chart data format and sort
     const chartData = Object.entries(accountPnL)
       .map(([account, pnl]) => ({
-        name: `Account ${account}`,
+        name: account,
         value: pnl,
         account,
       }))
@@ -242,18 +242,18 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-background p-2 border rounded shadow-sm">
-          <p className="text-sm font-medium">
+        <div className="bg-background p-2 border rounded shadow-sm text-xs md:text-sm">
+          <p className="font-medium">
             {isWeekly 
               ? `${t('calendar.charts.date')}: ${data.date}`
               : `${t('calendar.charts.time')}: ${data.time}`
             }
           </p>
-          <p className="text-sm font-medium">{`${t('calendar.charts.tradeNumber')}: ${data.tradeNumber}`}</p>
-          <p className={`text-sm font-medium ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <p className="font-medium">{`${t('calendar.charts.tradeNumber')}: ${data.tradeNumber}`}</p>
+          <p className={`font-medium ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {`${t('calendar.charts.tradePnl')}: ${formatCurrency(data.pnl)}`}
           </p>
-          <p className={`text-sm font-medium ${data.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`font-medium ${data.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {`${t('calendar.charts.balance')}: ${formatCurrency(data.balance)}`}
           </p>
         </div>
@@ -282,13 +282,13 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
         ? ((data.value / totalPnL) * 100).toFixed(1)
         : '100'
       return (
-        <div className="bg-background p-2 border rounded shadow-sm">
+        <div className="bg-background p-2 border rounded shadow-sm text-xs md:text-sm">
           <p className="font-semibold">{data.name}</p>
           <p className={`font-bold ${data.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {formatCurrency(data.value)}
           </p>
           {data.account !== 'total' && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-muted-foreground">
               {percentage}% {t('calendar.charts.ofTotal')}
             </p>
           )}
@@ -304,19 +304,19 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     : 0
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Card className="flex flex-col">
-          <CardHeader className="pb-2 flex-1">
-            <CardTitle className="text-lg">
+          <CardHeader className="pb-1 flex-1">
+            <CardTitle className="text-base md:text-lg">
               {isWeekly ? t('calendar.charts.weeklyPnlAfterComm') : t('calendar.charts.dailyPnlAfterComm')}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-2 mt-auto">
-            <p className={`text-2xl font-bold ${totalPnL >= 0 ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'}`}>
+            <p className={`text-xl md:text-2xl font-bold ${totalPnL >= 0 ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'}`}>
               {formatCurrency(totalPnL)}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
               {t('calendar.charts.across')} {Object.keys(accountPnL).length} {Object.keys(accountPnL).length > 1 
                 ? t('calendar.charts.accounts') 
                 : t('calendar.charts.account')}
@@ -325,16 +325,16 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
         </Card>
 
         <Card className="flex flex-col">
-          <CardHeader className="pb-2 flex-1">
-            <CardTitle className="text-lg">
+          <CardHeader className="pb-1 flex-1">
+            <CardTitle className="text-base md:text-lg">
               {isWeekly ? t('calendar.charts.weeklyAvgTimeInPosition') : t('calendar.charts.avgTimeInPosition')}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-2 mt-auto">
-            <p className="text-2xl font-bold">
+            <p className="text-xl md:text-2xl font-bold">
               {formatDuration(avgTimeInPosition)}
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs md:text-sm text-muted-foreground mt-1">
               {t('calendar.charts.over')} {dayData.trades.length} {dayData.trades.length > 1 
                 ? t('calendar.charts.trades') 
                 : t('calendar.charts.trade')}
@@ -343,8 +343,8 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
         </Card>
 
         <Card className="flex flex-col">
-          <CardHeader className="pb-2 flex-1">
-            <CardTitle className="text-lg">
+          <CardHeader className="pb-1 flex-1">
+            <CardTitle className="text-base md:text-lg">
               {isWeekly ? t('calendar.charts.weeklyMood') : t('calendar.charts.howWasYourDay')}
             </CardTitle>
           </CardHeader>
@@ -395,49 +395,52 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
 
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>
+          <CardTitle className="text-base md:text-lg">
             {isWeekly ? t('calendar.charts.weeklyEquityVariation') : t('calendar.charts.equityVariation')}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs md:text-sm">
             {t('calendar.charts.finalBalance')}: {formatCurrency(equityChartData[equityChartData.length - 1]?.balance || 0)}
           </CardDescription>
         </CardHeader>
-        <CardContent className="h-[300px]">
+        <CardContent className="h-[200px] md:h-[250px]">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={equityChartData}
-                margin={{ top: 20, right: 40, left: 60, bottom: 20 }}
+                margin={{ 
+                  top: 10, 
+                  right: 8, 
+                  left: 35, 
+                  bottom: 40 
+                }}
               >
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis 
                   dataKey={isWeekly ? "date" : "time"}
                   angle={-45}
                   textAnchor="end"
-                  height={60}
+                  height={40}
+                  tick={{ fontSize: '10px' }}
                   tickFormatter={(value) => {
                     if (isWeekly) {
                       return value;
                     }
-                    // Pour le format horaire, on garde HH:mm
                     const [hours, minutes] = value.split(':');
                     return `${hours}:${minutes}`;
                   }}
                 />
                 <YAxis
-                  yAxisId="left"
                   tickFormatter={(value) => formatCurrency(value)}
                   domain={calculateCommonDomain}
+                  tick={{ fontSize: '10px' }}
+                  width={50}
                 />
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tickFormatter={(value) => formatCurrency(value)}
-                  domain={calculateCommonDomain}
+                <Tooltip 
+                  content={<CustomEquityTooltip />}
+                  wrapperStyle={{ zIndex: 1000 }}
+                  cursor={{ strokeWidth: 2 }}
                 />
-                <Tooltip content={<CustomEquityTooltip />} />
                 <Bar
-                  yAxisId="left"
                   dataKey="pnl"
                   name={t('calendar.charts.tradePnl')}
                   opacity={0.8}
@@ -451,7 +454,6 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                   ))}
                 </Bar>
                 <Line
-                  yAxisId="right"
                   type="stepAfter"
                   dataKey="balance"
                   stroke={chartConfig.equity.color}
@@ -468,20 +470,25 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
 
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>
+          <CardTitle className="text-base md:text-lg">
             {isWeekly ? t('calendar.charts.weeklyPnlDistribution') : t('calendar.charts.dailyPnlDistribution')}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs md:text-sm">
             {isWeekly ? t('calendar.charts.weeklyTotalPnlAfterComm') : t('calendar.charts.totalPnlAfterComm')}: {formatCurrency(totalPnL)}
           </CardDescription>
         </CardHeader>
-        <CardContent className="min-h-[400px] h-full pb-24">
+        <CardContent className="h-[250px] md:h-[300px] pb-8 md:pb-16">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
-                margin={{ top: 20, right: 40, left: 60, bottom: 100 }}
-                barCategoryGap={8}
+                margin={{ 
+                  top: 10, 
+                  right: 16, 
+                  left: 35, 
+                  bottom: 60 
+                }}
+                barCategoryGap={4}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis 
@@ -489,7 +496,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                   dataKey="name"
                   axisLine={false}
                   tickLine={false}
-                  height={100}
+                  height={60}
                   interval={0}
                   tick={(props) => {
                     const { x, y, payload } = props;
@@ -497,10 +504,10 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                       <g transform={`translate(${x},${y})`}>
                         <text
                           dy={8}
-                          dx={-8}
+                          dx={-4}
                           textAnchor="end"
                           transform="rotate(-45)"
-                          className="text-[10px] fill-current"
+                          className="text-[8px] md:text-[10px] fill-current"
                         >
                           {payload.value}
                         </text>
@@ -512,9 +519,15 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                   type="number"
                   tickFormatter={(value) => formatCurrency(value)}
                   domain={calculateCommonDomain}
+                  tick={{ fontSize: '10px' }}
+                  width={50}
                 />
                 <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip 
+                  content={<CustomTooltip />}
+                  wrapperStyle={{ zIndex: 1000 }}
+                  cursor={{ fillOpacity: 0.3 }}
+                />
                 <Bar 
                   dataKey="value" 
                   barSize={20}
