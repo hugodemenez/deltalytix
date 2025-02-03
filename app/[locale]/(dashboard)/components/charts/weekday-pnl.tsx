@@ -16,13 +16,6 @@ import {
 import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 
-const chartConfig = {
-  pnl: {
-    label: "Average P/L",
-    color: "hsl(var(--chart-5))",
-  },
-} satisfies ChartConfig
-
 const daysOfWeek = ['weekdayPnl.days.sunday', 'weekdayPnl.days.monday', 'weekdayPnl.days.tuesday', 'weekdayPnl.days.wednesday', 'weekdayPnl.days.thursday', 'weekdayPnl.days.friday', 'weekdayPnl.days.saturday'];
 
 interface WeekdayPNLChartProps {
