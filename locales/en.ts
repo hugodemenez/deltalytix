@@ -584,6 +584,7 @@ export default {
     'pnlTime.tooltip.trades': 'Trades',
     'pnlTime.tooltip.trade': 'trade',
     'pnlTime.tooltip.trades_plural': 'trades',
+    'pnlTime.clearFilter': 'Clear Filter',
     'tickDistribution': {
         title: "Tick Distribution",
         description: "Distribution of trades by tick value (PnL per contract)",
@@ -618,6 +619,7 @@ export default {
     'weekdayPnl.days.thursday': 'Thursday',
     'weekdayPnl.days.friday': 'Friday',
     'weekdayPnl.days.saturday': 'Saturday',
+    'weekdayPnl.clearFilter': 'Clear Filter',
     'dataManagement.title': 'Data Management Dashboard',
     'dataManagement.description': 'Manage accounts, instruments, and commissions',
     'dataManagement.deleteSelected': 'Delete Selected',

@@ -17,6 +17,7 @@ import {
 import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 import { formatInTimeZone } from 'date-fns-tz'
+import { Button } from "@/components/ui/button"
 
 interface TimeOfDayTradeChartProps {
   size?: WidgetSize
@@ -33,8 +34,18 @@ const formatCurrency = (value: number) =>
   value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
 export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeChartProps) {
-  const { formattedTrades: trades } = useUserData()
+  const { formattedTrades: trades, hourFilter, setHourFilter } = useUserData()
+  const [activeHour, setActiveHour] = React.useState<number | null>(null)
   const t = useI18n()
+
+  const handleClick = React.useCallback(() => {
+    if (activeHour === null) return
+    if (hourFilter.hour === activeHour) {
+      setHourFilter({ hour: null })
+    } else {
+      setHourFilter({ hour: activeHour })
+    }
+  }, [activeHour, hourFilter.hour, setHourFilter])
 
   const chartData = React.useMemo(() => {
     const hourlyData: { [hour: string]: { totalPnl: number; count: number } } = {}
@@ -71,6 +82,14 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
   }
 
   const CustomTooltip = ({ active, payload, label }: any) => {
+    React.useEffect(() => {
+      if (active && payload && payload.length) {
+        setActiveHour(payload[0].payload.hour)
+      } else {
+        setActiveHour(null)
+      }
+    }, [active, payload])
+
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -111,11 +130,11 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
     <Card className="h-full flex flex-col">
       <CardHeader 
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === 'small-long' ? "p-2" : "p-3 sm:p-4"
+          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
         )}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
             <CardTitle 
               className={cn(
@@ -139,6 +158,16 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
               </UITooltip>
             </TooltipProvider>
           </div>
+          {hourFilter.hour !== null && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 lg:px-3"
+              onClick={() => setHourFilter({ hour: null })}
+            >
+              {t('pnlTime.clearFilter')}
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent 
@@ -147,16 +176,17 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
           size === 'small-long' ? "p-1" : "p-2 sm:p-4"
         )}
       >
-        <div className={cn(
-          "w-full h-full"
-        )}>
+        <div 
+          className="w-full h-full cursor-pointer" 
+          onClick={handleClick}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               margin={
                 size === 'small-long'
-                  ? { left: 10, right: 4, top: 4, bottom: 20 }
-                  : { left: 10, right: 8, top: 8, bottom: 24 }
+                  ? { left: 0, right: 4, top: 4, bottom: 20 }
+                  : { left: 0, right: 8, top: 8, bottom: 24 }
               }
             >
               <CartesianGrid 
@@ -179,7 +209,7 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={60}
+                width={45}
                 tickMargin={4}
                 tick={{ 
                   fontSize: size === 'small-long' ? 9 : 11,
@@ -196,14 +226,17 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
               />
               <Bar
                 dataKey="avgPnl"
+                fill={chartConfig.avgPnl.color}
                 radius={[3, 3, 0, 0]}
                 maxBarSize={size === 'small-long' ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
+                opacity={hourFilter.hour !== null ? 0.3 : 1}
               >
-                {chartData.map((entry, index) => (
+                {chartData.map((entry) => (
                   <Cell 
-                    key={`cell-${index}`} 
+                    key={`cell-${entry.hour}`} 
                     fill={getColor(entry.tradeCount)}
+                    opacity={hourFilter.hour === entry.hour ? 1 : (hourFilter.hour !== null ? 0.3 : 1)}
                   />
                 ))}
               </Bar>

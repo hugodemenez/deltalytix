@@ -16,6 +16,7 @@ import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
 import { Trade } from "@prisma/client"
 import { Button } from "@/components/ui/button"
+import { ChartConfig } from "@/components/ui/chart"
 
 interface TimeRangePerformanceChartProps {
   size?: WidgetSize
@@ -53,6 +54,13 @@ function getColorByWinRate(winRate: number): string {
   if (winRate === 0) return "hsl(var(--muted-foreground))"
   return winRate >= 50 ? "hsl(var(--success))" : "hsl(var(--destructive))"
 }
+
+const chartConfig = {
+  avgPnl: {
+    label: "Average PnL",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig
 
 export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRangePerformanceChartProps) {
   const { formattedTrades: trades, timeRange, setTimeRange } = useUserData()
@@ -172,11 +180,11 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
     <Card className="h-full flex flex-col">
       <CardHeader 
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === 'small-long' ? "p-2" : "p-3 sm:p-4"
+          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
         )}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
             <CardTitle 
               className={cn(
@@ -241,11 +249,26 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
                 axisLine={false}
                 height={size === 'small-long' ? 20 : 24}
                 tickMargin={size === 'small-long' ? 4 : 8}
-                tick={{ 
-                  fontSize: size === 'small-long' ? 9 : 11,
-                  fill: 'currentColor'
+                tick={(props) => {
+                  const { x, y, payload } = props;
+                  return (
+                    <g transform={`translate(${x},${y})`}>
+                      <text
+                        x={0}
+                        y={0}
+                        dy={size === 'small-long' ? 8 : 4}
+                        textAnchor={size === 'small-long' ? 'end' : 'middle'}
+                        fill="currentColor"
+                        fontSize={size === 'small-long' ? 9 : 11}
+                        transform={size === 'small-long' ? 'rotate(-45)' : 'rotate(0)'}
+                      >
+                        {getTimeRangeLabel(payload.value)}
+                      </text>
+                    </g>
+                  );
                 }}
-                tickFormatter={getTimeRangeLabel}
+                interval="preserveStartEnd"
+                allowDataOverflow={true}
               />
               <YAxis
                 tickLine={false}
@@ -266,15 +289,17 @@ export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRange
               />
               <Bar
                 dataKey="avgPnl"
+                fill={chartConfig.avgPnl.color}
                 radius={[3, 3, 0, 0]}
                 maxBarSize={size === 'small-long' ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
+                opacity={timeRange.range ? 0.3 : 1}
               >
-                {chartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
+                {chartData.map((entry) => (
+                  <Cell
+                    key={`cell-${entry.range}`}
                     fill={entry.color}
-                    opacity={timeRange.range && timeRange.range !== entry.range ? 0.3 : 1}
+                    opacity={timeRange.range === entry.range ? 1 : (timeRange.range ? 0.3 : 1)}
                   />
                 ))}
               </Bar>

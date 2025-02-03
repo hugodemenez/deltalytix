@@ -79,6 +79,16 @@ interface TickFilter {
   value: string | null
 }
 
+// Update WeekdayFilter interface to use numbers
+interface WeekdayFilter {
+  day: number | null
+}
+
+// Add new interface for hour filter
+interface HourFilter {
+  hour: number | null
+}
+
 // Add after the interfaces and before the UserDataContext
 const defaultLayouts: Layouts = {
   desktop: [
@@ -241,6 +251,14 @@ interface UserDataContextType {
   // Tick filter related
   tickFilter: TickFilter
   setTickFilter: React.Dispatch<React.SetStateAction<TickFilter>>
+
+  // Weekday filter related
+  weekdayFilter: WeekdayFilter
+  setWeekdayFilter: React.Dispatch<React.SetStateAction<WeekdayFilter>>
+
+  // Hour filter related
+  hourFilter: HourFilter
+  setHourFilter: React.Dispatch<React.SetStateAction<HourFilter>>
 }
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
@@ -301,6 +319,12 @@ export const UserDataProvider: React.FC<{
 
   // Add tick filter state
   const [tickFilter, setTickFilter] = useState<TickFilter>({ value: null });
+
+  // Add weekday filter state
+  const [weekdayFilter, setWeekdayFilter] = useState<WeekdayFilter>({ day: null });
+
+  // Add hour filter state
+  const [hourFilter, setHourFilter] = useState<HourFilter>({ hour: null });
 
   // Update the fetchData function to handle shared views
   const fetchData = useCallback(async () => {
@@ -506,15 +530,33 @@ export const UserDataProvider: React.FC<{
     );
   }, [tickFiltered, timeRange]);
 
-  // Update formattedTrades to use timeRangeFiltered
+  // Add weekday filter to filtering chain
+  const weekdayFiltered = useMemo(() => {
+    if (weekdayFilter?.day === null) return timeRangeFiltered;
+    return timeRangeFiltered.filter(trade => {
+      const dayOfWeek = new Date(trade.entryDate).getUTCDay();
+      return dayOfWeek === weekdayFilter.day;
+    });
+  }, [timeRangeFiltered, weekdayFilter?.day]);
+
+  // Add hour filter to filtering chain
+  const hourFiltered = useMemo(() => {
+    if (hourFilter?.hour === null) return weekdayFiltered;
+    return weekdayFiltered.filter(trade => {
+      const hour = new Date(trade.entryDate).getUTCHours();
+      return hour === hourFilter.hour;
+    });
+  }, [weekdayFiltered, hourFilter?.hour]);
+
+  // Update formattedTrades to use hourFiltered
   const formattedTrades = useMemo(() => {
     if(isSharedView) {
-      return timeRangeFiltered.filter(trade => 
+      return hourFiltered.filter(trade => 
         accountNumbers.length === 0 || accountNumbers.includes(trade.accountNumber)
       );
     }
 
-    return timeRangeFiltered
+    return hourFiltered
       .filter(trade => {
         const entryDate = parseISO(trade.entryDate);
         if (!isValid(entryDate)) return false;
@@ -533,7 +575,7 @@ export const UserDataProvider: React.FC<{
         return matchesInstruments && matchesAccounts && matchesDateRange && matchesPnlRange;
       })
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime());
-  }, [timeRangeFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView]);
+  }, [hourFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView]);
 
   const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades]);
   const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades]);
@@ -590,6 +632,14 @@ export const UserDataProvider: React.FC<{
     // Tick filter related
     tickFilter,
     setTickFilter,
+
+    // Weekday filter related
+    weekdayFilter,
+    setWeekdayFilter,
+
+    // Hour filter related
+    hourFilter,
+    setHourFilter,
   };
 
   return (

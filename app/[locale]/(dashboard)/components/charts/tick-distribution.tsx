@@ -113,7 +113,11 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
   const handleBarClick = (data: any) => {
     if (!data || !trades.length) return
     const clickedTicks = data.ticks
-    setTickFilter({ value: clickedTicks })
+    if (tickFilter.value === clickedTicks) {
+      setTickFilter({ value: null })
+    } else {
+      setTickFilter({ value: clickedTicks })
+    }
   }
 
   return (

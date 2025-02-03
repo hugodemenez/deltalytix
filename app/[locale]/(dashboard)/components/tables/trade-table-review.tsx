@@ -45,6 +45,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useI18n } from '@/locales/client'
 import { TradeComment } from './trade-comment'
 import { TradeVideoUrl } from './trade-video-url'
+import { formatInTimeZone } from 'date-fns-tz'
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -587,8 +588,8 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       ),
       cell: ({ row }) => {
         const dateStr = row.getValue("entryTime") as string
-        const date = new Date(dateStr)
-        return <div>{date.toLocaleTimeString()}</div>
+        const date = formatInTimeZone(new Date(dateStr), 'UTC', 'HH:mm:ss')
+        return <div>{date}</div>
       },
       size: 100,
     },
@@ -606,8 +607,8 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       ),
       cell: ({ row }) => {
         const dateStr = row.getValue("closeDate") as string
-        const date = new Date(dateStr)
-        return <div>{date.toLocaleTimeString()}</div>
+        const date = formatInTimeZone(new Date(dateStr), 'UTC', 'HH:mm:ss')
+        return <div>{date}</div>
       },
       size: 100,
     },
@@ -816,39 +817,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     return accountGroups.map(group => {
       if (!group.isExpanded) return group;
       
-      const sortedTrades = [...group.trades].sort((a, b) => {
-        for (const sort of sorting) {
-          switch (sort.id) {
-            case 'entryDate':
-              const aDate = new Date(a.entryDate).getTime();
-              const bDate = new Date(b.entryDate).getTime();
-              return sort.desc ? bDate - aDate : aDate - bDate;
-            
-            case 'pnl':
-              const aPnl = Number(a.pnl) || 0;
-              const bPnl = Number(b.pnl) || 0;
-              return sort.desc ? bPnl - aPnl : aPnl - bPnl;
-            
-            case 'quantity':
-              const aQty = Number(a.quantity) || 0;
-              const bQty = Number(b.quantity) || 0;
-              return sort.desc ? bQty - aQty : aQty - bQty;
-            
-            case 'direction':
-              const aDir = a.direction || '';
-              const bDir = b.direction || '';
-              return sort.desc 
-                ? bDir.localeCompare(aDir)
-                : aDir.localeCompare(bDir);
-            
-            case 'timeInPosition':
-              const aTime = Number(a.timeInPosition) || 0;
-              const bTime = Number(b.timeInPosition) || 0;
-              return sort.desc ? bTime - aTime : aTime - bTime;
-          }
-        }
-        return 0;
-      });
+      const sortedTrades = [...group.trades]
 
       return {
         ...group,

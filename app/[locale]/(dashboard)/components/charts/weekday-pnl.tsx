@@ -15,8 +15,18 @@ import {
 } from "@/components/ui/tooltip"
 import { WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { useI18n } from "@/locales/client"
+import { Button } from "@/components/ui/button"
 
-const daysOfWeek = ['weekdayPnl.days.sunday', 'weekdayPnl.days.monday', 'weekdayPnl.days.tuesday', 'weekdayPnl.days.wednesday', 'weekdayPnl.days.thursday', 'weekdayPnl.days.friday', 'weekdayPnl.days.saturday'];
+const daysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // Sunday = 0, Saturday = 6
+
+type WeekdayTranslationKey =
+  | 'weekdayPnl.days.sunday'
+  | 'weekdayPnl.days.monday'
+  | 'weekdayPnl.days.tuesday'
+  | 'weekdayPnl.days.wednesday'
+  | 'weekdayPnl.days.thursday'
+  | 'weekdayPnl.days.friday'
+  | 'weekdayPnl.days.saturday';
 
 interface WeekdayPNLChartProps {
   size?: WidgetSize
@@ -25,47 +35,30 @@ interface WeekdayPNLChartProps {
 const formatCurrency = (value: number) =>
   value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  const t = useI18n()
-  if (active && payload && payload.length) {
-    const data = payload[0].payload
-    return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm">
-        <div className="grid gap-2">
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t('weekdayPnl.tooltip.day')}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {t(label, {})}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t('weekdayPnl.tooltip.averagePnl')}
-            </span>
-            <span className="font-bold">
-              {formatCurrency(data.pnl)}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t('weekdayPnl.tooltip.trades')}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {data.tradeCount} {data.tradeCount !== 1 ? t('weekdayPnl.tooltip.trades_plural') : t('weekdayPnl.tooltip.trade')}
-            </span>
-          </div>
-        </div>
-      </div>
-    )
-  }
-  return null
+const getDayTranslationKey = (day: number): WeekdayTranslationKey => {
+  const keys: WeekdayTranslationKey[] = [
+    'weekdayPnl.days.sunday',
+    'weekdayPnl.days.monday',
+    'weekdayPnl.days.tuesday',
+    'weekdayPnl.days.wednesday',
+    'weekdayPnl.days.thursday',
+    'weekdayPnl.days.friday',
+    'weekdayPnl.days.saturday'
+  ];
+  return keys[day];
 }
 
+const chartConfig = {
+  pnl: {
+    label: "PnL",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig
+
 export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProps) {
-  const {calendarData} = useUserData()
+  const {calendarData, weekdayFilter, setWeekdayFilter} = useUserData()
   const [darkMode, setDarkMode] = React.useState(false)
+  const [activeDay, setActiveDay] = React.useState<number | null>(null)
   const t = useI18n()
 
   React.useEffect(() => {
@@ -88,10 +81,10 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
     const weekdayTotals = daysOfWeek.reduce((acc, day) => ({ 
       ...acc, 
       [day]: { total: 0, count: 0 } 
-    }), {} as Record<string, { total: number, count: number }>)
+    }), {} as Record<number, { total: number, count: number }>)
 
     Object.entries(calendarData).forEach(([date, entry]) => {
-      const dayOfWeek = daysOfWeek[new Date(date + 'T00:00:00Z').getUTCDay()]
+      const dayOfWeek = new Date(date).getUTCDay()
       weekdayTotals[dayOfWeek].total += entry.pnl
       weekdayTotals[dayOfWeek].count += 1
     })
@@ -115,15 +108,69 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
     return `hsl(var(${baseColorVar}) / ${intensity})`
   }
 
+  const handleClick = React.useCallback(() => {
+    if (activeDay === null) return
+    if (weekdayFilter.day === activeDay) {
+      setWeekdayFilter({ day: null })
+    } else {
+      setWeekdayFilter({ day: activeDay })
+    }
+  }, [activeDay, weekdayFilter.day, setWeekdayFilter])
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    React.useEffect(() => {
+      if (active && payload && payload.length) {
+        setActiveDay(payload[0].payload.day)
+      } else {
+        setActiveDay(null)
+      }
+    }, [active, payload])
+
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="grid gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {t('weekdayPnl.tooltip.day')}
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {t(getDayTranslationKey(data.day))}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {t('weekdayPnl.tooltip.averagePnl')}
+              </span>
+              <span className="font-bold">
+                {formatCurrency(data.pnl)}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {t('weekdayPnl.tooltip.trades')}
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {data.tradeCount} {data.tradeCount !== 1 ? t('weekdayPnl.tooltip.trades_plural') : t('weekdayPnl.tooltip.trade')}
+              </span>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader 
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === 'small-long' ? "p-2" : "p-3 sm:p-4"
+          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
         )}
       >
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
             <CardTitle 
               className={cn(
@@ -147,6 +194,16 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
               </UITooltip>
             </TooltipProvider>
           </div>
+          {weekdayFilter.day !== null && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 lg:px-3"
+              onClick={() => setWeekdayFilter({ day: null })}
+            >
+              {t('weekdayPnl.clearFilter')}
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent 
@@ -155,16 +212,17 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
           size === 'small-long' ? "p-1" : "p-2 sm:p-4"
         )}
       >
-        <div className={cn(
-          "w-full h-full"
-        )}>
+        <div 
+          className="w-full h-full cursor-pointer" 
+          onClick={handleClick}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={weekdayData}
               margin={
                 size === 'small-long'
-                  ? { left: 10, right: 4, top: 4, bottom: 20 }
-                  : { left: 10, right: 8, top: 8, bottom: 24 }
+                  ? { left: 0, right: 4, top: 4, bottom: 20 }
+                  : { left: 0, right: 8, top: 8, bottom: 24 }
               }
             >
               <CartesianGrid 
@@ -181,12 +239,15 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
                   fontSize: size === 'small-long' ? 9 : 11,
                   fill: 'currentColor'
                 }}
-                tickFormatter={(value) => size === 'small-long' ? t(value, {}).slice(0, 3) : t(value, {})}
+                tickFormatter={(value) => {
+                  const key = getDayTranslationKey(value);
+                  return size === 'small-long' ? t(key).slice(0, 3) : t(key)
+                }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                width={60}
+                width={45}
                 tickMargin={4}
                 tick={{ 
                   fontSize: size === 'small-long' ? 9 : 11,
@@ -203,14 +264,17 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
               />
               <Bar
                 dataKey="pnl"
+                fill={chartConfig.pnl.color}
                 radius={[3, 3, 0, 0]}
                 maxBarSize={size === 'small-long' ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
+                opacity={weekdayFilter.day !== null ? 0.3 : 1}
               >
-                {weekdayData.map((entry, index) => (
+                {weekdayData.map((entry) => (
                   <Cell 
-                    key={`cell-${index}`} 
+                    key={`cell-${entry.day}`} 
                     fill={getColor(entry.pnl)}
+                    opacity={weekdayFilter.day === entry.day ? 1 : (weekdayFilter.day !== null ? 0.3 : 1)}
                   />
                 ))}
               </Bar>
