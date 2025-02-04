@@ -274,7 +274,7 @@ function getDisplayDate(pendingChanges: PendingChanges | null, selectedAccount: 
 }
 
 export function PropFirmOverview({ size }: { size: WidgetSize }) {
-  const { trades, user } = useUserData()
+  const { formattedTrades: trades, user } = useUserData()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
