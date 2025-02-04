@@ -36,7 +36,8 @@ export async function POST(req: Request) {
     "payment_intent.succeeded",
     "payment_intent.payment_failed",
     "customer.subscription.deleted",
-    "customer.subscription.updated"
+    "customer.subscription.updated",
+    "customer.subscription.created"
   ];
 
   if (permittedEvents.includes(event.type)) {
@@ -158,6 +159,39 @@ export async function POST(req: Request) {
                 }
               });
               console.log(`Subscription updated: ${data.id}`);
+            }
+          }
+          break;
+        case "customer.subscription.created":
+          data = event.data.object as Stripe.Subscription;
+          const newCustomerData = await stripe.customers.retrieve(
+            data.customer as string
+          ) as Stripe.Customer;
+          
+          if (newCustomerData.email) {
+            const user = await prisma.user.findUnique({
+              where: { email: newCustomerData.email },
+            });
+
+            if (user) {
+              await prisma.subscription.upsert({
+                where: { email: newCustomerData.email },
+                update: {
+                  status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
+                  plan: data.metadata?.plan as string,
+                  endDate: new Date(data.current_period_end * 1000),
+                  trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
+                },
+                create: {
+                  email: newCustomerData.email,
+                  plan: data.metadata?.plan as string,
+                  user: { connect: { id: user.id } },
+                  status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
+                  endDate: new Date(data.current_period_end * 1000),
+                  trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
+                }
+              });
+              console.log(`New subscription created and saved: ${data.id}`);
             }
           }
           break;
