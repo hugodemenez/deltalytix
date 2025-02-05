@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserData } from "@/components/context/user-data"
-import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff } from "lucide-react"
+import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -40,8 +40,21 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 type Theme = 'light' | 'dark' | 'system'
 
+// Add timezone list
+const timezones = [
+  'UTC',
+  'Europe/Paris',
+  'America/New_York',
+  'America/Chicago',
+  'America/Los_Angeles',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+  // Add more common timezones as needed
+];
+
 export default function Navbar() {
-  const { user, subscription } = useUserData()
+  const { user, subscription, timezone, setTimezone } = useUserData()
   const { theme, toggleTheme, setTheme } = useTheme()
   const t = useI18n()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
@@ -209,6 +222,18 @@ export default function Navbar() {
                       }}
                     />
                   </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="flex items-center">
+                    <Clock className="mr-2 h-4 w-4" />
+                    {t('dashboard.timezone')}
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup value={timezone} onValueChange={setTimezone}>
+                    {timezones.map((tz) => (
+                      <DropdownMenuRadioItem key={tz} value={tz}>
+                        {tz.replace('_', ' ')}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => {
                     signOut()

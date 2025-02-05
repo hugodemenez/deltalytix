@@ -123,7 +123,53 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
                             break;
                         case 'entryDate':
                         case 'closeDate':
-                            item[key] = cellValue ? new Date(cellValue).toISOString() : undefined;
+                            if (cellValue) {
+                                try {
+                                    // Split date and time
+                                    const [datePart, timePart] = cellValue.split(' ');
+                                    
+                                    if (!datePart || !timePart) {
+                                        console.error(`Invalid date format: ${cellValue}`);
+                                        item[key] = undefined;
+                                        break;
+                                    }
+
+                                    // Parse MM/DD/YYYY format
+                                    const [month, day, year] = datePart.split('/').map(Number);
+                                    const [hours, minutes, seconds] = timePart.split(':').map(Number);
+                                    
+                                    // Validate all components
+                                    if ([year, month, day, hours, minutes, seconds].some(n => isNaN(n))) {
+                                        console.error(`Invalid date components:`, {
+                                            year, month, day, hours, minutes, seconds
+                                        });
+                                        item[key] = undefined;
+                                        break;
+                                    }
+
+                                    // Create date in local time (month - 1 because JS months are 0-based)
+                                    const localDate = new Date(year, month - 1, day, hours, minutes, seconds);
+                                    
+                                    // Validate the created date
+                                    if (isNaN(localDate.getTime())) {
+                                        console.error(`Invalid date created:`, localDate);
+                                        item[key] = undefined;
+                                        break;
+                                    }
+
+                                    // Convert to UTC
+                                    const utcDate = new Date(localDate.toISOString());
+                                    
+                                    // Format with explicit +00:00 timezone
+                                    item[key] = utcDate.toISOString().replace('Z', '+00:00');
+
+                                } catch (error) {
+                                    console.error(`Error parsing date: ${cellValue}`, error);
+                                    item[key] = undefined;
+                                }
+                            } else {
+                                item[key] = undefined;
+                            }
                             break;
                         default:
                             item[key] = cellValue as any;

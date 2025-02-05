@@ -34,7 +34,7 @@ const formatCurrency = (value: number) =>
   value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
 export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeChartProps) {
-  const { formattedTrades: trades, hourFilter, setHourFilter } = useUserData()
+  const { formattedTrades: trades, hourFilter, setHourFilter, timezone } = useUserData()
   const [activeHour, setActiveHour] = React.useState<number | null>(null)
   const t = useI18n()
 
@@ -55,9 +55,9 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
       hourlyData[i.toString()] = { totalPnl: 0, count: 0 }
     }
 
-    // Sum up PNL and count trades for each hour in UTC
+    // Sum up PNL and count trades for each hour in user's timezone
     trades.forEach((trade: Trade) => {
-      const hour = formatInTimeZone(new Date(trade.entryDate), 'UTC', 'H')
+      const hour = formatInTimeZone(new Date(trade.entryDate), timezone, 'H')
       hourlyData[hour].totalPnl += trade.pnl
       hourlyData[hour].count++
     })
@@ -70,7 +70,7 @@ export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeC
         tradeCount: data.count,
       }))
       .sort((a, b) => a.hour - b.hour)
-  }, [trades])
+  }, [trades, timezone])
 
   const maxTradeCount = Math.max(...chartData.map(data => data.tradeCount))
   const maxPnL = Math.max(...chartData.map(data => data.avgPnl))

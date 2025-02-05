@@ -290,7 +290,7 @@ interface TradeTableReviewProps {
 
 export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) {
   const t = useI18n()
-  const { formattedTrades: contextTrades, updateTrade } = useUserData()
+  const { formattedTrades: contextTrades, updateTrade, timezone } = useUserData()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [availableTags, setAvailableTags] = useState<string[]>([])
@@ -476,7 +476,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => new Date(row.getValue("entryDate")).toLocaleDateString(),
+      cell: ({ row }) => formatInTimeZone(new Date(row.getValue("entryDate")), timezone, 'yyyy-MM-dd'),
       sortingFn: (rowA, rowB, columnId) => {
         const a = new Date(rowA.getValue(columnId)).getTime();
         const b = new Date(rowB.getValue(columnId)).getTime();
@@ -588,8 +588,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       ),
       cell: ({ row }) => {
         const dateStr = row.getValue("entryTime") as string
-        const date = formatInTimeZone(new Date(dateStr), 'UTC', 'HH:mm:ss')
-        return <div>{date}</div>
+        return <div>{formatInTimeZone(new Date(dateStr), timezone, 'HH:mm:ss')}</div>
       },
       size: 100,
     },
@@ -607,8 +606,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       ),
       cell: ({ row }) => {
         const dateStr = row.getValue("closeDate") as string
-        const date = formatInTimeZone(new Date(dateStr), 'UTC', 'HH:mm:ss')
-        return <div>{date}</div>
+        return <div>{formatInTimeZone(new Date(dateStr), timezone, 'HH:mm:ss')}</div>
       },
       size: 100,
     },
@@ -810,7 +808,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         return filterValue.some(tag => tags.includes(tag))
       },
     }
-  ], [availableTags, t])
+  ], [availableTags, t, timezone])
 
   // Update the getSortedAccountGroups function to handle all sortable columns
   const getSortedAccountGroups = useMemo(() => {

@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getFinancialEvents } from "@/server/financial-events"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { WeeklyModal } from "./weekly-modal"
+import { useUserData } from "@/components/context/user-data"
 
 
 const WEEKDAYS = [
@@ -64,6 +65,7 @@ interface CalendarPnlProps {
 export default function CalendarPnl({ calendarData, financialEvents = [] }: CalendarPnlProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
+  const { timezone } = useUserData()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
@@ -139,7 +141,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
     return monthEvents.filter(event => {
       if (!event.date) return false;
       try {
-        return formatInTimeZone(event.date, 'UTC', 'yyyy-MM-dd') === formatInTimeZone(date, 'UTC', 'yyyy-MM-dd');
+        return formatInTimeZone(event.date, timezone, 'yyyy-MM-dd') === formatInTimeZone(date, timezone, 'yyyy-MM-dd');
       } catch (error) {
         console.error('Error parsing event date:', error);
         return false;
@@ -173,6 +175,15 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
     }
   }
 
+  const calculateWeeklyTotal = React.useCallback((index: number, calendarDays: Date[], calendarData: CalendarData) => {
+    const startOfWeekIndex = index - 6
+    const weekDays = calendarDays.slice(startOfWeekIndex, index + 1)
+    return weekDays.reduce((total, day) => {
+      const dayData = calendarData[formatInTimeZone(day, timezone, 'yyyy-MM-dd')]
+      return total + (dayData ? dayData.pnl : 0)
+    }, 0)
+  }, [timezone])
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader 
@@ -180,7 +191,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       >
         <div className="flex items-center gap-3">
           <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">
-            {formatInTimeZone(currentDate, 'UTC', 'MMMM yyyy', { locale: dateLocale })}
+            {formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })}
           </CardTitle>
           <div className={cn(
             "text-sm sm:text-base font-semibold truncate",
@@ -400,13 +411,4 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       />
     </Card>
   )
-}
-
-function calculateWeeklyTotal(index: number, calendarDays: Date[], calendarData: CalendarData) {
-  const startOfWeekIndex = index - 6
-  const weekDays = calendarDays.slice(startOfWeekIndex, index + 1)
-  return weekDays.reduce((total, day) => {
-    const dayData = calendarData[formatInTimeZone(day, 'UTC', 'yyyy-MM-dd')]
-    return total + (dayData ? dayData.pnl : 0)
-  }, 0)
 }

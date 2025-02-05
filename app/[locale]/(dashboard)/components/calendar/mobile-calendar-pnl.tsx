@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { CalendarModal } from "./new-modal"
 import { CalendarData } from "@/types/calendar"
 import { Card } from "@/components/ui/card"
+import { useUserData } from "@/components/context/user-data"
 
 function formatCurrency(value: number): string {
   const absValue = Math.abs(value);
@@ -38,12 +39,13 @@ function getCalendarDays(monthStart: Date, monthEnd: Date) {
   return [...days, ...additionalDays].slice(0, 42)
 }
 
-function isDateToday(date: Date): boolean {
+function isDateToday(date: Date, timezone: string): boolean {
   const today = new Date()
-  return formatInTimeZone(date, 'UTC', 'yyyy-MM-dd') === formatInTimeZone(today, 'UTC', 'yyyy-MM-dd')
+  return formatInTimeZone(date, timezone, 'yyyy-MM-dd') === formatInTimeZone(today, timezone, 'yyyy-MM-dd')
 }
 
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
+  const { timezone } = useUserData()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -80,7 +82,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <h2 className="text-2xl font-bold">
-            {formatInTimeZone(currentDate, 'UTC', 'MMMM')}
+            {formatInTimeZone(currentDate, timezone, 'MMMM')}
           </h2>
           <span className={cn(
             "text-xl font-semibold",
@@ -113,7 +115,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
           </div>
         ))}
         {calendarDays.map((date) => {
-          const dateString = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd')
+          const dateString = formatInTimeZone(date, timezone, 'yyyy-MM-dd')
           const dayData = calendarData[dateString]
           const contribution = dayData && monthlyTotal !== 0 
             ? Math.abs(dayData.pnl / monthlyTotal) 
@@ -161,15 +163,15 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
               )}
               <div className={cn(
                 "w-8 h-8 flex items-center justify-center rounded-full z-10",
-                isDateToday(date) && "bg-primary text-primary-foreground",
-                dayData && dayData.pnl !== 0 && !isDateToday(date) && (
+                isDateToday(date, timezone) && "bg-primary text-primary-foreground",
+                dayData && dayData.pnl !== 0 && !isDateToday(date, timezone) && (
                   dayData.pnl > 0 
                     ? "text-green-600 dark:text-green-400"
                     : "text-red-600 dark:text-red-400"
                 )
               )}>
                 <span className="text-lg font-semibold">
-                  {formatInTimeZone(date, 'UTC', 'd')}
+                  {formatInTimeZone(date, timezone, 'd')}
                 </span>
               </div>
             </div>
@@ -182,7 +184,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
           if (!open) setSelectedDate(null)
         }}
         selectedDate={selectedDate}
-        dayData={selectedDate ? calendarData[formatInTimeZone(selectedDate, 'UTC', 'yyyy-MM-dd')] : undefined}
+        dayData={selectedDate ? calendarData[formatInTimeZone(selectedDate, timezone, 'yyyy-MM-dd')] : undefined}
         isLoading={isLoading}
       />
     </Card>

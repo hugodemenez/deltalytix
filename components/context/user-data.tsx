@@ -259,6 +259,10 @@ interface UserDataContextType {
   // Hour filter related
   hourFilter: HourFilter
   setHourFilter: React.Dispatch<React.SetStateAction<HourFilter>>
+
+  // Add timezone management
+  timezone: string
+  setTimezone: React.Dispatch<React.SetStateAction<string>>
 }
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
@@ -326,6 +330,25 @@ export const UserDataProvider: React.FC<{
   // Add hour filter state
   const [hourFilter, setHourFilter] = useState<HourFilter>({ hour: null });
 
+  // Add timezone state
+  const [timezone, setTimezone] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const savedTimezone = localStorage.getItem('userTimezone');
+      return savedTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    }
+    return 'UTC';
+  });
+
+  // Save timezone to localStorage when it changes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('userTimezone', timezone);
+    }
+  }, [timezone]);
+
+  // Update userTimeZone to use the selected timezone
+  const userTimeZone = useMemo(() => timezone, [timezone]);
+
   // Update the fetchData function to handle shared views
   const fetchData = useCallback(async () => {
     try {
@@ -337,7 +360,7 @@ export const UserDataProvider: React.FC<{
         if (!sharedData.error) {
           const processedSharedTrades = sharedData.trades.map(trade => ({
             ...trade,
-            utcDateStr: formatInTimeZone(new Date(trade.entryDate), 'UTC', 'yyyy-MM-dd')
+            utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
           }));
           setTrades(processedSharedTrades);
           setSharedParams(sharedData.params);
@@ -390,14 +413,14 @@ export const UserDataProvider: React.FC<{
 
           const processedTrades = data.trades.map(trade => ({
             ...trade,
-            utcDateStr: formatInTimeZone(new Date(trade.entryDate), 'UTC', 'yyyy-MM-dd')
+            utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
           }));
           setTrades(processedTrades);
 
           // Set date range if trades exist
           if (processedTrades.length > 0) {
             const dates = processedTrades
-              .map(trade => parseISO(trade.entryDate))
+              .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
               .filter(date => isValid(date));
 
             if (dates.length > 0) {
@@ -417,12 +440,12 @@ export const UserDataProvider: React.FC<{
     } finally {
       setIsLoading(false);
     }
-  }, [params?.slug, isSharedView]);
+  }, [params?.slug, isSharedView, timezone]);
 
   // Initial data fetch
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, timezone]);
 
   // Update saveLayouts to handle shared views
   const saveLayouts = useCallback(async (newLayouts: Layouts) => {
@@ -453,16 +476,12 @@ export const UserDataProvider: React.FC<{
           ...trade, 
           ...updates,
           utcDateStr: updates.entryDate 
-            ? formatInTimeZone(new Date(updates.entryDate), 'UTC', 'yyyy-MM-dd')
+            ? formatInTimeZone(new Date(updates.entryDate), timezone, 'yyyy-MM-dd')
             : trade.utcDateStr
         } : trade
       )
     );
-  }, []);
-
-  const userTimeZone = useMemo(() => 
-    Intl.DateTimeFormat().resolvedOptions().timeZone
-  , []);
+  }, [timezone]);
 
   const dateRangeBoundaries = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return null;
@@ -490,13 +509,13 @@ export const UserDataProvider: React.FC<{
     if (!dateRangeBoundaries) return accountFiltered;
     return accountFiltered.filter(trade => {
       const entryDate = new Date(formatInTimeZone(
-        parseISO(trade.entryDate),
-        userTimeZone,
+        new Date(trade.entryDate),
+        timezone,
         'yyyy-MM-dd HH:mm:ssXXX'
       ));
       return entryDate >= dateRangeBoundaries.from && entryDate <= dateRangeBoundaries.to;
     });
-  }, [accountFiltered, dateRangeBoundaries, userTimeZone]);
+  }, [accountFiltered, dateRangeBoundaries, timezone]);
 
   // Memoize filtered trades by PnL
   const pnlFiltered = useMemo(() => {
@@ -534,19 +553,27 @@ export const UserDataProvider: React.FC<{
   const weekdayFiltered = useMemo(() => {
     if (weekdayFilter?.day === null) return timeRangeFiltered;
     return timeRangeFiltered.filter(trade => {
-      const dayOfWeek = new Date(trade.entryDate).getUTCDay();
+      const dayOfWeek = new Date(formatInTimeZone(
+        new Date(trade.entryDate),
+        timezone,
+        'yyyy-MM-dd HH:mm:ssXXX'
+      )).getDay();
       return dayOfWeek === weekdayFilter.day;
     });
-  }, [timeRangeFiltered, weekdayFilter?.day]);
+  }, [timeRangeFiltered, weekdayFilter?.day, timezone]);
 
   // Add hour filter to filtering chain
   const hourFiltered = useMemo(() => {
     if (hourFilter?.hour === null) return weekdayFiltered;
     return weekdayFiltered.filter(trade => {
-      const hour = new Date(trade.entryDate).getUTCHours();
+      const hour = new Date(formatInTimeZone(
+        new Date(trade.entryDate),
+        timezone,
+        'yyyy-MM-dd HH:mm:ssXXX'
+      )).getHours();
       return hour === hourFilter.hour;
     });
-  }, [weekdayFiltered, hourFilter?.hour]);
+  }, [weekdayFiltered, hourFilter?.hour, timezone]);
 
   // Update formattedTrades to use hourFiltered
   const formattedTrades = useMemo(() => {
@@ -640,6 +667,10 @@ export const UserDataProvider: React.FC<{
     // Hour filter related
     hourFilter,
     setHourFilter,
+
+    // Add timezone management
+    timezone,
+    setTimezone,
   };
 
   return (

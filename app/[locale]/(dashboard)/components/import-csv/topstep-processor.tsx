@@ -3,6 +3,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
 import { Button } from "@/components/ui/button"
+import { useUserData } from '@/components/context/user-data'
+import { formatInTimeZone } from 'date-fns-tz'
 
 interface TopstepProcessorProps {
     headers: string[];
@@ -25,6 +27,7 @@ const mappings: { [key: string]: string } = {
 
 export default function TopstepProcessor({ headers, csvData, setProcessedTrades }: TopstepProcessorProps) {
     const [trades, setTrades] = useState<Trade[]>([])
+    const { timezone } = useUserData()
 
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
@@ -101,30 +104,47 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
                 }
             });
 
-            // Ensure time values are stored as ISO strings
+            // Process dates with timezone consideration
             try {
                 if (item.entryDate) {
-                    const entryDate = new Date(item.entryDate);
-                    if (isNaN(entryDate.getTime())) {
+                    const localDate = new Date(item.entryDate);
+                    if (isNaN(localDate.getTime())) {
                         isValidTrade = false;
                         return;
                     }
-                    item.entryDate = entryDate.toISOString();
+                    
+                    // Get timezone offset in minutes
+                    const timezoneOffsetInMinutes = localDate.getTimezoneOffset();
+                    
+                    // Convert to UTC by adjusting for the timezone offset
+                    const utcDate = new Date(localDate.getTime() - (timezoneOffsetInMinutes * 60000));
+                    
+                    // Format with explicit timezone offset
+                    item.entryDate = utcDate.toISOString().replace('Z', '+00:00');
                 }
+
                 if (item.closeDate) {
-                    const closeDate = new Date(item.closeDate);
-                    if (isNaN(closeDate.getTime())) {
+                    const localDate = new Date(item.closeDate);
+                    if (isNaN(localDate.getTime())) {
                         isValidTrade = false;
                         return;
                     }
-                    item.closeDate = closeDate.toISOString();
+                    
+                    // Get timezone offset in minutes
+                    const timezoneOffsetInMinutes = localDate.getTimezoneOffset();
+                    
+                    // Convert to UTC by adjusting for the timezone offset
+                    const utcDate = new Date(localDate.getTime() - (timezoneOffsetInMinutes * 60000));
+                    
+                    // Format with explicit timezone offset
+                    item.closeDate = utcDate.toISOString().replace('Z', '+00:00');
                 }
             } catch (e) {
                 isValidTrade = false;
                 return;
             }
 
-            // Calculate time in position in seconds
+            // Calculate time in position in seconds using UTC timestamps
             if (item.entryDate && item.closeDate) {
                 const entryTime = new Date(item.entryDate).getTime();
                 const closeTime = new Date(item.closeDate).getTime();
@@ -191,8 +211,12 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
                                         <TableCell>{trade.quantity}</TableCell>
                                         <TableCell>{trade.entryPrice}</TableCell>
                                         <TableCell>{trade.closePrice}</TableCell>
-                                        <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
-                                        <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
+                                        <TableCell>
+                                            {formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ss')}
+                                        </TableCell>
+                                        <TableCell>
+                                            {trade.closeDate ? formatInTimeZone(new Date(trade.closeDate), timezone, 'yyyy-MM-dd HH:mm:ss') : '-'}
+                                        </TableCell>
                                         <TableCell className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
                                             {trade.pnl?.toFixed(2)}
                                         </TableCell>
