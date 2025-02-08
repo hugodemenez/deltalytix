@@ -70,34 +70,34 @@ const importTypeInfo: ImportTypeInfo[] = [
     videoUrl: '',
     details: ''
   },
-  {
-    type: 'rithmic-performance',
-    name: 'import.type.rithmicPerf.name',
-    description: 'import.type.rithmicPerf.description',
-    category: 'Platform CSV Import',
-    videoUrl: (() => {
-      return process.env.NEXT_PUBLIC_RITHMIC_PERFORMANCE_TUTORIAL_VIDEO || ''
-    })(),
-    details: 'import.type.rithmicPerf.details'
-  },
-  {
-    type: 'rithmic-orders',
-    name: 'import.type.rithmicOrders.name',
-    description: 'import.type.rithmicOrders.description',
-    category: 'Platform CSV Import',
-    videoUrl: (() => {
-      return process.env.NEXT_PUBLIC_RITHMIC_ORDER_TUTORIAL_VIDEO || ''
-    })(),
-    details: 'import.type.rithmicOrders.details'
-  },
-  {
-    type: 'ninjatrader-performance',
-    name: 'import.type.ninjaTrader.name',
-    description: 'import.type.ninjaTrader.description',
-    category: 'Platform CSV Import',
-    videoUrl: process.env.NEXT_PUBLIC_NINJATRADER_PERFORMANCE_TUTORIAL_VIDEO || '',
-    details: ''
-  },
+  // {
+  //   type: 'rithmic-performance',
+  //   name: 'import.type.rithmicPerf.name',
+  //   description: 'import.type.rithmicPerf.description',
+  //   category: 'Platform CSV Import',
+  //   videoUrl: (() => {
+  //     return process.env.NEXT_PUBLIC_RITHMIC_PERFORMANCE_TUTORIAL_VIDEO || ''
+  //   })(),
+  //   details: 'import.type.rithmicPerf.details'
+  // },
+  // {
+  //   type: 'rithmic-orders',
+  //   name: 'import.type.rithmicOrders.name',
+  //   description: 'import.type.rithmicOrders.description',
+  //   category: 'Platform CSV Import',
+  //   videoUrl: (() => {
+  //     return process.env.NEXT_PUBLIC_RITHMIC_ORDER_TUTORIAL_VIDEO || ''
+  //   })(),
+  //   details: 'import.type.rithmicOrders.details'
+  // },
+  // {
+  //   type: 'ninjatrader-performance',
+  //   name: 'import.type.ninjaTrader.name',
+  //   description: 'import.type.ninjaTrader.description',
+  //   category: 'Platform CSV Import',
+  //   videoUrl: process.env.NEXT_PUBLIC_NINJATRADER_PERFORMANCE_TUTORIAL_VIDEO || '',
+  //   details: ''
+  // },
   {
     type: 'tradezella',
     name: 'import.type.tradezella.name',

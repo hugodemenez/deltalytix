@@ -48,8 +48,8 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       description: t('pricing.basic.description'),
       price: { yearly: 0, monthly: 0 },
       features: [
+        t('pricing.basic.feature1'),
         t('pricing.basic.feature2'),
-        t('pricing.basic.feature3'),
       ]
     },
     plus: {
@@ -63,7 +63,6 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       features: [
         t('pricing.plus.feature1'),
         t('pricing.plus.feature2'),
-        t('pricing.plus.feature3'),
         t('pricing.plus.feature4'),
       ]
     },
@@ -159,11 +158,6 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
               <CardContent>
                 <div className="text-4xl font-bold mb-4">
                   {formatPrice(plan)}
-                  {key === 'pro' && (
-                    <div className="text-sm font-normal text-gray-500 mt-1">
-                      {t('pricing.contactUsForCustom')}
-                    </div>
-                  )}
                 </div>
                 <ul className="space-y-2">
                   {plan.features.map((feature, index) => (

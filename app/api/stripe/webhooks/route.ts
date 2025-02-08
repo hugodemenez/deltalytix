@@ -58,19 +58,20 @@ export async function POST(req: Request) {
             where: { email: data.customer_details?.email as string },
           });
 
+          const checkoutPlan = data.metadata?.plan || 'free'; // Provide a default value
           await prisma.subscription.upsert({
             where: {
               email: data.customer_details?.email as string,
             },
             update: {
-              plan: data.metadata?.plan as string,
+              plan: checkoutPlan,
               endDate: new Date(subscription.current_period_end * 1000),
               status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
               trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null
             },
             create: {
               email: data.customer_details?.email as string,
-              plan: data.metadata?.plan as string,
+              plan: checkoutPlan,
               user: { connect: { id: user?.id } },
               endDate: new Date(subscription.current_period_end * 1000),
               status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
@@ -149,11 +150,12 @@ export async function POST(req: Request) {
 
               console.log(`Subscription scheduled for cancellation: ${data.id}`);
             } else {
+              const updatedPlan = data.metadata?.plan || 'free'; // Provide a default value
               await prisma.subscription.update({
                 where: { email: updatedCustomerData.email },
                 data: {
                   status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
-                  plan: data.metadata?.plan as string,
+                  plan: updatedPlan,
                   endDate: new Date(data.current_period_end * 1000),
                   trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
                 }
@@ -174,17 +176,18 @@ export async function POST(req: Request) {
             });
 
             if (user) {
+              const subscriptionPlan = data.metadata?.plan || 'free'; // Provide a default value
               await prisma.subscription.upsert({
                 where: { email: newCustomerData.email },
                 update: {
                   status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
-                  plan: data.metadata?.plan as string,
+                  plan: subscriptionPlan,
                   endDate: new Date(data.current_period_end * 1000),
                   trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
                 },
                 create: {
                   email: newCustomerData.email,
-                  plan: data.metadata?.plan as string,
+                  plan: subscriptionPlan,
                   user: { connect: { id: user.id } },
                   status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
                   endDate: new Date(data.current_period_end * 1000),

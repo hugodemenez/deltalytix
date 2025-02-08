@@ -37,6 +37,7 @@ import { FilterDropdowns } from './filters/filter-dropdowns'
 import { ActiveFilterTags } from './filters/active-filter-tags'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { motion, AnimatePresence } from 'framer-motion'
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -138,7 +139,7 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || ""}>
+                    <Link href="/dashboard/billing">
                       <div className="flex w-full">
                         <CreditCard className="mr-2 h-4 w-4" />
                         <span>{t('dashboard.billing')}</span>
@@ -211,29 +212,41 @@ export default function Navbar() {
                     </DropdownMenuRadioItem>
                   </DropdownMenuRadioGroup>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t('dashboard.language')}</DropdownMenuLabel>
-                  <div className="px-2 py-1.5">
-                    <LanguageSelector
-                      languages={languages}
-                      className="w-full"
-                      triggerClassName="w-full justify-start h-8 px-2"
-                      onRequestNewLanguage={() => {
-                        console.log("Request new language support")
-                      }}
-                    />
-                  </div>
+                  <DropdownMenuLabel className="flex items-center">
+                    <Globe className="mr-2 h-4 w-4" />
+                    {t('dashboard.language')}
+                  </DropdownMenuLabel>
+                  <ScrollArea className="h-[64px]">
+                    <DropdownMenuRadioGroup value={languages.find(l => l.value === window.location.pathname.split('/')[1])?.value || 'en'}>
+                      {languages.map((lang) => (
+                        <DropdownMenuRadioItem 
+                          key={lang.value} 
+                          value={lang.value}
+                          onClick={() => {
+                            const currentPath = window.location.pathname.split('/')
+                            currentPath[1] = lang.value
+                            window.location.pathname = currentPath.join('/')
+                          }}
+                        >
+                          {lang.label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </ScrollArea>
                   <DropdownMenuSeparator />
                   <DropdownMenuLabel className="flex items-center">
                     <Clock className="mr-2 h-4 w-4" />
                     {t('dashboard.timezone')}
                   </DropdownMenuLabel>
-                  <DropdownMenuRadioGroup value={timezone} onValueChange={setTimezone}>
-                    {timezones.map((tz) => (
-                      <DropdownMenuRadioItem key={tz} value={tz}>
-                        {tz.replace('_', ' ')}
-                      </DropdownMenuRadioItem>
-                    ))}
-                  </DropdownMenuRadioGroup>
+                  <ScrollArea className="h-[120px]">
+                    <DropdownMenuRadioGroup value={timezone} onValueChange={setTimezone}>
+                      {timezones.map((tz) => (
+                        <DropdownMenuRadioItem key={tz} value={tz}>
+                          {tz.replace('_', ' ')}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </ScrollArea>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => {
                     signOut()
