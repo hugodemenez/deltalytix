@@ -25,9 +25,6 @@ import {
 } from "@/components/ui/command"
 import { useI18n } from "@/locales/client"
 
-// Easy toggle between COMING_SOON and PLUS_ONLY
-const RITHMIC_SYNC_STATE: 'COMING_SOON' | 'PLUS_ONLY' = 'PLUS_ONLY'
-
 // Add function to check if it's weekend
 function isWeekend() {
   const day = new Date().getDay()
@@ -231,7 +228,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                   }>
                     {categoryTypes.map((info) => {
                       const isRithmicSync = info.type === 'rithmic-sync'
-                      const isDisabled = isRithmicSync && (RITHMIC_SYNC_STATE === 'COMING_SOON' || (RITHMIC_SYNC_STATE === 'PLUS_ONLY' && !isPlusUser()))
+                      const isDisabled = info.type === 'ninjatrader-performance'
 
                       return (
                         <div className={cn(
@@ -313,17 +310,6 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                                 {isDisabled && (
                                   <>
                                     <Badge variant="secondary" className="ml-2 transition-transform duration-200 hover:scale-105">
-                                      {RITHMIC_SYNC_STATE === 'COMING_SOON' ? t('import.type.badge.soon') : t('import.type.badge.plus')}
-                                    </Badge>
-                                    {RITHMIC_SYNC_STATE === 'COMING_SOON' ? 
-                                      <Clock className="h-4 w-4 animate-pulse" /> : 
-                                      <Lock className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
-                                    }
-                                  </>
-                                )}
-                                {info.type === 'ninjatrader-performance' && (
-                                  <>
-                                    <Badge variant="secondary" className="ml-2 transition-transform duration-200 hover:scale-105">
                                       {t('import.type.badge.maintenance')}
                                     </Badge>
                                     <AlertTriangle className="h-4 w-4 text-yellow-500 animate-pulse" />
@@ -350,25 +336,101 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
         </div>
 
         <div className="space-y-4 overflow-y-auto px-2">
-          {selectedType === 'rithmic-sync' && (RITHMIC_SYNC_STATE === 'COMING_SOON' || (RITHMIC_SYNC_STATE === 'PLUS_ONLY' && !isPlusUser())) ? (
-            <Alert>
-              <AlertDescription>
-                {RITHMIC_SYNC_STATE === 'COMING_SOON' 
-                  ? t('import.type.comingSoon')
-                  : t('import.type.plusFeature')}
-              </AlertDescription>
-            </Alert>
-          ) : (
-            selectedType !== '' && (
-              <>
-                {selectedType === 'rithmic-sync' ? (
-                  <>
-                    <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
-                    <RithmicSyncCombined 
-                      setIsOpen={setIsOpen}
-                      onSync={async (data) => {
-                      }} 
-                    />
+          {selectedType !== '' && (
+            <>
+              {selectedType === 'rithmic-sync' ? (
+                <>
+                  <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
+                  <RithmicSyncCombined 
+                    setIsOpen={setIsOpen}
+                    onSync={async (data) => {
+                    }} 
+                  />
+                  <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
+                    <div className="flex items-center gap-4 mb-2">
+                      <Image 
+                        src="/RithmicArtwork/TradingPlatformByRithmic-Black.png"
+                        alt="Trading Platform by Rithmic"
+                        width={120}
+                        height={40}
+                        className="dark:hidden"
+                      />
+                      <Image 
+                        src="/RithmicArtwork/TradingPlatformByRithmic-Green.png"
+                        alt="Trading Platform by Rithmic"
+                        width={120}
+                        height={40}
+                        className="hidden dark:block"
+                      />
+                      <Image 
+                        src="/RithmicArtwork/Powered_by_Omne.png"
+                        alt="Powered by OMNE"
+                        width={120}
+                        height={40}
+                      />
+                    </div>
+                    <p>{t('import.type.copyright.rithmic')}</p>
+                    <p>{t('import.type.copyright.protocol')}</p>
+                    <p>{t('import.type.copyright.platform')}</p>
+                    <p>{t('import.type.copyright.omne')}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold">{t('import.type.tutorial.title')}</h2>
+                  <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
+                    <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      {importTypeInfo.map((info) => (
+                        info.videoUrl != '' && (
+                          <video
+                            key={info.type}
+                            ref={setVideoRef(info.type)}
+                            height="600"
+                            width="600"
+                            preload="metadata"
+                            loop
+                            muted
+                            controls
+                            playsInline
+                            className={cn(
+                              "rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover",
+                              selectedType !== info.type && "hidden"
+                            )}
+                          >
+                            <source src={info.videoUrl} type="video/mp4" />
+                            <track
+                              src="/path/to/captions.vtt"
+                              kind="subtitles"
+                              srcLang="en"
+                              label="English"
+                            />
+                            Your browser does not support the video tag.
+                          </video>
+                        )
+                      ))}
+                    </div>
+                    {selectedType && importTypeInfo.find(info => info.type === selectedType)?.videoUrl ? (
+                      <p className="text-sm text-muted-foreground" key={selectedType}>
+                        {t('import.type.tutorial.description', { platform: selectedType.split('-').join(' ') })}
+                        <br />
+                        {selectedType && importTypeInfo.find(info => info.type === selectedType)?.details && 
+                          t((importTypeInfo.find(info => info.type === selectedType)?.details || '') as any, {})}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground" key={selectedType}>
+                        {t('import.type.tutorial.notAvailable', { platform: selectedType.split('-').join(' ') })}
+                      </p>
+                    )}
+                  </div>
+                  
+                  {selectedType && importTypeInfo.find(info => info.type === selectedType)?.details && (
+                    <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4" key="details">
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-500 animate-pulse" />
+                      <p>{t((importTypeInfo.find(info => info.type === selectedType)?.details || '') as any, {})}</p>
+                    </div>
+                  )}
+                  
+                  {(selectedType === 'rithmic-performance' || selectedType === 'rithmic-orders') && (
                     <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
                       <div className="flex items-center gap-4 mb-2">
                         <Image 
@@ -392,99 +454,13 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                           height={40}
                         />
                       </div>
-                      <p>{t('import.type.copyright.rithmic')}</p>
-                      <p>{t('import.type.copyright.protocol')}</p>
                       <p>{t('import.type.copyright.platform')}</p>
                       <p>{t('import.type.copyright.omne')}</p>
                     </div>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="text-2xl font-bold">{t('import.type.tutorial.title')}</h2>
-                    <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
-                      <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-                        {importTypeInfo.map((info) => (
-                          info.videoUrl != '' && (
-                            <video
-                              key={info.type}
-                              ref={setVideoRef(info.type)}
-                              height="600"
-                              width="600"
-                              preload="metadata"
-                              loop
-                              muted
-                              controls
-                              playsInline
-                              className={cn(
-                                "rounded-lg border border-gray-200 dark:border-gray-800 shadow-lg w-full h-full object-cover",
-                                selectedType !== info.type && "hidden"
-                              )}
-                            >
-                              <source src={info.videoUrl} type="video/mp4" />
-                              <track
-                                src="/path/to/captions.vtt"
-                                kind="subtitles"
-                                srcLang="en"
-                                label="English"
-                              />
-                              Your browser does not support the video tag.
-                            </video>
-                          )
-                        ))}
-                      </div>
-                      {selectedType && importTypeInfo.find(info => info.type === selectedType)?.videoUrl ? (
-                        <p className="text-sm text-muted-foreground" key={selectedType}>
-                          {t('import.type.tutorial.description', { platform: selectedType.split('-').join(' ') })}
-                          <br />
-                          {selectedType && importTypeInfo.find(info => info.type === selectedType)?.details && 
-                            t((importTypeInfo.find(info => info.type === selectedType)?.details || '') as any, {})}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground" key={selectedType}>
-                          {t('import.type.tutorial.notAvailable', { platform: selectedType.split('-').join(' ') })}
-                        </p>
-                      )}
-                    </div>
-                    
-                    {selectedType && importTypeInfo.find(info => info.type === selectedType)?.details && (
-                      <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4" key="details">
-                        <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-500 animate-pulse" />
-                        <p>{t((importTypeInfo.find(info => info.type === selectedType)?.details || '') as any, {})}</p>
-                      </div>
-                    )}
-                    
-                    {(selectedType === 'rithmic-performance' || selectedType === 'rithmic-orders') && (
-                      <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
-                        <div className="flex items-center gap-4 mb-2">
-                          <Image 
-                            src="/RithmicArtwork/TradingPlatformByRithmic-Black.png"
-                            alt="Trading Platform by Rithmic"
-                            width={120}
-                            height={40}
-                            className="dark:hidden"
-                          />
-                          <Image 
-                            src="/RithmicArtwork/TradingPlatformByRithmic-Green.png"
-                            alt="Trading Platform by Rithmic"
-                            width={120}
-                            height={40}
-                            className="hidden dark:block"
-                          />
-                          <Image 
-                            src="/RithmicArtwork/Powered_by_Omne.png"
-                            alt="Powered by OMNE"
-                            width={120}
-                            height={40}
-                          />
-                        </div>
-                        <p>{t('import.type.copyright.platform')}</p>
-                        <p>{t('import.type.copyright.omne')}</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </>
-            )
+                  )}
+                </>
+              )}
+            </>
           )}
         </div>
       </div>

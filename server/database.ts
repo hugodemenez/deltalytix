@@ -80,18 +80,18 @@ export async function getTrades(userId: string, isSubscribed: boolean): Promise<
   try {
     const where: Prisma.TradeWhereInput = { userId }
     
-    // If not subscribed, limit to last month's trades
+    // If not subscribed, limit to last week's trades
     if (!isSubscribed) {
-      const oneMonthAgo = startOfDay(new Date())
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+      const oneWeekAgo = startOfDay(new Date())
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
       
       where.entryDate = {
-        gte: oneMonthAgo.toISOString().split('T')[0]
+        gte: oneWeekAgo.toISOString().split('T')[0]
       }
 
-      console.log('[getTrades] Limiting to last month for non-subscribed user:', { 
+      console.log('[getTrades] Limiting to last week for non-subscribed user:', { 
         userId,
-        fromDate: oneMonthAgo.toISOString()
+        fromDate: oneWeekAgo.toISOString()
       })
     }
     

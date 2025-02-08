@@ -608,7 +608,7 @@ export default function ImportButton() {
             {renderStep()}
           </div>
 
-          <div className="flex-none p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex-none p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 h-[68px]">
             <div className="flex justify-end items-center gap-4">
               {step > 0 && (
                 <Button 
@@ -619,25 +619,26 @@ export default function ImportButton() {
                   {t('import.button.back')}
                 </Button>
               )}
-              {!(step === 0 && importType === 'rithmic-sync') && (
-                <Button 
-                  onClick={handleNextStep}
-                  className="w-fit min-w-[100px]"
-                  disabled={
-                    (step === 1 && csvData.length === 0) ||
-                    ((step === 2 && importType === 'tradovate') && !accountNumber && !newAccountNumber) ||
-                    (step === 4 && !accountNumber && !newAccountNumber)
-                  }
-                >
-                  {isSaving 
-                    ? t('import.button.saving')
-                    : (step === 4 || (step === 3 && importType === 'rithmic-orders') 
-                      ? t('import.button.save')
-                      : t('import.button.next')
-                    )
-                  }
-                </Button>
-              )}
+              <Button 
+                onClick={handleNextStep}
+                className={cn(
+                  "w-fit min-w-[100px]",
+                  (step === 0 && importType === 'rithmic-sync') && "invisible"
+                )}
+                disabled={
+                  (step === 1 && csvData.length === 0) ||
+                  ((step === 2 && importType === 'tradovate') && !accountNumber && !newAccountNumber) ||
+                  (step === 4 && !accountNumber && !newAccountNumber)
+                }
+              >
+                {isSaving 
+                  ? t('import.button.saving')
+                  : (step === 4 || (step === 3 && importType === 'rithmic-orders') 
+                    ? t('import.button.save')
+                    : t('import.button.next')
+                  )
+                }
+              </Button>
             </div>
           </div>
         </DialogContent>
