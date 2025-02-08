@@ -16,9 +16,10 @@ import {
 interface TradeCommentProps {
   tradeId: string
   comment: string | null
+  onCommentChange?: (comment: string | null) => void
 }
 
-export function TradeComment({ tradeId, comment: initialComment }: TradeCommentProps) {
+export function TradeComment({ tradeId, comment: initialComment, onCommentChange }: TradeCommentProps) {
   const t = useI18n()
   const [localComment, setLocalComment] = useState(initialComment || '')
   const [isUpdating, setIsUpdating] = useState(false)
@@ -41,6 +42,7 @@ export function TradeComment({ tradeId, comment: initialComment }: TradeCommentP
     updateCommentRef.current = setTimeout(async () => {
       try {
         await updateTradeComment(tradeId, value || null)
+        onCommentChange?.(value || null)
         setShowSuccess(true)
         successTimeoutRef.current = setTimeout(() => {
           setShowSuccess(false)
@@ -58,6 +60,7 @@ export function TradeComment({ tradeId, comment: initialComment }: TradeCommentP
     try {
       await updateTradeComment(tradeId, null)
       setLocalComment('')
+      onCommentChange?.(null)
       setShowSuccess(true)
       successTimeoutRef.current = setTimeout(() => {
         setShowSuccess(false)

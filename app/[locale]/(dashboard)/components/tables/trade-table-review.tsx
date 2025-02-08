@@ -13,7 +13,7 @@ import {
   sortingFns,
 } from "@tanstack/react-table"
 import { Button } from '@/components/ui/button'
-import { Upload, ArrowUpDown, Plus, Search, Trash2, X, ChevronRight, ChevronDown } from 'lucide-react'
+import { Upload, ArrowUpDown, Plus, Search, Trash2, X, ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react'
 import Image from 'next/image'
 import { Trade } from '@prisma/client'
 import {
@@ -45,6 +45,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useI18n } from '@/locales/client'
 import { TradeComment } from './trade-comment'
 import { TradeVideoUrl } from './trade-video-url'
+import { TradeTag } from './trade-tag'
 import { formatInTimeZone } from 'date-fns-tz'
 
 interface ExtendedTrade extends Trade {
@@ -296,6 +297,8 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   const [availableTags, setAvailableTags] = useState<string[]>([])
   const [accountGroups, setAccountGroups] = useState<AccountGroup[]>([])
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const tradesPerPage = 50 // Show 50 trades per page for better performance
 
   const trades = propTrades || contextTrades
 
@@ -311,6 +314,75 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       isLoading: false
     })))
   }, [trades])
+
+  // Function to expand all accounts
+  const expandAllAccounts = async () => {
+    const updatedGroups = await Promise.all(accountGroups.map(async group => {
+      if (group.trades.length === 0) {
+        const accountTrades = trades.filter(t => t.accountNumber === group.accountNumber)
+        const extendedTrades: ExtendedTrade[] = accountTrades.map(trade => ({
+          ...trade,
+          direction: trade.side || '',
+          tags: trade.tags || [],
+          imageUrl: undefined,
+          comment: trade.comment || null,
+          videoUrl: trade.videoUrl || null
+        }))
+        return { ...group, trades: extendedTrades, isExpanded: true }
+      }
+      return { ...group, isExpanded: true }
+    }))
+    setAccountGroups(updatedGroups)
+    setCurrentPage(1) // Reset to first page when expanding all
+  }
+
+  // Function to collapse all accounts
+  const collapseAllAccounts = () => {
+    setAccountGroups(prev => prev.map(g => ({ ...g, isExpanded: false })))
+    setCurrentPage(1) // Reset to first page when collapsing all
+  }
+
+  // Calculate total pages
+  const totalTrades = useMemo(() => 
+    accountGroups
+      .filter(g => g.isExpanded)
+      .reduce((sum, g) => sum + g.trades.length, 0),
+    [accountGroups]
+  )
+  const totalPages = Math.ceil(totalTrades / tradesPerPage)
+
+  // Handle page navigation
+  const handlePreviousPage = () => setCurrentPage(prev => Math.max(1, prev - 1))
+  const handleNextPage = () => setCurrentPage(prev => Math.min(totalPages, prev + 1))
+
+  // Get paginated trades
+  const paginatedTrades = useMemo(() => {
+    const startIndex = (currentPage - 1) * tradesPerPage
+    let currentIndex = 0
+    let result: ExtendedTrade[] = []
+
+    for (const group of accountGroups) {
+      if (!group.isExpanded) continue
+      
+      if (currentIndex + group.trades.length <= startIndex) {
+        currentIndex += group.trades.length
+        continue
+      }
+
+      const groupStartIndex = Math.max(0, startIndex - currentIndex)
+      const groupEndIndex = Math.min(
+        group.trades.length,
+        startIndex + tradesPerPage - result.length
+      )
+
+      result = result.concat(group.trades.slice(groupStartIndex, groupEndIndex))
+      
+      if (result.length >= tradesPerPage) break
+      currentIndex += group.trades.length
+    }
+
+    return result
+  }, [accountGroups, currentPage, tradesPerPage])
 
   // Function to toggle account expansion and load trades
   const toggleAccount = async (accountNumber: string) => {
@@ -462,6 +534,31 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     document.addEventListener('paste', handleGlobalPaste)
     return () => document.removeEventListener('paste', handleGlobalPaste)
   }, [])
+
+  const handleTradeUpdate = (tradeId: string, updates: Partial<Trade>) => {
+    // Only update the local state, don't update the context
+    // This prevents unnecessary remounts
+    setAccountGroups(prev => prev.map(group => ({
+      ...group,
+      trades: group.trades.map(trade => 
+        trade.id === tradeId
+          ? { ...trade, ...updates }
+          : trade
+      )
+    })))
+  }
+
+  const handleVideoUrlChange = (tradeId: string, videoUrl: string | null) => {
+    handleTradeUpdate(tradeId, { videoUrl })
+  }
+
+  const handleTagsChange = (tradeId: string, newTags: string[]) => {
+    handleTradeUpdate(tradeId, { tags: newTags })
+  }
+
+  const handleCommentChange = (tradeId: string, comment: string | null) => {
+    handleTradeUpdate(tradeId, { comment })
+  }
 
   const columns = useMemo<ColumnDef<ExtendedTrade>[]>(() => [
     {
@@ -672,8 +769,17 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       ),
       cell: ({ row }) => {
         const trade = row.original
-        return <TradeComment tradeId={trade.id} comment={trade.comment} />
+        return (
+          <div className="min-w-[200px]">
+            <TradeComment 
+              tradeId={trade.id} 
+              comment={trade.comment} 
+              onCommentChange={(comment) => handleCommentChange(trade.id, comment)}
+            />
+          </div>
+        )
       },
+      size: 200,
     },
     {
       accessorKey: "videoUrl",
@@ -687,8 +793,17 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       ),
       cell: ({ row }) => {
         const trade = row.original
-        return <TradeVideoUrl tradeId={trade.id} videoUrl={trade.videoUrl} />
+        return (
+          <div className="min-w-[200px]">
+            <TradeVideoUrl 
+              tradeId={trade.id} 
+              videoUrl={trade.videoUrl} 
+              onVideoUrlChange={(videoUrl) => handleVideoUrlChange(trade.id, videoUrl)}
+            />
+          </div>
+        )
       },
+      size: 200,
     },
     {
       id: "image",
@@ -773,31 +888,12 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       cell: ({ row }) => {
         const trade = row.original
         return (
-          <div className="flex items-center gap-2">
-            <div className="flex gap-1 flex-wrap">
-              {trade.tags?.map((tag, index) => (
-                <div 
-                  key={index} 
-                  className="bg-secondary text-secondary-foreground rounded-md px-2 py-1 text-xs flex items-center gap-1"
-                >
-                  {tag}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleRemoveTag(trade.id, tag)
-                    }}
-                    className="hover:text-destructive"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-            <TagInput
+          <div className="min-w-[200px]">
+            <TradeTag
               tradeId={trade.id}
-              tradeTags={trade.tags || []}
+              tags={trade.tags || []}
               availableTags={availableTags}
-              onAddTag={handleAddTag}
+              onTagsChange={(newTags) => handleTagsChange(trade.id, newTags)}
             />
           </div>
         )
@@ -807,29 +903,16 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         if (!filterValue.length) return true
         return filterValue.some(tag => tags.includes(tag))
       },
+      size: 200,
     }
-  ], [availableTags, t, timezone])
-
-  // Update the getSortedAccountGroups function to handle all sortable columns
-  const getSortedAccountGroups = useMemo(() => {
-    return accountGroups.map(group => {
-      if (!group.isExpanded) return group;
-      
-      const sortedTrades = [...group.trades]
-
-      return {
-        ...group,
-        trades: sortedTrades
-      }
-    })
-  }, [accountGroups, sorting])
+  ], [availableTags, t, timezone, handleTagsChange, handleCommentChange, handleVideoUrlChange])
 
   const table = useReactTable({
     data: useMemo(() => 
-      getSortedAccountGroups
-        .filter(group => group.isExpanded)
-        .flatMap(group => group.trades),
-      [getSortedAccountGroups]
+      accountGroups
+        .filter(g => g.isExpanded)
+        .flatMap(g => g.trades),
+      [accountGroups]
     ),
     columns,
     getCoreRowModel: getCoreRowModel(),
@@ -846,6 +929,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       size: 100,
       maxSize: 400,
     },
+    columnResizeMode: "onChange",
   })
 
   // Add a debug log to check sorting state
@@ -855,10 +939,49 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
 
   return (
     <div className="flex flex-col h-full w-full border rounded-md overflow-hidden">
+      <div className="flex items-center justify-between p-2 border-b bg-background">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={expandAllAccounts}
+          >
+            {t('trade-table.expandAll')}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={collapseAllAccounts}
+          >
+            {t('trade-table.collapseAll')}
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreviousPage}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {t('trade-table.previous')}
+          </Button>
+          <span className="text-sm">
+            {t('trade-table.pageInfo', { current: currentPage, total: totalPages })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+          >
+            {t('trade-table.next')}
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
       <div 
         className="flex-1 overflow-y-auto"
-        // onWheel={handleScroll}
-        // style={{ overscrollBehavior: 'contain' }}
       >
         <table className="w-full border-separate border-spacing-0">
           <thead className="sticky top-0 z-30 bg-background">
@@ -885,7 +1008,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
             ))}
           </thead>
           <tbody>
-            {getSortedAccountGroups.map((group) => (
+            {accountGroups.map((group) => (
               <Fragment key={group.accountNumber}>
                 {/* Account Header Row */}
                 <tr 
@@ -916,36 +1039,40 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
                     </div>
                   </td>
                 </tr>
-                {/* Trade Rows - Only render if expanded */}
-                {group.isExpanded && (
+                {/* Trade Rows - Only render if expanded and within current page */}
+                {group.isExpanded && group.trades.some(trade => 
+                  paginatedTrades.some(pt => pt.id === trade.id)
+                ) && (
                   <tr>
                     <td colSpan={columns.length} className="p-0">
                       <table className="w-full">
                         <tbody>
-                          {group.trades.map((trade) => {
-                            const row = table.getRowModel().rows.find(r => r.original.id === trade.id)
-                            if (!row) return null
-                            
-                            return (
-                              <tr key={trade.id}>
-                                {row.getAllCells().map((cell) => (
-                                  <td
-                                    key={cell.id}
-                                    className="px-4 py-2 border-b whitespace-nowrap align-middle bg-background"
-                                    style={{
-                                      width: cell.column.getSize(),
-                                      maxWidth: cell.column.getSize(),
-                                    }}
-                                  >
-                                    {flexRender(
-                                      cell.column.columnDef.cell,
-                                      cell.getContext()
-                                    )}
-                                  </td>
-                                ))}
-                              </tr>
-                            )
-                          })}
+                          {group.trades
+                            .filter(trade => paginatedTrades.some(pt => pt.id === trade.id))
+                            .map((trade) => {
+                              const row = table.getRowModel().rows.find(r => r.original.id === trade.id)
+                              if (!row) return null
+                              
+                              return (
+                                <tr key={trade.id}>
+                                  {row.getAllCells().map((cell) => (
+                                    <td
+                                      key={cell.id}
+                                      className="px-4 py-2 border-b whitespace-nowrap align-middle bg-background"
+                                      style={{
+                                        width: cell.column.getSize(),
+                                        maxWidth: cell.column.getSize(),
+                                      }}
+                                    >
+                                      {flexRender(
+                                        cell.column.columnDef.cell,
+                                        cell.getContext()
+                                      )}
+                                    </td>
+                                  ))}
+                                </tr>
+                              )
+                            })}
                         </tbody>
                       </table>
                     </td>
@@ -953,7 +1080,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
                 )}
               </Fragment>
             ))}
-            {getSortedAccountGroups.length === 0 && (
+            {accountGroups.length === 0 && (
               <tr>
                 <td
                   colSpan={columns.length}
@@ -967,9 +1094,32 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         </table>
       </div>
 
-      <div className="flex items-center justify-end p-4 border-t bg-background">
+      <div className="flex items-center justify-between p-4 border-t bg-background">
         <div className="text-sm text-muted-foreground">
-          {t('trade-table.totalTrades', { count: table.getFilteredRowModel().rows.length })}
+          {t('trade-table.totalTrades', { count: totalTrades })}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePreviousPage}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            {t('trade-table.previous')}
+          </Button>
+          <span className="text-sm">
+            {t('trade-table.pageInfo', { current: currentPage, total: totalPages })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleNextPage}
+            disabled={currentPage === totalPages}
+          >
+            {t('trade-table.next')}
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </div>

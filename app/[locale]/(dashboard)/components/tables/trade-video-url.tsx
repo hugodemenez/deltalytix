@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Trash2 } from 'lucide-react'
@@ -12,22 +12,32 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '@/components/ui/dialog'
 
 interface TradeVideoUrlProps {
   tradeId: string
   videoUrl: string | null
+  onVideoUrlChange?: (videoUrl: string | null) => void
 }
 
-export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl }: TradeVideoUrlProps) {
+export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl, onVideoUrlChange }: TradeVideoUrlProps) {
   const t = useI18n()
   const [isOpen, setIsOpen] = useState(false)
   const [localUrl, setLocalUrl] = useState(initialVideoUrl || '')
+  const [draftUrl, setDraftUrl] = useState(initialVideoUrl || '')
   const [isUpdating, setIsUpdating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [isValid, setIsValid] = useState(true)
-  const updateUrlRef = useRef<NodeJS.Timeout>()
   const successTimeoutRef = useRef<NodeJS.Timeout>()
+
+  // Reset draft URL when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setDraftUrl(localUrl)
+      setIsValid(true)
+    }
+  }, [isOpen, localUrl])
 
   const validateUrl = (url: string) => {
     if (!url) return true
@@ -60,35 +70,27 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl }: TradeVideo
     }
   }
 
-  const handleUrlChange = async (value: string) => {
-    setLocalUrl(value)
-    const isValidUrl = validateUrl(value)
-    setIsValid(isValidUrl)
+  const handleUrlChange = (value: string) => {
+    setDraftUrl(value)
+    setIsValid(validateUrl(value))
+  }
+
+  const handleSave = async () => {
+    if (!isValid) return
     
-    if (updateUrlRef.current) {
-      clearTimeout(updateUrlRef.current)
-    }
-    if (successTimeoutRef.current) {
-      clearTimeout(successTimeoutRef.current)
-    }
-    
-    if (isValidUrl) {
-      setIsUpdating(true)
-      updateUrlRef.current = setTimeout(async () => {
-        try {
-          await updateTradeVideoUrl(tradeId, value || null)
-          setShowSuccess(true)
-          successTimeoutRef.current = setTimeout(() => {
-            setShowSuccess(false)
-          }, 1000)
-        } catch (error) {
-          console.error('Failed to update video URL:', error)
-        } finally {
-          setIsUpdating(false)
-        }
-      }, 800)
-    } else {
-      if (value === '') handleClear()
+    setIsUpdating(true)
+    try {
+      await updateTradeVideoUrl(tradeId, draftUrl || null)
+      setLocalUrl(draftUrl)
+      onVideoUrlChange?.(draftUrl || null)
+      setShowSuccess(true)
+      successTimeoutRef.current = setTimeout(() => {
+        setShowSuccess(false)
+        setIsOpen(false)
+      }, 1000)
+    } catch (error) {
+      console.error('Failed to update video URL:', error)
+    } finally {
       setIsUpdating(false)
     }
   }
@@ -98,9 +100,12 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl }: TradeVideo
     try {
       await updateTradeVideoUrl(tradeId, null)
       setLocalUrl('')
+      setDraftUrl('')
+      onVideoUrlChange?.(null)
       setShowSuccess(true)
       successTimeoutRef.current = setTimeout(() => {
         setShowSuccess(false)
+        setIsOpen(false)
       }, 1000)
     } catch (error) {
       console.error('Failed to clear video URL:', error)
@@ -142,11 +147,11 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl }: TradeVideo
                 <div className="relative flex-1">
                   <Input
                     placeholder="https://"
-                    value={localUrl}
+                    value={draftUrl}
                     onChange={(e) => handleUrlChange(e.target.value)}
                     className={cn(
                       "pr-8",
-                      !isValid && localUrl && "border-destructive focus-visible:ring-destructive",
+                      !isValid && draftUrl && "border-destructive focus-visible:ring-destructive",
                       showSuccess && "border-green-500 focus-visible:ring-green-500",
                       isUpdating && "border-primary/50"
                     )}
@@ -173,7 +178,7 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl }: TradeVideo
                         />
                       </svg>
                     )}
-                    {!isValid && localUrl && !isUpdating && (
+                    {!isValid && draftUrl && !isUpdating && (
                       <svg
                         className="h-4 w-4 text-destructive"
                         xmlns="http://www.w3.org/2000/svg"
@@ -194,23 +199,23 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl }: TradeVideo
                 <Button
                   variant="outline"
                   size="icon"
-                  disabled={isUpdating || !localUrl}
+                  disabled={isUpdating || !draftUrl}
                   onClick={handleClear}
                   className="shrink-0 text-destructive hover:text-destructive"
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
-              {!isValid && localUrl && (
+              {!isValid && draftUrl && (
                 <p className="text-sm text-destructive">
                   {t('trade-table.invalidVideoUrl')}
                 </p>
               )}
-              {localUrl && isValid && (
+              {draftUrl && isValid && (
                 <div className="rounded-lg overflow-hidden border bg-muted">
                   <div className="aspect-video w-full relative">
                     <iframe
-                      src={getEmbedUrl(localUrl)}
+                      src={getEmbedUrl(draftUrl)}
                       className="absolute inset-0 w-full h-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -223,6 +228,21 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl }: TradeVideo
               )}
             </div>
           </div>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setIsOpen(false)}
+              disabled={isUpdating}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={!isValid || isUpdating}
+            >
+              {t('common.save')}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
