@@ -101,12 +101,13 @@ export default async function RootLayout({
   return (
     <html lang="en" className="bg-background">
       <head>
+        {/* Google Tag Manager - Initial consent mode setup */}
         <Script id="google-consent-mode" strategy="beforeInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             
-            // Default consent settings
+            // Default consent settings - all denied except essential
             gtag("consent", "default", {
               analytics_storage: "denied",
               ad_storage: "denied",
@@ -116,6 +117,25 @@ export default async function RootLayout({
             });
           `}
         </Script>
+
+        {/* Google Tag Manager - Main script */}
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=AW-16864609071"
+          strategy="afterInteractive"
+        />
+        
+        {/* Google Tag Manager - Configuration */}
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-16864609071', {
+              page_path: window.location.pathname,
+            });
+          `}
+        </Script>
+
         <link 
           rel="apple-touch-icon" 
           sizes="180x180" 
