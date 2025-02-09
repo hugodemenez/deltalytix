@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { ConsentBanner } from "@/components/consent-banner";
 import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] });
@@ -100,6 +101,21 @@ export default async function RootLayout({
   return (
     <html lang="en" className="bg-background">
       <head>
+        <Script id="google-consent-mode" strategy="beforeInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            
+            // Default consent settings
+            gtag("consent", "default", {
+              analytics_storage: "denied",
+              ad_storage: "denied",
+              functionality_storage: "granted",
+              personalization_storage: "denied",
+              security_storage: "granted",
+            });
+          `}
+        </Script>
         <link 
           rel="apple-touch-icon" 
           sizes="180x180" 
@@ -164,6 +180,7 @@ export default async function RootLayout({
           <SpeedInsights />
           <Analytics />
           <Toaster />
+          <ConsentBanner />
           {children}
         </AuthProvider>
       </body>
