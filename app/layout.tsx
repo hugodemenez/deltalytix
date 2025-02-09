@@ -116,35 +116,42 @@ export default async function RootLayout({
             // Default consent settings with region-specific behavior
             gtag("consent", "default", {
               'ad_storage': 'denied',
-              'ad_user_data': 'denied',          // New in consent mode v2
-              'ad_personalization': 'denied',     // New in consent mode v2
+              'ad_user_data': 'denied',
+              'ad_personalization': 'denied',
               'analytics_storage': 'denied',
               'functionality_storage': 'granted',
               'personalization_storage': 'denied',
               'security_storage': 'granted',
-              'wait_for_update': 500            // Wait for CMP to load
+              'wait_for_update': 500
             });
           `}
         </Script>
 
-        {/* Google Tag Manager - Main script */}
+        {/* Google tag (gtag.js) - Combined GA4 and Ads */}
         <Script
-          src="https://www.googletagmanager.com/gtag/js?id=AW-16864609071"
+          src="https://www.googletagmanager.com/gtag/js?id=G-PYK62LTZRQ"
           strategy="afterInteractive"
         />
         
-        {/* Google Tag Manager - Configuration */}
+        {/* Google Tag Configuration */}
         <Script id="google-analytics" strategy="afterInteractive">
           {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
 
-            // Configure with privacy settings
+            // GA4 Configuration
+            gtag('config', 'G-PYK62LTZRQ', {
+              page_path: window.location.pathname,
+              restricted_data_processing: true,
+              allow_google_signals: false
+            });
+
+            // Google Ads Configuration
             gtag('config', 'AW-16864609071', {
               page_path: window.location.pathname,
-              restricted_data_processing: true,    // Enable restricted data processing
-              allow_google_signals: false,         // Disable Google signals by default
+              restricted_data_processing: true,
+              allow_google_signals: false
             });
           `}
         </Script>
