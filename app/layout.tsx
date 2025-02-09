@@ -107,13 +107,22 @@ export default async function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             
-            // Default consent settings - all denied except essential
+            // Enable URL passthrough
+            gtag('set', 'url_passthrough', true);
+
+            // Enable ads data redaction when ad_storage is denied
+            gtag('set', 'ads_data_redaction', true);
+            
+            // Default consent settings with region-specific behavior
             gtag("consent", "default", {
-              analytics_storage: "denied",
-              ad_storage: "denied",
-              functionality_storage: "granted",
-              personalization_storage: "denied",
-              security_storage: "granted",
+              'ad_storage': 'denied',
+              'ad_user_data': 'denied',          // New in consent mode v2
+              'ad_personalization': 'denied',     // New in consent mode v2
+              'analytics_storage': 'denied',
+              'functionality_storage': 'granted',
+              'personalization_storage': 'denied',
+              'security_storage': 'granted',
+              'wait_for_update': 500            // Wait for CMP to load
             });
           `}
         </Script>
@@ -130,8 +139,12 @@ export default async function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
+
+            // Configure with privacy settings
             gtag('config', 'AW-16864609071', {
               page_path: window.location.pathname,
+              restricted_data_processing: true,    // Enable restricted data processing
+              allow_google_signals: false,         // Disable Google signals by default
             });
           `}
         </Script>

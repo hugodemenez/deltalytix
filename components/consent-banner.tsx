@@ -25,6 +25,8 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 interface ConsentSettings {
   analytics_storage: boolean;
   ad_storage: boolean;
+  ad_user_data: boolean;
+  ad_personalization: boolean;
   functionality_storage: boolean;
   personalization_storage: boolean;
   security_storage: boolean;
@@ -79,6 +81,36 @@ function PreferencesContent({
           </div>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
+              <Label htmlFor="ad_user_data">Ad User Data</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow us to use your data to show relevant ads
+              </p>
+            </div>
+            <Switch
+              id="ad_user_data"
+              checked={settings.ad_user_data}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, ad_user_data: checked })
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="ad_personalization">Ad Personalization</Label>
+              <p className="text-sm text-muted-foreground">
+                Allow personalized advertising based on your preferences
+              </p>
+            </div>
+            <Switch
+              id="ad_personalization"
+              checked={settings.ad_personalization}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, ad_personalization: checked })
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
               <Label htmlFor="personalization">Personalization Cookies</Label>
               <p className="text-sm text-muted-foreground">
                 Allow us to personalize content based on your preferences
@@ -124,6 +156,8 @@ export function ConsentBanner() {
   const [settings, setSettings] = useState<ConsentSettings>({
     analytics_storage: false,
     ad_storage: false,
+    ad_user_data: false,
+    ad_personalization: false,
     functionality_storage: true,
     personalization_storage: false,
     security_storage: true,
@@ -153,6 +187,8 @@ export function ConsentBanner() {
     const allEnabled = {
       analytics_storage: true,
       ad_storage: true,
+      ad_user_data: true,
+      ad_personalization: true,
       functionality_storage: true,
       personalization_storage: true,
       security_storage: true,
@@ -171,6 +207,8 @@ export function ConsentBanner() {
     window.gtag?.("consent", "update", {
       analytics_storage: consentSettings.analytics_storage ? "granted" : "denied",
       ad_storage: consentSettings.ad_storage ? "granted" : "denied",
+      ad_user_data: consentSettings.ad_user_data ? "granted" : "denied",
+      ad_personalization: consentSettings.ad_personalization ? "granted" : "denied",
       functionality_storage: consentSettings.functionality_storage ? "granted" : "denied",
       personalization_storage: consentSettings.personalization_storage ? "granted" : "denied",
       security_storage: consentSettings.security_storage ? "granted" : "denied",
