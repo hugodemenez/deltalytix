@@ -33,6 +33,7 @@ const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
         ref={ref}
         className={cn(
           "cursor-pointer rounded-md relative group m-1 w-full overflow-hidden px-2",
+          "active:scale-[0.98] transition-all duration-150 ease-in-out",
           className
         )}
         onClick={onClick}
