@@ -161,6 +161,7 @@ export default {
     'auth.signInWithEmail': 'Se connecter avec Email',
     'auth.continueWith': 'Ou continuer avec',
     'auth.signInWithDiscord': 'Discord',
+    'auth.signInWithGoogle': 'Google',
     'pricing.chooseYourPlan': 'Choisissez Votre Plan',
     'pricing.subscribeToAccess': 'Abonnez-vous pour accéder à votre tableau de bord et améliorer vos performances de trading.',
     'pricing.or': 'ou',

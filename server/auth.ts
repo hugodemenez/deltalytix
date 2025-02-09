@@ -70,6 +70,20 @@ export async function signInWithDiscord(next: string | null = null) {
   }
 }
 
+export async function signInWithGoogle(next: string | null = null) {
+  const supabase = await createClient()
+  const websiteURL = await getWebsiteURL()
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${websiteURL}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
+    },
+  })
+  if (data.url) {
+    redirect(data.url)
+  }
+}
+
 export async function getUserId() {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()

@@ -162,6 +162,7 @@ export default {
     'auth.signInWithEmail': 'Sign In with Email',
     'auth.continueWith': 'Or continue with',
     'auth.signInWithDiscord': 'Discord',
+    'auth.signInWithGoogle': 'Google',
     'pricing.trialPeriod': '14-day free trial',
     'pricing.trialDescription': 'Try all features for 14 days, no credit card required',
     'pricing.chooseYourPlan': 'Choose Your Plan',

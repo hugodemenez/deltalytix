@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
-import { signInWithDiscord, signInWithEmail, verifyOtp } from "@/server/auth"
+import { signInWithDiscord, signInWithEmail, verifyOtp, signInWithGoogle } from "@/server/auth"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -38,7 +38,7 @@ const otpFormSchema = z.object({
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-type AuthMethod = 'email' | 'discord' | null
+type AuthMethod = 'email' | 'discord' | 'google' | null
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [isLoading, setIsLoading] = React.useState<boolean>(false)
@@ -135,6 +135,20 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         }
     }
 
+    async function onSubmitGoogle(event: React.SyntheticEvent) {
+        event.preventDefault()
+        setIsLoading(true)
+        setAuthMethod('google')
+
+        try {
+            await signInWithGoogle(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
+        } catch (error) {
+            console.error(error)
+            setAuthMethod(null)
+            setIsLoading(false)
+        }
+    }
+
     function openMailClient() {
         const email = form.getValues('email')
         const domain = email.split('@')[1]?.toLowerCase()
@@ -191,7 +205,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                                         autoCapitalize="none"
                                         autoComplete="email"
                                         autoCorrect="off"
-                                        disabled={isLoading || isEmailSent || authMethod === 'discord'}
+                                        disabled={isLoading || isEmailSent || authMethod === 'discord' || authMethod === 'google'}
                                         {...field}
                                     />
                                 </FormControl>
@@ -201,7 +215,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                     />
                     {!isEmailSent ? (
                         <Button 
-                            disabled={isLoading || countdown > 0 || authMethod === 'discord'}
+                            disabled={isLoading || countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
                             type="submit"
                         >
                             {isLoading && authMethod === 'email' && (
@@ -216,7 +230,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                                 variant="outline" 
                                 className="w-full"
                                 onClick={openMailClient}
-                                disabled={authMethod === 'discord'}
+                                disabled={authMethod === 'discord' || authMethod === 'google'}
                             >
                                 <Icons.envelope className="mr-2 h-4 w-4" />
                                 {t('auth.openMailbox')}
@@ -225,7 +239,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                                 type="submit"
                                 variant="ghost"
                                 className="w-full"
-                                disabled={countdown > 0 || authMethod === 'discord'}
+                                disabled={countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
                             >
                                 {countdown > 0 ? (
                                     `${t('auth.resendIn')} ${countdown}s`
@@ -309,6 +323,19 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                     <Icons.discord className="mr-2 h-4 w-4" />
                 )}{" "}
                 {t('auth.signInWithDiscord')}
+            </Button>
+            <Button 
+                variant="outline" 
+                type="button" 
+                disabled={isLoading || authMethod === 'email'} 
+                onClick={onSubmitGoogle}
+            >
+                {isLoading && authMethod === 'google' ? (
+                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <Icons.google className="mr-2 h-4 w-4" />
+                )}{" "}
+                {t('auth.signInWithGoogle')}
             </Button>
         </div>
     )
