@@ -553,8 +553,8 @@ export default {
             showingTopAccounts: 'Affichage de {count} sur {total} comptes'
         }
     },
-    'pricing.trialPeriod': '7 jours d\'essai gratuit',
-    'pricing.trialDescription': 'Essayez toutes les fonctionnalités pendant 7 jours, sans carte bancaire',
+    'pricing.trialPeriod': '14 jours d\'essai gratuit',
+    'pricing.trialDescription': 'Essayez toutes les fonctionnalités pendant 14 jours, sans carte bancaire',
     'widgets.screenshot': 'Capture',
     'widgets.doneScreenshot': 'Quitter',
     'widgets.takeScreenshot': 'Prendre une capture',

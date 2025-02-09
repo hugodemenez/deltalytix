@@ -25,7 +25,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     }
 
     // Calculate remaining trial days if there was a previous trial
-    let trialDays = 7;
+    let trialDays = 14;
     
     if (subscriptionDetails?.trialEndsAt) {
         const now = new Date();
