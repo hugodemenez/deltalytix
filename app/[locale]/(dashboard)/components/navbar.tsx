@@ -28,7 +28,7 @@ import { useTheme } from '@/components/context/theme-provider'
 import ImportButton from './import-csv/import-button'
 import { SubscriptionBadge } from './subscription-badge'
 import { LanguageSelector } from "@/components/ui/language-selector"
-import { useI18n } from "@/locales/client"
+import { useI18n, useChangeLocale, useCurrentLocale } from "@/locales/client"
 import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 import { useOnborda } from 'onborda'
@@ -38,8 +38,10 @@ import { ActiveFilterTags } from './filters/active-filter-tags'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { motion, AnimatePresence } from 'framer-motion'
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { useRouter, usePathname } from 'next/navigation'
 
 type Theme = 'light' | 'dark' | 'system'
+type Locale = 'en' | 'fr'
 
 // Add timezone list
 const timezones = [
@@ -58,6 +60,10 @@ export default function Navbar() {
   const { user, subscription, timezone, setTimezone } = useUserData()
   const { theme, toggleTheme, setTheme } = useTheme()
   const t = useI18n()
+  const changeLocale = useChangeLocale()
+  const currentLocale = useCurrentLocale()
+  const router = useRouter()
+  const pathname = usePathname()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
   const { startOnborda, closeOnborda } = useOnborda();
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
@@ -65,7 +71,7 @@ export default function Navbar() {
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
 
-  const languages = [
+  const languages: { value: Locale; label: string }[] = [
     { value: 'en', label: 'English' },
     { value: 'fr', label: 'Français' },
     // Add more languages here
@@ -217,15 +223,13 @@ export default function Navbar() {
                     {t('dashboard.language')}
                   </DropdownMenuLabel>
                   <ScrollArea className="h-[64px]">
-                    <DropdownMenuRadioGroup value={languages.find(l => l.value === window.location.pathname.split('/')[1])?.value || 'en'}>
+                    <DropdownMenuRadioGroup value={currentLocale}>
                       {languages.map((lang) => (
                         <DropdownMenuRadioItem 
                           key={lang.value} 
                           value={lang.value}
                           onClick={() => {
-                            const currentPath = window.location.pathname.split('/')
-                            currentPath[1] = lang.value
-                            window.location.pathname = currentPath.join('/')
+                            changeLocale(lang.value)
                           }}
                         >
                           {lang.label}

@@ -10,17 +10,14 @@ const I18nMiddleware = createI18nMiddleware({
 })
 
 export async function middleware(request: NextRequest) {
-  const i18nResponse = I18nMiddleware(request)
-  
-  if (!(i18nResponse instanceof NextResponse)) {
-    return NextResponse.next()
-  }
-
   const isAuthRoute = request.nextUrl.pathname.includes('/authentication')
   const isDashboardRoute = request.nextUrl.pathname.includes('/dashboard')
 
   try {
-    // Create a new response from i18nResponse
+    // Handle i18n first to get the locale information
+    const i18nResponse = I18nMiddleware(request)
+    
+    // Create a new response that preserves the current path
     const response = NextResponse.next({
       request: {
         headers: request.headers,
@@ -50,14 +47,11 @@ export async function middleware(request: NextRequest) {
       }
     )
 
-    // Get the session without auto-refresh
     const { data: { session } } = await supabase.auth.getSession()
 
     // For auth routes, redirect to dashboard if session exists
     if (session && isAuthRoute) {
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/dashboard'
-      const redirectResponse = NextResponse.redirect(redirectUrl)
+      const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url))
       
       // Copy all cookies from the response to the redirect
       response.cookies.getAll().forEach(cookie => {
@@ -74,9 +68,7 @@ export async function middleware(request: NextRequest) {
 
     // For dashboard routes, redirect to auth if no session
     if (!session && isDashboardRoute) {
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/authentication'
-      const redirectResponse = NextResponse.redirect(redirectUrl)
+      const redirectResponse = NextResponse.redirect(new URL('/authentication', request.url))
       
       // Copy all cookies from the response to the redirect
       response.cookies.getAll().forEach(cookie => {
@@ -91,23 +83,23 @@ export async function middleware(request: NextRequest) {
       return redirectResponse
     }
 
-    // Copy all i18n cookies to the final response
+    // Copy i18n cookies to the response
     i18nResponse.cookies.getAll().forEach(cookie => {
       response.cookies.set(cookie)
     })
 
-    return response
+    // For normal navigation, return the i18n response to maintain the current path
+    return i18nResponse
 
   } catch (error) {
     console.error('Middleware authentication error:', error)
     
     // On error, redirect to auth
     if (!isAuthRoute) {
-      const redirectUrl = request.nextUrl.clone()
-      redirectUrl.pathname = '/authentication'
-      const redirectResponse = NextResponse.redirect(redirectUrl)
+      const redirectResponse = NextResponse.redirect(new URL('/authentication', request.url))
       
-      // Copy i18n headers and cookies
+      // Copy i18n headers and cookies from the i18n response
+      const i18nResponse = I18nMiddleware(request)
       i18nResponse.headers.forEach((value, key) => {
         redirectResponse.headers.set(key, value)
       })
@@ -118,7 +110,7 @@ export async function middleware(request: NextRequest) {
       return redirectResponse
     }
     
-    return i18nResponse
+    return I18nMiddleware(request)
   }
 }
 
