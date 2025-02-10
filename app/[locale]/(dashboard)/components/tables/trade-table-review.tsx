@@ -570,7 +570,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.entryDate')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       cell: ({ row }) => formatInTimeZone(new Date(row.getValue("entryDate")), timezone, 'yyyy-MM-dd'),
@@ -602,7 +602,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.direction')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       size: 100,
@@ -616,7 +616,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-end"
         >
           {t('trade-table.entryPrice')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       cell: ({ row }) => {
@@ -638,7 +638,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-end"
         >
           {t('trade-table.exitPrice')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       cell: ({ row }) => {
@@ -660,7 +660,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.positionTime')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       cell: ({ row }) => {
@@ -680,7 +680,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.entryTime')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       cell: ({ row }) => {
@@ -698,7 +698,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-start"
         >
           {t('trade-table.exitTime')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       cell: ({ row }) => {
@@ -716,7 +716,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-end"
         >
           {t('trade-table.pnl')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       cell: ({ row }) => {
@@ -735,6 +735,29 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       size: 100,
     },
     {
+      accessorKey: "commission",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="hover:bg-transparent px-0 font-medium w-full justify-end"
+        >
+          Commission
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const commission = parseFloat(row.getValue("commission"))
+        return (
+          <div className="text-right font-medium">
+            ${commission.toFixed(2)}
+          </div>
+        )
+      },
+      // sortingFn: "basic",
+      size: 100,
+    },
+    {
       accessorKey: "quantity",
       header: ({ column }) => (
         <Button
@@ -743,7 +766,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           className="hover:bg-transparent px-0 font-medium w-full justify-end"
         >
           {t('trade-table.quantity')}
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          {/* <ArrowUpDown className="ml-2 h-4 w-4" /> */}
         </Button>
       ),
       cell: ({ row }) => {
