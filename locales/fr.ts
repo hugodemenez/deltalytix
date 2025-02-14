@@ -554,7 +554,7 @@ export default {
             showingTopAccounts: 'Affichage de {count} sur {total} comptes'
         }
     },
-    'pricing.trialPeriod': '14 jours d\'essai gratuit',
+    'pricing.trialPeriod': 'Commencer avec toutes les fonctionnalités',
     'pricing.trialDescription': 'Essayez toutes les fonctionnalités pendant 14 jours, sans carte bancaire',
     'widgets.screenshot': 'Capture',
     'widgets.doneScreenshot': 'Quitter',
@@ -921,12 +921,38 @@ export default {
             chat: "Chat",
             marketNews: "Actualités marché",
             tradeDistribution: "Distribution des trades",
-            consistencyTable: "Analyse de cohérence"
+            consistencyTable: "Analyse de cohérence",
+            tagWidget: 'Gestion des tags'
         },
         deprecated: {
             title: "Widget Obsolète",
             description: "Ce type de widget n'est plus pris en charge",
             remove: "Supprimer le Widget"
+        },
+        tags: {
+            title: 'Tags',
+            addTag: 'Ajouter un tag',
+            editTag: 'Modifier le tag',
+            description: 'Description',
+            name: 'Nom',
+            namePlaceholder: 'Entrez le nom du tag',
+            descriptionPlaceholder: 'Entrez une description (optionnel)',
+            color: 'Couleur',
+            saving: 'Enregistrement...',
+            save: 'Enregistrer les modifications',
+            create: 'Créer le tag',
+            searchPlaceholder: 'Rechercher des tags...',
+            noResults: 'Aucun tag trouvé',
+            noTags: 'Aucun tag créé',
+            success: 'Succès',
+            error: 'Erreur',
+            createSuccess: 'Tag créé avec succès',
+            createError: 'Échec de la création du tag',
+            updateSuccess: 'Tag mis à jour avec succès',
+            updateError: 'Échec de la mise à jour du tag',
+            deleteSuccess: 'Tag supprimé avec succès',
+            deleteError: 'Échec de la suppression du tag',
+            fetchError: 'Échec de la récupération des tags'
         }
     },
     'pnl.title': 'Profits et Pertes Quotidiens',
