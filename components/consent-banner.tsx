@@ -230,9 +230,9 @@ export function ConsentBanner() {
           ease: [0.32, 0.72, 0, 1]
         }}
       >
-        <div className="max-w-xl mx-auto p-4">
+        <div className="max-w-xl mx-auto p-4 sm:p-6">
           <motion.div 
-            className="bg-card rounded-lg shadow-lg border p-4 flex flex-col gap-4"
+            className="bg-card rounded-lg shadow-lg border p-3 sm:p-4 flex flex-col gap-3 sm:gap-4"
             whileHover={{ 
               scale: 1.002,
               transition: { duration: 0.2 }
@@ -244,7 +244,7 @@ export function ConsentBanner() {
               ease: "easeOut"
             }}
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
               <p className="text-sm text-muted-foreground">
                 We use cookies to enhance your experience. 
                 <Button 
@@ -255,10 +255,11 @@ export function ConsentBanner() {
                   Manage preferences
                 </Button>
               </p>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex gap-2 shrink-0 w-full sm:w-auto">
                 <Button 
                   variant="outline" 
                   size="sm" 
+                  className="flex-1 sm:flex-initial"
                   onClick={() => saveConsent({
                     ...settings,
                     analytics_storage: false,
@@ -270,6 +271,7 @@ export function ConsentBanner() {
                 </Button>
                 <Button 
                   size="sm"
+                  className="flex-1 sm:flex-initial"
                   onClick={handleAcceptAll}
                 >
                   Accept All
@@ -306,7 +308,7 @@ export function ConsentBanner() {
                     Customize your cookie preferences. Essential cookies are always enabled as they are required for the website to function properly.
                   </DrawerDescription>
                 </DrawerHeader>
-                <div className="px-4 py-2">
+                <div className="px-4 py-2 overflow-y-auto">
                   <PreferencesContent
                     settings={settings}
                     setSettings={setSettings}

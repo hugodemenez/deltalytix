@@ -8,6 +8,7 @@ import { getUserShared, deleteShared } from "@/server/shared"
 import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import { Trash2, Link, Calendar, Users, ArrowLeft, ExternalLink } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Card,
   CardContent,
@@ -43,6 +44,33 @@ interface SharedLayout {
 
 interface SharedLayoutsManagerProps {
   onBack: () => void
+}
+
+function SkeletonCard() {
+  return (
+    <Card className="flex flex-col min-h-[280px]">
+      <CardHeader className="p-4 pb-2">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-4 pt-2">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-4/5" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      </CardContent>
+      <CardFooter className="p-4 pt-3 border-t flex flex-col gap-2">
+        <div className="flex gap-2 w-full">
+          <Skeleton className="h-8 w-24" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+        <Skeleton className="h-8 w-full" />
+      </CardFooter>
+    </Card>
+  )
 }
 
 export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
@@ -82,10 +110,14 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
 
   const handleDelete = async () => {
     if (!selectedLayout) return
+    
+    const layoutToDelete = selectedLayout
+    setDeleteDialogOpen(false)
+    setSelectedLayout(null)
 
     try {
-      await deleteShared(selectedLayout.slug, user!.id)
-      setSharedLayouts(prev => prev.filter(layout => layout.slug !== selectedLayout.slug))
+      await deleteShared(layoutToDelete.slug, user!.id)
+      setSharedLayouts(prev => prev.filter(layout => layout.slug !== layoutToDelete.slug))
       toast({
         title: t('share.deleteSuccess'),
       })
@@ -96,9 +128,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
         description: t('share.error.deleteFailed'),
         variant: "destructive",
       })
-    } finally {
-      setDeleteDialogOpen(false)
-      setSelectedLayout(null)
+      // Don't need to reopen dialog on error, as the item still exists in the list
     }
   }
 
@@ -119,7 +149,24 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center p-8">Loading...</div>
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+          <div className="flex items-center justify-between w-full">
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={index}>
+                <SkeletonCard />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -138,7 +185,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-6 py-4 sm:py-6 w-full">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
         {sharedLayouts.length === 0 ? (
           <div className="max-w-2xl mx-auto">
             <Card className="border-dashed">
@@ -154,32 +201,28 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
             </Card>
           </div>
         ) : (
-          <div className="grid gap-3 sm:gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 auto-rows-fr">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
             {sharedLayouts.map((layout) => (
-              <Card 
-                key={layout.slug} 
-                className="flex flex-col h-full transition-all duration-200 hover:shadow-lg hover:border-primary/20 group"
-              >
-                <CardHeader className="flex-none space-y-2 px-4 sm:px-6 pb-2">
+              <Card key={layout.slug} className="flex flex-col min-h-[280px]">
+                <CardHeader className="p-4 pb-2">
                   <div>
-                    <CardTitle className="text-base sm:text-lg font-semibold line-clamp-1 group-hover:text-primary transition-colors mb-1">
+                    <CardTitle className="text-base font-medium line-clamp-1 mb-1">
                       {layout.title || t('share.untitledLayout')}
                     </CardTitle>
-                    <CardDescription className="line-clamp-2 text-xs sm:text-sm leading-normal">
+                    <CardDescription className="line-clamp-2 text-xs text-muted-foreground/80">
                       {layout.description || t('share.noDescription')}
                     </CardDescription>
                   </div>
                 </CardHeader>
-                <CardContent className="flex-grow space-y-3 px-4 sm:px-6 py-2">
-                  <div className="space-y-2">
+                <CardContent className="flex-1 p-4 pt-2">
+                  <div className="space-y-2.5">
                     <div className="flex items-center gap-2 text-muted-foreground/90">
                       <Calendar className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate text-xs leading-none">
+                      <span className="text-xs">
                         {format(new Date(layout.dateRange.from), 'PP')}
                         {layout.dateRange.to && (
                           <>
-                            <br className="sm:hidden" />
-                            <span className="hidden sm:inline"> - </span>
+                            {' - '}
                             {format(new Date(layout.dateRange.to), 'PP')}
                           </>
                         )}
@@ -187,39 +230,39 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground/90">
                       <Users className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate text-xs leading-none">
+                      <span className="text-xs">
                         {layout.accountNumbers.length} {t('share.accounts')}
                       </span>
                     </div>
                     {layout.viewCount > 0 && (
                       <div className="flex items-center gap-2 text-muted-foreground/75">
                         <div className="h-1 w-1 rounded-full bg-current" />
-                        <span className="text-xs leading-none">
+                        <span className="text-xs">
                           {t('share.viewCount', { count: layout.viewCount })}
                         </span>
                       </div>
                     )}
                   </div>
                 </CardContent>
-                <CardFooter className="flex flex-col gap-2 w-full mt-auto pt-3 border-t px-4 sm:px-6">
-                  <div className="flex gap-2 w-full">
+                <CardFooter className="p-4 pt-3 border-t flex flex-col gap-2">
+                  <div className="flex gap-2 justify-center w-full">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => visitSharedLayout(layout.slug)}
-                      className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors text-xs h-8"
+                      className="h-8 px-3"
                     >
                       <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                      {t('share.visit')}
+                      <span className="text-xs">{t('share.visit')}</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => copyShareLink(layout.slug)}
-                      className="flex-1 hover:bg-primary hover:text-primary-foreground transition-colors text-xs h-8"
+                      className="h-8 px-3"
                     >
                       <Link className="h-3.5 w-3.5 mr-1.5" />
-                      {t('share.copyUrl')}
+                      <span className="text-xs">{t('share.copyUrl')}</span>
                     </Button>
                   </div>
                   <Button
@@ -229,10 +272,10 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
                       setSelectedLayout(layout)
                       setDeleteDialogOpen(true)
                     }}
-                    className="w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs h-8"
+                    className="h-8 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                    {t('share.delete')}
+                    <span className="text-xs">{t('share.delete')}</span>
                   </Button>
                 </CardFooter>
               </Card>

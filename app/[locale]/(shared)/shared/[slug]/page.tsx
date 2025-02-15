@@ -86,26 +86,28 @@ function AccountsSelector({ accounts }: { accounts: string[] }) {
 
 function TopBanner({ languages, t }: { languages: { value: string; label: string }[]; t: any }) {
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b shadow-sm h-[60px]">
-      <div className="w-full mx-auto h-full py-3 px-4 md:px-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-        <div className="flex items-center gap-x-4">
-          <Logo className="fill-black h-6 w-6 dark:fill-white" />
-          <div className="flex flex-col">
-            <h1 className="font-semibold">Deltalytix</h1>
-            <p className="text-sm text-muted-foreground">{t('shared.tagline')}</p>
+    <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b shadow-sm">
+      <div className="w-full mx-auto py-3 px-4 md:px-10">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-x-4">
+            <Logo className="fill-black h-6 w-6 dark:fill-white" />
+            <div className="flex flex-col">
+              <h1 className="font-semibold">Deltalytix</h1>
+              <p className="text-sm text-muted-foreground">{t('shared.tagline')}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-x-2 sm:gap-x-4">
-          <LanguageSelector
-            languages={languages}
-            className="w-[110px]"
-            triggerClassName="h-8"
-          />
-          <Link href="/authentication" className="flex-1 sm:flex-none">
-            <Button size="sm" className="bg-primary hover:bg-primary/90 w-full">
-              {t('shared.createAccount')}
-            </Button>
-          </Link>
+          <div className="flex items-center gap-x-2 sm:gap-x-4 pb-2 sm:pb-0">
+            <LanguageSelector
+              languages={languages}
+              className="w-[110px]"
+              triggerClassName="h-8"
+            />
+            <Link href="/authentication" className="flex-1 sm:flex-none">
+              <Button size="sm" className="bg-primary hover:bg-primary/90 w-full">
+                {t('shared.createAccount')}
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -129,7 +131,7 @@ export default function SharedPage({ params }: SharedPageProps) {
     return (
       <div className="flex flex-col min-h-screen">
         <TopBanner languages={languages} t={t} />
-        <div className="w-full mx-auto flex-1 flex items-center justify-center pt-[60px]">
+        <div className="w-full mx-auto flex-1 flex items-center justify-center pt-[120px] sm:pt-[60px]">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             <p className="text-sm text-muted-foreground">{t('shared.loading')}</p>
@@ -143,7 +145,7 @@ export default function SharedPage({ params }: SharedPageProps) {
     return (
       <div className="flex flex-col min-h-screen">
         <TopBanner languages={languages} t={t} />
-        <div className="w-full mx-auto flex-1 flex items-center justify-center p-4 pt-[76px]">
+        <div className="w-full mx-auto flex-1 flex items-center justify-center p-4 pt-[120px] sm:pt-[76px]">
           <Card className="max-w-lg w-full">
             <CardHeader>
               <CardTitle>{t('shared.notFound')}</CardTitle>
@@ -162,7 +164,7 @@ export default function SharedPage({ params }: SharedPageProps) {
     return (
       <div className="flex flex-col min-h-screen">
         <TopBanner languages={languages} t={t} />
-        <div className="w-full mx-auto flex-1 flex items-center justify-center p-4 pt-[76px]">
+        <div className="w-full mx-auto flex-1 flex items-center justify-center p-4 pt-[120px] sm:pt-[76px]">
           <Card className="max-w-lg w-full">
             <CardHeader>
               <CardTitle>{t('shared.expired')}</CardTitle>
@@ -181,7 +183,7 @@ export default function SharedPage({ params }: SharedPageProps) {
   return (
     <div className="flex flex-col min-h-screen">
       <TopBanner languages={languages} t={t} />
-      <div className="w-full mx-auto px-8 flex-1 pt-[60px]">
+      <div className="w-full mx-auto px-8 flex-1 pt-[120px] sm:pt-[60px]">
         <main className="w-full py-6 lg:py-8">
           <Card className="mb-6">
             <CardHeader className="space-y-3">

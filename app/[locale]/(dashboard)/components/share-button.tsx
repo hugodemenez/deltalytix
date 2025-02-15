@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { useUserData } from "@/components/context/user-data"
-import { useI18n } from "@/locales/client"
+import { useI18n, useCurrentLocale } from "@/locales/client"
 import { addDays, startOfDay, endOfDay, format } from "date-fns"
 import { createShared } from "@/server/shared"
 import { useToast } from "@/hooks/use-toast"
@@ -38,6 +38,7 @@ import { Input } from "@/components/ui/input"
 import { SharedLayoutsManager } from "./shared-layouts-manager"
 import { cn } from "@/lib/utils"
 import confetti from 'canvas-confetti'
+import { fr } from 'date-fns/locale'
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -110,6 +111,8 @@ function triggerConfetti() {
 export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
   ({ variant = "ghost", size = "icon", currentLayout }, ref) => {
     const t = useI18n()
+    const locale = useCurrentLocale()
+    const dateLocale = locale === 'fr' ? fr : undefined
     const isMobile = useIsMobile()
     const { toast } = useToast()
     const { user, trades } = useUserData()
@@ -410,16 +413,16 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             )}
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw] ">
+        <DialogContent className="sm:max-w-4xl h-[90vh] sm:h-[85vh] w-[95vw]">
           <div className="h-full flex flex-col overflow-y-hidden">
-            <DialogHeader className="shrink-0">
-              <DialogTitle>{t("share.title")}</DialogTitle>
-              <DialogDescription>
-                {t("share.description")}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex-1 overflow-y-auto">
-              <div className="h-full overflow-y-hidden">
+              <DialogHeader>
+                <DialogTitle>{t("share.title")}</DialogTitle>
+                <DialogDescription>
+                  {t("share.description")}
+                </DialogDescription>
+              </DialogHeader>
+            <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
+              <div className="h-full">
                 {showManager ? (
                   <SharedLayoutsManager onBack={() => setShowManager(false)} />
                 ) : shareUrl ? (
@@ -462,18 +465,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                     </div>
                   </div>
                 ) : (
-                  <div className="grid gap-4 h-full overflow-y-auto py-2">
-                    <div className="flex justify-end">
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowManager(true)}
-                        className="mb-4"
-                      >
-                        <Layout className="h-4 w-4 mr-2" />
-                        {t("share.manageLayouts")}
-                      </Button>
-                    </div>
-                    <div className="grid gap-2">
+                  <div className="max-w-7xl mx-auto space-y-4">
+                    <div className="space-y-2">
                       <Label>{t("share.titleLabel")}</Label>
                       <Input
                         placeholder={t("share.titlePlaceholder")}
@@ -481,9 +474,9 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                         onChange={(e) => setShareTitle(e.target.value)}
                       />
                     </div>
-                    <div className="grid gap-2">
+                    <div className="space-y-2 relative">
                       <Label>{t("share.accountsLabel")}</Label>
-                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -502,7 +495,13 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start" side="bottom" sideOffset={4}>
+                        <PopoverContent 
+                          className="w-[var(--radix-popover-trigger-width)] p-0" 
+                          align="start" 
+                          side="bottom" 
+                          sideOffset={4}
+                          style={{ zIndex: 99999 }}
+                        >
                           <Command shouldFilter={false}>
                             <CommandInput 
                               placeholder={t("share.searchAccounts")} 
@@ -552,47 +551,53 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                       </Popover>
                     </div>
                     <div className="grid gap-4">
-                      <div className="flex flex-col md:flex-row gap-6">
+                      <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex-1">
-                          <Label className="mb-3 block">{t("share.startDateLabel")}</Label>
-                          <div className="border rounded-lg p-3 bg-card">
-                            <Calendar
-                              mode="single"
-                              selected={selectedDateRange.from}
-                              onSelect={(date) =>
-                                setSelectedDateRange((prev) => ({
-                                  ...prev,
-                                  from: date || prev.from
-                                }))
-                              }
-                              defaultMonth={selectedDateRange.from}
-                              className="w-full"
-                              showOutsideDays
-                              fixedWeeks
-                            />
+                          <div className="space-y-2">
+                            <Label>{t("share.startDateLabel")}</Label>
+                            <div className="border rounded-lg bg-card p-2">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDateRange.from}
+                                onSelect={(date) =>
+                                  setSelectedDateRange((prev) => ({
+                                    ...prev,
+                                    from: date || prev.from
+                                  }))
+                                }
+                                defaultMonth={selectedDateRange.from}
+                                className="w-full [&_.rdp-nav]:p-0 [&_.rdp-caption]:p-2 [&_.rdp-months]:p-2 pt-0"
+                                showOutsideDays
+                                fixedWeeks
+                                locale={dateLocale}
+                              />
+                            </div>
                           </div>
                         </div>
                         <div className="flex-1">
-                          <Label className="mb-3 block">{t("share.endDateLabel")}</Label>
-                          <div className="border rounded-lg p-3 bg-card">
-                            <Calendar
-                              mode="single"
-                              selected={selectedDateRange.to}
-                              onSelect={(date) =>
-                                setSelectedDateRange((prev) => ({
-                                  ...prev,
-                                  to: date
-                                }))
-                              }
-                              defaultMonth={selectedDateRange.to || selectedDateRange.from}
-                              fromDate={selectedDateRange.from}
-                              disabled={(date) =>
-                                selectedDateRange.from ? date < selectedDateRange.from : false
-                              }
-                              className="w-full"
-                              showOutsideDays
-                              fixedWeeks
-                            />
+                          <div className="space-y-2">
+                            <Label>{t("share.endDateLabel")}</Label>
+                            <div className="border rounded-lg bg-card p-2">
+                              <Calendar
+                                mode="single"
+                                selected={selectedDateRange.to}
+                                onSelect={(date) =>
+                                  setSelectedDateRange((prev) => ({
+                                    ...prev,
+                                    to: date
+                                  }))
+                                }
+                                defaultMonth={selectedDateRange.to || selectedDateRange.from}
+                                fromDate={selectedDateRange.from}
+                                disabled={(date) =>
+                                  selectedDateRange.from ? date < selectedDateRange.from : false
+                                }
+                                className="w-full [&_.rdp-nav]:p-0 [&_.rdp-caption]:p-2 [&_.rdp-months]:p-2 pt-0"
+                                showOutsideDays
+                                fixedWeeks
+                                locale={dateLocale}
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -601,19 +606,30 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                 )}
               </div>
             </div>
-            <DialogFooter className="p-6 pt-0 mt-auto shrink-0">
-              {showManager ? null : !shareUrl ? (
-                <Button onClick={handleShare} className="w-full sm:w-auto">{t("share.shareButton")}</Button>
-              ) : (
-                <Button onClick={() => {
-                  setShareUrl("")
-                  setShareTitle("")
-                  setOpen(false)
-                }} className="w-full sm:w-auto">
-                  {t("share.quit")}
-                </Button>
-              )}
-            </DialogFooter>
+            <div className="flex-shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              <DialogFooter>
+                {showManager ? null : !shareUrl ? (
+                  <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4 sm:justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowManager(true)}
+                    >
+                      <Layout className="h-4 w-4 mr-2" />
+                      {t("share.manageLayouts")}
+                    </Button>
+                    <Button onClick={handleShare}>{t("share.shareButton")}</Button>
+                  </div>
+                ) : (
+                  <Button onClick={() => {
+                    setShareUrl("")
+                    setShareTitle("")
+                    setOpen(false)
+                  }} className="w-full sm:w-auto">
+                    {t("share.quit")}
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
