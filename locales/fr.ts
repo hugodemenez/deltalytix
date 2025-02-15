@@ -952,7 +952,15 @@ export default {
             updateError: 'Échec de la mise à jour du tag',
             deleteSuccess: 'Tag supprimé avec succès',
             deleteError: 'Échec de la suppression du tag',
-            fetchError: 'Échec de la récupération des tags'
+            fetchError: 'Échec de la récupération des tags',
+            clearFilter: 'Effacer le filtre',
+            tagExists: 'Un tag avec ce nom existe déjà',
+            deleteConfirmTitle: 'Supprimer le Tag',
+            deleteConfirmDescription: 'Êtes-vous sûr de vouloir supprimer le tag \'{tag}\' ? Cette action ne peut pas être annulée.',
+            cancel: 'Annuler',
+            confirmDelete: 'Supprimer',
+            deleting: 'Suppression...',
+            nameRequired: 'Le nom du tag est requis'
         }
     },
     'pnl.title': 'Profits et Pertes Quotidiens',

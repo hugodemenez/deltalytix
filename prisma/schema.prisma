@@ -81,6 +81,7 @@ model User {
   accounts        Account[]
   dashboardLayout DashboardLayout?
   moods           Mood[]
+  tags            Tag[]
 
   @@index([email])
   @@schema("public")
@@ -197,5 +198,19 @@ model FinancialEvent {
   updatedAt   DateTime @updatedAt
 
   @@index([date])
+  @@schema("public")
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  color       String?  @default("#CBD5E1") // Default to a neutral color
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
   @@schema("public")
 }

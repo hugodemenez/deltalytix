@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { PropFirmCard } from '../components/data-management/prop-firm-card'
 import { PropFirmOverview } from '../components/data-management/prop-firm-overview'
+import { TagWidget } from '../components/filters/tag-widget'
 
 export interface WidgetConfig {
   type: WidgetType
@@ -276,6 +277,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 300,
     getComponent: ({ size }) => <TimeRangePerformanceChart size={size} />,
     getPreview: () => <TimeRangePerformanceChart size="small" />
+  },
+  tagWidget: {
+    type: 'tagWidget',
+    defaultSize: 'small',
+    allowedSizes: ['small', 'medium', 'large'],
+    category: 'other',
+    previewHeight: 300,
+    getComponent: ({ size }) => <TagWidget />,
+    getPreview: () => <div className="h-[300px]"><TagWidget /></div>
   }
 }
 

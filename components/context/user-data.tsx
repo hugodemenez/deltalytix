@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { getSubscriptionDetails } from "@/server/subscription"
 import { getTrades } from '@/server/database'
-import { Trade as PrismaTrade } from '@prisma/client'
+import { Trade as PrismaTrade, Tag } from '@prisma/client'
 import { getTickDetails } from '@/server/tick-details'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
 import { parseISO, isValid, startOfDay, endOfDay } from 'date-fns'
@@ -87,6 +87,11 @@ interface WeekdayFilter {
 // Add new interface for hour filter
 interface HourFilter {
   hour: number | null
+}
+
+// Add tag filter interface
+interface TagFilter {
+  tags: string[]
 }
 
 // Add after the interfaces and before the UserDataContext
@@ -263,7 +268,20 @@ interface UserDataContextType {
   // Add timezone management
   timezone: string
   setTimezone: React.Dispatch<React.SetStateAction<string>>
+
+  // Add tag filter
+  tagFilter: TagFilter
+  setTagFilter: React.Dispatch<React.SetStateAction<TagFilter>>
+
+  // New functions
+  updateTrades: (updates: { id: string, updates: Partial<TradeWithUTC> }[]) => void
+  removeTagFromAllTrades: (tagToRemove: string) => void
+
+  // New properties
+  tags: Tag[]
+  setTags: React.Dispatch<React.SetStateAction<Tag[]>>
 }
+
 
 const UserDataContext = createContext<UserDataContextType | undefined>(undefined);
 
@@ -305,6 +323,7 @@ export const UserDataProvider: React.FC<{
   const [subscription, setSubscription] = useState<UserDataContextType['subscription']>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tickDetails, setTickDetails] = useState<Record<string, number>>({});
+  const [tags, setTags] = useState<Tag[]>([]);
 
   // Trades state
   const [trades, setTrades] = useState<TradeWithUTC[]>([]);
@@ -349,6 +368,9 @@ export const UserDataProvider: React.FC<{
   // Update userTimeZone to use the selected timezone
   const userTimeZone = useMemo(() => timezone, [timezone]);
 
+  // Add tag filter state
+  const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] })
+
   // Update the fetchData function to handle shared views
   const fetchData = useCallback(async () => {
     try {
@@ -386,7 +408,9 @@ export const UserDataProvider: React.FC<{
         if (!data.error) {
           setUser(data.user);
           setSubscription(data.subscription);
-          
+          if (data.tags) {
+            setTags(data.tags);
+          }
           // Only set layouts if we have user data
           if (data.layouts) {
             // Ensure loaded layouts are valid
@@ -475,6 +499,8 @@ export const UserDataProvider: React.FC<{
         trade.id === tradeId ? { 
           ...trade, 
           ...updates,
+          // Ensure tags are properly handled
+          tags: updates.tags || trade.tags,
           utcDateStr: updates.entryDate 
             ? formatInTimeZone(new Date(updates.entryDate), timezone, 'yyyy-MM-dd')
             : trade.utcDateStr
@@ -482,6 +508,37 @@ export const UserDataProvider: React.FC<{
       )
     );
   }, [timezone]);
+
+  // Add a function to update multiple trades at once
+  const updateTrades = useCallback((updates: { id: string, updates: Partial<TradeWithUTC> }[]) => {
+    setTrades(prevTrades => {
+      const updatedTrades = [...prevTrades];
+      updates.forEach(({ id, updates: tradeUpdates }) => {
+        const index = updatedTrades.findIndex(t => t.id === id);
+        if (index !== -1) {
+          updatedTrades[index] = {
+            ...updatedTrades[index],
+            ...tradeUpdates,
+            tags: tradeUpdates.tags || updatedTrades[index].tags,
+            utcDateStr: tradeUpdates.entryDate 
+              ? formatInTimeZone(new Date(tradeUpdates.entryDate), timezone, 'yyyy-MM-dd')
+              : updatedTrades[index].utcDateStr
+          };
+        }
+      });
+      return updatedTrades;
+    });
+  }, [timezone]);
+
+  // Add a function to remove a tag from all trades
+  const removeTagFromAllTrades = useCallback((tagToRemove: string) => {
+    setTrades(prevTrades => 
+      prevTrades.map(trade => ({
+        ...trade,
+        tags: trade.tags.filter(tag => tag !== tagToRemove)
+      }))
+    );
+  }, []);
 
   const dateRangeBoundaries = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return null;
@@ -575,15 +632,27 @@ export const UserDataProvider: React.FC<{
     });
   }, [weekdayFiltered, hourFilter?.hour, timezone]);
 
-  // Update formattedTrades to use hourFiltered
+  // Add tag filtering to the filtering chain
+  const tagFiltered = useMemo(() => {
+    if (tagFilter.tags.length === 0) return hourFiltered;
+    return hourFiltered.filter(trade => {
+      // If no tags are selected, show all trades
+      if (tagFilter.tags.length === 0) return true;
+      
+      // Check if the trade has any of the selected tags
+      return trade.tags.some(tag => tagFilter.tags.includes(tag));
+    });
+  }, [hourFiltered, tagFilter.tags]);
+
+  // Update formattedTrades to use tagFiltered instead of hourFiltered
   const formattedTrades = useMemo(() => {
     if(isSharedView) {
-      return hourFiltered.filter(trade => 
+      return tagFiltered.filter(trade => 
         accountNumbers.length === 0 || accountNumbers.includes(trade.accountNumber)
       );
     }
 
-    return hourFiltered
+    return tagFiltered
       .filter(trade => {
         const entryDate = parseISO(trade.entryDate);
         if (!isValid(entryDate)) return false;
@@ -602,7 +671,7 @@ export const UserDataProvider: React.FC<{
         return matchesInstruments && matchesAccounts && matchesDateRange && matchesPnlRange;
       })
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime());
-  }, [hourFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView]);
+  }, [tagFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView]);
 
   const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades]);
   const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades]);
@@ -610,6 +679,7 @@ export const UserDataProvider: React.FC<{
   const isPlusUser = () => {
     return Boolean(subscription?.isActive && ['plus', 'pro'].includes(subscription?.plan?.split('_')[0].toLowerCase()||''));
   };
+
 
   const contextValue = {
     // User related
@@ -671,6 +741,18 @@ export const UserDataProvider: React.FC<{
     // Add timezone management
     timezone,
     setTimezone,
+
+    // Add tag filter
+    tagFilter,
+    setTagFilter,
+
+    // New functions
+    updateTrades,
+    removeTagFromAllTrades,
+
+    // New properties
+    tags,
+    setTags,
   };
 
   return (

@@ -156,7 +156,8 @@ interface TagFilterProps {
 
 function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
   const [search, setSearch] = useState('')
-  const selectedTags = (column?.getFilterValue() as string[]) || []
+  const { tagFilter, setTagFilter } = useUserData()
+  const selectedTags = tagFilter.tags
   const t = useI18n()
 
   const filteredTags = availableTags.filter(tag => 
@@ -164,12 +165,13 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
   )
 
   const toggleTag = (tag: string) => {
-    const currentFilters = selectedTags
-    const newFilters = currentFilters.includes(tag)
-      ? currentFilters.filter(t => t !== tag)
-      : [...currentFilters, tag]
+    const normalizedTag = tag.toLowerCase()
+    const newTags = selectedTags.includes(normalizedTag)
+      ? selectedTags.filter(t => t !== normalizedTag)
+      : [...selectedTags, normalizedTag]
     
-    column?.setFilterValue(newFilters)
+    setTagFilter({ tags: newTags })
+    column?.setFilterValue(newTags)
   }
 
   return (
@@ -285,70 +287,59 @@ function convertFileToBase64(file: File): Promise<string> {
   })
 }
 
+interface TagMetadata {
+  name: string
+  color: string | null
+  description?: string | null
+}
+
 interface TradeTableReviewProps {
   trades?: Trade[]
 }
 
 export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) {
   const t = useI18n()
-  const { formattedTrades: contextTrades, updateTrade, timezone } = useUserData()
+  const { 
+    formattedTrades: contextTrades, 
+    updateTrade, 
+    timezone, 
+    tagFilter,
+    tags
+  } = useUserData()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [availableTags, setAvailableTags] = useState<string[]>([])
-  const [accountGroups, setAccountGroups] = useState<AccountGroup[]>([])
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
-  const tradesPerPage = 50 // Show 50 trades per page for better performance
+  const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
+  const tradesPerPage = 50
 
   const trades = propTrades || contextTrades
 
-  // Initialize account groups on mount
+  // Get unique accounts
+  const accounts = useMemo(() => 
+    Array.from(new Set(trades.map(t => t.accountNumber))).sort(),
+    [trades]
+  )
+
+  // Set initial selected account
   useEffect(() => {
-    const uniqueAccounts = Array.from(new Set(trades.map(t => t.accountNumber)))
-    if (uniqueAccounts.length === 0) return
+    if (!selectedAccount && accounts.length > 0) {
+      setSelectedAccount(accounts[0])
+    }
+  }, [accounts, selectedAccount])
 
-    setAccountGroups(uniqueAccounts.map(accountNumber => ({
-      accountNumber,
-      isExpanded: false,
-      trades: [],
-      isLoading: false
-    })))
-  }, [trades])
-
-  // Function to expand all accounts
-  const expandAllAccounts = async () => {
-    const updatedGroups = await Promise.all(accountGroups.map(async group => {
-      if (group.trades.length === 0) {
-        const accountTrades = trades.filter(t => t.accountNumber === group.accountNumber)
-        const extendedTrades: ExtendedTrade[] = accountTrades.map(trade => ({
-          ...trade,
-          direction: trade.side || '',
-          tags: trade.tags || [],
-          imageUrl: undefined,
-          comment: trade.comment || null,
-          videoUrl: trade.videoUrl || null
-        }))
-        return { ...group, trades: extendedTrades, isExpanded: true }
-      }
-      return { ...group, isExpanded: true }
-    }))
-    setAccountGroups(updatedGroups)
-    setCurrentPage(1) // Reset to first page when expanding all
-  }
-
-  // Function to collapse all accounts
-  const collapseAllAccounts = () => {
-    setAccountGroups(prev => prev.map(g => ({ ...g, isExpanded: false })))
-    setCurrentPage(1) // Reset to first page when collapsing all
-  }
+  // Filter trades by selected account
+  const filteredTrades = useMemo(() => 
+    trades
+      .filter(trade => trade.accountNumber === selectedAccount)
+      .map(trade => ({
+        ...trade,
+        direction: trade.side || '',
+      })),
+    [trades, selectedAccount]
+  )
 
   // Calculate total pages
-  const totalTrades = useMemo(() => 
-    accountGroups
-      .filter(g => g.isExpanded)
-      .reduce((sum, g) => sum + g.trades.length, 0),
-    [accountGroups]
-  )
+  const totalTrades = filteredTrades.length
   const totalPages = Math.ceil(totalTrades / tradesPerPage)
 
   // Handle page navigation
@@ -358,82 +349,9 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   // Get paginated trades
   const paginatedTrades = useMemo(() => {
     const startIndex = (currentPage - 1) * tradesPerPage
-    let currentIndex = 0
-    let result: ExtendedTrade[] = []
-
-    for (const group of accountGroups) {
-      if (!group.isExpanded) continue
-      
-      if (currentIndex + group.trades.length <= startIndex) {
-        currentIndex += group.trades.length
-        continue
-      }
-
-      const groupStartIndex = Math.max(0, startIndex - currentIndex)
-      const groupEndIndex = Math.min(
-        group.trades.length,
-        startIndex + tradesPerPage - result.length
-      )
-
-      result = result.concat(group.trades.slice(groupStartIndex, groupEndIndex))
-      
-      if (result.length >= tradesPerPage) break
-      currentIndex += group.trades.length
-    }
-
-    return result
-  }, [accountGroups, currentPage, tradesPerPage])
-
-  // Function to toggle account expansion and load trades
-  const toggleAccount = async (accountNumber: string) => {
-    const group = accountGroups.find(g => g.accountNumber === accountNumber)
-    if (!group) return
-
-    // If already expanded, just collapse
-    if (group.isExpanded) {
-      setAccountGroups(prev => prev.map(g => 
-        g.accountNumber === accountNumber ? { ...g, isExpanded: false } : g
-      ))
-      return
-    }
-
-    // If trades not loaded yet, load them first
-    if (group.trades.length === 0) {
-      const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
-      const extendedTrades: ExtendedTrade[] = accountTrades.map(trade => ({
-        ...trade,
-        direction: trade.side || '',
-        tags: trade.tags || [],
-        imageUrl: undefined,
-        comment: trade.comment || null,
-        videoUrl: trade.videoUrl || null
-      }))
-
-      setAccountGroups(prev => prev.map(g => 
-        g.accountNumber === accountNumber 
-          ? { ...g, trades: extendedTrades, isExpanded: true, isLoading: false }
-          : g
-      ))
-    } else {
-      // If trades already loaded, just expand
-      setAccountGroups(prev => prev.map(g => 
-        g.accountNumber === accountNumber ? { ...g, isExpanded: true } : g
-      ))
-    }
-  }
-
-  // Initialize available tags from all trades with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const allTags = new Set<string>()
-      trades.forEach(trade => {
-        trade.tags?.forEach(tag => allTags.add(tag))
-      })
-      setAvailableTags(Array.from(allTags))
-    }, 100)
-
-    return () => clearTimeout(timer)
-  }, [trades])
+    const endIndex = startIndex + tradesPerPage
+    return filteredTrades.slice(startIndex, endIndex)
+  }, [filteredTrades, currentPage, tradesPerPage])
 
   const handleAddTag = async (tradeId: string, tag: string) => {
     const normalizedTag = tag.trim().toLowerCase()
@@ -442,10 +360,6 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     try {
       await addTagToTrade(tradeId, normalizedTag)
       
-      if (!availableTags.includes(normalizedTag)) {
-        setAvailableTags(prev => [...prev, normalizedTag])
-      }
-
       const trade = trades.find(t => t.id === tradeId)
       if (trade) {
         updateTrade(tradeId, {
@@ -475,7 +389,6 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   const handleDeleteTag = async (tag: string) => {
     try {
       await deleteTagFromAllTrades(tag)
-      setAvailableTags(prev => prev.filter(t => t !== tag))
       
       trades
         .filter(trade => trade.tags?.includes(tag))
@@ -538,14 +451,12 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   const handleTradeUpdate = (tradeId: string, updates: Partial<Trade>) => {
     // Only update the local state, don't update the context
     // This prevents unnecessary remounts
-    setAccountGroups(prev => prev.map(group => ({
-      ...group,
-      trades: group.trades.map(trade => 
-        trade.id === tradeId
-          ? { ...trade, ...updates }
-          : trade
-      )
-    })))
+    const updatedTrades = trades.map(trade => 
+      trade.id === tradeId
+        ? { ...trade, ...updates }
+        : trade
+    )
+    // Note: This is handled by the parent component through the updateTrade callback
   }
 
   const handleVideoUrlChange = (tradeId: string, videoUrl: string | null) => {
@@ -904,7 +815,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       header: ({ column }) => (
         <TagFilter 
           column={column}
-          availableTags={availableTags}
+          availableTags={tags.map(t => t.name)}
           onDeleteTag={handleDeleteTag}
         />
       ),
@@ -915,28 +826,23 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
             <TradeTag
               tradeId={trade.id}
               tags={trade.tags || []}
-              availableTags={availableTags}
+              availableTags={tags}
               onTagsChange={(newTags) => handleTagsChange(trade.id, newTags)}
             />
           </div>
         )
       },
       filterFn: (row, id, filterValue: string[]) => {
-        const tags = row.original.tags
-        if (!filterValue.length) return true
-        return filterValue.some(tag => tags.includes(tag))
+        if (!filterValue?.length) return true
+        const tradeTags = row.original.tags.map(tag => tag.toLowerCase())
+        return filterValue.some(tag => tradeTags.includes(tag.toLowerCase()))
       },
       size: 200,
     }
-  ], [availableTags, t, timezone, handleTagsChange, handleCommentChange, handleVideoUrlChange])
+  ], [t, timezone, handleTagsChange, handleCommentChange, handleVideoUrlChange, tags])
 
-  const table = useReactTable({
-    data: useMemo(() => 
-      accountGroups
-        .filter(g => g.isExpanded)
-        .flatMap(g => g.trades),
-      [accountGroups]
-    ),
+  const table = useReactTable<ExtendedTrade>({
+    data: paginatedTrades,
     columns,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -963,21 +869,22 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   return (
     <div className="flex flex-col h-full w-full border rounded-md overflow-hidden">
       <div className="flex items-center justify-between p-2 border-b bg-background">
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={expandAllAccounts}
+        <div className="flex gap-2 items-center">
+          <span className="text-sm font-medium">{t('trade-table.account')}:</span>
+          <select
+            className="h-8 w-48 rounded-md border border-input bg-background px-3 text-sm"
+            value={selectedAccount || ''}
+            onChange={(e) => {
+              setSelectedAccount(e.target.value)
+              setCurrentPage(1) // Reset to first page when changing account
+            }}
           >
-            {t('trade-table.expandAll')}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={collapseAllAccounts}
-          >
-            {t('trade-table.collapseAll')}
-          </Button>
+            {accounts.map(account => (
+              <option key={account} value={account}>
+                {account}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -1003,9 +910,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
           </Button>
         </div>
       </div>
-      <div 
-        className="flex-1 overflow-y-auto"
-      >
+      <div className="flex-1 overflow-y-auto">
         <table className="w-full border-separate border-spacing-0">
           <thead className="sticky top-0 z-30 bg-background">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -1031,79 +936,31 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
             ))}
           </thead>
           <tbody>
-            {accountGroups.map((group) => (
-              <Fragment key={group.accountNumber}>
-                {/* Account Header Row */}
-                <tr 
-                  className={cn(
-                    "hover:bg-muted/50 cursor-pointer sticky z-20",
-                    group.isExpanded && "bg-muted/50"
-                  )}
-                  style={{ top: "48px" }}
-                  onClick={() => toggleAccount(group.accountNumber)}
-                >
-                  <td
-                    colSpan={columns.length}
-                    className={cn(
-                      "px-4 py-2 font-medium border-b bg-background",
-                      group.isExpanded && "bg-muted"
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      {group.isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" />
+            {paginatedTrades.map((trade) => {
+              const row = table.getRowModel().rows.find(r => r.original.id === trade.id)
+              if (!row) return null
+              
+              return (
+                <tr key={trade.id}>
+                  {row.getAllCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className="px-4 py-2 border-b whitespace-nowrap align-middle bg-background"
+                      style={{
+                        width: cell.column.getSize(),
+                        maxWidth: cell.column.getSize(),
+                      }}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
                       )}
-                      {t('trade-table.account')}: {group.accountNumber}
-                      {group.isLoading && (
-                        <div className="ml-2 animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                {/* Trade Rows - Only render if expanded and within current page */}
-                {group.isExpanded && group.trades.some(trade => 
-                  paginatedTrades.some(pt => pt.id === trade.id)
-                ) && (
-                  <tr>
-                    <td colSpan={columns.length} className="p-0">
-                      <table className="w-full">
-                        <tbody>
-                          {group.trades
-                            .filter(trade => paginatedTrades.some(pt => pt.id === trade.id))
-                            .map((trade) => {
-                              const row = table.getRowModel().rows.find(r => r.original.id === trade.id)
-                              if (!row) return null
-                              
-                              return (
-                                <tr key={trade.id}>
-                                  {row.getAllCells().map((cell) => (
-                                    <td
-                                      key={cell.id}
-                                      className="px-4 py-2 border-b whitespace-nowrap align-middle bg-background"
-                                      style={{
-                                        width: cell.column.getSize(),
-                                        maxWidth: cell.column.getSize(),
-                                      }}
-                                    >
-                                      {flexRender(
-                                        cell.column.columnDef.cell,
-                                        cell.getContext()
-                                      )}
-                                    </td>
-                                  ))}
-                                </tr>
-                              )
-                            })}
-                        </tbody>
-                      </table>
                     </td>
-                  </tr>
-                )}
-              </Fragment>
-            ))}
-            {accountGroups.length === 0 && (
+                  ))}
+                </tr>
+              )
+            })}
+            {paginatedTrades.length === 0 && (
               <tr>
                 <td
                   colSpan={columns.length}

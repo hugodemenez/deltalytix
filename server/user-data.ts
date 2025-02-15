@@ -5,8 +5,9 @@ import { getSubscriptionDetails } from './subscription'
 import { getTrades, loadDashboardLayout } from './database'
 import { getTickDetails } from './tick-details'
 import { getShared } from './shared'
-import { Trade } from '@prisma/client'
+import { Tag, Trade } from '@prisma/client'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
+import { getTags } from './tags'
 
 // Update the interface declarations to export them
 export interface LayoutItem {
@@ -42,6 +43,7 @@ export type InitialDataResponse = {
   tickDetails: Record<string, number>
   layouts: Layouts | null
   error?: string
+  tags: Tag[]
 }
 
 export type SharedDataResponse = {
@@ -67,6 +69,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         trades: [],
         tickDetails: {},
         layouts: null,
+        tags: [],
         error: 'Session not found'
       }
     }
@@ -79,6 +82,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         trades: [],
         tickDetails: {},
         layouts: null,
+        tags: [],
         error: 'No active session'
       }
     }
@@ -94,6 +98,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         trades: [],
         tickDetails: {},
         layouts: null,
+        tags: [],
         error: 'Authentication failed'
       }
     }
@@ -106,6 +111,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         trades: [],
         tickDetails: {},
         layouts: null,
+        tags: [],
         error: 'User not found'
       }
     }
@@ -117,10 +123,11 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     const subscription = await getSubscriptionDetails(user.email || email || '')
 
     // Run remaining operations concurrently with subscription status
-    const [tradesResult, tickDetailsResult, layoutsResult] = await Promise.all([
+    const [tradesResult, tickDetailsResult, layoutsResult, tagsResult] = await Promise.all([
       getTrades(user.id, subscription?.isActive ?? false).catch(() => []),
       getTickDetails().catch(() => []),
-      loadDashboardLayout(user.id).catch(() => null)
+      loadDashboardLayout(user.id).catch(() => null),
+      getTags(user.id).catch(() => [])
     ])
 
     console.log('[loadInitialData] Processing tick details', { tickCount: tickDetailsResult.length })
@@ -144,7 +151,8 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       subscription,
       trades: tradesResult,
       tickDetails,
-      layouts
+      layouts,
+      tags: tagsResult
     }
   } catch (error) {
     console.error('[loadInitialData] Error loading initial data:', error)
@@ -154,6 +162,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       trades: [],
       tickDetails: {},
       layouts: null,
+      tags: [],
       error: 'Failed to load initial data'
     }
   }

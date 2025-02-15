@@ -21,6 +21,7 @@ export type WidgetType =
   | 'tradeDistribution'
   | 'propFirm'
   | 'timeRangePerformance'
+  | 'tagWidget'
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 
 export interface LayoutItem {
