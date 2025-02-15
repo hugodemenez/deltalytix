@@ -107,13 +107,13 @@ export default async function RootLayout({
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             
-            // Enable URL passthrough
-            gtag('set', 'url_passthrough', true);
-
-            // Enable ads data redaction when ad_storage is denied
-            gtag('set', 'ads_data_redaction', true);
+            // Enable URL passthrough and ads data redaction
+            gtag('set', {
+              'url_passthrough': true,
+              'ads_data_redaction': true
+            });
             
-            // Default consent settings with region-specific behavior
+            // Default consent settings
             gtag("consent", "default", {
               'ad_storage': 'denied',
               'ad_user_data': 'denied',
@@ -124,10 +124,9 @@ export default async function RootLayout({
               'security_storage': 'granted',
               'wait_for_update': 500
             });
-
-            gtag('config', 'AW-16864609071');
           `}
         </Script>
+
         {/* Google Tag Manager */}
         <Script id="google-tag-manager" strategy="beforeInteractive">
           {`
@@ -136,13 +135,10 @@ export default async function RootLayout({
             j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
             })(window,document,'script','dataLayer','GTM-KNM25S27');
-
-            gtag('config', 'AW-16864609071');
           `}
         </Script>
-        {/* End Google Tag Manager */}
 
-        {/* Google tag (gtag.js) - Combined GA4 and Google Ads (AW-16864609071) */}
+        {/* Google tag (gtag.js) - Combined GA4 and Google Ads */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-PYK62LTZRQ"
           strategy="afterInteractive"
@@ -155,20 +151,18 @@ export default async function RootLayout({
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
 
-            // GA4 Configuration
-            gtag('config', 'G-PYK62LTZRQ', {
+            // Common config options
+            const commonConfig = {
               page_path: window.location.pathname,
               restricted_data_processing: true,
               allow_google_signals: false
-            });
+            };
 
-            // Google Ads Configuration (AW-16864609071)
-            gtag('config', 'AW-16864609071', {
-              page_path: window.location.pathname,
-              restricted_data_processing: true,
-              allow_google_signals: false
-            });
-            gtag('config', 'AW-16864609071');
+            // GA4 Configuration
+            gtag('config', 'G-PYK62LTZRQ', commonConfig);
+
+            // Google Ads Configuration
+            gtag('config', 'AW-16864609071', commonConfig);
           `}
         </Script>
 
