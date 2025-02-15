@@ -124,6 +124,8 @@ export default async function RootLayout({
               'security_storage': 'granted',
               'wait_for_update': 500
             });
+
+            gtag('config', 'AW-16864609071');
           `}
         </Script>
         {/* Google Tag Manager */}
@@ -134,11 +136,13 @@ export default async function RootLayout({
             j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
             'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
             })(window,document,'script','dataLayer','GTM-KNM25S27');
+
+            gtag('config', 'AW-16864609071');
           `}
         </Script>
         {/* End Google Tag Manager */}
 
-        {/* Google tag (gtag.js) - Combined GA4 and Ads */}
+        {/* Google tag (gtag.js) - Combined GA4 and Google Ads (AW-16864609071) */}
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-PYK62LTZRQ"
           strategy="afterInteractive"
@@ -158,12 +162,13 @@ export default async function RootLayout({
               allow_google_signals: false
             });
 
-            // Google Ads Configuration
+            // Google Ads Configuration (AW-16864609071)
             gtag('config', 'AW-16864609071', {
               page_path: window.location.pathname,
               restricted_data_processing: true,
               allow_google_signals: false
             });
+            gtag('config', 'AW-16864609071');
           `}
         </Script>
 
