@@ -449,26 +449,20 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   }, [])
 
   const handleTradeUpdate = (tradeId: string, updates: Partial<Trade>) => {
-    // Only update the local state, don't update the context
-    // This prevents unnecessary remounts
-    const updatedTrades = trades.map(trade => 
-      trade.id === tradeId
-        ? { ...trade, ...updates }
-        : trade
-    )
-    // Note: This is handled by the parent component through the updateTrade callback
+    // Only update the context, which will trigger a re-render with the new data
+    updateTrade(tradeId, updates)
   }
 
   const handleVideoUrlChange = (tradeId: string, videoUrl: string | null) => {
-    handleTradeUpdate(tradeId, { videoUrl })
+    updateTrade(tradeId, { videoUrl })
   }
 
   const handleTagsChange = (tradeId: string, newTags: string[]) => {
-    handleTradeUpdate(tradeId, { tags: newTags })
+    updateTrade(tradeId, { tags: newTags })
   }
 
   const handleCommentChange = (tradeId: string, comment: string | null) => {
-    handleTradeUpdate(tradeId, { comment })
+    updateTrade(tradeId, { comment })
   }
 
   const columns = useMemo<ColumnDef<ExtendedTrade>[]>(() => [

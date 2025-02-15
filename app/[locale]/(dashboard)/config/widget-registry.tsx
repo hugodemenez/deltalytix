@@ -253,7 +253,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
   tradeTableReview: {
     type: 'tradeTableReview',
     defaultSize: 'extra-large',
-    allowedSizes: ['extra-large'],
+    allowedSizes: ['large', 'extra-large'],
     category: 'tables',
     requiresFullWidth: true,
     previewHeight: 300,
