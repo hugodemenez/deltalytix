@@ -664,21 +664,21 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [performAutoSyncForCredential])
 
   // Set up automatic sync interval
-  // useEffect(() => {
-  //   // Initial check on mount
-  //   performAutoSync()
+  useEffect(() => {
+    // Initial check on mount
+    performAutoSync()
 
-  //   // Set up interval for future checks
-  //   syncIntervalRef.current = setInterval(() => {
-  //     performAutoSync()
-  //   }, 60 * 1000) // Check every minute
+    // Set up interval for future checks
+    syncIntervalRef.current = setInterval(() => {
+      performAutoSync()
+    }, 60 * 1000) // Check every minute
 
-  //   return () => {
-  //     if (syncIntervalRef.current) {
-  //       clearInterval(syncIntervalRef.current)
-  //     }
-  //   }
-  // }, [performAutoSync])
+    return () => {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current)
+      }
+    }
+  }, [performAutoSync])
 
   // Clear interval when user changes
   useEffect(() => {
