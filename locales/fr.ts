@@ -713,7 +713,8 @@ export default {
             status: 'Statut',
             payout: 'Payout',
             payoutAmount: 'Montant du Payout',
-            payoutStatus: 'Statut du Payout'
+            payoutStatus: 'Statut du Payout',
+            maxAllowed: 'Maximum Autorisé'
         },
         setup: {
             button: 'Configurer',

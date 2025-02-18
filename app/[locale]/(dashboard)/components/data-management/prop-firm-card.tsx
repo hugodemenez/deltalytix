@@ -40,6 +40,7 @@ interface PropFirmAccount {
   trailingDrawdown: boolean
   trailingStopProfit: number
   resetDate?: Date
+  consistencyPercentage: number
 }
 
 interface PropFirmSetupDialogProps {
@@ -59,6 +60,7 @@ function PropFirmSetupDialog({ open, onOpenChange, accountNumber, onSubmit }: Pr
     trailingDrawdown: false,
     trailingStopProfit: 0,
     resetDate: new Date(),
+    consistencyPercentage: 0,
   })
 
   return (
@@ -147,6 +149,16 @@ function PropFirmSetupDialog({ open, onOpenChange, accountNumber, onSubmit }: Pr
                 className="rounded-md border"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="consistencyPercentage">Consistency Percentage</Label>
+            <Input
+              id="consistencyPercentage"
+              type="number"
+              className="col-span-3"
+              value={formData.consistencyPercentage}
+              onChange={(e) => setFormData(prev => ({ ...prev, consistencyPercentage: Number(e.target.value) }))}
+            />
           </div>
         </div>
         <DialogFooter>
@@ -367,6 +379,7 @@ function AccountEditDialog({ open, onOpenChange, account, onSubmit }: AccountEdi
     trailingDrawdown: account.trailingDrawdown,
     trailingStopProfit: account.trailingStopProfit,
     resetDate: account.resetDate || new Date(),
+    consistencyPercentage: account.consistencyPercentage,
   })
 
   return (
@@ -419,6 +432,16 @@ function AccountEditDialog({ open, onOpenChange, account, onSubmit }: AccountEdi
                 className="rounded-md border"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="consistencyPercentage">Consistency Percentage</Label>
+            <Input
+              id="consistencyPercentage"
+              type="number"
+              className="col-span-3"
+              value={formData.consistencyPercentage}
+              onChange={(e) => setFormData(prev => ({ ...prev, consistencyPercentage: Number(e.target.value) }))}
+            />
           </div>
         </div>
         <DialogFooter>
@@ -497,6 +520,16 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
 
   // Calculate remaining amount needed for next payout
   const remainingForPayout = Math.max(0, account.profitTarget - (currentProfits - totalPayouts))
+
+  // Calculate consistency based on profit target or actual profits
+  const maxAllowedDailyProfit = useMemo(() => {
+    // If profits are below target, use profit target as base
+    const baseAmount = currentProfits <= account.profitTarget 
+      ? account.profitTarget 
+      : currentProfits
+    
+    return baseAmount * (account.consistencyPercentage / 100)
+  }, [currentProfits, account.profitTarget, account.consistencyPercentage])
 
   // Estimate next payout date based on average daily PnL
   const estimatedNextPayout = useMemo(() => {
@@ -808,6 +841,7 @@ export function PropFirmCard() {
         trailingDrawdown: dbAccount?.trailingDrawdown ?? false,
         trailingStopProfit: dbAccount?.trailingStopProfit ?? 0,
         resetDate: dbAccount?.resetDate,
+        consistencyPercentage: dbAccount?.consistencyPercentage ?? 0,
       }
     })
   }, [trades, dbAccounts])
@@ -827,6 +861,7 @@ export function PropFirmCard() {
         trailingDrawdown: data.trailingDrawdown || false,
         trailingStopProfit: data.trailingStopProfit || 0,
         resetDate: data.resetDate || undefined,
+        consistencyPercentage: data.consistencyPercentage || 0,
       })
 
       toast({
@@ -947,6 +982,7 @@ export function PropFirmCard() {
         trailingDrawdown: data.trailingDrawdown,
         trailingStopProfit: data.trailingStopProfit,
         resetDate: selectedAccountForDrawdown.resetDate,
+        consistencyPercentage: selectedAccountForDrawdown.consistencyPercentage,
       })
 
       // Refresh accounts
@@ -992,6 +1028,7 @@ export function PropFirmCard() {
         trailingDrawdown: selectedAccountForEdit.trailingDrawdown,
         trailingStopProfit: selectedAccountForEdit.trailingStopProfit,
         resetDate: data.resetDate || undefined,
+        consistencyPercentage: data.consistencyPercentage ?? selectedAccountForEdit.consistencyPercentage,
       })
 
       const accounts = await getPropFirmAccounts(user.id)

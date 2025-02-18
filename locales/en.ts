@@ -972,7 +972,8 @@ export default {
             status: 'Status',
             payout: 'Payout',
             payoutAmount: 'Payout Amount',
-            payoutStatus: 'Payout Status'
+            payoutStatus: 'Payout Status',
+            maxAllowed: 'Max Allowed'
         },
         setup: {
             button: 'Setup',

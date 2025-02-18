@@ -52,6 +52,7 @@ interface ConsistencyMetrics {
   highestProfitDay: number
   isConsistent: boolean
   hasProfitableData: boolean
+  isConfigured: boolean
   dailyPnL: { [key: string]: number }
   totalProfitableDays: number
 }
@@ -347,6 +348,9 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
       const totalProfit = accountTrades.reduce((sum, trade) => sum + trade.pnl - (trade.commission || 0), 0)
       const hasProfitableData = totalProfit > 0
       
+      // Check if account is properly configured
+      const isConfigured = account.profitTarget > 0 && account.consistencyPercentage > 0
+      
       // Then calculate daily PnLs
       accountTrades.forEach(trade => {
         const date = new Date(trade.entryDate).toISOString().split('T')[0]
@@ -356,9 +360,14 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
 
       const highestProfitDay = Math.max(...Object.values(dailyPnL))
       
-      // Only calculate consistency metrics if we have profitable data
-      if (hasProfitableData) {
-        const maxAllowedDailyProfit = totalProfit * (account.consistencyPercentage / 100)
+      // Only calculate consistency metrics if we have profitable data and account is configured
+      if (hasProfitableData && isConfigured) {
+        // Use profit target as base until profits exceed it
+        const baseAmount = totalProfit <= account.profitTarget 
+          ? account.profitTarget 
+          : totalProfit
+        
+        const maxAllowedDailyProfit = baseAmount * (account.consistencyPercentage / 100)
         const isConsistent = highestProfitDay <= maxAllowedDailyProfit
 
         return {
@@ -368,12 +377,13 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
           highestProfitDay,
           isConsistent,
           hasProfitableData,
+          isConfigured,
           dailyPnL,
           totalProfitableDays: Object.values(dailyPnL).filter(pnl => pnl > 0).length
         }
       }
 
-      // Return default values for unprofitable accounts
+      // Return default values for unconfigured or unprofitable accounts
       return {
         accountNumber: account.accountNumber,
         totalProfit,
@@ -381,6 +391,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
         highestProfitDay,
         isConsistent: false,
         hasProfitableData,
+        isConfigured,
         dailyPnL,
         totalProfitableDays: Object.values(dailyPnL).filter(pnl => pnl > 0).length
       }
@@ -698,9 +709,27 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                   </TableHeader>
                   <TableBody>
                     {consistencyMetrics.map(metrics => {
+                      if (!metrics.isConfigured) {
+                        return (
+                          <TableRow key={metrics.accountNumber}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="h-2 w-2 rounded-full bg-muted" />
+                                {metrics.accountNumber}
+                              </div>
+                            </TableCell>
+                            <TableCell colSpan={4} className="text-center text-muted-foreground">
+                              <div className="flex items-center justify-center gap-2">
+                                <Info className="h-4 w-4" />
+                                {t('propFirm.setup.configureFirst.title')}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      }
+
                       const shouldHighlight = metrics.hasProfitableData && !metrics.isConsistent
                       const isInsufficientData = !metrics.hasProfitableData
-                      const isUnprofitable = !metrics.hasProfitableData
                       const highestProfitPercentage = metrics.totalProfit > 0 
                         ? (metrics.highestProfitDay / metrics.totalProfit) * 100 
                         : 0
@@ -719,7 +748,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                             <div className="flex items-center gap-2">
                               <div className={cn(
                                 "h-2 w-2 rounded-full",
-                                isUnprofitable ? "bg-muted" : 
+                                isInsufficientData ? "bg-muted" : 
                                 shouldHighlight ? "bg-destructive" : "bg-green-500"
                               )} />
                               {metrics.accountNumber}
@@ -736,7 +765,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                           </TableCell>
                           <TableCell className={cn(
                             "text-right font-medium",
-                            isUnprofitable ? "text-muted-foreground italic" :
+                            isInsufficientData ? "text-muted-foreground italic" :
                             !metrics.isConsistent ? "text-destructive" : "text-green-500"
                           )}>
                             {!metrics?.hasProfitableData ? t('propFirm.status.unprofitable') :

@@ -105,6 +105,7 @@ export function AccountTable({
           <TableHead className="text-right">{t('propFirm.dailyStats.balance')}</TableHead>
           <TableHead className="text-right">{t('propFirm.dailyStats.target')}</TableHead>
           <TableHead className="text-right">{t('consistency.modal.percentageOfTotal')}</TableHead>
+          <TableHead className="text-right">{t('propFirm.dailyStats.maxAllowed')}</TableHead>
           <TableHead className="text-right">{t('propFirm.dailyStats.status')}</TableHead>
           <TableHead className="text-right">{t('propFirm.dailyStats.payout')}</TableHead>
         </TableRow>
@@ -113,6 +114,24 @@ export function AccountTable({
   }
 
   function renderMetricRow(metric: typeof sortedMetrics[0], runningBalance: number, totalPnL: number) {
+    // Calculate total payouts for the entire period (not just up to this date)
+    const totalPayouts = sortedMetrics
+      .filter(m => m.payout?.status === 'PAID')
+      .reduce((sum, m) => sum + (m.payout?.amount || 0), 0)
+
+    // Calculate running profits up to this date
+    const profitsUpToDate = sortedMetrics
+      .filter(m => m.date <= metric.date)
+      .reduce((sum, m) => sum + m.pnl, 0)
+
+    // Calculate profits after all payouts
+    const profitsAfterPayouts = profitsUpToDate - totalPayouts
+
+    // Calculate the base amount for consistency (profit target until exceeded)
+    const baseAmount = profitsAfterPayouts <= profitTarget ? profitTarget : profitsAfterPayouts
+    const maxAllowedDailyProfit = baseAmount * (consistencyPercentage / 100)
+    const isConsistent = metric.pnl <= maxAllowedDailyProfit
+
     const percentageOfTotal = totalPnL > 0 && metric.pnl > 0 ? (metric.pnl / totalPnL) * 100 : null
 
     return (
@@ -133,11 +152,14 @@ export function AccountTable({
         <TableCell className="text-right">
           {percentageOfTotal !== null ? `${percentageOfTotal.toFixed(1)}%` : '-'}
         </TableCell>
+        <TableCell className="text-right font-medium">
+          ${maxAllowedDailyProfit.toFixed(2)}
+        </TableCell>
         <TableCell className={cn(
           "text-right font-medium",
-          !metric.isConsistent ? "text-destructive" : "text-green-500"
+          !isConsistent ? "text-destructive" : "text-green-500"
         )}>
-          {metric.isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
+          {isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
         </TableCell>
         <TableCell className="text-right">
           {metric.payout && (
@@ -184,6 +206,20 @@ export function AccountTable({
   }
 
   function renderTotalRow(metrics: typeof sortedMetrics, totalPnL: number, runningBalance: number) {
+    // Calculate total payouts
+    const totalPayouts = metrics.reduce((sum, metric) => 
+      sum + (metric.payout?.status === 'PAID' ? metric.payout.amount : 0), 0)
+
+    // Calculate profits after payouts
+    const profitsAfterPayouts = totalPnL - totalPayouts
+
+    // Calculate the base amount for consistency (profit target until exceeded)
+    const baseAmount = profitsAfterPayouts <= profitTarget ? profitTarget : profitsAfterPayouts
+    const maxAllowedDailyProfit = baseAmount * (consistencyPercentage / 100)
+    
+    // Check if any daily PnL exceeds the max allowed
+    const hasInconsistentDays = metrics.some(metric => metric.pnl > maxAllowedDailyProfit)
+
     return (
       <TableRow className="bg-muted/50 font-medium">
         <TableCell>{t('calendar.modal.total')}</TableCell>
@@ -202,18 +238,20 @@ export function AccountTable({
         <TableCell className="text-right">
           {totalPnL > 0 ? '100%' : '-'}
         </TableCell>
+        <TableCell className="text-right">
+          ${maxAllowedDailyProfit.toFixed(2)}
+        </TableCell>
         <TableCell className={cn(
           "text-right",
-          metrics.some(d => !d.isConsistent) ? "text-destructive" : "text-green-500"
+          hasInconsistentDays ? "text-destructive" : "text-green-500"
         )}>
-          {metrics.some(d => !d.isConsistent) ? 
+          {hasInconsistentDays ? 
             t('consistency.inconsistent') : 
             t('consistency.consistent')
           }
         </TableCell>
         <TableCell className="text-right">
-          -${metrics.reduce((sum, metric) => 
-            sum + (metric.payout?.status === 'PAID' ? metric.payout.amount : 0), 0).toFixed(2)}
+          -${totalPayouts.toFixed(2)}
         </TableCell>
       </TableRow>
     )
