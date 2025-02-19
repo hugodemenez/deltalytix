@@ -644,6 +644,16 @@ export default {
     propFirm: {
         title: 'Comptes Prop Firm',
         description: 'Gérez vos comptes prop firm et suivez vos performances.',
+        card: {
+            unnamedAccount: 'Compte sans nom',
+            balance: 'Solde',
+            target: 'Objectif',
+            drawdown: 'Drawdown',
+            remainingLoss: '${amount} restant',
+            drawdownBreached: 'Drawdown dépassé',
+            maxLoss: 'Perte max : ${amount}',
+            needsConfiguration: 'Le compte doit être configuré'
+        },
         tabs: {
             overview: 'Aperçu',
             consistency: 'Cohérence'

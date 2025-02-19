@@ -21,6 +21,8 @@ import { toast } from "@/hooks/use-toast"
 import { WidgetSize } from '../../types/dashboard'
 import { enUS, fr } from 'date-fns/locale'
 import { useParams } from 'next/navigation'
+import { PropFirmCard } from './prop-firm-card'
+import { Switch } from "@/components/ui/switch"
 
 interface PropFirmAccount {
   id: string
@@ -610,80 +612,15 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
               <div className={cn("grid grid-cols-1 gap-3 mt-4", size === "medium" ? "sm:grid-cols-2" : size === "large" ? "sm:grid-cols-3" : "sm:grid-cols-4")}>
                 {propFirmAccounts.map(account => {
                   const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
-                  const progress = account.profitTarget > 0 
-                    ? (account.balanceToDate / account.profitTarget) * 100
-                    : 0
-                  const isConfigured = account.profitTarget > 0 && account.drawdownThreshold > 0
-
+                  const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
                   return (
-                    <Card 
-                      key={account.accountNumber} 
-                      className="flex flex-col cursor-pointer hover:border-primary/50 transition-colors"
+                    <PropFirmCard
+                      key={account.accountNumber}
+                      account={account}
+                      trades={accountTrades}
+                      metrics={metrics}
                       onClick={() => setSelectedAccountForTable(account)}
-                    >
-                      <CardHeader className="flex-none p-3 pb-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="truncate">
-                              <CardTitle className="text-sm truncate flex items-center gap-2">
-                               <div className={cn(
-                              "h-2 w-2 rounded-full",
-                              !metrics?.hasProfitableData ? "bg-muted" :
-                              !metrics?.isConsistent ? "bg-destructive" : "bg-green-500"
-                            )} />
-                                {account.propfirm || "Unnamed Account"}
-                              </CardTitle>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {account.accountNumber}
-                              </p>
-                            </div>
-                          </div>
-                          {/* {isConfigured && metrics && (
-                            <Badge 
-                              variant={metrics.isConsistent ? "default" : "destructive"}
-                              className="text-xs whitespace-nowrap"
-                            >
-                              {metrics.isConsistent ? t('consistency.consistent') : t('consistency.inconsistent')}
-                            </Badge>
-                          )} */}
-                        </div>
-                      </CardHeader>
-                      <CardContent className="flex-1 p-3 pt-0 space-y-2">
-                        <div className="flex justify-between items-baseline">
-                          <span className="text-sm text-muted-foreground">{t('propFirm.balance')}</span>
-                          <span className="text-base font-semibold truncate ml-2">${account.balanceToDate.toFixed(2)}</span>
-                        </div>
-                        {isConfigured ? (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">{t('propFirm.target')}</span>
-                              <span>${account.profitTarget.toFixed(2)}</span>
-                            </div>
-                            <Progress 
-                              value={progress} 
-                              className="h-1.5" 
-                              indicatorClassName={cn(
-                                "transition-colors duration-300",
-                                "bg-[hsl(var(--chart-6))]",
-                                progress <= 20 ? "opacity-20" :
-                                progress <= 40 ? "opacity-40" :
-                                progress <= 60 ? "opacity-60" :
-                                progress <= 80 ? "opacity-80" :
-                                "opacity-100"
-                              )}
-                            />
-                            <div className="flex justify-between text-xs">
-                              <span className="text-muted-foreground">{t('propFirm.drawdown')}</span>
-                              <span>{account.drawdownThreshold}$</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-sm text-muted-foreground text-center pt-2">
-                            {t('propFirm.setup.message')}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
+                    />
                   )
                 })}
               </div>
@@ -884,7 +821,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label>{t('propFirm.drawdown')}</Label>
+                    <Label>Drawdown</Label>
                     <Input
                       type="number"
                       value={pendingChanges?.drawdownThreshold ?? selectedAccountForTable?.drawdownThreshold ?? 0}
@@ -895,7 +832,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label>{t('propFirm.coherence')}</Label>
+                    <Label>Coherence</Label>
                     <Input
                       type="number"
                       value={pendingChanges?.consistencyPercentage ?? selectedAccountForTable?.consistencyPercentage ?? 30}
@@ -905,6 +842,45 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                       }))}
                     />
                   </div>
+
+                  {/* Add Trailing Drawdown Configuration */}
+                  <div className="flex flex-col gap-2 md:col-span-2">
+                    <Label>Drawdown Type</Label>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center space-x-2">
+                        <Switch
+                          id="trailingDrawdown"
+                          checked={pendingChanges?.trailingDrawdown ?? selectedAccountForTable?.trailingDrawdown ?? false}
+                          onCheckedChange={(checked) => setPendingChanges(prev => ({
+                            ...prev,
+                            trailingDrawdown: checked,
+                            // Reset trailing stop profit if disabling trailing drawdown
+                            trailingStopProfit: checked ? (prev?.trailingStopProfit ?? selectedAccountForTable?.trailingStopProfit ?? 0) : 0
+                          }))}
+                        />
+                        <Label htmlFor="trailingDrawdown" className="cursor-pointer">Trailing Drawdown</Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Show Trailing Stop Profit input only when trailing drawdown is enabled */}
+                  {(pendingChanges?.trailingDrawdown ?? selectedAccountForTable?.trailingDrawdown) && (
+                    <div className="flex flex-col gap-2">
+                      <Label>Trailing Stop Profit</Label>
+                      <Input
+                        type="number"
+                        value={pendingChanges?.trailingStopProfit ?? selectedAccountForTable?.trailingStopProfit ?? 0}
+                        onChange={(e) => setPendingChanges(prev => ({
+                          ...prev,
+                          trailingStopProfit: parseFloat(e.target.value)
+                        }))}
+                        placeholder="Enter amount to lock drawdown"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Drawdown will trail profits until this level is reached
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-2">
                     <Label>{t('propFirm.resetDate.label')}</Label>

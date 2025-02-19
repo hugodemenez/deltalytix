@@ -22,6 +22,7 @@ export type WidgetType =
   | 'propFirm'
   | 'timeRangePerformance'
   | 'tagWidget'
+  // | 'marketChart'
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 
 export interface LayoutItem {

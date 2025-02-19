@@ -67,6 +67,7 @@
     "input-otp": "^1.4.1",
     "install": "^0.13.0",
     "ldrs": "^1.0.2",
+    "lightweight-charts": "^5.0.2",
     "lucide-react": "^0.471.1",
     "next": "14.2.15",
     "next-international": "^1.2.4",

@@ -903,6 +903,16 @@ export default {
     propFirm: {
         title: 'Prop Firm Accounts',
         description: 'Manage your prop firm accounts and track your performance.',
+        card: {
+            unnamedAccount: 'Unnamed Account',
+            balance: 'Balance',
+            target: 'Target',
+            drawdown: 'Drawdown',
+            remainingLoss: '${amount} remaining',
+            drawdownBreached: 'Drawdown breached',
+            maxLoss: 'Max Loss: ${amount}',
+            needsConfiguration: 'Account needs to be configured'
+        },
         tabs: {
             overview: 'Overview',
             consistency: 'Consistency'

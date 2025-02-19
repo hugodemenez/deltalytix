@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TradeTable from '../../components/filters/trade-table'
 import FilterLeftPane from '../../components/filters/filter-left-pane'
 import { DataManagementCard } from '../../components/data-management/data-management-card'
-import { PropFirmOverview } from "../../components/data-management/prop-firm-overview"
+import { PropFirmOverview } from "../../components/propfirm/prop-firm-overview"
 import { PropFirmCard } from "../../components/data-management/prop-firm-card"
 
 export default function DashboardPage() {

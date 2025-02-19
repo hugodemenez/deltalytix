@@ -23,8 +23,9 @@ import TradeDistributionChart from '../components/charts/trade-distribution'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { PropFirmCard } from '../components/data-management/prop-firm-card'
-import { PropFirmOverview } from '../components/data-management/prop-firm-overview'
+import { PropFirmOverview } from '../components/propfirm/prop-firm-overview'
 import { TagWidget } from '../components/filters/tag-widget'
+import MarketChart from '../components/charts/market-chart'
 
 export interface WidgetConfig {
   type: WidgetType
@@ -286,7 +287,16 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 300,
     getComponent: ({ size }) => <TagWidget />,
     getPreview: () => <div className="h-[300px]"><TagWidget /></div>
-  }
+  },
+  // marketChart: {
+  //   type: 'marketChart',
+  //   defaultSize: 'medium',
+  //   allowedSizes: ['small', 'medium', 'large'],
+  //   category: 'charts',
+  //   previewHeight: 300,
+  //   getComponent: ({ size }) => <MarketChart />,
+  //   getPreview: () => <MarketChart />
+  // },
 }
 
 export function getWidgetsByCategory(category: WidgetConfig['category']) {
