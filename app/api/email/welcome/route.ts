@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 import { createClient } from "@/server/auth"
 import { Resend } from 'resend'
+import WelcomeEmail from '@/components/emails/welcome'
+import { render } from '@react-email/render'
 
 const prisma = new PrismaClient()
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -34,18 +36,18 @@ export async function POST(req: Request) {
 
     const { record } = payload
 
+    // Get the user's first name or use default
+    const firstName = record.raw_user_meta_data?.first_name || 'trader'
+
+    // Render the welcome email template
+    const emailHtml = await render(WelcomeEmail({ firstName }))
 
     // Send welcome email
     await resend.emails.send({
-      from: 'Trade Optimizer <welcome@tradeoptimizerlt.com>',
+      from: 'Deltalytix <welcome@deltalytix.app>',
       to: record.email,
-      subject: 'Welcome to Trade Optimizer',
-      html: `
-        <h1>Welcome to Trade Optimizer!</h1>
-        <p>We're excited to have you on board.</p>
-        <p>Get started by importing your first trades and analyzing your performance.</p>
-        <p>If you have any questions, feel free to reply to this email.</p>
-      `
+      subject: 'Bienvenue sur Deltalytix',
+      html: emailHtml
     })
 
     return NextResponse.json(
