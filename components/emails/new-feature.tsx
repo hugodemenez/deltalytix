@@ -75,7 +75,7 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
               </Section>
 
               <Text className="text-gray-800 mb-4 leading-6">
-                Ces améliorations ont été développées en tenant compte de vos retours et suggestions. Nous espérons qu'elles vous aideront à optimiser davantage votre trading.
+                Ces améliorations ont été développées en tenant compte de vos retours et suggestions. Nous espérons qu&apos;elles vous aideront à optimiser davantage votre trading.
               </Text>
 
               <Text className="text-gray-800 mb-4 leading-6">

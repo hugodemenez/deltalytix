@@ -40,7 +40,7 @@ export default function WelcomeEmail({ firstName = 'trader' }: WelcomeEmailProps
               </Text>
 
               <Text className="text-gray-800 mb-4 leading-6">
-                L'objectif de la plateforme est de vous aider à suivre et analyser vos performances de trading de manière simple et efficace.
+                L&apos;objectif de la plateforme est de vous aider à suivre et analyser vos performances de trading de manière simple et efficace.
               </Text>
 
               <Text className="text-gray-800 mb-6 leading-6">
