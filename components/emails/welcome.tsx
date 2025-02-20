@@ -44,7 +44,7 @@ export default function WelcomeEmail({ firstName = 'trader' }: WelcomeEmailProps
               </Text>
 
               <Text className="text-gray-800 mb-6 leading-6">
-                J'espère que vous avez déjà pu explorer un peu l'interface.
+                J&apos;espère que vous avez déjà pu explorer un peu l&apos;interface.
               </Text>
 
               <Section className="mb-8">
@@ -64,7 +64,7 @@ export default function WelcomeEmail({ firstName = 'trader' }: WelcomeEmailProps
               </Section>
 
               <Text className="text-gray-800 mb-4 leading-6">
-                Si vous avez la moindre question ou besoin d'un coup de main pour démarrer, n'hésitez pas à me faire signe, je serai ravi de vous aider.
+                Si vous avez la moindre question ou besoin d&apos;un coup de main pour démarrer, n&apos;hésitez pas à me faire signe, je serai ravi de vous aider.
               </Text>
 
               <Text className="text-gray-800 mb-4 leading-6">

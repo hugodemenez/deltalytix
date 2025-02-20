@@ -79,7 +79,7 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
               </Text>
 
               <Text className="text-gray-800 mb-4 leading-6">
-                N'hésitez pas à nous faire part de vos impressions sur ces nouveautés !
+                N&apos;hésitez pas à nous faire part de vos impressions sur ces nouveautés !
               </Text>
 
               <Button 
