@@ -936,7 +936,7 @@ export default function WidgetCanvas() {
       effectiveSize = 'extra-large'
     }
     // Statistics widgets are always tiny
-    else if (['statisticsWidget', 'averagePositionTime', 'cumulativePnl', 
+    else if (['averagePositionTime', 'cumulativePnl', 
          'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(type)) {
       effectiveSize = 'tiny'
     }
