@@ -25,12 +25,28 @@ export async function POST(req: Request) {
     // Get the user's first name or use default
     const firstName = record.raw_user_meta_data?.first_name || 'trader'
 
+    // Add email to newsletter list
+    await prisma.newsletter.upsert({
+      where: { email: record.email },
+      update: { isActive: true },
+      create: {
+        email: record.email,
+        isActive: true
+      }
+    })
+
+    const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(record.email)}`
+
     // Use react prop instead of rendering to HTML
     const { data, error } = await resend.emails.send({
       from: 'Deltalytix <welcome@deltalytix.app>',
       to: record.email,
       subject: 'Bienvenue sur Deltalytix',
-      react: WelcomeEmail({ firstName })
+      react: WelcomeEmail({ firstName }),
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+      }
     })
 
     if (error) {

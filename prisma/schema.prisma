@@ -214,3 +214,14 @@ model Tag {
   @@index([userId])
   @@schema("public")
 }
+
+model Newsletter {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@schema("public")
+}
