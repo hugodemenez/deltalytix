@@ -4,7 +4,7 @@ import { sharedTranslations } from './shared-translations'
 export default {
     ...sharedTranslations,
     'landing.title': 'Master your trading journey.',
-    'landing.description': 'Deltalytix is a web dashboard for traders to store, explore and understand their track-record.',
+    'landing.description': 'Deltalytix is a trading dashboard for futures traders to store, explore and understand their track-record.',
     'landing.cta': 'Get Started',
     'landing.updates': 'Latest Product Updates →',
     'data-import': 'Data Import',
@@ -13,7 +13,7 @@ export default {
     'features.heading': 'Features',
     'features.subheading': 'The right tools to help you improve your trading.',
     'features.data-import.title': 'Data Import',
-    'features.data-import.description': 'Import data from various providers. Our platform uses AI mapping from CSV to support major brokers and trading platforms exports, allowing you to centralize all your trading information in one place.',
+    'features.data-import.description': 'Import data from various providers. Our platform supports automatic imports with Rithmic via a sync or .CSV imports, allowing you to centralize all your trading information in one place.',
     'features.data-import.stat': 'CSV Mappings from many providers',
     'features.performance-visualization.title': 'Performance Visualization',
     'features.performance-visualization.description': 'Visualize your trading performance with interactive charts and graphs. Analyze patterns, identify strengths, and pinpoint areas for improvement.',

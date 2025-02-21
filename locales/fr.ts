@@ -3,7 +3,7 @@ import { sharedTranslationsFr } from './shared-translations-fr'
 export default {
     ...sharedTranslationsFr,
     'landing.title': 'Votre journal de trading.',
-    'landing.description': 'Deltalytix est un journal de trading web pour traders permettant de stocker, explorer et comprendre leur historique de trading.',
+    'landing.description': 'Deltalytix est un journal de trading web pour traders futures permettant de stocker, explorer et comprendre leur historique de trading.',
     'landing.cta': 'Commencer maintenant',
     'landing.updates': 'Dernières mises à jour du produit →',
     'data-import': 'Importation de données',
@@ -12,7 +12,7 @@ export default {
     'features.heading': 'Fonctionnalités',
     'features.subheading': 'Les bons outils pour vous aider à améliorer votre trading.',
     'features.data-import.title': 'Importation de données',
-    'features.data-import.description': 'Importez des données de divers fournisseurs. Notre plateforme utilise une cartographie AI à partir de CSV pour prendre en charge les exportations de principaux courtiers et plateformes de trading, vous permettant de centraliser toutes vos informations de trading en un seul endroit.',
+    'features.data-import.description': 'Importez des données de divers fournisseurs. Notre plateforme permet d\'importer vos données automatiquement avec Rithmic via une synchronisation ou avec des imports .CSV permettant de supporter la plupart des courtiers et plateformes de trading comme Tradovate, Quantower ou TopstepX.',
     'features.data-import.stat': 'Imports CSV avec de nombreux fournisseurs',
     'features.performance-visualization.title': 'Visualisation des performances',
     'features.performance-visualization.description': 'Visualisez vos performances de trading avec des graphiques et des diagrammes interactifs. Analysez les tendances, identifiez vos points forts et repérez les domaines à améliorer.',
