@@ -38,31 +38,31 @@ export default function WelcomeEmail({ firstName = 'trader' }: WelcomeEmailProps
             </Text>
 
             <Text className="text-gray-800 mb-4 leading-6">
-              L'objectif de la plateforme est de vous aider à suivre et analyser vos performances de trading de manière simple et efficace.
+              L&apos;objectif de la plateforme est de vous aider à suivre et analyser vos performances de trading de manière simple et efficace.
             </Text>
 
             <Text className="text-gray-800 mb-6 leading-6">
-              J'espère que vous avez déjà pu explorer un peu l'interface.
+              J&apos;espère que vous avez déjà pu explorer un peu l&apos;interface.
             </Text>
 
             <Section className="mb-8">
               <Link href="https://youtu.be/oGdJ6XlKgjo">
                 <Img
                   src={thumbnailUrl}
-                  alt="Vidéo de présentation Deltalytix"
+                  alt="Dernière vidéo Deltalytix"
                   className="rounded-lg w-full mb-4"
                 />
               </Link>
               <Button
-                className="bg-black text-white px-6 py-3 rounded-lg font-medium box-border"
+                className="bg-black text-white text-sm px-4 py-2 rounded-md font-medium box-border"
                 href="https://youtu.be/oGdJ6XlKgjo"
               >
-                Regarder la vidéo de présentation
+                ▶️ Voir la dernière vidéo
               </Button>
             </Section>
 
             <Text className="text-gray-800 mb-4 leading-6">
-              Si vous avez la moindre question ou besoin d'un coup de main pour démarrer, n'hésitez pas à me faire signe, je serai ravi de vous aider.
+              Si vous avez la moindre question ou besoin d&apos;un coup de main pour démarrer, n&apos;hésitez pas à me faire signe, je serai ravi de vous aider.
             </Text>
 
             <Text className="text-gray-800 mb-4 leading-6">
