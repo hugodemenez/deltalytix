@@ -2,7 +2,6 @@ import * as React from 'react';
 import {
   Body,
   Button,
-  Container,
   Head,
   Heading,
   Hr,
@@ -28,9 +27,9 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
       <Head />
       <Preview>Nouvelles fonctionnalités Deltalytix - Améliorez votre suivi de trading</Preview>
       <Tailwind>
-        <Body className="bg-gray-100 font-sans">
-          <Container className="mx-auto py-20 px-4">
-            <Section className="bg-white rounded-lg shadow-lg px-8 py-10">
+        <Body className="bg-gray-50 font-sans">
+          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-sm">
+            <Section className="px-6 py-8">
               <Heading className="text-2xl font-bold text-gray-900 mb-6">
                 Bonjour {firstName},
               </Heading>
@@ -43,7 +42,7 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
                 Voici ce qui vous attend dans cette mise à jour :
               </Text>
 
-              <Section className="mb-6">
+              <Section className="bg-gray-50 rounded-lg p-6 mb-6">
                 <Text className="text-gray-800 leading-6 mb-2">
                   • Analyse approfondie des performances par paire de trading
                 </Text>
@@ -63,14 +62,14 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
                   <Img
                     src={thumbnailUrl}
                     alt="Présentation des nouvelles fonctionnalités"
-                    className="rounded-lg w-full mb-4"
+                    className="rounded-lg w-full mb-4 shadow-sm"
                   />
                 </Link>
                 <Button
-                  className="bg-black text-white px-6 py-3 rounded-lg font-medium box-border"
+                  className="bg-black text-white text-sm px-4 py-2 rounded-md font-medium box-border"
                   href={`https://youtu.be/${youtubeId}`}
                 >
-                  Découvrir les nouvelles fonctionnalités en vidéo
+                  ▶️ Découvrir les nouveautés en vidéo
                 </Button>
               </Section>
 
@@ -78,20 +77,22 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
                 Ces améliorations ont été développées en tenant compte de vos retours et suggestions. Nous espérons qu&apos;elles vous aideront à optimiser davantage votre trading.
               </Text>
 
-              <Text className="text-gray-800 mb-4 leading-6">
+              <Text className="text-gray-800 mb-6 leading-6">
                 N&apos;hésitez pas à nous faire part de vos impressions sur ces nouveautés !
               </Text>
 
-              <Button 
-                className="bg-black text-white px-6 py-3 rounded-lg font-medium mb-8 box-border"
-                href="https://deltalytix.com/dashboard"
-              >
-                Accéder à mon tableau de bord
-              </Button>
+              <Section className="text-center">
+                <Button 
+                  className="bg-black text-white text-sm px-6 py-2.5 rounded-md font-medium box-border"
+                  href="https://deltalytix.com/dashboard"
+                >
+                  Accéder à mon tableau de bord →
+                </Button>
+              </Section>
 
               <Hr className="border-gray-200 my-8" />
 
-              <Text className="text-gray-400 text-xs">
+              <Text className="text-gray-400 text-xs text-center">
                 Cet email vous a été envoyé par Deltalytix
                 {' • '}
                 <Link href="[unsubscribe]" className="text-gray-400 underline">
@@ -99,7 +100,7 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
                 </Link>
               </Text>
             </Section>
-          </Container>
+          </Section>
         </Body>
       </Tailwind>
     </Html>
