@@ -10,21 +10,7 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
   try {
-    // Verify webhook signature
-    const supabase = await createClient()
-    const webhookSecret = process.env.SUPABASE_WEBHOOK_SECRET
-    const signature = req.headers.get('x-webhook-signature')
-
-    if (!webhookSecret || !signature) {
-      return NextResponse.json(
-        { error: 'Missing webhook signature' },
-        { status: 401 }
-      )
-    }
-
-    // Get the raw body
-    const rawBody = await req.text()
-    const payload = JSON.parse(rawBody)
+    const payload = await req.json()
 
     // Only process new user insertions
     if (payload.type !== 'INSERT') {
@@ -39,19 +25,24 @@ export async function POST(req: Request) {
     // Get the user's first name or use default
     const firstName = record.raw_user_meta_data?.first_name || 'trader'
 
-    // Render the welcome email template
-    const emailHtml = await render(WelcomeEmail({ firstName }))
-
-    // Send welcome email
-    await resend.emails.send({
+    // Use react prop instead of rendering to HTML
+    const { data, error } = await resend.emails.send({
       from: 'Deltalytix <welcome@deltalytix.app>',
       to: record.email,
       subject: 'Bienvenue sur Deltalytix',
-      html: emailHtml
+      react: WelcomeEmail({ firstName })
     })
 
+    if (error) {
+      console.error('Email error:', error)
+      return NextResponse.json(
+        { error: 'Failed to send welcome email' },
+        { status: 500 }
+      )
+    }
+
     return NextResponse.json(
-      { message: 'Successfully processed webhook and sent welcome email' },
+      { message: 'Successfully processed webhook and sent welcome email', data },
       { status: 200 }
     )
 
