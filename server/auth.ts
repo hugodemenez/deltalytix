@@ -133,23 +133,38 @@ async function ensureUserInDatabase(user: SupabaseUser) {
   }
 
   try {
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
+    // First try to find user by auth_user_id
+    const existingUserByAuthId = await prisma.user.findUnique({
       where: { auth_user_id: user.id },
     });
 
-    if (existingUser) {
-      // Only update if email has changed
-      if (existingUser.email !== user.email) {
+    // If user exists by auth_user_id, update email if needed
+    if (existingUserByAuthId) {
+      if (existingUserByAuthId.email !== user.email) {
         return await prisma.user.update({
           where: { auth_user_id: user.id },
-          data: { email: user.email || existingUser.email }, // Fallback to existing email if new one is null
+          data: { email: user.email || existingUserByAuthId.email },
         });
       }
-      return existingUser;
+      return existingUserByAuthId;
     }
 
-    // Create new user if doesn't exist
+    // If user doesn't exist by auth_user_id, check if email exists
+    if (user.email) {
+      const existingUserByEmail = await prisma.user.findUnique({
+        where: { email: user.email },
+      });
+
+      if (existingUserByEmail) {
+        // Update the existing user with the new auth_user_id
+        return await prisma.user.update({
+          where: { email: user.email },
+          data: { auth_user_id: user.id },
+        });
+      }
+    }
+
+    // Create new user if no existing user found
     return await prisma.user.create({
       data: {
         auth_user_id: user.id,
@@ -159,6 +174,9 @@ async function ensureUserInDatabase(user: SupabaseUser) {
     });
   } catch (error) {
     console.error('Error ensuring user in database:', error);
+    if (error instanceof Error) {
+      throw new Error(`Failed to create or update user: ${error.message}`);
+    }
     throw new Error('Failed to create or update user');
   }
 }
