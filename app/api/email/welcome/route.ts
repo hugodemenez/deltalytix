@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       from: 'Deltalytix <welcome@deltalytix.app>',
       to: record.email,
       subject: 'Bienvenue sur Deltalytix',
-      react: WelcomeEmail({ firstName }),
+      react: WelcomeEmail({ firstName, email: record.email }),
       headers: {
         'List-Unsubscribe': `<${unsubscribeUrl}>`,
         'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'

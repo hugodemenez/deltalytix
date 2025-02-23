@@ -16,11 +16,15 @@ import {
 
 interface WelcomeEmailProps {
   firstName: string;
+  email?: string;
 }
 
-export default function WelcomeEmail({ firstName = 'trader' }: WelcomeEmailProps) {
-  const youtubeId = 'oGdJ6XlKgjo';
+export default function WelcomeEmail({ firstName = 'trader', email }: WelcomeEmailProps) {
+  const youtubeId = 'p2pYl6GMGbk';
   const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
+  const unsubscribeUrl = email 
+    ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
+    : '#';
 
   return (
     <Html>
@@ -73,7 +77,7 @@ export default function WelcomeEmail({ firstName = 'trader' }: WelcomeEmailProps
               <Section className="text-center">
                 <Button 
                   className="bg-black text-white text-sm px-6 py-2.5 rounded-md font-medium box-border"
-                  href="https://deltalytix.com/dashboard"
+                  href="https://deltalytix.app/dashboard"
                 >
                   Accéder à mon tableau de bord →
                 </Button>
@@ -84,7 +88,7 @@ export default function WelcomeEmail({ firstName = 'trader' }: WelcomeEmailProps
               <Text className="text-gray-400 text-xs text-center">
                 Cet email vous a été envoyé par Deltalytix
                 {' • '}
-                <Link href="[unsubscribe]" className="text-gray-400 underline">
+                <Link href={unsubscribeUrl} className="text-gray-400 underline">
                   Se désabonner
                 </Link>
               </Text>
