@@ -15,6 +15,25 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         );
     }
 
+    // First, try to find existing customer
+    const existingCustomers = await stripe.customers.list({
+        email: user.email,
+        limit: 1,
+    });
+
+    let customerId: string;
+
+    if (existingCustomers.data.length > 0) {
+        // Use existing customer
+        customerId = existingCustomers.data[0].id;
+    } else {
+        // Create new customer if none exists
+        const newCustomer = await stripe.customers.create({
+            email: user.email,
+        });
+        customerId = newCustomer.id;
+    }
+
     const prices = await stripe.prices.list({
         lookup_keys: [lookup_key],
         expand: ['data.product'],
@@ -42,8 +61,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     }
 
     const session = await stripe.checkout.sessions.create({
-        billing_address_collection: 'auto',
-        customer_email: user.email,
+        customer: customerId, // Use customer ID instead of email
         metadata: {
             plan: lookup_key,
         },
