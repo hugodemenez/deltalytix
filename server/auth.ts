@@ -122,18 +122,44 @@ export async function signInWithEmail(email: string, next: string | null = null)
   })
 }
 
-// New function to ensure user is in Prisma database
-async function ensureUserInDatabase(user: any) {
-  if (user) {
-    await prisma.user.upsert({
+interface SupabaseUser {
+  id: string;
+  email?: string | null;
+}
+
+async function ensureUserInDatabase(user: SupabaseUser) {
+  if (!user) {
+    throw new Error('User data is required');
+  }
+
+  try {
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
       where: { auth_user_id: user.id },
-      update: { email: user.email },
-      create: {
-        id: user.id,
-        email: user.email!,
+    });
+
+    if (existingUser) {
+      // Only update if email has changed
+      if (existingUser.email !== user.email) {
+        return await prisma.user.update({
+          where: { auth_user_id: user.id },
+          data: { email: user.email || existingUser.email }, // Fallback to existing email if new one is null
+        });
+      }
+      return existingUser;
+    }
+
+    // Create new user if doesn't exist
+    return await prisma.user.create({
+      data: {
         auth_user_id: user.id,
+        email: user.email || '', // Provide a default empty string if email is null
+        id: user.id,
       },
-    })
+    });
+  } catch (error) {
+    console.error('Error ensuring user in database:', error);
+    throw new Error('Failed to create or update user');
   }
 }
 

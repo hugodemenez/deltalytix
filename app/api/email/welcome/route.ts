@@ -26,7 +26,8 @@ export async function POST(req: Request) {
     console.log(record)
 
     // Get the user's first name or use default
-    const firstName = record.raw_user_meta_data?.first_name || 'trader'
+    const fullName = record.raw_user_meta_data?.name || record.raw_user_meta_data?.full_name || ''
+    const firstName = fullName.split(' ')[0] || 'trader'
 
     // Add email to newsletter list
     await prisma.newsletter.upsert({
