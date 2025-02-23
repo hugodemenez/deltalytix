@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     }
 
     const { record } = payload
+    console.log(record)
 
     // Get the user's first name or use default
     const firstName = record.raw_user_meta_data?.first_name || 'trader'
