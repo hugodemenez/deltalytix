@@ -160,23 +160,23 @@ export default function SharedPage({ params }: SharedPageProps) {
   }
 
   // Check if the share has expired
-  if (sharedParams.expiresAt && new Date() > new Date(sharedParams.expiresAt)) {
-    return (
-      <div className="flex flex-col min-h-screen">
-        <TopBanner languages={languages} t={t} />
-        <div className="w-full mx-auto flex-1 flex items-center justify-center p-4 pt-[120px] sm:pt-[76px]">
-          <Card className="max-w-lg w-full">
-            <CardHeader>
-              <CardTitle>{t('shared.expired')}</CardTitle>
-              <CardDescription>
-                {t('shared.expiredDescription')}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-      </div>
-    )
-  }
+  // if (sharedParams.expiresAt && new Date() > new Date(sharedParams.expiresAt)) {
+  //   return (
+  //     <div className="flex flex-col min-h-screen">
+  //       <TopBanner languages={languages} t={t} />
+  //       <div className="w-full mx-auto flex-1 flex items-center justify-center p-4 pt-[120px] sm:pt-[76px]">
+  //         <Card className="max-w-lg w-full">
+  //           <CardHeader>
+  //             <CardTitle>{t('shared.expired')}</CardTitle>
+  //             <CardDescription>
+  //               {t('shared.expiredDescription')}
+  //             </CardDescription>
+  //           </CardHeader>
+  //         </Card>
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   const dateRange = sharedParams.dateRange as { from: Date; to: Date }
 
