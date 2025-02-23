@@ -9,6 +9,8 @@ const prisma = new PrismaClient()
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: Request) {
+  const fifteenMinutesFromNow = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
   try {
     const payload = await req.json()
 
@@ -46,7 +48,8 @@ export async function POST(req: Request) {
       headers: {
         'List-Unsubscribe': `<${unsubscribeUrl}>`,
         'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
-      }
+      },
+      scheduledAt: fifteenMinutesFromNow
     })
 
     if (error) {
