@@ -242,7 +242,7 @@ export default function Navbar() {
                     <Clock className="mr-2 h-4 w-4" />
                     {t('dashboard.timezone')}
                   </DropdownMenuLabel>
-                  <ScrollArea className="h-[120px]">
+                  <ScrollArea className="h-[40px] sm:h-[120px]">
                     <DropdownMenuRadioGroup value={timezone} onValueChange={setTimezone}>
                       {timezones.map((tz) => (
                         <DropdownMenuRadioItem key={tz} value={tz}>
