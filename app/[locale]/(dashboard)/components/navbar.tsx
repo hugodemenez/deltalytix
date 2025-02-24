@@ -160,7 +160,7 @@ export default function Navbar() {
                       <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </Link>
-                  <DropdownMenuSeparator />
+                  {/* <DropdownMenuSeparator />
                   <DropdownMenuGroup>
                     <DropdownMenuSub>
                       <DropdownMenuSubTrigger>
@@ -180,7 +180,7 @@ export default function Navbar() {
                         </DropdownMenuSubContent>
                       </DropdownMenuPortal>
                     </DropdownMenuSub>
-                  </DropdownMenuGroup>
+                  </DropdownMenuGroup> */}
                   <DropdownMenuSeparator />
                   <Link href="/support">
                   <DropdownMenuItem>
@@ -188,15 +188,15 @@ export default function Navbar() {
                     <span>{t('dashboard.support')}</span>
                   </DropdownMenuItem>
                   </Link>
-                  <DropdownMenuItem disabled>
+                  {/* <DropdownMenuItem disabled>
                     <Cloud className="mr-2 h-4 w-4" />
                     <span>{t('dashboard.api')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setShortcutsDialogOpen(true)}>
+                  </DropdownMenuItem> */}
+                  {/* <DropdownMenuItem onClick={() => setShortcutsDialogOpen(true)}>
                     <Keyboard className="mr-2 h-4 w-4" />
                     <span>{t('dashboard.keyboardShortcuts')}</span>
                     <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                   <DropdownMenuItem onClick={() => startOnborda("main")}>
                     <HelpCircle className="mr-2 h-4 w-4" />
                     <span>{t('dashboard.startTour')}</span>
