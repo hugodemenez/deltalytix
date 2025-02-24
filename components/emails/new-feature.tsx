@@ -14,18 +14,27 @@ import {
   Text,
 } from '@react-email/components';
 
-interface NewFeaturesEmailProps {
-  firstName: string;
+interface NewsletterEmailProps {
+  firstName?: string;
+  email?: string;
+  youtubeId: string;
+  introMessage: string;
+  features: string[];
+  unsubscribeUrl: string;
 }
 
-export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEmailProps) {
-  const youtubeId = 'oGdJ6XlKgjo';
+export default function NewsletterEmail({
+  youtubeId,
+  introMessage,
+  features,
+  firstName,
+  unsubscribeUrl,
+}: NewsletterEmailProps) {
   const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
-
   return (
     <Html>
       <Head />
-      <Preview>Nouvelles fonctionnalités Deltalytix - Améliorez votre suivi de trading</Preview>
+      <Preview>Nouveautés sur Deltalytix - Votre plateforme de suivi de trading</Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans">
           <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-sm">
@@ -34,34 +43,15 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
                 Bonjour {firstName},
               </Heading>
               
-              <Text className="text-gray-800 mb-4 leading-6">
-                Nous sommes ravis de vous annoncer le déploiement de nouvelles fonctionnalités sur Deltalytix !
+              <Text className="text-gray-800 mb-6 leading-6">
+                {introMessage}
               </Text>
-
-              <Text className="text-gray-800 mb-4 leading-6">
-                Voici ce qui vous attend dans cette mise à jour :
-              </Text>
-
-              <Section className="bg-gray-50 rounded-lg p-6 mb-6">
-                <Text className="text-gray-800 leading-6 mb-2">
-                  • Analyse approfondie des performances par paire de trading
-                </Text>
-                <Text className="text-gray-800 leading-6 mb-2">
-                  • Nouveaux graphiques de visualisation des résultats
-                </Text>
-                <Text className="text-gray-800 leading-6 mb-2">
-                  • Export des données au format CSV
-                </Text>
-                <Text className="text-gray-800 leading-6 mb-2">
-                  • Interface optimisée pour une meilleure expérience utilisateur
-                </Text>
-              </Section>
 
               <Section className="mb-8">
                 <Link href={`https://youtu.be/${youtubeId}`}>
                   <Img
                     src={thumbnailUrl}
-                    alt="Présentation des nouvelles fonctionnalités"
+                    alt="Dernière vidéo Deltalytix"
                     className="rounded-lg w-full mb-4 shadow-sm"
                   />
                 </Link>
@@ -69,33 +59,47 @@ export default function NewFeaturesEmail({ firstName = 'trader' }: NewFeaturesEm
                   className="bg-black text-white text-sm px-4 py-2 rounded-md font-medium box-border"
                   href={`https://youtu.be/${youtubeId}`}
                 >
-                  ▶️ Découvrir les nouveautés en vidéo
+                  ▶️ Voir la dernière vidéo
                 </Button>
               </Section>
 
+              <Section className="mb-6">
+                {features.map((feature, index) => (
+                  <Text key={index} className="text-gray-800 mb-4 leading-6">
+                    • {feature}
+                  </Text>
+                ))}
+              </Section>
+
               <Text className="text-gray-800 mb-4 leading-6">
-                Ces améliorations ont été développées en tenant compte de vos retours et suggestions. Nous espérons qu&apos;elles vous aideront à optimiser davantage votre trading.
+                Si vous avez la moindre question ou besoin d&apos;un coup de main pour démarrer, n&apos;hésitez pas à me faire signe, je serai ravi de vous aider.
               </Text>
 
               <Text className="text-gray-800 mb-6 leading-6">
-                N&apos;hésitez pas à nous faire part de vos impressions sur ces nouveautés !
+                Bon trading et à bientôt !
               </Text>
 
               <Section className="text-center">
                 <Button 
                   className="bg-black text-white text-sm px-6 py-2.5 rounded-md font-medium box-border"
-                  href="https://deltalytix.com/dashboard"
+                  href="https://deltalytix.app/dashboard"
                 >
                   Accéder à mon tableau de bord →
                 </Button>
               </Section>
+
+              <Text className="text-gray-800 mt-8 mb-4">
+                Hugo DEMENEZ
+                <br />
+                <span className="text-gray-600">Fondateur de Deltalytix</span>
+              </Text>
 
               <Hr className="border-gray-200 my-8" />
 
               <Text className="text-gray-400 text-xs text-center">
                 Cet email vous a été envoyé par Deltalytix
                 {' • '}
-                <Link href="[unsubscribe]" className="text-gray-400 underline">
+                <Link href={unsubscribeUrl} className="text-gray-400 underline">
                   Se désabonner
                 </Link>
               </Text>

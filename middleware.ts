@@ -12,6 +12,7 @@ const I18nMiddleware = createI18nMiddleware({
 export async function middleware(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.includes('/authentication')
   const isDashboardRoute = request.nextUrl.pathname.includes('/dashboard')
+  const isAdminRoute = request.nextUrl.pathname.includes('/admin')
 
   try {
     // Handle i18n first to get the locale information
@@ -48,6 +49,34 @@ export async function middleware(request: NextRequest) {
     )
 
     const { data: { session } } = await supabase.auth.getSession()
+
+    // For admin routes, check if user has admin access
+    if (isAdminRoute) {
+      if (!session) {
+        const redirectResponse = NextResponse.redirect(new URL('/authentication', request.url))
+        response.cookies.getAll().forEach(cookie => {
+          redirectResponse.cookies.set(cookie)
+        })
+        i18nResponse.headers.forEach((value, key) => {
+          redirectResponse.headers.set(key, value)
+        })
+        return redirectResponse
+      }
+
+      // Securely verify the user's identity with the Supabase Auth server
+      const { data: { user }, error } = await supabase.auth.getUser()
+      
+      if (error || !user || user.id !== process.env.ALLOWED_ADMIN_USER_ID) {
+        const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url))
+        response.cookies.getAll().forEach(cookie => {
+          redirectResponse.cookies.set(cookie)
+        })
+        i18nResponse.headers.forEach((value, key) => {
+          redirectResponse.headers.set(key, value)
+        })
+        return redirectResponse
+      }
+    }
 
     // For auth routes, redirect to dashboard if session exists
     if (session && isAuthRoute) {

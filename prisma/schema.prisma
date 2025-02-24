@@ -216,11 +216,10 @@ model Tag {
 }
 
 model Newsletter {
-  id        String   @id @default(uuid())
-  email     String   @unique
+  email     String   @unique @id
+  firstName String?
+  lastName  String?
   isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 
   @@index([email])
   @@schema("public")

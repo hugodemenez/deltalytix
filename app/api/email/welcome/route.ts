@@ -38,6 +38,15 @@ export async function POST(req: Request) {
         isActive: true
       }
     })
+    
+    // Add to resend audience
+    resend.contacts.create({
+      email: record.email,
+      firstName: firstName,
+      lastName: '',
+      unsubscribed: false,
+      audienceId: process.env.RESEND_AUDIENCE_ID || ''
+    })
 
     const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(record.email)}`
 
