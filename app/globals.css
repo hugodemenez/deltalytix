@@ -122,3 +122,14 @@
   -ms-user-select: none;
   user-select: none;
 }
+
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

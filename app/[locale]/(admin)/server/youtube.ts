@@ -11,26 +11,6 @@ const summarySchema = z.object({
   summary: z.string().describe("Un résumé technique concis des mises à jour présentées")
 })
 
-export async function fetchYoutubeTranscript(videoId: string): Promise<string | null> {
-  try {
-    const transcript = await YoutubeTranscript.fetchTranscript(videoId)
-    
-    if (!transcript || transcript.length === 0) {
-      return null
-    }
-
-    // Combine all transcript pieces into one text
-    const fullText = transcript
-      .map(item => item.text)
-      .join(' ')
-      .trim()
-
-    return fullText
-  } catch (error) {
-    console.error('Error fetching YouTube transcript:', error)
-    return null
-  }
-}
 
 export async function generateTranscriptSummary(transcript: string): Promise<string | null> {
   try {
