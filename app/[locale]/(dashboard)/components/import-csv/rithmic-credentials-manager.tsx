@@ -94,7 +94,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                       variant="ghost" 
                       size="sm"
                       onClick={() => handleSync(cred)}
-                      disabled={isAutoSyncing || syncingId === id}
+                      disabled={isAutoSyncing}
                     >
                       {syncingId === id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
