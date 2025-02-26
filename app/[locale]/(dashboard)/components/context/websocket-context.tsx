@@ -534,6 +534,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         status: 'WebSocket error occurred',
         message: 'WebSocket connection error occurred' 
       })
+      // Reset auto sync state on error
+      setIsAutoSyncing(false)
       // Close connection on error
       disconnect()
     }
@@ -549,6 +551,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         status,
         message: `WebSocket disconnected: ${closeMessage}` 
       })
+      // Reset auto sync state on close
+      setIsAutoSyncing(false)
       // Clear timeout on close
       if (activityTimeoutRef.current) {
         clearTimeout(activityTimeoutRef.current)
