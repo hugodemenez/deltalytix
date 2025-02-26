@@ -123,7 +123,10 @@ export default function TraderStatsEmail({
               <Heading className="text-2xl font-bold text-gray-900 mb-6">
                 Bonjour {firstName},
               </Heading>
-              
+              <Text className="text-gray-400 mb-6 leading-6">
+              Cette analyse, effectuée sur les 14 derniers jours par un algorithme, peut contenir des erreurs.
+              </Text>
+
               <Text className="text-gray-800 mb-6 leading-6">
                 {resultAnalysisIntro}
               </Text>
@@ -150,7 +153,7 @@ export default function TraderStatsEmail({
                               <Text className="text-xs text-gray-600 mb-1 w-full text-center">
                                 {day.date}
                               </Text>
-                              <Text className={`text-sm font-semibold ${getPnLColor(day.pnl)} w-full text-center`}>
+                              <Text className={`text-xs font-semibold ${getPnLColor(day.pnl)} w-full text-center`}>
                                 {formatPnLWithSign(day.pnl)}€
                               </Text>
                             </div>

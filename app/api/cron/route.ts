@@ -156,13 +156,10 @@ Données de performance :
 - Jours profitables : ${profitableDays}/${totalDays}
 
 Directives pour l'analyse (intro) :
-1. Indique que l'analyse est faite sur les 14 derniers jours
-2. Informe le trader que le contenu est généré par un algorithme et qu'il peut y avoir des erreurs (ne pas hésiter à me contacter)
-Exemple: Cette analyse est faite par un algorithme et peut contenir des erreurs, n'hesitez pas à me contacter en repondant à cet email si vous remarquez une quelconque anomalie.
-3. Génère UNE SEULE phrase d'analyse des performances, avec un ton encourageant
-4. Sois direct et factuel
-5. Mentionne le point le plus important de la semaine
-6. Maximum 30 mots concernant l'analyse
+1. Génère UNE SEULE phrase d'analyse des performances, avec un ton encourageant
+2. Sois direct et factuel
+3. Mentionne le point le plus important de la semaine
+4. Maximum 30 mots concernant l'analyse
 
 Directives pour les conseils (tips) :
 1. Suggère une action spécifique utilisant les fonctionnalités de Deltalytix
