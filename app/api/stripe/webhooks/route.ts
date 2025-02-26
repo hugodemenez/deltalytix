@@ -37,7 +37,9 @@ export async function POST(req: Request) {
     "payment_intent.payment_failed",
     "customer.subscription.deleted",
     "customer.subscription.updated",
-    "customer.subscription.created"
+    "customer.subscription.created",
+    "invoice.payment_failed",
+    "customer.subscription.trial_will_end"
   ];
 
   if (permittedEvents.includes(event.type)) {
@@ -53,29 +55,37 @@ export async function POST(req: Request) {
           const subscription = await stripe.subscriptions.retrieve(
             data.subscription as string
           );
+
+          // Get the price information to determine the plan
+          const subscriptionItems = await stripe.subscriptionItems.list({
+            subscription: data.subscription as string,
+          });
+          
+          const priceId = subscriptionItems.data[0]?.price.id;
+          const price = await stripe.prices.retrieve(priceId);
+          const subscriptionPlan = price.nickname || data.metadata?.plan || 'free';
           
           const user = await prisma.user.findUnique({
             where: { email: data.customer_details?.email as string },
           });
 
-          const checkoutPlan = data.metadata?.plan || 'free'; // Provide a default value
           await prisma.subscription.upsert({
             where: {
               email: data.customer_details?.email as string,
             },
             update: {
-              plan: checkoutPlan,
+              plan: subscriptionPlan,
               endDate: new Date(subscription.current_period_end * 1000),
               status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
-              trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null
+              trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
             },
             create: {
               email: data.customer_details?.email as string,
-              plan: checkoutPlan,
+              plan: subscriptionPlan,
               user: { connect: { id: user?.id } },
               endDate: new Date(subscription.current_period_end * 1000),
               status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
-              trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null
+              trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
             }
           });
 
@@ -122,6 +132,42 @@ export async function POST(req: Request) {
           ) as Stripe.Customer;
           
           if (updatedCustomerData.email) {
+            // Get the current price information
+            const currentItems = await stripe.subscriptionItems.list({
+              subscription: data.id,
+            });
+            const currentPriceId = currentItems.data[0]?.price.id;
+            const currentPrice = await stripe.prices.retrieve(currentPriceId);
+            const updatedPlan = currentPrice.nickname || data.metadata?.plan || 'free';
+
+            // Handle different subscription statuses
+            let subscriptionStatus: string;
+            switch (data.status) {
+              case 'incomplete_expired':
+                subscriptionStatus = 'EXPIRED';
+                break;
+              case 'incomplete':
+                subscriptionStatus = 'PAYMENT_PENDING';
+                break;
+              case 'past_due':
+                subscriptionStatus = 'PAST_DUE';
+                break;
+              case 'canceled':
+                subscriptionStatus = 'CANCELLED';
+                break;
+              case 'unpaid':
+                subscriptionStatus = 'UNPAID';
+                break;
+              case 'trialing':
+                subscriptionStatus = 'TRIAL';
+                break;
+              case 'active':
+                subscriptionStatus = 'ACTIVE';
+                break;
+              default:
+                subscriptionStatus = 'INACTIVE';
+            }
+
             if (data.cancel_at_period_end) {
               // Update subscription status first
               await prisma.subscription.update({
@@ -150,17 +196,18 @@ export async function POST(req: Request) {
 
               console.log(`Subscription scheduled for cancellation: ${data.id}`);
             } else {
-              const updatedPlan = data.metadata?.plan || 'free'; // Provide a default value
               await prisma.subscription.update({
                 where: { email: updatedCustomerData.email },
                 data: {
-                  status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
-                  plan: updatedPlan,
-                  endDate: new Date(data.current_period_end * 1000),
+                  status: subscriptionStatus,
+                  plan: data.ended_at ? 'free' : updatedPlan,
+                  endDate: data.ended_at 
+                    ? new Date(data.ended_at * 1000)
+                    : new Date(data.current_period_end * 1000),
                   trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
                 }
               });
-              console.log(`Subscription updated: ${data.id}`);
+              console.log(`Subscription updated with status ${subscriptionStatus}: ${data.id}`);
             }
           }
           break;
@@ -197,6 +244,37 @@ export async function POST(req: Request) {
               console.log(`New subscription created and saved: ${data.id}`);
             }
           }
+          break;
+        case "invoice.payment_failed":
+          data = event.data.object as Stripe.Invoice;
+          const customerEmail = (await stripe.customers.retrieve(data.customer as string) as Stripe.Customer).email;
+          
+          if (customerEmail) {
+            await prisma.subscription.update({
+              where: { email: customerEmail },
+              data: { 
+                status: "PAYMENT_FAILED",
+              }
+            });
+          }
+          console.log(`Payment failed for invoice: ${data.id}`);
+          break;
+
+        case "customer.subscription.trial_will_end":
+          data = event.data.object as Stripe.Subscription;
+          const trialEndCustomer = await stripe.customers.retrieve(
+            data.customer as string
+          ) as Stripe.Customer;
+          
+          if (trialEndCustomer.email) {
+            await prisma.subscription.update({
+              where: { email: trialEndCustomer.email },
+              data: { 
+                status: "TRIAL_ENDING",
+              }
+            });
+          }
+          console.log(`Trial ending soon for subscription: ${data.id}`);
           break;
         default:
           throw new Error(`Unhandled event: ${event.type}`);
