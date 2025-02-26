@@ -10,6 +10,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import Link from "next/link"
+import { useI18n } from "@/locales/client"
 
 interface SubscriptionBadgeProps {
   plan: string | null
@@ -20,6 +21,8 @@ interface SubscriptionBadgeProps {
 }
 
 export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, className }: SubscriptionBadgeProps) {
+  const t = useI18n()
+
   if (!plan) {
     return (
       <TooltipProvider>
@@ -34,12 +37,12 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
                   className
                 )}
               >
-                Free
+                {t('pricing.free')}
               </Badge>
             </Link>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Click to upgrade your plan</p>
+            <p>{t('pricing.subscribeToAccess')}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -61,60 +64,134 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
 
   // Get badge content based on status
   const getBadgeContent = () => {
-    if (status === 'TRIAL') {
-      if (!trialDays) return {
-        text: `${formattedPlan} Trial Ended`,
-        variant: 'expired'
-      }
-      return {
-        text: `${formattedPlan} Trial • ${trialDays}d left`,
-        variant: 'trial'
-      }
-    }
-    
-    if (status === 'ACTIVE') {
-      return {
-        text: `${formattedPlan} • Active`,
-        variant: 'active'
-      }
-    }
+    switch (status) {
+      case 'TRIAL':
+        if (!trialDays) return {
+          text: `${formattedPlan} • ${t('billing.status.trialing')}`,
+          variant: 'expired',
+          tooltip: t('billing.status.incomplete_expired')
+        }
+        return {
+          text: `${formattedPlan} • ${trialDays}d ${t('calendar.charts.remaining')}`,
+          variant: 'trial',
+          tooltip: t('billing.trialEndsIn', { date: format(new Date(trialEndsAt!), 'MMM d') })
+        }
+      
+      case 'ACTIVE':
+        return {
+          text: `${formattedPlan} • ${t('billing.status.active')}`,
+          variant: 'active',
+          tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
+        }
 
-    if (!subscriptionDays || subscriptionDays <= 0) {
-      return {
-        text: `${formattedPlan} • Expired`,
-        variant: 'expired'
-      }
-    }
+      case 'PAYMENT_FAILED':
+        return {
+          text: `${formattedPlan} • ${t('billing.status.past_due')}`,
+          variant: 'expired',
+          tooltip: t('billing.status.past_due')
+        }
 
-    if (subscriptionDays <= 5) {
-      return {
-        text: `${formattedPlan} • ${subscriptionDays}d to renew`,
-        variant: 'expiring'
-      }
-    }
+      case 'PAYMENT_PENDING':
+        return {
+          text: `${formattedPlan} • ${t('billing.status.incomplete')}`,
+          variant: 'expiring',
+          tooltip: t('billing.status.incomplete')
+        }
 
-    return {
-      text: `${formattedPlan} • Renews ${format(new Date(endDate!), 'MMM d')}`,
-      variant: 'normal'
+      case 'PAST_DUE':
+        return {
+          text: `${formattedPlan} • ${t('billing.status.past_due')}`,
+          variant: 'expired',
+          tooltip: t('billing.status.past_due')
+        }
+
+      case 'CANCELLED':
+        return {
+          text: `${formattedPlan} • ${t('billing.status.canceled')}`,
+          variant: 'expired',
+          tooltip: t('billing.subscriptionCancelled')
+        }
+
+      case 'UNPAID':
+        return {
+          text: `${formattedPlan} • ${t('billing.status.unpaid')}`,
+          variant: 'expired',
+          tooltip: t('billing.status.unpaid')
+        }
+
+      case 'EXPIRED':
+        return {
+          text: `${formattedPlan} • ${t('billing.status.incomplete_expired')}`,
+          variant: 'expired',
+          tooltip: t('billing.status.incomplete_expired')
+        }
+
+      case 'SCHEDULED_CANCELLATION':
+        if (!subscriptionDays || subscriptionDays <= 0) {
+          return {
+            text: `${formattedPlan} • ${t('billing.status.canceled')}`,
+            variant: 'expired',
+            tooltip: t('billing.subscriptionCancelled')
+          }
+        }
+        return {
+          text: `${formattedPlan} • ${t('billing.scheduledToCancel')}`,
+          variant: 'expiring',
+          tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
+        }
+
+      default:
+        if (!subscriptionDays || subscriptionDays <= 0) {
+          return {
+            text: `${formattedPlan} • ${t('billing.status.incomplete_expired')}`,
+            variant: 'expired',
+            tooltip: t('billing.status.incomplete_expired')
+          }
+        }
+
+        if (subscriptionDays <= 5) {
+          return {
+            text: `${formattedPlan} • ${subscriptionDays}d ${t('calendar.charts.remaining')}`,
+            variant: 'expiring',
+            tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
+          }
+        }
+
+        return {
+          text: `${formattedPlan} • ${t('billing.dates.nextBilling', { date: format(new Date(endDate!), 'MMM d') })}`,
+          variant: 'normal',
+          tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
+        }
     }
   }
 
   const badge = getBadgeContent()
 
   return (
-    <Badge 
-      variant="secondary" 
-      className={cn(
-        "px-2 py-0.5 text-xs whitespace-nowrap", 
-        badge.variant === 'active' && plan.includes('pro') && "bg-primary text-primary-foreground",
-        badge.variant === 'trial' && "bg-blue-500 text-white dark:bg-blue-400",
-        badge.variant === 'expiring' && "bg-destructive text-destructive-foreground",
-        badge.variant === 'expired' && "bg-destructive/80 text-destructive-foreground",
-        badge.variant === 'normal' && "bg-secondary text-secondary-foreground",
-        className
-      )}
-    >
-      {badge.text}
-    </Badge>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge 
+            variant="secondary" 
+            className={cn(
+              "px-2 py-0.5 text-xs whitespace-nowrap cursor-help", 
+              badge.variant === 'active' && plan.includes('pro') && "bg-primary text-primary-foreground",
+              badge.variant === 'trial' && "bg-blue-500 text-white dark:bg-blue-400",
+              badge.variant === 'expiring' && "bg-destructive text-destructive-foreground",
+              badge.variant === 'expired' && "bg-destructive/80 text-destructive-foreground",
+              badge.variant === 'normal' && "bg-secondary text-secondary-foreground",
+              className
+            )}
+          >
+            {badge.text}
+          </Badge>
+        </TooltipTrigger>
+        {badge.tooltip && (
+          <TooltipContent>
+            <p>{badge.tooltip}</p>
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
   )
 } 

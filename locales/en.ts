@@ -1107,6 +1107,7 @@ export default {
     'calendar.charts.weeklyEquityVariation': 'Weekly Equity Variation',
     'calendar.charts.weeklyPnlDistribution': 'Weekly P&L Distribution',
     'calendar.charts.weeklyTotalPnlAfterComm': 'Weekly Total P&L (after commissions)',
+    'calendar.charts.remaining': 'remaining',
     'billing': {
         currentPlan: "Current Plan",
         subscriptionStatus: "Your {plan} subscription is {status}",
