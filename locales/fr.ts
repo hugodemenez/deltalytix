@@ -1172,5 +1172,8 @@ export default {
             nextBilling: "Prochaine facturation le {date}",
             canceledOn: "Annulé le {date}"
         }
-    }
+    },
+    'onboarding.welcome': 'Bienvenue sur Deltalytix !',
+    'onboarding.description': 'Regardez ce tutoriel rapide pour commencer votre parcours de trading',
+    'onboarding.getStarted': 'Commencer'
 } as const

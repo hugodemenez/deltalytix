@@ -82,6 +82,7 @@ model User {
   dashboardLayout DashboardLayout?
   moods           Mood[]
   tags            Tag[]
+  isFirstConnection Boolean        @default(true)
 
   @@index([email])
   @@schema("public")

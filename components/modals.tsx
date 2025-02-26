@@ -10,11 +10,12 @@ import { useI18n } from "@/locales/client"
 import { signOut } from '@/server/auth'
 import PricingPlans from '@/app/[locale]/(landing)/components/pricing-plans'
 import { useSearchParams } from 'next/navigation'
+import OnboardingModal from './onboarding-modal'
 
 const PAYWALL_COOLDOWN = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 export default function Modals() {
-  const { user, subscription, isLoading: userLoading, trades, isLoading: tradesLoading } = useUserData()
+  const { user, subscription, isLoading: userLoading, trades, isLoading: tradesLoading, isFirstConnection } = useUserData()
   const [isPaywallOpen, setIsPaywallOpen] = useState(false)
   const [isAlreadySubscribedOpen, setIsAlreadySubscribedOpen] = useState(false)
   const [isTradesDialogOpen, setIsTradesDialogOpen] = useState(false)
@@ -27,7 +28,7 @@ export default function Modals() {
       const lastShown = localStorage.getItem('paywall_last_shown');
       const currentTime = Date.now();
       
-      if (!lastShown || (currentTime - parseInt(lastShown)) > PAYWALL_COOLDOWN) {
+      if (!isFirstConnection && (!lastShown || (currentTime - parseInt(lastShown)) > PAYWALL_COOLDOWN)) {
         console.log('[Modals] Showing paywall - User not subscribed:', { 
           email: user.email,
           plan: subscription?.plan,
@@ -77,6 +78,7 @@ export default function Modals() {
   return (
     <>
       {(userLoading || tradesLoading) && <LoadingOverlay />}
+      <OnboardingModal />
       
       <Dialog open={isAlreadySubscribedOpen} onOpenChange={setIsAlreadySubscribedOpen}>
         <DialogContent>

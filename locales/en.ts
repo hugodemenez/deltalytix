@@ -1144,5 +1144,8 @@ export default {
             nextBilling: "Next billing on {date}",
             canceledOn: "Canceled on {date}"
         }
-    }
+    },
+    'onboarding.welcome': 'Welcome to Deltalytix!',
+    'onboarding.description': 'Watch this quick tutorial to get started with your trading journey',
+    'onboarding.getStarted': 'Get Started'
 } as const

@@ -8,6 +8,7 @@ import { getShared } from './shared'
 import { Tag, Trade } from '@prisma/client'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { getTags } from './tags'
+import { getOnboardingStatus } from './onboarding'
 
 // Update the interface declarations to export them
 export interface LayoutItem {
@@ -32,6 +33,7 @@ interface TickDetail {
 
 export type InitialDataResponse = {
   user: any | null
+  isFirstConnection: boolean
   subscription: {
     isActive: boolean
     plan: string | null
@@ -65,6 +67,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       console.error('[loadInitialData] Session error:', sessionError)
       return {
         user: null,
+        isFirstConnection: false,
         subscription: null,
         trades: [],
         tickDetails: {},
@@ -78,6 +81,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       console.log('[loadInitialData] No session found')
       return {
         user: null,
+        isFirstConnection: false,
         subscription: null,
         trades: [],
         tickDetails: {},
@@ -94,6 +98,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       console.error('[loadInitialData] Auth error:', userError)
       return {
         user: null,
+        isFirstConnection: false,
         subscription: null,
         trades: [],
         tickDetails: {},
@@ -107,6 +112,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       console.log('[loadInitialData] No user found')
       return {
         user: null,
+        isFirstConnection: false,
         subscription: null,
         trades: [],
         tickDetails: {},
@@ -117,6 +123,9 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     }
 
     console.log('[loadInitialData] User found', { userId: user.id })
+
+    // Get user onboarding status
+    const isFirstConnection = await getOnboardingStatus()
 
     // Get subscription details first
     console.log('[loadInitialData] Fetching subscription details')
@@ -148,6 +157,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
 
     return {
       user,
+      isFirstConnection,
       subscription,
       trades: tradesResult,
       tickDetails,
@@ -158,6 +168,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     console.error('[loadInitialData] Error loading initial data:', error)
     return {
       user: null,
+      isFirstConnection: false,
       subscription: null,
       trades: [],
       tickDetails: {},

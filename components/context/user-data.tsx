@@ -216,6 +216,8 @@ interface UserDataContextType {
   isLoading: boolean
   isMobile: boolean
   isSharedView: boolean
+  isFirstConnection: boolean
+  setIsFirstConnection: (isFirstConnection: boolean) => void
 
   // Trades related
   trades: TradeWithUTC[]
@@ -320,6 +322,7 @@ export const UserDataProvider: React.FC<{
   
   // User state - null for shared views
   const [user, setUser] = useState<User | null>(null);
+  const [isFirstConnection, setIsFirstConnection] = useState<boolean>(false);
   const [subscription, setSubscription] = useState<UserDataContextType['subscription']>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tickDetails, setTickDetails] = useState<Record<string, number>>({});
@@ -407,6 +410,7 @@ export const UserDataProvider: React.FC<{
         const data = await loadInitialData();
         if (!data.error) {
           setUser(data.user);
+          setIsFirstConnection(data.isFirstConnection);
           setSubscription(data.subscription);
           if (data.tags) {
             setTags(data.tags);
@@ -689,7 +693,8 @@ export const UserDataProvider: React.FC<{
     isLoading,
     isMobile,
     isSharedView,
-
+    isFirstConnection,
+    setIsFirstConnection,
     // Trades related
     trades,
     setTrades,
