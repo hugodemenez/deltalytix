@@ -201,7 +201,7 @@ export async function loadInitialContent() {
   const prisma = new PrismaClient()
   const trades = await prisma.trade.findMany({
     where: {
-      userId: 'e7707438-447f-453d-8652-5a9b93ba784b',
+      userId: process.env.ALLOWED_ADMIN_USER_ID,
     },
   })
   
