@@ -30,6 +30,7 @@ interface FilterDropdownProps {
   isItemDisabled: (item: FilterItem) => boolean
   isItemSelected: (item: FilterItem) => boolean
   anonymizeAccount?: (account: string) => string
+  className?: string
 }
 
 function FilterDropdown({ 
@@ -40,7 +41,8 @@ function FilterDropdown({
   onSelectAll,
   isItemDisabled,
   isItemSelected,
-  anonymizeAccount 
+  anonymizeAccount,
+  className
 }: FilterDropdownProps) {
   const [open, setOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
@@ -65,7 +67,7 @@ function FilterDropdown({
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="flex items-center">
+        <Button variant="outline" className={`flex items-center ${className || ''}`}>
           <span className="flex-1 text-left">{buttonText[type]}</span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
         </Button>
@@ -276,6 +278,7 @@ export function FilterDropdowns({ showAccountNumbers }: FilterDropdownsProps) {
         onSelectAll={() => handleSelectAll('propfirm')}
         isItemDisabled={isItemDisabled}
         isItemSelected={isItemSelected}
+        className="hidden [@media(max-aspect-ratio:3/2)]:hidden [@media(min-aspect-ratio:3/2)_and_(min-width:1280px)]:flex"
       />
       <FilterDropdown
         type="instrument"
