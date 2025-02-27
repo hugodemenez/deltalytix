@@ -28,6 +28,7 @@ import { useI18n } from "@/locales/client"
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
 
+
 export function DataManagementCard() {
   const t = useI18n()
   const { trades, setTrades, refreshTrades, user } = useUserData()
@@ -36,11 +37,8 @@ export function DataManagementCard() {
   const [renameLoading, setRenameLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [expandedAccounts, setExpandedAccounts] = useState<Record<string, boolean>>({})
-  const [renameDialogOpen, setRenameDialogOpen] = useState(false)
   const [renameInstrumentDialogOpen, setRenameInstrumentDialogOpen] = useState(false)
-  const [accountToRename, setAccountToRename] = useState("")
   const [instrumentToRename, setInstrumentToRename] = useState({ accountNumber: "", currentName: "" })
-  const [newAccountName, setNewAccountName] = useState("")
   const [newInstrumentName, setNewInstrumentName] = useState("")
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -163,40 +161,6 @@ export function DataManagementCard() {
     }))
   }
 
-  const handleRenameAccount = async () => {
-    if (!user || !accountToRename || !newAccountName) return
-    try {
-      setRenameLoading(true)
-      await renameAccount(accountToRename, newAccountName, user.id)
-      await refreshTrades()
-      toast({
-        title: t('dataManagement.toast.accountRenamed'),
-        variant: 'default',
-      })
-      setRenameDialogOpen(false)
-      setAccountToRename("")
-      setNewAccountName("")
-    } catch (error) {
-      console.error("Failed to rename account:", error)
-      setError(error instanceof Error ? error : new Error('Failed to rename account'))
-      toast({
-        title: t('dataManagement.toast.renameError'),
-        description: t('dataManagement.toast.deleteErrorDesc'),
-        variant: 'destructive',
-      })
-    } finally {
-      setRenameLoading(false)
-    }
-  }
-
-  const handleSelectAccount = (accountNumber: string) => {
-    setSelectedAccounts(prev =>
-      prev.includes(accountNumber)
-        ? prev.filter(acc => acc !== accountNumber)
-        : [...prev, accountNumber]
-    )
-  }
-
   const handleRenameInstrument = async () => {
     if (!user || !instrumentToRename.currentName || !newInstrumentName) return
     try {
@@ -221,6 +185,14 @@ export function DataManagementCard() {
     } finally {
       setRenameLoading(false)
     }
+  }
+
+  const handleSelectAccount = (accountNumber: string) => {
+    setSelectedAccounts(prev =>
+      prev.includes(accountNumber)
+        ? prev.filter(acc => acc !== accountNumber)
+        : [...prev, accountNumber]
+    )
   }
 
   if (error) return (
@@ -345,13 +317,6 @@ export function DataManagementCard() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => {
-                            setAccountToRename(accountNumber)
-                            setRenameDialogOpen(true)
-                          }}>
-                            <Edit2 className="w-4 h-4 mr-2" />
-                            {t('dataManagement.renameAccount')}
-                          </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
                             onSelect={() => {
@@ -369,18 +334,6 @@ export function DataManagementCard() {
                   </div>
                 </div>
                 <div className="hidden sm:flex items-center w-auto justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mr-2"
-                    onClick={() => {
-                      setAccountToRename(accountNumber)
-                      setRenameDialogOpen(true)
-                    }}
-                  >
-                    <Edit2 className="w-4 h-4 mr-2" />
-                    {t('dataManagement.rename')}
-                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -465,52 +418,6 @@ export function DataManagementCard() {
           ))}
         </div>
       </CardContent>
-      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t('dataManagement.renameDialog.title')}</DialogTitle>
-            <DialogDescription>
-              {t('dataManagement.renameDialog.description')}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={(e) => {
-            e.preventDefault()
-            handleRenameAccount()
-          }}>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="newAccountName" className="text-right">
-                  {t('dataManagement.renameDialog.newName')}
-                </Label>
-                <Input
-                  id="newAccountName"
-                  value={newAccountName}
-                  onChange={(e) => setNewAccountName(e.target.value)}
-                  className="col-span-3"
-                  autoFocus
-                  autoComplete="off"
-                  placeholder={t('dataManagement.renameDialog.placeholder')}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="submit"
-                disabled={renameLoading || !newAccountName}
-              >
-                {renameLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('dataManagement.renameDialog.renaming')}
-                  </>
-                ) : (
-                  t('dataManagement.rename')
-                )}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
       <Dialog open={renameInstrumentDialogOpen} onOpenChange={setRenameInstrumentDialogOpen}>
         <DialogContent>
           <DialogHeader>
