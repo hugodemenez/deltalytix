@@ -33,6 +33,8 @@ export function LanguageSelector({
 
   const handleLanguageChange = (locale: string) => {
     changeLocale(locale as "en" | "fr")
+    // Force a full page reload to ensure middleware picks up the new locale
+    window.location.reload()
     setOpen(false)
   }
 
