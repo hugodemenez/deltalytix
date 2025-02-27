@@ -80,6 +80,7 @@ export default function Modals() {
       {(userLoading || tradesLoading) && <LoadingOverlay />}
       <OnboardingModal />
       
+
       <Dialog open={isAlreadySubscribedOpen} onOpenChange={setIsAlreadySubscribedOpen}>
         <DialogContent>
           <DialogHeader>
@@ -98,9 +99,10 @@ export default function Modals() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isTradesDialogOpen} onOpenChange={setIsTradesDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
+      {!isFirstConnection && (
+        <Dialog open={isTradesDialogOpen} onOpenChange={setIsTradesDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
             <DialogTitle>{t('modals.noTrades.title')}</DialogTitle>
             <DialogDescription>
               {t('modals.noTrades.description')}
@@ -109,6 +111,7 @@ export default function Modals() {
           <ImportButton />
         </DialogContent>
       </Dialog>
+      )}
 
       <Dialog 
         open={isPaywallOpen} 
