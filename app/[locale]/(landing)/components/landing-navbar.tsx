@@ -20,7 +20,7 @@ import {
 import { useTheme } from '@/components/context/theme-provider'
 import { cn } from '@/lib/utils'
 import { useUserData } from '@/components/context/user-data'
-import { useI18n } from "@/locales/client"
+import { useChangeLocale, useI18n } from "@/locales/client"
 import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -111,12 +111,17 @@ export default function Component() {
         // Add more languages here
     ]
 
-    const [open, setOpen] = useState(false)
     const [themeOpen, setThemeOpen] = useState(false)
-
+    const [languageOpen, setLanguageOpen] = useState(false)
+    const changeLocale = useChangeLocale()
     const handleThemeChange = (value: string) => {
         setTheme(value as "light" | "dark" | "system")
         setThemeOpen(false)
+    }
+
+    const handleLanguageChange = (value: string) => {
+        changeLocale(value as "en" | "fr")
+        setLanguageOpen(false)
     }
 
     const getThemeIcon = () => {
@@ -172,12 +177,12 @@ export default function Component() {
             <div className="py-4 border-t space-y-4">
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="w-full justify-start">
+                        <Button variant="ghost" className="w-full justify-start">
                             {getThemeIcon()}
                             <span className="ml-2">{t('navbar.changeTheme')}</span>
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[200px] p-0">
+                    <PopoverContent className="w-[200px] p-0" align="start">
                         <Command>
                             <CommandList>
                                 <CommandGroup>
@@ -198,14 +203,32 @@ export default function Component() {
                         </Command>
                     </PopoverContent>
                 </Popover>
-                <LanguageSelector
-                    languages={languages}
-                    className="w-full"
-                    triggerClassName="w-full justify-start"
-                    onRequestNewLanguage={() => {
-                        console.log("Request new language support")
-                    }}
-                />
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-start">
+                            <Globe className="h-5 w-5" />
+                            <span className="ml-2">{t('navbar.changeLanguage')}</span>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0" align="start">
+                        <Command>
+                            <CommandList>
+                                <CommandGroup>
+                                    {languages.map((language) => (
+                                        <CommandItem
+                                            key={language.value}
+                                            onSelect={() => handleLanguageChange(language.value)}
+                                            className="flex items-center"
+                                        >
+                                            <span className="mr-2">{language.value === 'en' ? '🇬🇧' : '🇫🇷'}</span>
+                                            <span>{language.label}</span>
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
             </div>
         </nav>
     )
@@ -313,22 +336,40 @@ export default function Component() {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                    <LanguageSelector
-                        languages={languages}
-                        className="hidden lg:flex"
-                        triggerClassName="hidden lg:flex"
-                        onRequestNewLanguage={() => {
-                            console.log("Request new language support")
-                        }}
-                    />
-                    <Popover open={themeOpen} onOpenChange={setThemeOpen}>
+                    <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="hidden lg:flex">
+                            <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0">
+                                <Globe className="h-5 w-5" />
+                                <span className="sr-only">{t('navbar.changeLanguage')}</span>
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[200px] p-0" align="end">
+                            <Command>
+                                <CommandList>
+                                    <CommandGroup>
+                                        {languages.map((language) => (
+                                            <CommandItem
+                                                key={language.value}
+                                                onSelect={() => handleLanguageChange(language.value)}
+                                                className="flex items-center"
+                                            >
+                                                <span className="mr-2">{language.value === 'en' ? '🇬🇧' : '🇫🇷'}</span>
+                                                <span>{language.label}</span>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0">
                                 {getThemeIcon()}
                                 <span className="sr-only">{t('navbar.toggleTheme')}</span>
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0">
+                        <PopoverContent className="w-[200px] p-0" align="end">
                             <Command>
                                 <CommandList>
                                     <CommandGroup>
