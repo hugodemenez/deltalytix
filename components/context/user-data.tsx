@@ -14,7 +14,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { loadInitialData, loadSharedData, LayoutItem as ServerLayoutItem, Layouts as ServerLayouts } from '@/server/user-data'
 import { saveDashboardLayout } from '@/server/database'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
-
+import type { Account as PropFirmAccount } from '@prisma/client'
 const supabase = createClient();
 
 // Types from trades-data.tsx
@@ -282,6 +282,10 @@ interface UserDataContextType {
   // New properties
   tags: Tag[]
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>
+
+  // Add propfirm accounts
+  propfirmAccounts: PropFirmAccount[]
+  setPropfirmAccounts: React.Dispatch<React.SetStateAction<PropFirmAccount[]>>
 }
 
 
@@ -374,7 +378,10 @@ export const UserDataProvider: React.FC<{
   // Add tag filter state
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] })
 
-  // Update the fetchData function to handle shared views
+  // Add propfirm accounts state
+  const [propfirmAccounts, setPropfirmAccounts] = useState<PropFirmAccount[]>([])
+
+  // Update fetchData to handle propfirm accounts
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -414,6 +421,9 @@ export const UserDataProvider: React.FC<{
           setSubscription(data.subscription);
           if (data.tags) {
             setTags(data.tags);
+          }
+          if (data.propfirmAccounts) {
+            setPropfirmAccounts(data.propfirmAccounts);
           }
           // Only set layouts if we have user data
           if (data.layouts) {
@@ -758,6 +768,10 @@ export const UserDataProvider: React.FC<{
     // New properties
     tags,
     setTags,
+
+    // Add propfirm accounts
+    propfirmAccounts,
+    setPropfirmAccounts,
   };
 
   return (
