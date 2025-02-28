@@ -22,6 +22,10 @@ import { useUserData } from '@/components/context/user-data'
 import { useToast } from '@/hooks/use-toast'
 import { useI18n, useCurrentLocale } from '@/locales/client'
 import { fr, enUS } from 'date-fns/locale'
+import { Textarea } from "@/components/ui/textarea"
+import { useDebounce } from "@/hooks/use-debounce"
+import { Loader2 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;
@@ -64,6 +68,11 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const dateLocale = locale === 'fr' ? fr : enUS
   const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
   const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
+  const [comment, setComment] = React.useState<string>("")
+  const [isSavingComment, setIsSavingComment] = React.useState(false)
+  const [saveError, setSaveError] = React.useState<string | null>(null)
+  
+  const debouncedComment = useDebounce(comment, 1000)
 
   const STORAGE_KEY = 'daily_mood'
 
@@ -148,7 +157,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     };
   }, [dayData?.trades]);
 
-  // Load mood from localStorage or fetch from server on mount
+  // Load mood and comment from localStorage or fetch from server on mount
   React.useEffect(() => {
     const loadMood = async () => {
       if (!user?.id || !dayData?.trades?.[0]?.entryDate) return
@@ -161,6 +170,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
         const storedMood = JSON.parse(storedMoodData)
         if (storedMood.date === focusedDay) {
           setSelectedMood(storedMood.mood)
+          setComment(storedMood.comment || '')
           return
         }
       }
@@ -170,9 +180,15 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
         const mood = await getMoodForDay(user.id, new Date(dayData.trades[0].entryDate))
         if (mood) {
           setSelectedMood(mood.mood as 'bad' | 'okay' | 'great')
+          // Get the comment from the conversation array
+          const comment = mood.conversation ? 
+            (mood.conversation as Array<{ role: string; content: string }>).find(msg => msg.role === 'user')?.content || '' 
+            : ''
+          setComment(comment)
           // Update localStorage
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
             mood: mood.mood,
+            comment,
             date: focusedDay
           }))
         }
@@ -183,6 +199,41 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
 
     loadMood()
   }, [user?.id, dayData?.trades])
+
+  React.useEffect(() => {
+    if (!user?.id || !dayData?.trades?.[0]?.entryDate || !selectedMood || !debouncedComment) return
+    
+    const saveComment = async () => {
+      setIsSavingComment(true)
+      setSaveError(null)
+      
+      try {
+        const date = new Date(dayData.trades[0].entryDate)
+        date.setHours(12, 0, 0, 0)
+        await saveMood(user.id, selectedMood, [{ role: 'user', content: debouncedComment }], date)
+        
+        // Update localStorage
+        const focusedDay = date.toISOString().split('T')[0]
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          mood: selectedMood,
+          comment: debouncedComment,
+          date: focusedDay
+        }))
+      } catch (error) {
+        console.error('Error saving comment:', error)
+        setSaveError(t('calendar.charts.commentError'))
+        toast({
+          title: t('error'),
+          description: t('calendar.charts.commentError'),
+          variant: "destructive",
+        })
+      } finally {
+        setIsSavingComment(false)
+      }
+    }
+
+    saveComment()
+  }, [debouncedComment, user?.id, dayData?.trades, selectedMood, t])
 
   const handleMoodSelect = async (mood: 'bad' | 'okay' | 'great') => {
     if (!user?.id || !dayData?.trades?.[0]?.entryDate) {
@@ -199,13 +250,14 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
       const date = new Date(dayData.trades[0].entryDate)
       // Set the time to noon to avoid timezone issues
       date.setHours(12, 0, 0, 0)
-      await saveMood(user.id, mood, undefined, date)
+      await saveMood(user.id, mood, [{ role: 'user', content: comment }], date)
       setSelectedMood(mood)
       
       // Save to localStorage
       const focusedDay = date.toISOString().split('T')[0]
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         mood,
+        comment,
         date: focusedDay
       }))
 
@@ -223,6 +275,11 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     } finally {
       setIsLoading(null)
     }
+  }
+
+  const handleCommentChange = (newComment: string) => {
+    setComment(newComment)
+    setSaveError(null)
   }
 
   const getMoodButtonStyle = (moodType: 'bad' | 'okay' | 'great') => {
@@ -392,6 +449,48 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
           )}
         </Card>
       </div>
+
+      {!isWeekly && (
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle className="text-base md:text-lg">
+              {t('calendar.charts.dailyComment')}
+            </CardTitle>
+            <CardDescription className="text-xs md:text-sm">
+              {t('calendar.charts.addComment')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              placeholder={t('calendar.charts.dailyCommentPlaceholder')}
+              value={comment}
+              onChange={(e) => handleCommentChange(e.target.value)}
+              className={cn(
+                "min-h-[100px] resize-none",
+                isSavingComment && "opacity-50",
+                saveError && "border-destructive"
+              )}
+              disabled={!selectedMood || isSavingComment}
+            />
+            {isSavingComment && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {t('calendar.charts.saving')}
+              </div>
+            )}
+            {saveError && (
+              <p className="text-sm text-destructive mt-2">
+                {saveError}
+              </p>
+            )}
+            {!selectedMood && (
+              <p className="text-sm text-muted-foreground mt-2">
+                {t('calendar.charts.selectMoodFirst')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="w-full">
         <CardHeader>

@@ -1175,5 +1175,13 @@ export default {
     },
     'onboarding.welcome': 'Bienvenue sur Deltalytix !',
     'onboarding.description': 'Regardez ce tutoriel rapide pour commencer votre parcours de trading',
-    'onboarding.getStarted': 'Commencer'
+    'onboarding.getStarted': 'Commencer',
+    'calendar.charts.dailyComment': 'Commentaire du jour',
+    'calendar.charts.dailyCommentPlaceholder': 'Ajoutez une note sur votre journée de trading...',
+    'calendar.charts.selectMoodFirst': 'Sélectionnez une humeur pour ajouter un commentaire',
+    'calendar.charts.commentSaved': 'Commentaire enregistré',
+    'calendar.charts.commentSaving': 'Enregistrement du commentaire...',
+    'calendar.charts.commentError': 'Erreur lors de l\'enregistrement du commentaire',
+    'calendar.charts.saving': 'Enregistrement...',
+    'calendar.charts.addComment': 'Ajouter un commentaire'
 } as const
