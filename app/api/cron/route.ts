@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client"
 import { Resend } from 'resend'
 import { headers } from 'next/headers'
 import TraderStatsEmail from "@/components/emails/weekly-recap"
+import MissingYouEmail from "@/components/emails/missing-data"
 import { openai } from "@ai-sdk/openai"
 import { streamObject } from "ai"
 import { z } from "zod"
@@ -73,6 +74,19 @@ export async function GET(req: Request) {
             const tradeDate = new Date(trade.entryDate)
             return tradeDate >= new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
           })
+
+          //  if no trades, send an email to the user to remind them to start trading
+          if (trades.length === 0) {
+            return {
+              from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
+              to: [email],
+              subject: 'Nous manquons de vous voir sur Deltalytix',
+              react: MissingYouEmail({
+                firstName: firstName || 'trader',
+                email,
+              }),
+            }
+          }
           
           const winLossStats = trades.reduce((acc, trade) => {
             if (trade.pnl > 0) {
