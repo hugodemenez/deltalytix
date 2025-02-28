@@ -39,7 +39,7 @@ export default function MissingYouEmail({
               </Heading>
 
               <Text className="text-gray-800 mb-6 leading-6">
-                Nous avons remarqué que vous n'avez pas encore importé vos données de trading sur Deltalytix.
+                Nous avons remarqué que vous n&apos;avez pas encore importé vos données de trading sur Deltalytix.
               </Text>
 
               <Text className="text-gray-800 mb-6 leading-6">
@@ -123,13 +123,13 @@ export default function MissingYouEmail({
                 </li>
                 <li className="text-gray-800 mb-2">
                   <Text className="text-gray-800">
-                    Identifier vos points forts et vos axes d'amélioration
+                    Identifier vos points forts et vos axes d&apos;amélioration
                   </Text>
                 </li>
               </ul>
 
               <Text className="text-gray-800 mb-6 leading-6">
-                Commencez dès aujourd'hui en important vos données et découvrez comment Deltalytix peut transformer votre approche du trading.
+                Commencez dès aujourd&apos;hui en important vos données et découvrez comment Deltalytix peut transformer votre approche du trading.
               </Text>
 
               <Section className="text-center mb-8">
