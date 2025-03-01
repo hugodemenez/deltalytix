@@ -5,6 +5,7 @@ import { PostType } from '@prisma/client'
 import { createPost } from '@/server/community'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/locales/client'
+import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
@@ -53,6 +54,7 @@ type Props = {
 
 export function CreatePost({ children }: Props) {
   const t = useI18n()
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const form = useForm<z.infer<typeof formSchema>>({
@@ -111,6 +113,7 @@ export function CreatePost({ children }: Props) {
       await createPost(values)
       setOpen(false)
       form.reset()
+      router.refresh()
       toast.success(t('community.createPost.success'))
     } catch (error) {
       toast.error(t('community.createPost.error'))

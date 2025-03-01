@@ -7,6 +7,7 @@ import { ArrowBigDown, ArrowBigUp, MessageSquare, ImageIcon, Pencil } from 'luci
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useI18n, useCurrentLocale } from '@/locales/client'
+import { useRouter } from 'next/navigation'
 import {
   Card,
   CardContent,
@@ -61,6 +62,7 @@ const statusColors = {
 export function PostCard({ post }: Props) {
   const t = useI18n()
   const locale = useCurrentLocale()
+  const router = useRouter()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [optimisticVotes, setOptimisticVotes] = useState(post.votes)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
@@ -127,6 +129,7 @@ export function PostCard({ post }: Props) {
 
       setOptimisticVotes(newVotes)
       await votePost(post.id, type)
+      router.refresh()
     } catch (error) {
       // Revert optimistic update
       setOptimisticVotes(post.votes)
@@ -137,6 +140,7 @@ export function PostCard({ post }: Props) {
   async function handleDelete() {
     try {
       await deletePost(post.id)
+      router.refresh()
       toast.success('Post deleted')
     } catch (error) {
       toast.error('Failed to delete post')
@@ -146,6 +150,7 @@ export function PostCard({ post }: Props) {
   async function handleEdit() {
     try {
       await editPost(post.id, editedContent)
+      router.refresh()
       setIsEditing(false)
       toast.success('Post updated')
     } catch (error) {

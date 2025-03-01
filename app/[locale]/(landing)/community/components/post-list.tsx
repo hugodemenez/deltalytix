@@ -33,12 +33,11 @@ type Props = {
 
 export function PostList({ initialPosts }: Props) {
   const t = useI18n()
-  const [posts] = useState(initialPosts)
   const [filter, setFilter] = useState<PostType | 'ALL'>('ALL')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<PostStatus | 'ALL'>('ALL')
 
-  const filteredPosts = posts.filter((post) => {
+  const filteredPosts = initialPosts.filter((post) => {
     const matchesType = filter === 'ALL' || post.type === filter
     const matchesStatus = statusFilter === 'ALL' || post.status === statusFilter
     const matchesSearch = post.title.toLowerCase().includes(search.toLowerCase()) ||

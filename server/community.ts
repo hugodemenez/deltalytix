@@ -103,7 +103,7 @@ export async function createPost(formData: {
       },
     })
 
-    revalidatePath('/community')
+    revalidatePath('/community', 'page')
     return { post }
   } catch (error) {
     console.error('Failed to create post:', error)
