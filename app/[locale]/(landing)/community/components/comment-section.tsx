@@ -235,7 +235,7 @@ export function CommentSection({
       <div className="space-y-4">
         <div className="flex items-start gap-4">
           <Avatar className="h-8 w-8 shrink-0">
-            <AvatarFallback>{user.email[0].toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{user?.email?.[0].toUpperCase() || ''}</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2">
             <Textarea
