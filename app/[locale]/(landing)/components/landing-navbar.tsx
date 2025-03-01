@@ -166,10 +166,16 @@ export default function Component() {
                     <MobileNavItem href="/pricing" onClick={onLinkClick} className={cn(
                         "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180 border-b",
                     )}>{t('navbar.pricing')}</MobileNavItem>
-                    <MobileNavItem href="/updates" onClick={onLinkClick} className={cn(
-                        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180 border-b",
-                    )}>{t('navbar.updates')}</MobileNavItem>
                 </ul>
+                <AccordionItem value="updates">
+                    <AccordionTrigger>{t('navbar.updates')}</AccordionTrigger>
+                    <AccordionContent>
+                        <ul className="space-y-2 list-none">
+                            <MobileNavItem href="/updates" onClick={onLinkClick}>{t('navbar.productUpdates')}</MobileNavItem>
+                            <MobileNavItem href="/community" onClick={onLinkClick}>{t('navbar.community')}</MobileNavItem>
+                        </ul>
+                    </AccordionContent>
+                </AccordionItem>
             </Accordion>
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
                 <Link href={user ? "/dashboard" : "/authentication"}>{user ? t('navbar.dashboard') : t('navbar.signIn')}</Link>
@@ -286,12 +292,18 @@ export default function Component() {
                                     </NavigationMenuLink>
                                 </Link>
                             </NavigationMenuItem>
-                            <NavigationMenuItem>
-                                <Link href="/updates" legacyBehavior passHref>
-                                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
-                                        {t('navbar.updates')}
-                                    </NavigationMenuLink>
-                                </Link>
+                            <NavigationMenuItem onMouseEnter={() => setHoveredItem('updates')} onMouseLeave={() => setHoveredItem(null)}>
+                                <NavigationMenuTrigger className='bg-transparent'>{t('navbar.updates')}</NavigationMenuTrigger>
+                                <NavigationMenuContent>
+                                    <ul className="grid gap-3 p-4 w-[400px] list-none">
+                                        <ListItem href="/updates" title={t('navbar.productUpdates')} icon={<BarChart3 className="h-4 w-4" />}>
+                                            {t('navbar.productUpdatesDescription')}
+                                        </ListItem>
+                                        <ListItem href="/community" title={t('navbar.community')} icon={<Users className="h-4 w-4" />}>
+                                            {t('navbar.communityDescription')}
+                                        </ListItem>
+                                    </ul>
+                                </NavigationMenuContent>
                             </NavigationMenuItem>
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('developers')} onMouseLeave={() => setHoveredItem(null)}>
                                 <NavigationMenuTrigger className='bg-transparent'>{t('navbar.developers')}</NavigationMenuTrigger>

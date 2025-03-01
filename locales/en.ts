@@ -78,6 +78,8 @@ export default {
     'navbar.api': 'API',
     'navbar.pricing': 'Pricing',
     'navbar.updates': 'Updates',
+    'navbar.productUpdates': 'Product Updates',
+    'navbar.productUpdatesDescription': 'Stay up to date with our latest features and improvements.',
     'navbar.dashboard': 'Dashboard',
     'navbar.signIn': 'Sign in',
     'navbar.elevateTrading': 'Elevate your trading with comprehensive analytics and AI-powered insights.',
@@ -90,6 +92,8 @@ export default {
     'navbar.documentationDescription': 'Comprehensive guides and API references.',
     'navbar.joinCommunityDescription': 'Connect with other developers and traders.',
     'navbar.apiDescription': 'Access our API for custom integrations.',
+    'navbar.community': 'Community',
+    'navbar.communityDescription': 'Join our community to share ideas, report bugs, and discuss features.',
     'navbar.oneApi': 'One API to rule them all',
     'navbar.oneApiDescription': 'A single API effortlessly connecting to multiple providers and get one unified format.',
     'navbar.toggleTheme': 'Toggle theme',
@@ -1178,5 +1182,81 @@ export default {
     },
     'import.type.etpSync.name': 'ETP',
     'import.type.etpSync.description': 'Direct account synchronization',
-    'import.type.etpSync.details': 'Direct sync with your ETP account. Requires API token authentication.'
+    'import.type.etpSync.details': 'Direct sync with your ETP account. Requires API token authentication.',
+    'community': {
+        'title': 'Community',
+        'description': 'Share your ideas, report bugs, and discuss features with the community.',
+        'newPost': 'New Post',
+        'searchPosts': 'Search posts...',
+        'filterByType': 'Filter by type',
+        'filterByStatus': 'Filter by status',
+        'types': {
+            'all': 'All Types',
+            'featureRequest': 'Feature Requests',
+            'bugReport': 'Bug Reports',
+            'discussion': 'Discussions'
+        },
+        'status': {
+            'all': 'All Status',
+            'open': 'Open',
+            'inProgress': 'In Progress',
+            'completed': 'Completed',
+            'closed': 'Closed'
+        },
+        'noPosts': 'No posts found',
+        'post': {
+            'edit': 'Edit',
+            'delete': 'Delete',
+            'cancel': 'Cancel',
+            'save': 'Save',
+            'screenshot': 'Screenshot',
+            'screenshots': 'Screenshots',
+            'score': 'Score',
+            'comments': 'Comments',
+            'postedBy': 'Posted by {user} {time} ago'
+        },
+        'createPost': {
+            'title': 'Create Post',
+            'description': 'Share your ideas, report bugs, or start a discussion with the community.',
+            'type': 'Type',
+            'selectType': 'Select a post type',
+            'postTitle': 'Title',
+            'titlePlaceholder': 'Enter your post title',
+            'content': 'Content',
+            'contentPlaceholder': 'Write your post content here...',
+            'screenshots': 'Screenshots (optional)',
+            'addScreenshot': 'Add Screenshot',
+            'maxScreenshots': 'Maximum 3 screenshots allowed',
+            'imageSizeError': 'Image must be less than 5MB',
+            'imageTypeError': 'Invalid file type. Please upload a JPEG, PNG or WebP image',
+            'createButton': 'Create Post',
+            'success': 'Post created successfully',
+            'error': 'Failed to create post'
+        },
+        'comments': {
+            'writeComment': 'Write a comment...',
+            'writeReply': 'Write a reply...',
+            'reply': 'Reply',
+            'edit': 'Edit',
+            'delete': 'Delete',
+            'cancel': 'Cancel',
+            'save': 'Save',
+            'comment': 'Comment',
+            'signInPrompt': 'Please sign in to comment',
+            'noComments': 'No comments yet. Be the first to comment!',
+            'timeAgo': '{time} ago',
+            'success': {
+                'add': 'Comment added',
+                'reply': 'Reply added',
+                'update': 'Comment updated',
+                'delete': 'Comment deleted'
+            },
+            'error': {
+                'add': 'Failed to add comment',
+                'reply': 'Failed to add reply',
+                'update': 'Failed to update comment',
+                'delete': 'Failed to delete comment'
+            }
+        }
+    },
 } as const

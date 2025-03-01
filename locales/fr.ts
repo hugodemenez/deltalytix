@@ -77,6 +77,10 @@ export default {
     'navbar.api': 'API',
     'navbar.pricing': 'Tarifs',
     'navbar.updates': 'Mises à jour',
+    'navbar.productUpdates': 'Mises à jour du produit',
+    'navbar.productUpdatesDescription': 'Restez informé de nos dernières fonctionnalités et améliorations.',
+    'navbar.community': 'Communauté',
+    'navbar.communityDescription': 'Partagez vos idées, signalez des bugs et discutez des fonctionnalités.',
     'navbar.dashboard': 'Tableau de bord',
     'navbar.signIn': 'Se connecter',
     'navbar.elevateTrading': 'Améliorez votre trading avec des analyses complètes et des insights alimentés par l\'IA.',
@@ -1206,5 +1210,81 @@ export default {
     },
     'import.type.etpSync.name': 'ETP',
     'import.type.etpSync.description': 'Synchronisation directe de vos comptes connectés à ETP',
-    'import.type.etpSync.details': 'Synchronisation directe avec votre compte ETP. Nécessite une authentification par token API.'
+    'import.type.etpSync.details': 'Synchronisation directe avec votre compte ETP. Nécessite une authentification par token API.',
+    'community': {
+        'title': 'Communauté',
+        'description': 'Partagez vos idées, signalez des bugs et discutez des fonctionnalités avec la communauté.',
+        'newPost': 'Nouvelle Publication',
+        'searchPosts': 'Rechercher des publications...',
+        'filterByType': 'Filtrer par type',
+        'filterByStatus': 'Filtrer par statut',
+        'types': {
+            'all': 'Tous les Types',
+            'featureRequest': 'Demandes de Fonctionnalités',
+            'bugReport': 'Signalements de Bugs',
+            'discussion': 'Discussions'
+        },
+        'status': {
+            'all': 'Tous les Statuts',
+            'open': 'Ouvert',
+            'inProgress': 'En Cours',
+            'completed': 'Terminé',
+            'closed': 'Fermé'
+        },
+        'noPosts': 'Aucune publication trouvée',
+        'post': {
+            'edit': 'Modifier',
+            'delete': 'Supprimer',
+            'cancel': 'Annuler',
+            'save': 'Enregistrer',
+            'screenshot': 'Capture d\'écran',
+            'screenshots': 'Captures d\'écran',
+            'score': 'Score',
+            'comments': 'Commentaires',
+            'postedBy': 'Publié par {user} il y a {time}'
+        },
+        'createPost': {
+            'title': 'Créer une Publication',
+            'description': 'Partagez vos idées, signalez des bugs ou démarrez une discussion avec la communauté.',
+            'type': 'Type',
+            'selectType': 'Sélectionnez un type de publication',
+            'postTitle': 'Titre',
+            'titlePlaceholder': 'Entrez le titre de votre publication',
+            'content': 'Contenu',
+            'contentPlaceholder': 'Rédigez le contenu de votre publication ici...',
+            'screenshots': 'Captures d\'écran (optionnel)',
+            'addScreenshot': 'Ajouter une Capture d\'écran',
+            'maxScreenshots': 'Maximum 3 captures d\'écran autorisées',
+            'imageSizeError': 'L\'image doit faire moins de 5MB',
+            'imageTypeError': 'Type de fichier invalide. Veuillez télécharger une image JPEG, PNG ou WebP',
+            'createButton': 'Créer la Publication',
+            'success': 'Publication créée avec succès',
+            'error': 'Échec de la création de la publication'
+        },
+        'comments': {
+            'writeComment': 'Écrire un commentaire...',
+            'writeReply': 'Écrire une réponse...',
+            'reply': 'Répondre',
+            'edit': 'Modifier',
+            'delete': 'Supprimer',
+            'cancel': 'Annuler',
+            'save': 'Enregistrer',
+            'comment': 'Commentaire',
+            'signInPrompt': 'Veuillez vous connecter pour commenter',
+            'noComments': 'Aucun commentaire pour le moment. Soyez le premier à commenter !',
+            'timeAgo': 'il y a {time}',
+            'success': {
+                'add': 'Commentaire ajouté',
+                'reply': 'Réponse ajoutée',
+                'update': 'Commentaire mis à jour',
+                'delete': 'Commentaire supprimé'
+            },
+            'error': {
+                'add': 'Échec de l\'ajout du commentaire',
+                'reply': 'Échec de l\'ajout de la réponse',
+                'update': 'Échec de la mise à jour du commentaire',
+                'delete': 'Échec de la suppression du commentaire'
+            }
+        }
+    }
 } as const
