@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button"
 import { useUserData } from '@/components/context/user-data'
 import LoadingOverlay from '../app/[locale]/(dashboard)/components/loading-overlay'
-import ImportButton from '../app/[locale]/(dashboard)/components/import-csv/import-button'
+import ImportButton from '../app/[locale]/(dashboard)/components/import/import-button'
 import { useI18n } from "@/locales/client"
 import { signOut } from '@/server/auth'
 import PricingPlans from '@/app/[locale]/(landing)/components/pricing-plans'

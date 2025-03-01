@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useWebSocket } from './context/websocket-context'
+import { useWebSocket } from '@/components/context/websocket-context'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { XCircle, CheckCircle2, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'

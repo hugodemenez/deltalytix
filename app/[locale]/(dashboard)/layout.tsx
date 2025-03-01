@@ -6,7 +6,7 @@ import { I18nProviderClient } from "@/locales/client";
 import { ReactElement } from "react";
 import { AI } from "@/components/ai";
 import Navbar from "./components/navbar";
-import { WebSocketProvider } from "./components/context/websocket-context";
+import { WebSocketProvider } from "@/components/context/websocket-context";
 import { OnbordaProvider, Onborda } from 'onborda'
 import { steps } from "./components/onboarding/onboarding-steps";
 import { TourCard } from "./components/onboarding/custom-card";

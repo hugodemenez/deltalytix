@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from '@/hooks/use-toast'
 import { TickDetails, Trade } from '@prisma/client'
-import { getTickDetails } from '../../../../../server/tick-details'
+import { getTickDetails } from '@/server/tick-details'
 
 interface ContractSpec {
   tickSize: number;

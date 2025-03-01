@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SyncCountdown } from './sync-countdown'
-import { useWebSocket } from '../context/websocket-context'
+import { useWebSocket } from '@/components/context/websocket-context'
 import { useI18n } from '@/locales/client'
 
 interface RithmicCredentialsManagerProps {

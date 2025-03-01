@@ -25,7 +25,7 @@ import { signOut } from "@/server/auth"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import { useTheme } from '@/components/context/theme-provider'
-import ImportButton from './import-csv/import-button'
+import ImportButton from './import/import-button'
 import { SubscriptionBadge } from './subscription-badge'
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { useI18n, useChangeLocale, useCurrentLocale } from "@/locales/client"

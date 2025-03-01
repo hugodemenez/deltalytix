@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useUserData } from '@/components/context/user-data'
 import { toast } from '@/hooks/use-toast'
 import { RithmicSyncFeedback } from './rithmic-sync-feedback'
-import { useWebSocket } from '../context/websocket-context'
+import { useWebSocket } from '@/components/context/websocket-context'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'

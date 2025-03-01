@@ -83,6 +83,7 @@ model User {
   moods           Mood[]
   tags            Tag[]
   isFirstConnection Boolean        @default(true)
+  etpToken        String?
 
   @@index([email])
   @@schema("public")

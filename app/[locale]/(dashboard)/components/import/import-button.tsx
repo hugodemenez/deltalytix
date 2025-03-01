@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { UploadIcon } from 'lucide-react'
 import { Trade } from '@prisma/client'
@@ -12,16 +12,18 @@ import FileUpload from './file-upload'
 import HeaderSelection from './header-selection'
 import AccountSelection from './account-selection'
 import { useUserData } from '@/components/context/user-data'
-import RithmicOrderProcessor from './rithmic-order-processor-new'
-import RithmicPerformanceProcessor from './rithmic-performance-processor'
-import TradovateProcessor from './tradovate-processor'
+import RithmicOrderProcessor from './rithmic/rithmic-order-processor-new'
+import RithmicPerformanceProcessor from './rithmic/rithmic-performance-processor'
+import TradovateProcessor from './tradovate/tradovate-processor'
 import ColumnMapping from './column-mapping'
-import TradezellaProcessor from './tradezella-processor'
-import NinjaTraderPerformanceProcessor from './ninjatrader-performance-processor'
-import QuantowerOrderProcessor from './quantower-processor'
-import TopstepProcessor from './topstep-processor'
-import { cn } from '@/lib/utils'
+import TradezellaProcessor from './tradezella/tradezella-processor'
+import NinjaTraderPerformanceProcessor from './ninjatrader/ninjatrader-performance-processor'
+import QuantowerOrderProcessor from './quantower/quantower-processor'
+import TopstepProcessor from './topstep/topstep-processor'
 import { useI18n } from "@/locales/client"
+import { ImportDialogHeader } from './components/import-dialog-header'
+import { ImportDialogFooter } from './components/import-dialog-footer'
+import { platforms } from './config/platforms'
 
 type ColumnConfig = {
   [key: string]: {
@@ -61,7 +63,7 @@ export default function ImportButton() {
   const [processedTrades, setProcessedTrades] = useState<Trade[]>([])
 
   const { toast } = useToast()
-  const { trades, setTrades, refreshTrades, user } = useUserData()
+  const { trades, refreshTrades, user } = useUserData()
   const t = useI18n()
 
   const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
@@ -285,14 +287,7 @@ export default function ImportButton() {
         description: t('import.successDescription', { numberOfTradesAdded: result.numberOfTradesAdded }),
       })
       // Reset the import process
-      setImportType('')
-      setStep(0)
-      setRawCsvData([])
-      setCsvData([])
-      setHeaders([])
-      setMappings({})
-      setAccountNumber('')
-      setNewAccountNumber('')
+      resetImportState()
 
     } catch (error) {
       console.error('Error saving trades:', error)
@@ -306,27 +301,43 @@ export default function ImportButton() {
     }
   }
 
-  const isRequiredFieldsMapped = useCallback((): boolean => {
+  const resetImportState = () => {
+    setImportType('')
+    setStep(0)
+    setRawCsvData([])
+    setCsvData([])
+    setHeaders([])
+    setMappings({})
+    setAccountNumber('')
+    setNewAccountNumber('')
+    setProcessedTrades([])
+    setError(null)
+  }
+
+  const isRequiredFieldsMapped = (): boolean => {
     const requiredFields = Object.entries(columnConfig)
       .filter(([_, config]) => config.required)
       .map(([field, _]) => field);
     return requiredFields.every(field => Object.values(mappings).includes(field));
-  }, [mappings]);
+  }
 
-  const getMissingRequiredFields = useCallback((): string[] => {
+  const getMissingRequiredFields = (): string[] => {
     const requiredFields = Object.entries(columnConfig)
       .filter(([_, config]) => config.required)
       .map(([field, _]) => field);
     return requiredFields.filter(field => !Object.values(mappings).includes(field));
-  }, [mappings]);
+  }
 
   const handleNextStep = () => {
+    const platform = platforms.find(p => p.type === importType)
+    if (!platform) return
+
     if (step === 0) {
       setStep(1)
     } else if (step === 1) {
       setStep(2)
     } else if (step === 2) {
-      if (importType === 'tradovate') {
+      if (platform.requiresAccountSelection) {
         if (accountNumber || newAccountNumber) {
           setStep(3)
         } else {
@@ -342,26 +353,12 @@ export default function ImportButton() {
     } else if (step === 3) {
       switch (importType) {
         case 'quantower':
-          handleSave()
-          break
         case 'tradovate':
-          handleSave()
-          break
         case 'rithmic-orders':
-          handleSave()
-          break
         case 'rithmic-performance':
-          handleSave()
-          break
         case 'tradezella':
-          handleSave()
-          break
         case 'ninjatrader-performance':
-          handleSave()
-          break
         case 'rithmic-sync':
-          handleSave()
-          break
         case 'topstep':
           handleSave()
           break
@@ -383,7 +380,7 @@ export default function ImportButton() {
               ),
               variant: "destructive",
             })
-          } else if (!Object.values(mappings).includes('accountNumber') && !accountNumber) {
+          } else if (!Object.values(mappings).includes('accountNumber') && !accountNumber && platform.requiresAccountSelection) {
             setStep(4)
           } else {
             handleSave()
@@ -399,40 +396,6 @@ export default function ImportButton() {
           variant: "destructive",
         })
       }
-    }
-  }
-
-  const getDialogTitle = () => {
-    switch (step) {
-      case 0:
-        return t('import.title.selectType')
-      case 1:
-        return importType === 'rithmic-sync' ? t('import.title.connect') : t('import.title.upload')
-      case 2:
-        return importType === 'rithmic-sync' ? t('import.title.syncSettings') : t('import.title.selectHeader')
-      case 3:
-        return importType === 'rithmic-orders' ? t('import.title.processOrders') : t('import.title.mapColumns')
-      case 4:
-        return t('import.title.selectAccount')
-      default:
-        return ''
-    }
-  }
-
-  const getDialogDescription = () => {
-    switch (step) {
-      case 0:
-        return t('import.description.selectType')
-      case 1:
-        return importType === 'rithmic-sync' ? t('import.description.connect') : t('import.description.upload')
-      case 2:
-        return importType === 'rithmic-sync' ? t('import.description.syncSettings') : t('import.description.selectHeader')
-      case 3:
-        return importType === 'rithmic-orders' ? t('import.description.processOrders') : t('import.description.mapColumns')
-      case 4:
-        return t('import.description.selectAccount')
-      default:
-        return ''
     }
   }
 
@@ -468,72 +431,21 @@ export default function ImportButton() {
       case 3:
         switch (importType) {
           case 'quantower':
-            return (
-              <QuantowerOrderProcessor
-                csvData={csvData}
-                setProcessedTrades={setProcessedTrades}
-              />
-            )
+            return <QuantowerOrderProcessor csvData={csvData} setProcessedTrades={setProcessedTrades} />
           case 'rithmic-orders':
-            return (
-              <RithmicOrderProcessor
-                csvData={csvData}
-                headers={headers}
-                setProcessedTrades={setProcessedTrades}
-              />
-            )
+            return <RithmicOrderProcessor csvData={csvData} headers={headers} setProcessedTrades={setProcessedTrades} />
           case 'rithmic-performance':
-            return (
-              <RithmicPerformanceProcessor
-                csvData={csvData}
-                headers={headers}
-                setProcessedTrades={setProcessedTrades}
-              />
-            )
+            return <RithmicPerformanceProcessor csvData={csvData} headers={headers} setProcessedTrades={setProcessedTrades} />
           case 'tradovate':
-            return (
-              <TradovateProcessor
-                csvData={csvData}
-                headers={headers}
-                setProcessedTrades={setProcessedTrades}
-                accountNumber={accountNumber || newAccountNumber}
-              />
-            )
+            return <TradovateProcessor csvData={csvData} headers={headers} setProcessedTrades={setProcessedTrades} accountNumber={accountNumber || newAccountNumber} />
           case 'tradezella':
-            return (
-              <TradezellaProcessor
-                csvData={csvData}
-                headers={headers}
-                setProcessedTrades={setProcessedTrades}
-              />
-            )
+            return <TradezellaProcessor csvData={csvData} headers={headers} setProcessedTrades={setProcessedTrades} />
           case 'ninjatrader-performance':
-            return (
-              <NinjaTraderPerformanceProcessor
-                csvData={csvData}
-                headers={headers}
-                setProcessedTrades={setProcessedTrades}
-              />
-            )
+            return <NinjaTraderPerformanceProcessor csvData={csvData} headers={headers} setProcessedTrades={setProcessedTrades} />
           case 'topstep':
-            return (
-              <TopstepProcessor
-                csvData={csvData}
-                headers={headers}
-                setProcessedTrades={setProcessedTrades}
-              />
-            )
+            return <TopstepProcessor csvData={csvData} headers={headers} setProcessedTrades={setProcessedTrades} />
           default:
-            return (
-              <ColumnMapping
-                headers={headers}
-                csvData={csvData}
-                mappings={mappings}
-                setMappings={setMappings}
-                error={error}
-                importType={importType}
-              />
-            )
+            return <ColumnMapping headers={headers} csvData={csvData} mappings={mappings} setMappings={setMappings} error={error} importType={importType} />
         }
       case 4:
         return <AccountSelection
@@ -548,6 +460,13 @@ export default function ImportButton() {
     }
   }
 
+  const isNextDisabled = () => {
+    if (step === 1 && csvData.length === 0) return true
+    if ((step === 2 && importType === 'tradovate') && !accountNumber && !newAccountNumber) return true
+    if (step === 4 && !accountNumber && !newAccountNumber) return true
+    return false
+  }
+
   return (
     <div>
       <Button onClick={() => setIsOpen(true)} className='w-full' id="import-data">
@@ -557,90 +476,20 @@ export default function ImportButton() {
       
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="flex flex-col max-w-[80vw] h-[80vh] p-0">
-          <DialogHeader className="flex-none p-6 border-b space-y-4">
-            <DialogTitle>{getDialogTitle()}</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {getDialogDescription()}
-            </DialogDescription>
-            <div className="space-y-2">
-              <div className="w-full bg-secondary h-2 rounded-full">
-                <div 
-                  className="bg-primary h-2 rounded-full transition-all duration-300 ease-in-out"
-                  style={{ width: `${(step / (importType === 'rithmic-orders' ? 3 : importType === 'rithmic-sync' ? 2 : 4)) * 100}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-xs text-muted-foreground px-1">
-                <div className={cn("transition-colors", step >= 0 && "text-primary font-medium")}>
-                  {t('import.step.importType')}
-                </div>
-                {importType === 'rithmic-sync' ? (
-                  <>
-                    <div className={cn("transition-colors", step >= 1 && "text-primary font-medium")}>
-                      {t('import.step.connect')}
-                    </div>
-                    <div className={cn("transition-colors", step >= 2 && "text-primary font-medium")}>
-                      {t('import.step.settings')}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className={cn("transition-colors", step >= 1 && "text-primary font-medium")}>
-                      {t('import.step.upload')}
-                    </div>
-                    <div className={cn("transition-colors", step >= 2 && "text-primary font-medium")}>
-                      {t('import.step.headers')}
-                    </div>
-                    <div className={cn("transition-colors", step >= 3 && "text-primary font-medium")}>
-                      {importType === 'rithmic-orders' ? t('import.step.process') : t('import.step.mapColumns')}
-                    </div>
-                    {importType !== 'rithmic-orders' && (
-                      <div className={cn("transition-colors", step >= 4 && "text-primary font-medium")}>
-                        {t('import.step.account')}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </DialogHeader>
-
+          <ImportDialogHeader step={step} importType={importType} />
+          
           <div className="flex-1 overflow-hidden h-full w-full">
             {renderStep()}
           </div>
 
-          <div className="flex-none p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 h-[68px]">
-            <div className="flex justify-end items-center gap-4">
-              {step > 0 && (
-                <Button 
-                  variant="outline" 
-                  onClick={() => setStep(step - 1)}
-                  className="w-fit min-w-[100px]"
-                >
-                  {t('import.button.back')}
-                </Button>
-              )}
-              <Button 
-                onClick={handleNextStep}
-                className={cn(
-                  "w-fit min-w-[100px]",
-                  (step === 0 && importType === 'rithmic-sync') && "invisible"
-                )}
-                disabled={
-                  (step === 1 && csvData.length === 0) ||
-                  ((step === 2 && importType === 'tradovate') && !accountNumber && !newAccountNumber) ||
-                  (step === 4 && !accountNumber && !newAccountNumber)
-                }
-              >
-                {isSaving 
-                  ? t('import.button.saving')
-                  : (step === 4 || (step === 3 && importType === 'rithmic-orders') 
-                    ? t('import.button.save')
-                    : t('import.button.next')
-                  )
-                }
-              </Button>
-            </div>
-          </div>
+          <ImportDialogFooter
+            step={step}
+            importType={importType}
+            onBack={() => setStep(step - 1)}
+            onNext={handleNextStep}
+            isSaving={isSaving}
+            isNextDisabled={isNextDisabled()}
+          />
         </DialogContent>
       </Dialog>
     </div>
