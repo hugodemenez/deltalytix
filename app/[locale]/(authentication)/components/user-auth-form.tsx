@@ -48,15 +48,18 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [lookupKey, setLookupKey] = React.useState<string | null>(null)
     const [authMethod, setAuthMethod] = React.useState<AuthMethod>(null)
     const [showOtpInput, setShowOtpInput] = React.useState<boolean>(false)
+    const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const router = useRouter()
     const t = useI18n()
 
     React.useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
         const subscription = urlParams.get('subscription')
+        const next = urlParams.get('next')
         setIsSubscription(subscription === 'true')
         const lookup_key = urlParams.get('lookup_key')
         setLookupKey(lookup_key)
+        setNextUrl(next)
     }, [])
 
     React.useEffect(() => {
@@ -86,7 +89,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setIsLoading(true)
         setAuthMethod('email')
         try {
-            await signInWithEmail(values.email, isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
+            await signInWithEmail(values.email, isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl)
             setIsEmailSent(true)
             setShowOtpInput(true)
             setCountdown(15)
@@ -108,7 +111,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 description: "Successfully verified. Redirecting...",
             })
             router.refresh()
-            router.push('/dashboard')
+            router.push(nextUrl || '/dashboard')
         } catch (error) {
             console.error(error)
             toast({
@@ -127,7 +130,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('discord')
 
         try {
-            await signInWithDiscord(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
+            await signInWithDiscord(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
@@ -141,7 +144,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('google')
 
         try {
-            await signInWithGoogle(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : null)
+            await signInWithGoogle(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
