@@ -82,6 +82,7 @@ model User {
   dashboardLayout DashboardLayout?
   moods           Mood[]
   tags            Tag[]
+  isBeta          Boolean          @default(false)
   isFirstConnection Boolean        @default(true)
   etpToken        String?
 
