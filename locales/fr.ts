@@ -1285,6 +1285,11 @@ export default {
                 'update': 'Échec de la mise à jour du commentaire',
                 'delete': 'Échec de la suppression du commentaire'
             }
+        },
+        'actions': {
+            'vote': 'voter sur les publications',
+            'comment': 'laisser des commentaires',
+            'createPost': 'créer une publication'
         }
     }
 } as const

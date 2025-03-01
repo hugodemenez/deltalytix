@@ -162,11 +162,19 @@ export default {
     'updates.milestone11.description': 'Our upcoming feature will allow you to identify which indicators are most correlated to your PnL, providing deeper insights into your trading strategies and performance.',
     'updates.milestone12.title': 'Custom Dashboard Layout',
     'updates.milestone12.description': 'We\'ve added the ability to customize your dashboard layout. You can now create your own personalized dashboard with favorite charts, statistics, and widgets arranged exactly how you want them.',
-    'auth.emailPlaceholder': 'name@example.com',
-    'auth.signInWithEmail': 'Sign In with Email',
-    'auth.continueWith': 'Or continue with',
-    'auth.signInWithDiscord': 'Discord',
-    'auth.signInWithGoogle': 'Google',
+    'auth': {
+        'required': 'Authentication Required',
+        'signInRequired': 'Please sign in to {action}',
+        'signIn': 'Sign In',
+        'emailPlaceholder': 'name@example.com',
+        'signInWithEmail': 'Sign In with Email',
+        'continueWith': 'Or continue with',
+        'signInWithDiscord': 'Discord',
+        'signInWithGoogle': 'Google',
+        'openMailbox': 'Open Mailbox',
+        'resendIn': 'Resend in',
+        'resendEmail': 'Resend Email'
+    },
     'pricing.trialPeriod': 'Start now with all features',
     'pricing.trialDescription': 'Try all features for 14 days, no credit card required',
     'pricing.chooseYourPlan': 'Choose Your Plan',
@@ -360,7 +368,7 @@ export default {
     'mood.error': 'Failed to save your mood',
     'error': 'Error',
     'success': 'Success',
-    'auth.required': 'You need to be logged in to perform this action',
+    'auth.required': 'Authentication Required',
     'chat.title': 'Chat',
     'chat.resetConversation': 'Reset conversation',
     'chat.camera': 'Camera',
@@ -1257,6 +1265,11 @@ export default {
                 'update': 'Failed to update comment',
                 'delete': 'Failed to delete comment'
             }
+        },
+        'actions': {
+            'vote': 'vote on posts',
+            'comment': 'leave comments',
+            'createPost': 'create a post'
         }
     },
 } as const
