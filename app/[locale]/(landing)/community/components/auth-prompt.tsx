@@ -34,7 +34,7 @@ export function AuthPrompt({ open, onOpenChange, action = 'perform this action' 
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button onClick={() => router.push('/auth/signin')}>
+          <Button onClick={() => router.push('/authentication')}>
             {t('auth.signIn')}
           </Button>
         </div>
