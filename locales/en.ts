@@ -1155,5 +1155,28 @@ export default {
     'calendar.charts.commentSaving': 'Saving comment...',
     'calendar.charts.commentError': 'Error saving comment',
     'calendar.charts.saving': 'Saving...',
-    'calendar.charts.addComment': 'Add Comment'
+    'calendar.charts.addComment': 'Add Comment',
+    'etp': {
+        'title': 'ETP API Token',
+        'description': 'Generate and manage your ETP API token. This token is required to sync your trades from ETP.',
+        'noToken': 'No token generated',
+        'revealToken': 'Reveal API Token',
+        'revealWarning': 'Are you sure you want to reveal your API token? Make sure no one else can see your screen.',
+        'cancel': 'Cancel',
+        'reveal': 'Reveal Token',
+        'copied': 'Token copied to clipboard',
+        'generated': 'Token generated successfully',
+        'error': {
+            'generation': 'Failed to generate token',
+        },
+        'invalidation': 'Note: Generating a new token will invalidate any existing token.',
+        'tutorial': {
+            'title': 'How to Use Your ETP Token',
+            'description': 'Watch this tutorial to learn how to set up and use your ETP token for trade synchronization.',
+            'notAvailable': 'Tutorial video is not yet available.'
+        }
+    },
+    'import.type.etpSync.name': 'ETP',
+    'import.type.etpSync.description': 'Direct account synchronization',
+    'import.type.etpSync.details': 'Direct sync with your ETP account. Requires API token authentication.'
 } as const

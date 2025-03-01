@@ -11,6 +11,7 @@ import { getTags } from './tags'
 import { getOnboardingStatus } from './onboarding'
 import { getPropFirmAccounts } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
 import type { Account as PropFirmAccount } from '@prisma/client'
+import { getEtpToken } from './etp'
 
 // Update the interface declarations to export them
 export interface LayoutItem {
@@ -36,6 +37,7 @@ interface TickDetail {
 export type InitialDataResponse = {
   user: any | null
   isFirstConnection: boolean
+  etpToken: string | null
   subscription: {
     isActive: boolean
     plan: string | null
@@ -71,6 +73,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       return {
         user: null,
         isFirstConnection: false,
+        etpToken: null,
         subscription: null,
         trades: [],
         tickDetails: {},
@@ -86,6 +89,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       return {
         user: null,
         isFirstConnection: false,
+        etpToken: null,
         subscription: null,
         trades: [],
         tickDetails: {},
@@ -104,6 +108,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       return {
         user: null,
         isFirstConnection: false,
+        etpToken: null,
         subscription: null,
         trades: [],
         tickDetails: {},
@@ -119,6 +124,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       return {
         user: null,
         isFirstConnection: false,
+        etpToken: null,
         subscription: null,
         trades: [],
         tickDetails: {},
@@ -131,8 +137,11 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
 
     console.log('[loadInitialData] User found', { userId: user.id })
 
-    // Get user onboarding status
-    const isFirstConnection = await getOnboardingStatus()
+    // Get user onboarding status and ETP token
+    const [isFirstConnection, etpTokenData] = await Promise.all([
+      getOnboardingStatus(),
+      getEtpToken()
+    ])
 
     // Get subscription details first
     console.log('[loadInitialData] Fetching subscription details')
@@ -167,6 +176,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     return {
       user,
       isFirstConnection,
+      etpToken: etpTokenData.token || null,
       subscription,
       trades: tradesResult,
       tickDetails,
@@ -179,6 +189,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     return {
       user: null,
       isFirstConnection: false,
+      etpToken: null,
       subscription: null,
       trades: [],
       tickDetails: {},

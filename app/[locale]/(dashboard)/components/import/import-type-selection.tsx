@@ -12,14 +12,15 @@ import {
   CommandInput,
   CommandList,
 } from "@/components/ui/command"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useI18n } from "@/locales/client"
-import { platforms, PlatformConfig } from './config/platforms'
+import { platforms, PlatformConfig, PlatformType } from './config/platforms'
 import { PlatformItem } from './components/platform-item'
 import { PlatformTutorial } from './components/platform-tutorial'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
 
-export type ImportType = '' | 'rithmic-performance' | 'rithmic-orders' | 'tradezella' | 'tradovate' | 'ninjatrader-performance' | 'quantower' | 'rithmic-sync' | 'topstep'
+export type ImportType = PlatformType
 
 interface ImportTypeSelectionProps {
   selectedType: ImportType
@@ -76,93 +77,68 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   const selectedPlatform = platforms.find(p => p.type === selectedType)
 
   return (
-    <div className="flex flex-col h-full px-4">
-      <div className="grid md:grid-cols-2 gap-6 h-full">
-        <div className="h-full">
-          <Command className="border h-full shadow-sm">
-            <CommandInput 
-              className='h-fit rounded-none'
-              placeholder={t('import.type.search')}
-              value={searchQuery}
-              onValueChange={setSearchQuery}
-            />
-            <CommandList className="min-h-[calc(100%-42px)]">
-              <CommandEmpty>{t('import.type.noResults')}</CommandEmpty>
-              {categories.map(category => {
-                const categoryPlatforms = filteredPlatforms.filter(platform => platform.category === category)
-                if (categoryPlatforms.length === 0) return null
+    <div className="flex flex-col h-full">
+      <div className="grid md:grid-cols-2 gap-6 h-full min-h-0 p-2">
+        <div className="h-full min-h-0">
+          <Command className="border rounded-lg h-full">
+            <div className="flex flex-col h-full">
+              <CommandInput 
+                className="h-auto rounded-none shrink-0"
+                placeholder={t('import.type.search')}
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+              />
+              <ScrollArea className="h-[calc(100%-45px)]">
+                <CommandList className="h-full">
+                  <CommandEmpty>{t('import.type.noResults')}</CommandEmpty>
+                  {categories.map(category => {
+                    const categoryPlatforms = filteredPlatforms.filter(platform => platform.category === category)
+                    if (categoryPlatforms.length === 0) return null
 
-                return (
-                  <CommandGroup key={category} heading={
-                    <div className={cn(
-                      "flex items-center gap-2 text-muted-foreground transition-all duration-200 px-2",
-                      hoveredCategory === category ? "text-foreground scale-[1.02] translate-x-1" : "hover:text-foreground"
-                    )}>
-                      {categoryIcons[category]}
-                      <span>{getTranslatedCategory(category)}</span>
-                    </div>
-                  }>
-                    {categoryPlatforms.map((platform) => (
-                      <PlatformItem
-                        key={platform.type}
-                        platform={platform}
-                        isSelected={selectedType === platform.type}
-                        onSelect={(type) => setSelectedType(type as ImportType)}
-                        onHover={(category) => setHoveredCategory(category as Category)}
-                        onLeave={() => setHoveredCategory(null)}
-                        isWeekend={isWeekend()}
-                      />
-                    ))}
-                  </CommandGroup>
-                )
-              })}
-            </CommandList>
+                    return (
+                      <CommandGroup key={category} heading={
+                        <div className={cn(
+                          "flex items-center gap-2 text-muted-foreground transition-all duration-200 px-2",
+                          hoveredCategory === category ? "text-foreground scale-[1.02] translate-x-1" : "hover:text-foreground"
+                        )}>
+                          {categoryIcons[category]}
+                          <span>{getTranslatedCategory(category)}</span>
+                        </div>
+                      }>
+                        {categoryPlatforms.map((platform) => (
+                          <PlatformItem
+                            key={platform.type}
+                            platform={platform}
+                            isSelected={selectedType === platform.type}
+                            onSelect={(type) => setSelectedType(type as ImportType)}
+                            onHover={(category) => setHoveredCategory(category as Category)}
+                            onLeave={() => setHoveredCategory(null)}
+                            isWeekend={isWeekend()}
+                          />
+                        ))}
+                      </CommandGroup>
+                    )
+                  })}
+                </CommandList>
+              </ScrollArea>
+            </div>
           </Command>
         </div>
 
-        <div className="space-y-4 overflow-y-auto px-2">
-          {selectedType !== '' && (
-            selectedType === 'rithmic-sync' ? (
-              <>
-                <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
-                <RithmicSyncCombined 
-                  setIsOpen={setIsOpen}
-                  onSync={async (data) => {
-                  }} 
-                />
-                <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
-                  <div className="flex items-center gap-4 mb-2">
-                    <Image 
-                      src="/RithmicArtwork/TradingPlatformByRithmic-Black.png"
-                      alt="Trading Platform by Rithmic"
-                      width={120}
-                      height={40}
-                      className="dark:hidden"
-                    />
-                    <Image 
-                      src="/RithmicArtwork/TradingPlatformByRithmic-Green.png"
-                      alt="Trading Platform by Rithmic"
-                      width={120}
-                      height={40}
-                      className="hidden dark:block"
-                    />
-                    <Image 
-                      src="/RithmicArtwork/Powered_by_Omne.png"
-                      alt="Powered by OMNE"
-                      width={120}
-                      height={40}
-                    />
-                  </div>
-                  <p>{t('import.type.copyright.rithmic')}</p>
-                  <p>{t('import.type.copyright.protocol')}</p>
-                  <p>{t('import.type.copyright.platform')}</p>
-                  <p>{t('import.type.copyright.omne')}</p>
+        <div className="h-full min-h-0 overflow-y-auto">
+          {/* <ScrollArea className="h-full"> */}
+            {selectedType !== '' && selectedPlatform && (
+              selectedPlatform.customComponent ? (
+                <div className="h-full pr-4">
+                  {selectedPlatform.customComponent && <selectedPlatform.customComponent setIsOpen={setIsOpen} />}
                 </div>
-              </>
-            ) : (
-              <PlatformTutorial selectedPlatform={selectedPlatform} />
-            )
-          )}
+              ) : (
+                <div className="pr-4">
+                  <PlatformTutorial selectedPlatform={selectedPlatform} setIsOpen={setIsOpen} />
+                </div>
+              )
+            )}
+          {/* </ScrollArea> */}
         </div>
       </div>
     </div>

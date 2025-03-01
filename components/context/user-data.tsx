@@ -205,6 +205,7 @@ const defaultLayouts: Layouts = {
 interface UserDataContextType {
   // User related
   user: User | null
+  etpToken: string | null
   subscription: {
     isActive: boolean
     plan: string | null
@@ -218,6 +219,7 @@ interface UserDataContextType {
   isSharedView: boolean
   isFirstConnection: boolean
   setIsFirstConnection: (isFirstConnection: boolean) => void
+  refreshUser: () => Promise<void>
 
   // Trades related
   trades: TradeWithUTC[]
@@ -326,6 +328,7 @@ export const UserDataProvider: React.FC<{
   
   // User state - null for shared views
   const [user, setUser] = useState<User | null>(null);
+  const [etpToken, setEtpToken] = useState<string | null>(null);
   const [isFirstConnection, setIsFirstConnection] = useState<boolean>(false);
   const [subscription, setSubscription] = useState<UserDataContextType['subscription']>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -417,6 +420,7 @@ export const UserDataProvider: React.FC<{
         const data = await loadInitialData();
         if (!data.error) {
           setUser(data.user);
+          setEtpToken(data.etpToken);
           setIsFirstConnection(data.isFirstConnection);
           setSubscription(data.subscription);
           if (data.tags) {
@@ -694,10 +698,27 @@ export const UserDataProvider: React.FC<{
     return Boolean(subscription?.isActive && ['plus', 'pro'].includes(subscription?.plan?.split('_')[0].toLowerCase()||''));
   };
 
+  const refreshUser = useCallback(async () => {
+    if (isSharedView) return;
+    const data = await loadInitialData();
+    if (!data.error) {
+      setUser(data.user);
+      setEtpToken(data.etpToken);
+      setIsFirstConnection(data.isFirstConnection);
+      setSubscription(data.subscription);
+      if (data.tags) {
+        setTags(data.tags);
+      }
+      if (data.propfirmAccounts) {
+        setPropfirmAccounts(data.propfirmAccounts);
+      }
+    }
+  }, [isSharedView]);
 
   const contextValue = {
     // User related
     user,
+    etpToken,
     subscription,
     isPlusUser,
     isLoading,
@@ -705,6 +726,8 @@ export const UserDataProvider: React.FC<{
     isSharedView,
     isFirstConnection,
     setIsFirstConnection,
+    refreshUser,
+
     // Trades related
     trades,
     setTrades,

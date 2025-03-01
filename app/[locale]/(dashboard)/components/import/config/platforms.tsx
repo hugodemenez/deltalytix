@@ -1,4 +1,7 @@
+import { EtpSync } from '../etp/etp-sync'
 import { ImportType } from '../import-type-selection'
+import { RithmicSyncWrapper } from '../rithmic/rithmic-sync-new'
+import type { ComponentType } from 'react'
 
 export interface ProcessedData {
   headers: string[]
@@ -6,7 +9,8 @@ export interface ProcessedData {
 }
 
 export interface PlatformConfig {
-  type: ImportType
+  platformName: string
+  type: string
   name: string
   description: string
   category: 'Direct Account Sync' | 'Custom CSV Import' | 'Platform CSV Import'
@@ -21,6 +25,7 @@ export interface PlatformConfig {
   skipHeaderSelection?: boolean
   requiresAccountSelection?: boolean
   processFile?: (data: string[][]) => ProcessedData
+  customComponent?: ComponentType<{ setIsOpen: React.Dispatch<React.SetStateAction<boolean>> }>
 }
 
 // Platform-specific processing functions
@@ -83,6 +88,7 @@ const processStandardCsv = (data: string[][]): ProcessedData => {
 
 export const platforms: PlatformConfig[] = [
   {
+    platformName: 'rithmic-sync',
     type: 'rithmic-sync',
     name: 'import.type.rithmicSync.name',
     description: 'import.type.rithmicSync.description',
@@ -94,8 +100,10 @@ export const platforms: PlatformConfig[] = [
       alt: 'Rithmic Logo'
     },
     isRithmic: true,
+    customComponent: RithmicSyncWrapper
   },
   {
+    platformName: 'csv-ai',
     type: '',
     name: 'import.type.csvAi.name',
     description: 'import.type.csvAi.description',
@@ -110,6 +118,7 @@ export const platforms: PlatformConfig[] = [
     processFile: processStandardCsv
   },
   {
+    platformName: 'tradezella',
     type: 'tradezella',
     name: 'import.type.tradezella.name',
     description: 'import.type.tradezella.description',
@@ -123,6 +132,7 @@ export const platforms: PlatformConfig[] = [
     processFile: processStandardCsv
   },
   {
+    platformName: 'tradovate',
     type: 'tradovate',
     name: 'import.type.tradovate.name',
     description: 'import.type.tradovate.description',
@@ -137,6 +147,7 @@ export const platforms: PlatformConfig[] = [
     processFile: processStandardCsv
   },
   {
+    platformName: 'quantower',
     type: 'quantower',
     name: 'import.type.quantower.name',
     description: 'import.type.quantower.description',
@@ -151,6 +162,7 @@ export const platforms: PlatformConfig[] = [
     processFile: processQuantower
   },
   {
+    platformName: 'topstep',
     type: 'topstep',
     name: 'import.type.topstep.name',
     description: 'import.type.topstep.description',
@@ -164,6 +176,7 @@ export const platforms: PlatformConfig[] = [
     processFile: processStandardCsv
   },
   {
+    platformName: 'ninjatrader-performance',
     type: 'ninjatrader-performance',
     name: 'import.type.ninjaTrader.name',
     description: 'import.type.ninjaTrader.description',
@@ -178,6 +191,7 @@ export const platforms: PlatformConfig[] = [
     processFile: processStandardCsv
   },
   {
+    platformName: 'rithmic-performance',
     type: 'rithmic-performance',
     name: 'import.type.rithmicPerf.name',
     description: 'import.type.rithmicPerf.description',
@@ -193,6 +207,7 @@ export const platforms: PlatformConfig[] = [
     processFile: processRithmicPerformance
   },
   {
+    platformName: 'rithmic-orders',
     type: 'rithmic-orders',
     name: 'import.type.rithmicOrders.name',
     description: 'import.type.rithmicOrders.description',
@@ -206,5 +221,22 @@ export const platforms: PlatformConfig[] = [
     isRithmic: true,
     skipHeaderSelection: true,
     processFile: processRithmicOrders
-  }
-] 
+  },
+  {
+    platformName: 'etp-sync',
+    type: 'etp-sync',
+    name: 'import.type.etpSync.name',
+    description: 'import.type.etpSync.description',
+    category: 'Direct Account Sync',
+    videoUrl: process.env.NEXT_PUBLIC_ETP_SYNC_TUTORIAL_VIDEO || '',
+    details: 'import.type.etpSync.details',
+    logo: {
+      path: '/logos/etp.png',
+      alt: 'ETP Logo'
+    },
+    isDisabled: true,
+    customComponent: EtpSync
+  },
+] as const
+
+export type PlatformType = typeof platforms[number]['platformName'] 

@@ -24,6 +24,9 @@ import { useI18n } from "@/locales/client"
 import { ImportDialogHeader } from './components/import-dialog-header'
 import { ImportDialogFooter } from './components/import-dialog-footer'
 import { platforms } from './config/platforms'
+import Image from 'next/image'
+import { PlatformTutorial } from './components/platform-tutorial'
+import { RithmicSyncCombined } from './rithmic/rithmic-sync-new'
 
 type ColumnConfig = {
   [key: string]: {
@@ -335,7 +338,12 @@ export default function ImportButton() {
     if (step === 0) {
       setStep(1)
     } else if (step === 1) {
-      setStep(2)
+      // For direct sync platforms, we don't need file upload
+      if (platform.customComponent) {
+        handleSave()
+      } else {
+        setStep(2)
+      }
     } else if (step === 2) {
       if (platform.requiresAccountSelection) {
         if (accountNumber || newAccountNumber) {
@@ -402,7 +410,15 @@ export default function ImportButton() {
   const renderStep = () => {
     switch (step) {
       case 0:
-        return <ImportTypeSelection selectedType={importType} setSelectedType={setImportType} setIsOpen={setIsOpen} />
+        return (
+          <div className="flex flex-col gap-4 h-full">
+            <ImportTypeSelection
+              selectedType={importType}
+              setSelectedType={setImportType}
+              setIsOpen={setIsOpen}
+            />
+          </div>
+        )
       case 1:
         return <FileUpload
           importType={importType}

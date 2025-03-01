@@ -9,9 +9,10 @@ import { useI18n } from "@/locales/client"
 
 interface PlatformTutorialProps {
   selectedPlatform: PlatformConfig | undefined
+  setIsOpen: (isOpen: boolean) => void
 }
 
-export function PlatformTutorial({ selectedPlatform }: PlatformTutorialProps) {
+export function PlatformTutorial({ selectedPlatform, setIsOpen }: PlatformTutorialProps) {
   const t = useI18n()
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -86,15 +87,13 @@ export function PlatformTutorial({ selectedPlatform }: PlatformTutorialProps) {
             ? t('import.type.tutorial.description', { platform: selectedPlatform.type.split('-').join(' ') })
             : t('import.type.tutorial.notAvailable', { platform: selectedPlatform.type.split('-').join(' ') })
           }
-          <br />
-          {selectedPlatform.details && t(selectedPlatform.details as any, {})}
         </p>
       </div>
 
       {selectedPlatform.details && (
         <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4">
           <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-500 animate-pulse" />
-          <p>{t(selectedPlatform.details as any, {})}</p>
+          <p>{t(selectedPlatform.details as Parameters<typeof t>[0])}</p>
         </div>
       )}
 
