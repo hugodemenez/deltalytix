@@ -50,10 +50,10 @@ function compareDates(dateA: string, dateB: string) {
 function formatPnL(value: number): string {
   // For values >= 1000 or <= -1000, use K format
   if (Math.abs(value) >= 1000) {
-    return `${(value / 1000).toFixed(1)}K`
+    return `${Math.trunc(value / 1000)}K`
   }
-  // For values between -1000 and 1000, show at most 2 decimal places
-  return value.toFixed(Math.abs(value) < 10 ? 2 : 1)
+  // For values between -1000 and 1000, show no decimals
+  return Math.trunc(value).toString()
 }
 
 export default function TraderStatsEmail({

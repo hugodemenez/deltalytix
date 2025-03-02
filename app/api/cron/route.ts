@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
+import { Resend } from 'resend'
 import { headers } from 'next/headers'
 
 const prisma = new PrismaClient()
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Vercel cron job handler - runs every Sunday at 8 AM UTC+1
 export async function GET(req: Request) {
@@ -19,7 +21,8 @@ export async function GET(req: Request) {
     }
 
     // Get all users
-    const users = await prisma.user.findMany()
+    const users = await prisma.user.findMany({
+    })
 
     if (users.length === 0) {
       return NextResponse.json(
@@ -28,46 +31,63 @@ export async function GET(req: Request) {
       )
     }
 
-    // Process all subscribers in parallel
-    const results = await Promise.allSettled(
-      users.map(async (user) => {
-        if (!user.email) {
-          console.warn(`No email found for user: ${user.id}`)
-          return { status: 'skipped', email: user.email }
-        }
+    // Process subscribers in batches of 100 (Resend's batch limit)
+    const batchSize = 100
+    const batches = []
+    for (let i = 0; i < users.length; i += batchSize) {
+      const batch = users.slice(i, i + batchSize)
+      batches.push(batch)
+    }
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL}/api/email/weekly-summary/${user.id}`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${process.env.CRON_SECRET}`
-            }
+    let successCount = 0
+    let errorCount = 0
+
+    // Process each batch
+    for (const batch of batches) {
+      try {
+        const emailBatch = batch.map(async (user) => {
+          if (!user.email) {
+            console.warn(`No email found for user: ${user.id}`)
+            return null
           }
-        )
 
-        const result = await response.json()
-        return {
-          status: response.ok ? 'fulfilled' : 'rejected',
-          email: user.email,
-          ...result
+          // Get email data from the weekly summary endpoint
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_APP_URL}/api/email/weekly-summary/${user.id}`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.CRON_SECRET}`
+              }
+            }
+          )
+
+          if (!response.ok) {
+            console.error(`Failed to get email data for user ${user.id}:`, await response.text())
+            return null
+          }
+
+          const { emailData } = await response.json()
+          return emailData
+        })
+
+        // Filter out null values and send batch
+        const validEmails = (await Promise.all(emailBatch)).filter(Boolean)
+        if (validEmails.length > 0) {
+          const result = await resend.batch.send(validEmails)
+          successCount += result.data?.data.length || 0
+          errorCount += batch.length - (result.data?.data.length || 0)
         }
-      })
-    )
-
-    // Calculate statistics
-    const stats = results.reduce((acc, result) => {
-      if (result.status === 'fulfilled') acc.success++
-      else if (result.status === 'rejected') acc.failed++
-      else acc.skipped++
-      return acc
-    }, { success: 0, failed: 0, skipped: 0 })
+      } catch (error) {
+        console.error('Failed to send batch:', error)
+        errorCount += batch.length
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Weekly emails processed: ${stats.success} successful, ${stats.failed} failed, ${stats.skipped} skipped`,
-      stats,
-      details: results
+      message: `Weekly emails processed: ${successCount} successful, ${errorCount} failed`,
+      stats: { success: successCount, failed: errorCount }
     })
 
   } catch (error) {

@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
-import { Resend } from 'resend'
 import { headers } from 'next/headers'
 import TraderStatsEmail from "@/components/emails/weekly-recap"
 import MissingYouEmail from "@/components/emails/missing-data"
 import { openai } from "@ai-sdk/openai"
 import { streamObject } from "ai"
 import { z } from "zod"
+import { render, renderAsync } from "@react-email/render"
 
 const prisma = new PrismaClient()
-const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(
   req: Request,
@@ -46,10 +45,18 @@ export async function POST(
 
     if (!newsletter || !newsletter.isActive) {
       return NextResponse.json(
-        { error: 'User not found or not subscribed to newsletter' },
+        { error: `Newsletter subscription not found or inactive for email: ${user.email}` },
         { status: 404 }
       )
     }
+
+    // Ensure URL has protocol
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || ''
+    const apiUrl = baseUrl.startsWith('http') 
+      ? baseUrl 
+      : `http://${baseUrl}`
+
+    const unsubscribeUrl = `${apiUrl}/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`
 
     // Get user's trades from last 14 days
     const trades = await prisma.trade.findMany({
@@ -61,24 +68,23 @@ export async function POST(
       },
     })
 
-    const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(user.email)}`
-
-    // If no trades, send missing you email
+    // If no trades, return missing you email data
     if (trades.length === 0) {
-      const result = await resend.emails.send({
-        from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
-        to: [newsletter.email],
-        subject: 'Nous manquons de vous voir sur Deltalytix',
-        react: MissingYouEmail({
+      const missingYouEmailHtml = await render(
+        MissingYouEmail({
           firstName: newsletter.firstName || 'trader',
           email: newsletter.email,
-        }),
-      })
+        })
+      )
 
       return NextResponse.json({
         success: true,
-        message: 'Missing you email sent successfully',
-        id: result.data?.id
+        emailData: {
+          from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
+          to: [newsletter.email],
+          subject: 'Nous manquons de vous voir sur Deltalytix',
+          html: missingYouEmailHtml
+        }
       })
     }
 
@@ -91,6 +97,12 @@ export async function POST(
       }
       return acc
     }, { wins: 0, losses: 0 })
+    const formatPnL = (value: number): string => {
+      if (Math.abs(value) >= 1000) {
+        return `${Math.trunc(value / 1000)}K`
+      }
+      return Math.trunc(value).toString()
+    }
 
     const dailyPnL = trades.reduce((acc, trade) => {
       const tradeDate = new Date(trade.entryDate)
@@ -115,6 +127,10 @@ export async function POST(
       return acc
     }, [] as { date: string, pnl: number, weekday: number }[])
 
+    dailyPnL.forEach(day => {
+      day.pnl = Number(formatPnL(day.pnl))
+    })
+
     // Sort by date
     dailyPnL.sort((a, b) => {
       const [dayA, monthA] = a.date.split('/').map(Number)
@@ -137,12 +153,6 @@ export async function POST(
     const profitableDays = dailyPnL.filter(day => day.pnl > 0).length
     const totalDays = dailyPnL.length
 
-    const formatPnL = (value: number): string => {
-      if (Math.abs(value) >= 1000) {
-        return `${(value / 1000).toFixed(1)}K`
-      }
-      return value.toFixed(Math.abs(value) < 10 ? 2 : 1)
-    }
 
     let analysis = {
       resultAnalysisIntro: "Voici vos statistiques de trading de la semaine.",
@@ -195,36 +205,36 @@ Génère une analyse personnalisée basée sur ces données :`,
       console.error('Error generating analysis:', error)
     }
 
-    // Send the email
-    const result = await resend.emails.send({
-      from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
-      to: [user.email],
-      subject: 'Vos statistiques de trading de la semaine 📈',
-      react: TraderStatsEmail({
+    const weeklyStatsEmailHtml = await render(
+      TraderStatsEmail({
         firstName: newsletter.firstName || 'trader',
         dailyPnL,
         winLossStats,
         email: newsletter.email,
         resultAnalysisIntro: analysis.resultAnalysisIntro,
         tipsForNextWeek: analysis.tipsForNextWeek
-      }),
-      headers: {
-        'List-Unsubscribe': `<${unsubscribeUrl}>`,
-        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
-      },
-      replyTo: 'hugo.demenez@deltalytix.app'
-    })
+      })
+    )
 
     return NextResponse.json({
       success: true,
-      message: 'Weekly summary email sent successfully',
-      id: result.data?.id
+      emailData: {
+        from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
+        to: [user.email],
+        subject: 'Vos statistiques de trading de la semaine 📈',
+        html: weeklyStatsEmailHtml,
+        headers: {
+          'List-Unsubscribe': `<${unsubscribeUrl}>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+        },
+        replyTo: 'hugo.demenez@deltalytix.app'
+      }
     })
 
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: error instanceof Error ? error.message : 'Internal server error', stack: error instanceof Error ? error.stack : undefined },
       { status: 500 }
     )
   }
