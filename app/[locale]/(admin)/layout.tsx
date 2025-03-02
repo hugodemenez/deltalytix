@@ -36,7 +36,7 @@ export default function RootLayout({
   return (
     <I18nProviderClient locale={locale}>
       <SidebarProvider defaultOpen>
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen w-screen">
           <SidebarNav />
           <main className="flex-1 overflow-y-auto">
             <div className="container p-6">

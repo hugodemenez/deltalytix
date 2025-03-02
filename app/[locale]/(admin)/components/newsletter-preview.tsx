@@ -23,7 +23,7 @@ export function NewsletterPreview() {
   useEffect(() => {
     const updatePreview = async () => {
       const result = await renderEmailPreview({
-        youtubeId: debouncedContent.youtubeId || 'dQw4w9WgXcQ',
+        youtubeId: debouncedContent.youtubeId || 'p2pYl6GMGbk',
         introMessage: debouncedContent.introMessage || '*Pas encore de contenu*',
         features: debouncedContent.features.filter(f => f.trim()),
         firstName: debouncedContent.firstName,

@@ -3,23 +3,39 @@ import { NewsletterEditor } from "@/app/[locale]/(admin)/components/newsletter-e
 import { SubscriberTable } from "@/app/[locale]/(admin)/components/subscriber-table"
 import { NewsletterProvider } from "@/app/[locale]/(admin)/components/newsletter-context"
 import { NewsletterPreview } from "@/app/[locale]/(admin)/components/newsletter-preview"
+import {
+  ResizablePanel,
+  ResizablePanelGroup,
+  ResizableHandle,
+} from "@/components/ui/resizable"
 
 export default function AdminPage() {
   return (
     <div className="container mx-auto py-6 space-y-8">
-      <h1 className="text-3xl font-bold">Newsletter Administration</h1>
-      
       <NewsletterProvider>
         {/* Editor and Preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Suspense fallback={<div>Loading editor...</div>}>
-            <NewsletterEditor />
-          </Suspense>
+        <ResizablePanelGroup
+          direction="horizontal"
+          className="min-h-[600px] rounded-lg border"
+        >
+          <ResizablePanel defaultSize={50}>
+            <div className="h-full p-4">
+              <Suspense fallback={<div>Loading editor...</div>}>
+                <NewsletterEditor />
+              </Suspense>
+            </div>
+          </ResizablePanel>
           
-          <Suspense fallback={<div>Loading preview...</div>}>
-            <NewsletterPreview />
-          </Suspense>
-        </div>
+          <ResizableHandle withHandle />
+          
+          <ResizablePanel defaultSize={50}>
+            <div className="h-full p-4">
+              <Suspense fallback={<div>Loading preview...</div>}>
+                <NewsletterPreview />
+              </Suspense>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
 
         {/* Subscribers Table */}
         <div>

@@ -13,30 +13,9 @@ import { Loader2, Sparkles } from "lucide-react"
 import { generateNewsletterContent } from "../server/generate-newsletter"
 import { generateTranscriptSummary } from "../server/youtube"
 import type { NewsletterContent } from "./newsletter-context"
-import { YoutubeTranscript } from "youtube-transcript"
 import { extractYouTubeId } from "../utils/youtube"
+import { fetchTranscriptServer } from "../server/youtube"
 
-
-export async function fetchYoutubeTranscript(videoId: string): Promise<string | null> {
-  try {
-    const transcript = await YoutubeTranscript.fetchTranscript(videoId)
-    
-    if (!transcript || transcript.length === 0) {
-      return null
-    }
-
-    // Combine all transcript pieces into one text
-    const fullText = transcript
-      .map(item => item.text)
-      .join(' ')
-      .trim()
-
-    return fullText
-  } catch (error) {
-    console.error('Error fetching YouTube transcript:', error)
-    return null
-  }
-}
 export function NewsletterEditor() {
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -53,7 +32,7 @@ export function NewsletterEditor() {
 
       try {
         setIsLoadingTranscript(true)
-        const transcript = await fetchYoutubeTranscript(videoId)
+        const transcript = await fetchTranscriptServer(videoId)
 
         if (transcript) {
           // Generate summary from transcript

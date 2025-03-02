@@ -44,4 +44,27 @@ ${transcript}`,
     console.error('Error generating transcript summary:', error)
     return null
   }
+}
+
+export async function fetchTranscriptServer(videoId: string): Promise<string | null> {
+  "use server"
+  
+  try {
+    const transcript = await YoutubeTranscript.fetchTranscript(videoId)
+    
+    if (!transcript || transcript.length === 0) {
+      return null
+    }
+
+    // Combine all transcript pieces into one text
+    const fullText = transcript
+      .map(item => item.text)
+      .join(' ')
+      .trim()
+
+    return fullText
+  } catch (error) {
+    console.error('Error fetching YouTube transcript:', error)
+    return null
+  }
 } 

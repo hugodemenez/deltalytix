@@ -88,6 +88,7 @@ model User {
   posts           Post[]
   votes           Vote[]
   comments        Comment[]
+  language        String           @default("en")
 
   @@index([email])
   @@schema("public")

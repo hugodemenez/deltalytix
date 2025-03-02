@@ -2,6 +2,8 @@
 import { createI18nMiddleware } from 'next-international/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { getCurrentLocale } from './locales/server'
+import { PrismaClient } from '@prisma/client'
 
 const I18nMiddleware = createI18nMiddleware({
   locales: ['en', 'fr'],
@@ -65,6 +67,14 @@ export async function middleware(request: NextRequest) {
 
       // Securely verify the user's identity with the Supabase Auth server
       const { data: { user }, error } = await supabase.auth.getUser()
+      
+      const prisma = new PrismaClient()
+      const locale = await getCurrentLocale()
+      // Set user language in db
+      await prisma.user.update({
+        where: { id: user?.id },
+        data: { language: locale},
+      })
       
       if (error || !user || user.id !== process.env.ALLOWED_ADMIN_USER_ID) {
         const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url))
