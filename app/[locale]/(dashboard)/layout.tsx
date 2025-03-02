@@ -13,8 +13,18 @@ import { TourCard } from "./components/onboarding/custom-card";
 import { WebSocketNotifications } from './components/websocket-notifications'
 import { MoodProvider } from '@/components/context/mood-data';
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { PrismaClient } from "@prisma/client";
+import { createClient } from "@/server/auth";
 
 export default async function RootLayout({ params: { locale }, children }: { params: { locale: string }, children: ReactElement }) {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      const prisma = new PrismaClient()
+      // Set user language in db
+      await prisma.user.update({
+        where: { id: user?.id },
+        data: { language: locale},
+      })
   return (
     <I18nProviderClient locale={locale}>
       <AI>
