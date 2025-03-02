@@ -82,6 +82,7 @@ export async function POST(
         emailData: {
           from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
           to: [newsletter.email],
+          replyTo: 'hugo.demenez@deltalytix.app',
           subject: 'Nous manquons de vous voir sur Deltalytix',
           html: missingYouEmailHtml
         }
