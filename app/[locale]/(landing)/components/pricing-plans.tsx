@@ -48,7 +48,6 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       description: t('pricing.basic.description'),
       price: { yearly: 0, monthly: 0 },
       features: [
-        t('pricing.basic.feature1'),
         t('pricing.basic.feature2'),
       ]
     },
