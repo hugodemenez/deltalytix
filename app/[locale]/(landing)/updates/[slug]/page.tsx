@@ -1,7 +1,7 @@
 import { getPost } from '@/lib/mdx'
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
-import { generateStaticParams } from '@/lib/posts'
+import { getAllPosts } from '@/lib/mdx'
 import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import { format } from 'date-fns'
@@ -17,6 +17,22 @@ interface PageProps {
 // Force page to be statically generated
 export const dynamic = 'force-static'
 export const dynamicParams = false // Don't generate pages for non-existent slugs
+
+// Generate static paths for all posts in all locales
+export async function generateStaticParams() {
+  const locales = ['en', 'fr']
+  const paths = []
+
+  for (const locale of locales) {
+    const posts = await getAllPosts(locale)
+    paths.push(...posts.map((post) => ({
+      locale,
+      slug: post.slug,
+    })))
+  }
+
+  return paths
+}
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   try {
@@ -72,8 +88,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   }
 }
-
-export { generateStaticParams }
 
 export default async function Page({ params }: PageProps) {
   const post = await getPost(params.slug, params.locale)
