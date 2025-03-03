@@ -123,8 +123,6 @@
   user-select: none;
 }
 
-
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -132,4 +130,111 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Code block styles */
+pre {
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+
+pre [data-line] {
+  padding: 0 1rem;
+}
+
+pre [data-highlighted-line] {
+  background: rgba(200, 200, 255, 0.1);
+  padding: 0 1rem;
+  width: 100%;
+  display: block;
+  position: relative;
+}
+
+pre [data-highlighted-line]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: #60a5fa;
+}
+
+pre [data-highlighted-chars] {
+  background: rgba(200, 200, 255, 0.1);
+  padding: 2px;
+  border-radius: 2px;
+}
+
+code {
+  counter-reset: line;
+}
+
+code > [data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 1rem;
+  margin-right: 1rem;
+  text-align: right;
+  color: gray;
+}
+
+.prose pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.prose pre code {
+  font-size: 0.875em;
+  line-height: 1.7142857;
+  display: block;
+  overflow-x: auto;
+  border-radius: 0.375rem;
+}
+
+/* MDX Typography Overrides */
+.prose {
+  --tw-prose-body: theme('colors.neutral.700');
+  --tw-prose-headings: theme('colors.neutral.900');
+  --tw-prose-links: theme('colors.neutral.900');
+  --tw-prose-links-hover: theme('colors.neutral.800');
+  --tw-prose-underline: theme('colors.neutral.400');
+  --tw-prose-underline-hover: theme('colors.neutral.800');
+  --tw-prose-bold: theme('colors.neutral.900');
+  --tw-prose-counters: theme('colors.neutral.500');
+  --tw-prose-bullets: theme('colors.neutral.300');
+  --tw-prose-hr: theme('colors.neutral.200');
+  --tw-prose-quote-borders: theme('colors.neutral.200');
+  --tw-prose-captions: theme('colors.neutral.500');
+  --tw-prose-code: theme('colors.neutral.900');
+  --tw-prose-code-bg: theme('colors.neutral.100');
+  --tw-prose-pre-code: theme('colors.neutral.200');
+  --tw-prose-pre-bg: theme('colors.neutral.800');
+  --tw-prose-pre-border: transparent;
+  --tw-prose-th-borders: theme('colors.neutral.200');
+  --tw-prose-td-borders: theme('colors.neutral.100');
+}
+
+.dark .prose {
+  --tw-prose-body: theme('colors.neutral.300');
+  --tw-prose-headings: theme('colors.neutral.100');
+  --tw-prose-links: theme('colors.neutral.100');
+  --tw-prose-links-hover: theme('colors.neutral.200');
+  --tw-prose-underline: theme('colors.neutral.600');
+  --tw-prose-underline-hover: theme('colors.neutral.200');
+  --tw-prose-bold: theme('colors.neutral.100');
+  --tw-prose-counters: theme('colors.neutral.400');
+  --tw-prose-bullets: theme('colors.neutral.600');
+  --tw-prose-hr: theme('colors.neutral.700');
+  --tw-prose-quote-borders: theme('colors.neutral.700');
+  --tw-prose-captions: theme('colors.neutral.400');
+  --tw-prose-code: theme('colors.neutral.200');
+  --tw-prose-code-bg: theme('colors.neutral.800');
+  --tw-prose-pre-code: theme('colors.neutral.100');
+  --tw-prose-pre-bg: theme('colors.neutral.900');
+  --tw-prose-pre-border: transparent;
+  --tw-prose-th-borders: theme('colors.neutral.700');
+  --tw-prose-td-borders: theme('colors.neutral.800');
 }

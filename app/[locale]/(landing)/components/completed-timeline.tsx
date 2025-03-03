@@ -6,18 +6,19 @@ import { motion } from "framer-motion"
 import { useI18n } from '@/locales/client'
 import { TranslationKeys } from "@/types/translations"
 import Image from 'next/image'
+import Link from 'next/link'
+import { format } from 'date-fns'
 
-type Milestone = {
-  id: number;
-  titleKey: keyof TranslationKeys;
-  descriptionKey: keyof TranslationKeys;
-  image?: string;
-  status: 'completed' | 'in-progress' | 'upcoming';
-  estimatedDate?: keyof TranslationKeys;
-  completedDate?: string;
+interface TimelineItem {
+  id: string
+  title: string
+  description: string
+  completedDate: string
+  status: 'completed' | 'in-progress' | 'upcoming'
+  image?: string
 }
 
-export default function CompletedTimeline({ milestones }: { milestones: Milestone[] }) {
+export default function CompletedTimeline({ milestones }: { milestones: TimelineItem[] }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const observerRefs = useRef<(HTMLDivElement | null)[]>([])
   const t = useI18n()
@@ -49,54 +50,44 @@ export default function CompletedTimeline({ milestones }: { milestones: Mileston
   // Filter and sort completed milestones by completedDate, most recent first
   const completedMilestones = milestones
     .filter(milestone => milestone.status === 'completed' && milestone.completedDate)
-    .sort((a, b) => new Date(b.completedDate!).getTime() - new Date(a.completedDate!).getTime())
+    .sort((a, b) => new Date(b.completedDate).getTime() - new Date(a.completedDate).getTime())
 
   return (
     <div className="relative">
-      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-300 dark:bg-gray-700" />
-      {completedMilestones.map((milestone, index) => (
-        <motion.div
-          key={milestone.id}
-          ref={(el: HTMLDivElement | null) => {
-            observerRefs.current[index] = el
-          }}
-          className="milestone relative pl-12 pb-16"
-          initial={{ opacity: 0.5, y: 20, scale: 1 }}
-          animate={{ 
-            opacity: activeIndex === index ? 1 : 0.5, 
-            y: activeIndex === index ? 0 : 20,
-            scale: activeIndex === index ? 1.05 : 1
-          }}
-          transition={{ duration: 0.5 }}
-        >
-          <motion.div 
-            className="absolute left-4 w-4 h-4 rounded-full bg-primary border-4 border-white dark:border-gray-900 transform -translate-x-1/2"
-            initial={{ scale: 1 }}
-            animate={{ scale: activeIndex === index ? 1.5 : 1 }}
-            transition={{ duration: 0.3 }}
-          />
-          {milestone.completedDate && (
-            <Badge variant="outline" className="mb-2">
-              {formatDate(milestone.completedDate)}
-            </Badge>
-          )}
-          <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-gray-100">
-            {t(milestone.titleKey)}
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            {t(milestone.descriptionKey)}
-          </p>
-          {milestone.image && (
-            <Image 
-              src={milestone.image} 
-              alt={t(milestone.titleKey)} 
-              width={100}
-              height={100}
-              className="mt-4 rounded-lg shadow-md max-w-full h-auto"
-            />
-          )}
-        </motion.div>
-      ))}
+      <div className="absolute left-4 top-0 h-full w-0.5 bg-neutral-200 dark:bg-neutral-800" />
+      
+      <div className="space-y-12 pl-12">
+        {completedMilestones.map((milestone, index) => (
+          <div key={milestone.id} className="relative">
+            <div className="absolute -left-[44px] flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="h-3 w-3 rounded-full bg-neutral-300 dark:bg-neutral-700" />
+            </div>
+            
+            <Link href={`/updates/${milestone.id}`} className="block hover:opacity-90 transition-opacity">
+              <time className="mb-2 block text-sm text-neutral-600 dark:text-neutral-400">
+                {format(new Date(milestone.completedDate), 'MMMM d, yyyy')}
+              </time>
+              <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                {milestone.title}
+              </h3>
+              <p className="mt-2 text-neutral-600 dark:text-neutral-400">
+                {milestone.description}
+              </p>
+              {milestone.image && (
+                <div className="mt-4 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                  <Image
+                    src={milestone.image}
+                    alt={milestone.title}
+                    width={800}
+                    height={400}
+                    className="w-full h-auto"
+                  />
+                </div>
+              )}
+            </Link>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

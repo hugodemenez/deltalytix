@@ -93,9 +93,56 @@ const config: Config = {
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
   			'accordion-up': 'accordion-up 0.2s ease-out'
+  		},
+  		typography: {
+  			DEFAULT: {
+  				css: {
+  					'code::before': {
+  						content: '""'
+  					},
+  					'code::after': {
+  						content: '""'
+  					},
+  					'table': {
+  						width: '100%',
+  						marginTop: '1.5rem',
+  						marginBottom: '1.5rem',
+  						borderCollapse: 'collapse',
+  						fontSize: '0.875rem',
+  						lineHeight: '1.25rem',
+  						border: '1px solid var(--tw-prose-td-borders)',
+  					},
+  					'thead': {
+  						backgroundColor: 'var(--tw-prose-th-borders)',
+  						borderWidth: '1px',
+  						borderStyle: 'solid',
+  						borderColor: 'var(--tw-prose-td-borders)',
+  					},
+  					'thead th': {
+  						padding: '1rem',
+  						fontWeight: '500',
+  						textAlign: 'left',
+  						backgroundColor: 'var(--tw-prose-th-borders)',
+  					},
+  					'tbody tr': {
+  						borderBottomWidth: '1px',
+  						borderBottomStyle: 'solid',
+  						borderBottomColor: 'var(--tw-prose-td-borders)',
+  					},
+  					'tbody td': {
+  						padding: '1rem',
+  						borderWidth: '1px',
+  						borderStyle: 'solid',
+  						borderColor: 'var(--tw-prose-td-borders)',
+  					},
+  				}
+  			}
   		}
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    require('@tailwindcss/typography'),
+  ],
 };
 export default config;
