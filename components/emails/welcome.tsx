@@ -20,7 +20,7 @@ interface WelcomeEmailProps {
 }
 
 export default function WelcomeEmail({ firstName = 'trader', email }: WelcomeEmailProps) {
-  const youtubeId = 'p2pYl6GMGbk';
+  const youtubeId = 'OfFre6WLcqo';
   const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
   const unsubscribeUrl = email 
     ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
