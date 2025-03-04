@@ -14,17 +14,35 @@ import { WebSocketNotifications } from './components/websocket-notifications'
 import { MoodProvider } from '@/components/context/mood-data';
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { PrismaClient } from "@prisma/client";
-import { createClient } from "@/server/auth";
+import { createClient, ensureUserInDatabase } from "@/server/auth";
 
 export default async function RootLayout({ params: { locale }, children }: { params: { locale: string }, children: ReactElement }) {
       const supabase = await createClient()
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
       const prisma = new PrismaClient()
-      // Set user language in db
-      await prisma.user.update({
-        where: { id: user?.id },
-        data: { language: locale},
-      })
+      
+      if (user?.id) {
+        try {
+          // First ensure the user exists in the database using our existing function
+          await ensureUserInDatabase(user)
+          
+          // Then update the language preference
+          await prisma.user.update({
+            where: { 
+              auth_user_id: user.id
+            },
+            data: { 
+              language: locale
+            },
+          })
+        } catch (error) {
+          console.error('Error syncing user data:', error)
+          // Don't throw the error as this is not critical for the app to function
+        } finally {
+          await prisma.$disconnect()
+        }
+      }
+
   return (
     <I18nProviderClient locale={locale}>
       <AI>

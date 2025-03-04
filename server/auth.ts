@@ -127,7 +127,7 @@ interface SupabaseUser {
   email?: string | null;
 }
 
-async function ensureUserInDatabase(user: SupabaseUser) {
+export async function ensureUserInDatabase(user: SupabaseUser) {
   if (!user) {
     await signOut();
     throw new Error('User data is required');
