@@ -49,7 +49,7 @@ model Subscription {
   plan      String
   createdAt DateTime  @default(now())
   userId    String    @unique
-  user      User      @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   status    String    @default("ACTIVE")
   endDate   DateTime?
   trialEndsAt DateTime?
@@ -66,7 +66,7 @@ model Notification {
   description String
   createdAt   DateTime @default(now())
   readAt      DateTime?
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@schema("public")
@@ -105,7 +105,7 @@ model Account {
   startingBalance   Float     @default(0)
   isPerformance     Boolean   @default(false)
   userId            String
-  user              User      @relation(fields: [userId], references: [id])
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt         DateTime  @default(now())
   payoutCount       Int       @default(0)
   resetDate         DateTime?
@@ -134,7 +134,7 @@ model Payout {
 model DashboardLayout {
   id        String   @id @default(uuid())
   userId    String   @unique
-  user      User     @relation(fields: [userId], references: [auth_user_id])
+  user      User     @relation(fields: [userId], references: [auth_user_id], onDelete: Cascade)
   desktop   Json     @default("[]")
   mobile    Json     @default("[]")
   createdAt DateTime @default(now())
@@ -160,7 +160,7 @@ model SubscriptionFeedback {
 model Mood {
   id            String   @id @default(uuid())
   userId        String
-  user          User     @relation(fields: [userId], references: [id])
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   day           DateTime
   mood          String
   conversation  Json?    // Stores the conversation history as JSON
@@ -214,7 +214,7 @@ model Tag {
   description String?
   color       String?  @default("#CBD5E1") // Default to a neutral color
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -239,7 +239,7 @@ model Post {
   type        PostType  @default(FEATURE_REQUEST)
   status      PostStatus @default(OPEN)
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   votes       Vote[]
   comments    Comment[]
   screenshots String[]  @default([]) @db.Text
@@ -258,7 +258,7 @@ model Comment {
   postId    String
   post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
-  user      User      @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   parentId  String?
   parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
   replies   Comment[] @relation("CommentReplies")
@@ -294,7 +294,7 @@ model Vote {
   postId    String
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@unique([postId, userId])

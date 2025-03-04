@@ -129,7 +129,13 @@ interface SupabaseUser {
 
 async function ensureUserInDatabase(user: SupabaseUser) {
   if (!user) {
+    await signOut();
     throw new Error('User data is required');
+  }
+
+  if (!user.id) {
+    await signOut();
+    throw new Error('User ID is required');
   }
 
   try {
@@ -141,10 +147,19 @@ async function ensureUserInDatabase(user: SupabaseUser) {
     // If user exists by auth_user_id, update email if needed
     if (existingUserByAuthId) {
       if (existingUserByAuthId.email !== user.email) {
-        return await prisma.user.update({
-          where: { auth_user_id: user.id },
-          data: { email: user.email || existingUserByAuthId.email },
-        });
+        try {
+          return await prisma.user.update({
+            where: { 
+              auth_user_id: user.id // Always use auth_user_id as the unique identifier
+            },
+            data: { 
+              email: user.email || existingUserByAuthId.email 
+            },
+          });
+        } catch (updateError) {
+          console.error('Error updating user email:', updateError);
+          throw new Error('Failed to update user email');
+        }
       }
       return existingUserByAuthId;
     }
@@ -155,29 +170,72 @@ async function ensureUserInDatabase(user: SupabaseUser) {
         where: { email: user.email },
       });
 
+      if (existingUserByEmail && existingUserByEmail.auth_user_id !== user.id) {
+        await signOut();
+        throw new Error('Account conflict: Email already associated with different authentication method');
+      }
+
       if (existingUserByEmail) {
-        // Update the existing user with the new auth_user_id
-        return await prisma.user.update({
-          where: { email: user.email },
-          data: { auth_user_id: user.id },
-        });
+        try {
+          return await prisma.user.update({
+            where: { 
+              email: user.email // Use email as the unique identifier since we found the user by email
+            },
+            data: { 
+              auth_user_id: user.id 
+            },
+          });
+        } catch (updateError) {
+          console.error('Error updating auth_user_id:', updateError);
+          await signOut();
+          throw new Error('Failed to update user authentication');
+        }
       }
     }
 
     // Create new user if no existing user found
-    return await prisma.user.create({
-      data: {
-        auth_user_id: user.id,
-        email: user.email || '', // Provide a default empty string if email is null
-        id: user.id,
-      },
-    });
+    try {
+      return await prisma.user.create({
+        data: {
+          auth_user_id: user.id,
+          email: user.email || '', // Provide a default empty string if email is null
+          id: user.id,
+        },
+      });
+    } catch (createError) {
+      if (createError instanceof Error && 
+          createError.message.includes('Unique constraint failed')) {
+        await signOut();
+        throw new Error('Database integrity error: Duplicate user records found');
+      }
+      console.error('Error creating user:', createError);
+      await signOut();
+      throw new Error('Failed to create user account');
+    }
   } catch (error) {
     console.error('Error ensuring user in database:', error);
+    
+    // Handle Prisma validation errors
     if (error instanceof Error) {
-      throw new Error(`Failed to create or update user: ${error.message}`);
+      if (error.message.includes('Argument `where` of type UserWhereUniqueInput needs')) {
+        await signOut();
+        throw new Error('Invalid user identification provided');
+      }
+      
+      if (error.message.includes('Unique constraint failed')) {
+        await signOut();
+        throw new Error('Database integrity error: Duplicate user records found');
+      }
+      
+      if (error.message.includes('Account conflict')) {
+        // Error already handled above
+        throw error;
+      }
     }
-    throw new Error('Failed to create or update user');
+    
+    // For any other unexpected errors, log out the user
+    await signOut();
+    throw new Error('Critical database error occurred. Please try logging in again.');
   }
 }
 
