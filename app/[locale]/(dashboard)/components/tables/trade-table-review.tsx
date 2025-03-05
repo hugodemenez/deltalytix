@@ -306,12 +306,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     tagFilter,
     tags
   } = useUserData()
-  const [sorting, setSorting] = useState<SortingState>([
-    {
-      id: "entryDate",
-      desc: true
-    }
-  ])
+  const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
