@@ -306,7 +306,12 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     tagFilter,
     tags
   } = useUserData()
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>([
+    {
+      id: "entryDate",
+      desc: true
+    }
+  ])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
@@ -334,7 +339,8 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       .map(trade => ({
         ...trade,
         direction: trade.side || '',
-      })),
+      }))
+      .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime()),
     [trades, selectedAccount]
   )
 
