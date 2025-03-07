@@ -26,6 +26,7 @@ import { PropFirmCard } from '../components/data-management/prop-firm-card'
 import { PropFirmOverview } from '../components/propfirm/prop-firm-overview'
 import { TagWidget } from '../components/filters/tag-widget'
 import MarketChart from '../components/charts/market-chart'
+import ProfitFactorCard from '../components/statistics/profit-factor-card'
 
 export interface WidgetConfig {
   type: WidgetType
@@ -205,6 +206,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 100,
     getComponent: ({ size }) => <WinningStreakCard size={size} />,
     getPreview: () => <WinningStreakCard size="tiny" />
+  },
+  profitFactor: {
+    type: 'profitFactor',
+    defaultSize: 'tiny',
+    allowedSizes: ['tiny'],
+    category: 'statistics',
+    previewHeight: 100,
+    getComponent: ({ size }) => <ProfitFactorCard size={size} />,
+    getPreview: () => <ProfitFactorCard size="tiny" />
   },
   statisticsWidget: {
     type: 'statisticsWidget',

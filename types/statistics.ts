@@ -9,4 +9,5 @@ export interface StatisticsProps {
   nbLoss: number;
   totalPositionTime: number;
   averagePositionTime: string;
+  profitFactor: number;
 }

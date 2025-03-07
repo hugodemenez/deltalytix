@@ -29,6 +29,7 @@ type StatisticsProps = {
   nbLoss: number
   totalPositionTime: number
   averagePositionTime: string
+  profitFactor: number
 }
 
 type CalendarData = {
@@ -691,7 +692,31 @@ export const UserDataProvider: React.FC<{
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime());
   }, [tagFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView]);
 
-  const statistics = useMemo(() => calculateStatistics(formattedTrades), [formattedTrades]);
+  const statistics = useMemo(() => {
+    const stats = calculateStatistics(formattedTrades);
+    
+    // Calculate gross profits and gross losses including commissions
+    const grossProfits = formattedTrades.reduce((sum, trade) => {
+      const totalPnL = trade.pnl - trade.commission;
+      return totalPnL > 0 ? sum + totalPnL : sum;
+    }, 0);
+    
+    const grossLosses = Math.abs(formattedTrades.reduce((sum, trade) => {
+      const totalPnL = trade.pnl - trade.commission;
+      return totalPnL < 0 ? sum + totalPnL : sum;
+    }, 0));
+
+    // Calculate profit factor (handle division by zero)
+    const profitFactor = grossLosses === 0 ? 
+      grossProfits > 0 ? Number.POSITIVE_INFINITY : 1 : 
+      grossProfits / grossLosses;
+
+    return {
+      ...stats,
+      profitFactor
+    };
+  }, [formattedTrades]);
+
   const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades]);
 
   const isPlusUser = () => {

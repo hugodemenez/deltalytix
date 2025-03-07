@@ -27,7 +27,23 @@ export function parsePositionTime(timeInSeconds: number): string {
   return formattedTime;
 }
 
-export function calculateStatistics(formattedTrades: Trade[]): StatisticsProps {
+export function calculateStatistics(trades: Trade[]): StatisticsProps {
+  if (!trades.length) {
+    return {
+      cumulativeFees: 0,
+      cumulativePnl: 0,
+      winningStreak: 0,
+      winRate: 0,
+      nbTrades: 0,
+      nbBe: 0,
+      nbWin: 0,
+      nbLoss: 0,
+      totalPositionTime: 0,
+      averagePositionTime: '0s',
+      profitFactor: 1
+    }
+  }
+
   const initialStatistics: StatisticsProps = {
     cumulativeFees: 0,
     cumulativePnl: 0,
@@ -38,10 +54,11 @@ export function calculateStatistics(formattedTrades: Trade[]): StatisticsProps {
     nbWin: 0,
     nbLoss: 0,
     totalPositionTime: 0,
-    averagePositionTime: ''
+    averagePositionTime: '0s',
+    profitFactor: 1
   };
 
-  const statistics = formattedTrades.reduce((acc: StatisticsProps, trade: Trade) => {
+  const statistics = trades.reduce((acc: StatisticsProps, trade: Trade) => {
     const pnl = trade.pnl;
     
     acc.nbTrades++;
@@ -65,7 +82,7 @@ export function calculateStatistics(formattedTrades: Trade[]): StatisticsProps {
     return acc;
   }, initialStatistics);
 
-  const averageTimeInSeconds = Math.round(statistics.totalPositionTime / formattedTrades.length);
+  const averageTimeInSeconds = Math.round(statistics.totalPositionTime / trades.length);
   statistics.averagePositionTime = parsePositionTime(averageTimeInSeconds);
 
   return statistics;

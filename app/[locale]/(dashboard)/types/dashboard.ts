@@ -13,6 +13,7 @@ export type WidgetType =
   | 'longShortPerformance'
   | 'tradePerformance'
   | 'winningStreak'
+  | 'profitFactor'
   | 'statisticsWidget'
   | 'tradeTableReview'
   | 'moodSelector'
