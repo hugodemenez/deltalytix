@@ -29,7 +29,7 @@ export function PlatformItem({
 
   return (
     <div className={cn(
-      platform.isDisabled && "cursor-not-allowed"
+      (platform.isDisabled || platform.isComingSoon) && "cursor-not-allowed"
     )}>
       <CommandItem
         onSelect={() => !platform.isDisabled && onSelect(platform.type)}
@@ -42,7 +42,7 @@ export function PlatformItem({
           isSelected && "border-l-primary bg-primary/5",
           !platform.isDisabled && "hover:border-l-primary/50"
         )}
-        disabled={platform.isDisabled}
+        disabled={platform.isDisabled || platform.isComingSoon}
       >
         <div className="flex items-center py-1">
           {platform.logo.path && (
@@ -64,6 +64,13 @@ export function PlatformItem({
                   {t('import.type.badge.maintenance')}
                 </Badge>
                 <AlertTriangle className="h-4 w-4 text-yellow-500 animate-pulse" />
+              </>
+            )}
+            {platform.isComingSoon && !platform.isDisabled && (
+              <>
+                <Badge variant="secondary" className="ml-2 transition-transform duration-200 hover:scale-105 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20">
+                  {t('import.type.badge.comingSoon')}
+                </Badge>
               </>
             )}
             {!platform.isDisabled && platform.isRithmic && isWeekend && (

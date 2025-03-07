@@ -325,6 +325,7 @@ export default {
     'import.type.badge.soon': 'SOON',
     'import.type.badge.plus': 'PLUS',
     'import.type.badge.maintenance': 'MAINTENANCE',
+    'import.type.badge.comingSoon': 'COMING SOON',
     'import.type.comingSoon': 'This feature is coming soon!',
     'import.type.plusFeature': 'Rithmic sync is a Plus feature. Please upgrade your account to use this feature.',
     'import.type.rithmicLogin': 'Rithmic Account Login',

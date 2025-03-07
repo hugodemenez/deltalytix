@@ -21,6 +21,7 @@ export interface PlatformConfig {
     alt: string
   }
   isDisabled?: boolean
+  isComingSoon?: boolean
   isRithmic?: boolean
   skipHeaderSelection?: boolean
   requiresAccountSelection?: boolean
@@ -234,7 +235,7 @@ export const platforms: PlatformConfig[] = [
       path: '/logos/etp.png',
       alt: 'ETP Logo'
     },
-    isDisabled: true,
+    isComingSoon: true,
     customComponent: EtpSync
   },
 ] as const

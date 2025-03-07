@@ -322,6 +322,7 @@ export default {
     'import.type.badge.soon': 'BIENTÔT',
     'import.type.badge.plus': 'PLUS',
     'import.type.badge.maintenance': 'MAINTENANCE',
+    'import.type.badge.comingSoon': 'BIENTÔT DISPONIBLE',
     'import.type.comingSoon': 'Cette fonctionnalité arrive bientôt !',
     'import.type.plusFeature': 'La synchronisation Rithmic est une fonctionnalité Plus. Veuillez mettre à niveau votre compte pour utiliser cette fonctionnalité.',
     'import.type.rithmicLogin': 'Connexion Compte Rithmic',
