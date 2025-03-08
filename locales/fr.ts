@@ -789,7 +789,8 @@ export default {
         delete: 'Supprimer',
         edit: 'Modifier',
         close: 'Fermer',
-        back: "Retour"
+        back: "Retour",
+        send: 'Envoyer'
     },
     rithmic: {
         savedCredentials: "Identifiants Sauvegardés",
@@ -1300,5 +1301,23 @@ export default {
             'comment': 'laisser des commentaires',
             'createPost': 'créer une publication'
         }
-    }
-} as const
+    },
+    'support': {
+        'greeting': "Bonjour ! Bienvenue sur le support Deltalytix. Comment puis-je vous aider avec votre journal de trading aujourd'hui ? Expliquez-moi votre problème ou votre question, et je ferai de mon mieux pour vous aider.",
+        'description': 'Comment pouvons-nous vous aider avec votre journal de trading ?',
+        'requestHumanSupport': 'Demander une assistance humaine',
+        'contactInformation': 'Informations de contact',
+        'contactInformationDescription': 'Veuillez fournir vos informations de contact pour que nous puissions vous recontacter.',
+        'emailSent': 'Notre équipe vous recontactera bientôt.',
+        'emailError': 'Veuillez réessayer plus tard.',
+        'emailConfirmation': "Merci, {name}. J'ai envoyé votre demande de support à notre équipe. Ils examineront votre cas et vous recontacteront à l'adresse {email} dès que possible. Y a-t-il autre chose dont vous avez besoin ?",
+        'form': {
+            'name': 'Nom',
+            'email': 'Email',
+            'additionalInfo': 'Informations supplémentaires',
+            'additionalInfoPlaceholder': 'Détails supplémentaires que vous souhaitez partager...',
+            'submit': 'Envoyer',
+            'cancel': 'Annuler'
+        }
+    } as const
+}

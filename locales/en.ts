@@ -1273,4 +1273,26 @@ export default {
             'createPost': 'create a post'
         }
     },
+    'support': {
+        'greeting': "Hello! Welcome to Deltalytix support. How can I assist you with your trading journal today? Please explain your issue or question, and I'll do my best to help.",
+        'description': 'How can we help you with your trading journal?',
+        'requestHumanSupport': 'Request Human Support',
+        'contactInformation': 'Contact Information',
+        'contactInformationDescription': 'Please provide your contact information so we can get back to you.',
+        'emailSent': 'Our team will get back to you soon.',
+        'emailError': 'Please try again later.',
+        'emailConfirmation': "Thank you, {name}. I've sent your support request to our team. They will review your case and get back to you at {email} as soon as possible. Is there anything else I can help you with?",
+        'form': {
+            'name': 'Name',
+            'email': 'Email',
+            'additionalInfo': 'Additional Information',
+            'additionalInfoPlaceholder': "Any additional details you'd like to share...",
+            'submit': 'Submit',
+            'cancel': 'Cancel'
+        }
+    },
+    'common': {
+        'send': 'Send',
+        'saving': 'Sending'
+    }
 } as const

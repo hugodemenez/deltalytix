@@ -20,14 +20,16 @@ import { useToast } from '@/hooks/use-toast'
 import { supportChat } from '@/server/support-chat'
 import { sendSupportEmail } from '@/server/send-support-email'
 import { ContactForm } from '@/components/emails/contact-form'
-
-const GREETING_MESSAGE: Message = {
-  id: 'greeting',
-  role: 'assistant',
-  content: "Hello! Welcome to Deltalytix support. How can I assist you with your trading journal today? Please explain your issue or question, and I'll do my best to help."
-}
+import { useI18n } from '@/locales/client'
 
 export default function SupportPage() {
+  const t = useI18n()
+  const GREETING_MESSAGE: Message = {
+    id: 'greeting',
+    role: 'assistant',
+    content: t('support.greeting')
+  }
+  
   const { messages, append, setMessages, input, handleInputChange, isLoading, setInput } = useChat({
     initialMessages: [GREETING_MESSAGE]
   })
@@ -88,7 +90,7 @@ export default function SupportPage() {
       const errorMessage: Message = { 
         id: (Date.now() + 1).toString(), 
         role: 'assistant', 
-        content: "I'm sorry, but I encountered an error. Please try again or contact our support team." 
+        content: t('error') 
       }
       setMessages(prevMessages => [...prevMessages, errorMessage])
       setNeedsHumanHelp(true)
@@ -108,8 +110,8 @@ export default function SupportPage() {
       })
       if (result.success) {
         toast({
-          title: "Support Request Sent",
-          description: "Our team will get back to you soon.",
+          title: t('success'),
+          description: t('support.emailSent'),
           duration: 5000,
         })
         setMessages(prevMessages => [
@@ -117,7 +119,7 @@ export default function SupportPage() {
           {
             id: Date.now().toString(),
             role: 'assistant',
-            content: `Thank you, ${contactInfo.name}. I've sent your support request to our team. They will review your case and get back to you at ${contactInfo.email} as soon as possible. Is there anything else I can help you with?`
+            content: t('support.emailConfirmation', { name: contactInfo.name, email: contactInfo.email })
           }
         ])
       } else {
@@ -126,8 +128,8 @@ export default function SupportPage() {
     } catch (error) {
       console.error('Error sending email:', error)
       toast({
-        title: "Failed to Send Support Request",
-        description: "Please try again later.",
+        title: t('error'),
+        description: t('support.emailError'),
         variant: "destructive",
         duration: 5000,
       })
@@ -140,8 +142,8 @@ export default function SupportPage() {
     <div className="md:container md:mx-auto md:p-4 md:py-8 fixed inset-0 md:static md:h-auto z-50 bg-background md:bg-transparent">
       <Card className="w-full h-full md:h-auto md:max-w-2xl mx-auto flex flex-col">
         <CardHeader className="p-4 sm:p-6 flex-shrink-0">
-          <CardTitle className="text-xl sm:text-2xl">Deltalytix Support</CardTitle>
-          <CardDescription className="text-sm sm:text-base">How can we help you with your trading journal?</CardDescription>
+          <CardTitle className="text-xl sm:text-2xl">{t('dashboard.support')}</CardTitle>
+          <CardDescription className="text-sm sm:text-base">{t('support.description')}</CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 flex-grow overflow-hidden">
           <ScrollArea className="h-[calc(100vh-180px)] md:h-[400px] pr-4" ref={scrollAreaRef}>
@@ -177,7 +179,7 @@ export default function SupportPage() {
               >
                 <div className="flex items-center bg-muted rounded-lg p-2 sm:p-3 text-base">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Thinking...</span>
+                  <span>{t('chat.aiThinking')}</span>
                 </div>
               </motion.div>
             )}
@@ -189,7 +191,7 @@ export default function SupportPage() {
                 className="flex justify-center my-4"
               >
                 <Button onClick={() => setIsContactFormOpen(true)} variant="secondary" size="sm" className="text-base">
-                  Request Human Support
+                  {t('support.requestHumanSupport')}
                 </Button>
               </motion.div>
             )}
@@ -200,20 +202,20 @@ export default function SupportPage() {
             <Input
               value={input}
               onChange={handleInputChange}
-              placeholder="Type your message here..."
+              placeholder={t('chat.writeMessage')}
               disabled={isLoading || isSendingEmail}
-              aria-label="Chat input"
+              aria-label={t('chat.writeMessage')}
               className="text-base"
             />
             <Button type="submit" disabled={isLoading || isSendingEmail} size="sm" className="whitespace-nowrap text-base">
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span className="hidden sm:inline">Sending</span>
+                  <span className="hidden sm:inline">{t('common.saving')}</span>
                 </>
               ) : (
                 <>
-                  <span className="hidden sm:inline">Send</span>
+                  <span className="hidden sm:inline">{t('common.send')}</span>
                   <span className="sm:hidden">➤</span>
                 </>
               )}
@@ -225,9 +227,9 @@ export default function SupportPage() {
       <Dialog open={isContactFormOpen} onOpenChange={setIsContactFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Contact Information</DialogTitle>
+            <DialogTitle>{t('support.contactInformation')}</DialogTitle>
             <DialogDescription>
-              Please provide your contact information so we can get back to you.
+              {t('support.contactInformationDescription')}
             </DialogDescription>
           </DialogHeader>
           <ContactForm
