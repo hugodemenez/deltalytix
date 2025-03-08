@@ -156,7 +156,7 @@ export const platforms: PlatformConfig[] = [
     description: 'import.type.quantower.description',
     category: 'Platform CSV Import',
     videoUrl: process.env.NEXT_PUBLIC_QUANTOWER_TUTORIAL_VIDEO || '',
-    details: '',
+    details: 'import.type.quantower.details',
     logo: {
       path: '/logos/quantower.png',
       alt: 'Quantower Logo'

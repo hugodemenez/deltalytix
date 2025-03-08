@@ -316,6 +316,7 @@ export default {
     'import.type.tradovate.description': 'Import depuis Tradovate',
     'import.type.quantower.name': 'Quantower',
     'import.type.quantower.description': 'Import depuis Quantower',
+    'import.type.quantower.details': 'Sélectionnez les colonnes à importer : Account, Date/Time, Symbol, Description, Symbol type, Expiration date, Strike price, Side, Order type, Quantity, Price, Gross P/L, Fee, Net P/L, Trade value, Trade ID, Order ID, Position ID, Connection name, Comment, Exchange',
     'import.type.tutorial.title': 'Vidéo Tutoriel',
     'import.type.tutorial.description': 'Regardez cette vidéo tutoriel pour apprendre à importer des données depuis {platform}.',
     'import.type.tutorial.notAvailable': 'La vidéo tutoriel pour {platform} n\'est pas disponible.',
