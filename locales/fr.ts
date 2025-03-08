@@ -319,6 +319,7 @@ export default {
     'import.type.tutorial.title': 'Vidéo Tutoriel',
     'import.type.tutorial.description': 'Regardez cette vidéo tutoriel pour apprendre à importer des données depuis {platform}.',
     'import.type.tutorial.notAvailable': 'La vidéo tutoriel pour {platform} n\'est pas disponible.',
+    'import.type.tutorial.viewDocs': 'Voir la Documentation',
     'import.type.badge.soon': 'BIENTÔT',
     'import.type.badge.plus': 'PLUS',
     'import.type.badge.maintenance': 'MAINTENANCE',

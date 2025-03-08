@@ -322,6 +322,7 @@ export default {
     'import.type.tutorial.title': 'Tutorial Video',
     'import.type.tutorial.description': 'Watch this tutorial video to learn how to import data from {platform}.',
     'import.type.tutorial.notAvailable': 'Tutorial video for {platform} is not available.',
+    'import.type.tutorial.viewDocs': 'View Documentation',
     'import.type.badge.soon': 'SOON',
     'import.type.badge.plus': 'PLUS',
     'import.type.badge.maintenance': 'MAINTENANCE',

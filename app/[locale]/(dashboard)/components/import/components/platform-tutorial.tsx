@@ -1,11 +1,12 @@
 'use client'
 
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, ExternalLink } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef } from "react"
 import { cn } from "@/lib/utils"
 import { PlatformConfig } from "../config/platforms"
 import { useI18n } from "@/locales/client"
+import { Button } from "@/components/ui/button"
 
 interface PlatformTutorialProps {
   selectedPlatform: PlatformConfig | undefined
@@ -56,10 +57,23 @@ export function PlatformTutorial({ selectedPlatform, setIsOpen }: PlatformTutori
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-bold">{t('import.type.tutorial.title')}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">{t('import.type.tutorial.title')}</h2>
+        {selectedPlatform.tutorialLink && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => window.open(selectedPlatform.tutorialLink, '_blank')}
+          >
+            <ExternalLink className="h-4 w-4" />
+            {t('import.type.tutorial.viewDocs')}
+          </Button>
+        )}
+      </div>
+          {selectedPlatform.videoUrl ? (
       <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
         <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-          {selectedPlatform.videoUrl ? (
             <video
               ref={videoRef}
               height="600"
@@ -80,7 +94,6 @@ export function PlatformTutorial({ selectedPlatform, setIsOpen }: PlatformTutori
               />
               Your browser does not support the video tag.
             </video>
-          ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
           {selectedPlatform.videoUrl 
@@ -89,6 +102,7 @@ export function PlatformTutorial({ selectedPlatform, setIsOpen }: PlatformTutori
           }
         </p>
       </div>
+          ) : null}
 
       {selectedPlatform.details && (
         <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4">

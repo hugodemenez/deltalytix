@@ -14,7 +14,7 @@ export interface PlatformConfig {
   name: string
   description: string
   category: 'Direct Account Sync' | 'Custom CSV Import' | 'Platform CSV Import'
-  videoUrl: string
+  videoUrl?: string
   details: string
   logo: {
     path: string
@@ -27,6 +27,7 @@ export interface PlatformConfig {
   requiresAccountSelection?: boolean
   processFile?: (data: string[][]) => ProcessedData
   customComponent?: ComponentType<{ setIsOpen: React.Dispatch<React.SetStateAction<boolean>> }>
+  tutorialLink?: string
 }
 
 // Platform-specific processing functions
@@ -130,7 +131,8 @@ export const platforms: PlatformConfig[] = [
       path: '/logos/tradezella.png',
       alt: 'Tradezella Logo'
     },
-    processFile: processStandardCsv
+    processFile: processStandardCsv,
+    tutorialLink:'https://intercom.help/tradezella-4066d388d93c/en/articles/9725069-how-to-export-data-to-a-csv-file-from-the-trade-log-page'
   },
   {
     platformName: 'tradovate',
@@ -168,13 +170,13 @@ export const platforms: PlatformConfig[] = [
     name: 'import.type.topstep.name',
     description: 'import.type.topstep.description',
     category: 'Platform CSV Import',
-    videoUrl: process.env.NEXT_PUBLIC_TOPSTEP_TUTORIAL_VIDEO || '',
     details: 'import.type.topstep.details',
     logo: {
       path: '/logos/topstep.png',
       alt: 'Topstep Logo'
     },
-    processFile: processStandardCsv
+    processFile: processStandardCsv,
+    tutorialLink: 'https://help.topstep.com/en/articles/9424086-exporting-trades-on-topstepx'
   },
   {
     platformName: 'ninjatrader-performance',
