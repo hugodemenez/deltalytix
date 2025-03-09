@@ -84,6 +84,8 @@ export async function GET(req: Request) {
       }
     }
 
+    console.log(`Weekly emails processed: ${successCount} successful, ${errorCount} failed`)
+
     return NextResponse.json({
       success: true,
       message: `Weekly emails processed: ${successCount} successful, ${errorCount} failed`,

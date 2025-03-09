@@ -37,6 +37,13 @@ export async function POST(
         { status: 404 }
       )
     }
+    
+    if (user.language === 'en') {
+      return NextResponse.json(
+        { error: 'User not french' },
+        { status: 404 }
+      )
+    }
 
     // get the newsletter config for this user based on email
     const newsletter = await prisma.newsletter.findUnique({
@@ -98,12 +105,6 @@ export async function POST(
       }
       return acc
     }, { wins: 0, losses: 0 })
-    const formatPnL = (value: number): string => {
-      if (Math.abs(value) >= 1000) {
-        return `${Math.trunc(value / 1000)}K`
-      }
-      return Math.trunc(value).toString()
-    }
 
     const dailyPnL = trades.reduce((acc, trade) => {
       const tradeDate = new Date(trade.entryDate)
@@ -128,10 +129,6 @@ export async function POST(
       return acc
     }, [] as { date: string, pnl: number, weekday: number }[])
 
-    dailyPnL.forEach(day => {
-      day.pnl = Number(formatPnL(day.pnl))
-    })
-
     // Sort by date
     dailyPnL.sort((a, b) => {
       const [dayA, monthA] = a.date.split('/').map(Number)
@@ -141,6 +138,7 @@ export async function POST(
       const dateObjB = new Date(currentYear, monthB - 1, dayB)
       return dateObjA.getTime() - dateObjB.getTime()
     })
+
 
     // Generate AI analysis
     const DELTALYTIX_CONTEXT = `Deltalytix est une plateforme web pour day traders de futures, avec une interface intuitive et personnalisable. Conçue à partir de mon expérience personnelle en tant que day trader de futures, utilisant des stratégies de scalping, elle propose des fonctionnalités comme la gestion de multiple compte, le suivi des challenges propfirms, et des tableaux de bord personnalisables. Notre but est de fournir aux traders des analyses approfondies sur leurs habitudes de trading pour optimiser leurs stratégies et améliorer leur prise de décision.`
@@ -170,7 +168,7 @@ ${DELTALYTIX_CONTEXT}
 Ta tâche est de générer deux éléments distincts basés sur ces métriques de trading :
 
 Données de performance :
-- PnL total : ${formatPnL(thisWeekPnL)}€
+- PnL total : ${thisWeekPnL}€
 - Jours profitables : ${profitableDays}/${totalDays}
 
 Directives pour l'analyse (intro) :
