@@ -44,12 +44,19 @@ export async function POST(req: Request) {
     
     const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(record.email)}`
 
+    // Check user language preference from database
+    const user = await prisma.user.findUnique({
+      where: { email: record.email }
+    })
+    const userLanguage = user?.language || 'fr'
+
     // Use react prop instead of rendering to HTML
     const { data, error } = await resend.emails.send({
       from: 'Deltalytix <welcome@eu.auth.deltalytix.app>',
       to: record.email,
-      subject: 'Bienvenue sur Deltalytix',
-      react: WelcomeEmail({ firstName, email: record.email }),
+      subject: userLanguage === 'fr' ? 'Bienvenue sur Deltalytix' : 'Welcome to Deltalytix',
+      react: WelcomeEmail({ firstName, email: record.email, language: userLanguage }),
+      replyTo: 'hugo.demenez@deltalytix.app',
       headers: {
         'List-Unsubscribe': `<${unsubscribeUrl}>`,
         'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'

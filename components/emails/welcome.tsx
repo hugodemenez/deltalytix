@@ -17,15 +17,17 @@ import {
 interface WelcomeEmailProps {
   firstName: string;
   email?: string;
+  language: string;
 }
 
-export default function WelcomeEmail({ firstName = 'trader', email }: WelcomeEmailProps) {
-  const youtubeId = 'OfFre6WLcqo';
+export default function WelcomeEmail({ firstName = 'trader', email, language }: WelcomeEmailProps) {
+  const youtubeId = '0q7Xk2gA3K4';
   const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
   const unsubscribeUrl = email 
     ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
     : '#';
 
+  if (language === 'fr') {
   return (
     <Html>
       <Head />
@@ -98,4 +100,78 @@ export default function WelcomeEmail({ firstName = 'trader', email }: WelcomeEma
       </Tailwind>
     </Html>
   );
+  } else {
+    return (
+      <Html>
+      <Head />
+      <Preview>Welcome to Deltalytix - Your trading tracking platform</Preview>
+      <Tailwind>
+        <Body className="bg-gray-50 font-sans">
+          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-sm">
+            <Section className="px-6 py-8">
+              <Heading className="text-2xl font-bold text-gray-900 mb-6">
+                Hello {firstName},
+              </Heading>
+              
+              <Text className="text-gray-800 mb-4 leading-6">
+                I&apos;m happy to count you among the users of Deltalytix!
+              </Text>
+
+              <Text className="text-gray-800 mb-4 leading-6">
+                The goal of the platform is to help you follow and analyze your trading performance in a simple and efficient way.
+              </Text>
+
+              <Text className="text-gray-800 mb-6 leading-6">
+                I hope you have had the chance to explore the interface.
+              </Text>
+
+              <Section className="mb-8">
+                <Link href={`https://youtu.be/${youtubeId}`}>
+                  <Img
+                    src={thumbnailUrl}
+                    alt="Dernière vidéo Deltalytix"
+                    className="rounded-lg w-full mb-4 shadow-sm"
+                  />
+                </Link>
+                <Button
+                  className="bg-black text-white text-sm px-4 py-2 rounded-md font-medium box-border"
+                  href={`https://youtu.be/${youtubeId}`}
+                >
+                  ▶️ Watch the latest video
+                </Button>
+              </Section>
+
+              <Text className="text-gray-800 mb-4 leading-6">
+                If you have any questions or need help getting started, please let me know, I&apos;d be happy to help.
+              </Text>
+
+              <Text className="text-gray-800 mb-6 leading-6">
+                Happy trading and see you soon!
+              </Text>
+
+              <Section className="text-center">
+                <Button 
+                  className="bg-black text-white text-sm px-6 py-2.5 rounded-md font-medium box-border"
+                  href="https://deltalytix.app/dashboard"
+                >
+                  Access my dashboard →
+                </Button>
+              </Section>
+
+              <Hr className="border-gray-200 my-8" />
+
+              <Text className="text-gray-400 text-xs text-center">
+                This email was sent by Deltalytix
+                {' • '}
+                <Link href={unsubscribeUrl} className="text-gray-400 underline">
+                  Unsubscribe
+                </Link>
+              </Text>
+            </Section>
+          </Section>
+        </Body>
+      </Tailwind>
+    </Html>
+    );
+  }
 }
