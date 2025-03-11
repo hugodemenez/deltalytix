@@ -15,6 +15,7 @@ import Chat from "./chat"
 import { CalendarEntry } from "@/types/calendar"
 import { Charts } from "./charts"
 import { useI18n, useCurrentLocale } from "@/locales/client"
+import { useUserData } from "@/components/context/user-data"
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export function CalendarModal({
 }: CalendarModalProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
+  const { timezone } = useUserData()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [activeTab, setActiveTab] = useState("charts")
 
@@ -57,7 +59,7 @@ export function CalendarModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full h-[100dvh] sm:h-[90vh] p-0 flex flex-col">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle>{formatInTimeZone(selectedDate, 'UTC', 'MMMM d, yyyy', { locale: dateLocale })}</DialogTitle>
+          <DialogTitle>{formatInTimeZone(selectedDate, timezone, 'MMMM d, yyyy', { locale: dateLocale })}</DialogTitle>
           <DialogDescription>
             {t('calendar.modal.tradeDetails')}
           </DialogDescription>
