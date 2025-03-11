@@ -340,7 +340,13 @@ export const UserDataProvider: React.FC<{
   const [trades, setTrades] = useState<TradeWithUTC[]>([]);
   const [instruments, setInstruments] = useState<string[]>([]);
   const [accountNumbers, setAccountNumbers] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    // Initialize with a default range of last 30 days
+    const end = endOfDay(new Date());
+    const start = startOfDay(new Date(end));
+    start.setDate(start.getDate() - 30);
+    return { from: start, to: end };
+  });
   const [tickRange, setTickRange] = useState<TickRange>({ min: undefined, max: undefined });
   const [pnlRange, setPnlRange] = useState<PnlRange>({ min: undefined, max: undefined });
   const [sharedParams, setSharedParams] = useState<SharedParams | null>(null);
@@ -589,6 +595,14 @@ export const UserDataProvider: React.FC<{
         timezone,
         'yyyy-MM-dd HH:mm:ssXXX'
       ));
+
+      // For single day selection, compare only the date part
+      if (dateRangeBoundaries.from.getTime() === startOfDay(dateRangeBoundaries.to).getTime()) {
+        const tradeDate = startOfDay(entryDate);
+        return tradeDate.getTime() === dateRangeBoundaries.from.getTime();
+      }
+
+      // For date range, use the existing logic
       return entryDate >= dateRangeBoundaries.from && entryDate <= dateRangeBoundaries.to;
     });
   }, [accountFiltered, dateRangeBoundaries, timezone]);
@@ -663,7 +677,7 @@ export const UserDataProvider: React.FC<{
     });
   }, [hourFiltered, tagFilter.tags]);
 
-  // Update formattedTrades to use tagFiltered instead of hourFiltered
+  // Update formattedTrades to use the same date filtering logic
   const formattedTrades = useMemo(() => {
     if(isSharedView) {
       return tagFiltered.filter(trade => 
@@ -673,15 +687,29 @@ export const UserDataProvider: React.FC<{
 
     return tagFiltered
       .filter(trade => {
-        const entryDate = parseISO(trade.entryDate);
+        const entryDate = new Date(formatInTimeZone(
+          new Date(trade.entryDate),
+          timezone,
+          'yyyy-MM-dd HH:mm:ssXXX'
+        ));
         if (!isValid(entryDate)) return false;
 
         const matchesInstruments = instruments.length === 0 || instruments.includes(trade.instrument);
         const matchesAccounts = accountNumbers.length === 0 || accountNumbers.includes(trade.accountNumber);
-        const matchesDateRange = !dateRange?.from || !dateRange?.to || (
-          entryDate >= startOfDay(dateRange.from) && 
-          entryDate <= endOfDay(dateRange.to)
-        );
+        
+        // Update date range matching logic to handle single day
+        let matchesDateRange = true;
+        if (dateRange?.from && dateRange?.to) {
+          if (dateRange.from.getTime() === startOfDay(dateRange.to).getTime()) {
+            // Single day selection
+            const tradeDate = startOfDay(entryDate);
+            matchesDateRange = tradeDate.getTime() === dateRange.from.getTime();
+          } else {
+            // Date range selection
+            matchesDateRange = entryDate >= startOfDay(dateRange.from) && entryDate <= endOfDay(dateRange.to);
+          }
+        }
+
         const matchesPnlRange = (
           (pnlRange.min === undefined || trade.pnl >= pnlRange.min) &&
           (pnlRange.max === undefined || trade.pnl <= pnlRange.max)
@@ -690,7 +718,7 @@ export const UserDataProvider: React.FC<{
         return matchesInstruments && matchesAccounts && matchesDateRange && matchesPnlRange;
       })
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime());
-  }, [tagFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView]);
+  }, [tagFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView, timezone]);
 
   const statistics = useMemo(() => {
     const stats = calculateStatistics(formattedTrades);

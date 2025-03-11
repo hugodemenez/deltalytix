@@ -341,10 +341,12 @@ export default {
     'error': 'Erreur',
     'success': 'Succès',
     'auth.required': 'Vous devez être connecté pour effectuer cette action',
-    filters: {
+    'filters': {
         search: "Rechercher...",
         noResults: "Aucun résultat trouvé",
         pickDate: "Choisir une période",
+        singleDay: "Jour unique",
+        dateRange: "Période",
         thisWeek: "Cette Semaine",
         thisMonth: "Ce Mois",
         lastThreeMonths: "3 Derniers Mois",

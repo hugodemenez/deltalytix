@@ -342,6 +342,8 @@ export default {
         search: "Search...",
         noResults: "No results found",
         pickDate: "Pick a date range",
+        singleDay: "Single Day",
+        dateRange: "Date Range",
         thisWeek: "This Week",
         thisMonth: "This Month",
         lastThreeMonths: "Last 3 Months",
@@ -1087,7 +1089,14 @@ export default {
         fcmId: "FCM ID",
         rememberSelectedAccounts: "Remember selected accounts for next sync",
         'startProcessing.one': "Start Processing {count} Account",
-        'startProcessing.other': "Start Processing {count} Accounts"
+        'startProcessing.other': "Start Processing {count} Accounts",
+        accountChanges: {
+            title: "Account Changes Detected",
+            description: "The list of available accounts has changed. Please review and select the accounts you want to sync.",
+            newAccounts: "New Accounts",
+            existingAccounts: "Existing Accounts",
+            removedAccounts: "No Longer Available",
+        }
     },
     timeRangePerformance: {
         title: 'Time Range Performance',

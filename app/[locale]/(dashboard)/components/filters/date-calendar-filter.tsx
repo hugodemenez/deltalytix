@@ -6,16 +6,18 @@ import { useUserData } from "@/components/context/user-data"
 import { useState } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
-import { DateRange, SelectRangeEventHandler } from "react-day-picker"
+import { DateRange, SelectRangeEventHandler, SelectSingleEventHandler } from "react-day-picker"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns"
 import { fr } from 'date-fns/locale'
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useI18n } from "@/locales/client"
 import { useParams } from "next/navigation"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function DateCalendarFilter() {
   const { dateRange, setDateRange } = useUserData()
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [mode, setMode] = useState<'single' | 'range'>('range')
   const isMobile = useMediaQuery('(max-width: 768px)')
   const t = useI18n()
   const params = useParams()
@@ -23,8 +25,15 @@ export default function DateCalendarFilter() {
   
   const dateLocale = locale === 'fr' ? fr : undefined
 
-  const handleSelect: SelectRangeEventHandler = (range) => {
+  const handleRangeSelect: SelectRangeEventHandler = (range) => {
     setDateRange(range ? { from: range.from as Date, to: range.to as Date } : undefined);
+    if (isMobile) {
+      setCalendarOpen(false);
+    }
+  };
+
+  const handleSingleSelect: SelectSingleEventHandler = (date) => {
+    setDateRange(date ? { from: date, to: date } : undefined);
     if (isMobile) {
       setCalendarOpen(false);
     }
@@ -53,7 +62,7 @@ export default function DateCalendarFilter() {
     >
       <CalendarIcon className="mr-2 h-4 w-4" />
       {dateRange?.from ? (
-        dateRange.to ? (
+        dateRange.to && dateRange.from.getTime() !== dateRange.to.getTime() ? (
           <>
             {formatDate(dateRange.from)} -{" "}
             {formatDate(dateRange.to)}
@@ -69,32 +78,68 @@ export default function DateCalendarFilter() {
 
   const CalendarContent = (
     <div className="p-4">
-      <div className="mb-4 space-y-2">
-        {quickSelectors.map((selector, index) => (
-          <Button
-            key={index}
-            variant="outline"
-            className="w-full"
-            onClick={() => {
-              const range = selector.getRange();
-              setDateRange(range);
-              if (isMobile) setCalendarOpen(false);
-            }}
-          >
-            {selector.label}
-          </Button>
-        ))}
-      </div>
-      <Calendar
-        initialFocus
-        mode="range"
-        defaultMonth={dateRange?.from}
-        selected={dateRange}
-        onSelect={handleSelect}
-        numberOfMonths={isMobile ? 1 : 2}
-        className="rounded-md border"
-        locale={dateLocale}
-      />
+      <Tabs defaultValue="range" className="w-full" onValueChange={(value) => setMode(value as 'single' | 'range')}>
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="single">{t('filters.singleDay')}</TabsTrigger>
+          <TabsTrigger value="range">{t('filters.dateRange')}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="single">
+          <div className="mb-4 space-y-2">
+            {quickSelectors.map((selector, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  const range = selector.getRange();
+                  setDateRange({ from: range.from, to: range.from });
+                  if (isMobile) setCalendarOpen(false);
+                }}
+              >
+                {selector.label}
+              </Button>
+            ))}
+          </div>
+          <Calendar
+            initialFocus
+            mode="single"
+            defaultMonth={dateRange?.from}
+            selected={dateRange?.from}
+            onSelect={handleSingleSelect}
+            numberOfMonths={isMobile ? 1 : 2}
+            className="rounded-md border"
+            locale={dateLocale}
+          />
+        </TabsContent>
+        <TabsContent value="range">
+          <div className="mb-4 space-y-2">
+            {quickSelectors.map((selector, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  const range = selector.getRange();
+                  setDateRange(range);
+                  if (isMobile) setCalendarOpen(false);
+                }}
+              >
+                {selector.label}
+              </Button>
+            ))}
+          </div>
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={dateRange?.from}
+            selected={dateRange}
+            onSelect={handleRangeSelect}
+            numberOfMonths={isMobile ? 1 : 2}
+            className="rounded-md border"
+            locale={dateLocale}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 
