@@ -1,11 +1,10 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
 export async function addTagToTrade(tradeId: string, tag: string) {
-  const prisma = new PrismaClient()
-  try {
+    try {
     const trade = await prisma.trade.findUnique({
       where: { id: tradeId },
       select: { tags: true }
@@ -35,7 +34,6 @@ export async function addTagToTrade(tradeId: string, tag: string) {
 }
 
 export async function removeTagFromTrade(tradeId: string, tagToRemove: string) {
-  const prisma = new PrismaClient()
   try {
     const trade = await prisma.trade.findUnique({
       where: { id: tradeId },
@@ -66,7 +64,6 @@ export async function removeTagFromTrade(tradeId: string, tagToRemove: string) {
 }
 
 export async function deleteTagFromAllTrades(tag: string) {
-  const prisma = new PrismaClient()
   try {
     // Get all trades that have this tag
     const trades = await prisma.trade.findMany({
@@ -102,7 +99,6 @@ export async function deleteTagFromAllTrades(tag: string) {
 }
 
 export async function updateTradeImage(tradeId: string, imageBase64: string | null) {
-  const prisma = new PrismaClient()
   try {
     const trade = await prisma.trade.findUnique({
       where: { id: tradeId }

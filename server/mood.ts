@@ -1,6 +1,6 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
 export type Conversation = {
@@ -14,7 +14,6 @@ export async function saveMood(
   conversation?: Conversation[],
   date?: Date
 ) {
-  const prisma = new PrismaClient()
   try {
     // Get current date with time set to start of day in user's timezone
     const now = new Date()
@@ -61,13 +60,10 @@ export async function saveMood(
   } catch (error) {
     console.error('Error saving mood:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
 export async function getMoodForDay(userId: string, date: Date) {
-  const prisma = new PrismaClient()
   try {
     // Set the time to noon to avoid timezone issues
     const targetDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12)
@@ -91,13 +87,10 @@ export async function getMoodForDay(userId: string, date: Date) {
   } catch (error) {
     console.error('Error getting mood:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 
 export async function getMoodHistory(userId: string, startDate: Date, endDate: Date) {
-  const prisma = new PrismaClient()
   try {
     const moods = await prisma.mood.findMany({
       where: {
@@ -119,7 +112,5 @@ export async function getMoodHistory(userId: string, startDate: Date, endDate: D
   } catch (error) {
     console.error('Error getting mood history:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 } 

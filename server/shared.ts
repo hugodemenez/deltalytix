@@ -4,7 +4,7 @@ import { Trade, Prisma, PrismaClient } from '@prisma/client'
 import { endOfDay, startOfDay } from 'date-fns'
 import { parseISO, isValid } from 'date-fns'
 import { revalidatePath } from 'next/cache'
-
+import { prisma } from '@/lib/prisma'
 export interface SharedParams {
   userId: string
   title?: string
@@ -29,7 +29,6 @@ interface DateRange {
 }
 
 export async function createShared(data: SharedParams): Promise<string> {
-  const prisma = new PrismaClient()
   try {
     // Validate date range
     if (!data.dateRange?.from) {
@@ -93,7 +92,6 @@ export async function createShared(data: SharedParams): Promise<string> {
 }
 
 export async function getShared(slug: string): Promise<{params: SharedParams, trades: Trade[]} | null> {
-  const prisma = new PrismaClient()
   try {
     const result = await prisma.$transaction(async (tx) => {
       const shared = await tx.shared.findUnique({
@@ -176,7 +174,6 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
 }
 
 export async function getUserShared(userId: string) {
-  const prisma = new PrismaClient()
   try {
     const sharedTrades = await prisma.shared.findMany({
       where: { userId },
@@ -191,7 +188,6 @@ export async function getUserShared(userId: string) {
 }
 
 export async function deleteShared(slug: string, userId: string) {
-  const prisma = new PrismaClient()
   try {
     const shared = await prisma.shared.findUnique({
       where: { slug },

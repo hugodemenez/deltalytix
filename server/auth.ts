@@ -4,8 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 export async function getWebsiteURL(){
   let url =

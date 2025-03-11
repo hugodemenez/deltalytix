@@ -7,9 +7,7 @@ import { parseISO, startOfDay, endOfDay } from 'date-fns'
 import { CalendarEntry } from '@/types/calendar'
 import { generateAIComment } from './generate-ai-comment'
 import { getSubscriptionDetails } from './subscription'
-
-// Create a single PrismaClient instance to be reused
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 type TradeError = 
   | 'DUPLICATE_TRADES'

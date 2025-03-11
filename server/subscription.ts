@@ -1,9 +1,7 @@
 'use server'
 
-import { PrismaClient } from "@prisma/client"
+import { prisma } from '@/lib/prisma'
 
-// Create a single PrismaClient instance to be reused
-const prisma = new PrismaClient()
 
 interface SubscriptionInfo {
     isActive: boolean;

@@ -1,10 +1,8 @@
 'use server'
 
-import { PrismaClient } from '@prisma/client'
 import { createClient } from '@/server/auth'
-
+import { prisma } from '@/lib/prisma'
 export async function updateFirstConnectionStatus() {
-  const prisma = new PrismaClient()
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -31,7 +29,6 @@ export async function updateFirstConnectionStatus() {
 } 
 
 export async function getOnboardingStatus() {
-  const prisma = new PrismaClient()
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()

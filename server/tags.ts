@@ -1,7 +1,7 @@
 'use server'
 
 import { createClient } from './auth'
-import { PrismaClient } from '@prisma/client'
+import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
 export async function getTags(userId: string) {
@@ -9,7 +9,6 @@ export async function getTags(userId: string) {
 
 
   try {
-    const prisma = new PrismaClient()
     const tags = await prisma.tag.findMany({
       where: {
         userId: userId,
@@ -39,7 +38,6 @@ export async function createTag(formData: {
   }
 
   try {
-    const prisma = new PrismaClient()
     const tag = await prisma.tag.create({
       data: {
         ...formData,
@@ -69,7 +67,6 @@ export async function updateTag(id: string, formData: {
   }
 
   try {
-    const prisma = new PrismaClient()
 
     // First get the old tag name
     const oldTag = await prisma.tag.findUnique({
@@ -139,8 +136,6 @@ export async function deleteTag(id: string) {
   }
 
   try {
-    const prisma = new PrismaClient()
-
     // First get the tag name
     const tag = await prisma.tag.findUnique({
       where: {
@@ -206,8 +201,6 @@ export async function syncTradeTagsToTagTable() {
   }
 
   try {
-    const prisma = new PrismaClient()
-
     // Get all unique tags from trades
     const trades = await prisma.trade.findMany({
       where: { userId: user.id },

@@ -1,10 +1,9 @@
 'use server'
 
 import { createClient } from './auth'
-import { PrismaClient } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import crypto from 'crypto'
-
+import { prisma } from '@/lib/prisma'
 export async function generateEtpToken() {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -14,7 +13,6 @@ export async function generateEtpToken() {
   }
 
   try {
-    const prisma = new PrismaClient()
     
     // Generate a secure random token
     const token = crypto.randomBytes(32).toString('hex')
@@ -46,7 +44,6 @@ export async function getEtpToken() {
   }
 
   try {
-    const prisma = new PrismaClient()
     const userData = await prisma.user.findUnique({
       where: {
         auth_user_id: user.id

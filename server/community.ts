@@ -1,7 +1,9 @@
 'use server'
 
+import { prisma } from '@/lib/prisma'
 import { createClient } from './auth'
 import { PrismaClient, PostType, PostStatus, VoteType } from '@prisma/client'
+
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'
 
@@ -13,7 +15,6 @@ async function isAdmin(userId: string) {
 // Get all posts with votes and user information
 export async function getPosts() {
   try {
-    const prisma = new PrismaClient()
     const posts = await prisma.post.findMany({
       include: {
         user: {
@@ -66,8 +67,6 @@ export async function createPost(formData: {
   }
 
   try {
-    const prisma = new PrismaClient()
-
     // Process screenshots if they exist
     const processedScreenshots = await Promise.all(
       (formData.screenshots || []).map(async (screenshot) => {
@@ -126,7 +125,6 @@ export async function updatePostStatus(id: string, status: PostStatus) {
   }
 
   try {
-    const prisma = new PrismaClient()
     await prisma.post.update({
       where: { id },
       data: { status }
@@ -150,7 +148,6 @@ export async function deletePost(id: string) {
   }
 
   try {
-    const prisma = new PrismaClient()
     const post = await prisma.post.findUnique({
       where: { id },
       select: { userId: true }
@@ -182,7 +179,6 @@ export async function votePost(postId: string, voteType: VoteType) {
   }
 
   try {
-    const prisma = new PrismaClient()
     
     // Check if user has already voted
     const existingVote = await prisma.vote.findUnique({
@@ -239,7 +235,6 @@ export async function votePost(postId: string, voteType: VoteType) {
 // Get post by ID with votes and user information
 export async function getPost(id: string) {
   try {
-    const prisma = new PrismaClient()
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
@@ -274,7 +269,6 @@ export async function getPost(id: string) {
 // Get comments for a post
 export async function getComments(postId: string) {
   try {
-    const prisma = new PrismaClient()
     const comments = await prisma.comment.findMany({
       where: {
         postId,
@@ -340,7 +334,6 @@ export async function addComment(postId: string, content: string, parentId: stri
   }
 
   try {
-    const prisma = new PrismaClient()
     const comment = await prisma.comment.create({
       data: {
         content,
@@ -376,7 +369,6 @@ export async function editComment(commentId: string, content: string) {
   }
 
   try {
-    const prisma = new PrismaClient()
     const comment = await prisma.comment.findUnique({
       where: { id: commentId },
       select: { userId: true }
@@ -409,7 +401,6 @@ export async function deleteComment(commentId: string) {
   }
 
   try {
-    const prisma = new PrismaClient()
     const comment = await prisma.comment.findUnique({
       where: { id: commentId },
       select: { userId: true }
@@ -441,7 +432,6 @@ export async function editPost(id: string, content: string) {
   }
 
   try {
-    const prisma = new PrismaClient()
     const post = await prisma.post.findUnique({
       where: { id },
       select: { userId: true }
