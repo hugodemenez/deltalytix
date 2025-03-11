@@ -1202,6 +1202,7 @@ export default {
     'calendar.charts.commentError': 'Erreur lors de l\'enregistrement du commentaire',
     'calendar.charts.saving': 'Enregistrement...',
     'calendar.charts.addComment': 'Ajouter un commentaire',
+    'calendar.charts.saveComment': 'Enregistrer le commentaire',
     'etp': {
         'title': 'Token API ETP',
         'description': 'Générez et gérez votre token API ETP. Ce token est nécessaire pour synchroniser vos trades depuis ETP.',

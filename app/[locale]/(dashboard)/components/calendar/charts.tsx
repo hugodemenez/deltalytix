@@ -23,7 +23,6 @@ import { useToast } from '@/hooks/use-toast'
 import { useI18n, useCurrentLocale } from '@/locales/client'
 import { fr, enUS } from 'date-fns/locale'
 import { Textarea } from "@/components/ui/textarea"
-import { useDebounce } from "@/hooks/use-debounce"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -72,8 +71,6 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const [isSavingComment, setIsSavingComment] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
   
-  const debouncedComment = useDebounce(comment, 1000)
-
   const STORAGE_KEY = 'daily_mood'
 
   // Calculate data for charts
@@ -200,41 +197,6 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     loadMood()
   }, [user?.id, dayData?.trades])
 
-  React.useEffect(() => {
-    if (!user?.id || !dayData?.trades?.[0]?.entryDate || !selectedMood || !debouncedComment) return
-    
-    const saveComment = async () => {
-      setIsSavingComment(true)
-      setSaveError(null)
-      
-      try {
-        const date = new Date(dayData.trades[0].entryDate)
-        date.setHours(12, 0, 0, 0)
-        await saveMood(user.id, selectedMood, [{ role: 'user', content: debouncedComment }], date)
-        
-        // Update localStorage
-        const focusedDay = date.toISOString().split('T')[0]
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-          mood: selectedMood,
-          comment: debouncedComment,
-          date: focusedDay
-        }))
-      } catch (error) {
-        console.error('Error saving comment:', error)
-        setSaveError(t('calendar.charts.commentError'))
-        toast({
-          title: t('error'),
-          description: t('calendar.charts.commentError'),
-          variant: "destructive",
-        })
-      } finally {
-        setIsSavingComment(false)
-      }
-    }
-
-    saveComment()
-  }, [debouncedComment, user?.id, dayData?.trades, selectedMood, t])
-
   const handleMoodSelect = async (mood: 'bad' | 'okay' | 'great') => {
     if (!user?.id || !dayData?.trades?.[0]?.entryDate) {
       toast({
@@ -280,6 +242,49 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const handleCommentChange = (newComment: string) => {
     setComment(newComment)
     setSaveError(null)
+  }
+
+  const handleSaveComment = async () => {
+    if (!user?.id || !dayData?.trades?.[0]?.entryDate || !selectedMood) {
+      toast({
+        title: t('error'),
+        description: t('auth.required'),
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSavingComment(true)
+    setSaveError(null)
+    
+    try {
+      const date = new Date(dayData.trades[0].entryDate)
+      date.setHours(12, 0, 0, 0)
+      await saveMood(user.id, selectedMood, [{ role: 'user', content: comment }], date)
+      
+      // Update localStorage
+      const focusedDay = date.toISOString().split('T')[0]
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        mood: selectedMood,
+        comment,
+        date: focusedDay
+      }))
+
+      toast({
+        title: t('success'),
+        description: t('calendar.charts.commentSaved'),
+      })
+    } catch (error) {
+      console.error('Error saving comment:', error)
+      setSaveError(t('calendar.charts.commentError'))
+      toast({
+        title: t('error'),
+        description: t('calendar.charts.commentError'),
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingComment(false)
+    }
   }
 
   const getMoodButtonStyle = (moodType: 'bad' | 'okay' | 'great') => {
@@ -461,33 +466,44 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Textarea
-              placeholder={t('calendar.charts.dailyCommentPlaceholder')}
-              value={comment}
-              onChange={(e) => handleCommentChange(e.target.value)}
-              className={cn(
-                "min-h-[100px] resize-none",
-                isSavingComment && "opacity-50",
-                saveError && "border-destructive"
-              )}
-              disabled={!selectedMood || isSavingComment}
-            />
-            {isSavingComment && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t('calendar.charts.saving')}
+            <div className="space-y-2">
+              <Textarea
+                placeholder={t('calendar.charts.dailyCommentPlaceholder')}
+                value={comment}
+                onChange={(e) => handleCommentChange(e.target.value)}
+                className={cn(
+                  "min-h-[100px] resize-none",
+                  isSavingComment && "opacity-50",
+                  saveError && "border-destructive"
+                )}
+                disabled={!selectedMood || isSavingComment}
+              />
+              <div className="flex items-center justify-between">
+                {isSavingComment && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {t('calendar.charts.saving')}
+                  </div>
+                )}
+                {saveError && (
+                  <p className="text-sm text-destructive">
+                    {saveError}
+                  </p>
+                )}
+                {!selectedMood && (
+                  <p className="text-sm text-muted-foreground">
+                    {t('calendar.charts.selectMoodFirst')}
+                  </p>
+                )}
+                <Button
+                  onClick={handleSaveComment}
+                  disabled={!selectedMood || isSavingComment || !comment.trim()}
+                  size="sm"
+                >
+                  {t('calendar.charts.saveComment')}
+                </Button>
               </div>
-            )}
-            {saveError && (
-              <p className="text-sm text-destructive mt-2">
-                {saveError}
-              </p>
-            )}
-            {!selectedMood && (
-              <p className="text-sm text-muted-foreground mt-2">
-                {t('calendar.charts.selectMoodFirst')}
-              </p>
-            )}
+            </div>
           </CardContent>
         </Card>
       )}

@@ -1180,6 +1180,7 @@ export default {
     'calendar.charts.commentError': 'Error saving comment',
     'calendar.charts.saving': 'Saving...',
     'calendar.charts.addComment': 'Add Comment',
+    'calendar.charts.saveComment': 'Save Comment',
     'etp': {
         'title': 'ETP API Token',
         'description': 'Generate and manage your ETP API token. This token is required to sync your trades from ETP.',
