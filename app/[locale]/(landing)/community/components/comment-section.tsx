@@ -94,7 +94,7 @@ function CommentComponent({
         <div className="flex-1 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-sm">{comment.user.email}</span>
+              <span className="font-medium text-sm">{comment.user.email.split('@')[0]}</span>
               <span className="text-xs text-muted-foreground">
                 {t('community.comments.timeAgo', { time: formatDistanceToNow(comment.createdAt) })}
               </span>
