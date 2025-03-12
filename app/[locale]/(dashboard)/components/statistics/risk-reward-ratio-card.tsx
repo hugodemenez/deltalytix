@@ -55,15 +55,15 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
           <Scale className="h-3 w-3 text-primary" />
           <span className="font-medium text-sm">RR {riskRewardRatio}</span>
         </div>
-        <TooltipProvider>
+        <TooltipProvider delayDuration={100}>
           <Tooltip>
             <TooltipTrigger asChild>
-              <div className="w-full px-1">
+              <div className="w-full px-1 py-1.5 cursor-pointer">
                 <Progress value={profitPercentage} className="h-1.5" />
               </div>
             </TooltipTrigger>
-            <TooltipContent>
-              <div className="text-xs">
+            <TooltipContent side="top" sideOffset={5}>
+              <div className="text-xs space-y-0.5">
                 <div className="text-green-500">Avg. Win: ${avgWin.toFixed(2)}</div>
                 <div className="text-red-500">Avg. Loss: ${avgLoss.toFixed(2)}</div>
               </div>
