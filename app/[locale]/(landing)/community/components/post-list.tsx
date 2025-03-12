@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Post, PostType, PostStatus } from '@prisma/client'
 import { PostCard } from './post-card'
+import { ExtendedPost } from '../types'
 import {
   Select,
   SelectContent,
@@ -12,20 +13,6 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { useI18n } from '@/locales/client'
-
-type ExtendedPost = Post & {
-  user: {
-    email: string
-    id: string
-  }
-  votes: {
-    id: string
-    type: 'UPVOTE' | 'DOWNVOTE'
-    userId: string
-    createdAt: Date
-    postId: string
-  }[]
-}
 
 type Props = {
   initialPosts: ExtendedPost[]

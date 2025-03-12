@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useI18n, useCurrentLocale } from '@/locales/client'
 import { useRouter } from 'next/navigation'
+import { ExtendedPost } from '../types'
 import {
   Card,
   CardContent,
@@ -34,14 +35,6 @@ import { CommentSection } from './comment-section'
 import { Textarea } from '@/components/ui/textarea'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { AuthPrompt } from './auth-prompt'
-
-type ExtendedPost = Post & {
-  user: {
-    email: string
-    id: string
-  }
-  votes: Vote[]
-}
 
 type Props = {
   post: ExtendedPost
@@ -71,7 +64,7 @@ export function PostCard({ post }: Props) {
   const [editedContent, setEditedContent] = useState(post.content)
   const [isCommentsOpen, setIsCommentsOpen] = useState(false)
   const [comments, setComments] = useState<any[]>([])
-  const [commentCount, setCommentCount] = useState(0)
+  const [commentCount, setCommentCount] = useState(post._count.comments)
   const { user } = useUserData()
   const isAuthor = user?.id === post.user.id
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
@@ -91,13 +84,6 @@ export function PostCard({ post }: Props) {
     try {
       const fetchedComments = await getComments(post.id)
       setComments(fetchedComments)
-      // Calculate total comments including replies
-      const countComments = (comments: any[]): number => {
-        return comments.reduce((acc, comment) => {
-          return acc + 1 + (comment.replies ? countComments(comment.replies) : 0)
-        }, 0)
-      }
-      setCommentCount(countComments(fetchedComments))
     } catch (error) {
       toast.error('Failed to load comments')
     }
@@ -176,6 +162,7 @@ export function PostCard({ post }: Props) {
 
     const comment = await addComment(post.id, content, parentId)
     await loadComments()
+    setCommentCount(prev => prev + 1)
     return { ...comment, replies: [] }
   }
 
@@ -187,6 +174,7 @@ export function PostCard({ post }: Props) {
   async function handleDeleteComment(commentId: string) {
     await deleteComment(commentId)
     await loadComments() // Reload comments to get the updated list
+    setCommentCount(prev => prev - 1)
   }
 
   return (

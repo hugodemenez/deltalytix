@@ -24,13 +24,41 @@ export async function getPosts() {
           }
         },
         votes: true,
+        comments: {
+          select: {
+            id: true,
+            parentId: true,
+            _count: {
+              select: {
+                replies: true
+              }
+            }
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc',
       },
     })
 
-    return posts
+    // Calculate total comments for each post
+    const postsWithCommentCount = posts.map(post => {
+      const totalComments = post.comments.reduce((acc, comment) => {
+        // Add 1 for the comment itself and the number of its replies
+        return acc + 1 + (comment._count?.replies || 0)
+      }, 0)
+
+      // Remove the comments array from the post object since we only need the count
+      const { comments, ...postWithoutComments } = post
+      return {
+        ...postWithoutComments,
+        _count: {
+          comments: totalComments
+        }
+      }
+    })
+
+    return postsWithCommentCount
   } catch (error) {
     console.error('Failed to fetch posts:', error)
     throw new Error('Failed to fetch posts')
