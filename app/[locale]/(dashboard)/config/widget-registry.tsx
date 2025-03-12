@@ -298,15 +298,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     getComponent: ({ size }) => <TagWidget />,
     getPreview: () => <div className="h-[300px]"><TagWidget /></div>
   },
-  marketChart: {
-    type: 'marketChart',
-    defaultSize: 'medium',
-    allowedSizes: ['small', 'medium', 'large'],
-    category: 'charts',
-    previewHeight: 300,
-    getComponent: ({ size }) => <MarketChart />,
-    getPreview: () => <MarketChart />
-  },
+  // marketChart: {
+  //   type: 'marketChart',
+  //   defaultSize: 'medium',
+  //   allowedSizes: ['small', 'medium', 'large'],
+  //   category: 'charts',
+  //   previewHeight: 300,
+  //   getComponent: ({ size }) => <MarketChart />,
+  //   getPreview: () => <MarketChart />
+  // },
 }
 
 export function getWidgetsByCategory(category: WidgetConfig['category']) {
