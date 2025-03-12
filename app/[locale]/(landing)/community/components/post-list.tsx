@@ -22,7 +22,7 @@ export function PostList({ initialPosts }: Props) {
   const t = useI18n()
   const [filter, setFilter] = useState<PostType | 'ALL'>('ALL')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState<PostStatus | 'ALL'>('ALL')
+  const [statusFilter, setStatusFilter] = useState<PostStatus | 'ALL'>(PostStatus.OPEN)
 
   const filteredPosts = initialPosts.filter((post) => {
     const matchesType = filter === 'ALL' || post.type === filter

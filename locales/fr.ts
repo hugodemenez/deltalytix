@@ -1256,7 +1256,12 @@ export default {
             'screenshots': 'Captures d\'écran',
             'score': 'Score',
             'comments': 'Commentaires',
-            'postedBy': 'Publié par {user} il y a {time}'
+            'postedBy': 'Publié par {user} il y a {time}',
+            'notFound': 'La publication que vous recherchez est introuvable.',
+            'open': 'Ouvrir la publication',
+            'copyLink': 'Copier le lien',
+            'actions': 'Actions',
+            'linkCopied': 'Lien copié dans le presse-papiers'
         },
         'createPost': {
             'title': 'Créer une Publication',

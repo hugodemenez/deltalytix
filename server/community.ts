@@ -6,6 +6,12 @@ import { PrismaClient, PostType, PostStatus, VoteType } from '@prisma/client'
 
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'
+import { Resend } from 'resend'
+import { formatDistanceToNow } from 'date-fns'
+import { fr, enUS } from 'date-fns/locale'
+import CommentNotificationEmail from '@/components/emails/blog/comment-notification'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 // Helper function to check if user is admin
 async function isAdmin(userId: string) {
@@ -269,6 +275,7 @@ export async function getPost(id: string) {
         user: {
           select: {
             email: true,
+            id: true,
           }
         },
         votes: {
@@ -352,6 +359,53 @@ export async function getComments(postId: string) {
   }
 }
 
+// Helper function to send comment notification email
+async function sendCommentNotificationEmail({
+  recipientEmail,
+  recipientName,
+  postTitle,
+  postId,
+  commentAuthor,
+  commentContent,
+  commentDate,
+  language
+}: {
+  recipientEmail: string
+  recipientName: string
+  postTitle: string
+  postId: string
+  commentAuthor: string
+  commentContent: string
+  commentDate: Date
+  language: string
+}) {
+  const postUrl = `${process.env.NEXT_PUBLIC_APP_URL}/community/post/${postId}`
+  const unsubscribeUrl = `${process.env.NEXT_PUBLIC_APP_URL}/settings/notifications`
+  const dateLocale = language === 'fr' ? fr : enUS
+  console.log('Sending comment notification email to:', recipientEmail)
+
+  try {
+    await resend.emails.send({
+      from: 'Deltalytix Community <community@eu.updates.deltalytix.app>',
+      to: recipientEmail,
+      subject: language === 'fr' ? 'Nouveau commentaire sur votre publication' : 'New comment on your post',
+      react: CommentNotificationEmail({
+        postTitle,
+        postUrl,
+        commentAuthor: commentAuthor.split('@')[0],
+        commentContent,
+        commentDate: formatDistanceToNow(commentDate, { locale: dateLocale }),
+        recipientName: recipientName.split('@')[0],
+        unsubscribeUrl,
+        language
+      }),
+      replyTo: 'hugo.demenez@deltalytix.app'
+    })
+  } catch (error) {
+    console.error('Failed to send comment notification email:', error)
+  }
+}
+
 // Add a comment
 export async function addComment(postId: string, content: string, parentId: string | null = null) {
   const supabase = await createClient()
@@ -362,6 +416,28 @@ export async function addComment(postId: string, content: string, parentId: stri
   }
 
   try {
+    console.log('Adding comment for post:', postId)
+    // Get the post and its author
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: {
+        user: {
+          select: {
+            email: true,
+            id: true,
+            language: true
+          }
+        }
+      }
+    })
+
+    if (!post) {
+      throw new Error('Post not found')
+    }
+
+    console.log('Post author:', post.user.id)
+    console.log('Current user:', user.id)
+
     const comment = await prisma.comment.create({
       data: {
         content,
@@ -378,6 +454,29 @@ export async function addComment(postId: string, content: string, parentId: stri
         }
       }
     })
+
+    // Send email notification to post author if it's not their own comment
+    if (post.user.id !== user.id) {
+      console.log('Sending notification email to:', post.user.email)
+      try {
+        await sendCommentNotificationEmail({
+          recipientEmail: post.user.email,
+          recipientName: post.user.email,
+          postTitle: post.title,
+          postId: post.id,
+          commentAuthor: user.email ?? 'Anonymous User',
+          commentContent: content,
+          commentDate: comment.createdAt,
+          language: post.user.language ?? 'en'
+        })
+        console.log('Email notification sent successfully')
+      } catch (emailError) {
+        console.error('Failed to send email notification:', emailError)
+        // Don't throw the error to prevent comment creation from failing
+      }
+    } else {
+      console.log('Skipping notification - user commented on their own post')
+    }
 
     revalidatePath('/community')
     return comment

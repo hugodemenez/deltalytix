@@ -1234,7 +1234,12 @@ export default {
             'screenshots': 'Screenshots',
             'score': 'Score',
             'comments': 'Comments',
-            'postedBy': 'Posted by {user} {time} ago'
+            'postedBy': 'Posted by {user} {time} ago',
+            'notFound': 'The post you are looking for could not be found.',
+            'open': 'Open post',
+            'copyLink': 'Copy link',
+            'actions': 'Actions',
+            'linkCopied': 'Link copied to clipboard'
         },
         'createPost': {
             'title': 'Create Post',

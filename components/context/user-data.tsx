@@ -318,6 +318,51 @@ function useIsMobileDetection() {
   return isMobile;
 }
 
+const CACHE_KEY = 'deltalytix_user_data';
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+interface CachedData {
+  timestamp: number;
+  user: User | null;
+  etpToken: string | null;
+  subscription: UserDataContextType['subscription'];
+  trades: TradeWithUTC[];
+  tickDetails: Record<string, number>;
+  tags: Tag[];
+  propfirmAccounts: PropFirmAccount[];
+  layouts: Layouts;
+}
+
+// Add this function before the UserDataProvider
+function getLocalCache(): CachedData | null {
+  if (typeof window === 'undefined') return null;
+  const cached = localStorage.getItem(CACHE_KEY);
+  if (!cached) return null;
+  
+  try {
+    const parsedCache = JSON.parse(cached);
+    if (Date.now() - parsedCache.timestamp > CACHE_EXPIRY) {
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+    return parsedCache;
+  } catch {
+    localStorage.removeItem(CACHE_KEY);
+    return null;
+  }
+}
+
+function setLocalCache(data: Partial<CachedData>) {
+  if (typeof window === 'undefined') return;
+  const existing = getLocalCache();
+  const newCache = {
+    ...existing,
+    ...data,
+    timestamp: Date.now(),
+  };
+  localStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
+}
+
 export const UserDataProvider: React.FC<{ 
   children: React.ReactNode;
   isSharedView?: boolean;
@@ -391,7 +436,25 @@ export const UserDataProvider: React.FC<{
   // Add propfirm accounts state
   const [propfirmAccounts, setPropfirmAccounts] = useState<PropFirmAccount[]>([])
 
-  // Update fetchData to handle propfirm accounts
+  // Initialize state from cache
+  useEffect(() => {
+    if (!isSharedView) {
+      const cached = getLocalCache();
+      if (cached) {
+        setUser(cached.user);
+        setEtpToken(cached.etpToken);
+        setSubscription(cached.subscription);
+        setTrades(cached.trades);
+        setTickDetails(cached.tickDetails);
+        setTags(cached.tags);
+        setPropfirmAccounts(cached.propfirmAccounts);
+        setLayouts(cached.layouts);
+        setIsLoading(false);
+      }
+    }
+  }, [isSharedView]);
+
+  // Update fetchData to use cache
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -423,69 +486,64 @@ export const UserDataProvider: React.FC<{
           }
         }
       } else if (!isSharedView) {
-        // Only load user data if not in shared view
-        const data = await loadInitialData();
-        if (!data.error) {
-          setUser(data.user);
-          setEtpToken(data.etpToken);
-          setIsFirstConnection(data.isFirstConnection);
-          setSubscription(data.subscription);
-          if (data.tags) {
-            setTags(data.tags);
-          }
-          if (data.propfirmAccounts) {
-            setPropfirmAccounts(data.propfirmAccounts);
-          }
-          // Only set layouts if we have user data
-          if (data.layouts) {
-            // Ensure loaded layouts are valid
-            const loadedLayouts = data.layouts;
-            const safeLayouts = {
-              desktop: Array.isArray(loadedLayouts.desktop) ? loadedLayouts.desktop : [],
-              mobile: Array.isArray(loadedLayouts.mobile) ? loadedLayouts.mobile : [],
-            };
-            // Only use default layouts if both arrays are empty
-            if (safeLayouts.desktop.length === 0 && safeLayouts.mobile.length === 0) {
-              setLayouts(defaultLayouts);
-            } else {
-              setLayouts(safeLayouts);
-            }
-          } else {
-            // No layouts found, use defaults
-            setLayouts(defaultLayouts);
-          }
+        // Check cache first
+        const cached = getLocalCache();
+        const shouldFetch = !cached || Date.now() - cached.timestamp > CACHE_EXPIRY;
 
-          // Set tick details from initial data
-          if (data.tickDetails) {
-            setTickDetails(data.tickDetails);
-          }
+        if (shouldFetch) {
+          const data = await loadInitialData();
+          if (!data.error) {
+            const processedTrades = data.trades.map(trade => ({
+              ...trade,
+              utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
+            }));
 
-          const processedTrades = data.trades.map(trade => ({
-            ...trade,
-            utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
-          }));
-          setTrades(processedTrades);
+            // Update state
+            setUser(data.user);
+            setEtpToken(data.etpToken);
+            setIsFirstConnection(data.isFirstConnection);
+            setSubscription(data.subscription);
+            setTrades(processedTrades);
+            setTickDetails(data.tickDetails || {});
+            setTags(data.tags || []);
+            setPropfirmAccounts(data.propfirmAccounts || []);
 
-          // Set date range if trades exist
-          if (processedTrades.length > 0) {
-            const dates = processedTrades
-              .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
-              .filter(date => isValid(date));
+            // Handle layouts
+            const newLayouts = data.layouts || defaultLayouts;
+            setLayouts(newLayouts);
 
-            if (dates.length > 0) {
-              const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
-              const maxDate = new Date(Math.max(
-                ...dates.map(date => date.getTime()),
-                new Date().getTime()
-              ));
-              setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+            // Update cache
+            setLocalCache({
+              user: data.user,
+              etpToken: data.etpToken,
+              subscription: data.subscription,
+              trades: processedTrades,
+              tickDetails: data.tickDetails || {},
+              tags: data.tags || [],
+              propfirmAccounts: data.propfirmAccounts || [],
+              layouts: newLayouts,
+            });
+
+            // Update date range if needed
+            if (processedTrades.length > 0) {
+              const dates = processedTrades
+                .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
+                .filter(date => isValid(date));
+
+              if (dates.length > 0) {
+                const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
+                const maxDate = new Date(Math.max(
+                  ...dates.map(date => date.getTime()),
+                  new Date().getTime()
+                ));
+                setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+              }
             }
           }
         }
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      // Don't set default layouts on error - let the UI handle the loading state
     } finally {
       setIsLoading(false);
     }
@@ -751,6 +809,7 @@ export const UserDataProvider: React.FC<{
     return Boolean(subscription?.isActive && ['plus', 'pro'].includes(subscription?.plan?.split('_')[0].toLowerCase()||''));
   };
 
+  // Update refreshUser to update cache
   const refreshUser = useCallback(async () => {
     if (isSharedView) return;
     const data = await loadInitialData();
@@ -759,12 +818,17 @@ export const UserDataProvider: React.FC<{
       setEtpToken(data.etpToken);
       setIsFirstConnection(data.isFirstConnection);
       setSubscription(data.subscription);
-      if (data.tags) {
-        setTags(data.tags);
-      }
-      if (data.propfirmAccounts) {
-        setPropfirmAccounts(data.propfirmAccounts);
-      }
+      setTags(data.tags || []);
+      setPropfirmAccounts(data.propfirmAccounts || []);
+
+      // Update cache
+      setLocalCache({
+        user: data.user,
+        etpToken: data.etpToken,
+        subscription: data.subscription,
+        tags: data.tags || [],
+        propfirmAccounts: data.propfirmAccounts || [],
+      });
     }
   }, [isSharedView]);
 

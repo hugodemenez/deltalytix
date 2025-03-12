@@ -3,11 +3,12 @@
 import { Post, PostStatus, PostType, Vote, VoteType } from '@prisma/client'
 import { formatDistanceToNow } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
-import { ArrowBigDown, ArrowBigUp, MessageSquare, ImageIcon, Pencil } from 'lucide-react'
+import { ArrowBigDown, ArrowBigUp, MessageSquare, ImageIcon, Pencil, ExternalLink, Link as LinkIcon, Copy, Check, MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useI18n, useCurrentLocale } from '@/locales/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import { ExtendedPost } from '../types'
 import {
   Card,
@@ -35,40 +36,46 @@ import { CommentSection } from './comment-section'
 import { Textarea } from '@/components/ui/textarea'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { AuthPrompt } from './auth-prompt'
+import { CopyNotification } from './copy-notification'
 
-type Props = {
+interface Props {
   post: ExtendedPost
+  isExpanded?: boolean
 }
 
 const typeColors = {
-  [PostType.FEATURE_REQUEST]: 'bg-blue-500',
-  [PostType.BUG_REPORT]: 'bg-red-500',
-  [PostType.DISCUSSION]: 'bg-green-500',
+  [PostType.FEATURE_REQUEST]: 'bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100',
+  [PostType.BUG_REPORT]: 'bg-red-100 text-red-900 dark:bg-red-900 dark:text-red-100',
+  [PostType.DISCUSSION]: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
 }
 
 const statusColors = {
-  [PostStatus.OPEN]: 'bg-green-500',
-  [PostStatus.IN_PROGRESS]: 'bg-yellow-500',
-  [PostStatus.COMPLETED]: 'bg-blue-500',
-  [PostStatus.CLOSED]: 'bg-gray-500',
+  [PostStatus.OPEN]: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
+  [PostStatus.IN_PROGRESS]: 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100',
+  [PostStatus.COMPLETED]: 'bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100',
+  [PostStatus.CLOSED]: 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100',
 }
 
-export function PostCard({ post }: Props) {
+export function PostCard({ post, isExpanded = false }: Props) {
   const t = useI18n()
   const locale = useCurrentLocale()
   const router = useRouter()
+  const pathname = usePathname()
+  const isPostPage = pathname === `/${locale}/community/post/${post.id}`
   const dateLocale = locale === 'fr' ? fr : enUS
   const [optimisticVotes, setOptimisticVotes] = useState(post.votes)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState(post.content)
-  const [isCommentsOpen, setIsCommentsOpen] = useState(false)
+  const [isCommentsOpen, setIsCommentsOpen] = useState(isExpanded)
   const [comments, setComments] = useState<any[]>([])
   const [commentCount, setCommentCount] = useState(post._count.comments)
   const { user } = useUserData()
   const isAuthor = user?.id === post.user.id
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [authAction, setAuthAction] = useState('')
+  const [hasCopied, setHasCopied] = useState(false)
+  const [showCopyNotification, setShowCopyNotification] = useState(false)
 
   const upvotes = optimisticVotes.filter(vote => vote.type === VoteType.UPVOTE).length
   const downvotes = optimisticVotes.filter(vote => vote.type === VoteType.DOWNVOTE).length
@@ -177,6 +184,17 @@ export function PostCard({ post }: Props) {
     setCommentCount(prev => prev - 1)
   }
 
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/${locale}/community/post/${post.id}`
+    navigator.clipboard.writeText(url)
+    setHasCopied(true)
+    setShowCopyNotification(true)
+    setTimeout(() => {
+      setHasCopied(false)
+      setShowCopyNotification(false)
+    }, 2000)
+  }
+
   return (
     <>
       <Card>
@@ -198,27 +216,55 @@ export function PostCard({ post }: Props) {
               })}
             </p>
           </div>
-          {isAuthor && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  •••
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                  <Pencil className="mr-2 h-4 w-4" />
-                  {t('community.post.edit')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-red-600"
-                  onClick={handleDelete}
-                >
-                  {t('community.post.delete')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <div className="flex items-center gap-2">
+            {!isPostPage && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <MoreHorizontal className="h-4 w-4" />
+                    {t('community.post.actions')}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
+                    <Link href={`/${locale}/community/post/${post.id}`}>
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      {t('community.post.open')}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopyLink}>
+                    {hasCopied ? (
+                      <Check className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Copy className="mr-2 h-4 w-4" />
+                    )}
+                    {t('community.post.copyLink')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+            {isAuthor && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    •••
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                    <Pencil className="mr-2 h-4 w-4" />
+                    {t('community.post.edit')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    onClick={handleDelete}
+                  >
+                    {t('community.post.delete')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {isEditing ? (
@@ -332,6 +378,10 @@ export function PostCard({ post }: Props) {
           </div>
         )}
       </Card>
+      <CopyNotification 
+        show={showCopyNotification} 
+        message={t('community.post.linkCopied')} 
+      />
       <AuthPrompt 
         open={showAuthPrompt} 
         onOpenChange={setShowAuthPrompt}

@@ -53,9 +53,13 @@ function CommentComponent({
   const [isEditing, setIsEditing] = useState(false)
   const [content, setContent] = useState(comment.content)
   const [replyContent, setReplyContent] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const isAuthor = user?.id === comment.user.id
 
   const handleReply = async () => {
+    if (isSubmitting || !replyContent.trim()) return
+    
+    setIsSubmitting(true)
     try {
       const addedComment = await onAddComment(replyContent, comment.id)
       setReplyContent('')
@@ -63,25 +67,37 @@ function CommentComponent({
       toast.success(t('community.comments.success.reply'))
     } catch (error) {
       toast.error(t('community.comments.error.reply'))
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleEdit = async () => {
+    if (isSubmitting || !content.trim()) return
+    
+    setIsSubmitting(true)
     try {
       await onEditComment(comment.id, content)
       setIsEditing(false)
       toast.success(t('community.comments.success.update'))
     } catch (error) {
       toast.error(t('community.comments.error.update'))
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleDelete = async () => {
+    if (isSubmitting) return
+    
+    setIsSubmitting(true)
     try {
       await onDeleteComment(comment.id)
       toast.success(t('community.comments.success.delete'))
     } catch (error) {
       toast.error(t('community.comments.error.delete'))
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -126,17 +142,28 @@ function CommentComponent({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="min-h-[100px] w-full resize-none"
+                disabled={isSubmitting}
               />
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setIsEditing(false)}
+                  disabled={isSubmitting}
                 >
                   {t('community.comments.cancel')}
                 </Button>
-                <Button size="sm" onClick={handleEdit}>
-                  {t('community.comments.save')}
+                <Button 
+                  size="sm" 
+                  onClick={handleEdit}
+                  disabled={isSubmitting || !content.trim()}
+                >
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      {t('common.saving')}
+                    </div>
+                  ) : t('community.comments.save')}
                 </Button>
               </div>
             </div>
@@ -149,6 +176,7 @@ function CommentComponent({
               size="sm"
               className="h-auto px-2 text-muted-foreground hover:text-foreground"
               onClick={() => setIsReplying(!isReplying)}
+              disabled={isSubmitting}
             >
               <Reply className="mr-1 h-3 w-3" />
               {t('community.comments.reply')}
@@ -161,6 +189,7 @@ function CommentComponent({
                 value={replyContent}
                 onChange={(e) => setReplyContent(e.target.value)}
                 className="min-h-[100px] w-full resize-none"
+                disabled={isSubmitting}
               />
               <div className="flex justify-end gap-2">
                 <Button
@@ -170,11 +199,21 @@ function CommentComponent({
                     setIsReplying(false)
                     setReplyContent('')
                   }}
+                  disabled={isSubmitting}
                 >
                   {t('community.comments.cancel')}
                 </Button>
-                <Button size="sm" onClick={handleReply}>
-                  {t('community.comments.reply')}
+                <Button 
+                  size="sm" 
+                  onClick={handleReply}
+                  disabled={isSubmitting || !replyContent.trim()}
+                >
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      {t('common.saving')}
+                    </div>
+                  ) : t('community.comments.reply')}
                 </Button>
               </div>
             </div>
@@ -208,17 +247,21 @@ export function CommentSection({
 }: CommentSectionProps) {
   const t = useI18n()
   const [newComment, setNewComment] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { user } = useUserData()
 
   const handleAddComment = async () => {
-    if (!newComment.trim()) return
+    if (isSubmitting || !newComment.trim()) return
     
+    setIsSubmitting(true)
     try {
       const addedComment = await onAddComment(newComment, null)
       setNewComment('')
       toast.success(t('community.comments.success.add'))
     } catch (error) {
       toast.error(t('community.comments.error.add'))
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -243,13 +286,19 @@ export function CommentSection({
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               className="min-h-[100px] w-full resize-none"
+              disabled={isSubmitting}
             />
             <div className="flex justify-end">
               <Button 
                 onClick={handleAddComment}
-                disabled={!newComment.trim()}
+                disabled={isSubmitting || !newComment.trim()}
               >
-                {t('community.comments.comment')}
+                {isSubmitting ? (
+                  <div className="flex items-center gap-2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    {t('common.saving')}
+                  </div>
+                ) : t('community.comments.comment')}
               </Button>
             </div>
           </div>
