@@ -23,6 +23,7 @@ export type WidgetType =
   | 'propFirm'
   | 'timeRangePerformance'
   | 'tagWidget'
+  | 'riskRewardRatio'
   // | 'marketChart'
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 

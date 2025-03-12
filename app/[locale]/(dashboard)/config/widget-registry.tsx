@@ -12,6 +12,7 @@ import CumulativePnlCard from '../components/statistics/cumulative-pnl-card'
 import LongShortPerformanceCard from '../components/statistics/long-short-card'
 import TradePerformanceCard from '../components/statistics/trade-performance-card'
 import WinningStreakCard from '../components/statistics/winning-streak-card'
+import RiskRewardRatioCard from '../components/statistics/risk-reward-ratio-card'
 import CalendarPnl from '../components/calendar/calendar-pnl'
 import CommissionsPnLChart from '../components/charts/commissions-pnl'
 import StatisticsWidget from '../components/statistics/statistics-widget'
@@ -297,6 +298,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 300,
     getComponent: ({ size }) => <TagWidget />,
     getPreview: () => <div className="h-[300px]"><TagWidget /></div>
+  },
+  riskRewardRatio: {
+    type: 'riskRewardRatio',
+    defaultSize: 'tiny',
+    allowedSizes: ['tiny'],
+    category: 'statistics',
+    previewHeight: 100,
+    getComponent: ({ size }) => <RiskRewardRatioCard size={size} />,
+    getPreview: () => <RiskRewardRatioCard size="tiny" />
   },
   // marketChart: {
   //   type: 'marketChart',
