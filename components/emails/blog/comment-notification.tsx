@@ -91,7 +91,7 @@ const CommentNotificationEmail = ({
                     {commentAuthor} <span className="text-gray-500 font-normal text-sm">• {commentDate}</span>
                   </Text>
                   <Text className="text-gray-800 mb-0 leading-6">
-                    "{commentContent}"
+                    &ldquo;{commentContent}&rdquo;
                   </Text>
                 </Section>
               </Section>
