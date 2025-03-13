@@ -258,6 +258,8 @@ export default function Navbar() {
                   </ScrollArea>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => {
+                    // Clear client-side cache before signing out
+                    localStorage.removeItem('deltalytix_user_data')
                     signOut()
                   }}>
                     <LogOut className="mr-2 h-4 w-4" />
