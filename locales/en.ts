@@ -388,16 +388,20 @@ export default {
     'import.account.tradingAccount': 'Trading Account',
     'import.account.enterAccountNumber': 'Enter account number',
     'import.account.addNewAccount': 'Add New Account',
-    'common.add': 'Add',
-    'common.cancel': 'Cancel',
-    'common.save': 'Save',
-    'common.saving': 'Saving...',
-    'common.clear': 'Clear',
-    'common.done': 'Done',
-    'common.delete': 'Delete',
-    'common.edit': 'Edit',
-    'common.close': 'Close',
-    'common.back': "Back",
+    'common': {
+        'add': 'Add',
+        'cancel': 'Cancel',
+        'save': 'Save',
+        'saving': 'Saving...',
+        'clear': 'Clear',
+        'done': 'Done',
+        'delete': 'Delete',
+        'edit': 'Edit',
+        'close': 'Close',
+        'back': "Back",
+        'send': 'Send',
+        'confirm': 'Confirm'
+    },
     'import.error.accountExists': 'Account already exists',
     'import.upload.dragAndDrop': 'Drag and drop your CSV files here',
     'import.upload.clickToBrowse': 'or click to browse your files',
@@ -1309,8 +1313,4 @@ export default {
             'cancel': 'Cancel'
         }
     },
-    'common': {
-        'send': 'Send',
-        'saving': 'Sending'
-    }
 } as const

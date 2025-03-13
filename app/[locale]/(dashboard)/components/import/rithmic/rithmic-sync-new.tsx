@@ -15,6 +15,7 @@ import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'
 import Image from 'next/image'
+import { AccountComparisonDialog } from './account-comparison-dialog'
 
 interface RithmicCredentials {
   username: string
@@ -72,7 +73,10 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     messageHistory,
     handleMessage,
     step,
-    setStep
+    setStep,
+    showAccountComparisonDialog,
+    setShowAccountComparisonDialog,
+    compareAccounts
   } = useWebSocket()
 
   const [isLoading, setIsLoading] = useState(false)
@@ -378,8 +382,27 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     return oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
   }
 
+  // Handle account selection from comparison dialog
+  const handleAccountSelectionConfirm = useCallback((selectedAccounts: string[]) => {
+    setSelectedAccounts(selectedAccounts)
+    setShowAccountComparisonDialog(false)
+    
+    // If this was triggered during auto-sync, proceed with sync
+    if (token && wsUrl) {
+      const startDate = calculateStartDate(selectedAccounts)
+      connect(wsUrl, token, selectedAccounts, startDate)
+    }
+  }, [token, wsUrl, connect, calculateStartDate])
+
   return (
     <div className="space-y-6">
+      <AccountComparisonDialog
+        isOpen={showAccountComparisonDialog}
+        onClose={() => setShowAccountComparisonDialog(false)}
+        savedAccounts={selectedAccounts}
+        availableAccounts={availableAccounts}
+        onConfirm={handleAccountSelectionConfirm}
+      />
       {showCredentialsManager ? (
         <RithmicCredentialsManager
           onSelectCredential={handleSelectCredential}

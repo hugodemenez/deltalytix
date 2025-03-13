@@ -795,7 +795,8 @@ export default {
         edit: 'Modifier',
         close: 'Fermer',
         back: "Retour",
-        send: 'Envoyer'
+        send: 'Envoyer',
+        confirm: 'Confirmer'
     },
     rithmic: {
         savedCredentials: "Identifiants Sauvegardés",

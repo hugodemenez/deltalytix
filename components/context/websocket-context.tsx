@@ -51,6 +51,12 @@ interface WebSocketContextType {
   step: 'credentials' | 'select-accounts' | 'processing'
   setStep: (step: 'credentials' | 'select-accounts' | 'processing') => void
   performAutoSyncForCredential: (credentialId: string) => Promise<void>
+  showAccountComparisonDialog: boolean
+  setShowAccountComparisonDialog: (show: boolean) => void
+  compareAccounts: (savedAccounts: string[], newAccounts: { account_id: string; fcm_id: string }[]) => boolean
+  reconnect: () => void
+  maxSyncDuration: number
+  setMaxSyncDuration: (duration: number) => void
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
@@ -81,6 +87,14 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [activeCredentialIds, setActiveCredentialIds] = useState<string[]>([])
   const activityTimeoutRef = useRef<NodeJS.Timeout>()
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
+  const [showAccountComparisonDialog, setShowAccountComparisonDialog] = useState(false)
+  const [maxSyncDuration, setMaxSyncDuration] = useState(3600000) // 1 hour default
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout>()
+  const reconnectAttemptsRef = useRef(0)
+  const maxReconnectAttempts = 3
+  const reconnectDelayRef = useRef(1000) // Start with 1 second delay
+  const syncStartTimeRef = useRef<number>()
+  const syncTimeoutRef = useRef<NodeJS.Timeout>()
 
   // Helper function to check if it's a weekday
   const isWeekday = () => {
@@ -105,6 +119,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const disconnect = useCallback(() => {
     if (activityTimeoutRef.current) {
       clearTimeout(activityTimeoutRef.current)
+    }
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current)
+    }
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current)
     }
     if (ws) {
       console.log('Disconnecting WebSocket')
@@ -135,6 +155,19 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       setStep('credentials')
     }, 15000)
   }, [disconnect, resetProcessingState])
+
+  // Add heartbeat mechanism
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current)
+    }
+
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'heartbeat' }))
+      }
+    }, 10000) // Send heartbeat every 10 seconds
+  }, [ws])
 
   const handleMessage = useCallback((message: any) => {
     if (!message) return
@@ -482,8 +515,23 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     console.log('Creating new WebSocket connection to:', url)
     const newWs = new WebSocket(url)
 
+    // Add connection timeout
+    const connectionTimeout = setTimeout(() => {
+      if (newWs.readyState !== WebSocket.OPEN) {
+        console.log('WebSocket connection timeout')
+        newWs.close()
+        setIsAutoSyncing(false)
+        handleMessage({ 
+          type: 'connection_status', 
+          status: 'Connection timeout',
+          message: 'WebSocket connection timed out' 
+        })
+      }
+    }, 10000) // 10 second timeout
+
     newWs.onopen = () => {
       console.log('WebSocket connection established')
+      clearTimeout(connectionTimeout)
       setIsConnected(true)
       setConnectionStatus('Connected')
       
@@ -528,6 +576,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     newWs.onerror = (error) => {
       console.error('WebSocket error:', error)
+      clearTimeout(connectionTimeout)
       setConnectionStatus('WebSocket error occurred')
       handleMessage({ 
         type: 'connection_status', 
@@ -542,6 +591,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     newWs.onclose = (event) => {
       console.log('WebSocket connection closed:', event.code, event.reason)
+      clearTimeout(connectionTimeout)
       setIsConnected(false)
       const closeMessage = event.reason || 'Connection closed'
       const status = `Disconnected: ${closeMessage}`
@@ -560,9 +610,39 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
 
     setWs(newWs)
-  }, [ws, handleMessage, resetActivityTimeout, disconnect, resetProcessingState])
 
-  // Function to perform automatic sync for a single credential set
+    // Set sync start time
+    syncStartTimeRef.current = Date.now()
+
+    // Set maximum sync duration timeout
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current)
+    }
+
+    syncTimeoutRef.current = setTimeout(() => {
+      console.log('Maximum sync duration reached')
+      handleMessage({
+        type: 'log',
+        level: 'warning',
+        message: `Sync operation exceeded maximum duration of ${maxSyncDuration / 1000} seconds`
+      })
+      disconnect()
+    }, maxSyncDuration)
+
+    // Start heartbeat
+    startHeartbeat()
+  }, [ws, handleMessage, resetActivityTimeout, disconnect, resetProcessingState, startHeartbeat, maxSyncDuration])
+
+  // Function to compare account lists and return true if they differ
+  const compareAccounts = useCallback((savedAccounts: string[], newAccounts: { account_id: string; fcm_id: string }[]) => {
+    if (savedAccounts.length !== newAccounts.length) return true
+
+    const newAccountIds = newAccounts.map(acc => acc.account_id)
+    return savedAccounts.some(acc => !newAccountIds.includes(acc)) ||
+           newAccountIds.some(acc => !savedAccounts.includes(acc))
+  }, [])
+
+  // Modify performAutoSyncForCredential
   const performAutoSyncForCredential = useCallback(async (credentialId: string) => {
     if (!user?.id || isAutoSyncing) return
 
@@ -571,25 +651,44 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     setIsAutoSyncing(true)
     
+    // Add timeout promise
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Auto-sync operation timed out')), 30000) // 30 second timeout
+    })
+
     try {
       const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
       const protocol = isLocalhost ? window.location.protocol : 'https:'
       
-      const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...savedData.credentials,
-          userId: user.id
-        })
-      })
+      // Race between the fetch and timeout
+      const response = await Promise.race([
+        fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ...savedData.credentials,
+            userId: user.id
+          })
+        }),
+        timeoutPromise
+      ]) as Response
 
       const data = await response.json()
       
       if (!data.success) {
         throw new Error(data.message)
+      }
+
+      // Compare accounts and show dialog if they differ
+      const accountsDiffer = compareAccounts(savedData.selectedAccounts, data.accounts)
+      if (accountsDiffer) {
+        setAvailableAccounts(data.accounts)
+        setSelectedAccounts(savedData.selectedAccounts)
+        setShowAccountComparisonDialog(true)
+        setIsAutoSyncing(false)
+        return
       }
 
       setAvailableAccounts(data.accounts)
@@ -642,9 +741,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         message: `Auto-sync error for credential set ${credentialId}: ${errorMessage}`
       })
     } finally {
-      setIsAutoSyncing(false)
+      // Ensure isAutoSyncing is set to false even if component unmounts
+      if (typeof window !== 'undefined') {
+        setIsAutoSyncing(false)
+      }
     }
-  }, [user?.id, isAutoSyncing, connect, handleMessage, trades])
+  }, [user?.id, isAutoSyncing, connect, handleMessage, trades, compareAccounts])
 
   // Function to check and sync all credentials
   const performAutoSync = useCallback(async () => {
@@ -691,11 +793,40 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id])
 
+  // Add reconnection logic
+  const reconnect = useCallback(() => {
+    if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
+      console.log('Max reconnection attempts reached')
+      handleMessage({
+        type: 'log',
+        level: 'error',
+        message: 'Max reconnection attempts reached. Please try again later.'
+      })
+      return
+    }
+
+    const delay = reconnectDelayRef.current * Math.pow(2, reconnectAttemptsRef.current)
+    console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`)
+
+    setTimeout(() => {
+      reconnectAttemptsRef.current++
+      if (ws?.url) {
+        connect(ws.url, '', selectedAccounts, dateRange?.start || '')
+      }
+    }, delay)
+  }, [ws, connect, selectedAccounts, dateRange])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (activityTimeoutRef.current) {
         clearTimeout(activityTimeoutRef.current)
+      }
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current)
+      }
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current)
       }
     }
   }, [])
@@ -726,7 +857,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       activeCredentialIds,
       step,
       setStep,
-      performAutoSyncForCredential
+      performAutoSyncForCredential,
+      showAccountComparisonDialog,
+      setShowAccountComparisonDialog,
+      compareAccounts,
+      reconnect,
+      maxSyncDuration,
+      setMaxSyncDuration
     }}>
       {children}
     </WebSocketContext.Provider>

@@ -77,6 +77,7 @@
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.1",
     "install": "^0.13.0",
+    "ios-vibrator-pro-max": "^1.0.7",
     "ldrs": "^1.0.2",
     "lightweight-charts": "^5.0.2",
     "lucide-react": "^0.476.0",
