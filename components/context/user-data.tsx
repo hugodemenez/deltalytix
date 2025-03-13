@@ -572,9 +572,52 @@ export const UserDataProvider: React.FC<{
   }, [user?.id, isSharedView]);
 
   const refreshTrades = useCallback(async () => {
+    if (isSharedView) return;
     setIsLoading(true);
-    await fetchData();
-  }, [fetchData]);
+    try {
+      const data = await loadInitialData();
+      if (!data.error) {
+        const processedTrades = data.trades.map(trade => ({
+          ...trade,
+          utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
+        }));
+
+        // Update state
+        setTrades(processedTrades);
+        setTickDetails(data.tickDetails || {});
+        setTags(data.tags || []);
+        setPropfirmAccounts(data.propfirmAccounts || []);
+
+        // Update cache
+        setLocalCache({
+          trades: processedTrades,
+          tickDetails: data.tickDetails || {},
+          tags: data.tags || [],
+          propfirmAccounts: data.propfirmAccounts || [],
+        });
+
+        // Update date range if needed
+        if (processedTrades.length > 0) {
+          const dates = processedTrades
+            .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
+            .filter(date => isValid(date));
+
+          if (dates.length > 0) {
+            const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
+            const maxDate = new Date(Math.max(
+              ...dates.map(date => date.getTime()),
+              new Date().getTime()
+            ));
+            setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing trades:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [timezone, isSharedView]);
 
   const updateTrade = useCallback((tradeId: string, updates: Partial<TradeWithUTC>) => {
     setTrades(prevTrades => 
