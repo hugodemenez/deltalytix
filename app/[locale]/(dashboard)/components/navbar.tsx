@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserData } from "@/components/context/user-data"
-import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff, Clock } from "lucide-react"
+import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff, Clock, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -57,7 +57,7 @@ const timezones = [
 ];
 
 export default function Navbar() {
-  const { user, subscription, timezone, setTimezone } = useUserData()
+  const { user, subscription, timezone, setTimezone, refreshTrades } = useUserData()
   const { theme, toggleTheme, setTheme } = useTheme()
   const t = useI18n()
   const changeLocale = useChangeLocale()
@@ -160,6 +160,11 @@ export default function Navbar() {
                       <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                     </DropdownMenuItem>
                   </Link>
+                  <DropdownMenuItem onClick={refreshTrades}>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    <span>{t('dashboard.refreshData')}</span>
+                    <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
+                  </DropdownMenuItem>
                   {/* <DropdownMenuSeparator />
                   <DropdownMenuGroup>
                     <DropdownMenuSub>

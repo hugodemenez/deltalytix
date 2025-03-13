@@ -215,6 +215,7 @@ export default {
     'dashboard.profile': 'Profil',
     'dashboard.billing': 'Facturation',
     'dashboard.data': 'Données',
+    'dashboard.refreshData': 'Actualiser les données',
     'dashboard.inviteUsers': 'Inviter des utilisateurs',
     'dashboard.email': 'Email',
     'dashboard.message': 'Message',

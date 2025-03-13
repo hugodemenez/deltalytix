@@ -218,6 +218,7 @@ export default {
     'dashboard.profile': 'Profile',
     'dashboard.billing': 'Billing',
     'dashboard.data': 'Data',
+    'dashboard.refreshData': 'Refresh Data',
     'dashboard.inviteUsers': 'Invite users',
     'dashboard.email': 'Email',
     'dashboard.message': 'Message',
