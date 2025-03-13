@@ -1313,4 +1313,17 @@ export default {
             'cancel': 'Cancel'
         }
     },
+    'maintenance': {
+        'title': 'System Maintenance',
+        'description': 'We are currently performing scheduled maintenance to improve our services.',
+        'message': 'Please check back later. We apologize for any inconvenience.',
+        'status': 'System Status',
+        'inMaintenance': 'Under Maintenance',
+        'estimatedCompletion': 'Estimated completion',
+        'contact': 'Contact Support',
+        'contactDescription': 'If you need immediate assistance, please contact our support team.',
+        'updates': 'Status Updates',
+        'lastUpdate': 'Last update: {time}',
+        'nextUpdate': 'Next update: {time}'
+    },
 } as const

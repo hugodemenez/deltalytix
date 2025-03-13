@@ -5,6 +5,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { getCurrentLocale } from './locales/server'
 import { PrismaClient } from '@prisma/client'
 
+// Maintenance mode flag - Set to true to enable maintenance mode
+const MAINTENANCE_MODE = true
+
 const I18nMiddleware = createI18nMiddleware({
   locales: ['en', 'fr'],
   defaultLocale: 'fr',
@@ -15,6 +18,7 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = request.nextUrl.pathname.includes('/authentication')
   const isDashboardRoute = request.nextUrl.pathname.includes('/dashboard')
   const isAdminRoute = request.nextUrl.pathname.includes('/admin')
+  const isMaintenanceRoute = request.nextUrl.pathname.includes('/maintenance')
 
   try {
     // Handle i18n first to get the locale information
@@ -51,6 +55,18 @@ export async function middleware(request: NextRequest) {
     )
 
     const { data: { session } } = await supabase.auth.getSession()
+
+    // If in maintenance mode and not accessing maintenance page or landing page, redirect to maintenance
+    if (MAINTENANCE_MODE && !isMaintenanceRoute && !isDashboardRoute) {
+      const redirectResponse = NextResponse.redirect(new URL('/maintenance', request.url))
+      response.cookies.getAll().forEach(cookie => {
+        redirectResponse.cookies.set(cookie)
+      })
+      i18nResponse.headers.forEach((value, key) => {
+        redirectResponse.headers.set(key, value)
+      })
+      return redirectResponse
+    }
 
     // For admin routes, check if user has admin access
     if (isAdminRoute) {

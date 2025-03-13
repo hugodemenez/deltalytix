@@ -1331,5 +1331,18 @@ export default {
             'submit': 'Envoyer',
             'cancel': 'Annuler'
         }
+    },
+    'maintenance': {
+        'title': 'Maintenance du Système',
+        'description': 'Nous effectuons actuellement une maintenance planifiée pour améliorer nos services.',
+        'message': 'Veuillez réessayer plus tard. Nous nous excusons pour la gêne occasionnée.',
+        'status': 'État du Système',
+        'inMaintenance': 'En Maintenance',
+        'estimatedCompletion': 'Fin estimée',
+        'contact': 'Contacter le Support',
+        'contactDescription': 'Si vous avez besoin d\'une assistance immédiate, veuillez contacter notre équipe de support.',
+        'updates': 'Mises à jour du statut',
+        'lastUpdate': 'Dernière mise à jour : {time}',
+        'nextUpdate': 'Prochaine mise à jour : {time}'
     } as const
 }
