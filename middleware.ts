@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession()
 
     // If in maintenance mode and not accessing maintenance page or landing page, redirect to maintenance
-    if (MAINTENANCE_MODE && !isMaintenanceRoute && !isDashboardRoute) {
+    if (MAINTENANCE_MODE && !isMaintenanceRoute && isDashboardRoute) {
       const redirectResponse = NextResponse.redirect(new URL('/maintenance', request.url))
       response.cookies.getAll().forEach(cookie => {
         redirectResponse.cookies.set(cookie)
