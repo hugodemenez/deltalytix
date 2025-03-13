@@ -31,6 +31,7 @@ import FilterLeftPane from './filters/filter-left-pane'
 import { ShareButton } from './share-button'
 import { Widget, WidgetType, WidgetSize } from '../types/dashboard'
 import type { LayoutItem as ServerLayoutItem, Layouts } from '@/server/user-data'
+import { Skeleton } from "@/components/ui/skeleton"
 
 // Add type for our local LayoutItem that extends the server one
 type LayoutItem = Omit<ServerLayoutItem, 'type' | 'size'> & {
@@ -842,6 +843,17 @@ function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEdit
   )
 }
 
+// Add a function to pre-calculate widget dimensions
+function getWidgetDimensions(widget: LayoutItem, isMobile: boolean) {
+  const grid = getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, isMobile)
+  return {
+    w: grid.w,
+    h: grid.h,
+    width: `${(grid.w * 100) / 12}%`,
+    height: `${grid.h * (isMobile ? 65 : 70)}px`
+  }
+}
+
 export default function WidgetCanvas() {
   const { user, isMobile, layouts, setLayouts, saveLayouts } = useUserData()
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
@@ -849,9 +861,40 @@ export default function WidgetCanvas() {
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isScreenshotMode, setIsScreenshotMode] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRendered, setIsRendered] = useState(false)
 
   // Add this state to track if the layout change is from user interaction
   const activeLayout = isMobile ? 'mobile' : 'desktop'
+
+  // Pre-calculate all widget dimensions
+  const widgetDimensions = useMemo(() => {
+    if (!layouts) return {}
+    return layouts[activeLayout].reduce((acc, widget) => {
+      acc[widget.i] = getWidgetDimensions(widget as LayoutItem, isMobile)
+      return acc
+    }, {} as Record<string, ReturnType<typeof getWidgetDimensions>>)
+  }, [layouts, activeLayout, isMobile])
+
+  // Handle initial render and loading state
+  useEffect(() => {
+    if (layouts) {
+      // First, ensure everything is rendered
+      const renderTimer = setTimeout(() => {
+        setIsRendered(true)
+      }, 0)
+
+      // Then start the opacity transition
+      const opacityTimer = setTimeout(() => {
+        setIsLoading(false)
+      }, 50) // Small delay after render to ensure smooth transition
+
+      return () => {
+        clearTimeout(renderTimer)
+        clearTimeout(opacityTimer)
+      }
+    }
+  }, [layouts])
 
   // Add click outside handler
   const handleOutsideClick = useCallback((e: MouseEvent) => {
@@ -1176,7 +1219,12 @@ export default function WidgetCanvas() {
 
       {layouts && (
         <ResponsiveGridLayout
-          className="layout"
+          className={cn(
+            "layout",
+            !isRendered && "opacity-0",
+            isRendered && !isLoading && "opacity-100",
+            "transition-opacity duration-200"
+          )}
           layouts={generateResponsiveLayout(layouts[activeLayout] as unknown as LayoutItem[])}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
@@ -1197,10 +1245,19 @@ export default function WidgetCanvas() {
           }}
         >
           {layouts[activeLayout].map((widget) => {
-            // Cast the widget to our local LayoutItem type
             const typedWidget = widget as unknown as LayoutItem
+            const dimensions = widgetDimensions[typedWidget.i]
+            
             return (
-              <div key={typedWidget.i} className="h-full" data-customizing={isCustomizing}>
+              <div 
+                key={typedWidget.i} 
+                className="h-full" 
+                data-customizing={isCustomizing}
+                style={{
+                  width: dimensions.width,
+                  height: dimensions.height
+                }}
+              >
                 <WidgetWrapper
                   onRemove={() => removeWidget(typedWidget.i)}
                   onChangeType={(type) => changeWidgetType(typedWidget.i, type)}
@@ -1220,7 +1277,30 @@ export default function WidgetCanvas() {
         </ResponsiveGridLayout>
       )}
 
-      <style jsx global>{customStyles}</style>
+      <style jsx global>{`
+        ${customStyles}
+        
+        /* Add styles to prevent layout shifts */
+        .layout {
+          transition: opacity 0.2s ease;
+          will-change: opacity;
+        }
+        
+        .react-grid-item {
+          transition: none !important;
+        }
+        
+        .react-grid-item.react-grid-placeholder {
+          transition: none !important;
+        }
+        
+        /* Prevent content jumping during load */
+        .react-grid-item > div {
+          height: 100%;
+          width: 100%;
+          position: relative;
+        }
+      `}</style>
     </div>
   )
 }
