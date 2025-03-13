@@ -385,13 +385,7 @@ export const UserDataProvider: React.FC<{
   const [trades, setTrades] = useState<TradeWithUTC[]>([]);
   const [instruments, setInstruments] = useState<string[]>([]);
   const [accountNumbers, setAccountNumbers] = useState<string[]>([]);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
-    // Initialize with a default range of last 30 days
-    const end = endOfDay(new Date());
-    const start = startOfDay(new Date(end));
-    start.setDate(start.getDate() - 30);
-    return { from: start, to: end };
-  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [tickRange, setTickRange] = useState<TickRange>({ min: undefined, max: undefined });
   const [pnlRange, setPnlRange] = useState<PnlRange>({ min: undefined, max: undefined });
   const [sharedParams, setSharedParams] = useState<SharedParams | null>(null);
@@ -475,6 +469,24 @@ export const UserDataProvider: React.FC<{
       }
     }
   }, [isSharedView, timezone]);
+
+  // Add a new effect to update date range when trades change
+  useEffect(() => {
+    if (trades.length > 0) {
+      const dates = trades
+        .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
+        .filter(date => isValid(date));
+
+      if (dates.length > 0) {
+        const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
+        const maxDate = new Date(Math.max(
+          ...dates.map(date => date.getTime()),
+          new Date().getTime()
+        ));
+        setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+      }
+    }
+  }, [trades, timezone]);
 
   // Update fetchData to use cache
   const fetchData = useCallback(async () => {
