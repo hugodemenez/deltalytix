@@ -95,6 +95,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const reconnectDelayRef = useRef(1000) // Start with 1 second delay
   const syncStartTimeRef = useRef<number>()
   const syncTimeoutRef = useRef<NodeJS.Timeout>()
+  const lastSyncAttemptRef = useRef<Record<string, number>>({})
+  const SYNC_COOLDOWN = 5 * 60 * 1000 // 5 minutes cooldown between syncs for each credential
+  const isInitialMountRef = useRef(true)
 
   // Helper function to check if it's a weekday
   const isWeekday = () => {
@@ -642,44 +645,66 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
            newAccountIds.some(acc => !savedAccounts.includes(acc))
   }, [])
 
+  // Extract common protocol logic
+  const getProtocols = useCallback(() => {
+    const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
+    return {
+      http: isLocalhost ? window.location.protocol : 'https:',
+      ws: isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
+    }
+  }, [])
+
+  // Extract WebSocket URL construction
+  const getWebSocketUrl = useCallback((baseUrl: string) => {
+    const { ws } = getProtocols()
+    return baseUrl.replace('ws://your-domain', `${ws}//${process.env.NEXT_PUBLIC_API_URL}`)
+  }, [getProtocols])
+
+  // Extract sync timing logic
+  const shouldSync = useCallback((lastSyncTime: number) => {
+    const now = Date.now()
+    const hoursSinceLastSync = (now - lastSyncTime) / (1000 * 60 * 60)
+    return hoursSinceLastSync >= 1
+  }, [])
+
   // Modify performAutoSyncForCredential
   const performAutoSyncForCredential = useCallback(async (credentialId: string) => {
     if (!user?.id || isAutoSyncing) return
+
+    // Check if we're within the cooldown period for this credential
+    const now = Date.now()
+    const lastAttempt = lastSyncAttemptRef.current[credentialId] || 0
+    if (now - lastAttempt < SYNC_COOLDOWN) {
+      console.log(`Skipping sync for credential ${credentialId} due to cooldown`)
+      return
+    }
+
+    // Update last attempt time
+    lastSyncAttemptRef.current[credentialId] = now
 
     const savedData = getRithmicData(credentialId)
     if (!savedData) return
 
     setIsAutoSyncing(true)
     
-    // Add timeout promise
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Auto-sync operation timed out')), 30000) // 30 second timeout
-    })
-
     try {
-      const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
-      const protocol = isLocalhost ? window.location.protocol : 'https:'
-      
-      // Race between the fetch and timeout
+      const { http } = getProtocols()
       const response = await Promise.race([
-        fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
+        fetch(`${http}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...savedData.credentials,
             userId: user.id
           })
         }),
-        timeoutPromise
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Auto-sync operation timed out')), 30000)
+        )
       ]) as Response
 
       const data = await response.json()
-      
-      if (!data.success) {
-        throw new Error(data.message)
-      }
+      if (!data.success) throw new Error(data.message)
 
       // Compare accounts and show dialog if they differ
       const accountsDiffer = compareAccounts(savedData.selectedAccounts, data.accounts)
@@ -687,41 +712,29 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         setAvailableAccounts(data.accounts)
         setSelectedAccounts(savedData.selectedAccounts)
         setShowAccountComparisonDialog(true)
-        setIsAutoSyncing(false)
         return
       }
 
       setAvailableAccounts(data.accounts)
-      const wsProtocol = isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
-      const wsUrl = data.websocket_url.replace('ws://your-domain', 
-        `${wsProtocol}//${process.env.NEXT_PUBLIC_API_URL}`)
+      const wsUrl = getWebSocketUrl(data.websocket_url)
 
       // Calculate start date based on existing trades
       const accountTrades = trades.filter(trade => savedData.selectedAccounts.includes(trade.accountNumber))
-      let startDate: string
-
-      if (accountTrades.length === 0) {
-        // If no trades found, return date 90 days ago
-        const date = new Date()
-        date.setDate(date.getDate() - 200)
-        startDate = date.toISOString().slice(0, 10).replace(/-/g, '')
-      } else {
-        // Find the most recent trade date for each account
-        const accountDates = savedData.selectedAccounts.map(accountId => {
-          const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
-          if (accountTrades.length === 0) return null
-          return Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
-        }).filter(Boolean) as number[]
-
-        // Get the oldest most recent date across all accounts
-        const oldestRecentDate = new Date(Math.min(...accountDates))
-        
-        // Set to next day
-        oldestRecentDate.setDate(oldestRecentDate.getDate() + 1)
-        
-        // Format as YYYYMMDD
-        startDate = oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
-      }
+      const startDate = accountTrades.length === 0
+        ? new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '')
+        : (() => {
+            const accountDates = savedData.selectedAccounts
+              .map(accountId => {
+                const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
+                if (accountTrades.length === 0) return null
+                return Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
+              })
+              .filter(Boolean) as number[]
+            
+            const oldestRecentDate = new Date(Math.min(...accountDates))
+            oldestRecentDate.setDate(oldestRecentDate.getDate() + 1)
+            return oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+          })()
 
       // Connect and start syncing
       connect(wsUrl, data.token, savedData.selectedAccounts, startDate)
@@ -734,50 +747,48 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       })
     } catch (error) {
       console.error('Auto-sync error:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       handleMessage({
         type: 'log',
         level: 'error',
-        message: `Auto-sync error for credential set ${credentialId}: ${errorMessage}`
+        message: `Auto-sync error for credential set ${credentialId}: ${error instanceof Error ? error.message : 'Unknown error'}`
       })
     } finally {
-      // Ensure isAutoSyncing is set to false even if component unmounts
       if (typeof window !== 'undefined') {
         setIsAutoSyncing(false)
       }
     }
-  }, [user?.id, isAutoSyncing, connect, handleMessage, trades, compareAccounts])
+  }, [user?.id, isAutoSyncing, connect, handleMessage, trades, compareAccounts, getProtocols, getWebSocketUrl])
 
   // Function to check and sync all credentials
   const performAutoSync = useCallback(async () => {
-    // Skip auto-sync during weekends
     if (!isWeekday()) {
       console.log('Skipping auto-sync during weekend')
       return
     }
 
     const allData = getAllRithmicData()
-    const now = new Date().getTime()
+    const now = Date.now()
 
     for (const [id, data] of Object.entries(allData)) {
-      const lastSync = new Date(data.lastSyncTime).getTime()
-      const hoursSinceLastSync = (now - lastSync) / (1000 * 60 * 60)
-      
-      if (hoursSinceLastSync >= 1) {
+      if (shouldSync(new Date(data.lastSyncTime).getTime())) {
         await performAutoSyncForCredential(id)
+        await new Promise(resolve => setTimeout(resolve, 2000))
       }
     }
-  }, [performAutoSyncForCredential])
+  }, [performAutoSyncForCredential, shouldSync])
 
   // Set up automatic sync interval
   useEffect(() => {
-    // Initial check on mount
-    performAutoSync()
+    // Only perform initial check on mount if it's the first mount
+    if (isInitialMountRef.current) {
+      performAutoSync()
+      isInitialMountRef.current = false
+    }
 
-    // Set up interval for future checks
+    // Set up interval for future checks with a longer interval
     syncIntervalRef.current = setInterval(() => {
       performAutoSync()
-    }, 60 * 1000) // Check every minute
+    }, 60 * 60 * 1000) // Check every hour instead of every 15 minutes
 
     return () => {
       if (syncIntervalRef.current) {
