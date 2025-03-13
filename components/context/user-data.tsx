@@ -441,6 +441,10 @@ export const UserDataProvider: React.FC<{
     if (!isSharedView) {
       const cached = getLocalCache();
       if (cached) {
+        // Set loading state while restoring from cache
+        setIsLoading(true);
+        
+        // Restore all state from cache
         setUser(cached.user);
         setEtpToken(cached.etpToken);
         setSubscription(cached.subscription);
@@ -449,10 +453,28 @@ export const UserDataProvider: React.FC<{
         setTags(cached.tags);
         setPropfirmAccounts(cached.propfirmAccounts);
         setLayouts(cached.layouts);
+        
+        // Update date range if needed
+        if (cached.trades?.length > 0) {
+          const dates = cached.trades
+            .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
+            .filter(date => isValid(date));
+
+          if (dates.length > 0) {
+            const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
+            const maxDate = new Date(Math.max(
+              ...dates.map(date => date.getTime()),
+              new Date().getTime()
+            ));
+            setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+          }
+        }
+        
+        // Set loading to false after cache restoration
         setIsLoading(false);
       }
     }
-  }, [isSharedView]);
+  }, [isSharedView, timezone]);
 
   // Update fetchData to use cache
   const fetchData = useCallback(async () => {
@@ -490,55 +512,71 @@ export const UserDataProvider: React.FC<{
         const cached = getLocalCache();
         const shouldFetch = !cached || Date.now() - cached.timestamp > CACHE_EXPIRY;
 
+        let fetchedData;
         if (shouldFetch) {
-          const data = await loadInitialData();
-          if (!data.error) {
-            const processedTrades = data.trades.map(trade => ({
+          fetchedData = await loadInitialData();
+          if (!fetchedData.error) {
+            const processedTrades = fetchedData.trades.map(trade => ({
               ...trade,
               utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
             }));
 
             // Update state
-            setUser(data.user);
-            setEtpToken(data.etpToken);
-            setIsFirstConnection(data.isFirstConnection);
-            setSubscription(data.subscription);
+            setUser(fetchedData.user);
+            setEtpToken(fetchedData.etpToken);
+            setIsFirstConnection(fetchedData.isFirstConnection);
+            setSubscription(fetchedData.subscription);
             setTrades(processedTrades);
-            setTickDetails(data.tickDetails || {});
-            setTags(data.tags || []);
-            setPropfirmAccounts(data.propfirmAccounts || []);
+            setTickDetails(fetchedData.tickDetails || {});
+            setTags(fetchedData.tags || []);
+            setPropfirmAccounts(fetchedData.propfirmAccounts || []);
 
             // Handle layouts
-            const newLayouts = data.layouts || defaultLayouts;
+            const newLayouts = fetchedData.layouts || defaultLayouts;
             setLayouts(newLayouts);
 
             // Update cache
             setLocalCache({
-              user: data.user,
-              etpToken: data.etpToken,
-              subscription: data.subscription,
+              user: fetchedData.user,
+              etpToken: fetchedData.etpToken,
+              subscription: fetchedData.subscription,
               trades: processedTrades,
-              tickDetails: data.tickDetails || {},
-              tags: data.tags || [],
-              propfirmAccounts: data.propfirmAccounts || [],
+              tickDetails: fetchedData.tickDetails || {},
+              tags: fetchedData.tags || [],
+              propfirmAccounts: fetchedData.propfirmAccounts || [],
               layouts: newLayouts,
             });
+          }
+        } else {
+          // Restore from cache
+          setUser(cached.user);
+          setEtpToken(cached.etpToken);
+          setSubscription(cached.subscription);
+          setTrades(cached.trades);
+          setTickDetails(cached.tickDetails);
+          setTags(cached.tags);
+          setPropfirmAccounts(cached.propfirmAccounts);
+          setLayouts(cached.layouts);
+        }
 
-            // Update date range if needed
-            if (processedTrades.length > 0) {
-              const dates = processedTrades
-                .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
-                .filter(date => isValid(date));
+        // Update date range if needed
+        const currentTrades = shouldFetch ? fetchedData?.trades : cached?.trades;
+        if (currentTrades && currentTrades.length > 0) {
+          const processedTrades = currentTrades.map(trade => ({
+            ...trade,
+            utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
+          }));
+          const dates = processedTrades
+            .map((trade: TradeWithUTC) => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
+            .filter((date: Date) => isValid(date));
 
-              if (dates.length > 0) {
-                const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
-                const maxDate = new Date(Math.max(
-                  ...dates.map(date => date.getTime()),
-                  new Date().getTime()
-                ));
-                setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
-              }
-            }
+          if (dates.length > 0) {
+            const minDate = new Date(Math.min(...dates.map((date: Date) => date.getTime())));
+            const maxDate = new Date(Math.max(
+              ...dates.map((date: Date) => date.getTime()),
+              new Date().getTime()
+            ));
+            setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
           }
         }
       }
