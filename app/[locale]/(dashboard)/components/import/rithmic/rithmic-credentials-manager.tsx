@@ -35,12 +35,18 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null)
   const { isAutoSyncing, performAutoSyncForCredential } = useWebSocket()
   const [syncingId, setSyncingId] = useState<string | null>(null)
+  const [cooldownId, setCooldownId] = useState<string | null>(null)
   const t = useI18n()
 
   async function handleSync(credential: RithmicCredentialSet) {
     setSyncingId(credential.id)
     await performAutoSyncForCredential(credential.id)
     setSyncingId(null)
+    // Set cooldown
+    setCooldownId(credential.id)
+    setTimeout(() => {
+      setCooldownId(null)
+    }, 5000) // 5 seconds cooldown
   }
 
   function handleDelete(id: string) {
@@ -94,10 +100,12 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                       variant="ghost" 
                       size="sm"
                       onClick={() => handleSync(cred)}
-                      disabled={isAutoSyncing}
+                      disabled={isAutoSyncing || cooldownId === id}
                     >
                       {syncingId === id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : cooldownId === id ? (
+                        <RefreshCw className="h-4 w-4 text-muted-foreground" />
                       ) : (
                         <RefreshCw className="h-4 w-4" />
                       )}

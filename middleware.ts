@@ -6,7 +6,7 @@ import { getCurrentLocale } from './locales/server'
 import { PrismaClient } from '@prisma/client'
 
 // Maintenance mode flag - Set to true to enable maintenance mode
-const MAINTENANCE_MODE = true
+const MAINTENANCE_MODE = false
 
 const I18nMiddleware = createI18nMiddleware({
   locales: ['en', 'fr'],

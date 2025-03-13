@@ -96,7 +96,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const syncStartTimeRef = useRef<number>()
   const syncTimeoutRef = useRef<NodeJS.Timeout>()
   const lastSyncAttemptRef = useRef<Record<string, number>>({})
-  const SYNC_COOLDOWN = 60 * 60 * 1000 // 1 hour cooldown between syncs for each credential
+  const SYNC_COOLDOWN = 5000 // 5 seconds cooldown between syncs for each credential
   const isInitialMountRef = useRef(true)
   const activeSyncRequestsRef = useRef<Set<string>>(new Set())
   const tabIdRef = useRef<string>(Math.random().toString(36).substring(7))

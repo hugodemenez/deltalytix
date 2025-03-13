@@ -102,6 +102,7 @@ export const platforms: PlatformConfig[] = [
       alt: 'Rithmic Logo'
     },
     isRithmic: true,
+    isDisabled: true,
     customComponent: RithmicSyncWrapper
   },
   {
