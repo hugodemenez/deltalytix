@@ -96,14 +96,72 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const syncStartTimeRef = useRef<number>()
   const syncTimeoutRef = useRef<NodeJS.Timeout>()
   const lastSyncAttemptRef = useRef<Record<string, number>>({})
-  const SYNC_COOLDOWN = 5 * 60 * 1000 // 5 minutes cooldown between syncs for each credential
+  const SYNC_COOLDOWN = 60 * 60 * 1000 // 1 hour cooldown between syncs for each credential
   const isInitialMountRef = useRef(true)
+  const activeSyncRequestsRef = useRef<Set<string>>(new Set())
+  const tabIdRef = useRef<string>(Math.random().toString(36).substring(7))
+  const SYNC_LOCK_KEY = 'rithmic_sync_lock'
+  const SYNC_LOCK_TIMEOUT = 5 * 60 * 1000 // 5 minutes lock timeout
 
   // Helper function to check if it's a weekday
   const isWeekday = () => {
     const day = new Date().getDay()
     return day !== 0 && day !== 6 // 0 is Sunday, 6 is Saturday
   }
+
+  // Function to acquire sync lock
+  const acquireSyncLock = useCallback(() => {
+    try {
+      const lockData = localStorage.getItem(SYNC_LOCK_KEY)
+      const now = Date.now()
+
+      if (!lockData) {
+        // No lock exists, create one
+        localStorage.setItem(SYNC_LOCK_KEY, JSON.stringify({
+          tabId: tabIdRef.current,
+          timestamp: now
+        }))
+        return true
+      }
+
+      const lock = JSON.parse(lockData)
+      const lockAge = now - lock.timestamp
+
+      // If lock is expired (older than 5 minutes), we can take it
+      if (lockAge > SYNC_LOCK_TIMEOUT) {
+        localStorage.setItem(SYNC_LOCK_KEY, JSON.stringify({
+          tabId: tabIdRef.current,
+          timestamp: now
+        }))
+        return true
+      }
+
+      // If lock is from this tab, we can keep it
+      if (lock.tabId === tabIdRef.current) {
+        return true
+      }
+
+      return false
+    } catch (error) {
+      console.error('Error acquiring sync lock:', error)
+      return false
+    }
+  }, [])
+
+  // Function to release sync lock
+  const releaseSyncLock = useCallback(() => {
+    try {
+      const lockData = localStorage.getItem(SYNC_LOCK_KEY)
+      if (lockData) {
+        const lock = JSON.parse(lockData)
+        if (lock.tabId === tabIdRef.current) {
+          localStorage.removeItem(SYNC_LOCK_KEY)
+        }
+      }
+    } catch (error) {
+      console.error('Error releasing sync lock:', error)
+    }
+  }, [])
 
   const resetProcessingState = useCallback(() => {
     setProcessingStats({
@@ -671,6 +729,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const performAutoSyncForCredential = useCallback(async (credentialId: string) => {
     if (!user?.id || isAutoSyncing) return
 
+    // Check if this credential is already being synced
+    if (activeSyncRequestsRef.current.has(credentialId)) {
+      console.log(`Skipping sync for credential ${credentialId} - already in progress`)
+      return
+    }
+
     // Check if we're within the cooldown period for this credential
     const now = Date.now()
     const lastAttempt = lastSyncAttemptRef.current[credentialId] || 0
@@ -679,11 +743,17 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    // Mark this credential as being synced
+    activeSyncRequestsRef.current.add(credentialId)
+
     // Update last attempt time
     lastSyncAttemptRef.current[credentialId] = now
 
     const savedData = getRithmicData(credentialId)
-    if (!savedData) return
+    if (!savedData) {
+      activeSyncRequestsRef.current.delete(credentialId)
+      return
+    }
 
     setIsAutoSyncing(true)
     
@@ -755,6 +825,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     } finally {
       if (typeof window !== 'undefined') {
         setIsAutoSyncing(false)
+        activeSyncRequestsRef.current.delete(credentialId)
       }
     }
   }, [user?.id, isAutoSyncing, connect, handleMessage, trades, compareAccounts, getProtocols, getWebSocketUrl])
@@ -766,16 +837,29 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    const allData = getAllRithmicData()
-    const now = Date.now()
-
-    for (const [id, data] of Object.entries(allData)) {
-      if (shouldSync(new Date(data.lastSyncTime).getTime())) {
-        await performAutoSyncForCredential(id)
-        await new Promise(resolve => setTimeout(resolve, 2000))
-      }
+    // Try to acquire sync lock
+    if (!acquireSyncLock()) {
+      console.log('Another tab is currently syncing, skipping sync in this tab')
+      return
     }
-  }, [performAutoSyncForCredential, shouldSync])
+
+    try {
+      const allData = getAllRithmicData()
+      const now = Date.now()
+
+      // Process credentials sequentially with a delay between each
+      for (const [id, data] of Object.entries(allData)) {
+        if (shouldSync(new Date(data.lastSyncTime).getTime())) {
+          await performAutoSyncForCredential(id)
+          // Add a delay between processing each credential
+          await new Promise(resolve => setTimeout(resolve, 5000))
+        }
+      }
+    } finally {
+      // Always release the lock when done
+      releaseSyncLock()
+    }
+  }, [performAutoSyncForCredential, shouldSync, acquireSyncLock, releaseSyncLock])
 
   // Set up automatic sync interval
   useEffect(() => {
@@ -788,21 +872,37 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     // Set up interval for future checks with a longer interval
     syncIntervalRef.current = setInterval(() => {
       performAutoSync()
-    }, 60 * 60 * 1000) // Check every hour instead of every 15 minutes
+    }, 60 * 60 * 1000) // Check every hour
+
+    // Listen for storage events from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === SYNC_LOCK_KEY && !e.newValue) {
+        // Another tab released the lock, we can try to sync
+        performAutoSync()
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
 
     return () => {
       if (syncIntervalRef.current) {
         clearInterval(syncIntervalRef.current)
       }
+      window.removeEventListener('storage', handleStorageChange)
+      // Release lock when component unmounts
+      releaseSyncLock()
     }
-  }, [performAutoSync])
+  }, [performAutoSync, releaseSyncLock])
 
-  // Clear interval when user changes
+  // Clear interval and release lock when user changes
   useEffect(() => {
-    if (!user?.id && syncIntervalRef.current) {
-      clearInterval(syncIntervalRef.current)
+    if (!user?.id) {
+      if (syncIntervalRef.current) {
+        clearInterval(syncIntervalRef.current)
+      }
+      releaseSyncLock()
     }
-  }, [user?.id])
+  }, [user?.id, releaseSyncLock])
 
   // Add reconnection logic
   const reconnect = useCallback(() => {
