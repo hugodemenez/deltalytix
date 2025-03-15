@@ -105,10 +105,16 @@ export async function sendNewsletter({
     }
     const resend = new Resend(process.env.RESEND_API_KEY)
 
-    // Get all active subscribers
+    // get all users
+    const users = await prisma.user.findMany()
+
+    // For all french users, check if they are subscribed to the newsletter
+    const frenchUsers = users.filter(user => user.language === 'fr')
     const subscribers = await prisma.newsletter.findMany({
-      where: { isActive: true },
+      where: { email: { in: frenchUsers.map(user => user.email) }, isActive: true },
     })
+    
+
 
     if (subscribers.length === 0) {
       return { error: "No active subscribers found" }
