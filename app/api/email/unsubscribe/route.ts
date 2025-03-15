@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
+import { redirect } from "next/navigation"
 
 // Add route segment config
 export const dynamic = 'force-dynamic'
@@ -28,9 +29,9 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json(
-      { message: 'Successfully unsubscribed from newsletter' },
-      { status: 200 }
+    // Redirect to the newsletter preferences page
+    return NextResponse.redirect(
+      new URL(`/newsletter?status=unsubscribed&email=${encodeURIComponent(email)}`, request.url)
     )
   } catch (error) {
     console.error('Unsubscribe error:', error)

@@ -1326,4 +1326,16 @@ export default {
         'lastUpdate': 'Last update: {time}',
         'nextUpdate': 'Next update: {time}'
     },
+    'newsletter': {
+        'unsubscribed': {
+            'title': 'Successfully Unsubscribed',
+            'description': 'You have been successfully unsubscribed from our newsletter.',
+            'email': 'Unsubscribed email'
+        },
+        'preferences': {
+            'title': 'Newsletter Preferences',
+            'description': 'Manage your email preferences and subscription settings',
+            'comingSoon': 'Additional newsletter preferences management features coming soon.'
+        }
+    },
 } as const

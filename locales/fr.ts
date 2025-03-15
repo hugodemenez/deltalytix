@@ -1344,5 +1344,17 @@ export default {
         'updates': 'Mises à jour du statut',
         'lastUpdate': 'Dernière mise à jour : {time}',
         'nextUpdate': 'Prochaine mise à jour : {time}'
+    },
+    'newsletter': {
+        'unsubscribed': {
+            'title': 'Désabonnement Réussi',
+            'description': 'Vous avez été désabonné avec succès de notre newsletter.',
+            'email': 'Email désabonné'
+        },
+        'preferences': {
+            'title': 'Préférences Newsletter',
+            'description': 'Gérez vos préférences email et paramètres d\'abonnement',
+            'comingSoon': 'Les fonctionnalités de gestion des préférences de la newsletter arrivent bientôt.'
+        }
     } as const
 }
