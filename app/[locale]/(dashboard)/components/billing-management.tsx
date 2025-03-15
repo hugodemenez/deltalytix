@@ -171,7 +171,9 @@ export default function BillingManagement() {
         </span>
         {billingPeriod === 'yearly' && (
           <div className="text-sm font-normal text-gray-500 mt-1">
-            {t('pricing.billedYearly', { total: plan.price.yearly })}
+            {t('pricing.billedYearly', {
+              total: plan.price.yearly.toString()
+            })}
           </div>
         )}
       </>
