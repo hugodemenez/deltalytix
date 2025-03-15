@@ -423,7 +423,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       ) : (
         <>
           {step === 'credentials' && (
-            <form onSubmit={(e) => handleConnect(e, false)} className="space-y-4" autoComplete="off">
+            <form onSubmit={(e) => handleConnect(e, false)} className="space-y-4" autoComplete="on">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold">
                   {currentCredentialId ? t('rithmic.editCredentials') : t('rithmic.addNewCredentials')}
@@ -441,10 +441,10 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
                 <Label htmlFor="rithmic-username">{t('rithmic.usernameLabel')}</Label>
                 <Input 
                   id="rithmic-username" 
-                  name="rithmic-username"
+                  name="username"
+                  autoComplete="username"
                   value={credentials.username}
                   onChange={(e) => setCredentials(prev => ({ ...prev, username: e.target.value }))}
-                  autoComplete="off"
                   spellCheck="false"
                   required 
                 />
@@ -454,11 +454,11 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
                 <Label htmlFor="rithmic-password">{t('rithmic.passwordLabel')}</Label>
                 <Input 
                   id="rithmic-password" 
-                  name="rithmic-password"
+                  name="password"
                   type="password" 
+                  autoComplete="current-password"
                   value={credentials.password}
                   onChange={(e) => setCredentials(prev => ({ ...prev, password: e.target.value }))}
-                  autoComplete="new-password"
                   required 
                 />
               </div>
