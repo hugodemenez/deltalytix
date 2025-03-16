@@ -1,6 +1,6 @@
 import { EtpSync } from '../etp/etp-sync'
 import { ImportType } from '../import-type-selection'
-import { RithmicSyncWrapper } from '../rithmic/rithmic-sync-new'
+import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-new'
 import type { ComponentType } from 'react'
 
 export interface ProcessedData {
@@ -102,7 +102,6 @@ export const platforms: PlatformConfig[] = [
       alt: 'Rithmic Logo'
     },
     isRithmic: true,
-    isDisabled: true,
     customComponent: RithmicSyncWrapper
   },
   {

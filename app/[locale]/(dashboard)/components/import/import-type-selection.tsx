@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link2, FileSpreadsheet, Database } from "lucide-react"
 import { useUserData } from '@/components/context/user-data'
-import { RithmicSyncCombined } from './rithmic/rithmic-sync-new'
+import { RithmicSyncCombined } from './rithmic/sync/rithmic-sync-new'
 import {
   Command,
   CommandDialog,

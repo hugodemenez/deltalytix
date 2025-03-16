@@ -773,6 +773,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         )
       ]) as Response
 
+      // Handle rate limit error specifically
+      if (response.status === 429) {
+        const data = await response.json()
+        throw new Error(data.detail || 'Rate limit exceeded. Please try again later.')
+      }
+
       const data = await response.json()
       if (!data.success) throw new Error(data.message)
 

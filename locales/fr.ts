@@ -826,7 +826,9 @@ export default {
         error: {
             connectionFailed: "Échec de la Connexion",
             timeout: "La connexion a expiré. Veuillez vérifier vos identifiants et réessayer.",
-            invalidCredentials: "Identifiants invalides. Veuillez vérifier votre nom d'utilisateur et votre mot de passe."
+            invalidCredentials: "Identifiants invalides. Veuillez vérifier votre nom d'utilisateur et votre mot de passe.",
+            rateLimit: "Limite d'essais atteinte. Veuillez patienter avant de réessayer.",
+            syncError: "Une erreur est survenue lors de la synchronisation. Veuillez réessayer."
         },
         editCredentials: "Modifier les Identifiants",
         addNewCredentials: "Ajouter de Nouveaux Identifiants",

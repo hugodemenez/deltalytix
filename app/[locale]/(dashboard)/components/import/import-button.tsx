@@ -26,7 +26,7 @@ import { ImportDialogFooter } from './components/import-dialog-footer'
 import { platforms } from './config/platforms'
 import Image from 'next/image'
 import { PlatformTutorial } from './components/platform-tutorial'
-import { RithmicSyncCombined } from './rithmic/rithmic-sync-new'
+import { RithmicSyncCombined } from './rithmic/sync/rithmic-sync-new'
 
 type ColumnConfig = {
   [key: string]: {

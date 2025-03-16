@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, CheckCircle2, AlertCircle, Calendar } from 'lucide-react'
-import { useWebSocket } from '@/components/context/websocket-context'
+import { useWebSocket } from '@/components/context/rithmic-sync-context'
 import { cn } from "@/lib/utils"
 import { useI18n } from '@/locales/client'
 

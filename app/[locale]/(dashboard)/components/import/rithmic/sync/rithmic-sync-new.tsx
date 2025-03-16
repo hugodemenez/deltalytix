@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useUserData } from '@/components/context/user-data'
 import { toast } from '@/hooks/use-toast'
 import { RithmicSyncFeedback } from './rithmic-sync-feedback'
-import { useWebSocket } from '@/components/context/websocket-context'
+import { useWebSocket } from '@/components/context/rithmic-sync-context'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'
@@ -132,6 +132,12 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       })
 
       clearTimeout(timeoutId)
+
+      // Handle rate limit error specifically
+      if (response.status === 429) {
+        const data = await response.json()
+        throw new Error(data.detail || 'Rate limit exceeded. Please try again later.')
+      }
 
       const data = await response.json()
       console.log('Account response:', data)

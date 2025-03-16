@@ -1075,7 +1075,9 @@ export default {
         error: {
             connectionFailed: "Connection Failed",
             timeout: "Connection timed out. Please check your credentials and try again.",
-            invalidCredentials: "Invalid credentials. Please check your username and password."
+            invalidCredentials: "Invalid credentials. Please check your username and password.",
+            rateLimit: "Rate limit exceeded. Please wait before trying again.",
+            syncError: "An error occurred during synchronization. Please try again."
         },
         editCredentials: "Edit Credentials",
         addNewCredentials: "Add New Credentials",

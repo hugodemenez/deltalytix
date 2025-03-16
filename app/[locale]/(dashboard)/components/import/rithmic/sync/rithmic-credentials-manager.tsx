@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Loader2, Trash2, Plus, Edit2, RefreshCw } from 'lucide-react'
 import { getAllRithmicData, clearRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
@@ -21,8 +21,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SyncCountdown } from './sync-countdown'
-import { useWebSocket } from '@/components/context/websocket-context'
+import { useWebSocket } from '@/components/context/rithmic-sync-context'
 import { useI18n } from '@/locales/client'
+import { toast } from "sonner"
 
 interface RithmicCredentialsManagerProps {
   onSelectCredential: (credential: RithmicCredentialSet) => void
@@ -36,18 +37,45 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   const { isAutoSyncing, performAutoSyncForCredential } = useWebSocket()
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [cooldownId, setCooldownId] = useState<string | null>(null)
+  const syncTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({})
   const t = useI18n()
 
-  async function handleSync(credential: RithmicCredentialSet) {
-    setSyncingId(credential.id)
-    await performAutoSyncForCredential(credential.id)
-    setSyncingId(null)
-    // Set cooldown
-    setCooldownId(credential.id)
-    setTimeout(() => {
-      setCooldownId(null)
-    }, 5000) // 5 seconds cooldown
-  }
+  const handleSync = useCallback(async (credential: RithmicCredentialSet) => {
+    // Prevent multiple syncs for the same credential
+    if (syncingId === credential.id || cooldownId === credential.id) {
+      return
+    }
+
+    try {
+      setSyncingId(credential.id)
+      await performAutoSyncForCredential(credential.id)
+      
+      // Clear any existing timeout for this credential
+      if (syncTimeoutsRef.current[credential.id]) {
+        clearTimeout(syncTimeoutsRef.current[credential.id])
+      }
+
+      // Set cooldown
+      setCooldownId(credential.id)
+      syncTimeoutsRef.current[credential.id] = setTimeout(() => {
+        setCooldownId(null)
+        delete syncTimeoutsRef.current[credential.id]
+      }, 5000)
+
+    } catch (error) {
+      toast.error(t('rithmic.error.syncError'))
+      console.error('Sync error:', error)
+    } finally {
+      setSyncingId(null)
+    }
+  }, [syncingId, cooldownId, performAutoSyncForCredential, t])
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(syncTimeoutsRef.current).forEach(timeout => clearTimeout(timeout))
+    }
+  }, [])
 
   function handleDelete(id: string) {
     clearRithmicData(id)
