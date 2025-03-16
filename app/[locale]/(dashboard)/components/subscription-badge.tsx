@@ -28,7 +28,7 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Link href="/pricing">
+            <Link href="/dashboard/billing">
               <Badge 
                 variant="secondary" 
                 className={cn(
@@ -171,20 +171,22 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge 
-            variant="secondary" 
-            className={cn(
-              "px-2 py-0.5 text-xs whitespace-nowrap cursor-help", 
-              badge.variant === 'active' && plan.includes('pro') && "bg-primary text-primary-foreground",
-              badge.variant === 'trial' && "bg-blue-500 text-white dark:bg-blue-400",
-              badge.variant === 'expiring' && "bg-destructive text-destructive-foreground",
-              badge.variant === 'expired' && "bg-destructive/80 text-destructive-foreground",
-              badge.variant === 'normal' && "bg-secondary text-secondary-foreground",
-              className
-            )}
-          >
-            {badge.text}
-          </Badge>
+          <Link href="/dashboard/billing">
+            <Badge 
+              variant="secondary" 
+              className={cn(
+                "px-2 py-0.5 text-xs whitespace-nowrap cursor-help", 
+                badge.variant === 'active' && plan.includes('pro') && "bg-primary text-primary-foreground",
+                badge.variant === 'trial' && "bg-blue-500 text-white dark:bg-blue-400",
+                badge.variant === 'expiring' && "bg-destructive text-destructive-foreground",
+                badge.variant === 'expired' && "bg-destructive/80 text-destructive-foreground",
+                badge.variant === 'normal' && "bg-secondary text-secondary-foreground",
+                className
+              )}
+            >
+              {badge.text}
+            </Badge>
+          </Link>
         </TooltipTrigger>
         {badge.tooltip && (
           <TooltipContent>
