@@ -705,7 +705,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   // Extract common protocol logic
   const getProtocols = useCallback(() => {
-    const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
+    const isLocalhost = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes('localhost')
     return {
       http: isLocalhost ? window.location.protocol : 'https:',
       ws: isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
@@ -715,7 +715,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   // Extract WebSocket URL construction
   const getWebSocketUrl = useCallback((baseUrl: string) => {
     const { ws } = getProtocols()
-    return baseUrl.replace('ws://your-domain', `${ws}//${process.env.NEXT_PUBLIC_API_URL}`)
+    return baseUrl.replace('ws://your-domain', `${ws}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}`)
   }, [getProtocols])
 
   // Extract sync timing logic
@@ -760,7 +760,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     try {
       const { http } = getProtocols()
       const response = await Promise.race([
-        fetch(`${http}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
+        fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

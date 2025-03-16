@@ -107,7 +107,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     }
 
     try {
-      const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
+      const isLocalhost = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes('localhost')
       const protocol = isLocalhost ? window.location.protocol : 'https:'
       
       const payload = {
@@ -122,7 +122,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 seconds timeout
 
-      const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/accounts`, {
+      const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       setToken(data.token)
       const wsProtocol = isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
       setWsUrl(data.websocket_url.replace('ws://your-domain', 
-        `${wsProtocol}//${process.env.NEXT_PUBLIC_API_URL}`))
+        `${wsProtocol}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}`))
       console.log('Token set:', data.token)
       console.log('WebSocket URL set:', data.websocket_url)
       
@@ -303,9 +303,9 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
   useEffect(() => {
     async function fetchServerConfigs() {
       try {
-        const isLocalhost = process.env.NEXT_PUBLIC_API_URL?.includes('localhost')
+        const isLocalhost = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes('localhost')
         const protocol = isLocalhost ? window.location.protocol : 'https:'
-        const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_API_URL}/servers`)
+        const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/servers`)
         const data = await response.json()
         
         if (data.success) {

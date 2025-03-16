@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { MessageCircle, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import ChatInterface from "@/chat-interface"
+import ChatInterface from "@/components/assistant/chat-interface"
 
 export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false)
