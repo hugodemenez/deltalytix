@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserData } from "@/components/context/user-data"
-import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff, Clock, RefreshCw } from "lucide-react"
+import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff, Clock, RefreshCw, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -39,6 +39,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { motion, AnimatePresence } from 'framer-motion'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useRouter, usePathname } from 'next/navigation'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 type Theme = 'light' | 'dark' | 'system'
 type Locale = 'en' | 'fr'
@@ -67,6 +72,7 @@ export default function Navbar() {
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
   const { startOnborda, closeOnborda } = useOnborda();
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
+  const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
@@ -86,9 +92,40 @@ export default function Navbar() {
       <nav className="fixed py-2 top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-sm w-screen">
         <div className="flex items-center justify-between px-10 h-16">
           <div className="flex items-center gap-x-2">
-            <Link href="/dashboard">
-              <Logo className='fill-black h-6 w-6 dark:fill-white' />
-            </Link>
+            <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="p-0">
+                  <Logo className='fill-black h-6 w-6 dark:fill-white' />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48" align="start">
+                <div className="space-y-2">
+                  <h4 className="font-medium leading-none mb-3">{t('navbar.logo.title')}</h4>
+                  <div className="grid gap-2">
+                    <Link 
+                      href="/dashboard" 
+                      className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
+                      onClick={() => setIsLogoPopoverOpen(false)}
+                    >
+                      <div className="flex-shrink-0 w-4 h-4">
+                        <LayoutDashboard className="h-full w-full" />
+                      </div>
+                      {t('navbar.logo.dashboard')}
+                    </Link>
+                    <Link 
+                      href="/" 
+                      className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
+                      onClick={() => setIsLogoPopoverOpen(false)}
+                    >
+                      <div className="flex-shrink-0 w-4 h-4">
+                        <Home className="h-full w-full" />
+                      </div>
+                      {t('navbar.logo.home')}
+                    </Link>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
             <SubscriptionBadge 
               plan={subscription?.plan || null} 
               endDate={subscription?.endDate || null}

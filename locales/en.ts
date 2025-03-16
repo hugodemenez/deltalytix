@@ -78,6 +78,11 @@ export default {
     'navbar.api': 'API',
     'navbar.pricing': 'Pricing',
     'navbar.updates': 'Updates',
+    'navbar.logo': {
+        'title': 'Navigation',
+        'dashboard': 'Go to Dashboard',
+        'home': 'Go to Home'
+    },
     'navbar.productUpdates': 'Product Updates',
     'navbar.productUpdatesDescription': 'Stay up to date with our latest features and improvements.',
     'navbar.dashboard': 'Dashboard',

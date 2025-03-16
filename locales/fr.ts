@@ -77,6 +77,11 @@ export default {
     'navbar.api': 'API',
     'navbar.pricing': 'Tarifs',
     'navbar.updates': 'Mises à jour',
+    'navbar.logo': {
+        'title': 'Navigation',
+        'dashboard': 'Aller au tableau de bord',
+        'home': 'Aller à l\'accueil'
+    },
     'navbar.productUpdates': 'Mises à jour du produit',
     'navbar.productUpdatesDescription': 'Restez informé de nos dernières fonctionnalités et améliorations.',
     'navbar.community': 'Communauté',
