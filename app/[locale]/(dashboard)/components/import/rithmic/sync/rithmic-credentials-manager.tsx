@@ -102,8 +102,6 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
           <TableHeader>
             <TableRow>
               <TableHead>{t('rithmic.username')}</TableHead>
-              <TableHead>{t('rithmic.serverType')}</TableHead>
-              <TableHead>{t('rithmic.location')}</TableHead>
               <TableHead>{t('rithmic.lastSync')}</TableHead>
               <TableHead>{t('rithmic.nextSync')}</TableHead>
               <TableHead>{t('rithmic.actions')}</TableHead>
@@ -113,8 +111,6 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
             {Object.entries(credentials).map(([id, cred]) => (
               <TableRow key={id}>
                 <TableCell>{cred.credentials.username}</TableCell>
-                <TableCell>{cred.credentials.server_type}</TableCell>
-                <TableCell>{cred.credentials.location}</TableCell>
                 <TableCell>{formatDate(cred.lastSyncTime)}</TableCell>
                 <TableCell>
                   <SyncCountdown 
