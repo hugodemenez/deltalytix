@@ -615,6 +615,15 @@ export const UserDataProvider: React.FC<{
       };
       await saveDashboardLayout(user.id, safeNewLayouts);
       setLayouts(safeNewLayouts);
+      
+      // Update the localStorage cache
+      const existingCache = getLocalCache();
+      if (existingCache) {
+        setLocalCache({
+          ...existingCache,
+          layouts: safeNewLayouts
+        });
+      }
     } catch (error) {
       console.error('Error saving layouts:', error);
       setLayouts(defaultLayouts);
