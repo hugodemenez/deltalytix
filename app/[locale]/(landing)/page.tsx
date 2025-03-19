@@ -7,6 +7,7 @@ import { useTheme } from '@/components/context/theme-provider'
 import Features from './components/features'
 import GitHubRepoCard from './components/open-source'
 import PricingPage from './pricing/page'
+import Partners from './components/partners'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/locales/client'
 import { useUserData } from '@/components/context/user-data'
@@ -106,6 +107,9 @@ export default function LandingPage() {
                             </div>
                         </div>
                     </div>
+                </section>
+                <section id="partners" className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
+                    <Partners />
                 </section>
                 <section id="features" className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
                     <Features />

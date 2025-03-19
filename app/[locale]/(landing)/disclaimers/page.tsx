@@ -7,7 +7,7 @@ export default function DisclaimersPage() {
 
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">Disclaimers</h1>
+      <h1 className="text-3xl font-bold mb-8">{t('footer.legal.disclaimers')}</h1>
       
       <div className="space-y-6">
         <Card>

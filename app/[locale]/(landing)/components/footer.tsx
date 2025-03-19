@@ -18,6 +18,7 @@ export default function Footer() {
     legal: [
       { name: t('footer.legal.privacy'), href: '/privacy' },
       { name: t('footer.legal.terms'), href: '/terms' },
+      { name: t('footer.legal.disclaimers'), href: '/disclaimers' },
     ],
     social: [
       { name: 'GitHub', href: 'https://github.com/hugodemenez/deltalytix', icon: (props: React.SVGProps<SVGSVGElement>) => (
@@ -103,8 +104,16 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-16 border-t border-gray-200 dark:border-gray-800 pt-8 text-center text-sm text-gray-600 dark:text-gray-400">
-          {t('footer.copyright', { year: new Date().getFullYear() })}
+        <div className="mt-16 border-t border-gray-200 dark:border-gray-800 pt-8">
+          <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+            {t('footer.copyright', { year: new Date().getFullYear() })}
+          </div>
+          <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-500">
+            {t('disclaimer.risk.content')}
+          </div>
+          <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-500">
+            {t('disclaimer.hypothetical.content')}
+          </div>
         </div>
       </div>
     </footer>
