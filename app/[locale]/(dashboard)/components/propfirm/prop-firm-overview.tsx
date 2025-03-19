@@ -482,19 +482,6 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
     return metrics
   }, [selectedAccountForTable, trades])
 
-  // Add this function to handle scroll events
-  function handleScroll(e: React.WheelEvent<HTMLDivElement>) {
-    const target = e.currentTarget;
-    const isAtTop = target.scrollTop === 0;
-    const isAtBottom = target.scrollHeight - target.scrollTop === target.clientHeight;
-    
-    // Prevent scroll propagation at boundaries
-    if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-  }
-
   // Add this function to handle both add and update
   const handleAddPayout = async (payout: Payout) => {
     if (!selectedAccountForTable || !user) return
@@ -606,8 +593,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
           <TabsContent value="overview" className="flex-1 overflow-hidden data-[state=active]:flex flex-col">
             <div 
               className="flex-1 overflow-y-auto h-full"
-              onWheel={handleScroll}
-              style={{ height: 'calc(100% - 1rem)', overscrollBehavior: 'contain' }}
+              style={{ height: 'calc(100% - 1rem)' }}
             >
               <div className={cn("grid grid-cols-1 gap-3 mt-4", size === "medium" ? "sm:grid-cols-2" : size === "large" ? "sm:grid-cols-3" : "sm:grid-cols-4")}>
                 {propFirmAccounts.map(account => {
@@ -630,8 +616,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
           <TabsContent value="consistency" className="flex-1 overflow-hidden data-[state=active]:flex flex-col">
             <div 
               className="flex-1 overflow-y-auto h-full"
-              onWheel={handleScroll}
-              style={{ height: 'calc(100% - 1rem)', overscrollBehavior: 'contain' }}
+              style={{ height: 'calc(100% - 1rem)' }}
             >
               <div className="rounded-md border mt-4">
                 <Table>
