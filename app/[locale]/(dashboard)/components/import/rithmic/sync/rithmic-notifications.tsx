@@ -244,7 +244,6 @@ export function WebSocketNotifications() {
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Days: {notifications.progress.progress.current} / {notifications.progress.progress.total}</span>
-                    <span>Orders: {notifications.progress.progress.ordersProcessed}</span>
                   </div>
                   {notifications.progress.progress.currentDate && notifications.progress.progress.currentDayNumber && (
                     <div className="text-xs text-muted-foreground">
