@@ -12,10 +12,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 
-type BillingPeriod = 'yearly' | 'monthly';
+type BillingPeriod = 'monthly' | 'quarterly' | 'yearly';
 
 type PlanPrice = {
   yearly: number;
+  quarterly: number;
   monthly: number;
 };
 
@@ -46,7 +47,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
     basic: {
       name: t('pricing.basic.name'),
       description: t('pricing.basic.description'),
-      price: { yearly: 0, monthly: 0 },
+      price: { yearly: 0, quarterly: 0, monthly: 0 },
       features: [
         t('pricing.basic.feature2'),
       ]
@@ -56,6 +57,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       description: t('pricing.plus.description'),
       price: { 
         yearly: 300,
+        quarterly: 82.5,
         monthly: 29.99
       },
       isPopular: true,
@@ -70,6 +72,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       description: t('pricing.pro.description'),
       price: { 
         yearly: 1000,
+        quarterly: 299.99,
         monthly: 99.99
       },
       isComingSoon: true,
@@ -88,13 +91,24 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
 
     const priceDisplay = (
       <>
-        €{billingPeriod === 'monthly' ? plan.price.monthly : (plan.price.yearly / 12).toFixed(2)}
+        €{(() => {
+          switch (billingPeriod) {
+            case 'monthly':
+              return plan.price.monthly;
+            case 'quarterly':
+              return (plan.price.quarterly / 3).toFixed(2);
+            case 'yearly':
+              return (plan.price.yearly / 12).toFixed(2);
+          }
+        })()}
         <span className="text-lg font-normal text-gray-500">
           /{t('pricing.month')}
         </span>
-        {billingPeriod === 'yearly' && (
+        {billingPeriod !== 'monthly' && (
           <div className="text-sm font-normal text-gray-500 mt-1">
-            {t('pricing.billedYearly', { total: plan.price.yearly })}
+            {billingPeriod === 'yearly' 
+              ? t('pricing.billedYearly', { total: plan.price.yearly })
+              : t('pricing.billedQuarterly', { total: plan.price.quarterly })}
           </div>
         )}
       </>
@@ -108,12 +122,17 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       {/* Sticky container for mobile */}
       <div className="md:hidden sticky top-[64px] z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 border-b">
         <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)} className="w-full max-w-3xl mx-auto">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="monthly">{t('pricing.monthly')}</TabsTrigger>
+            <TabsTrigger value="quarterly">{t('pricing.quarterly')}</TabsTrigger>
             <TabsTrigger value="yearly">{t('pricing.yearly')}</TabsTrigger>
           </TabsList>
           <p className="text-sm text-center text-gray-500 mt-2">
-            {billingPeriod === 'yearly' ? t('pricing.yearlySavings') : t('pricing.monthlyFlexibility')}
+            {billingPeriod === 'yearly' 
+              ? t('pricing.yearlySavings')
+              : billingPeriod === 'quarterly'
+              ? t('pricing.quarterlySavings')
+              : t('pricing.monthlyFlexibility')}
           </p>
         </Tabs>
       </div>
@@ -121,12 +140,17 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       {/* Desktop version */}
       <div className="hidden md:block">
         <Tabs value={billingPeriod} onValueChange={(value) => setBillingPeriod(value as BillingPeriod)} className="w-full max-w-3xl mx-auto mb-12">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="monthly">{t('pricing.monthly')}</TabsTrigger>
+            <TabsTrigger value="quarterly">{t('pricing.quarterly')}</TabsTrigger>
             <TabsTrigger value="yearly">{t('pricing.yearly')}</TabsTrigger>
           </TabsList>
           <p className="text-sm text-center text-gray-500 mt-2">
-            {billingPeriod === 'yearly' ? t('pricing.yearlySavings') : t('pricing.monthlyFlexibility')}
+            {billingPeriod === 'yearly' 
+              ? t('pricing.yearlySavings')
+              : billingPeriod === 'quarterly'
+              ? t('pricing.quarterlySavings')
+              : t('pricing.monthlyFlexibility')}
           </p>
         </Tabs>
       </div>
