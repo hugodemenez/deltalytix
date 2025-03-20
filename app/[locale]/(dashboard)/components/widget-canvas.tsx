@@ -747,6 +747,11 @@ const customStyles = `
     border-radius: 0 0 4px 0;
   }
   
+  /* Ensure tooltips appear above widget cards */
+  [data-radix-popper-content-wrapper] {
+    z-index: 9999 !important;
+  }
+  
   /* Prevent text selection on mobile */
   @media (max-width: 768px) {
     .react-grid-item {
