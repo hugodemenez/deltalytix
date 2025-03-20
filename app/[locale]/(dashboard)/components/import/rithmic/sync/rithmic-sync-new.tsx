@@ -15,7 +15,6 @@ import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'
 import Image from 'next/image'
-import { AccountComparisonDialog } from './account-comparison-dialog'
 
 interface RithmicCredentials {
   username: string
@@ -76,13 +75,17 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     setStep,
     showAccountComparisonDialog,
     setShowAccountComparisonDialog,
-    compareAccounts
+    compareAccounts,
+    serverConfigs,
+    fetchServerConfigs,
+    authenticateAndGetAccounts,
+    wsUrl,
+    token,
+    setWsUrl,
+    setToken
   } = useWebSocket()
 
   const [isLoading, setIsLoading] = useState(false)
-  const [serverConfigs, setServerConfigs] = useState<ServerConfigurations>({})
-  const [token, setToken] = useState<string | null>(null)
-  const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [shouldAutoConnect, setShouldAutoConnect] = useState(false)
   const [credentials, setCredentials] = useState<RithmicCredentials>({
     username: '',
@@ -107,52 +110,10 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     }
 
     try {
-      const isLocalhost = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes('localhost')
-      const protocol = isLocalhost ? window.location.protocol : 'https:'
-      
-      const payload = {
-        username: credentials.username,
-        password: credentials.password,
-        server_type: credentials.server_type,
-        location: credentials.location,
-        userId: credentials.userId
-      }
-
-      // Create AbortController for timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 seconds timeout
-
-      const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      })
-
-      clearTimeout(timeoutId)
-
-      // Handle rate limit error specifically
-      if (response.status === 429) {
-        const data = await response.json()
-        throw new Error(data.detail || 'Rate limit exceeded. Please try again later.')
-      }
-
-      const data = await response.json()
-      console.log('Account response:', data)
-
-      if (!data.success) {
-        throw new Error(data.message || t('rithmic.error.invalidCredentials'))
-      }
-
-      setAvailableAccounts(data.accounts)
-      setToken(data.token)
-      const wsProtocol = isLocalhost ? (window.location.protocol === 'https:' ? 'wss:' : 'ws:') : 'wss:'
-      setWsUrl(data.websocket_url.replace('ws://your-domain', 
-        `${wsProtocol}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}`))
-      console.log('Token set:', data.token)
-      console.log('WebSocket URL set:', data.websocket_url)
+      const result = await authenticateAndGetAccounts(credentials)
+      setAvailableAccounts(result.accounts)
+      setToken(result.token)
+      setWsUrl(result.websocket_url)
       
       // Always go to account selection when editing credentials
       setStep('select-accounts')
@@ -161,7 +122,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       handleMessage({
         type: 'log',
         level: 'info',
-        message: `Retrieved ${data.accounts.length} accounts. Please select accounts and click "Start Processing"`
+        message: `Retrieved ${result.accounts.length} accounts. Please select accounts and click "Start Processing"`
       })
     } catch (error: unknown) {
       console.error('Connection error:', error)
@@ -205,7 +166,8 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     connect, 
     handleMessage, 
     calculateStartDate, 
-    user?.id
+    user?.id,
+    authenticateAndGetAccounts
   ])
 
   // Handle selecting a credential from the manager
@@ -279,7 +241,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       location: 'Chicago Area',
       userId: user?.id || ''
     })
-  }, [resetProcessingState, user?.id])
+  }, [resetProcessingState, user?.id, setToken, setWsUrl])
 
   // Close modal when processing is complete
   useEffect(() => {
@@ -299,43 +261,10 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     }
   }, [user])
 
-  // Fetch server configurations on mount and set defaults
+  // Update useEffect to use context's fetchServerConfigs
   useEffect(() => {
-    async function fetchServerConfigs() {
-      try {
-        const isLocalhost = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes('localhost')
-        const protocol = isLocalhost ? window.location.protocol : 'https:'
-        const response = await fetch(`${protocol}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/servers`)
-        const data = await response.json()
-        
-        if (data.success) {
-          setServerConfigs(data.servers)
-          
-          // Verify if our defaults exist in the server configs
-          const hasDefaultServer = 'Rithmic Paper Trading' in data.servers
-          const hasDefaultLocation = hasDefaultServer && data.servers['Rithmic Paper Trading'].includes('Chicago Area')
-          
-          // If defaults don't exist, set to first available options
-          if (!hasDefaultServer || !hasDefaultLocation) {
-            const firstServerType = Object.keys(data.servers)[0]
-            const firstLocation = data.servers[firstServerType][0]
-            
-            setCredentials(prev => ({
-              ...prev,
-              server_type: firstServerType,
-              location: firstLocation
-            }))
-          }
-        } else {
-          throw new Error(data.message)
-        }
-      } catch (error) {
-        console.error('Failed to fetch server configurations:', error)
-      }
-    }
-    
     fetchServerConfigs()
-  }, [])
+  }, [fetchServerConfigs])
 
   // Update effect to use context step
   useEffect(() => {
@@ -388,27 +317,8 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     return oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
   }
 
-  // Handle account selection from comparison dialog
-  const handleAccountSelectionConfirm = useCallback((selectedAccounts: string[]) => {
-    setSelectedAccounts(selectedAccounts)
-    setShowAccountComparisonDialog(false)
-    
-    // If this was triggered during auto-sync, proceed with sync
-    if (token && wsUrl) {
-      const startDate = calculateStartDate(selectedAccounts)
-      connect(wsUrl, token, selectedAccounts, startDate)
-    }
-  }, [token, wsUrl, connect, calculateStartDate])
-
   return (
     <div className="space-y-6">
-      <AccountComparisonDialog
-        isOpen={showAccountComparisonDialog}
-        onClose={() => setShowAccountComparisonDialog(false)}
-        savedAccounts={selectedAccounts}
-        availableAccounts={availableAccounts}
-        onConfirm={handleAccountSelectionConfirm}
-      />
       {showCredentialsManager ? (
         <RithmicCredentialsManager
           onSelectCredential={handleSelectCredential}

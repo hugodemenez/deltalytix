@@ -25,6 +25,14 @@ interface ProcessingStats {
   isComplete: boolean
 }
 
+interface RithmicCredentials {
+  username: string
+  password: string
+  server_type: string
+  location: string
+  userId: string
+}
+
 interface WebSocketContextType {
   connect: (url: string, token: string, accounts: string[], startDate: string) => void
   disconnect: () => void
@@ -57,6 +65,14 @@ interface WebSocketContextType {
   reconnect: () => void
   maxSyncDuration: number
   setMaxSyncDuration: (duration: number) => void
+  serverConfigs: Record<string, string[]>
+  fetchServerConfigs: () => Promise<void>
+  authenticateAndGetAccounts: (credentials: RithmicCredentials) => Promise<{ success: boolean; token: string; websocket_url: string; accounts: { account_id: string; fcm_id: string }[] }>
+  getWebSocketUrl: (baseUrl: string) => string
+  wsUrl: string | null
+  token: string | null
+  setWsUrl: (url: string | null) => void
+  setToken: (token: string | null) => void
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
@@ -102,6 +118,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const tabIdRef = useRef<string>(Math.random().toString(36).substring(7))
   const SYNC_LOCK_KEY = 'rithmic_sync_lock'
   const SYNC_LOCK_TIMEOUT = 5 * 60 * 1000 // 5 minutes lock timeout
+  const [serverConfigs, setServerConfigs] = useState<Record<string, string[]>>({})
+  const [wsUrl, setWsUrl] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(null)
 
   // Helper function to check if it's a weekday
   const isWeekday = () => {
@@ -933,6 +952,58 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }, delay)
   }, [ws, connect, selectedAccounts, dateRange])
 
+  // Add fetchServerConfigs function
+  const fetchServerConfigs = useCallback(async () => {
+    try {
+      const { http } = getProtocols()
+      const response = await fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/servers`)
+      const data = await response.json()
+      
+      if (data.success) {
+        setServerConfigs(data.servers)
+      } else {
+        throw new Error(data.message)
+      }
+    } catch (error) {
+      console.error('Failed to fetch server configurations:', error)
+      handleMessage({
+        type: 'log',
+        level: 'error',
+        message: 'Failed to fetch server configurations'
+      })
+    }
+  }, [getProtocols, handleMessage])
+
+  // Update authenticateAndGetAccounts to transform the URL
+  const authenticateAndGetAccounts = useCallback(async (credentials: RithmicCredentials) => {
+    const { http } = getProtocols()
+    const response = await fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(credentials)
+    })
+
+    // Handle rate limit error specifically
+    if (response.status === 429) {
+      const data = await response.json()
+      throw new Error(data.detail || 'Rate limit exceeded. Please try again later.')
+    }
+
+    const data = await response.json()
+    if (!data.success) {
+      throw new Error(data.message)
+    }
+
+    return {
+      success: true,
+      token: data.token,
+      websocket_url: getWebSocketUrl(data.websocket_url),
+      accounts: data.accounts
+    }
+  }, [getProtocols, getWebSocketUrl])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -980,7 +1051,15 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       compareAccounts,
       reconnect,
       maxSyncDuration,
-      setMaxSyncDuration
+      setMaxSyncDuration,
+      serverConfigs,
+      fetchServerConfigs,
+      authenticateAndGetAccounts,
+      getWebSocketUrl,
+      wsUrl,
+      token,
+      setWsUrl,
+      setToken,
     }}>
       {children}
     </WebSocketContext.Provider>
