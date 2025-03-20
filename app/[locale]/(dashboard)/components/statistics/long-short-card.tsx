@@ -2,9 +2,16 @@
 
 import { useUserData } from '@/components/context/user-data'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { ArrowLeftRight, ArrowUpFromLine, ArrowDownFromLine } from "lucide-react"
+import { ArrowLeftRight, ArrowUpFromLine, ArrowDownFromLine, HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '../../types/dashboard'
+import { useI18n } from '@/locales/client'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface LongShortPerformanceCardProps {
   size?: WidgetSize
@@ -12,6 +19,7 @@ interface LongShortPerformanceCardProps {
 
 export default function LongShortPerformanceCard({ size = 'medium' }: LongShortPerformanceCardProps) {
   const { calendarData } = useUserData()
+  const  t  = useI18n()
 
   // Calculate long/short data
   const chartData = Object.entries(calendarData).map(([date, values]) => ({
@@ -27,7 +35,6 @@ export default function LongShortPerformanceCard({ size = 'medium' }: LongShortP
   const longRate = Number((longNumber / totalTrades * 100).toFixed(2))
   const shortRate = Number((shortNumber / totalTrades * 100).toFixed(2))
 
-  if (size === 'tiny') {
     return (
       <Card className="h-full">
         <div className="flex items-center justify-center h-full gap-1.5">
@@ -40,72 +47,21 @@ export default function LongShortPerformanceCard({ size = 'medium' }: LongShortP
             <ArrowDownFromLine className="h-3 w-3 text-red-500" />
             <span className="font-medium text-sm">{shortRate}%</span>
           </div>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent 
+                side="bottom" 
+                sideOffset={5} 
+                className="bg-popover text-popover-foreground shadow-md rounded-md p-3 text-sm max-w-[300px] z-[9999]"
+              >
+                <p className="text-xs">{t('widgets.longShortPerformance.tooltip')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </Card>
     )
   }
-
-  return (
-    <Card className="h-full">
-      <CardHeader 
-        className={cn(
-          "flex flex-row items-center justify-between space-y-0",
-          (size === 'small' || size === 'small-long')
-            ? "p-2" 
-            : "p-4 sm:p-6"
-        )}
-      >
-        <CardTitle 
-          className={cn(
-            "line-clamp-1",
-            (size === 'small' || size === 'small-long') ? "text-sm" : "text-base sm:text-lg"
-          )}
-        >
-          Long/Short Performance
-        </CardTitle>
-        <ArrowLeftRight className={cn(
-          "text-muted-foreground",
-          (size === 'small' || size === 'small-long') ? "h-4 w-4" : "h-5 w-5"
-        )} />
-      </CardHeader>
-      <CardContent 
-        className={cn(
-          (size === 'small' || size === 'small-long') ? "p-2" : "p-4 sm:p-6"
-        )}
-      >
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <div className={cn(
-              "font-bold flex items-center gap-1",
-              (size === 'small' || size === 'small-long') ? "text-lg" : "text-2xl"
-            )}>
-              <ArrowUpFromLine className="h-4 w-4 text-green-500" />
-              {longRate}%
-            </div>
-            <div className={cn(
-              "text-muted-foreground",
-              (size === 'small' || size === 'small-long') ? "text-xs" : "text-sm"
-            )}>
-              Long ({longNumber})
-            </div>
-          </div>
-          <div>
-            <div className={cn(
-              "font-bold flex items-center gap-1",
-              (size === 'small' || size === 'small-long') ? "text-lg" : "text-2xl"
-            )}>
-              <ArrowDownFromLine className="h-4 w-4 text-red-500" />
-              {shortRate}%
-            </div>
-            <div className={cn(
-              "text-muted-foreground",
-              (size === 'small' || size === 'small-long') ? "text-xs" : "text-sm"
-            )}>
-              Short ({shortNumber})
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}

@@ -10,7 +10,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { WidgetSize } from '../../types/dashboard'
-import { Scale } from "lucide-react"
+import { Scale, HelpCircle } from "lucide-react"
+import { useI18n } from '@/locales/client'
 import { useMemo } from "react"
 
 interface RiskRewardRatioCardProps {
@@ -19,6 +20,7 @@ interface RiskRewardRatioCardProps {
 
 export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCardProps) {
   const { formattedTrades } = useUserData()
+  const t = useI18n()
   
   const { avgWin, avgLoss, riskRewardRatio, profitPercentage } = useMemo(() => {
     // Filter winning and losing trades
@@ -54,6 +56,20 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
         <div className="flex items-center gap-1.5">
           <Scale className="h-3 w-3 text-primary" />
           <span className="font-medium text-sm">RR {riskRewardRatio}</span>
+          <TooltipProvider delayDuration={100}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent 
+                side="bottom" 
+                sideOffset={5} 
+                className="bg-popover text-popover-foreground shadow-md rounded-md p-3 text-sm max-w-[300px] z-[9999]"
+              >
+                <p className="text-xs">{t('widgets.riskRewardRatio.tooltip')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
         <TooltipProvider delayDuration={100}>
           <Tooltip>

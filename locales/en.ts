@@ -488,7 +488,10 @@ export default {
     'widgets.types.pnlBySide': 'P&L by Side',
     'widgets.types.tickDistribution': 'Tick Distribution',
     'widgets.types.commissionsPnl': 'Commissions PnL share',
-    'widgets.types.averagePositionTime': 'Average Position Time by hour of day',
+    'widgets.types.averagePositionTime': 'Average Position Time',
+    'widgets.averagePositionTime': {
+        'tooltip': 'Average time you hold your positions. This metric helps you understand your typical holding period and can be useful for identifying if you tend to hold positions too long or exit too quickly.'
+    },
     'widgets.types.cumulativePnl': 'Cumulative PnL',
     'widgets.types.longShortPerformance': 'Long/Short Ratio',
     'widgets.types.tradePerformance': 'Trade Performance',
@@ -1357,4 +1360,11 @@ export default {
     'disclaimer.risk.content': 'Trading in futures and forex markets involves significant risks and is not suitable for all investors. An investor could potentially lose all or a portion of their initial investment. Risk capital is money that can be lost without jeopardizing one\'s financial security or lifestyle. Only risk capital should be used for trading, and only those with sufficient risk capital should consider trading. Past performance is not necessarily indicative of future results.',
     'disclaimer.hypothetical.title': 'Hypothetical Performance Warning',
     'disclaimer.hypothetical.content': 'Hypothetical performance results have many inherent limitations, some of which are described below. No representation is being made that any account will or is likely to achieve profits or losses similar to those shown; in fact, there are frequently sharp differences between hypothetical performance results and the actual results subsequently achieved by any particular trading program. One of the limitations of hypothetical performance results is that they are generally prepared with the benefit of hindsight. In addition, hypothetical trading does not involve financial risk, and no hypothetical trading record can completely account for the impact of financial risk in actual trading. For example, the ability to withstand losses or to adhere to a particular trading program in spite of trading losses are material points which can also adversely affect actual trading results. There are numerous other factors related to the markets in general or to the implementation of any specific trading program which cannot be fully accounted for in the preparation of hypothetical performance results and all of which can adversely affect actual trading results.',
+    'widgets.cumulativePnl.tooltip': 'Your total profit or loss across all trades, including fees. This metric shows your overall trading performance and helps you track your long-term profitability.',
+    'widgets.averagePositionTime.tooltip': 'Average time you hold your positions. This metric helps you understand your typical holding period and can be useful for identifying if you tend to hold positions too long or exit too quickly.',
+    'widgets.longShortPerformance.tooltip': 'Distribution of your trades between long and short positions. This metric helps you understand your trading preference and identify if you perform better in a particular direction.',
+    'widgets.riskRewardRatio.tooltip': 'Ratio between your average win and average loss. A ratio above 1 indicates your wins are larger than your losses, which is a positive indicator of your trading strategy.',
+    'widgets.profitFactor.tooltip': 'Ratio between your total profits and total losses. A profit factor above 1 indicates a profitable strategy as your gains exceed your losses.',
+    'widgets.winningStreak.tooltip': 'Maximum number of consecutive winning trades. This metric reflects your ability to maintain a streak of successful trades and can indicate the strength of your strategy.',
+    'widgets.tradePerformance.tooltip': 'Breakdown of your trades into winning, breakeven, and losing trades. This metric helps you understand your overall success rate and trading consistency.'
 } as const
