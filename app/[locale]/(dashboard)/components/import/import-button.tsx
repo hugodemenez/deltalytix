@@ -494,7 +494,7 @@ export default function ImportButton() {
         <DialogContent className="flex flex-col max-w-[80vw] h-[80vh] p-0">
           <ImportDialogHeader step={step} importType={importType} />
           
-          <div className="flex-1 overflow-hidden h-full w-full">
+          <div className="flex-1 overflow-hidden p-6">
             {renderStep()}
           </div>
 
