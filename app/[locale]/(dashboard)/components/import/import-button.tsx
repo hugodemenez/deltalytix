@@ -345,19 +345,7 @@ export default function ImportButton() {
         setStep(2)
       }
     } else if (step === 2) {
-      if (platform.requiresAccountSelection) {
-        if (accountNumber || newAccountNumber) {
-          setStep(3)
-        } else {
-          toast({
-            title: t('import.error.accountRequired'),
-            description: t('import.error.accountRequiredDescription'),
-            variant: "destructive",
-          })
-        }
-      } else {
-        setStep(3)
-      }
+      setStep(3)
     } else if (step === 3) {
       switch (importType) {
         case 'quantower':

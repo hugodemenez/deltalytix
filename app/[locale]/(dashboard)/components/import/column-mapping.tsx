@@ -132,7 +132,7 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
   }
 
   return (
-    <div className="space-y-4">
+    <div className="h-full flex flex-col">
       <div className="mb-4">
         <div className="flex flex-wrap gap-2">
           {getRemainingFieldsToMap().map((field, index) => (
@@ -154,7 +154,7 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
           ))}
         </div>
       </div>
-      <div className="max-h-[calc(80vh-300px)] overflow-auto">
+      <div className="flex-1 overflow-auto">
         <Table>
           <TableHeader>
             <TableRow>
