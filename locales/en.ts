@@ -1174,6 +1174,12 @@ export default {
         availablePlans: "Available Plans",
         choosePlan: "Choose a plan that works best for you",
         managePaymentMethod: "Manage Payment Method",
+        promotionCode: "Promo code: {code}",
+        promotionDuration: {
+          forever: "forever",
+          once: "one-time",
+          repeating: "for {months} months"
+        },
         status: {
             active: "active",
             trialing: "in trial period",
@@ -1190,6 +1196,17 @@ export default {
             trialPeriod: "Trial period: {startDate} - {endDate}",
             nextBilling: "Next billing on {date}",
             canceledOn: "Canceled on {date}"
+        },
+        paymentHistory: "Payment History",
+        paymentHistoryDesc: "View your past payments and download invoices",
+        viewInvoice: "View Invoice",
+        viewReceipt: "View Receipt",
+        downloadPdf: "Download PDF",
+        noPaymentHistory: "No payment history available",
+        paymentStatus: {
+            succeeded: "Paid",
+            pending: "Pending",
+            failed: "Failed"
         }
     },
     'onboarding.welcome': 'Welcome to Deltalytix!',

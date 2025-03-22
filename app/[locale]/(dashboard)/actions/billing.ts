@@ -25,6 +25,23 @@ export type SubscriptionWithPrice = {
     amount: number
     interval: 'month' | 'year'
   }
+  promotion?: {
+    code: string
+    amount_off: number
+    percent_off: number | null
+    duration: {
+      duration_in_months: number | null
+      duration: 'forever' | 'once' | 'repeating' | null
+    }
+  }
+  invoices?: Array<{
+    id: string
+    amount_paid: number
+    status: string
+    created: number
+    invoice_pdf: string | null
+    hosted_invoice_url: string | null
+  }>
 }
 
 export async function getSubscriptionData() {
@@ -57,7 +74,7 @@ export async function getSubscriptionData() {
     const subscriptions = await stripe.subscriptions.list({
       customer: customer.id,
       status: 'all',
-      expand: ['data.plan', 'data.items.data.price'],
+      expand: ['data.plan', 'data.items.data.price', 'data.discount'],
       limit: 1,
     })
 
@@ -69,6 +86,13 @@ export async function getSubscriptionData() {
     }
 
     const price = subscription.items.data[0].price
+
+    // Fetch invoices
+    const invoices = await stripe.invoices.list({
+      customer: customer.id,
+      limit: 10, // Get last 10 invoices
+      status: 'paid'
+    })
 
     return {
       id: subscription.id,
@@ -87,6 +111,23 @@ export async function getSubscriptionData() {
         amount: price.unit_amount || 0,
         interval: price.recurring?.interval || 'month',
       },
+      promotion: subscription.discount ? {
+        code: subscription.discount.coupon.id,
+        amount_off: subscription.discount.coupon.amount_off || 0,
+        percent_off: subscription.discount.coupon.percent_off,
+        duration: {
+          duration_in_months: subscription.discount.coupon.duration_in_months,
+          duration: subscription.discount.coupon.duration
+        }
+      } : undefined,
+      invoices: invoices.data.map(invoice => ({
+        id: invoice.id,
+        amount_paid: invoice.amount_paid,
+        status: invoice.status,
+        created: invoice.created,
+        invoice_pdf: invoice.invoice_pdf,
+        hosted_invoice_url: invoice.hosted_invoice_url
+      }))
     } as SubscriptionWithPrice
   } catch (error) {
     console.error('Error fetching subscription:', error)

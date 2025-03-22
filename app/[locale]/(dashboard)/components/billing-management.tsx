@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Check, AlertCircle, CheckCircle2, CalendarDays, Clock, CreditCard, History } from "lucide-react"
+import { Check, AlertCircle, CheckCircle2, CalendarDays, Clock, CreditCard, History, Receipt, FileText } from "lucide-react"
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -283,11 +283,44 @@ export default function BillingManagement() {
             {/* Current Plan Details */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold">
-                  {subscription?.plan?.amount 
-                    ? `€${(subscription.plan.amount / 100).toFixed(2)}/${subscription.plan.interval}`
-                    : t('pricing.free')}
-                </h2>
+                {subscription?.promotion ? (
+                  <div className="space-y-1">
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      <span className="text-muted-foreground line-through">
+                        €{(subscription.plan.amount / 100).toFixed(2)}
+                      </span>
+                      <span>
+                        €{((subscription.plan.amount - (subscription.promotion.amount_off || (subscription.promotion.percent_off ? subscription.plan.amount * subscription.promotion.percent_off / 100 : 0))) / 100).toFixed(2)}
+                        /{subscription.plan.interval}
+                      </span>
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                        {subscription.promotion.percent_off 
+                          ? `${subscription.promotion.percent_off}% OFF`
+                          : `€${(subscription.promotion.amount_off / 100).toFixed(2)} OFF`}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {t('billing.promotionCode', { code: subscription.promotion.code })}
+                        {subscription.promotion.duration.duration === 'forever' && (
+                          <span className="ml-1">({t('billing.promotionDuration.forever')})</span>
+                        )}
+                        {subscription.promotion.duration.duration === 'once' && (
+                          <span className="ml-1">({t('billing.promotionDuration.once')})</span>
+                        )}
+                        {subscription.promotion.duration.duration === 'repeating' && subscription.promotion.duration.duration_in_months && (
+                          <span className="ml-1">({t('billing.promotionDuration.repeating', { months: subscription.promotion.duration.duration_in_months })})</span>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <h2 className="text-2xl font-bold">
+                    {subscription?.plan?.amount 
+                      ? `€${(subscription.plan.amount / 100).toFixed(2)}/${subscription.plan.interval}`
+                      : t('pricing.free')}
+                  </h2>
+                )}
                 <p className="text-sm text-muted-foreground mt-1">
                   {subscription?.plan?.interval === 'year' 
                     ? t('pricing.currentlyYearly') 
@@ -419,6 +452,69 @@ export default function BillingManagement() {
           </CardContent>
         </Card>
       )}
+
+      {/* Payment History */}
+      <Card className="border-none shadow-none bg-transparent">
+        <CardHeader className="px-0">
+          <CardTitle>{t('billing.paymentHistory')}</CardTitle>
+          <CardDescription>{t('billing.paymentHistoryDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent className="px-0">
+          <div className="rounded-lg border bg-card">
+            {subscription?.invoices && subscription.invoices.length > 0 ? (
+              <div className="divide-y">
+                {subscription.invoices.map((invoice) => (
+                  <div key={invoice.id} className="flex items-center justify-between p-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">
+                        €{(invoice.amount_paid / 100).toFixed(2)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatStripeDate(invoice.created, locale, t)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {invoice.status === 'paid' && (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                          {t('billing.paymentStatus.succeeded')}
+                        </Badge>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {invoice.hosted_invoice_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => invoice.hosted_invoice_url && window.open(invoice.hosted_invoice_url, '_blank')}
+                          >
+                            <Receipt className="h-4 w-4 mr-2" />
+                            {t('billing.viewInvoice')}
+                          </Button>
+                        )}
+                        {invoice.invoice_pdf && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8"
+                            onClick={() => invoice.invoice_pdf && window.open(invoice.invoice_pdf, '_blank')}
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            {t('billing.downloadPdf')}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                {t('billing.noPaymentHistory')}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Available Plans */}
       <Card className="border-none shadow-none bg-transparent">

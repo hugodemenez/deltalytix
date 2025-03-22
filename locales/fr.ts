@@ -1214,6 +1214,12 @@ export default {
         availablePlans: "Plans disponibles",
         choosePlan: "Choisissez le plan qui vous convient le mieux",
         managePaymentMethod: "Gérer le mode de paiement",
+        promotionCode: "Code promo : {code}",
+        promotionDuration: {
+          forever: "à vie",
+          once: "unique",
+          repeating: "pour {months} mois"
+        },
         status: {
             active: "actif",
             trialing: "en période d'essai",
@@ -1230,7 +1236,18 @@ export default {
             trialPeriod: "Période d'essai : {startDate} - {endDate}",
             nextBilling: "Prochaine facturation le {date}",
             canceledOn: "Annulé le {date}"
-        }
+        },
+        paymentHistory: "Historique des paiements",
+        paymentHistoryDesc: "Consultez vos paiements passés et téléchargez vos factures",
+        viewInvoice: "Voir la facture",
+        viewReceipt: "Voir le reçu",
+        downloadPdf: "Télécharger le PDF",
+        noPaymentHistory: "Aucun historique de paiement disponible",
+        paymentStatus: {
+            succeeded: "Payé",
+            pending: "En attente",
+            failed: "Échoué"
+        },
     },
     'onboarding.welcome': 'Bienvenue sur Deltalytix !',
     'onboarding.description': 'Regardez ce tutoriel rapide pour commencer votre parcours de trading',
