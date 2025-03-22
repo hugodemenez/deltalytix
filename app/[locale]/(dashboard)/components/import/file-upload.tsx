@@ -11,13 +11,14 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { platforms } from './config/platforms'
+import { Step } from './import-button'
 
 interface FileUploadProps {
   importType: ImportType
   setRawCsvData: React.Dispatch<React.SetStateAction<string[][]>>
   setCsvData: React.Dispatch<React.SetStateAction<string[][]>>
   setHeaders: React.Dispatch<React.SetStateAction<string[]>>
-  setStep: React.Dispatch<React.SetStateAction<number>>
+  setStep: React.Dispatch<React.SetStateAction<Step>>
   setError: React.Dispatch<React.SetStateAction<string | null>>
 }
 
@@ -124,10 +125,17 @@ export default function FileUpload({
         }
       })
 
+      console.log(headers, concatenatedData)
       setRawCsvData([headers, ...concatenatedData])
       setCsvData(concatenatedData)
       setHeaders(headers)
-      setStep(platform.skipHeaderSelection ? 3 : 2)
+
+      // Find current step index and move to next step
+      const currentStepIndex = platform.steps.findIndex(step => step.id === 'upload-file')
+      if (currentStepIndex !== -1 && currentStepIndex < platform.steps.length - 1) {
+        setStep(platform.steps[currentStepIndex + 1].id)
+      }
+      
       setError(null)
     } catch (error) {
       setError((error as Error).message)
@@ -135,10 +143,10 @@ export default function FileUpload({
   }, [importType, parsedFiles, setRawCsvData, setCsvData, setHeaders, setStep, setError])
 
   useEffect(() => {
-    if (parsedFiles.length > 0 && Object.values(uploadProgress).every(progress => progress === 100)) {
+    if (parsedFiles.length > 0 && parsedFiles.length === uploadedFiles.length && Object.values(uploadProgress).every(progress => progress === 100)) {
       concatenateFiles()
     }
-  }, [parsedFiles, uploadProgress, concatenateFiles])
+  }, [parsedFiles, uploadProgress, concatenateFiles, uploadedFiles.length])
 
   return (
     <div className="space-y-4 w-full h-full p-8 flex flex-col items-center justify-center">

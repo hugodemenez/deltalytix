@@ -151,51 +151,6 @@ export function SharedWidgetCanvas({ layout }: SharedWidgetCanvasProps) {
           )
         })}
       </ResponsiveGridLayout>
-
-      <style jsx global>{`
-        .react-grid-placeholder {
-          background: hsl(var(--accent) / 0.4) !important;
-          border: 2px dashed hsl(var(--accent)) !important;
-          border-radius: 0.5rem !important;
-          opacity: 1 !important;
-          transition: all 200ms ease !important;
-          backdrop-filter: blur(4px) !important;
-          box-shadow: 0 0 0 1px hsl(var(--accent) / 0.4) !important;
-        }
-        .react-grid-item.react-grid-placeholder {
-          box-shadow: 0 0 0 1px hsl(var(--accent) / 0.2) !important;
-          transform-origin: center !important;
-        }
-        @keyframes pulse {
-          0%, 100% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.7;
-          }
-        }
-        .react-grid-item > .react-resizable-handle {
-          border-radius: 0 0 4px 0;
-        }
-        
-        /* Prevent text selection on mobile */
-        @media (max-width: 768px) {
-          .react-grid-item {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
-          }
-          
-          /* Allow scrolling on content that needs it */
-          .react-grid-item [data-scrollable="true"] {
-            touch-action: pan-y;
-            -webkit-overflow-scrolling: touch;
-          }
-        }
-      `}</style>
     </div>
   )
 } 

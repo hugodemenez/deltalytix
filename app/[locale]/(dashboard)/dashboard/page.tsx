@@ -1,5 +1,4 @@
 'use server'
-import FilterLeftPane from '../components/filters/filter-left-pane'
 import WidgetCanvas from '../components/widget-canvas'
 
 

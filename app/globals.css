@@ -238,3 +238,36 @@ code > [data-line]::before {
   --tw-prose-th-borders: theme('colors.neutral.700');
   --tw-prose-td-borders: theme('colors.neutral.800');
 }
+
+@layer components {
+  .react-grid-item.react-grid-placeholder {
+    @apply bg-accent/40 border-2 border-dashed border-accent rounded-lg opacity-100 transition-all duration-200 backdrop-blur-sm shadow-[0_0_0_1px_hsl(var(--accent)/0.4)] origin-center !important;
+  }
+
+  .react-grid-item.react-draggable-dragging {
+    @apply transition-none z-[100] cursor-grabbing opacity-90 !important;
+  }
+
+  .react-grid-item > .react-resizable-handle {
+    @apply rounded-br-sm;
+  }
+
+  [data-radix-popper-content-wrapper] {
+    @apply z-[9999] !important;
+  }
+
+  @media (max-width: 768px) {
+    .react-grid-item {
+      @apply select-none;
+    }
+
+    .react-grid-item[data-customizing="true"] {
+      @apply touch-none;
+    }
+
+    .react-grid-item [data-scrollable="true"] {
+      @apply touch-pan-y;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+}

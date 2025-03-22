@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { ImportType } from "../import-type-selection"
+import { platforms } from "../config/platforms"
+import { Step } from "../import-button"
 
 interface ImportDialogFooterProps {
-  step: number
+  step: Step
   importType: ImportType
   onBack: () => void
   onNext: () => void
@@ -23,10 +25,17 @@ export function ImportDialogFooter({
   isNextDisabled
 }: ImportDialogFooterProps) {
   const t = useI18n()
+  const platform = platforms.find(p => p.type === importType) || platforms.find(p => p.platformName === 'csv-ai')
+  if (!platform) return null
+
+  const currentStep = platform.steps.find(s => s.id === step)
+  if (!currentStep) return null
+
+  const currentStepIndex = platform.steps.findIndex(s => s.id === step)
 
   const getNextButtonText = () => {
     if (isSaving) return t('import.button.saving')
-    if (step === 4 || (step === 3 && importType === 'rithmic-orders')) {
+    if (currentStep.isLastStep) {
       return t('import.button.save')
     }
     return t('import.button.next')
@@ -35,7 +44,7 @@ export function ImportDialogFooter({
   return (
     <div className="flex-none p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 h-[68px]">
       <div className="flex justify-end items-center gap-4">
-        {step > 0 && (
+        {currentStepIndex > 0 && (
           <Button 
             variant="outline" 
             onClick={onBack}
@@ -48,7 +57,7 @@ export function ImportDialogFooter({
           onClick={onNext}
           className={cn(
             "w-fit min-w-[100px]",
-            (step === 0 && importType === 'rithmic-sync') && "invisible"
+            (currentStepIndex === 0 && importType === 'rithmic-sync') && "invisible"
           )}
           disabled={isNextDisabled}
         >

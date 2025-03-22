@@ -577,117 +577,124 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
   }
 
   return (
-    <div className="space-y-4">
-      {incompleteTrades.length > 0 && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
-          <p className="font-bold">Incomplete Trades Detected</p>
-          <p>{`${incompleteTrades.length} trade(s) were not completed and have been removed from the analysis.`}</p>
-          <ul className="list-disc list-inside mt-2">
-            {incompleteTrades.map((trade, index) => (
-              <li key={index}>
-                {`${trade.instrument}: ${trade.side} ${trade.quantity} @ ${trade.averageEntryPrice.toFixed(2)} (Opened on ${new Date(trade.entryDate).toLocaleString()})`}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      
-      {unknownSymbols.length > 0 && (
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Unknown Contract Specifications</h3>
-          <div className="grid grid-cols-3 gap-4">
-            {unknownSymbols.map((symbol) => (
-              <div key={symbol} className="space-y-2">
-                <h4 className="font-medium">{symbol}</h4>
-                <div className="flex items-center space-x-2">
-                  <label className="text-sm">Tick Size:</label>
-                  <Input
-                    type="number"
-                    value={contractSpecs[symbol].tickSize}
-                    onChange={(e) => handleContractSpecChange(symbol, 'tickSize', e.target.value)}
-                    className="w-24"
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <label className="text-sm">Tick Value:</label>
-                  <Input
-                    type="number"
-                    value={contractSpecs[symbol].tickValue}
-                    onChange={(e) => handleContractSpecChange(symbol, 'tickValue', e.target.value)}
-                    className="w-24"
-                  />
-                </div>
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex-1 overflow-auto">
+        <div className="space-y-4 p-6">
+          {incompleteTrades.length > 0 && (
+            <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
+              <p className="font-bold">Incomplete Trades Detected</p>
+              <p>{`${incompleteTrades.length} trade(s) were not completed and have been removed from the analysis.`}</p>
+              <ul className="list-disc list-inside mt-2">
+                {incompleteTrades.map((trade, index) => (
+                  <li key={index}>
+                    {`${trade.instrument}: ${trade.side} ${trade.quantity} @ ${trade.averageEntryPrice.toFixed(2)} (Opened on ${new Date(trade.entryDate).toLocaleString()})`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          
+          {unknownSymbols.length > 0 && (
+            <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
+              <h3 className="font-bold">Unknown Contract Specifications</h3>
+              <div className="grid grid-cols-3 gap-4 mt-4">
+                {unknownSymbols.map((symbol) => (
+                  <div key={symbol} className="space-y-2">
+                    <h4 className="font-medium">{symbol}</h4>
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm">Tick Size:</label>
+                      <Input
+                        type="number"
+                        value={contractSpecs[symbol].tickSize}
+                        onChange={(e) => handleContractSpecChange(symbol, 'tickSize', e.target.value)}
+                        className="w-24"
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <label className="text-sm">Tick Value:</label>
+                      <Input
+                        type="number"
+                        value={contractSpecs[symbol].tickValue}
+                        onChange={(e) => handleContractSpecChange(symbol, 'tickValue', e.target.value)}
+                        className="w-24"
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-        <div className="border rounded-lg overflow-auto max-h-[600px]">
-          <Table>
-            <TableHeader className="sticky top-0 bg-background z-10">
-              <TableRow>
-                <TableHead className="min-w-[100px]">Instrument</TableHead>
-                <TableHead className="min-w-[80px]">Side</TableHead>
-                <TableHead className="min-w-[100px]">Quantity</TableHead>
-                <TableHead className="min-w-[100px]">Entry Price</TableHead>
-                <TableHead className="min-w-[100px]">Close Price</TableHead>
-                <TableHead className="min-w-[180px]">Entry Date</TableHead>
-                <TableHead className="min-w-[180px]">Close Date</TableHead>
-                <TableHead className="min-w-[100px]">PnL</TableHead>
-                <TableHead className="min-w-[120px]">Time in Position</TableHead>
-                <TableHead className="min-w-[100px]">Commission</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trades.map((trade) => (
-                <TableRow key={trade.id}>
-                  <TableCell>{trade.instrument}</TableCell>
-                  <TableCell>{trade.side}</TableCell>
-                  <TableCell>{trade.quantity}</TableCell>
-                  <TableCell>{trade.entryPrice}</TableCell>
-                  <TableCell>{trade.closePrice || '-'}</TableCell>
-                  <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
-                  <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                  <TableCell>{trade.pnl.toFixed(2)}</TableCell>
-                  <TableCell>{`${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s`}</TableCell>
-                  <TableCell>{trade.commission.toFixed(2)}</TableCell>
+            </div>
+          )}
+          
+          <div className="px-2">
+            <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Instrument</TableHead>
+                  <TableHead>Side</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Entry Price</TableHead>
+                  <TableHead>Close Price</TableHead>
+                  <TableHead>Entry Date</TableHead>
+                  <TableHead>Close Date</TableHead>
+                  <TableHead>PnL</TableHead>
+                  <TableHead>Time in Position</TableHead>
+                  <TableHead>Commission</TableHead>
                 </TableRow>
+              </TableHeader>
+              <TableBody>
+                {trades.map((trade) => (
+                  <TableRow key={trade.id}>
+                    <TableCell>{trade.instrument}</TableCell>
+                    <TableCell>{trade.side}</TableCell>
+                    <TableCell>{trade.quantity}</TableCell>
+                    <TableCell>{trade.entryPrice}</TableCell>
+                    <TableCell>{trade.closePrice || '-'}</TableCell>
+                    <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                    <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
+                    <TableCell className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {trade.pnl.toFixed(2)}
+                    </TableCell>
+                    <TableCell>{`${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s`}</TableCell>
+                    <TableCell>{trade.commission.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          
+          <div className="flex justify-between px-2 py-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
+              <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {totalPnL.toFixed(2)}
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
+              <p className="text-xl font-bold text-blue-600">
+                {totalCommission.toFixed(2)}
+              </p>
+            </div>
+          </div>
+          
+          <div className="px-2">
+            <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
+            <div className="flex flex-wrap gap-2">
+              {uniqueSymbols.map((symbol) => (
+                <Button
+                  key={symbol}
+                  variant="outline"
+                  onClick={() => toast({
+                    title: "Instrument Information",
+                    description: `You traded ${symbol}. For more details, please check the trades table.`
+                  })}
+                >
+                  {symbol}
+                </Button>
               ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-      <div className="flex justify-between">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-          <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {totalPnL.toFixed(2)}
-          </p>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-          <p className="text-xl font-bold text-blue-600">
-            {totalCommission.toFixed(2)}
-          </p>
-        </div>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
-        <div className="flex flex-wrap gap-2">
-          {uniqueSymbols.map((symbol) => (
-            <Button
-              key={symbol}
-              variant="outline"
-              onClick={() => toast({
-                title: "Instrument Information",
-                description: `You traded ${symbol}. For more details, please check the trades table.`
-              })}
-            >
-              {symbol || 'Unknown'}
-            </Button>
-          ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

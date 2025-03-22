@@ -64,9 +64,9 @@ export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCa
               <TooltipContent 
                 side="bottom" 
                 sideOffset={5} 
-                className="bg-popover text-popover-foreground shadow-md rounded-md p-3 text-sm max-w-[300px] z-[9999]"
+                className="max-w-[300px]"
               >
-                <p className="text-xs">{t('widgets.riskRewardRatio.tooltip')}</p>
+                {t('widgets.riskRewardRatio.tooltip')}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

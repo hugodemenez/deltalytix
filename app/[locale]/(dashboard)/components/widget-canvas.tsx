@@ -16,7 +16,7 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, Pencil, Camera } from 'lucide-react'
+import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, Pencil, Camera, Trash2 } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
@@ -32,6 +32,7 @@ import { ShareButton } from './share-button'
 import { Widget, WidgetType, WidgetSize } from '../types/dashboard'
 import type { LayoutItem as ServerLayoutItem, Layouts } from '@/server/user-data'
 import { Skeleton } from "@/components/ui/skeleton"
+import { Toolbar } from './toolbar'
 
 // Add type for our local LayoutItem that extends the server one
 type LayoutItem = Omit<ServerLayoutItem, 'type' | 'size'> & {
@@ -520,7 +521,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
       <ContextMenuTrigger asChild>
         <div 
           ref={widgetRef}
-          className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group"
+          className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate"
           onTouchStart={handleTouchStart}
         >
           <div className={cn("h-full w-full transition-all duration-200", 
@@ -593,7 +594,7 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
           )}
         </div>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-56">
+      <ContextMenuContent className="w-56 z-[100]">
         <ContextMenuItem 
           onClick={onCustomize}
           className="hover:bg-accent hover:text-accent-foreground"
@@ -712,142 +713,6 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   )
 }
 
-
-// Update the customStyles string to remove scrollbar handling
-const customStyles = `
-  /* Existing styles */
-  .react-grid-placeholder {
-    background: hsl(var(--accent) / 0.4) !important;
-    border: 2px dashed hsl(var(--accent)) !important;
-    border-radius: 0.5rem !important;
-    opacity: 1 !important;
-    transition: all 200ms ease !important;
-    backdrop-filter: blur(4px) !important;
-    box-shadow: 0 0 0 1px hsl(var(--accent) / 0.4) !important;
-  }
-  .react-grid-item.react-grid-placeholder {
-    box-shadow: 0 0 0 1px hsl(var(--accent) / 0.2) !important;
-    transform-origin: center !important;
-  }
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
-  }
-  .react-grid-item.react-draggable-dragging {
-    transition: none !important;
-    z-index: 100;
-    cursor: grabbing !important;
-    opacity: 0.9 !important;
-  }
-  .react-grid-item > .react-resizable-handle {
-    border-radius: 0 0 4px 0;
-  }
-  
-  /* Ensure tooltips appear above widget cards */
-  [data-radix-popper-content-wrapper] {
-    z-index: 9999 !important;
-  }
-  
-  /* Prevent text selection on mobile */
-  @media (max-width: 768px) {
-    .react-grid-item {
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      -khtml-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
-    }
-
-    /* Only disable touch events when customizing */
-    .react-grid-item[data-customizing="true"] {
-      touch-action: none;
-    }
-    
-    /* Allow scrolling on content that needs it */
-    .react-grid-item [data-scrollable="true"] {
-      touch-action: pan-y;
-      -webkit-overflow-scrolling: touch;
-    }
-  }
-`
-
-function DashboardSidebar({ onAddWidget, isCustomizing, isScreenshotMode, onEditToggle, onScreenshotToggle, currentLayout }: { 
-  onAddWidget: (type: WidgetType, size?: WidgetSize) => void
-  isCustomizing: boolean
-  isScreenshotMode: boolean
-  onEditToggle: () => void
-  onScreenshotToggle: () => void
-  currentLayout: {
-    desktop: any[]
-    mobile: any[]
-  }
-}) {
-  const t = useI18n()
-  const { isMobile } = useUserData()
-
-  return (
-    <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center">
-      <div className="mx-auto flex items-center justify-around gap-4 p-3 bg-background/80 backdrop-blur-md border rounded-full shadow-lg">
-        <Button
-          variant={isCustomizing ? "default" : "ghost"}
-          onClick={onEditToggle}
-          className={cn(
-            "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-            isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
-          )}
-        >
-          <Pencil className={cn(
-            "h-4 w-4 shrink-0",
-            isCustomizing && "text-background"
-          )} />
-          {!isMobile && (
-            <span className="text-sm font-medium">
-              {isCustomizing ? t('widgets.done') : t('widgets.edit')}
-            </span>
-          )}
-        </Button>
-
-        <Button
-          variant={isScreenshotMode ? "default" : "ghost"}
-          onClick={onScreenshotToggle}
-          className={cn(
-            "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-            isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
-          )}
-        >
-          <Camera className={cn(
-            "h-4 w-4 shrink-0",
-            isScreenshotMode && "text-background"
-          )} />
-          {!isMobile && (
-            <span className="text-sm font-medium">
-              {isScreenshotMode ? t('widgets.doneScreenshot') : t('widgets.screenshot')}
-            </span>
-          )}
-        </Button>
-
-        <ShareButton currentLayout={currentLayout} />
-
-        <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
-
-        {isMobile && (
-          <Button
-            variant="ghost"
-            className="h-10 w-10 p-0 rounded-full flex items-center justify-center transition-transform active:scale-95"
-          >
-            <FilterLeftPane />
-          </Button>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // Add a function to pre-calculate widget dimensions
 function getWidgetDimensions(widget: LayoutItem, isMobile: boolean) {
   const grid = getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, isMobile)
@@ -867,35 +732,44 @@ export default function WidgetCanvas() {
   const [isScreenshotMode, setIsScreenshotMode] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [isRendered, setIsRendered] = useState(false)
 
   // Add this state to track if the layout change is from user interaction
   const activeLayout = isMobile ? 'mobile' : 'desktop'
 
-  // Pre-calculate all widget dimensions
+  // Pre-calculate all widget dimensions with stable reference
   const widgetDimensions = useMemo(() => {
     if (!layouts) return {}
-    return layouts[activeLayout].reduce((acc, widget) => {
-      acc[widget.i] = getWidgetDimensions(widget as LayoutItem, isMobile)
-      return acc
-    }, {} as Record<string, ReturnType<typeof getWidgetDimensions>>)
+    const dimensions: Record<string, ReturnType<typeof getWidgetDimensions>> = {}
+    
+    // Calculate dimensions once and store them
+    layouts[activeLayout].forEach(widget => {
+      dimensions[widget.i] = getWidgetDimensions(widget as LayoutItem, isMobile)
+    })
+    
+    return dimensions
   }, [layouts, activeLayout, isMobile])
+
+  // Memoize the responsive layout to prevent regeneration on every render
+  const responsiveLayout = useMemo(() => {
+    if (!layouts) return {}
+    return generateResponsiveLayout(layouts[activeLayout] as unknown as LayoutItem[])
+  }, [layouts, activeLayout])
+
+  // Add a stable layout reference
+  const currentLayout = useMemo(() => {
+    if (!layouts) return []
+    return layouts[activeLayout] as LayoutItem[]
+  }, [layouts, activeLayout])
 
   // Handle initial render and loading state
   useEffect(() => {
     if (layouts) {
-      // First, ensure everything is rendered
-      const renderTimer = setTimeout(() => {
-        setIsRendered(true)
-      }, 0)
-
-      // Then start the opacity transition
+      // Start the opacity transition with a longer delay to ensure all widgets are ready
       const opacityTimer = setTimeout(() => {
         setIsLoading(false)
-      }, 50) // Small delay after render to ensure smooth transition
+      }, 300) // Increased delay to ensure smooth transition
 
       return () => {
-        clearTimeout(renderTimer)
         clearTimeout(opacityTimer)
       }
     }
@@ -969,7 +843,9 @@ export default function WidgetCanvas() {
 
   // Don't render anything until layouts are loaded
   if (!layouts) {
-    return null;
+    return (
+            <Skeleton className="h-full w-full" />
+    );
   }
 
   const addWidget = async (type: WidgetType, size: WidgetSize = 'medium') => {
@@ -1156,20 +1032,7 @@ export default function WidgetCanvas() {
     // Ensure widget.type is a valid WidgetType
     if (!Object.keys(WIDGET_REGISTRY).includes(widget.type)) {
       return (
-        <WidgetWrapper
-          key={widget.i}
-          onRemove={() => removeWidget(widget.i)}
-          onChangeType={() => {}} // No-op for deprecated widgets
-          onChangeSize={() => {}} // No-op for deprecated widgets
-          isCustomizing={isCustomizing}
-          isScreenshotMode={isScreenshotMode}
-          size={widget.size as WidgetSize}
-          currentType={widget.type as WidgetType}
-          onCustomize={() => {}}
-          onScreenshotToggle={() => setIsScreenshotMode(false)}
-        >
           <DeprecatedWidget onRemove={() => removeWidget(widget.i)} />
-        </WidgetWrapper>
       )
     }
 
@@ -1206,8 +1069,12 @@ export default function WidgetCanvas() {
   }
 
   return (
-    <div className="relative mt-6 pb-16">
-      <DashboardSidebar 
+    <div className={cn(
+      "relative mt-6 pb-16",
+      isLoading ? "opacity-0" : "opacity-100",
+      "transition-opacity duration-300"
+    )}>
+      <Toolbar 
         onAddWidget={addWidget}
         isCustomizing={isCustomizing}
         isScreenshotMode={isScreenshotMode}
@@ -1220,92 +1087,60 @@ export default function WidgetCanvas() {
           if (isCustomizing) setIsCustomizing(false)
         }}
         currentLayout={layouts || { desktop: [], mobile: [] }}
+        onRemoveAll={removeAllWidgets}
       />
 
       {layouts && (
-        <ResponsiveGridLayout
-          className={cn(
-            "layout",
-            !isRendered && "opacity-0",
-            isRendered && !isLoading && "opacity-100",
-            "transition-opacity duration-200"
-          )}
-          layouts={generateResponsiveLayout(layouts[activeLayout] as unknown as LayoutItem[])}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
-          rowHeight={isMobile ? 65 : 70}
-          isDraggable={isCustomizing}
-          isResizable={false}
-          draggableHandle=".drag-handle"
-          onDragStart={() => setIsUserAction(true)}
-          onLayoutChange={handleLayoutChange}
-          margin={[16, 16]}
-          containerPadding={[0, 0]}
-          compactType="vertical"
-          preventCollision={false}
-          useCSSTransforms={true}
-          style={{ 
-            minHeight: isMobile ? '100vh' : 'auto',
-            touchAction: isCustomizing ? 'none' : 'auto'
-          }}
-        >
-          {layouts[activeLayout].map((widget) => {
-            const typedWidget = widget as unknown as LayoutItem
-            const dimensions = widgetDimensions[typedWidget.i]
-            
-            return (
-              <div 
-                key={typedWidget.i} 
-                className="h-full" 
-                data-customizing={isCustomizing}
-                style={{
-                  width: dimensions.width,
-                  height: dimensions.height
-                }}
-              >
-                <WidgetWrapper
-                  onRemove={() => removeWidget(typedWidget.i)}
-                  onChangeType={(type) => changeWidgetType(typedWidget.i, type)}
-                  onChangeSize={(size) => changeWidgetSize(typedWidget.i, size)}
-                  isCustomizing={isCustomizing}
-                  isScreenshotMode={isScreenshotMode}
-                  size={typedWidget.size as WidgetSize}
-                  currentType={typedWidget.type as WidgetType}
-                  onCustomize={() => setIsCustomizing(true)}
-                  onScreenshotToggle={() => setIsScreenshotMode(false)}
+        <div className="relative">
+          <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-[9999]" />
+          <ResponsiveGridLayout
+            layouts={responsiveLayout}
+            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+            cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
+            rowHeight={isMobile ? 65 : 70}
+            isDraggable={isCustomizing}
+            isResizable={false}
+            draggableHandle=".drag-handle"
+            onDragStart={() => setIsUserAction(true)}
+            onLayoutChange={handleLayoutChange}
+            margin={[16, 16]}
+            containerPadding={[0, 0]}
+            compactType="vertical"
+            preventCollision={false}
+          >
+            {currentLayout.map((widget) => {
+              const typedWidget = widget as unknown as LayoutItem
+              const dimensions = widgetDimensions[typedWidget.i]
+              
+              return (
+                <div 
+                  key={typedWidget.i} 
+                  className="h-full" 
+                  data-customizing={isCustomizing}
+                  style={{
+                    width: dimensions.width,
+                    height: dimensions.height
+                  }}
                 >
-                  {renderWidget(typedWidget)}
-                </WidgetWrapper>
-              </div>
-            )
-          })}
-        </ResponsiveGridLayout>
+                  <WidgetWrapper
+                    onRemove={() => removeWidget(typedWidget.i)}
+                    onChangeType={(type) => changeWidgetType(typedWidget.i, type)}
+                    onChangeSize={(size) => changeWidgetSize(typedWidget.i, size)}
+                    isCustomizing={isCustomizing}
+                    isScreenshotMode={isScreenshotMode}
+                    size={typedWidget.size as WidgetSize}
+                    currentType={typedWidget.type as WidgetType}
+                    onCustomize={() => setIsCustomizing(true)}
+                    onScreenshotToggle={() => setIsScreenshotMode(false)}
+                  >
+                    {renderWidget(typedWidget)}
+                  </WidgetWrapper>
+                </div>
+              )
+            })}
+          </ResponsiveGridLayout>
+        </div>
       )}
-
-      <style jsx global>{`
-        ${customStyles}
-        
-        /* Add styles to prevent layout shifts */
-        .layout {
-          transition: opacity 0.2s ease;
-          will-change: opacity;
-        }
-        
-        .react-grid-item {
-          transition: none !important;
-        }
-        
-        .react-grid-item.react-grid-placeholder {
-          transition: none !important;
-        }
-        
-        /* Prevent content jumping during load */
-        .react-grid-item > div {
-          height: 100%;
-          width: 100%;
-          position: relative;
-        }
-      `}</style>
     </div>
   )
 }

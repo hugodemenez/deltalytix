@@ -862,7 +862,14 @@ export default {
         fcmId: "ID FCM",
         rememberSelectedAccounts: "Mémoriser les comptes sélectionnés pour la prochaine synchronisation",
         'startProcessing.one': "Démarrer le Traitement de {count} Compte",
-        'startProcessing.other': "Démarrer le Traitement de {count} Comptes"
+        'startProcessing.other': "Démarrer le Traitement de {count} Comptes",
+        accountChanges: {
+            title: "Changements de Comptes Détectés",
+            description: "La liste des comptes disponibles a changé. Veuillez vérifier et sélectionner les comptes que vous souhaitez synchroniser.",
+            newAccounts: "Nouveaux Comptes",
+            existingAccounts: "Comptes Existants",
+            removedAccounts: "Plus Disponibles"
+        }
     },
     'import.type.topstep.name': 'Topstep',
     'import.type.topstep.description': 'Importer les trades depuis les exports de compte Topstep funded trader',
@@ -1009,6 +1016,21 @@ export default {
             confirmDelete: 'Supprimer',
             deleting: 'Suppression...',
             nameRequired: 'Le nom du tag est requis'
+        },
+        cumulativePnl: {
+            tooltip: 'Votre profit ou perte total sur tous les trades, frais inclus. Cette métrique montre votre performance globale de trading et vous aide à suivre votre rentabilité à long terme.'
+        },
+        riskRewardRatio: {
+            tooltip: 'Ratio entre votre gain moyen et votre perte moyenne. Un ratio supérieur à 1 indique que vos gains sont plus importants que vos pertes, ce qui est un indicateur positif de votre stratégie de trading.'
+        },
+        profitFactor: {
+            tooltip: 'Ratio entre vos profits totaux et vos pertes totales. Un facteur de profit supérieur à 1 indique une stratégie rentable, car vos gains sont supérieurs à vos pertes.'
+        },
+        winningStreak: {
+            tooltip: 'Nombre maximum de trades gagnants consécutifs. Cette métrique reflète votre capacité à maintenir une série de trades réussis et peut indiquer la force de votre stratégie.'
+        },
+        tradePerformance: {
+            tooltip: 'Répartition de vos trades entre gagnants, à l\'équilibre et perdants. Cette métrique vous aide à comprendre votre taux de réussite global et votre cohérence dans le trading.'
         }
     },
     'pnl.title': 'Profits et Pertes Quotidiens',
@@ -1385,4 +1407,22 @@ export default {
     'widgets.profitFactor.tooltip': 'Ratio entre vos profits totaux et vos pertes totales. Un facteur de profit supérieur à 1 indique une stratégie rentable, car vos gains sont supérieurs à vos pertes.',
     'widgets.winningStreak.tooltip': 'Nombre maximum de trades gagnants consécutifs. Cette métrique reflète votre capacité à maintenir une série de trades réussis et peut indiquer la force de votre stratégie.',
     'widgets.tradePerformance.tooltip': 'Répartition de vos trades entre gagnants, à l\'équilibre et perdants. Cette métrique vous aide à comprendre votre taux de réussite global et votre cohérence dans le trading.',
+    'import.steps.selectPlatform': 'Sélectionner la Plateforme',
+    'import.steps.selectPlatformDescription': 'Choisissez comment vous souhaitez importer vos trades',
+    'import.steps.uploadFile': 'Importer un Fichier',
+    'import.steps.uploadFileDescription': 'Importez votre fichier CSV',
+    'import.steps.selectHeaders': 'Sélectionner les En-têtes',
+    'import.steps.selectHeadersDescription': 'Sélectionnez la ligne contenant vos en-têtes de colonnes',
+    'import.steps.mapColumns': 'Mapper les Colonnes',
+    'import.steps.mapColumnsDescription': 'Mappez vos colonnes CSV avec nos champs',
+    'import.steps.selectAccount': 'Sélectionner un Compte',
+    'import.steps.selectAccountDescription': 'Sélectionnez un compte existant ou créez-en un nouveau',
+    'import.steps.reviewTrades': 'Vérifier les Trades',
+    'import.steps.reviewTradesDescription': 'Vérifiez vos trades avant l\'import',
+    'import.steps.processTrades': 'Traiter les Trades',
+    'import.steps.processTradesDescription': 'Traitez vos trades',
+    'import.steps.connectAccount': 'Connecter le Compte',
+    'import.steps.connectAccountDescription': 'Connectez votre compte de trading',
+    'import.title': 'Importer des Trades',
+    'import.description': 'Importez vos trades depuis différentes sources',
 } as const

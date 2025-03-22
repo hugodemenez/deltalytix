@@ -1,12 +1,62 @@
+import { Trade } from '@prisma/client'
 import { EtpSync } from '../etp/etp-sync'
 import { ImportType } from '../import-type-selection'
 import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-new'
 import type { ComponentType } from 'react'
+import ImportTypeSelection from '../import-type-selection'
+import FileUpload from '../file-upload'
+import HeaderSelection from '../header-selection'
+import AccountSelection from '../account-selection'
+import ColumnMapping from '../column-mapping'
+import { FormatPreview } from '../components/format-preview'
+import TradezellaProcessor from '../tradezella/tradezella-processor'
+import TradovateProcessor from '../tradovate/tradovate-processor'
+import QuantowerOrderProcessor from '../quantower/quantower-processor'
+import TopstepProcessor from '../topstep/topstep-processor'
+import NinjaTraderPerformanceProcessor from '../ninjatrader/ninjatrader-performance-processor'
+import RithmicPerformanceProcessor from '../rithmic/rithmic-performance-processor'
+import RithmicOrderProcessor from '../rithmic/rithmic-order-processor-new'
+import { Step } from '../import-button'
+
+type TranslationKey = 
+  | 'import.steps.selectPlatform'
+  | 'import.steps.selectPlatformDescription'
+  | 'import.steps.uploadFile'
+  | 'import.steps.uploadFileDescription'
+  | 'import.steps.selectHeaders'
+  | 'import.steps.selectHeadersDescription'
+  | 'import.steps.mapColumns'
+  | 'import.steps.mapColumnsDescription'
+  | 'import.steps.selectAccount'
+  | 'import.steps.selectAccountDescription'
+  | 'import.steps.reviewTrades'
+  | 'import.steps.reviewTradesDescription'
+  | 'import.steps.processTrades'
+  | 'import.steps.processTradesDescription'
+  | 'import.steps.connectAccount'
+  | 'import.steps.connectAccountDescription'
 
 export interface ProcessedData {
   headers: string[]
   processedData: string[][]
 }
+
+type StepComponent = 
+  | typeof ImportTypeSelection
+  | typeof FileUpload
+  | typeof HeaderSelection
+  | typeof AccountSelection
+  | typeof ColumnMapping
+  | typeof FormatPreview
+  | typeof TradezellaProcessor
+  | typeof TradovateProcessor
+  | typeof QuantowerOrderProcessor
+  | typeof TopstepProcessor
+  | typeof NinjaTraderPerformanceProcessor
+  | typeof RithmicPerformanceProcessor
+  | typeof RithmicOrderProcessor
+  | typeof RithmicSyncWrapper
+  | typeof EtpSync
 
 export interface PlatformConfig {
   platformName: string
@@ -27,7 +77,20 @@ export interface PlatformConfig {
   requiresAccountSelection?: boolean
   processFile?: (data: string[][]) => ProcessedData
   customComponent?: ComponentType<{ setIsOpen: React.Dispatch<React.SetStateAction<boolean>> }>
+  processorComponent?: ComponentType<{
+    csvData: string[][]
+    headers: string[]
+    setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>
+    accountNumber: string
+  }>
   tutorialLink?: string
+  steps: {
+    id: Step
+    title: TranslationKey
+    description: TranslationKey
+    component: StepComponent
+    isLastStep?: boolean
+  }[]
 }
 
 // Platform-specific processing functions
@@ -102,7 +165,22 @@ export const platforms: PlatformConfig[] = [
       alt: 'Rithmic Logo'
     },
     isRithmic: true,
-    customComponent: RithmicSyncWrapper
+    customComponent: RithmicSyncWrapper,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'complete',
+        title: 'import.steps.connectAccount',
+        description: 'import.steps.connectAccountDescription',
+        component: RithmicSyncWrapper,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'csv-ai',
@@ -117,7 +195,46 @@ export const platforms: PlatformConfig[] = [
       alt: ''
     },
     requiresAccountSelection: true,
-    processFile: processStandardCsv
+    processFile: processStandardCsv,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'select-headers',
+        title: 'import.steps.selectHeaders',
+        description: 'import.steps.selectHeadersDescription',
+        component: HeaderSelection
+      },
+      {
+        id: 'map-columns',
+        title: 'import.steps.mapColumns',
+        description: 'import.steps.mapColumnsDescription',
+        component: ColumnMapping
+      },
+      {
+        id: 'select-account',
+        title: 'import.steps.selectAccount',
+        description: 'import.steps.selectAccountDescription',
+        component: AccountSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.reviewTrades',
+        description: 'import.steps.reviewTradesDescription',
+        component: FormatPreview,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'tradezella',
@@ -132,7 +249,35 @@ export const platforms: PlatformConfig[] = [
       alt: 'Tradezella Logo'
     },
     processFile: processStandardCsv,
-    tutorialLink:'https://intercom.help/tradezella-4066d388d93c/en/articles/9725069-how-to-export-data-to-a-csv-file-from-the-trade-log-page'
+    processorComponent: TradezellaProcessor,
+    tutorialLink:'https://intercom.help/tradezella-4066d388d93c/en/articles/9725069-how-to-export-data-to-a-csv-file-from-the-trade-log-page',
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'select-headers',
+        title: 'import.steps.selectHeaders',
+        description: 'import.steps.selectHeadersDescription',
+        component: HeaderSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: TradezellaProcessor,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'tradovate',
@@ -147,7 +292,35 @@ export const platforms: PlatformConfig[] = [
       alt: 'Tradovate Logo'
     },
     requiresAccountSelection: true,
-    processFile: processStandardCsv
+    processFile: processStandardCsv,
+    processorComponent: TradovateProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'select-account',
+        title: 'import.steps.selectAccount',
+        description: 'import.steps.selectAccountDescription',
+        component: AccountSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: TradovateProcessor,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'quantower',
@@ -162,7 +335,29 @@ export const platforms: PlatformConfig[] = [
       alt: 'Quantower Logo'
     },
     skipHeaderSelection: true,
-    processFile: processQuantower
+    processFile: processQuantower,
+    processorComponent: QuantowerOrderProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: QuantowerOrderProcessor,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'topstep',
@@ -176,7 +371,35 @@ export const platforms: PlatformConfig[] = [
       alt: 'Topstep Logo'
     },
     processFile: processStandardCsv,
-    tutorialLink: 'https://help.topstep.com/en/articles/9424086-exporting-trades-on-topstepx'
+    processorComponent: TopstepProcessor,
+    tutorialLink: 'https://help.topstep.com/en/articles/9424086-exporting-trades-on-topstepx',
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'select-headers',
+        title: 'import.steps.selectHeaders',
+        description: 'import.steps.selectHeadersDescription',
+        component: HeaderSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: TopstepProcessor,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'ninjatrader-performance',
@@ -191,7 +414,35 @@ export const platforms: PlatformConfig[] = [
       alt: 'NinjaTrader Logo'
     },
     isDisabled: true,
-    processFile: processStandardCsv
+    processFile: processStandardCsv,
+    processorComponent: NinjaTraderPerformanceProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'select-headers',
+        title: 'import.steps.selectHeaders',
+        description: 'import.steps.selectHeadersDescription',
+        component: HeaderSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: NinjaTraderPerformanceProcessor,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'rithmic-performance',
@@ -207,7 +458,29 @@ export const platforms: PlatformConfig[] = [
     },
     isRithmic: true,
     skipHeaderSelection: true,
-    processFile: processRithmicPerformance
+    processFile: processRithmicPerformance,
+    processorComponent: RithmicPerformanceProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: RithmicPerformanceProcessor,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'rithmic-orders',
@@ -223,7 +496,29 @@ export const platforms: PlatformConfig[] = [
     },
     isRithmic: true,
     skipHeaderSelection: true,
-    processFile: processRithmicOrders
+    processFile: processRithmicOrders,
+    processorComponent: RithmicOrderProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: FileUpload
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: RithmicOrderProcessor,
+        isLastStep: true
+      }
+    ]
   },
   {
     platformName: 'etp-sync',
@@ -238,8 +533,23 @@ export const platforms: PlatformConfig[] = [
       alt: 'ETP Logo'
     },
     isComingSoon: true,
-    customComponent: EtpSync
-  },
+    customComponent: EtpSync,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'complete',
+        title: 'import.steps.connectAccount',
+        description: 'import.steps.connectAccountDescription',
+        component: EtpSync,
+        isLastStep: true
+      }
+    ]
+  }
 ] as const
 
 export type PlatformType = typeof platforms[number]['platformName'] 

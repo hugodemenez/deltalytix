@@ -33,9 +33,9 @@ export default function AveragePositionTimeCard({ size = 'medium' }: AveragePosi
               <TooltipContent 
                 side="bottom" 
                 sideOffset={5} 
-                className="bg-popover text-popover-foreground shadow-md rounded-md p-3 text-sm max-w-[300px] z-[9999]"
+                className="max-w-[300px]"
               >
-                <p className="text-xs">{t('widgets.averagePositionTime.tooltip')}</p>
+                {t('widgets.averagePositionTime.tooltip')}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

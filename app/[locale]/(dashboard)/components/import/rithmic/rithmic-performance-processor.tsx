@@ -30,7 +30,6 @@ const newMappings: { [key: string]: string } = {
 export default function RithmicPerformanceProcessor({ headers, csvData, setProcessedTrades }: RithmicPerformanceProcessorProps) {
     const [trades, setTrades] = useState<Trade[]>([])
 
-
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
         const accountNumber = 'default-account'; // Replace with actual account number

@@ -1,21 +1,16 @@
 'use client'
-import { createClient } from '@/hooks/auth';
 import { User } from '@supabase/supabase-js';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
-import { getSubscriptionDetails } from "@/server/subscription"
-import { getTrades } from '@/server/database'
 import { Trade as PrismaTrade, Tag } from '@prisma/client'
-import { getTickDetails } from '@/server/tick-details'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
 import { parseISO, isValid, startOfDay, endOfDay } from 'date-fns'
-import { getShared, SharedParams } from '@/server/shared'
+import { SharedParams } from '@/server/shared'
 import { formatInTimeZone } from 'date-fns-tz'
 import { loadInitialData, loadSharedData, LayoutItem as ServerLayoutItem, Layouts as ServerLayouts } from '@/server/user-data'
 import { saveDashboardLayout } from '@/server/database'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import type { Account as PropFirmAccount } from '@prisma/client'
-const supabase = createClient();
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -99,7 +94,7 @@ interface TagFilter {
 const defaultLayouts: Layouts = {
   desktop: [
     {
-      i: "widget1732477563848",
+      i: "calendarWidget",
       type: "calendarWidget" as WidgetType,
       size: "large" as WidgetSize,
       x: 0,
@@ -108,7 +103,7 @@ const defaultLayouts: Layouts = {
       h: 8
     },
     {
-      i: "widget1732477566865",
+      i: "equityChart",
       type: "equityChart" as WidgetType,
       size: "medium" as WidgetSize,
       x: 6,
@@ -117,7 +112,7 @@ const defaultLayouts: Layouts = {
       h: 4
     },
     {
-      i: "widget1734881236127",
+      i: "pnlChart",
       type: "pnlChart" as WidgetType,
       size: "medium" as WidgetSize,
       x: 6,
@@ -126,7 +121,7 @@ const defaultLayouts: Layouts = {
       h: 4
     },
     {
-      i: "widget1734881247979",
+      i: "cumulativePnl",
       type: "cumulativePnl" as WidgetType,
       size: "tiny" as WidgetSize,
       x: 0,
@@ -135,7 +130,7 @@ const defaultLayouts: Layouts = {
       h: 1
     },
     {
-      i: "widget1734881251266",
+      i: "longShortPerformance",
       type: "longShortPerformance" as WidgetType,
       size: "tiny" as WidgetSize,
       x: 3,
@@ -144,7 +139,7 @@ const defaultLayouts: Layouts = {
       h: 1
     },
     {
-      i: "widget1734881254352",
+      i: "tradePerformance",
       type: "tradePerformance" as WidgetType,
       size: "tiny" as WidgetSize,
       x: 6,
@@ -153,7 +148,7 @@ const defaultLayouts: Layouts = {
       h: 1
     },
     {
-      i: "widget1734881263452",
+      i: "averagePositionTime",
       type: "averagePositionTime" as WidgetType,
       size: "tiny" as WidgetSize,
       x: 9,
@@ -164,7 +159,7 @@ const defaultLayouts: Layouts = {
   ],
   mobile: [
     {
-      i: "widget1732477563848",
+      i: "calendarWidget",
       type: "calendarWidget" as WidgetType,
       size: "large" as WidgetSize,
       x: 0,
@@ -173,7 +168,7 @@ const defaultLayouts: Layouts = {
       h: 6
     },
     {
-      i: "widget1732477566865",
+      i: "equityChart",
       type: "equityChart" as WidgetType,
       size: "medium" as WidgetSize,
       x: 0,
@@ -182,7 +177,7 @@ const defaultLayouts: Layouts = {
       h: 6
     },
     {
-      i: "widget1734881247979",
+      i: "cumulativePnl",
       type: "cumulativePnl" as WidgetType,
       size: "tiny" as WidgetSize,
       x: 0,
@@ -191,7 +186,7 @@ const defaultLayouts: Layouts = {
       h: 1
     },
     {
-      i: "widget1734881254352",
+      i: "tradePerformance",
       type: "tradePerformance" as WidgetType,
       size: "tiny" as WidgetSize,
       x: 0,
@@ -216,6 +211,7 @@ interface UserDataContextType {
   } | null
   isPlusUser: () => boolean
   isLoading: boolean
+  isInitialLoad: boolean
   isMobile: boolean
   isSharedView: boolean
   isFirstConnection: boolean
@@ -249,9 +245,9 @@ interface UserDataContextType {
   statistics: StatisticsProps
   calendarData: CalendarData
 
-  // Layout related - updated to non-nullable
+  // Layout related - updated to nullable
   layouts: Layouts
-  setLayouts: React.Dispatch<React.SetStateAction<Layouts>>
+  setLayouts: React.Dispatch<React.SetStateAction<Layouts | null>>
   saveLayouts: (newLayouts: Layouts) => Promise<void>
 
   // Time range related
@@ -319,7 +315,8 @@ function useIsMobileDetection() {
 }
 
 const CACHE_KEY = 'deltalytix_user_data';
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes in milliseconds
+// Cache data for 1 hour to reduce unnecessary API calls while keeping data relatively fresh
+const CACHE_EXPIRY = 60 * 60 * 1000; // 1 hour in milliseconds
 
 interface CachedData {
   timestamp: number;
@@ -377,7 +374,7 @@ export const UserDataProvider: React.FC<{
   const [etpToken, setEtpToken] = useState<string | null>(null);
   const [isFirstConnection, setIsFirstConnection] = useState<boolean>(false);
   const [subscription, setSubscription] = useState<UserDataContextType['subscription']>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [tickDetails, setTickDetails] = useState<Record<string, number>>({});
   const [tags, setTags] = useState<Tag[]>([]);
 
@@ -390,8 +387,11 @@ export const UserDataProvider: React.FC<{
   const [pnlRange, setPnlRange] = useState<PnlRange>({ min: undefined, max: undefined });
   const [sharedParams, setSharedParams] = useState<SharedParams | null>(null);
 
-  // Initialize layouts with default layouts for shared views
-  const [layouts, setLayouts] = useState<Layouts>(defaultLayouts);
+  // Initialize layouts with null to prevent flashing
+  const [layouts, setLayouts] = useState<Layouts | null>(null);
+
+  // Add loading state for initial data load
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Time range state
   const [timeRange, setTimeRange] = useState<TimeRange>({ range: null });
@@ -432,177 +432,145 @@ export const UserDataProvider: React.FC<{
 
   // Initialize state from cache
   useEffect(() => {
-    if (!isSharedView) {
-      const cached = getLocalCache();
-      if (cached) {
-        // Set loading state while restoring from cache
-        setIsLoading(true);
-        
-        // Restore all state from cache
-        setUser(cached.user);
-        setEtpToken(cached.etpToken);
-        setSubscription(cached.subscription);
-        setTrades(cached.trades);
-        setTickDetails(cached.tickDetails);
-        setTags(cached.tags);
-        setPropfirmAccounts(cached.propfirmAccounts);
-        setLayouts(cached.layouts);
-        
-        // Update date range if needed
-        if (cached.trades?.length > 0) {
-          const dates = cached.trades
-            .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
-            .filter(date => isValid(date));
-
-          if (dates.length > 0) {
-            const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
-            const maxDate = new Date(Math.max(
-              ...dates.map(date => date.getTime()),
-              new Date().getTime()
-            ));
-            setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
-          }
-        }
-        
-        // Set loading to false after cache restoration
-        setIsLoading(false);
-      }
-    }
-  }, [isSharedView, timezone]);
-
-  // Add a new effect to update date range when trades change
-  useEffect(() => {
-    if (trades.length > 0) {
-      const dates = trades
-        .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
-        .filter(date => isValid(date));
-
-      if (dates.length > 0) {
-        const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
-        const maxDate = new Date(Math.max(
-          ...dates.map(date => date.getTime()),
-          new Date().getTime()
-        ));
-        setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
-      }
-    }
-  }, [trades, timezone]);
-
-  // Update fetchData to use cache
-  const fetchData = useCallback(async () => {
-    try {
-      setIsLoading(true);
-
-      if (params?.slug) {
-        // Load shared data
-        const sharedData = await loadSharedData(params.slug as string);
-        if (!sharedData.error) {
-          const processedSharedTrades = sharedData.trades.map(trade => ({
-            ...trade,
-            utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
-          }));
-          setTrades(processedSharedTrades);
-          setSharedParams(sharedData.params);
-          
-          // Set layouts from shared data or use defaults
-          if (sharedData.params.desktop || sharedData.params.mobile) {
-            setLayouts({
-              desktop: sharedData.params.desktop || defaultLayouts.desktop,
-              mobile: sharedData.params.mobile || defaultLayouts.mobile
-            });
-          } else {
-            setLayouts(defaultLayouts);
-          }
-
-          // Set tick details from shared data if available
-          if (sharedData.params.tickDetails) {
-            setTickDetails(sharedData.params.tickDetails);
-          }
-        }
-      } else if (!isSharedView) {
-        // Check cache first
-        const cached = getLocalCache();
-        const shouldFetch = !cached || Date.now() - cached.timestamp > CACHE_EXPIRY;
-
-        let fetchedData;
-        if (shouldFetch) {
-          fetchedData = await loadInitialData();
-          if (!fetchedData.error) {
-            const processedTrades = fetchedData.trades.map(trade => ({
+    const loadData = async () => {
+      try {
+        setIsInitialLoad(true);
+        if (isSharedView) {
+          // In shared view, always fetch fresh data
+          const sharedData = await loadSharedData(params.slug as string);
+          if (!sharedData.error) {
+            const processedSharedTrades = sharedData.trades.map(trade => ({
               ...trade,
               utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
             }));
+            
+            setTrades(processedSharedTrades);
+            setSharedParams(sharedData.params);
+            
+            // Set layouts from shared data or use defaults
+            if (sharedData.params.desktop || sharedData.params.mobile) {
+              setLayouts({
+                desktop: sharedData.params.desktop || defaultLayouts.desktop,
+                mobile: sharedData.params.mobile || defaultLayouts.mobile
+              });
+            } else {
+              setLayouts(defaultLayouts);
+            }
 
-            // Update state
-            setUser(fetchedData.user);
-            setEtpToken(fetchedData.etpToken);
-            setIsFirstConnection(fetchedData.isFirstConnection);
-            setSubscription(fetchedData.subscription);
-            setTrades(processedTrades);
-            setTickDetails(fetchedData.tickDetails || {});
-            setTags(fetchedData.tags || []);
-            setPropfirmAccounts(fetchedData.propfirmAccounts || []);
-
-            // Handle layouts
-            const newLayouts = fetchedData.layouts || defaultLayouts;
-            setLayouts(newLayouts);
-
-            // Update cache
-            setLocalCache({
-              user: fetchedData.user,
-              etpToken: fetchedData.etpToken,
-              subscription: fetchedData.subscription,
-              trades: processedTrades,
-              tickDetails: fetchedData.tickDetails || {},
-              tags: fetchedData.tags || [],
-              propfirmAccounts: fetchedData.propfirmAccounts || [],
-              layouts: newLayouts,
-            });
+            // Set tick details from shared data if available
+            if (sharedData.params.tickDetails) {
+              setTickDetails(sharedData.params.tickDetails);
+            }
           }
-        } else {
-          // Restore from cache
-          setUser(cached.user);
-          setEtpToken(cached.etpToken);
-          setSubscription(cached.subscription);
-          setTrades(cached.trades);
-          setTickDetails(cached.tickDetails);
-          setTags(cached.tags);
-          setPropfirmAccounts(cached.propfirmAccounts);
-          setLayouts(cached.layouts);
+          return;
         }
 
-        // Update date range if needed
-        const currentTrades = shouldFetch ? fetchedData?.trades : cached?.trades;
-        if (currentTrades && currentTrades.length > 0) {
-          const processedTrades = currentTrades.map(trade => ({
+        // For non-shared views, check cache first
+        const cached = getLocalCache();
+        const shouldFetch = !cached || Date.now() - cached.timestamp > CACHE_EXPIRY;
+
+        if (!shouldFetch && cached) {
+          // Restore from cache without loading state
+          const {
+            user,
+            etpToken,
+            subscription,
+            trades,
+            tickDetails,
+            tags,
+            propfirmAccounts,
+            layouts,
+          } = cached;
+
+          setUser(user);
+          setEtpToken(etpToken);
+          setSubscription(subscription);
+          setTrades(trades);
+          setTickDetails(tickDetails);
+          setTags(tags);
+          setPropfirmAccounts(propfirmAccounts);
+          setLayouts(layouts);
+
+          // Update date range if needed
+          if (trades?.length > 0) {
+            const dates = trades
+              .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
+              .filter(date => isValid(date));
+
+            if (dates.length > 0) {
+              const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
+              const maxDate = new Date(Math.max(
+                ...dates.map(date => date.getTime()),
+                new Date().getTime()
+              ));
+              setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+            }
+          }
+          return;
+        }
+
+        // Fetch fresh data if needed
+        setIsLoading(true);
+        const fetchedData = await loadInitialData();
+        
+        if (!fetchedData.error) {
+          const processedTrades = fetchedData.trades.map(trade => ({
             ...trade,
             utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
           }));
-          const dates = processedTrades
-            .map((trade: TradeWithUTC) => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
-            .filter((date: Date) => isValid(date));
 
-          if (dates.length > 0) {
-            const minDate = new Date(Math.min(...dates.map((date: Date) => date.getTime())));
-            const maxDate = new Date(Math.max(
-              ...dates.map((date: Date) => date.getTime()),
-              new Date().getTime()
-            ));
-            setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+          // Update state
+          setUser(fetchedData.user);
+          setEtpToken(fetchedData.etpToken);
+          setIsFirstConnection(fetchedData.isFirstConnection);
+          setSubscription(fetchedData.subscription);
+          setTrades(processedTrades);
+          setTickDetails(fetchedData.tickDetails || {});
+          setTags(fetchedData.tags || []);
+          setPropfirmAccounts(fetchedData.propfirmAccounts || []);
+
+          // Handle layouts
+          const newLayouts = fetchedData.layouts || defaultLayouts;
+          setLayouts(newLayouts);
+
+          // Update cache with fresh data
+          setLocalCache({
+            user: fetchedData.user,
+            etpToken: fetchedData.etpToken,
+            subscription: fetchedData.subscription,
+            trades: processedTrades,
+            tickDetails: fetchedData.tickDetails || {},
+            tags: fetchedData.tags || [],
+            propfirmAccounts: fetchedData.propfirmAccounts || [],
+            layouts: newLayouts,
+          });
+
+          // Update date range if needed
+          if (processedTrades.length > 0) {
+            const dates = processedTrades
+              .map(trade => new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
+              .filter(date => isValid(date));
+
+            if (dates.length > 0) {
+              const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
+              const maxDate = new Date(Math.max(
+                ...dates.map(date => date.getTime()),
+                new Date().getTime()
+              ));
+              setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+            }
           }
         }
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
+        setIsInitialLoad(false);
       }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [params?.slug, isSharedView, timezone]);
+    };
 
-  // Initial data fetch
-  useEffect(() => {
-    fetchData();
-  }, [fetchData, timezone]);
+    loadData();
+  }, [isSharedView, params?.slug, timezone]);
 
   // Update saveLayouts to handle shared views
   const saveLayouts = useCallback(async (newLayouts: Layouts) => {
@@ -941,6 +909,7 @@ export const UserDataProvider: React.FC<{
     subscription,
     isPlusUser,
     isLoading,
+    isInitialLoad,
     isMobile,
     isSharedView,
     isFirstConnection,
@@ -975,7 +944,7 @@ export const UserDataProvider: React.FC<{
     calendarData,
 
     // Add layout values
-    layouts,
+    layouts: layouts || (isSharedView ? defaultLayouts : { desktop: [], mobile: [] }),
     setLayouts,
     saveLayouts,
 
@@ -1015,6 +984,11 @@ export const UserDataProvider: React.FC<{
     propfirmAccounts,
     setPropfirmAccounts,
   };
+
+  // If we're still loading initial data, return null or a loading state
+  if (isInitialLoad) {
+    return null; // Or return a loading spinner component if you have one
+  }
 
   return (
     <UserDataContext.Provider value={contextValue}>
