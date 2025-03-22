@@ -20,7 +20,7 @@ export default async function CommunityPage() {
   const t = await getI18n()
 
   return (
-    <div className="container max-w-4xl py-6 space-y-8">
+    <div className="container mx-auto max-w-4xl py-6 space-y-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{t('community.title')}</h1>

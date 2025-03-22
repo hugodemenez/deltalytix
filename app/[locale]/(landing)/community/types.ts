@@ -1,12 +1,10 @@
-import { Post, Vote, VoteType } from '@prisma/client'
+import { Post, User, Vote } from '@prisma/client'
 
 export type ExtendedPost = Post & {
-  user: {
-    email: string
-    id: string
-  }
+  user: Pick<User, 'email' | 'id'>
   votes: Vote[]
   _count: {
     comments: number
   }
+  isAuthor: boolean
 } 

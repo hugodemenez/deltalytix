@@ -1300,9 +1300,7 @@ export default {
         'status': {
             'all': 'Tous les Statuts',
             'open': 'Ouvert',
-            'inProgress': 'En Cours',
-            'completed': 'Terminé',
-            'closed': 'Fermé'
+            'completed': 'Terminé'
         },
         'noPosts': 'Aucune publication trouvée',
         'post': {
@@ -1319,7 +1317,8 @@ export default {
             'open': 'Ouvrir la publication',
             'copyLink': 'Copier le lien',
             'actions': 'Actions',
-            'linkCopied': 'Lien copié dans le presse-papiers'
+            'linkCopied': 'Lien copié dans le presse-papiers',
+            'status': 'Changer le statut'
         },
         'createPost': {
             'title': 'Créer une Publication',

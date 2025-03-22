@@ -3,7 +3,7 @@
 import { Post, PostStatus, PostType, Vote, VoteType } from '@prisma/client'
 import { formatDistanceToNow } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
-import { ArrowBigDown, ArrowBigUp, MessageSquare, ImageIcon, Pencil, ExternalLink, Link as LinkIcon, Copy, Check, MoreHorizontal } from 'lucide-react'
+import { ArrowBigDown, ArrowBigUp, MessageSquare, ImageIcon, Pencil, ExternalLink, Link as LinkIcon, Copy, Check, MoreHorizontal, Settings2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useI18n, useCurrentLocale } from '@/locales/client'
@@ -21,13 +21,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu'
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { votePost, deletePost, getComments, addComment, editComment, deleteComment, editPost } from '@/server/community'
+import { votePost, deletePost, getComments, addComment, editComment, deleteComment, editPost, updatePostStatus } from '@/server/community'
 import { toast } from 'sonner'
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
@@ -41,6 +44,7 @@ import { CopyNotification } from './copy-notification'
 interface Props {
   post: ExtendedPost
   isExpanded?: boolean
+  isAuthor: boolean
 }
 
 const typeColors = {
@@ -56,7 +60,7 @@ const statusColors = {
   [PostStatus.CLOSED]: 'bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-100',
 }
 
-export function PostCard({ post, isExpanded = false }: Props) {
+export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
   const t = useI18n()
   const locale = useCurrentLocale()
   const router = useRouter()
@@ -71,7 +75,6 @@ export function PostCard({ post, isExpanded = false }: Props) {
   const [comments, setComments] = useState<any[]>([])
   const [commentCount, setCommentCount] = useState(post._count.comments)
   const { user } = useUserData()
-  const isAuthor = user?.id === post.user.id
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [authAction, setAuthAction] = useState('')
   const [hasCopied, setHasCopied] = useState(false)
@@ -195,6 +198,16 @@ export function PostCard({ post, isExpanded = false }: Props) {
     }, 2000)
   }
 
+  async function handleStatusChange(status: PostStatus) {
+    try {
+      await updatePostStatus(post.id, status)
+      router.refresh()
+      toast.success('Post status updated')
+    } catch (error) {
+      toast.error('Failed to update post status')
+    }
+  }
+
   return (
     <>
       <Card>
@@ -217,53 +230,63 @@ export function PostCard({ post, isExpanded = false }: Props) {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {!isPostPage && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <MoreHorizontal className="h-4 w-4" />
-                    {t('community.post.actions')}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href={`/${locale}/community/post/${post.id}`}>
-                      <ExternalLink className="mr-2 h-4 w-4" />
-                      {t('community.post.open')}
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCopyLink}>
-                    {hasCopied ? (
-                      <Check className="mr-2 h-4 w-4" />
-                    ) : (
-                      <Copy className="mr-2 h-4 w-4" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!isPostPage && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/${locale}/community/post/${post.id}`}>
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        {t('community.post.open')}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleCopyLink}>
+                      {hasCopied ? (
+                        <Check className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Copy className="mr-2 h-4 w-4" />
+                      )}
+                      {t('community.post.copyLink')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+                {isAuthor && (
+                  <>
+                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {t('community.post.edit')}
+                    </DropdownMenuItem>
+                    {process.env.NODE_ENV === 'development' && (
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <Settings2 className="mr-2 h-4 w-4" />
+                          {t('community.post.status')}
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuSubContent>
+                          <DropdownMenuItem onClick={() => handleStatusChange(PostStatus.OPEN)}>
+                            {t('community.status.open')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleStatusChange(PostStatus.COMPLETED)}>
+                            {t('community.status.completed')}
+                          </DropdownMenuItem>
+                        </DropdownMenuSubContent>
+                      </DropdownMenuSub>
                     )}
-                    {t('community.post.copyLink')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-            {isAuthor && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    •••
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                    <Pencil className="mr-2 h-4 w-4" />
-                    {t('community.post.edit')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-red-600"
-                    onClick={handleDelete}
-                  >
-                    {t('community.post.delete')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={handleDelete}
+                    >
+                      {t('community.post.delete')}
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

@@ -1260,9 +1260,7 @@ export default {
         'status': {
             'all': 'All Status',
             'open': 'Open',
-            'inProgress': 'In Progress',
-            'completed': 'Completed',
-            'closed': 'Closed'
+            'completed': 'Completed'
         },
         'noPosts': 'No posts found',
         'post': {
@@ -1279,7 +1277,8 @@ export default {
             'open': 'Open post',
             'copyLink': 'Copy link',
             'actions': 'Actions',
-            'linkCopied': 'Link copied to clipboard'
+            'linkCopied': 'Link copied to clipboard',
+            'status': 'Change Status'
         },
         'createPost': {
             'title': 'Create Post',

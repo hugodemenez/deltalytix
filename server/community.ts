@@ -21,6 +21,10 @@ async function isAdmin(userId: string) {
 // Get all posts with votes and user information
 export async function getPosts() {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const currentUserId = user?.id
+
     const posts = await prisma.post.findMany({
       include: {
         user: {
@@ -47,7 +51,7 @@ export async function getPosts() {
       },
     })
 
-    // Calculate total comments for each post
+    // Calculate total comments for each post and add isAuthor flag
     const postsWithCommentCount = posts.map(post => {
       const totalComments = post.comments.reduce((acc, comment) => {
         // Add 1 for the comment itself and the number of its replies
@@ -60,7 +64,8 @@ export async function getPosts() {
         ...postWithoutComments,
         _count: {
           comments: totalComments
-        }
+        },
+        isAuthor: currentUserId ? (post.userId === currentUserId || process.env.NODE_ENV === 'development') : false
       }
     })
 
@@ -153,8 +158,8 @@ export async function updatePostStatus(id: string, status: PostStatus) {
     throw new Error('Unauthorized')
   }
 
-  // Check if user is admin
-  if (!await isAdmin(user.id)) {
+  // Allow status changes in development or if user is admin
+  if (process.env.NODE_ENV !== 'development' && !await isAdmin(user.id)) {
     throw new Error('Only administrators can change post status')
   }
 
@@ -564,7 +569,12 @@ export async function editPost(id: string, content: string) {
       select: { userId: true }
     })
 
-    if (!post || post.userId !== user.id) {
+    if (!post) {
+      throw new Error('Post not found')
+    }
+
+    // Allow editing in development or if user is the author
+    if (process.env.NODE_ENV !== 'development' && post.userId !== user.id) {
       throw new Error('Only the author can edit this post')
     }
 

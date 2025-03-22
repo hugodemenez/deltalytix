@@ -69,9 +69,7 @@ export function PostList({ initialPosts }: Props) {
             <SelectContent>
               <SelectItem value="ALL">{t('community.status.all')}</SelectItem>
               <SelectItem value={PostStatus.OPEN}>{t('community.status.open')}</SelectItem>
-              <SelectItem value={PostStatus.IN_PROGRESS}>{t('community.status.inProgress')}</SelectItem>
               <SelectItem value={PostStatus.COMPLETED}>{t('community.status.completed')}</SelectItem>
-              <SelectItem value={PostStatus.CLOSED}>{t('community.status.closed')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -84,7 +82,11 @@ export function PostList({ initialPosts }: Props) {
           </div>
         ) : (
           filteredPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard
+              key={post.id}
+              post={post}
+              isAuthor={post.isAuthor}
+            />
           ))
         )}
       </div>
