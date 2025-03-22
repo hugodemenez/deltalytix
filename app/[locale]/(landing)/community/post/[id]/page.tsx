@@ -1,6 +1,7 @@
 import { getPost, getComments } from '@/server/community'
 import { PostCard } from '../../components/post-card'
 import { notFound } from 'next/navigation'
+import { ExtendedPost } from '../../types'
 
 interface Props {
   params: {
@@ -18,12 +19,18 @@ export default async function PostPage({ params }: Props) {
       notFound()
     }
 
+    const extendedPost: ExtendedPost = {
+      ...post,
+      _count: { comments: comments.length }
+    }
+
     return (
       <div className="container max-w-4xl py-8">
         <div className="space-y-8">
           <PostCard 
-            post={{ ...post, _count: { comments: comments.length } }} 
+            post={extendedPost}
             isExpanded={true}
+            isAuthor={extendedPost.isAuthor}
           />
         </div>
       </div>

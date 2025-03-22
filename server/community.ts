@@ -274,6 +274,10 @@ export async function votePost(postId: string, voteType: VoteType) {
 // Get post by ID with votes and user information
 export async function getPost(id: string) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const currentUserId = user?.id
+
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
@@ -299,7 +303,10 @@ export async function getPost(id: string) {
       throw new Error('Post not found')
     }
 
-    return post
+    return {
+      ...post,
+      isAuthor: currentUserId ? (post.userId === currentUserId || process.env.NODE_ENV === 'development') : false
+    }
   } catch (error) {
     console.error('Failed to fetch post:', error)
     throw new Error('Failed to fetch post')
