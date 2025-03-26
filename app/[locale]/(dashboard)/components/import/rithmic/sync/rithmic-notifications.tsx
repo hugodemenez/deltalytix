@@ -41,7 +41,7 @@ export function WebSocketNotifications() {
   const [isComplete, setIsComplete] = useState(false)
   const { lastMessage, isConnected, accountsProgress, currentAccount } = useWebSocket()
   const { refreshTrades } = useUserData()
-  const refreshTimeoutRef = useRef<NodeJS.Timeout>()
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Reset complete state when connection is established
   useEffect(() => {

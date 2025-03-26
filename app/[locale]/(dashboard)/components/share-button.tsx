@@ -164,7 +164,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       if (accountNumbers.length > 0 && selectedAccounts.length === 0) {
         setSelectedAccounts(accountNumbers)
       }
-    }, [accountNumbers])
+    }, [accountNumbers, selectedAccounts])
 
     const filteredAccounts = useMemo(() => {
       if (!searchQuery) return accountNumbers

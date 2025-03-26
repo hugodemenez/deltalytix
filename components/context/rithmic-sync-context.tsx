@@ -1,8 +1,10 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react'
-import { getRithmicData, getAllRithmicData, updateLastSyncTime } from '@/lib/rithmic-storage'
+import { getRithmicData, getAllRithmicData, updateLastSyncTime, clearRithmicData, saveRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { useUserData } from '@/components/context/user-data'
+import { toast } from "@/hooks/use-toast"
+import { useI18n } from "@/locales/client"
 
 interface AccountProgress {
   ordersProcessed: number
@@ -33,6 +35,13 @@ interface RithmicCredentials {
   userId: string
 }
 
+function parseRateLimitMessage(detail: string) {
+  const match = detail.match(/Maximum (\d+) attempts allowed per (\d+\.?\d*) minutes\. Please wait (\d+\.?\d*) minutes/)
+  return match 
+    ? { max: match[1], period: match[2], wait: match[3] }
+    : { max: 2, period: 15, wait: 12 }
+}
+
 interface WebSocketContextType {
   connect: (url: string, token: string, accounts: string[], startDate: string) => void
   disconnect: () => void
@@ -58,7 +67,7 @@ interface WebSocketContextType {
   activeCredentialIds: string[]
   step: 'credentials' | 'select-accounts' | 'processing'
   setStep: (step: 'credentials' | 'select-accounts' | 'processing') => void
-  performAutoSyncForCredential: (credentialId: string) => Promise<void>
+  performAutoSyncForCredential: (credentialId: string) => Promise<{ success: boolean; rateLimited: boolean; message: string } | undefined>
   showAccountComparisonDialog: boolean
   setShowAccountComparisonDialog: (show: boolean) => void
   compareAccounts: (savedAccounts: string[], newAccounts: { account_id: string; fcm_id: string }[]) => boolean
@@ -67,12 +76,16 @@ interface WebSocketContextType {
   setMaxSyncDuration: (duration: number) => void
   serverConfigs: Record<string, string[]>
   fetchServerConfigs: () => Promise<void>
-  authenticateAndGetAccounts: (credentials: RithmicCredentials) => Promise<{ success: boolean; token: string; websocket_url: string; accounts: { account_id: string; fcm_id: string }[] }>
+  authenticateAndGetAccounts: (credentials: RithmicCredentials) => Promise<
+    | { success: false; rateLimited: boolean; message: string }
+    | { success: true; rateLimited: boolean; token: string; websocket_url: string; accounts: { account_id: string; fcm_id: string }[] }
+  >
   getWebSocketUrl: (baseUrl: string) => string
   wsUrl: string | null
   token: string | null
   setWsUrl: (url: string | null) => void
   setToken: (token: string | null) => void
+  calculateStartDate: (selectedAccounts: string[]) => string
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
@@ -99,18 +112,18 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
-  const syncIntervalRef = useRef<NodeJS.Timeout>()
+  const syncIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const [activeCredentialIds, setActiveCredentialIds] = useState<string[]>([])
-  const activityTimeoutRef = useRef<NodeJS.Timeout>()
+  const activityTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [showAccountComparisonDialog, setShowAccountComparisonDialog] = useState(false)
   const [maxSyncDuration, setMaxSyncDuration] = useState(3600000) // 1 hour default
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout>()
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const reconnectAttemptsRef = useRef(0)
   const maxReconnectAttempts = 3
   const reconnectDelayRef = useRef(1000) // Start with 1 second delay
-  const syncStartTimeRef = useRef<number>()
-  const syncTimeoutRef = useRef<NodeJS.Timeout>()
+  const syncStartTimeRef = useRef<number | undefined>(undefined)
+  const syncTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const lastSyncAttemptRef = useRef<Record<string, number>>({})
   const SYNC_COOLDOWN = 5000 // 5 seconds cooldown between syncs for each credential
   const isInitialMountRef = useRef(true)
@@ -121,6 +134,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [serverConfigs, setServerConfigs] = useState<Record<string, string[]>>({})
   const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [token, setToken] = useState<string | null>(null)
+  const t = useI18n()
 
   // Helper function to check if it's a weekday
   const isWeekday = () => {
@@ -165,7 +179,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       console.error('Error acquiring sync lock:', error)
       return false
     }
-  }, [])
+  }, [SYNC_LOCK_TIMEOUT])
 
   // Function to release sync lock
   const releaseSyncLock = useCallback(() => {
@@ -215,39 +229,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       resetProcessingState()
     }
   }, [ws, resetProcessingState])
-
-  const resetActivityTimeout = useCallback(() => {
-    if (activityTimeoutRef.current) {
-      clearTimeout(activityTimeoutRef.current)
-    }
-    
-    activityTimeoutRef.current = setTimeout(() => {
-      console.log('WebSocket inactive for 15 seconds, closing connection')
-      handleMessage({
-        type: 'log',
-        level: 'warning',
-        message: 'Connection timeout: No activity for 15 seconds'
-      })
-      disconnect()
-      setIsConnected(false)
-      setConnectionStatus('Disconnected: Timeout')
-      resetProcessingState()
-      setStep('credentials')
-    }, 15000)
-  }, [disconnect, resetProcessingState])
-
-  // Add heartbeat mechanism
-  const startHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current)
-    }
-
-    heartbeatIntervalRef.current = setInterval(() => {
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'heartbeat' }))
-      }
-    }, 10000) // Send heartbeat every 10 seconds
-  }, [ws])
 
   const handleMessage = useCallback((message: any) => {
     if (!message) return
@@ -551,7 +532,40 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         return [...prev, messageString]
       })
     }
-  }, [currentAccount, setCurrentAccount])
+  }, [currentAccount, setCurrentAccount, refreshTrades])
+
+  const resetActivityTimeout = useCallback(() => {
+    if (activityTimeoutRef.current) {
+      clearTimeout(activityTimeoutRef.current)
+    }
+    
+    activityTimeoutRef.current = setTimeout(() => {
+      console.log('WebSocket inactive for 15 seconds, closing connection')
+      handleMessage({
+        type: 'log',
+        level: 'warning',
+        message: 'Connection timeout: No activity for 15 seconds'
+      })
+      disconnect()
+      setIsConnected(false)
+      setConnectionStatus('Disconnected: Timeout')
+      resetProcessingState()
+      setStep('credentials')
+    }, 15000)
+  }, [disconnect, resetProcessingState, handleMessage])
+
+  // Add heartbeat mechanism
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current)
+    }
+
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'heartbeat' }))
+      }
+    }, 10000) // Send heartbeat every 10 seconds
+  }, [ws])
 
   const clearAllState = useCallback(() => {
     resetProcessingState()
@@ -795,17 +809,32 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       // Handle rate limit error specifically
       if (response.status === 429) {
         const data = await response.json()
-        throw new Error(data.detail || 'Rate limit exceeded. Please try again later.')
+        const params = parseRateLimitMessage(data.detail)
+        
+        toast({
+          title: t('rithmic.rateLimit.title'),
+          description: t('rithmic.rateLimit.description', params),
+          variant: "destructive",
+        })
+        
+        return { 
+          success: false as const, 
+          rateLimited: true, 
+          message: data.detail || 'Rate limit exceeded' 
+        }
       }
 
       const data = await response.json()
       if (!data.success) throw new Error(data.message)
 
+      // If allAccounts is true, use all available accounts
+      const accountsToSync = savedData.allAccounts ? data.accounts.map((acc: any) => acc.account_id) : savedData.selectedAccounts
+
       // Compare accounts and show dialog if they differ
-      const accountsDiffer = compareAccounts(savedData.selectedAccounts, data.accounts)
+      const accountsDiffer = compareAccounts(accountsToSync, data.accounts)
       if (accountsDiffer) {
         setAvailableAccounts(data.accounts)
-        setSelectedAccounts(savedData.selectedAccounts)
+        setSelectedAccounts(accountsToSync)
         setShowAccountComparisonDialog(true)
         return
       }
@@ -814,12 +843,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       const wsUrl = getWebSocketUrl(data.websocket_url)
 
       // Calculate start date based on existing trades
-      const accountTrades = trades.filter(trade => savedData.selectedAccounts.includes(trade.accountNumber))
+      const accountTrades = trades.filter(trade => accountsToSync.includes(trade.accountNumber))
       const startDate = accountTrades.length === 0
         ? new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '')
         : (() => {
-            const accountDates = savedData.selectedAccounts
-              .map(accountId => {
+            const accountDates = accountsToSync
+              .map((accountId: string) => {
                 const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
                 if (accountTrades.length === 0) return null
                 return Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
@@ -832,7 +861,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           })()
 
       // Connect and start syncing
-      connect(wsUrl, data.token, savedData.selectedAccounts, startDate)
+      connect(wsUrl, data.token, accountsToSync, startDate)
       updateLastSyncTime(credentialId)
       
       handleMessage({
@@ -853,7 +882,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         activeSyncRequestsRef.current.delete(credentialId)
       }
     }
-  }, [user?.id, isAutoSyncing, connect, handleMessage, trades, compareAccounts, getProtocols, getWebSocketUrl])
+  }, [user?.id, isAutoSyncing, connect, handleMessage, trades, compareAccounts, getProtocols, getWebSocketUrl, t])
 
   // Function to check and sync all credentials
   const performAutoSync = useCallback(async () => {
@@ -886,10 +915,66 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
   }, [performAutoSyncForCredential, shouldSync, acquireSyncLock, releaseSyncLock])
 
-  // Set up automatic sync interval
+  // Add mergeDuplicateCredentials function
+  const mergeDuplicateCredentials = useCallback(() => {
+    const allData = getAllRithmicData()
+    const usernames = new Map<string, RithmicCredentialSet[]>()
+
+    // Group credentials by username
+    Object.values(allData).forEach(cred => {
+      const existing = usernames.get(cred.credentials.username) || []
+      usernames.set(cred.credentials.username, [...existing, cred])
+    })
+
+    // Process each username group
+    usernames.forEach((credentials, username) => {
+      if (credentials.length > 1) {
+        // Merge all selected accounts and remove duplicates
+        const mergedSelectedAccounts = Array.from(new Set(
+          credentials.flatMap(cred => cred.selectedAccounts)
+        ))
+
+        // Use the most recent sync time
+        const mostRecentSync = Math.max(
+          ...credentials.map(cred => new Date(cred.lastSyncTime).getTime()),
+          Date.now()
+        )
+
+        // Use the most recent allAccounts setting
+        const mergedAllAccounts = credentials.some(cred => cred.allAccounts)
+
+        const dataToSave = {
+          id: credentials[0].id, // Use the ID of the first existing credential
+          credentials: credentials[0].credentials,
+          selectedAccounts: mergedSelectedAccounts,
+          lastSyncTime: new Date(mostRecentSync).toISOString(),
+          allAccounts: mergedAllAccounts
+        }
+
+        // Delete all other credentials with the same username
+        credentials.forEach(cred => {
+          if (cred.id !== dataToSave.id) {
+            clearRithmicData(cred.id)
+          }
+        })
+
+        // Save the merged credential
+        saveRithmicData(dataToSave)
+
+        // Show toast notification
+        toast({
+          title: t('rithmic.credentials.merged'),
+          description: t('rithmic.credentials.mergedDescription'),
+        })
+      }
+    })
+  }, [t])
+
+  // Add merging to the initial mount effect
   useEffect(() => {
     // Only perform initial check on mount if it's the first mount
     if (isInitialMountRef.current) {
+      mergeDuplicateCredentials()
       performAutoSync()
       isInitialMountRef.current = false
     }
@@ -917,7 +1002,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       // Release lock when component unmounts
       releaseSyncLock()
     }
-  }, [performAutoSync, releaseSyncLock])
+  }, [performAutoSync, releaseSyncLock, mergeDuplicateCredentials])
 
   // Clear interval and release lock when user changes
   useEffect(() => {
@@ -950,7 +1035,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         connect(ws.url, '', selectedAccounts, dateRange?.start || '')
       }
     }, delay)
-  }, [ws, connect, selectedAccounts, dateRange])
+  }, [ws, connect, selectedAccounts, dateRange, handleMessage])
 
   // Add fetchServerConfigs function
   const fetchServerConfigs = useCallback(async () => {
@@ -974,7 +1059,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
   }, [getProtocols, handleMessage])
 
-  // Update authenticateAndGetAccounts to transform the URL
+  // Update authenticateAndGetAccounts to return a rate limit response object
   const authenticateAndGetAccounts = useCallback(async (credentials: RithmicCredentials) => {
     const { http } = getProtocols()
     const response = await fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
@@ -984,25 +1069,71 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       },
       body: JSON.stringify(credentials)
     })
-
+    
     // Handle rate limit error specifically
     if (response.status === 429) {
       const data = await response.json()
-      throw new Error(data.detail || 'Rate limit exceeded. Please try again later.')
+      const params = parseRateLimitMessage(data.detail)
+      
+      toast({
+        title: t('rithmic.rateLimit.title'),
+        description: t('rithmic.rateLimit.description', params),
+        variant: "destructive",
+      })
+      
+      return { 
+        success: false as const, 
+        rateLimited: true, 
+        message: data.detail || 'Rate limit exceeded' 
+      }
     }
 
     const data = await response.json()
     if (!data.success) {
-      throw new Error(data.message)
+      return { 
+        success: false as const, 
+        rateLimited: false, 
+        message: data.message 
+      }
     }
 
-    return {
-      success: true,
-      token: data.token,
-      websocket_url: getWebSocketUrl(data.websocket_url),
-      accounts: data.accounts
+    return { 
+      success: true as const, 
+      rateLimited: false, 
+      token: data.token, 
+      websocket_url: getWebSocketUrl(data.websocket_url), 
+      accounts: data.accounts 
     }
-  }, [getProtocols, getWebSocketUrl])
+  }, [getProtocols, getWebSocketUrl, t])
+
+  // Add calculateStartDate function
+  const calculateStartDate = useCallback((selectedAccounts: string[]): string => {
+    // Filter trades for selected accounts
+    const accountTrades = trades.filter(trade => selectedAccounts.includes(trade.accountNumber))
+    
+    if (accountTrades.length === 0) {
+      // If no trades found, return date 90 days ago
+      const date = new Date()
+      date.setDate(date.getDate() - 91)
+      return date.toISOString().slice(0, 10).replace(/-/g, '')
+    }
+
+    // Find the most recent trade date for each account
+    const accountDates = selectedAccounts.map(accountId => {
+      const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
+      if (accountTrades.length === 0) return null
+      return Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
+    }).filter(Boolean) as number[]
+
+    // Get the oldest most recent date across all accounts
+    const oldestRecentDate = new Date(Math.min(...accountDates))
+    
+    // Set to next day
+    oldestRecentDate.setDate(oldestRecentDate.getDate() + 1)
+    
+    // Format as YYYYMMDD
+    return oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+  }, [trades])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1060,6 +1191,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       token,
       setWsUrl,
       setToken,
+      calculateStartDate,
     }}>
       {children}
     </WebSocketContext.Provider>

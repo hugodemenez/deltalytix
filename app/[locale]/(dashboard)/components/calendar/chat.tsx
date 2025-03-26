@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -29,11 +29,13 @@ function extractTextContent(content: string | React.ReactNode): string {
     if (typeof element.type === 'function') {
       return '[Chart Analysis]';
     }
-    if (element.props.children) {
+    
+    const props = element.props as { children?: React.ReactNode };
+    if (props.children) {
       // Recursively extract text from nested elements
-      return Array.isArray(element.props.children)
-        ? element.props.children.map((child: React.ReactNode) => extractTextContent(child)).join(' ')
-        : extractTextContent(element.props.children);
+      return Array.isArray(props.children)
+        ? props.children.map((child: React.ReactNode) => extractTextContent(child)).join(' ')
+        : extractTextContent(props.children);
     }
   }
   return String(content);
@@ -137,29 +139,31 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
   }, [user?.id, dateString, setConversation]);
 
   // Save conversation when it changes
-  const debouncedSaveConversation = useCallback(
-    debounce(async (userId: string, messages: ClientMessage[], date: string) => {
-      if (messages.length === 0 || isInitializing) return;
+  const saveConversation = useCallback(async (userId: string, messages: ClientMessage[], date: string) => {
+    if (messages.length === 0 || isInitializing) return;
 
-      try {
-        // Convert ClientMessage to SavedConversation, ensuring content is string
-        const conversationToSave: SavedConversation[] = messages.map(msg => ({
-          role: msg.role,
-          content: extractTextContent(msg.display)
-        }));
+    try {
+      // Convert ClientMessage to SavedConversation, ensuring content is string
+      const conversationToSave: SavedConversation[] = messages.map(msg => ({
+        role: msg.role,
+        content: extractTextContent(msg.display)
+      }));
 
-        const dayMood = await getMoodForDay(userId, new Date(date));
-        let currentMood: MoodType = 'okay';
-        if (dayMood?.mood && ['bad', 'okay', 'great'].includes(dayMood.mood)) {
-          currentMood = dayMood.mood as MoodType;
-        }
-        
-        await saveMood(userId, currentMood, conversationToSave, new Date(date));
-      } catch (error) {
-        console.error('Error saving conversation:', error);
+      const dayMood = await getMoodForDay(userId, new Date(date));
+      let currentMood: MoodType = 'okay';
+      if (dayMood?.mood && ['bad', 'okay', 'great'].includes(dayMood.mood)) {
+        currentMood = dayMood.mood as MoodType;
       }
-    }, 1000),
-    [isInitializing]
+      
+      await saveMood(userId, currentMood, conversationToSave, new Date(date));
+    } catch (error) {
+      console.error('Error saving conversation:', error);
+    }
+  }, [isInitializing]);
+
+  const debouncedSaveConversation = useMemo(
+    () => debounce(saveConversation, 1000),
+    [saveConversation]
   );
 
   useEffect(() => {
@@ -201,7 +205,7 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
     } finally {
       setIsMessageLoading(false);
     }
-  }, [continueConversation, dayData, dateString, setConversation, isMessageLoading]);
+  }, [continueConversation, dayData, dateString, setConversation, isMessageLoading, setInput, setIsMessageLoading]);
 
   const handleFileUpload = (type: 'camera' | 'photo' | 'folder') => {
     if (fileInputRef.current) {

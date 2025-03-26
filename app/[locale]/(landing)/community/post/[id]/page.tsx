@@ -4,13 +4,14 @@ import { notFound } from 'next/navigation'
 import { ExtendedPost } from '../../types'
 
 interface Props {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
-export default async function PostPage({ params }: Props) {
-  
+export default async function PostPage(props: Props) {
+  const params = await props.params;
+
   try {
     const post = await getPost(params.id)
     const comments = await getComments(params.id)

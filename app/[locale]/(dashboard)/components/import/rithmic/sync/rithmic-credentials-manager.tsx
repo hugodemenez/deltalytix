@@ -72,8 +72,11 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
 
   // Cleanup timeouts on unmount
   useEffect(() => {
+    // Capture current value to use in cleanup function
+    const timeouts = syncTimeoutsRef.current
+    
     return () => {
-      Object.values(syncTimeoutsRef.current).forEach(timeout => clearTimeout(timeout))
+      Object.values(timeouts).forEach(timeout => clearTimeout(timeout))
     }
   }, [])
 

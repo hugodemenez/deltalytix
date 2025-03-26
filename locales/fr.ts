@@ -355,6 +355,7 @@ export default {
     'success': 'Succès',
     'auth.required': 'Vous devez être connecté pour effectuer cette action',
     'filters': {
+        title: "Filtres",
         search: "Rechercher...",
         noResults: "Aucun résultat trouvé",
         pickDate: "Choisir une période",
@@ -845,6 +846,12 @@ export default {
             rateLimit: "Limite d'essais atteinte. Veuillez patienter avant de réessayer.",
             syncError: "Une erreur est survenue lors de la synchronisation. Veuillez réessayer."
         },
+        credentials: {
+            updated: "Identifiants Mis à Jour",
+            updatedDescription: "Vos identifiants existants ont été mis à jour avec les nouvelles informations.",
+            merged: "Identifiants Fusionnés",
+            mergedDescription: "Vos identifiants en double ont été fusionnés en un seul ensemble."
+        },
         editCredentials: "Modifier les Identifiants",
         addNewCredentials: "Ajouter de Nouveaux Identifiants",
         backToList: "Retour à la Liste",
@@ -859,16 +866,26 @@ export default {
         getAccounts: "Obtenir les Comptes",
         selectAccountsTitle: "Sélectionner les Comptes à Importer",
         selectAllAccounts: "Sélectionner Tous les Comptes",
+        syncAllAccounts: "Synchroniser Tous les Comptes",
+        syncAllAccountsDescription: "Synchroniser automatiquement tous les comptes disponibles, y compris ceux qui seront ajoutés à l'avenir",
         fcmId: "ID FCM",
         rememberSelectedAccounts: "Mémoriser les comptes sélectionnés pour la prochaine synchronisation",
-        'startProcessing.one': "Démarrer le Traitement de {count} Compte",
-        'startProcessing.other': "Démarrer le Traitement de {count} Comptes",
+        searchAccounts: "Rechercher des comptes...",
+        startProcessing: {
+            one: "Démarrer le Traitement de {count} Compte",
+            other: "Démarrer le Traitement de {count} Comptes",
+            all: "Démarrer le Traitement de Tous les Comptes"
+        },
         accountChanges: {
             title: "Changements de Comptes Détectés",
             description: "La liste des comptes disponibles a changé. Veuillez vérifier et sélectionner les comptes que vous souhaitez synchroniser.",
             newAccounts: "Nouveaux Comptes",
             existingAccounts: "Comptes Existants",
             removedAccounts: "Plus Disponibles"
+        },
+        'rateLimit': {
+            'title': 'Limite de requêtes dépassée',
+            'description': 'Maximum {max} tentatives autorisées par {period} minutes. Veuillez attendre {wait} minutes avant de réessayer.'
         }
     },
     'import.type.topstep.name': 'Topstep',

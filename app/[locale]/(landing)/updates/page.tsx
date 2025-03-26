@@ -8,12 +8,18 @@ import { getAllPosts } from '@/lib/posts'
 import { Post } from '@/types/post'
 
 interface PageProps {
-  params: {
+  params: Promise<{
     locale: string
-  }
+  }>
 }
 
-export default async function UpdatesPage({ params: { locale } }: PageProps) {
+export default async function UpdatesPage(props: PageProps) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const t = await getI18n()
   const posts = await getAllPosts(locale)
 

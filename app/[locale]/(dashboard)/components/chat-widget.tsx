@@ -41,7 +41,7 @@ function extractTextContent(content: string | React.ReactNode): string {
   
   // If it's a React element created by our AI response
   if (React.isValidElement(content)) {
-    const element = content as React.ReactElement;
+    const element = content as React.ReactElement<{ children?: React.ReactNode }>;
     if (element.props.children) {
       return String(element.props.children);
     }
@@ -87,7 +87,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
 
   // Debounced save conversation function
   const debouncedSaveConversation = useCallback(
-    debounce(async (userId: string, messages: Message[]) => {
+    async (userId: string, messages: Message[]) => {
       try {
         const conversationToSave = messages.map(msg => ({
           role: msg.role,
@@ -101,8 +101,13 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
       } catch (error) {
         console.error('Error saving conversation:', error);
       }
-    }, 1000),
+    },
     []
+  );
+
+  const debouncedSave = useMemo(
+    () => debounce(debouncedSaveConversation, 1000),
+    [debouncedSaveConversation]
   );
 
   // Initialize chat data
@@ -154,12 +159,12 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
   // Save conversation with debounce, but only for non-initial messages
   useEffect(() => {
     if (!user?.id || messages.length === 0 || !hasInitializedChat || messages.length === 1) return;
-    debouncedSaveConversation(user.id, messages);
+    debouncedSave(user.id, messages);
     
     return () => {
-      debouncedSaveConversation.cancel();
+      debouncedSave.cancel();
     };
-  }, [messages, user?.id, debouncedSaveConversation, hasInitializedChat]);
+  }, [messages, user?.id, debouncedSave, hasInitializedChat]);
 
   const handleSendMessage = async (message: string) => {
     if (message.trim() === '' || isLoading) return;
@@ -256,7 +261,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
       setMessages([newMessage]);
       
       // Save the reset conversation immediately
-      await debouncedSaveConversation.cancel();
+      await debouncedSave.cancel();
       await saveMood(user.id, 'okay', [{
         role: 'assistant' as const,
         content: extractTextContent(greeting.display)

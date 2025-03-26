@@ -209,32 +209,7 @@ export default function Component() {
                         </Command>
                     </PopoverContent>
                 </Popover>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" className="w-full justify-start">
-                            <Globe className="h-5 w-5" />
-                            <span className="ml-2">{t('navbar.changeLanguage')}</span>
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[200px] p-0" align="start">
-                        <Command>
-                            <CommandList>
-                                <CommandGroup>
-                                    {languages.map((language) => (
-                                        <CommandItem
-                                            key={language.value}
-                                            onSelect={() => handleLanguageChange(language.value)}
-                                            className="flex items-center"
-                                        >
-                                            <span className="mr-2">{language.value === 'en' ? '🇬🇧' : '🇫🇷'}</span>
-                                            <span>{language.label}</span>
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+                <LanguageSelector showLabel align="start" />
             </div>
         </nav>
     )
@@ -348,32 +323,7 @@ export default function Component() {
                 </div>
 
                 <div className="flex items-center space-x-4">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0">
-                                <Globe className="h-5 w-5" />
-                                <span className="sr-only">{t('navbar.changeLanguage')}</span>
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[200px] p-0" align="end">
-                            <Command>
-                                <CommandList>
-                                    <CommandGroup>
-                                        {languages.map((language) => (
-                                            <CommandItem
-                                                key={language.value}
-                                                onSelect={() => handleLanguageChange(language.value)}
-                                                className="flex items-center"
-                                            >
-                                                <span className="mr-2">{language.value === 'en' ? '🇬🇧' : '🇫🇷'}</span>
-                                                <span>{language.label}</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                    <LanguageSelector />
                     <Popover>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" className="hidden lg:inline-flex h-9 w-9 px-0">

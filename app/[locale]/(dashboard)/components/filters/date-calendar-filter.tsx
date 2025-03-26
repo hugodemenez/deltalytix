@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import { DateRange, SelectRangeEventHandler, SelectSingleEventHandler } from "react-day-picker"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns"
 import { fr } from 'date-fns/locale'
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { useI18n } from "@/locales/client"
 import { useParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -149,8 +149,13 @@ export default function DateCalendarFilter() {
         <SheetTrigger asChild>
           {DateButton}
         </SheetTrigger>
-        <SheetContent>
-          {CalendarContent}
+        <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-[100dvh] overflow-hidden">
+          <SheetHeader>
+            <SheetTitle>{t('filters.pickDate')}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-auto">
+            {CalendarContent}
+          </div>
         </SheetContent>
       </Sheet>
     );

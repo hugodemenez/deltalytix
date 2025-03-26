@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { useChangeLocale, useCurrentLocale } from '@/locales/client'
 import { useI18n } from "@/locales/client"
+import { cn } from "@/lib/utils"
 
 interface Language {
   value: string
@@ -16,15 +17,24 @@ interface Language {
 interface LanguageSelectorProps {
   className?: string
   triggerClassName?: string
-  languages: Language[]
+  languages?: Language[]
   onRequestNewLanguage?: () => void
+  showLabel?: boolean
+  align?: 'start' | 'end'
 }
+
+const defaultLanguages: Language[] = [
+  { value: 'en', label: 'English' },
+  { value: 'fr', label: 'Français' },
+]
 
 export function LanguageSelector({ 
   className,
   triggerClassName,
-  languages,
-  onRequestNewLanguage 
+  languages = defaultLanguages,
+  onRequestNewLanguage,
+  showLabel = false,
+  align = 'end'
 }: LanguageSelectorProps) {
   const [open, setOpen] = React.useState(false)
   const currentLocale = useCurrentLocale()
@@ -33,8 +43,6 @@ export function LanguageSelector({
 
   const handleLanguageChange = (locale: string) => {
     changeLocale(locale as "en" | "fr")
-    // Force a full page reload to ensure middleware picks up the new locale
-    window.location.reload()
     setOpen(false)
   }
 
@@ -43,26 +51,33 @@ export function LanguageSelector({
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
-          className={triggerClassName}
+          className={cn(
+            "inline-flex h-9 w-9 px-0",
+            showLabel && "w-auto px-2",
+            triggerClassName
+          )}
         >
           <Globe className="h-5 w-5" />
-          <span className="sr-only">{t('navbar.changeLanguage')}</span>
-          <span className="ml-2">{currentLocale.toUpperCase()}</span>
+          {showLabel && (
+            <>
+              <span className="sr-only">{t('navbar.changeLanguage')}</span>
+              <span className="ml-2">{t('navbar.changeLanguage')}</span>
+            </>
+          )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={`w-[200px] p-0 ${className}`}>
+      <PopoverContent className={`w-[200px] p-0 ${className}`} align={align}>
         <Command>
-          <CommandInput placeholder={t('dashboard.searchLanguage')} />
           <CommandList>
-            <CommandEmpty>{t('dashboard.noLanguageFound')}</CommandEmpty>
             <CommandGroup>
               {languages.map((language) => (
                 <CommandItem
                   key={language.value}
                   onSelect={() => handleLanguageChange(language.value)}
-                  className="cursor-pointer"
+                  className="flex items-center cursor-pointer"
                 >
-                  {language.label}
+                  <span className="mr-2">{language.value === 'en' ? '🇬🇧' : '🇫🇷'}</span>
+                  <span>{language.label}</span>
                 </CommandItem>
               ))}
               {onRequestNewLanguage && (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
@@ -82,13 +82,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedLayout, setSelectedLayout] = useState<SharedLayout | null>(null)
 
-  useEffect(() => {
-    if (user) {
-      loadSharedLayouts()
-    }
-  }, [user])
-
-  const loadSharedLayouts = async () => {
+  const loadSharedLayouts = useCallback(async () => {
     try {
       const layouts = await getUserShared(user!.id)
       const transformedLayouts = layouts.map(layout => ({
@@ -106,7 +100,13 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [user, toast, t])
+
+  useEffect(() => {
+    if (user) {
+      loadSharedLayouts()
+    }
+  }, [user, loadSharedLayouts])
 
   const handleDelete = async () => {
     if (!selectedLayout) return

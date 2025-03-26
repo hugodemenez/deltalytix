@@ -1,20 +1,22 @@
 'use client'
 
-import { useEffect } from "react";
+import { useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import { I18nProviderClient } from "@/locales/client";
 import { SidebarNav } from "./components/sidebar-nav";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
-export default function RootLayout({
-  children,
-  params: { locale },
-}: Readonly<{
-  children: React.ReactNode;
-  params: { locale: string };
-}>) {
+export default function RootLayout(
+  props: Readonly<{
+    children: React.ReactNode;
+  }>
+) {
   
+  const {
+    children
+  } = props;
+
   const router = useRouter();
   useEffect(() => {
     const hash = window.location.hash;
@@ -34,7 +36,6 @@ export default function RootLayout({
   }, [router]);
 
   return (
-    <I18nProviderClient locale={locale}>
       <SidebarProvider defaultOpen>
         <div className="flex min-h-screen w-screen">
           <SidebarNav />
@@ -46,6 +47,5 @@ export default function RootLayout({
           </main>
         </div>
       </SidebarProvider>
-    </I18nProviderClient>
   );
 }

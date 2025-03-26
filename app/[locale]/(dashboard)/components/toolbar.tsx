@@ -98,12 +98,7 @@ export function Toolbar({
         <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
 
         {isMobile && (
-          <Button
-            variant="ghost"
-            className="h-10 w-10 p-0 rounded-full flex items-center justify-center transition-transform active:scale-95"
-          >
-            <FilterLeftPane />
-          </Button>
+          <FilterLeftPane />
         )}
       </div>
     </div>

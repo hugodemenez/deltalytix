@@ -2,9 +2,6 @@
 import { createI18nMiddleware } from 'next-international/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { getCurrentLocale } from './locales/server'
-import { PrismaClient } from '@prisma/client'
-
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
 
@@ -136,8 +133,8 @@ export async function middleware(request: NextRequest) {
       response.cookies.set(cookie)
     })
 
-    // For normal navigation, return the i18n response to maintain the current path
-    return i18nResponse
+    // For normal navigation, return the response that contains both i18n and Supabase cookies
+    return response
 
   } catch (error) {
     console.error('Middleware authentication error:', error)

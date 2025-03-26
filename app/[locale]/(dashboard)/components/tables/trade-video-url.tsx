@@ -29,7 +29,7 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl, onVideoUrlCh
   const [isUpdating, setIsUpdating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [isValid, setIsValid] = useState(true)
-  const successTimeoutRef = useRef<NodeJS.Timeout>()
+  const successTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
 
   // Reset draft URL when modal opens
   useEffect(() => {

@@ -32,7 +32,7 @@ import {
 } from '@/components/ui/dialog'
 import { votePost, deletePost, getComments, addComment, editComment, deleteComment, editPost, updatePostStatus } from '@/server/community'
 import { toast } from 'sonner'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useUserData } from '@/components/context/user-data'
 import { CommentSection } from './comment-section'
@@ -84,20 +84,20 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
   const downvotes = optimisticVotes.filter(vote => vote.type === VoteType.DOWNVOTE).length
   const score = upvotes - downvotes
 
-  useEffect(() => {
-    if (isCommentsOpen) {
-      loadComments()
-    }
-  }, [isCommentsOpen])
-
-  async function loadComments() {
+  const loadComments = useCallback(async function() {
     try {
       const fetchedComments = await getComments(post.id)
       setComments(fetchedComments)
     } catch (error) {
       toast.error('Failed to load comments')
     }
-  }
+  }, [post.id]);
+
+  useEffect(() => {
+    if (isCommentsOpen) {
+      loadComments()
+    }
+  }, [isCommentsOpen, loadComments])
 
   async function handleVote(type: VoteType) {
     if (!user) {

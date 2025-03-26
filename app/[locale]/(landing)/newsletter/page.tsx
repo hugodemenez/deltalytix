@@ -8,11 +8,12 @@ export const metadata: Metadata = {
   description: "Manage your newsletter preferences and subscription settings",
 }
 
-export default async function NewsletterPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | undefined }
-}) {
+export default async function NewsletterPage(
+  props: {
+    searchParams: Promise<{ [key: string]: string | undefined }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const t = await getScopedI18n('newsletter')
 
   const isUnsubscribed = searchParams?.status === "unsubscribed"

@@ -9,6 +9,7 @@ export interface RithmicCredentialSet {
   selectedAccounts: string[]
   lastSyncTime: string
   name?: string // optional display name for the credential set
+  allAccounts?: boolean // flag to indicate if all accounts should be synced
 }
 
 const STORAGE_KEY = 'rithmic_sync_data'

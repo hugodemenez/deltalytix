@@ -44,7 +44,7 @@ export default function Modals() {
         status: subscription.status
       });
     }
-  }, [user?.email, subscription]);
+  }, [user?.email, subscription, isFirstConnection]);
 
   useEffect(() => {
     if (!userLoading) {

@@ -24,8 +24,8 @@ export function TradeComment({ tradeId, comment: initialComment, onCommentChange
   const [localComment, setLocalComment] = useState(initialComment || '')
   const [isUpdating, setIsUpdating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const updateCommentRef = useRef<NodeJS.Timeout>()
-  const successTimeoutRef = useRef<NodeJS.Timeout>()
+  const updateCommentRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const successTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const handleCommentChange = async (value: string) => {

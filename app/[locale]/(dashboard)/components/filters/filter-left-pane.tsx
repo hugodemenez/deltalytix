@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Filter } from "lucide-react"
@@ -173,7 +173,7 @@ export default function FilterLeftPane() {
     }, 100)
 
     return () => clearTimeout(timer)
-  }, [selectedItems, accountNumbers, instruments, propfirms])
+  }, [selectedItems, accountNumbers, instruments, propfirms, setAccountNumbers, setInstruments, setPropfirms])
 
   const anonymizeAccount = useCallback((account: string) => {
     if (!showAccountNumbers) {
@@ -248,12 +248,18 @@ export default function FilterLeftPane() {
       <>
         <Sheet open={isOpen} onOpenChange={setIsOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10" aria-label={t('filters.openFilters')}>
+            <Button
+              variant="ghost"
+              className="h-10 w-10 p-0 rounded-full flex items-center justify-center transition-transform active:scale-95"
+            >
               <Filter className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-            <ScrollArea className="h-full pt-2 ">
+          <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-[100dvh] overflow-hidden">
+            <SheetHeader>
+              <SheetTitle>{t('filters.title')}</SheetTitle>
+            </SheetHeader>
+            <ScrollArea className="flex-1 mt-6">
               {FilterContent}
             </ScrollArea>
           </SheetContent>

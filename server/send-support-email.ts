@@ -4,6 +4,7 @@
 import SupportRequestEmail from '@/components/emails/support-request';
 import SubscriptionErrorEmail from '@/components/emails/support-subscription-error';
 import { Resend } from 'resend';
+import { createElement } from 'react';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -22,7 +23,7 @@ export async function sendSupportEmail({ messages, contactInfo }: SupportEmailDa
       from: `Deltalytix Support <${process.env.SUPPORT_EMAIL??''}>`,
       to: [process.env.SUPPORT_TEAM_EMAIL??''],
       subject: 'New Support Request',
-      react: SupportRequestEmail({ messages, contactInfo }),
+      react: createElement(SupportRequestEmail, { messages, contactInfo }),
     });
 
     if (error) {
@@ -50,7 +51,7 @@ export async function sendSubscriptionErrorEmail({ contactInfo }: SubscriptionEr
       from: `Deltalytix Support <${process.env.SUPPORT_EMAIL??''}>`,
       to: [process.env.SUPPORT_TEAM_EMAIL??''],
       subject: 'Error creating subscription',
-      react: SubscriptionErrorEmail({ contactInfo }),
+      react: createElement(SubscriptionErrorEmail, { contactInfo }),
     });
 
     if (error) {

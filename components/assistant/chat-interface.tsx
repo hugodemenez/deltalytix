@@ -3,7 +3,7 @@
 import "ios-vibrator-pro-max"
 
 import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import {
   Search,
   Plus,
@@ -101,7 +101,7 @@ export default function ChatInterface({ onClose, isFloating = false }: ChatInter
         }
       ])
     }
-  }, [])
+  }, [messages])
 
   // Constants for layout calculations to account for the padding values
   const HEADER_HEIGHT = 48 // 12px height + padding
@@ -218,13 +218,20 @@ export default function ChatInterface({ onClose, isFloating = false }: ChatInter
     }
   }, [isMobile])
 
+  // Focus the textarea function
+  const focusTextarea = useCallback(() => {
+    if (textareaRef.current && !isMobile) {
+      textareaRef.current.focus()
+    }
+  }, [isMobile])
+
   // Set focus back to textarea after streaming ends (only on desktop)
   useEffect(() => {
     if (!isStreaming && shouldFocusAfterStreamingRef.current && !isMobile) {
       focusTextarea()
       shouldFocusAfterStreamingRef.current = false
     }
-  }, [isStreaming, isMobile])
+  }, [isStreaming, isMobile, focusTextarea])
 
   // Calculate available content height (viewport minus header and input)
   const getContentHeight = () => {
@@ -254,12 +261,6 @@ export default function ChatInterface({ onClose, isFloating = false }: ChatInter
     } else if (textarea) {
       // If no selection was saved, just focus
       textarea.focus()
-    }
-  }
-
-  const focusTextarea = () => {
-    if (textareaRef.current && !isMobile) {
-      textareaRef.current.focus()
     }
   }
 

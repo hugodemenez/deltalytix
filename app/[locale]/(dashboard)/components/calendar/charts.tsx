@@ -152,7 +152,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
       totalPnL,
       calculateCommonDomain
     };
-  }, [dayData?.trades]);
+  }, [dayData?.trades, locale]);
 
   // Load mood and comment from localStorage or fetch from server on mount
   React.useEffect(() => {

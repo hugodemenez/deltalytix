@@ -1,28 +1,35 @@
 import { ThemeProvider } from "@/components/context/theme-provider";
 import { UserDataProvider } from "@/components/context/user-data";
 import { Toaster } from "@/components/ui/toaster";
-import { I18nProviderClient } from "@/locales/client";
 import { ReactElement } from "react";
 import { AI } from "@/components/ai";
 import { MoodProvider } from '@/components/context/mood-data';
 
-export default async function RootLayout({ params: { locale }, children }: { params: { locale: string }, children: ReactElement }) {
+export default async function RootLayout(props: { params: Promise<{ locale: string }>, children: ReactElement }) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
+  const {
+    children
+  } = props;
+
   return (
-    <I18nProviderClient locale={locale}>
-      <AI>
-        <ThemeProvider>
-          <MoodProvider>
-            <UserDataProvider isSharedView>
-              <div className="min-h-screen flex flex-col bg-background">
-                <Toaster />
-                <div className="flex-1">
-                  {children}
-                </div>
+    <AI>
+      <ThemeProvider>
+        <MoodProvider>
+          <UserDataProvider isSharedView>
+            <div className="min-h-screen flex flex-col bg-background">
+              <Toaster />
+              <div className="flex-1">
+                {children}
               </div>
-            </UserDataProvider>
-          </MoodProvider>
-        </ThemeProvider>
-      </AI>
-    </I18nProviderClient>
+            </div>
+          </UserDataProvider>
+        </MoodProvider>
+      </ThemeProvider>
+    </AI>
   );
 }

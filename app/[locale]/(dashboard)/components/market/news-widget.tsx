@@ -16,10 +16,12 @@ export function NewsWidget({ className }: NewsWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const widgetId = useRef(`tradingview-widget-${Math.random().toString(36).substring(7)}`);
-  const initTimeoutRef = useRef<NodeJS.Timeout>();
+  const initTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     setIsLoading(true);
+    // Capture the current value of widgetId.current for use in cleanup
+    const currentWidgetId = widgetId.current;
 
     // Clear any existing timeout
     if (initTimeoutRef.current) {
@@ -28,7 +30,7 @@ export function NewsWidget({ className }: NewsWidgetProps) {
 
     // Wait a bit for the container to be properly sized
     initTimeoutRef.current = setTimeout(() => {
-      const container = document.getElementById(widgetId.current);
+      const container = document.getElementById(currentWidgetId);
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
@@ -56,7 +58,7 @@ export function NewsWidget({ className }: NewsWidgetProps) {
         "isTransparent": true,
         "locale": "en",
         "importanceFilter": "-1,0,1",
-        "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,za,tr,gb,us,eu"
+        "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,tr,gb,us,eu"
       });
 
       // Add load event listener to hide skeleton
@@ -71,7 +73,7 @@ export function NewsWidget({ className }: NewsWidgetProps) {
       if (initTimeoutRef.current) {
         clearTimeout(initTimeoutRef.current);
       }
-      const container = document.getElementById(widgetId.current);
+      const container = document.getElementById(currentWidgetId);
       if (container) {
         container.innerHTML = '';
       }

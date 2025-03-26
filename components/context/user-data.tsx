@@ -224,6 +224,7 @@ interface UserDataContextType {
   refreshTrades: () => Promise<void>
   updateTrade: (tradeId: string, updates: Partial<TradeWithUTC>) => void
   sharedParams: SharedParams | null
+  setSharedParams: React.Dispatch<React.SetStateAction<SharedParams | null>>
   
   // Tick details
   tickDetails: Record<string, number>
@@ -922,6 +923,7 @@ export const UserDataProvider: React.FC<{
     refreshTrades,
     updateTrade,
     sharedParams,
+    setSharedParams,
 
     // Tick details
     tickDetails,

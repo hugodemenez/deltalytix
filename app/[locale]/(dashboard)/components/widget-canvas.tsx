@@ -726,17 +726,21 @@ function getWidgetDimensions(widget: LayoutItem, isMobile: boolean) {
 
 export default function WidgetCanvas() {
   const { user, isMobile, layouts, setLayouts, saveLayouts } = useUserData()
-  const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
   
+  // Group all useState hooks together at the top
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isScreenshotMode, setIsScreenshotMode] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
 
   // Add this state to track if the layout change is from user interaction
-  const activeLayout = isMobile ? 'mobile' : 'desktop'
+  const activeLayout = useMemo(() => isMobile ? 'mobile' : 'desktop', [isMobile])
+  
+  // Move all memoized values up, out of conditional rendering paths
+  const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
 
-  // Pre-calculate all widget dimensions with stable reference
+  // Group all useMemo hooks together
   const widgetDimensions = useMemo(() => {
     if (!layouts) return {}
     const dimensions: Record<string, ReturnType<typeof getWidgetDimensions>> = {}
@@ -749,33 +753,17 @@ export default function WidgetCanvas() {
     return dimensions
   }, [layouts, activeLayout, isMobile])
 
-  // Memoize the responsive layout to prevent regeneration on every render
   const responsiveLayout = useMemo(() => {
     if (!layouts) return {}
     return generateResponsiveLayout(layouts[activeLayout] as unknown as LayoutItem[])
   }, [layouts, activeLayout])
 
-  // Add a stable layout reference
   const currentLayout = useMemo(() => {
     if (!layouts) return []
     return layouts[activeLayout] as LayoutItem[]
   }, [layouts, activeLayout])
 
-  // Handle initial render and loading state
-  useEffect(() => {
-    if (layouts) {
-      // Start the opacity transition with a longer delay to ensure all widgets are ready
-      const opacityTimer = setTimeout(() => {
-        setIsLoading(false)
-      }, 300) // Increased delay to ensure smooth transition
-
-      return () => {
-        clearTimeout(opacityTimer)
-      }
-    }
-  }, [layouts])
-
-  // Add click outside handler
+  // Define handleOutsideClick before using it in useEffect
   const handleOutsideClick = useCallback((e: MouseEvent) => {
     // Check if the click is on a widget or its children
     const isWidgetClick = (e.target as HTMLElement).closest('.react-grid-item')
@@ -788,20 +776,10 @@ export default function WidgetCanvas() {
     if (!isWidgetClick && !isContextMenuClick && !isCustomizationSwitchClick && !isDialogClick && !isDialogTriggerClick) {
       setIsCustomizing(false)
     }
-  }, [])
+  }, [setIsCustomizing])
 
-  useEffect(() => {
-    if (isCustomizing) {
-      document.addEventListener('click', handleOutsideClick)
-      return () => document.removeEventListener('click', handleOutsideClick)
-    }
-  }, [isCustomizing, handleOutsideClick])
-
-  // Add auto-scroll functionality for mobile
-  useAutoScroll(isMobile && isCustomizing)
-
-  // Update handleLayoutChange with proper type handling
-  const handleLayoutChange = useCallback(async (layout: LayoutItem[], allLayouts: any) => {
+  // Update handleLayoutChange with proper type handling and all dependencies
+  const handleLayoutChange = useCallback((layout: LayoutItem[], allLayouts: any) => {
     if (!user?.id || !isCustomizing || !setLayouts || !layouts) return;
 
     try {
@@ -831,7 +809,7 @@ export default function WidgetCanvas() {
       
       // Only save to database if it's a user action (drag/drop)
       if (isUserAction) {
-        await saveLayouts(updatedLayouts);
+        saveLayouts(updatedLayouts);
         setIsUserAction(false);
       }
     } catch (error) {
@@ -839,16 +817,10 @@ export default function WidgetCanvas() {
       // Revert to previous layout on error
       setLayouts(layouts);
     }
-  }, [user?.id, isCustomizing, setLayouts, layouts, activeLayout, isMobile, isUserAction, saveLayouts]);
+  }, [user?.id, isCustomizing, setLayouts, layouts, activeLayout, isMobile, isUserAction, saveLayouts, setIsUserAction]);
 
-  // Don't render anything until layouts are loaded
-  if (!layouts) {
-    return (
-            <Skeleton className="h-full w-full" />
-    );
-  }
-
-  const addWidget = async (type: WidgetType, size: WidgetSize = 'medium') => {
+  // Define addWidget with all dependencies
+  const addWidget = useCallback(async (type: WidgetType, size: WidgetSize = 'medium') => {
     if (!user?.id || !layouts) return
     
     // Determine default size based on widget type
@@ -977,9 +949,10 @@ export default function WidgetCanvas() {
     
     setLayouts(newLayouts)
     await saveLayouts(newLayouts)
-  }
+  }, [user?.id, layouts, activeLayout, setLayouts, saveLayouts]);
 
-  const removeWidget = async (i: string) => {
+  // Define removeWidget with all dependencies
+  const removeWidget = useCallback(async (i: string) => {
     if (!user?.id || !layouts) return
     const updatedWidgets = layouts[activeLayout].filter(widget => widget.i !== i)
     const newLayouts = {
@@ -988,9 +961,10 @@ export default function WidgetCanvas() {
     }
     setLayouts(newLayouts)
     await saveLayouts(newLayouts)
-  }
+  }, [user?.id, layouts, activeLayout, setLayouts, saveLayouts]);
 
-  const changeWidgetType = async (i: string, newType: WidgetType) => {
+  // Define changeWidgetType with all dependencies
+  const changeWidgetType = useCallback(async (i: string, newType: WidgetType) => {
     if (!user?.id || !layouts) return
     const updatedWidgets = layouts[activeLayout].map(widget => 
       widget.i === i ? { ...widget, type: newType } : widget
@@ -1001,9 +975,10 @@ export default function WidgetCanvas() {
     }
     setLayouts(newLayouts)
     await saveLayouts(newLayouts)
-  }
+  }, [user?.id, layouts, activeLayout, setLayouts, saveLayouts]);
 
-  const changeWidgetSize = async (i: string, newSize: WidgetSize) => {
+  // Define changeWidgetSize with all dependencies
+  const changeWidgetSize = useCallback(async (i: string, newSize: WidgetSize) => {
     if (!user?.id || !layouts) return
     
     // Find the widget
@@ -1026,9 +1001,24 @@ export default function WidgetCanvas() {
     }
     setLayouts(newLayouts)
     await saveLayouts(newLayouts)
-  }
+  }, [user?.id, layouts, activeLayout, setLayouts, saveLayouts]);
 
-  const renderWidget = (widget: LayoutItem) => {
+  // Define removeAllWidgets with all dependencies
+  const removeAllWidgets = useCallback(async () => {
+    if (!user?.id || !layouts) return
+    
+    const newLayouts = {
+      ...layouts,
+      desktop: [],
+      mobile: []
+    }
+    
+    setLayouts(newLayouts)
+    await saveLayouts(newLayouts)
+  }, [user?.id, layouts, setLayouts, saveLayouts]);
+
+  // Define renderWidget with all dependencies
+  const renderWidget = useCallback((widget: LayoutItem) => {
     // Ensure widget.type is a valid WidgetType
     if (!Object.keys(WIDGET_REGISTRY).includes(widget.type)) {
       return (
@@ -1053,19 +1043,39 @@ export default function WidgetCanvas() {
     })()
 
     return getWidgetComponent(widget.type as WidgetType, effectiveSize)
-  }
+  }, [isMobile, removeWidget]);
 
-  const removeAllWidgets = async () => {
-    if (!user?.id || !layouts) return
-    
-    const newLayouts = {
-      ...layouts,
-      desktop: [],
-      mobile: []
+  // Group all useEffect hooks together
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, []);
+
+  useEffect(() => {
+    if (layouts && mounted) {
+      const opacityTimer = setTimeout(() => {
+        setIsLoading(false)
+      }, 300)
+
+      return () => {
+        clearTimeout(opacityTimer)
+      }
     }
-    
-    setLayouts(newLayouts)
-    await saveLayouts(newLayouts)
+  }, [layouts, mounted]);
+
+  useEffect(() => {
+    if (isCustomizing) {
+      document.addEventListener('click', handleOutsideClick)
+      return () => document.removeEventListener('click', handleOutsideClick)
+    }
+  }, [isCustomizing, handleOutsideClick]);
+
+  // Add auto-scroll functionality for mobile
+  useAutoScroll(isMobile && isCustomizing)
+
+  // Don't render anything until mounted and layouts are loaded
+  if (!mounted || !layouts) {
+    return <Skeleton className="h-full w-full" />
   }
 
   return (

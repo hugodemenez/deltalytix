@@ -36,7 +36,7 @@ const mockTrades = [
 
 export default function MarketChart({ size = 'medium', containerClassName }: MarketChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<ReturnType<typeof createChart>>();
+  const chartRef = useRef<ReturnType<typeof createChart> | undefined>(undefined);
   const t = useI18n();
 
   useEffect(() => {

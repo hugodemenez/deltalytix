@@ -353,6 +353,7 @@ export default {
     'import.type.topstep.description': 'Import trades from Topstep funded trader account exports',
     'import.type.topstep.details': 'Make sure to export your trades in CSV format from your Topstep funded trader account dashboard.',
     'filters': {
+        title: "Filters",
         search: "Search...",
         noResults: "No results found",
         pickDate: "Pick a date range",
@@ -1109,16 +1110,30 @@ export default {
         getAccounts: "Get Accounts",
         selectAccountsTitle: "Select Accounts to Import",
         selectAllAccounts: "Select All Accounts",
+        syncAllAccounts: "Sync All Accounts",
+        syncAllAccountsDescription: "Automatically sync all available accounts, including any new ones added in the future",
         fcmId: "FCM ID",
         rememberSelectedAccounts: "Remember selected accounts for next sync",
         'startProcessing.one': "Start Processing {count} Account",
         'startProcessing.other': "Start Processing {count} Accounts",
+        'startProcessing.all': "Start Processing All Accounts",
         accountChanges: {
             title: "Account Changes Detected",
             description: "The list of available accounts has changed. Please review and select the accounts you want to sync.",
             newAccounts: "New Accounts",
             existingAccounts: "Existing Accounts",
             removedAccounts: "No Longer Available",
+        },
+        'rateLimit': {
+            'title': 'Rate Limit Exceeded',
+            'description': 'Maximum {max} attempts allowed per {period} minutes. Please wait {wait} minutes before trying again.'
+        },
+        searchAccounts: "Search accounts by ID or FCM ID",
+        credentials: {
+            updated: "Credentials Updated",
+            updatedDescription: "Your existing credentials have been updated with the new information.",
+            merged: "Credentials Merged",
+            mergedDescription: "Your duplicate credentials have been merged into a single set."
         }
     },
     timeRangePerformance: {

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
+import { Switch } from "@/components/ui/switch"
 import { useUserData } from '@/components/context/user-data'
 import { toast } from '@/hooks/use-toast'
 import { RithmicSyncFeedback } from './rithmic-sync-feedback'
@@ -82,7 +83,8 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     wsUrl,
     token,
     setWsUrl,
-    setToken
+    setToken,
+    calculateStartDate
   } = useWebSocket()
 
   const [isLoading, setIsLoading] = useState(false)
@@ -97,7 +99,18 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
   const [shouldSaveCredentials, setShouldSaveCredentials] = useState(true)
   const [showCredentialsManager, setShowCredentialsManager] = useState(true)
   const [currentCredentialId, setCurrentCredentialId] = useState<string | null>(null)
+  const [allAccounts, setAllAccounts] = useState(true)
+  const [accountSearch, setAccountSearch] = useState('')
   const t = useI18n()
+
+  const filteredAccounts = useMemo(() => {
+    if (!accountSearch) return availableAccounts
+    const searchLower = accountSearch.toLowerCase()
+    return availableAccounts.filter(account => 
+      account.account_id.toLowerCase().includes(searchLower) ||
+      account.fcm_id.toLowerCase().includes(searchLower)
+    )
+  }, [availableAccounts, accountSearch])
 
   const handleConnect = useCallback(async (event: React.FormEvent, isAutoConnect: boolean = false) => {
     event.preventDefault()
@@ -111,6 +124,24 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
 
     try {
       const result = await authenticateAndGetAccounts(credentials)
+      
+      if (!result.success) {
+        // Handle rate limit error without showing console error
+        if (result.rateLimited) {
+          toast({
+            title: t('rithmic.rateLimit.title'),
+            description: t('rithmic.rateLimit.description', {
+              max: 2,
+              period: 15,
+              wait: 8
+            }),
+            variant: "destructive",
+          })
+          return
+        }
+        throw new Error(result.message)
+      }
+
       setAvailableAccounts(result.accounts)
       setToken(result.token)
       setWsUrl(result.websocket_url)
@@ -125,7 +156,11 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
         message: `Retrieved ${result.accounts.length} accounts. Please select accounts and click "Start Processing"`
       })
     } catch (error: unknown) {
-      console.error('Connection error:', error)
+      // Only show console error for non-rate-limit errors
+      if (!(error instanceof Error && error.message.includes('Rate limit exceeded'))) {
+        console.error('Connection error:', error)
+      }
+      
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       
       // Show error toast
@@ -162,12 +197,13 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     isConnected, 
     disconnect, 
     t, 
-    selectedAccounts, 
-    connect, 
     handleMessage, 
-    calculateStartDate, 
     user?.id,
-    authenticateAndGetAccounts
+    authenticateAndGetAccounts,
+    setAvailableAccounts,
+    setStep,
+    setToken,
+    setWsUrl,
   ])
 
   // Handle selecting a credential from the manager
@@ -178,11 +214,12 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       userId: user?.id || ''
     })
     setSelectedAccounts(credential.selectedAccounts)
+    setAllAccounts(credential.allAccounts || false)
     setCurrentCredentialId(credential.id)
     setShouldSaveCredentials(true)
     setShowCredentialsManager(false)
     setShouldAutoConnect(true)
-  }, [user?.id])
+  }, [user?.id, setSelectedAccounts])
 
   // Effect to handle auto-connect only when editing from credentials manager
   useEffect(() => {
@@ -204,26 +241,84 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       setSelectedAccounts(lastCredential.selectedAccounts)
       setShouldSaveCredentials(true)
     }
-  }, [user?.id])
+  }, [user?.id, setSelectedAccounts])
 
-  // Update the saveCredentialsAndAccounts function to use the current credential ID
+  // Update the saveCredentialsAndAccounts function to merge duplicate usernames into one credential set
   const saveCredentialsAndAccounts = useCallback(() => {
     if (shouldSaveCredentials) {
-      const dataToSave = {
-        id: currentCredentialId || generateCredentialId(),
-        credentials: {
-          username: credentials.username,
-          password: credentials.password,
-          server_type: credentials.server_type,
-          location: credentials.location
-        },
-        selectedAccounts,
-        lastSyncTime: new Date().toISOString()
+      const allData = getAllRithmicData()
+      
+      // Find all credentials with the same username
+      const existingCredentials = Object.values(allData).filter(
+        cred => cred.credentials.username === credentials.username
+      )
+
+      // If we found existing credentials, merge them
+      if (existingCredentials.length > 0) {
+        // Merge all selected accounts and remove duplicates
+        const mergedSelectedAccounts = Array.from(new Set([
+          ...selectedAccounts,
+          ...existingCredentials.flatMap(cred => cred.selectedAccounts)
+        ]))
+
+        // Use the most recent sync time
+        const mostRecentSync = Math.max(
+          ...existingCredentials.map(cred => new Date(cred.lastSyncTime).getTime()),
+          Date.now()
+        )
+
+        // Use the most recent allAccounts setting
+        const mergedAllAccounts = allAccounts || existingCredentials.some(cred => cred.allAccounts)
+
+        const dataToSave = {
+          id: existingCredentials[0].id, // Use the ID of the first existing credential
+          credentials: {
+            username: credentials.username,
+            password: credentials.password,
+            server_type: credentials.server_type,
+            location: credentials.location
+          },
+          selectedAccounts: mergedSelectedAccounts,
+          lastSyncTime: new Date(mostRecentSync).toISOString(),
+          allAccounts: mergedAllAccounts
+        }
+
+        // Delete all other credentials with the same username
+        existingCredentials.forEach(cred => {
+          if (cred.id !== dataToSave.id) {
+            clearRithmicData(cred.id)
+          }
+        })
+
+        // Save the merged credential
+        saveRithmicData(dataToSave)
+        setCurrentCredentialId(dataToSave.id)
+
+        // Show toast notification
+        toast({
+          title: t('rithmic.credentials.merged'),
+          description: t('rithmic.credentials.mergedDescription'),
+        })
+      } else {
+        // No existing credentials found, save as new
+        const dataToSave = {
+          id: currentCredentialId || generateCredentialId(),
+          credentials: {
+            username: credentials.username,
+            password: credentials.password,
+            server_type: credentials.server_type,
+            location: credentials.location
+          },
+          selectedAccounts,
+          lastSyncTime: new Date().toISOString(),
+          allAccounts
+        }
+
+        saveRithmicData(dataToSave)
+        setCurrentCredentialId(dataToSave.id)
       }
-      saveRithmicData(dataToSave)
-      setCurrentCredentialId(dataToSave.id)
     }
-  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId])
+  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId, allAccounts, t])
 
   // Reset state when component mounts (modal opens)
   useEffect(() => {
@@ -241,7 +336,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       location: 'Chicago Area',
       userId: user?.id || ''
     })
-  }, [resetProcessingState, user?.id, setToken, setWsUrl])
+  }, [resetProcessingState, user?.id, setToken, setWsUrl, setStep])
 
   // Close modal when processing is complete
   useEffect(() => {
@@ -284,37 +379,11 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     }
 
     saveCredentialsAndAccounts()
-    const startDate = calculateStartDate(selectedAccounts)
+    // Use all available accounts if allAccounts is true
+    const accountsToSync = allAccounts ? availableAccounts.map(acc => acc.account_id) : selectedAccounts
+    const startDate = calculateStartDate(accountsToSync)
     console.log('Connecting to WebSocket:', wsUrl)
-    connect(wsUrl, token, selectedAccounts, startDate)
-  }
-
-  function calculateStartDate(selectedAccounts: string[]): string {
-    // Filter trades for selected accounts
-    const accountTrades = trades.filter(trade => selectedAccounts.includes(trade.accountNumber))
-    
-    if (accountTrades.length === 0) {
-      // If no trades found, return date 90 days ago
-      const date = new Date()
-      date.setDate(date.getDate() - 91)
-      return date.toISOString().slice(0, 10).replace(/-/g, '')
-    }
-
-    // Find the most recent trade date for each account
-    const accountDates = selectedAccounts.map(accountId => {
-      const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
-      if (accountTrades.length === 0) return null
-      return Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
-    }).filter(Boolean) as number[]
-
-    // Get the oldest most recent date across all accounts
-    const oldestRecentDate = new Date(Math.min(...accountDates))
-    
-    // Set to next day
-    oldestRecentDate.setDate(oldestRecentDate.getDate() + 1)
-    
-    // Format as YYYYMMDD
-    return oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+    connect(wsUrl, token, accountsToSync, startDate)
   }
 
   return (
@@ -326,6 +395,8 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
             setShowCredentialsManager(false)
             setSelectedAccounts([])
             setAvailableAccounts([])
+            setAllAccounts(true)
+            setAccountSearch('')
             setCredentials({
               username: '',
               password: '',
@@ -455,65 +526,101 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
 
           {step === 'select-accounts' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-medium">{t('rithmic.selectAccountsTitle')}</h3>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
-                  <Checkbox
-                    id="select-all"
-                    checked={availableAccounts.length > 0 && selectedAccounts.length === availableAccounts.length}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedAccounts(availableAccounts.map(account => account.account_id))
-                      } else {
-                        setSelectedAccounts([])
-                      }
-                    }}
-                  />
-                  <Label 
-                    htmlFor="select-all"
-                    className="flex-1 cursor-pointer font-medium"
-                  >
-                    {t('rithmic.selectAllAccounts')}
-                  </Label>
-                </div>
-                {availableAccounts.map((account) => (
-                  <div key={account.account_id} className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
-                    <Checkbox
-                      id={account.account_id}
-                      checked={selectedAccounts.includes(account.account_id)}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="sync-all"
+                      checked={allAccounts}
                       onCheckedChange={(checked) => {
+                        setAllAccounts(checked)
                         if (checked) {
-                          setSelectedAccounts([...selectedAccounts, account.account_id])
-                        } else {
-                          setSelectedAccounts(selectedAccounts.filter(id => id !== account.account_id))
+                          setSelectedAccounts([])
                         }
                       }}
                     />
-                    <Label 
-                      htmlFor={account.account_id}
-                      className="flex-1 cursor-pointer"
-                    >
-                      {account.account_id} 
-                      <span className="text-sm text-muted-foreground ml-2">
-                        ({t('rithmic.fcmId')}: {account.fcm_id})
+                    <div className="flex flex-col">
+                      <Label 
+                        htmlFor="sync-all"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {t('rithmic.syncAllAccounts')}
+                      </Label>
+                      <span className="text-xs text-muted-foreground">
+                        {t('rithmic.syncAllAccountsDescription')}
                       </span>
-                    </Label>
+                    </div>
                   </div>
-                ))}
+                </div>
+
+                {!allAccounts && (
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        placeholder={t('rithmic.searchAccounts')}
+                        value={accountSearch}
+                        onChange={(e) => setAccountSearch(e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAccountSearch('')}
+                      >
+                        {t('common.clear')}
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center space-x-2 p-2 rounded bg-accent/50">
+                      <Checkbox
+                        id="select-all"
+                        checked={selectedAccounts.length === filteredAccounts.length}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedAccounts(filteredAccounts.map(acc => acc.account_id))
+                          } else {
+                            setSelectedAccounts([])
+                          }
+                        }}
+                      />
+                      <Label 
+                        htmlFor="select-all"
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {t('rithmic.selectAllAccounts')}
+                      </Label>
+                    </div>
+
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {filteredAccounts.map((account) => (
+                        <div key={account.account_id} className="flex items-center space-x-2 p-2 rounded hover:bg-accent">
+                          <Checkbox
+                            id={account.account_id}
+                            checked={selectedAccounts.includes(account.account_id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedAccounts([...selectedAccounts, account.account_id])
+                              } else {
+                                setSelectedAccounts(selectedAccounts.filter(id => id !== account.account_id))
+                              }
+                            }}
+                          />
+                          <Label 
+                            htmlFor={account.account_id}
+                            className="flex-1 cursor-pointer"
+                          >
+                            {account.account_id} 
+                            <span className="text-sm text-muted-foreground ml-2">
+                              ({t('rithmic.fcmId')}: {account.fcm_id})
+                            </span>
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="flex items-center space-x-2 py-2">
-                <Checkbox
-                  id="save-accounts"
-                  checked={shouldSaveCredentials}
-                  onCheckedChange={(checked) => setShouldSaveCredentials(checked as boolean)}
-                />
-                <Label 
-                  htmlFor="save-accounts"
-                  className="text-sm text-muted-foreground cursor-pointer"
-                >
-                  {t('rithmic.rememberSelectedAccounts')}
-                </Label>
-              </div>
+
               <div className="flex space-x-2">
                 <Button
                   variant="outline"
@@ -521,6 +628,8 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
                     setStep('credentials')
                     setSelectedAccounts([])
                     setAvailableAccounts([])
+                    setAllAccounts(true)
+                    setAccountSearch('')
                   }}
                   disabled={isLoading}
                 >
@@ -528,11 +637,16 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
                 </Button>
                 <Button
                   onClick={handleStartProcessing}
-                  disabled={isLoading || selectedAccounts.length === 0}
+                  disabled={isLoading || (!allAccounts && selectedAccounts.length === 0)}
                   className="flex-1"
                 >
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {t(`rithmic.startProcessing.${selectedAccounts.length === 1 ? 'one' : 'other'}`, { count: selectedAccounts.length })}
+                  {allAccounts 
+                    ? t('rithmic.startProcessing.all')
+                    : selectedAccounts.length === 1 
+                      ? t('rithmic.startProcessing.one', { count: 1 })
+                      : t('rithmic.startProcessing.other', { count: selectedAccounts.length })
+                  }
                 </Button>
               </div>
             </div>
@@ -541,7 +655,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
           {step === 'processing' && (
             <div className="space-y-4">
               <RithmicSyncFeedback 
-                totalAccounts={selectedAccounts.length}
+                totalAccounts={allAccounts ? availableAccounts.length : selectedAccounts.length}
               />
             </div>
           )}

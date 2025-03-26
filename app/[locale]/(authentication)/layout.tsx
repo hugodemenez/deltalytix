@@ -1,21 +1,26 @@
 'use client'
 
-import { useEffect } from "react";
-import { redirect, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
-import { createClient } from "@/server/auth";
-import { I18nProviderClient } from "@/locales/client";
 
-export default function RootLayout({
-  children,
-  params: { locale },
-}: Readonly<{
+interface AuthenticationLayoutProps {
   children: React.ReactNode;
-  params: { locale: string };
-}>) {
-  
+}
+
+export default function AuthenticationLayout({
+  children
+}: AuthenticationLayoutProps) {
   const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
+
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isClient) return;
+
     const hash = window.location.hash;
     const params = new URLSearchParams(hash.slice(1)); // Remove the # and parse
 
@@ -30,11 +35,7 @@ export default function RootLayout({
       // Clear the hash after showing the toast
       router.replace('/authentication');
     }
-  }, [router]);
+  }, [router, isClient]);
 
-  return (
-    <>
-      <I18nProviderClient locale={locale}>{children}</I18nProviderClient>
-    </>
-  );
+  return children;
 }

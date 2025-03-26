@@ -188,13 +188,11 @@ export default function BillingManagement() {
         <Card className="border-none shadow-none bg-transparent">
           <CardHeader className="px-0">
             <CardTitle>{t('billing.currentPlan')}</CardTitle>
-            <CardDescription className="mt-1.5">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-4 w-[100px]" /> {/* Plan name */}
-                <span className="text-muted-foreground">•</span>
-                <Skeleton className="h-4 w-[60px]" /> {/* Status */}
-              </div>
-            </CardDescription>
+            <div className="mt-1.5 text-sm text-muted-foreground flex items-center gap-2">
+              <Skeleton className="h-4 w-[100px]" /> {/* Plan name */}
+              <span className="text-muted-foreground">•</span>
+              <Skeleton className="h-4 w-[60px]" /> {/* Status */}
+            </div>
           </CardHeader>
           <CardContent className="px-0">
             <div className="rounded-lg border bg-card p-6 space-y-6">
@@ -202,7 +200,9 @@ export default function BillingManagement() {
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="space-y-2">
                   <Skeleton className="h-8 w-[100px]" /> {/* Price */}
-                  <Skeleton className="h-4 w-[140px]" /> {/* Billing interval */}
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-[140px]" /> {/* Billing interval */}
+                  </div>
                 </div>
               </div>
 
@@ -212,14 +212,14 @@ export default function BillingManagement() {
                   <div className="flex items-start gap-2">
                     <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium">Active Since</p>
+                      <div className="font-medium">Active Since</div>
                       <Skeleton className="h-4 w-[120px] mt-1" />
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium">Current Period</p>
+                      <div className="font-medium">Current Period</div>
                       <Skeleton className="h-4 w-[200px] mt-1" />
                     </div>
                   </div>
@@ -261,22 +261,25 @@ export default function BillingManagement() {
       <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0">
           <CardTitle>{t('billing.currentPlan')}</CardTitle>
-          <CardDescription className="mt-1.5">
-            {subscription?.plan?.name || t('pricing.basic.name')} • {subscription?.status === 'active' 
-              ? <span className="text-green-500 dark:text-green-400 inline-flex items-center gap-1">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  {t('billing.status.active')}
-                </span>
-              : subscription?.cancel_at_period_end 
-                ? <span className="text-yellow-500 dark:text-yellow-400 inline-flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {t('billing.scheduledToCancel')}
-                  </span>
-                : <span className="text-gray-500 dark:text-gray-400">
-                    {subscription?.status ? t(`billing.status.${subscription.status as SubscriptionStatus}`) : t('billing.notApplicable')}
-                  </span>
-            }
-          </CardDescription>
+          <div className="mt-1.5 text-sm text-muted-foreground flex items-center gap-2">
+            <span>{subscription?.plan?.name || t('pricing.basic.name')}</span>
+            <span className="text-muted-foreground">•</span>
+            {subscription?.status === 'active' ? (
+              <span className="text-green-500 dark:text-green-400 inline-flex items-center gap-1">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {t('billing.status.active')}
+              </span>
+            ) : subscription?.cancel_at_period_end ? (
+              <span className="text-yellow-500 dark:text-yellow-400 inline-flex items-center gap-1">
+                <Clock className="h-3.5 w-3.5" />
+                {t('billing.scheduledToCancel')}
+              </span>
+            ) : (
+              <span className="text-gray-500 dark:text-gray-400">
+                {subscription?.status ? t(`billing.status.${subscription.status as SubscriptionStatus}`) : t('billing.notApplicable')}
+              </span>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="px-0">
           <div className="rounded-lg border bg-card p-6 space-y-6">
@@ -285,15 +288,17 @@ export default function BillingManagement() {
               <div>
                 {subscription?.promotion ? (
                   <div className="space-y-1">
-                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                    <div className="text-2xl font-bold flex items-center gap-2">
                       <span className="text-muted-foreground line-through">
                         €{(subscription.plan.amount / 100).toFixed(2)}
                       </span>
                       <span>
                         €{((subscription.plan.amount - (subscription.promotion.amount_off || (subscription.promotion.percent_off ? subscription.plan.amount * subscription.promotion.percent_off / 100 : 0))) / 100).toFixed(2)}
-                        /{subscription.plan.interval}
+                        <span className="text-lg font-normal text-gray-500">
+                          /{subscription.plan.interval}
+                        </span>
                       </span>
-                    </h2>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
                         {subscription.promotion.percent_off 
@@ -315,11 +320,18 @@ export default function BillingManagement() {
                     </div>
                   </div>
                 ) : (
-                  <h2 className="text-2xl font-bold">
+                  <div className="text-2xl font-bold">
                     {subscription?.plan?.amount 
-                      ? `€${(subscription.plan.amount / 100).toFixed(2)}/${subscription.plan.interval}`
+                      ? (
+                        <>
+                          €{(subscription.plan.amount / 100).toFixed(2)}
+                          <span className="text-lg font-normal text-gray-500">
+                            /{subscription.plan.interval}
+                          </span>
+                        </>
+                      )
                       : t('pricing.free')}
-                  </h2>
+                  </div>
                 )}
                 <p className="text-sm text-muted-foreground mt-1">
                   {subscription?.plan?.interval === 'year' 
@@ -346,24 +358,28 @@ export default function BillingManagement() {
                   <div className="flex items-start gap-2">
                     <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium">{t('billing.dates.activeSince', { 
-                        date: formatStripeDate(subscription.created, locale, t) 
-                      })}</p>
+                      <p className="font-medium">
+                        {t('billing.dates.activeSince', { 
+                          date: formatStripeDate(subscription.created, locale, t) 
+                        })}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium">{t('billing.dates.currentPeriod', {
-                        startDate: formatStripeDate(subscription.current_period_start, locale, t, { 
-                          month: 'long', 
-                          day: 'numeric'
-                        }),
-                        endDate: formatStripeDate(subscription.current_period_end, locale, t, { 
-                          month: 'long', 
-                          day: 'numeric'
-                        })
-                      })}</p>
+                      <p className="font-medium">
+                        {t('billing.dates.currentPeriod', {
+                          startDate: formatStripeDate(subscription.current_period_start, locale, t, { 
+                            month: 'long', 
+                            day: 'numeric'
+                          }),
+                          endDate: formatStripeDate(subscription.current_period_end, locale, t, { 
+                            month: 'long', 
+                            day: 'numeric'
+                          })
+                        })}
+                      </p>
                     </div>
                   </div>
                   {subscription.trial_start && subscription.trial_end && (

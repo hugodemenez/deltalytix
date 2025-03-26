@@ -168,8 +168,6 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
   } catch (error) {
     console.error('Error getting shared trades:', error)
     throw error
-  } finally {
-    await prisma.$disconnect()
   }
 }
 

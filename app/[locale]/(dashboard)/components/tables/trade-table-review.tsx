@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, Fragment } from 'react'
+import React, { useState, useEffect, useMemo, useRef, Fragment, useCallback } from 'react'
 import { useUserData } from '@/components/context/user-data'
 import {
   ColumnDef,
@@ -387,7 +387,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     }
   }
 
-  const handleDeleteTag = async (tag: string) => {
+  const handleDeleteTag = useCallback(async (tag: string) => {
     try {
       await deleteTagFromAllTrades(tag)
       
@@ -401,9 +401,9 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     } catch (error) {
       console.error('Failed to delete tag:', error)
     }
-  }
+  }, [trades, updateTrade])
 
-  const handleImageUpload = async (tradeId: string, file: File) => {
+  const handleImageUpload = useCallback(async (tradeId: string, file: File) => {
     try {
       const base64 = await convertFileToBase64(file)
       await updateTradeImage(tradeId, base64)
@@ -411,9 +411,9 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     } catch (error) {
       console.error('Failed to upload image:', error)
     }
-  }
+  }, [updateTrade])
 
-  const handleImagePaste = async (tradeId: string, e: ClipboardEvent) => {
+  const handleImagePaste = useCallback(async (tradeId: string, e: ClipboardEvent) => {
     const items = e.clipboardData?.items
     if (!items) return
 
@@ -426,16 +426,16 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
         }
       }
     }
-  }
+  }, [handleImageUpload])
 
-  const handleRemoveImage = async (tradeId: string) => {
+  const handleRemoveImage = useCallback(async (tradeId: string) => {
     try {
       await updateTradeImage(tradeId, null)
       updateTrade(tradeId, { imageBase64: null })
     } catch (error) {
       console.error('Failed to remove image:', error)
     }
-  }
+  }, [updateTrade])
 
   useEffect(() => {
     const handleGlobalPaste = async (e: ClipboardEvent) => {
@@ -447,24 +447,24 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
 
     document.addEventListener('paste', handleGlobalPaste)
     return () => document.removeEventListener('paste', handleGlobalPaste)
-  }, [])
+  }, [handleImagePaste])
 
-  const handleTradeUpdate = (tradeId: string, updates: Partial<Trade>) => {
+  const handleTradeUpdate = useCallback((tradeId: string, updates: Partial<Trade>) => {
     // Only update the context, which will trigger a re-render with the new data
     updateTrade(tradeId, updates)
-  }
+  }, [updateTrade])
 
-  const handleVideoUrlChange = (tradeId: string, videoUrl: string | null) => {
+  const handleVideoUrlChange = useCallback((tradeId: string, videoUrl: string | null) => {
     updateTrade(tradeId, { videoUrl })
-  }
+  }, [updateTrade])
 
-  const handleTagsChange = (tradeId: string, newTags: string[]) => {
+  const handleTagsChange = useCallback((tradeId: string, newTags: string[]) => {
     updateTrade(tradeId, { tags: newTags })
-  }
+  }, [updateTrade])
 
-  const handleCommentChange = (tradeId: string, comment: string | null) => {
+  const handleCommentChange = useCallback((tradeId: string, comment: string | null) => {
     updateTrade(tradeId, { comment })
-  }
+  }, [updateTrade])
 
   const columns = useMemo<ColumnDef<ExtendedTrade>[]>(() => [
     {
@@ -834,7 +834,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
       },
       size: 200,
     }
-  ], [t, timezone, handleTagsChange, handleCommentChange, handleVideoUrlChange, tags])
+  ], [t, timezone, handleTagsChange, handleCommentChange, handleVideoUrlChange, tags, handleDeleteTag, handleImagePaste, handleImageUpload, handleRemoveImage])
 
   const table = useReactTable<ExtendedTrade>({
     data: paginatedTrades,
