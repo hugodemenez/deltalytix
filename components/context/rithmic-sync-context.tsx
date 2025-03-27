@@ -271,7 +271,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
                   [accountId]: {
                     ...prev[accountId],
                     totalDays: parseInt(totalDays),
-                    daysProcessed: 0
+                    daysProcessed: 0,
+                    total: parseInt(totalDays) // Also update the total field
                   }
                 }
               })
@@ -593,7 +594,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         processedDates: [],
         currentDayNumber: 0,
         currentDate: '',
-        lastProcessedDate: ''
+        lastProcessedDate: '',
+        current: 0,
+        total: 0
       }
     }), {})
 

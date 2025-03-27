@@ -212,6 +212,13 @@ export default {
     'pricing.plus.feature2': 'Unlimited data storage',
     'pricing.plus.feature3': 'Rithmic direct connection',
     'pricing.plus.feature4': 'All statistics and charts',
+    'pricing.plus.promo': {
+        'price': '€19.99',
+        'originalPrice': '€29.99',
+        'code': 'Use code SALON',
+        'duration': 'First month only',
+        'validUntil': 'Valid until March 31st'
+    },
     'pricing.pro.name': 'Pro',
     'pricing.pro.description': 'Advanced analytics and custom development for professional traders.',
     'pricing.pro.feature1': 'Everything in Plus',

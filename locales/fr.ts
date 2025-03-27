@@ -206,6 +206,13 @@ export default {
     'pricing.plus.feature2': 'Stockage de données illimité',
     'pricing.plus.feature3': 'Connexion directe Rithmic',
     'pricing.plus.feature4': 'Toutes les statistiques et graphiques',
+    'pricing.plus.promo': {
+        'price': '19,99 €',
+        'originalPrice': '29,99 €',
+        'code': 'Utilisez le code SALON',
+        'duration': 'Premier mois uniquement',
+        'validUntil': 'Valable jusqu\'au 31 mars'
+    },
     'pricing.pro.name': 'Pro',
     'pricing.pro.description': 'Analyses avancées et développement personnalisé pour traders professionnels.',
     'pricing.pro.feature1': 'Tout ce qui est inclus dans Plus',

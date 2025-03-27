@@ -91,25 +91,50 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
 
     const priceDisplay = (
       <>
-        €{(() => {
-          switch (billingPeriod) {
-            case 'monthly':
-              return plan.price.monthly;
-            case 'quarterly':
-              return (plan.price.quarterly / 3).toFixed(2);
-            case 'yearly':
-              return (plan.price.yearly / 12).toFixed(2);
-          }
-        })()}
-        <span className="text-lg font-normal text-gray-500">
-          /{t('pricing.month')}
-        </span>
-        {billingPeriod !== 'monthly' && (
-          <div className="text-sm font-normal text-gray-500 mt-1">
-            {billingPeriod === 'yearly' 
-              ? t('pricing.billedYearly', { total: plan.price.yearly })
-              : t('pricing.billedQuarterly', { total: plan.price.quarterly })}
-          </div>
+        {plan.name === t('pricing.plus.name') && billingPeriod === 'monthly' ? (
+          <>
+            <span className="line-through text-gray-500 text-2xl mr-2">
+              {t('pricing.plus.promo.originalPrice')}
+            </span>
+            <span className="text-red-500">
+              {t('pricing.plus.promo.price')}
+            </span>
+            <span className="text-lg font-normal text-gray-500">
+              /{t('pricing.month')}
+            </span>
+            <div className="text-sm font-normal text-green-500 mt-1">
+              {t('pricing.plus.promo.code')}
+            </div>
+            <div className="text-sm font-normal text-gray-500">
+              {t('pricing.plus.promo.validUntil')}
+            </div>
+            <div className="text-xs font-normal text-gray-400 mt-1">
+              {t('pricing.plus.promo.duration')}
+            </div>
+          </>
+        ) : (
+          <>
+            €{(() => {
+              switch (billingPeriod) {
+                case 'monthly':
+                  return plan.price.monthly;
+                case 'quarterly':
+                  return (plan.price.quarterly / 3).toFixed(2);
+                case 'yearly':
+                  return (plan.price.yearly / 12).toFixed(2);
+              }
+            })()}
+            <span className="text-lg font-normal text-gray-500">
+              /{t('pricing.month')}
+            </span>
+            {billingPeriod !== 'monthly' && (
+              <div className="text-sm font-normal text-gray-500 mt-1">
+                {billingPeriod === 'yearly' 
+                  ? t('pricing.billedYearly', { total: plan.price.yearly })
+                  : t('pricing.billedQuarterly', { total: plan.price.quarterly })}
+              </div>
+            )}
+          </>
         )}
       </>
     )
