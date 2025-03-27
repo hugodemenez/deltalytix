@@ -293,12 +293,12 @@ export default function Component() {
                                         <ListItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} title={t('navbar.joinCommunity')} icon={<Users className="h-4 w-4" />}>
                                             {t('navbar.joinCommunityDescription')}
                                         </ListItem>
-                                        <ListItem href="/docs" title={t('navbar.documentation')} icon={<FileText className="h-4 w-4" />}>
+                                        {/* <ListItem href="/docs" title={t('navbar.documentation')} icon={<FileText className="h-4 w-4" />}>
                                             {t('navbar.documentationDescription')}
-                                        </ListItem>
-                                        <ListItem href="/api" title={t('navbar.api')} icon={<Cpu className="h-4 w-4" />}>
+                                        </ListItem> */}
+                                        {/* <ListItem href="/api" title={t('navbar.api')} icon={<Cpu className="h-4 w-4" />}>
                                             {t('navbar.apiDescription')}
-                                        </ListItem>
+                                        </ListItem> */}
                                         <li className="row-span-3 md:col-span-2">
                                             <NavigationMenuLink asChild>
                                                 <a className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md" href="#api">
