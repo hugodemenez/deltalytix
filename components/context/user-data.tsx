@@ -648,8 +648,8 @@ export const UserDataProvider: React.FC<{
   }, [timezone, isSharedView]);
 
   const updateTrade = useCallback((tradeId: string, updates: Partial<TradeWithUTC>) => {
-    setTrades(prevTrades => 
-      prevTrades.map(trade => 
+    setTrades(prevTrades => {
+      const updatedTrades = prevTrades.map(trade => 
         trade.id === tradeId ? { 
           ...trade, 
           ...updates,
@@ -659,8 +659,19 @@ export const UserDataProvider: React.FC<{
             ? formatInTimeZone(new Date(updates.entryDate), timezone, 'yyyy-MM-dd')
             : trade.utcDateStr
         } : trade
-      )
-    );
+      );
+
+      // Update the cache with the new trades
+      const existingCache = getLocalCache();
+      if (existingCache) {
+        setLocalCache({
+          ...existingCache,
+          trades: updatedTrades
+        });
+      }
+
+      return updatedTrades;
+    });
   }, [timezone]);
 
   // Add a function to update multiple trades at once

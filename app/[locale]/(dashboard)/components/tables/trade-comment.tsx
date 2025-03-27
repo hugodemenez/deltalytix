@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Trash2, X } from 'lucide-react'
+import { Trash2, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/locales/client'
 import { updateTradeComment } from '@/server/database'
@@ -24,35 +24,29 @@ export function TradeComment({ tradeId, comment: initialComment, onCommentChange
   const [localComment, setLocalComment] = useState(initialComment || '')
   const [isUpdating, setIsUpdating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const updateCommentRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const successTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const handleCommentChange = async (value: string) => {
+  const handleCommentChange = (value: string) => {
     setLocalComment(value)
-    setIsUpdating(true)
-    
-    if (updateCommentRef.current) {
-      clearTimeout(updateCommentRef.current)
-    }
-    if (successTimeoutRef.current) {
-      clearTimeout(successTimeoutRef.current)
-    }
+    setHasUnsavedChanges(true)
+  }
 
-    updateCommentRef.current = setTimeout(async () => {
-      try {
-        await updateTradeComment(tradeId, value || null)
-        onCommentChange?.(value || null)
-        setShowSuccess(true)
-        successTimeoutRef.current = setTimeout(() => {
-          setShowSuccess(false)
-        }, 1000)
-      } catch (error) {
-        console.error('Failed to update comment:', error)
-      } finally {
-        setIsUpdating(false)
-      }
-    }, 800)
+  const handleSave = async () => {
+    setIsUpdating(true)
+    try {
+      await updateTradeComment(tradeId, localComment || null)
+      onCommentChange?.(localComment || null)
+      setHasUnsavedChanges(false)
+      setShowSuccess(true)
+      setTimeout(() => {
+        setShowSuccess(false)
+      }, 1000)
+    } catch (error) {
+      console.error('Failed to update comment:', error)
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
   const handleClear = async () => {
@@ -61,8 +55,9 @@ export function TradeComment({ tradeId, comment: initialComment, onCommentChange
       await updateTradeComment(tradeId, null)
       setLocalComment('')
       onCommentChange?.(null)
+      setHasUnsavedChanges(false)
       setShowSuccess(true)
-      successTimeoutRef.current = setTimeout(() => {
+      setTimeout(() => {
         setShowSuccess(false)
       }, 1000)
     } catch (error) {
@@ -145,6 +140,14 @@ export function TradeComment({ tradeId, comment: initialComment, onCommentChange
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 {t('common.clear')}
+              </Button>
+              <Button
+                size="sm"
+                disabled={isUpdating || !hasUnsavedChanges}
+                onClick={handleSave}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {t('common.save')}
               </Button>
             </div>
           </div>
