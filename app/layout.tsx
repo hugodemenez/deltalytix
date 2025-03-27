@@ -81,7 +81,8 @@ export const metadata: Metadata = {
     },
   },
   other:{
-    'google':'notranslate',
+    'google': 'notranslate',
+    'google-site-verification': 'your-verification-code',
   },
   authors: [{ name: 'Hugo DEMENEZ' }],
   creator: 'Hugo DEMENEZ',
@@ -99,8 +100,14 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="en" className="bg-background" translate="no">
       <head>
+        {/* Prevent Google Translate */}
+        <meta name="google" content="notranslate" />
+        <meta name="googlebot" content="notranslate" />
+        <meta name="googlebot-news" content="notranslate" />
+        <meta name="google-site-verification" content="your-verification-code" />
+
         {/* Google Tag Manager - Initial consent mode setup */}
         <Script id="google-consent-mode" strategy="beforeInteractive">
           {`
