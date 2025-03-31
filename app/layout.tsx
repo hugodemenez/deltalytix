@@ -82,7 +82,6 @@ export const metadata: Metadata = {
   },
   other:{
     'google': 'notranslate',
-    'google-site-verification': 'your-verification-code',
   },
   authors: [{ name: 'Hugo DEMENEZ' }],
   creator: 'Hugo DEMENEZ',

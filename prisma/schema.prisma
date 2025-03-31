@@ -79,6 +79,7 @@ model User {
   notifications   Notification[]
   subscriptions   Subscription?
   accounts        Account[]
+  groups          Group[]
   dashboardLayout DashboardLayout?
   moods           Mood[]
   tags            Tag[]
@@ -94,10 +95,26 @@ model User {
   @@schema("public")
 }
 
+model Group {
+  id          String    @id @default(uuid())
+  name        String
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts    Account[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([name, userId])
+  @@index([userId])
+  @@schema("public")
+}
+
 model Account {
   id                String    @id @unique @default(uuid())
   number            String
-  propfirm          String    @default("")
+  propfirm          String    @default("") // Keep for backward compatibility
+  groupId           String?   // New field for group reference
+  group             Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
   drawdownThreshold Float     @default(0)
   trailingDrawdown  Boolean   @default(false)
   trailingStopProfit Float?   
@@ -114,6 +131,7 @@ model Account {
 
   @@unique([number, userId])
   @@index([number])
+  @@index([groupId])
   @@schema("public")
 }
 
