@@ -5,13 +5,14 @@ import { getSubscriptionDetails } from './subscription'
 import { getTrades, loadDashboardLayout } from './database'
 import { getTickDetails } from './tick-details'
 import { getShared } from './shared'
-import { Tag, Trade } from '@prisma/client'
+import { Tag, Trade, Group } from '@prisma/client'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { getTags } from './tags'
 import { getOnboardingStatus } from './onboarding'
 import { getPropFirmAccounts } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
 import type { Account as PropFirmAccount } from '@prisma/client'
 import { getEtpToken } from './etp'
+import { getGroups, GroupWithAccounts } from './groups'
 
 // Update the interface declarations to export them
 export interface LayoutItem {
@@ -51,12 +52,14 @@ export type InitialDataResponse = {
   error?: string
   tags: Tag[]
   propfirmAccounts: PropFirmAccount[]
+  groups: GroupWithAccounts[]
 }
 
 export type SharedDataResponse = {
   trades: Trade[]
   params: any
   error?: string
+  groups: GroupWithAccounts[]
 }
 
 export async function loadInitialData(email?: string): Promise<InitialDataResponse> {
@@ -80,6 +83,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         layouts: null,
         tags: [],
         propfirmAccounts: [],
+        groups: [],
         error: 'Session not found'
       }
     }
@@ -96,6 +100,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         layouts: null,
         tags: [],
         propfirmAccounts: [],
+        groups: [],
         error: 'No active session'
       }
     }
@@ -115,6 +120,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         layouts: null,
         tags: [],
         propfirmAccounts: [],
+        groups: [],
         error: 'Authentication failed'
       }
     }
@@ -131,6 +137,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         layouts: null,
         tags: [],
         propfirmAccounts: [],
+        groups: [],
         error: 'User not found'
       }
     }
@@ -148,12 +155,13 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     const subscription = await getSubscriptionDetails(user.email || email || '')
 
     // Run remaining operations concurrently with subscription status
-    const [tradesResult, tickDetailsResult, layoutsResult, tagsResult, propfirmAccountsResult] = await Promise.all([
+    const [tradesResult, tickDetailsResult, layoutsResult, tagsResult, propfirmAccountsResult, groupsResult] = await Promise.all([
       getTrades(user.id, subscription?.isActive ?? false).catch(() => []),
       getTickDetails().catch(() => []),
       loadDashboardLayout(user.id).catch(() => null),
       getTags(user.id).catch(() => []),
-      getPropFirmAccounts(user.id).catch(() => [])
+      getPropFirmAccounts(user.id).catch(() => []),
+      getGroups(user.id).catch(() => [])
     ])
 
     console.log('[loadInitialData] Processing tick details', { tickCount: tickDetailsResult.length })
@@ -170,7 +178,8 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       tickDetailsCount: Object.keys(tickDetails).length,
       hasSubscription: !!subscription,
       hasLayouts: !!layouts,
-      propfirmAccountsCount: propfirmAccountsResult.length
+      propfirmAccountsCount: propfirmAccountsResult.length,
+      groupsCount: groupsResult.length
     })
 
     return {
@@ -182,7 +191,8 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       tickDetails,
       layouts,
       tags: tagsResult,
-      propfirmAccounts: propfirmAccountsResult as PropFirmAccount[]
+      propfirmAccounts: propfirmAccountsResult as PropFirmAccount[],
+      groups: groupsResult
     }
   } catch (error) {
     console.error('[loadInitialData] Error loading initial data:', error)
@@ -196,6 +206,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       layouts: null,
       tags: [],
       propfirmAccounts: [],
+      groups: [],
       error: 'Failed to load initial data'
     }
   }
@@ -207,7 +218,8 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
     return {
       trades: [],
       params: null,
-      error: 'Invalid slug'
+      error: 'Invalid slug',
+      groups: []
     }
   }
 
@@ -219,7 +231,8 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
       return {
         trades: [],
         params: null,
-        error: 'Shared data not found'
+        error: 'Shared data not found',
+        groups: []
       }
     }
 
@@ -230,14 +243,16 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
 
     return {
       trades: sharedData.trades,
-      params: sharedData.params
+      params: sharedData.params,
+      groups: []
     }
   } catch (error) {
     console.error('[loadSharedData] Error loading shared data:', error)
     return {
       trades: [],
       params: null,
-      error: 'Failed to load shared data'
+      error: 'Failed to load shared data',
+      groups: []
     }
   }
 } 
