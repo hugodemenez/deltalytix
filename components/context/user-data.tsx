@@ -1,8 +1,9 @@
 'use client'
+import { createClient } from '@/server/auth'
 import { User } from '@supabase/supabase-js';
 import { useParams } from 'next/navigation';
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
-import { Trade as PrismaTrade, Tag } from '@prisma/client'
+import { Trade as PrismaTrade, Tag, Group as PrismaGroup, Account as PrismaAccount } from '@prisma/client'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
 import { parseISO, isValid, startOfDay, endOfDay } from 'date-fns'
 import { SharedParams } from '@/server/shared'
@@ -11,6 +12,8 @@ import { loadInitialData, loadSharedData, LayoutItem as ServerLayoutItem, Layout
 import { saveDashboardLayout } from '@/server/database'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import type { Account as PropFirmAccount } from '@prisma/client'
+import { setupPropFirmAccount, getPropFirmAccounts } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
+import { createGroup as createGroupAction, updateGroup as updateGroupAction, deleteGroup as deleteGroupAction, getGroups, moveAccountToGroup as moveAccountToGroupAction } from '@/server/groups'
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -88,6 +91,20 @@ interface HourFilter {
 // Add tag filter interface
 interface TagFilter {
   tags: string[]
+}
+
+interface Account {
+  id: string
+  number: string
+  groupId: string | null
+}
+
+interface Group {
+  id: string
+  name: string
+  accounts: Account[]
+  createdAt: Date
+  updatedAt: Date
 }
 
 // Add after the interfaces and before the UserDataContext
@@ -286,6 +303,18 @@ interface UserDataContextType {
   // Add propfirm accounts
   propfirmAccounts: PropFirmAccount[]
   setPropfirmAccounts: React.Dispatch<React.SetStateAction<PropFirmAccount[]>>
+
+  // New functions
+  updateAccount: (accountNumber: string, updates: { propfirm?: string }) => Promise<void>
+
+  // Add groups related properties
+  groups: Group[]
+  setGroups: React.Dispatch<React.SetStateAction<Group[]>>
+  refreshGroups: () => Promise<void>
+  createGroup: (name: string) => Promise<void>
+  updateGroup: (groupId: string, name: string) => Promise<void>
+  deleteGroup: (groupId: string) => Promise<void>
+  moveAccountToGroup: (accountId: string, targetGroupId: string | null) => Promise<void>
 }
 
 
@@ -329,6 +358,7 @@ interface CachedData {
   tags: Tag[];
   propfirmAccounts: PropFirmAccount[];
   layouts: Layouts;
+  groups: Group[];
 }
 
 // Add this function before the UserDataProvider
@@ -431,6 +461,9 @@ export const UserDataProvider: React.FC<{
   // Add propfirm accounts state
   const [propfirmAccounts, setPropfirmAccounts] = useState<PropFirmAccount[]>([])
 
+  // Add groups state
+  const [groups, setGroups] = useState<Group[]>([])
+
   // Initialize state from cache
   useEffect(() => {
     const loadData = async () => {
@@ -462,6 +495,8 @@ export const UserDataProvider: React.FC<{
             if (sharedData.params.tickDetails) {
               setTickDetails(sharedData.params.tickDetails);
             }
+
+            setGroups(sharedData.groups || [])
           }
           return;
         }
@@ -481,7 +516,17 @@ export const UserDataProvider: React.FC<{
             tags,
             propfirmAccounts,
             layouts,
+            groups,
           } = cached;
+
+
+          if (!user) {
+            const supabase = await createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+              await supabase.auth.signOut()
+            }
+          }
 
           setUser(user);
           setEtpToken(etpToken);
@@ -491,6 +536,7 @@ export const UserDataProvider: React.FC<{
           setTags(tags);
           setPropfirmAccounts(propfirmAccounts);
           setLayouts(layouts);
+          setGroups(groups);
 
           // Update date range if needed
           if (trades?.length > 0) {
@@ -529,6 +575,7 @@ export const UserDataProvider: React.FC<{
           setTickDetails(fetchedData.tickDetails || {});
           setTags(fetchedData.tags || []);
           setPropfirmAccounts(fetchedData.propfirmAccounts || []);
+          setGroups(fetchedData.groups || []);
 
           // Handle layouts
           const newLayouts = fetchedData.layouts || defaultLayouts;
@@ -544,6 +591,7 @@ export const UserDataProvider: React.FC<{
             tags: fetchedData.tags || [],
             propfirmAccounts: fetchedData.propfirmAccounts || [],
             layouts: newLayouts,
+            groups: fetchedData.groups || [],
           });
 
           // Update date range if needed
@@ -615,6 +663,7 @@ export const UserDataProvider: React.FC<{
         setTickDetails(data.tickDetails || {});
         setTags(data.tags || []);
         setPropfirmAccounts(data.propfirmAccounts || []);
+        setGroups(data.groups || []);
 
         // Update cache
         setLocalCache({
@@ -622,6 +671,7 @@ export const UserDataProvider: React.FC<{
           tickDetails: data.tickDetails || {},
           tags: data.tags || [],
           propfirmAccounts: data.propfirmAccounts || [],
+          groups: data.groups || [],
         });
 
         // Update date range if needed
@@ -902,6 +952,7 @@ export const UserDataProvider: React.FC<{
       setSubscription(data.subscription);
       setTags(data.tags || []);
       setPropfirmAccounts(data.propfirmAccounts || []);
+      setGroups(data.groups || []);
 
       // Update cache
       setLocalCache({
@@ -910,9 +961,116 @@ export const UserDataProvider: React.FC<{
         subscription: data.subscription,
         tags: data.tags || [],
         propfirmAccounts: data.propfirmAccounts || [],
+        groups: data.groups || [],
       });
     }
   }, [isSharedView]);
+
+  const updateAccount = useCallback(async (accountNumber: string, updates: { propfirm?: string }) => {
+    if (!user?.id) return
+
+    try {
+      // Get the current account to preserve other properties
+      const currentAccount = propfirmAccounts.find(acc => acc.number === accountNumber)
+      if (!currentAccount) return
+
+      // Update the account
+      await setupPropFirmAccount({
+        accountNumber,
+        userId: user.id,
+        propfirm: updates.propfirm ?? currentAccount.propfirm,
+        profitTarget: currentAccount.profitTarget,
+        drawdownThreshold: currentAccount.drawdownThreshold,
+        startingBalance: currentAccount.startingBalance,
+        isPerformance: currentAccount.isPerformance,
+        trailingDrawdown: currentAccount.trailingDrawdown ?? undefined,
+        trailingStopProfit: currentAccount.trailingStopProfit ?? undefined,
+        resetDate: currentAccount.resetDate,
+        consistencyPercentage: currentAccount.consistencyPercentage ?? undefined,
+      })
+
+      // Refresh the accounts list
+      const accounts = await getPropFirmAccounts(user.id)
+      setPropfirmAccounts(accounts)
+
+      // Update cache
+      const existingCache = getLocalCache()
+      if (existingCache) {
+        setLocalCache({
+          ...existingCache,
+          propfirmAccounts: accounts
+        })
+      }
+    } catch (error) {
+      console.error('Error updating account:', error)
+      throw error
+    }
+  }, [user?.id, propfirmAccounts])
+
+  // Add refreshGroups function
+  const refreshGroups = useCallback(async () => {
+    if (!user?.id || isSharedView) return
+    try {
+      const fetchedGroups = await getGroups(user.id)
+      setGroups(fetchedGroups)
+      
+      // Update cache
+      const existingCache = getLocalCache()
+      if (existingCache) {
+        setLocalCache({
+          ...existingCache,
+          groups: fetchedGroups
+        })
+      }
+    } catch (error) {
+      console.error('Error refreshing groups:', error)
+    }
+  }, [user?.id, isSharedView])
+
+  // Add createGroup function
+  const createGroup = useCallback(async (name: string) => {
+    if (!user?.id) return
+    try {
+      await createGroupAction(user.id, name)
+      await refreshGroups()
+    } catch (error) {
+      console.error('Error creating group:', error)
+      throw error
+    }
+  }, [user?.id, refreshGroups])
+
+  // Add updateGroup function
+  const updateGroup = useCallback(async (groupId: string, name: string) => {
+    try {
+      await updateGroupAction(groupId, name)
+      await refreshGroups()
+    } catch (error) {
+      console.error('Error updating group:', error)
+      throw error
+    }
+  }, [refreshGroups])
+
+  // Add deleteGroup function
+  const deleteGroup = useCallback(async (groupId: string) => {
+    try {
+      await deleteGroupAction(groupId)
+      await refreshGroups()
+    } catch (error) {
+      console.error('Error deleting group:', error)
+      throw error
+    }
+  }, [refreshGroups])
+
+  // Add moveAccountToGroup function
+  const moveAccountToGroup = useCallback(async (accountId: string, targetGroupId: string | null) => {
+    try {
+      await moveAccountToGroupAction(accountId, targetGroupId)
+      await refreshGroups()
+    } catch (error) {
+      console.error('Error moving account to group:', error)
+      throw error
+    }
+  }, [refreshGroups])
 
   const contextValue = {
     // User related
@@ -996,6 +1154,18 @@ export const UserDataProvider: React.FC<{
     // Add propfirm accounts
     propfirmAccounts,
     setPropfirmAccounts,
+
+    // New functions
+    updateAccount,
+
+    // Add groups related values
+    groups,
+    setGroups,
+    refreshGroups,
+    createGroup,
+    updateGroup,
+    deleteGroup,
+    moveAccountToGroup,
   };
 
   // If we're still loading initial data, return null or a loading state
