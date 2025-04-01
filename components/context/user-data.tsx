@@ -519,13 +519,9 @@ export const UserDataProvider: React.FC<{
             groups,
           } = cached;
 
-
           if (!user) {
             const supabase = await createClient()
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-              await supabase.auth.signOut()
-            }
+            await supabase.auth.signOut()
           }
 
           setUser(user);
@@ -612,6 +608,8 @@ export const UserDataProvider: React.FC<{
         }
       } catch (error) {
         console.error('Error loading data:', error);
+          const supabase = await createClient()
+          await supabase.auth.signOut()
       } finally {
         setIsLoading(false);
         setIsInitialLoad(false);
