@@ -5,16 +5,10 @@ import { Responsive, WidthProvider } from 'react-grid-layout'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuLabel,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, Pencil, Camera, Trash2 } from 'lucide-react'
 import html2canvas from 'html2canvas'
@@ -25,10 +19,6 @@ import { useI18n } from "@/locales/client"
 import { WIDGET_REGISTRY, getWidgetComponent } from '../config/widget-registry'
 import { useAutoScroll } from '../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
-import { AddWidgetSheet } from './add-widget-sheet'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import FilterLeftPane from './filters/filter-left-pane'
-import { ShareButton } from './share-button'
 import { Widget, WidgetType, WidgetSize } from '../types/dashboard'
 import type { LayoutItem as ServerLayoutItem, Layouts } from '@/server/user-data'
 import { Skeleton } from "@/components/ui/skeleton"
@@ -175,9 +165,13 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
 }) {
   const t = useI18n()
   const { isMobile } = useUserData()
-  const [isContextMenuOpen, setIsContextMenuOpen] = useState(false)
-  const contextButtonRef = useRef<HTMLButtonElement>(null)
   const widgetRef = useRef<HTMLDivElement>(null)
+  const [isSizePopoverOpen, setIsSizePopoverOpen] = useState(false)
+
+  const handleSizeChange = (newSize: WidgetSize) => {
+    onChangeSize(newSize)
+    setIsSizePopoverOpen(false)
+  }
 
   const handleScreenshot = async () => {
     if (!widgetRef.current) return
@@ -517,199 +511,190 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   }
 
   return (
-    <ContextMenu onOpenChange={setIsContextMenuOpen}>
-      <ContextMenuTrigger asChild>
-        <div 
-          ref={widgetRef}
-          className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate"
-          onTouchStart={handleTouchStart}
-        >
-          <div className={cn("h-full w-full transition-all duration-200", 
-            (isCustomizing || isScreenshotMode) && "group-hover:blur-[2px]"
-          )}>
-            {children}
+    <div 
+      ref={widgetRef}
+      className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate"
+      onTouchStart={handleTouchStart}
+    >
+      <div className={cn("h-full w-full transition-all duration-200", 
+        (isCustomizing || isScreenshotMode) && "group-hover:blur-[2px]"
+      )}>
+        {children}
+      </div>
+      {isCustomizing && (
+        <>
+          <div className="absolute inset-0 border-2 border-dashed border-transparent group-hover:border-accent group-focus-within:border-accent transition-colors duration-200" />
+          <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200" />
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 drag-handle cursor-grab active:cursor-grabbing">
+            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+              <GripVertical className="h-6 w-4" />
+              <p className="text-sm font-medium">{t('widgets.dragToMove')}</p>
+            </div>
           </div>
-          {isCustomizing && (
-            <>
-              <div className="absolute inset-0 border-2 border-dashed border-transparent group-hover:border-accent group-focus-within:border-accent transition-colors duration-200" />
-              <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200" />
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 drag-handle cursor-grab active:cursor-grabbing">
-                <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                  <GripVertical className="h-6 w-4" />
-                  <p className="text-sm font-medium">{t('widgets.dragToMove')}</p>
-                </div>
-              </div>
-              <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10">
+          <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-200 z-10">
+            <Popover open={isSizePopoverOpen} onOpenChange={setIsSizePopoverOpen}>
+              <PopoverTrigger asChild>
                 <Button
-                  ref={contextButtonRef}
                   variant="outline"
                   size="icon"
-                  className={cn(
-                    "hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-                    isContextMenuOpen && "bg-accent text-accent-foreground"
-                  )}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    const rect = contextButtonRef.current?.getBoundingClientRect()
-                    if (rect) {
-                      const event = new MouseEvent('contextmenu', {
-                        bubbles: true,
-                        clientX: rect.left,
-                        clientY: rect.bottom
-                      })
-                      contextButtonRef.current?.dispatchEvent(event)
-                    }
-                  }}
+                  className="h-8 w-8"
                 >
-                  <MoreVertical className="h-4 w-4" />
+                  <Maximize2 className="h-4 w-4" />
                 </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t('widgets.removeWidgetConfirm')}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t('widgets.removeWidgetDescription')}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t('widgets.cancel')}</AlertDialogCancel>
-                      <AlertDialogAction onClick={onRemove}>{t('widgets.removeWidget')}</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </>
-          )}
-          {isScreenshotMode && (
-            <ScreenshotOverlay onScreenshot={handleScreenshot} />
-          )}
-        </div>
-      </ContextMenuTrigger>
-      <ContextMenuContent className="w-56 z-[100]">
-        <ContextMenuItem 
-          onClick={onCustomize}
-          className="hover:bg-accent hover:text-accent-foreground"
-        >
-          <GripVertical className="mr-2 h-4 w-4" />
-          <span>{t('widgets.move')}</span>
-        </ContextMenuItem>
-            <ContextMenuSeparator />
-            <ContextMenuSub>
-              <ContextMenuSubTrigger className="flex items-center">
-                <Maximize2 className="mr-2 h-4 w-4" />
-                <span>{t('widgets.changeSize')}</span>
-              </ContextMenuSubTrigger>
-              <ContextMenuSubContent>
-                {isMobile ? (
-                  <>
-                    <ContextMenuItem 
-                      onClick={() => onChangeSize('tiny')}
-                      className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
-                      disabled={!isValidSize(currentType, 'tiny')}
-                    >
-                      <Minimize2 className="mr-2 h-4 w-4" />
-                      <span>{t('widgets.size.mobile.small')}</span>
-                    </ContextMenuItem>
-                    <ContextMenuItem 
-                      onClick={() => onChangeSize('medium')}
-                      className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
-                      disabled={!isValidSize(currentType, 'medium')}
-                    >
-                      <Square className="mr-2 h-4 w-4" />
-                      <span>{t('widgets.size.mobile.medium')}</span>
-                    </ContextMenuItem>
-                    <ContextMenuItem 
-                      onClick={() => onChangeSize('large')}
-                      className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
-                      disabled={!isValidSize(currentType, 'large')}
-                    >
-                      <Maximize2 className="mr-2 h-4 w-4" />
-                      <span>{t('widgets.size.mobile.large')}</span>
-                    </ContextMenuItem>
-                  </>
-                ) : (
-                  <>
-                    <ContextMenuItem 
-                      onClick={() => onChangeSize('tiny')}
-                      className={size === 'tiny' ? 'bg-accent text-accent-foreground' : ''}
-                      disabled={!isValidSize(currentType, 'tiny')}
-                    >
-                      <Minimize2 className="mr-2 h-4 w-4" />
-                      <span>{t('widgets.size.tiny')}</span>
-                    </ContextMenuItem>
-                    <ContextMenuItem 
-                      onClick={() => onChangeSize('small')}
-                      className={size === 'small' ? 'bg-accent text-accent-foreground' : ''}
-                      disabled={!isValidSize(currentType, 'small')}
-                    >
-                      <Minimize2 className="mr-2 h-4 w-4" />
-                      <span>{t('widgets.size.small')}</span>
-                    </ContextMenuItem>
-                    <ContextMenuItem 
-                      onClick={() => onChangeSize('medium')}
-                      className={size === 'medium' ? 'bg-accent text-accent-foreground' : ''}
-                      disabled={!isValidSize(currentType, 'medium')}
-                    >
-                      <Square className="mr-2 h-4 w-4" />
-                      <span>{t('widgets.size.medium')}</span>
-                    </ContextMenuItem>
-                    <ContextMenuItem 
-                      onClick={() => onChangeSize('large')}
-                      className={size === 'large' ? 'bg-accent text-accent-foreground' : ''}
-                      disabled={!isValidSize(currentType, 'large')}
-                    >
-                      <Maximize2 className="mr-2 h-4 w-4" />
-                      <span>{t('widgets.size.large')}</span>
-                    </ContextMenuItem>
-                    <ContextMenuItem 
-                      onClick={() => onChangeSize('extra-large')}
-                      className={size === 'extra-large' ? 'bg-accent text-accent-foreground' : ''}
-                      disabled={!isValidSize(currentType, 'extra-large')}
-                    >
-                      <Maximize2 className="mr-2 h-4 w-4" />
-                      <span>{t('widgets.size.extra-large')}</span>
-                    </ContextMenuItem>
-                  </>
-                )}
-              </ContextMenuSubContent>
-            </ContextMenuSub>
-        <ContextMenuSeparator />
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <ContextMenuItem 
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive"
-              onSelect={(e) => {
-                e.preventDefault()
-              }}
-            >
-              <Minus className="mr-2 h-4 w-4" />
-              <span>{t('widgets.remove')}</span>
-            </ContextMenuItem>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t('widgets.removeWidgetConfirm')}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t('widgets.removeWidgetDescription')}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t('widgets.cancel')}</AlertDialogCancel>
-              <AlertDialogAction onClick={onRemove}>{t('widgets.removeWidget')}</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </ContextMenuContent>
-    </ContextMenu>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2">
+                <div className="flex flex-col gap-1">
+                  {isMobile ? (
+                    <>
+                      <Button
+                        variant={size === 'tiny' ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleSizeChange('tiny')}
+                        disabled={!isValidSize(currentType, 'tiny') || size === 'tiny'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-4 w-4 rounded",
+                            size === 'tiny' ? "bg-primary" : "bg-muted"
+                          )} />
+                          <span>{t('widgets.size.mobile.small')}</span>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={size === 'medium' ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleSizeChange('medium')}
+                        disabled={!isValidSize(currentType, 'medium') || size === 'medium'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-4 w-8 rounded",
+                            size === 'medium' ? "bg-primary" : "bg-muted"
+                          )} />
+                          <span>{t('widgets.size.mobile.medium')}</span>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={size === 'large' ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleSizeChange('large')}
+                        disabled={!isValidSize(currentType, 'large') || size === 'large'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-4 w-12 rounded",
+                            size === 'large' ? "bg-primary" : "bg-muted"
+                          )} />
+                          <span>{t('widgets.size.mobile.large')}</span>
+                        </div>
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant={size === 'tiny' ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleSizeChange('tiny')}
+                        disabled={!isValidSize(currentType, 'tiny') || size === 'tiny'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-4 w-4 rounded",
+                            size === 'tiny' ? "bg-primary" : "bg-muted"
+                          )} />
+                          <span>{t('widgets.size.tiny')}</span>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={size === 'small' ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleSizeChange('small')}
+                        disabled={!isValidSize(currentType, 'small') || size === 'small'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-4 w-6 rounded",
+                            size === 'small' ? "bg-primary" : "bg-muted"
+                          )} />
+                          <span>{t('widgets.size.small')}</span>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={size === 'medium' ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleSizeChange('medium')}
+                        disabled={!isValidSize(currentType, 'medium') || size === 'medium'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-4 w-8 rounded",
+                            size === 'medium' ? "bg-primary" : "bg-muted"
+                          )} />
+                          <span>{t('widgets.size.medium')}</span>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={size === 'large' ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleSizeChange('large')}
+                        disabled={!isValidSize(currentType, 'large') || size === 'large'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-4 w-10 rounded",
+                            size === 'large' ? "bg-primary" : "bg-muted"
+                          )} />
+                          <span>{t('widgets.size.large')}</span>
+                        </div>
+                      </Button>
+                      <Button
+                        variant={size === 'extra-large' ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleSizeChange('extra-large')}
+                        disabled={!isValidSize(currentType, 'extra-large') || size === 'extra-large'}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={cn(
+                            "h-4 w-12 rounded",
+                            size === 'extra-large' ? "bg-primary" : "bg-muted"
+                          )} />
+                          <span>{t('widgets.size.extra-large')}</span>
+                        </div>
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="icon"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('widgets.removeWidgetConfirm')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('widgets.removeWidgetDescription')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('widgets.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction onClick={onRemove}>{t('widgets.removeWidget')}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </>
+      )}
+      {isScreenshotMode && (
+        <ScreenshotOverlay onScreenshot={handleScreenshot} />
+      )}
+    </div>
   )
 }
 
@@ -1081,8 +1066,6 @@ export default function WidgetCanvas() {
   return (
     <div className={cn(
       "relative mt-6 pb-16",
-      isLoading ? "opacity-0" : "opacity-100",
-      "transition-opacity duration-300"
     )}>
       <Toolbar 
         onAddWidget={addWidget}
@@ -1115,8 +1098,8 @@ export default function WidgetCanvas() {
             onLayoutChange={handleLayoutChange}
             margin={[16, 16]}
             containerPadding={[0, 0]}
-            compactType="vertical"
-            preventCollision={false}
+            useCSSTransforms={true}
+            
           >
             {currentLayout.map((widget) => {
               const typedWidget = widget as unknown as LayoutItem

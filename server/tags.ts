@@ -30,6 +30,7 @@ export async function createTag(formData: {
   description?: string
   color: string
 }) {
+  console.log('createTag', formData)
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 

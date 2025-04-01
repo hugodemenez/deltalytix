@@ -1,10 +1,12 @@
 'use server'
 
-import { Trade, Prisma, PrismaClient } from '@prisma/client'
+import { Trade, Prisma, PrismaClient, Group } from '@prisma/client'
 import { endOfDay, startOfDay } from 'date-fns'
 import { parseISO, isValid } from 'date-fns'
 import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
+import { GroupWithAccounts } from './groups'
+
 export interface SharedParams {
   userId: string
   title?: string
@@ -91,7 +93,7 @@ export async function createShared(data: SharedParams): Promise<string> {
   }
 }
 
-export async function getShared(slug: string): Promise<{params: SharedParams, trades: Trade[]} | null> {
+export async function getShared(slug: string): Promise<{params: SharedParams, trades: Trade[], groups: GroupWithAccounts[]} | null> {
   try {
     const result = await prisma.$transaction(async (tx) => {
       const shared = await tx.shared.findUnique({
@@ -117,8 +119,8 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
       const fromDate = new Date(dateRange.from)
       const toDate = dateRange.to ? new Date(dateRange.to) : undefined
 
-      // Parallel fetch of trades and tick details
-      const [trades, tickDetailsData] = await Promise.all([
+      // Parallel fetch of trades, tick details, and groups
+      const [trades, tickDetailsData, groups] = await Promise.all([
         tx.trade.findMany({
           where: {
             userId: shared.userId,
@@ -134,7 +136,15 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
             entryDate: 'desc',
           },
         }),
-        tx.tickDetails.findMany()
+        tx.tickDetails.findMany(),
+        tx.group.findMany({
+          where: {
+            userId: shared.userId,
+          },
+          include: {
+            accounts: true,
+          },
+        })
       ])
 
       const tickDetails = tickDetailsData.reduce((acc, detail) => {
@@ -159,15 +169,14 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
           tickDetails,
         },
         trades,
+        groups,
       }
     })
 
-    if (!result) return null
     return result
-
   } catch (error) {
-    console.error('Error getting shared trades:', error)
-    throw error
+    console.error('[getShared] Error:', error)
+    return null
   }
 }
 

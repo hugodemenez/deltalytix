@@ -423,3 +423,90 @@ export async function checkAndResetAccounts() {
     })
   }
 }
+
+export async function createGroup(userId: string, name: string) {
+  try {
+    const group = await prisma.group.create({
+      data: {
+        name,
+        userId,
+      },
+    })
+    return group
+  } catch (error) {
+    console.error('Error creating group:', error)
+    throw error
+  }
+}
+
+export async function updateGroup(groupId: string, name: string) {
+  try {
+    const group = await prisma.group.update({
+      where: { id: groupId },
+      data: { name },
+    })
+    return group
+  } catch (error) {
+    console.error('Error updating group:', error)
+    throw error
+  }
+}
+
+export async function deleteGroup(groupId: string) {
+  try {
+    await prisma.group.delete({
+      where: { id: groupId },
+    })
+  } catch (error) {
+    console.error('Error deleting group:', error)
+    throw error
+  }
+}
+
+export async function moveAccountToGroup(accountId: string, groupId: string | null) {
+  try {
+    const account = await prisma.account.update({
+      where: { id: accountId },
+      data: { groupId },
+    })
+    return account
+  } catch (error) {
+    console.error('Error moving account to group:', error)
+    throw error
+  }
+}
+
+export async function getGroups(userId: string) {
+  try {
+    const groups = await prisma.group.findMany({
+      where: { userId },
+      include: {
+        accounts: true,
+      },
+    })
+    return groups
+  } catch (error) {
+    console.error('Error fetching groups:', error)
+    throw error
+  }
+}
+
+export async function createAccount(userId: string, accountNumber: string) {
+  try {
+    const account = await prisma.account.create({
+      data: {
+        number: accountNumber,
+        userId,
+        propfirm: '',
+        drawdownThreshold: 0,
+        profitTarget: 0,
+        isPerformance: false,
+        payoutCount: 0,
+      },
+    })
+    return account
+  } catch (error) {
+    console.error('Error creating account:', error)
+    throw error
+  }
+}

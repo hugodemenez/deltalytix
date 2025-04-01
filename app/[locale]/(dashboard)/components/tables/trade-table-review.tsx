@@ -327,7 +327,7 @@ export function TradeTableReview() {
       }))
       .filter(trade => accounts.length > 1 ? trade.accountNumber === selectedAccount : true)
       .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime()),
-    [trades, selectedAccount]
+    [trades, selectedAccount, accounts]
   )
 
   // Calculate total pages
