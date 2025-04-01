@@ -287,17 +287,8 @@ function convertFileToBase64(file: File): Promise<string> {
   })
 }
 
-interface TagMetadata {
-  name: string
-  color: string | null
-  description?: string | null
-}
 
-interface TradeTableReviewProps {
-  trades?: Trade[]
-}
-
-export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) {
+export function TradeTableReview() {
   const t = useI18n()
   const { 
     formattedTrades: contextTrades, 
@@ -312,7 +303,7 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   const [selectedAccount, setSelectedAccount] = useState<string | null>(null)
   const tradesPerPage = 50
 
-  const trades = propTrades || contextTrades
+  const trades = contextTrades
 
   // Get unique accounts
   const accounts = useMemo(() => 
@@ -330,11 +321,11 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
   // Filter trades by selected account
   const filteredTrades = useMemo(() => 
     trades
-      .filter(trade => trade.accountNumber === selectedAccount)
       .map(trade => ({
         ...trade,
         direction: trade.side || '',
       }))
+      .filter(trade => accounts.length > 1 ? trade.accountNumber === selectedAccount : true)
       .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime()),
     [trades, selectedAccount]
   )
@@ -353,39 +344,6 @@ export function TradeTableReview({ trades: propTrades }: TradeTableReviewProps) 
     const endIndex = startIndex + tradesPerPage
     return filteredTrades.slice(startIndex, endIndex)
   }, [filteredTrades, currentPage, tradesPerPage])
-
-  const handleAddTag = async (tradeId: string, tag: string) => {
-    const normalizedTag = tag.trim().toLowerCase()
-    if (!normalizedTag) return
-
-    try {
-      await addTagToTrade(tradeId, normalizedTag)
-      
-      const trade = trades.find(t => t.id === tradeId)
-      if (trade) {
-        updateTrade(tradeId, {
-          tags: [...(trade.tags || []), normalizedTag]
-        })
-      }
-    } catch (error) {
-      console.error('Failed to add tag:', error)
-    }
-  }
-
-  const handleRemoveTag = async (tradeId: string, tagToRemove: string) => {
-    try {
-      await removeTagFromTrade(tradeId, tagToRemove)
-      
-      const trade = trades.find(t => t.id === tradeId)
-      if (trade) {
-        updateTrade(tradeId, {
-          tags: trade.tags?.filter(tag => tag !== tagToRemove) || []
-        })
-      }
-    } catch (error) {
-      console.error('Failed to remove tag:', error)
-    }
-  }
 
   const handleDeleteTag = useCallback(async (tag: string) => {
     try {
