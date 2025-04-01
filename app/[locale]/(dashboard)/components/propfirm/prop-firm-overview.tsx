@@ -1066,7 +1066,9 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                         drawdownThreshold: pendingChanges?.drawdownThreshold ?? selectedAccountForTable.drawdownThreshold,
                         consistencyPercentage: pendingChanges?.consistencyPercentage ?? selectedAccountForTable.consistencyPercentage,
                         propfirm: pendingChanges?.propfirm ?? selectedAccountForTable.propfirm,
-                        resetDate: pendingChanges?.resetDate instanceof Date ? pendingChanges.resetDate : undefined
+                        resetDate: pendingChanges?.resetDate instanceof Date ? pendingChanges.resetDate : undefined,
+                        trailingDrawdown: pendingChanges?.trailingDrawdown ?? selectedAccountForTable.trailingDrawdown,
+                        trailingStopProfit: pendingChanges?.trailingStopProfit ?? selectedAccountForTable.trailingStopProfit
                       };
 
                       await setupPropFirmAccount(accountUpdate)
@@ -1085,6 +1087,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                           drawdownThreshold: updatedDbAccount.drawdownThreshold,
                           consistencyPercentage: updatedDbAccount.consistencyPercentage ?? 30,
                           propfirm: updatedDbAccount.propfirm,
+                          trailingDrawdown: updatedDbAccount.trailingDrawdown ?? false,
                           trailingStopProfit: updatedDbAccount.trailingStopProfit ?? 0,
                           resetDate: updatedDbAccount.resetDate ? new Date(updatedDbAccount.resetDate) : null
                         })
