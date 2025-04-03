@@ -47,6 +47,7 @@ import { TradeComment } from './trade-comment'
 import { TradeVideoUrl } from './trade-video-url'
 import { TradeTag } from './trade-tag'
 import { formatInTimeZone } from 'date-fns-tz'
+import { ImageGallery } from './trade-image-editor'
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -713,38 +714,10 @@ export function TradeTableReview() {
             onPaste={(e: any) => handleImagePaste(trade.id, e)}
           >
             {trade.imageBase64 ? (
-              <HoverCard openDelay={200}>
-                <HoverCardTrigger asChild>
-                  <div className="relative group">
-                    <Image
-                      src={trade.imageBase64}
-                      alt="Trade screenshot"
-                      width={40}
-                      height={40}
-                      className="object-cover rounded cursor-pointer"
-                    />
-                    <button
-                      className="absolute -top-2 -right-2 h-5 w-5 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleRemoveImage(trade.id)
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                </HoverCardTrigger>
-                <HoverCardContent side="right" className="w-[400px] h-[300px] p-0">
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={trade.imageBase64}
-                      alt="Trade screenshot"
-                      fill
-                      className="object-contain rounded"
-                    />
-                  </div>
-                </HoverCardContent>
-              </HoverCard>
+              <ImageGallery 
+                images={trade.imageBase64} 
+                onDelete={() => handleRemoveImage(trade.id)}
+              />
             ) : (
               <label className="cursor-pointer flex items-center justify-center h-full w-full border-2 border-dashed border-muted-foreground/25 rounded hover:border-muted-foreground/50 transition-colors">
                 <Upload className="h-6 w-6 text-muted-foreground/50" />
