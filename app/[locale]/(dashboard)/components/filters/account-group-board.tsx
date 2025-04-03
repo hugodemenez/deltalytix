@@ -5,13 +5,24 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Settings, Check, X } from "lucide-react"
+import { Plus, Settings, Check, X, Trash2 } from "lucide-react"
 import { useI18n } from "@/locales/client"
 import { useUserData } from "@/components/context/user-data"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { ensureAccountAndAssignGroup } from "@/app/[locale]/(dashboard)/actions/accounts"
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog"
 
 interface Account {
   id: string
@@ -34,6 +45,7 @@ export function AccountGroupBoard() {
     setGroups,
     createGroup,
     updateGroup,
+    deleteGroup,
     isLoading,
     refreshGroups,
   } = useUserData()
@@ -42,6 +54,7 @@ export function AccountGroupBoard() {
   const [isCreating, setIsCreating] = useState(false)
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
   const [editingGroupName, setEditingGroupName] = useState("")
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Extract all account numbers from trades
   const tradeAccountNumbers = useMemo(() => {
@@ -116,6 +129,23 @@ export function AccountGroupBoard() {
       toast.error(t("common.error"), {
         description: t("filters.errorMovingAccount", { account: accountNumber })
       })
+    }
+  }
+
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    try {
+      setIsDeleting(true)
+      await deleteGroup(groupId)
+      toast.success(t("common.success"), {
+        description: t("filters.groupDeleted", { name: groupName })
+      })
+    } catch (error) {
+      console.error("Error deleting group:", error)
+      toast.error(t("common.error"), {
+        description: t("filters.errorDeletingGroup", { name: groupName })
+      })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -233,17 +263,48 @@ export function AccountGroupBoard() {
                   <h4 className="text-sm font-medium">
                     {group.name} ({group.accounts.length})
                   </h4>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => {
-                      setEditingGroupId(group.id)
-                      setEditingGroupName(group.name)
-                    }}
-                  >
-                    <Settings className="h-3 w-3" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        setEditingGroupId(group.id)
+                        setEditingGroupName(group.name)
+                      }}
+                    >
+                      <Settings className="h-3 w-3" />
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive hover:text-destructive"
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{t("filters.deleteGroupTitle")}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t("filters.deleteGroupDescription", { name: group.name })}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteGroup(group.id, group.name)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {t("common.delete")}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               )}
             </div>

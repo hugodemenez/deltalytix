@@ -1498,6 +1498,10 @@ export default {
     'filters.errorUpdatingGroup': 'Échec de la mise à jour du groupe "{name}"',
     'filters.accountMoved': 'Compte "{account}" déplacé avec succès',
     'filters.errorMovingAccount': 'Échec du déplacement du compte "{account}"',
+    'filters.groupDeleted': 'Groupe "{name}" supprimé avec succès',
+    'filters.errorDeletingGroup': 'Échec de la suppression du groupe "{name}"',
+    'filters.deleteGroupTitle': 'Supprimer le Groupe',
+    'filters.deleteGroupDescription': 'Êtes-vous sûr de vouloir supprimer le groupe "{name}"? Cette action est irréversible.',
     'common.success': 'Succès',
     'common.error': 'Erreur',
 } as const
