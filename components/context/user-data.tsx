@@ -1079,6 +1079,22 @@ export const UserDataProvider: React.FC<{
     }
   }, [refreshGroups])
 
+  // Update the setTags function to handle cache
+  const setTagsWithCache: React.Dispatch<React.SetStateAction<Tag[]>> = (value) => {
+    setTags((prevTags) => {
+      const newTags = typeof value === 'function' ? value(prevTags) : value;
+      // Update cache
+      const existingCache = getLocalCache();
+      if (existingCache) {
+        setLocalCache({
+          ...existingCache,
+          tags: newTags
+        });
+      }
+      return newTags;
+    });
+  };
+
   const contextValue = {
     // User related
     user,
@@ -1156,7 +1172,7 @@ export const UserDataProvider: React.FC<{
 
     // New properties
     tags,
-    setTags,
+    setTags: setTagsWithCache,
 
     // Add propfirm accounts
     propfirmAccounts,

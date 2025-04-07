@@ -105,10 +105,10 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
     setIsLoading(true)
 
     try {
-      const normalizedName = formData.name.trim().toLowerCase()
+      const trimmedName = formData.name.trim()
       
       // Check if name is empty
-      if (!normalizedName) {
+      if (!trimmedName) {
         toast({
           title: t('widgets.tags.error'),
           description: t('widgets.tags.nameRequired'),
@@ -121,12 +121,12 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
       setIsAddDialogOpen(false)
       
       if (editingTag) {
-        const oldTagName = editingTag.name.toLowerCase()
-        const newTagName = normalizedName
+        const oldTagName = editingTag.name
+        const newTagName = trimmedName
 
         // Check if new name already exists (excluding the current tag)
         const tagExists = tags.some(tag => 
-          tag.id !== editingTag.id && tag.name.toLowerCase() === newTagName
+          tag.id !== editingTag.id && tag.name === newTagName
         )
 
         if (tagExists) {
@@ -139,17 +139,20 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
         }
 
         const updatedTag = await updateTag(editingTag.id, {
-          name: normalizedName,
+          name: trimmedName,
           description: formData.description || undefined,
           color: formData.color
         })
 
-        // Update tag metadata in context
-        setTags((prevTags: Tag[]) => prevTags.map(tag => 
-          tag.name === oldTagName
-            ? { ...tag, name: newTagName, color: formData.color, description: formData.description }
-            : tag
-        ))
+        // Update tag metadata in context and cache
+        setTags((prevTags: Tag[]) => {
+          const newTags = prevTags.map(tag => 
+            tag.name === oldTagName
+              ? { ...tag, name: newTagName, color: formData.color, description: formData.description }
+              : tag
+          )
+          return newTags
+        })
 
         // If tag name changed, update all trades that use this tag
         if (oldTagName !== newTagName) {
@@ -186,7 +189,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
       } else {
         // Check if tag already exists
         const tagExists = tags.some(tag => 
-          tag.name.toLowerCase() === normalizedName
+          tag.name === trimmedName
         )
 
         if (tagExists) {
@@ -198,15 +201,18 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
           return
         }
 
-        // Create new tag with normalized name
+        // Create new tag
         const newTag = await createTag({
-          name: normalizedName,
+          name: trimmedName,
           description: formData.description || undefined,
           color: formData.color
         })
 
-        // Update tag metadata in context
-        setTags((prevTags: Tag[]) => [...prevTags, newTag.tag])
+        // Update tag metadata in context and cache
+        setTags((prevTags: Tag[]) => {
+          const newTags = [...prevTags, newTag.tag]
+          return newTags
+        })
 
         toast({
           title: t('widgets.tags.success'),
@@ -239,16 +245,19 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
     try {
       await deleteTag(tagToDelete.id)
       
-      // Update local tags state immediately
-      setTags(prevTags => prevTags.filter(tag => tag.id !== tagToDelete.id))
+      // Update local tags state and cache
+      setTags(prevTags => {
+        const newTags = prevTags.filter(tag => tag.id !== tagToDelete.id)
+        return newTags
+      })
       
       // Remove the tag from all trades in the context
-      removeTagFromAllTrades(tagToDelete.name.toLowerCase())
+      removeTagFromAllTrades(tagToDelete.name)
       
       // Also remove from tag filter if it's selected
-      if (tagFilter.tags.includes(tagToDelete.name.toLowerCase())) {
+      if (tagFilter.tags.includes(tagToDelete.name)) {
         setTagFilter(prev => ({
-          tags: prev.tags.filter(t => t !== tagToDelete.name.toLowerCase())
+          tags: prev.tags.filter(t => t !== tagToDelete.name)
         }))
       }
       
@@ -281,7 +290,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
 
   // Filter tags based on search query
   const filteredTags = tags.filter(tag => 
-    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+    tag.name.includes(searchQuery)
   )
 
   return (

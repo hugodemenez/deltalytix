@@ -52,33 +52,33 @@ export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChan
   // Create a map of tag names to their metadata for quick lookup
   const tagMetadataMap = useMemo(() => {
     const map = new Map<string, TagMetadata>()
-    availableTags.forEach(tag => map.set(tag.name.toLowerCase(), tag))
+    availableTags.forEach(tag => map.set(tag.name, tag))
     return map
   }, [availableTags])
 
   const handleAddTag = async (tag: string) => {
-    const normalizedTag = tag.trim().toLowerCase()
-    if (!normalizedTag) return
+    const trimmedTag = tag.trim()
+    if (!trimmedTag) return
 
     setIsUpdating(true)
     try {
       // If this is a new tag not in availableTags, it will be added through the sync process
-      const existingTag = availableTags.find(t => t.name.toLowerCase() === normalizedTag)
+      const existingTag = availableTags.find(t => t.name === trimmedTag)
       if (existingTag) {
-        await addTagToTrade(tradeId, normalizedTag)
-      }else{
-      // Create a new tag in database using 
-      const newTag = await createTag({
-        name: normalizedTag,
-        description: '',
-        color: '#CBD5E1'
-      })
-      await addTagToTrade(tradeId, normalizedTag)
-      setTags((tags: Tag[]) => [...tags, newTag.tag])
+        await addTagToTrade(tradeId, trimmedTag)
+      } else {
+        // Create a new tag in database using 
+        const newTag = await createTag({
+          name: trimmedTag,
+          description: '',
+          color: '#CBD5E1'
+        })
+        await addTagToTrade(tradeId, trimmedTag)
+        setTags((tags: Tag[]) => [...tags, newTag.tag])
       }
 
       // Update local state immediately
-      const newTags = [...localTags, normalizedTag]
+      const newTags = [...localTags, trimmedTag]
       setLocalTags(newTags)
       onTagsChange?.(newTags)
       
@@ -124,7 +124,7 @@ export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChan
     <div className="flex items-center gap-2">
       <div className="flex gap-1 flex-wrap">
         {localTags.map((tag, index) => {
-          const metadata = tagMetadataMap.get(tag.toLowerCase())
+          const metadata = tagMetadataMap.get(tag)
           return (
             <div 
               key={index} 
@@ -192,10 +192,10 @@ export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChan
               {availableTags.length > 0 && (
                 <CommandGroup heading={t('trade-table.existingTags')}>
                   {availableTags
-                    .filter(tag => !localTags.includes(tag.name.toLowerCase()))
+                    .filter(tag => !localTags.includes(tag.name))
                     .filter(tag => {
-                      const normalizedInput = inputValue.toLowerCase()
-                      return !normalizedInput || tag.name.toLowerCase().includes(normalizedInput)
+                      const input = inputValue.trim()
+                      return !input || tag.name.includes(input)
                     })
                     .map(tag => (
                       <CommandItem
