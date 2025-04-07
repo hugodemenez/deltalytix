@@ -7,14 +7,18 @@ type Theme = 'light' | 'dark' | 'system'
 type ThemeContextType = {
   theme: Theme
   effectiveTheme: 'light' | 'dark'
+  intensity: number
   setTheme: (theme: Theme) => void
+  setIntensity: (intensity: number) => void
   toggleTheme: () => void
 }
 
 const ThemeContext = createContext<ThemeContextType>({
   theme: 'system',
   effectiveTheme: 'light',
+  intensity: 100,
   setTheme: () => {},
+  setIntensity: () => {},
   toggleTheme: () => {},
 })
 
@@ -23,6 +27,7 @@ export const useTheme = () => useContext(ThemeContext)
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system')
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light')
+  const [intensity, setIntensityState] = useState<number>(100)
   const [mounted, setMounted] = useState(false)
 
   const applyTheme = (newTheme: Theme) => {
@@ -43,8 +48,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true)
     const savedTheme = localStorage.getItem('theme') as Theme | null
+    const savedIntensity = localStorage.getItem('intensity')
+    
     if (savedTheme) {
       setThemeState(savedTheme)
+    }
+    if (savedIntensity) {
+      setIntensityState(Number(savedIntensity))
     }
     applyTheme(savedTheme || 'system')
   }, [])
@@ -53,8 +63,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (mounted) {
       applyTheme(theme)
       localStorage.setItem('theme', theme)
+      localStorage.setItem('intensity', intensity.toString())
+      
+      // Set CSS variables for theme intensity
+      const root = window.document.documentElement
+      root.style.setProperty('--theme-intensity', `${intensity}%`)
     }
-  }, [theme, mounted])
+  }, [theme, intensity, mounted])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -72,6 +87,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeState(newTheme)
   }
 
+  const setIntensity = (newIntensity: number) => {
+    setIntensityState(newIntensity)
+  }
+
   const toggleTheme = () => {
     setThemeState(prevTheme => {
       if (prevTheme === 'system') {
@@ -84,7 +103,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const value = {
     theme,
     effectiveTheme,
+    intensity,
     setTheme,
+    setIntensity,
     toggleTheme,
   }
 

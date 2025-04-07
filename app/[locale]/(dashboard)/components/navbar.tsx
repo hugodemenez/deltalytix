@@ -44,6 +44,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { ThemeSwitcher } from "@/components/theme-switcher"
 
 type Theme = 'light' | 'dark' | 'system'
 type Locale = 'en' | 'fr'
@@ -63,7 +64,7 @@ const timezones = [
 
 export default function Navbar() {
   const { user, subscription, timezone, setTimezone, refreshTrades } = useUserData()
-  const { theme, toggleTheme, setTheme } = useTheme()
+  const { theme } = useTheme()
   const t = useI18n()
   const changeLocale = useChangeLocale()
   const currentLocale = useCurrentLocale()
@@ -82,10 +83,6 @@ export default function Navbar() {
     { value: 'fr', label: 'Français' },
     // Add more languages here
   ]
-
-  const handleThemeChange = (value: string) => {
-    setTheme(value as Theme)
-  }
 
   return (
     <>
@@ -160,151 +157,107 @@ export default function Navbar() {
               <FilterDropdowns showAccountNumbers={showAccountNumbers} />
               <ImportButton />
             </div>
-            <div className="relative">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Avatar className="cursor-pointer h-8 w-8">
-                    <AvatarImage src={user?.user_metadata.avatar_url} />
-                    <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
-                      {user?.email![0]}
-                    </AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
-                  <DropdownMenuLabel>{t('dashboard.myAccount')}</DropdownMenuLabel>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">
-                      <div className="flex w-full">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        <span>{t('navbar.dashboard')}</span>
-                        <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
-                      </div>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard/billing">
-                      <div className="flex w-full">
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        <span>{t('dashboard.billing')}</span>
-                        <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
-                      </div>
-                    </Link>
-                  </DropdownMenuItem>
-                  <Link href={"/dashboard/data"}>
-                    <DropdownMenuItem>
-                      <Database className="mr-2 h-4 w-4" />
-                      <span>{t('dashboard.data')}</span>
-                      <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+            <div className="flex items-center gap-2">
+              <ThemeSwitcher />
+              <div className="relative">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Avatar className="cursor-pointer h-8 w-8">
+                      <AvatarImage src={user?.user_metadata.avatar_url} />
+                      <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
+                        {user?.email![0]}
+                      </AvatarFallback>
+                    </Avatar>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56">
+                    <DropdownMenuLabel>{t('dashboard.myAccount')}</DropdownMenuLabel>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard">
+                        <div className="flex w-full">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          <span>{t('navbar.dashboard')}</span>
+                          <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
+                        </div>
+                      </Link>
                     </DropdownMenuItem>
-                  </Link>
-                  <DropdownMenuItem onClick={refreshTrades}>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    <span>{t('dashboard.refreshData')}</span>
-                    <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  {/* <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        <span>{t('dashboard.inviteUsers')}</span>
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuPortal>
-                        <DropdownMenuSubContent>
-                          <DropdownMenuItem>
-                            <Mail className="mr-2 h-4 w-4" />
-                            <span>{t('dashboard.email')}</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem disabled>
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            <span>{t('dashboard.message')}</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                      </DropdownMenuPortal>
-                    </DropdownMenuSub>
-                  </DropdownMenuGroup> */}
-                  <DropdownMenuSeparator />
-                  <Link href="/support">
-                  <DropdownMenuItem>
-                    <LifeBuoy className="mr-2 h-4 w-4" />
-                    <span>{t('dashboard.support')}</span>
-                  </DropdownMenuItem>
-                  </Link>
-                  {/* <DropdownMenuItem disabled>
-                    <Cloud className="mr-2 h-4 w-4" />
-                    <span>{t('dashboard.api')}</span>
-                  </DropdownMenuItem> */}
-                  {/* <DropdownMenuItem onClick={() => setShortcutsDialogOpen(true)}>
-                    <Keyboard className="mr-2 h-4 w-4" />
-                    <span>{t('dashboard.keyboardShortcuts')}</span>
-                    <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
-                  </DropdownMenuItem> */}
-                  <DropdownMenuItem onClick={() => startOnborda("main")}>
-                    <HelpCircle className="mr-2 h-4 w-4" />
-                    <span>{t('dashboard.startTour')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{t('dashboard.theme')}</DropdownMenuLabel>
-                  <DropdownMenuRadioGroup value={theme} onValueChange={handleThemeChange}>
-                    <DropdownMenuRadioItem value="light">
-                      <Sun className="mr-2 h-4 w-4" />
-                      <span>{t('navbar.lightMode')}</span>
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="dark">
-                      <Moon className="mr-2 h-4 w-4" />
-                      <span>{t('navbar.darkMode')}</span>
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="system">
-                      <Laptop className="mr-2 h-4 w-4" />
-                      <span>{t('navbar.systemTheme')}</span>
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="flex items-center">
-                    <Globe className="mr-2 h-4 w-4" />
-                    {t('dashboard.language')}
-                  </DropdownMenuLabel>
-                  <ScrollArea className="h-[64px]">
-                    <DropdownMenuRadioGroup value={currentLocale}>
-                      {languages.map((lang) => (
-                        <DropdownMenuRadioItem 
-                          key={lang.value} 
-                          value={lang.value}
-                          onClick={() => {
-                            changeLocale(lang.value)
-                          }}
-                        >
-                          {lang.label}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </ScrollArea>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="flex items-center">
-                    <Clock className="mr-2 h-4 w-4" />
-                    {t('dashboard.timezone')}
-                  </DropdownMenuLabel>
-                  <ScrollArea className="h-[40px] sm:h-[120px]">
-                    <DropdownMenuRadioGroup value={timezone} onValueChange={setTimezone}>
-                      {timezones.map((tz) => (
-                        <DropdownMenuRadioItem key={tz} value={tz}>
-                          {tz.replace('_', ' ')}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </ScrollArea>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => {
-                    // Clear client-side cache before signing out
-                    localStorage.removeItem('deltalytix_user_data')
-                    signOut()
-                  }}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>{t('dashboard.logOut')}</span>
-                    <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/billing">
+                        <div className="flex w-full">
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          <span>{t('dashboard.billing')}</span>
+                          <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <Link href={"/dashboard/data"}>
+                      <DropdownMenuItem>
+                        <Database className="mr-2 h-4 w-4" />
+                        <span>{t('dashboard.data')}</span>
+                        <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
+                      </DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuItem onClick={refreshTrades}>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      <span>{t('dashboard.refreshData')}</span>
+                      <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <Link href="/support">
+                      <DropdownMenuItem>
+                        <LifeBuoy className="mr-2 h-4 w-4" />
+                        <span>{t('dashboard.support')}</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <DropdownMenuItem onClick={() => startOnborda("main")}>
+                      <HelpCircle className="mr-2 h-4 w-4" />
+                      <span>{t('dashboard.startTour')}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="flex items-center">
+                      <Globe className="mr-2 h-4 w-4" />
+                      {t('dashboard.language')}
+                    </DropdownMenuLabel>
+                    <ScrollArea className="h-[64px]">
+                      <DropdownMenuRadioGroup value={currentLocale}>
+                        {languages.map((lang) => (
+                          <DropdownMenuRadioItem 
+                            key={lang.value} 
+                            value={lang.value}
+                            onClick={() => {
+                              changeLocale(lang.value)
+                            }}
+                          >
+                            {lang.label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </ScrollArea>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4" />
+                      {t('dashboard.timezone')}
+                    </DropdownMenuLabel>
+                    <ScrollArea className="h-[40px] sm:h-[120px]">
+                      <DropdownMenuRadioGroup value={timezone} onValueChange={setTimezone}>
+                        {timezones.map((tz) => (
+                          <DropdownMenuRadioItem key={tz} value={tz}>
+                            {tz.replace('_', ' ')}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </ScrollArea>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => {
+                      localStorage.removeItem('deltalytix_user_data')
+                      signOut()
+                    }}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>{t('dashboard.logOut')}</span>
+                      <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
         </div>
@@ -312,7 +265,7 @@ export default function Navbar() {
           <ActiveFilterTags showAccountNumbers={showAccountNumbers} />
         </AnimatePresence>
       </nav>
-      <div className="h-[72px]" /> {/* Adjusted spacer height for more compact layout */}
+      <div className="h-[72px]" />
       <KeyboardShortcutsDialog 
         open={shortcutsDialogOpen} 
         onOpenChange={setShortcutsDialogOpen} 
