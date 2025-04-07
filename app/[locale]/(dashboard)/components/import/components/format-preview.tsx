@@ -1,7 +1,7 @@
 "use client";
 
 import { Trade } from "@prisma/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -13,6 +13,8 @@ import {
 import { format, isValid } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils"; // Assuming you have a utility for className merging
+import { Button } from "@/components/ui/button";
+import { ArrowDownToLine } from "lucide-react";
 
 interface FormatPreviewProps {
   trades: string[][];
@@ -39,7 +41,7 @@ function TradeCell({ value, render }: { value: any; render: (v: any) => React.Re
 
   return (
     <TableCell className={cn(shouldAnimate && "animate-in")}>
-      {displayValue !== undefined ? render(displayValue) : <Skeleton className="h-4 w-16" />}
+      {displayValue !== undefined ? render(displayValue) : <Skeleton className="h-4 w-full" />}
     </TableCell>
   );
 }
@@ -78,17 +80,40 @@ export function FormatPreview({
   headers,
   mappings,
 }: FormatPreviewProps) {
-  const [trades, setTrades] = useState<Partial<Trade>[]>(() =>
-    Array(initialTrades.length).fill({})
+  // Calculate valid trades only when initialTrades changes
+  const validTrades = useMemo(() => 
+    initialTrades.filter(row => row.length > 0 && row[0] !== ""),
+    [initialTrades]
   );
+
   const [error, setError] = useState<string | null>(null);
+  const [currentBatch, setCurrentBatch] = useState(0);
+  const batchSize = 10;
+  const totalBatches = Math.ceil(validTrades.length / batchSize);
+
+  const [trades, setTrades] = useState<Partial<Trade>[]>(() =>
+    Array(batchSize).fill({})
+  );
+  const [autoScroll, setAutoScroll] = useState(true);
+  const tableRef = useRef<HTMLDivElement>(null);
+
+  const handleLoadMore = () => {
+    setCurrentBatch(prev => Math.min(prev + 1, totalBatches - 1));
+  };
+
+  const batchToProcess = useMemo(() => {
+    const startIndex = currentBatch * batchSize;
+    const endIndex = Math.min(startIndex + batchSize, validTrades.length);
+    return validTrades.slice(startIndex, endIndex);
+  }, [currentBatch, validTrades, batchSize]);
 
   useEffect(() => {
-
-
     setIsLoading(true);
     setError(null);
-    setTrades(Array(initialTrades.length).fill({}));
+    // Initialize trades array with the current batch size
+    if (currentBatch === 0) {
+      setTrades(Array(batchSize).fill({}));
+    }
 
     let mounted = true;
 
@@ -97,7 +122,7 @@ export function FormatPreview({
         const response = await fetch("/api/format-trades", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ headers, rows: initialTrades, mappings }),
+          body: JSON.stringify({ headers, rows: batchToProcess, mappings }),
         });
 
         if (!response.ok || !response.body) throw new Error("Streaming failed");
@@ -115,16 +140,18 @@ export function FormatPreview({
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               const event = JSON.parse(line.slice(6));
-              if (event.type === "partial" && event.index < initialTrades.length) {
-                setTrades(prev => {
-                  const newTrades = [...prev];
-                  newTrades[event.index] = { ...newTrades[event.index], ...event.data };
-                  return newTrades;
-                });
+              if (event.type === "partial") {
+                const actualIndex = currentBatch * batchSize + event.index;
+                if (actualIndex < validTrades.length) {
+                  setTrades(prev => {
+                    const newTrades = [...prev];
+                    newTrades[actualIndex] = { ...newTrades[actualIndex], ...event.data };
+                    return newTrades;
+                  });
+                }
               } else if (event.type === "complete") {
-                setTrades(event.data);
                 console.log('[FormatPreview] Complete trades:', event.data);
-                setProcessedTrades(event.data);
+                setProcessedTrades([...processedTrades, ...event.data]);
                 break;
               } else if (event.type === "error") {
                 setError(event.message);
@@ -147,7 +174,23 @@ export function FormatPreview({
       mounted = false;
       setIsLoading(false);
     };
-  }, [setIsLoading, headers, initialTrades, mappings, setProcessedTrades]);
+  }, [setIsLoading, headers, validTrades, mappings, setProcessedTrades, batchToProcess]);
+
+  // Auto-scroll to bottom when new trades are added
+  useEffect(() => {
+    if (autoScroll && tableRef.current) {
+      tableRef.current.scrollTop = tableRef.current.scrollHeight;
+    }
+  }, [trades, autoScroll]);
+
+  // Handle manual scroll
+  const handleScroll = () => {
+    if (tableRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = tableRef.current;
+      const isAtBottom = scrollHeight - scrollTop === clientHeight;
+      setAutoScroll(isAtBottom);
+    }
+  };
 
   if (error) {
     return (
@@ -159,27 +202,57 @@ export function FormatPreview({
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      <div className="flex-1 overflow-auto">
+      <div className="text-sm text-muted-foreground">
+        {trades.filter(trade => trade.entryDate).length} of {validTrades.length} trades formatted
+      </div>
+      <div className="flex-1 overflow-auto relative" ref={tableRef} onScroll={handleScroll}>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Instrument</TableHead>
-              <TableHead>Side</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Entry Price</TableHead>
-              <TableHead>Exit Price</TableHead>
-              <TableHead>PnL</TableHead>
-              <TableHead>Commission</TableHead>
+              <TableHead className="w-[180px]">Date</TableHead>
+              <TableHead className="w-[120px]">Instrument</TableHead>
+              <TableHead className="w-[100px]">Side</TableHead>
+              <TableHead className="w-[100px]">Quantity</TableHead>
+              <TableHead className="w-[120px]">Entry Price</TableHead>
+              <TableHead className="w-[120px]">Exit Price</TableHead>
+              <TableHead className="w-[120px]">PnL</TableHead>
+              <TableHead className="w-[120px]">Commission</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {trades.slice(0, 25).map((trade, index) => (
+            {trades.map((trade, index) => (
               <TradeRow key={index} trade={trade} />
             ))}
           </TableBody>
         </Table>
+        {!autoScroll && (
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 shadow-lg"
+            onClick={() => {
+              setAutoScroll(true);
+              if (tableRef.current) {
+                tableRef.current.scrollTop = tableRef.current.scrollHeight;
+              }
+            }}
+          >
+            <ArrowDownToLine className="h-4 w-4" />
+          </Button>
+        )}
       </div>
+      {currentBatch < totalBatches - 1 && (
+        <div className="flex justify-center">
+          <Button 
+            onClick={handleLoadMore}
+            disabled={isLoading}
+            variant="outline"
+            className="w-full sm:w-auto"
+          >
+            {isLoading ? "Loading..." : "Load More"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

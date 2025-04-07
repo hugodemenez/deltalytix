@@ -23,6 +23,12 @@ const TradeSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const { headers, rows, mappings } = await req.json();
+    if (rows.length > 100) {
+      return new Response(JSON.stringify({ error: "Too many rows to process" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     const encoder = new TextEncoder();
 
     const stream = new ReadableStream({
@@ -38,8 +44,8 @@ export async function POST(req: NextRequest) {
               Headers: ${headers.join(", ")}
               Column mappings: ${JSON.stringify(mappings)}
               
-              Rows (limit to 25):
-              ${rows.slice(0, 25).map((row: string[]) => row.join(", ")).join("\n")}
+              Rows:
+              ${rows.map((row: string[]) => row.join(", ")).join("\n")}
               
               Total rows to process: ${rows.length}
 
