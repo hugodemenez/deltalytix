@@ -75,13 +75,16 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
 
   // Filter groups and trade-only accounts based on search term
   const filteredGroups = searchTerm
-    ? groups.map(group => ({
-        ...group,
-        accounts: group.accounts.filter(account => 
-          account.number.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      })).filter(group => group.accounts.length > 0)
-    : groups
+    ? groups
+        .filter(group => group.name !== "Hidden Accounts") // Exclude hidden group
+        .map(group => ({
+          ...group,
+          accounts: group.accounts.filter(account => 
+            account.number.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+        }))
+        .filter(group => group.accounts.length > 0)
+    : groups.filter(group => group.name !== "Hidden Accounts") // Exclude hidden group
 
   const filteredTradeOnlyAccounts = searchTerm
     ? tradeOnlyAccounts.filter(account => 
@@ -109,13 +112,20 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
 
   const handleSelectAll = () => {
     const allAccounts = [
-      ...groups.flatMap(group => group.accounts),
+      ...groups
+        .filter(group => group.name !== "Hidden Accounts") // Exclude hidden group
+        .flatMap(group => group.accounts),
       ...tradeOnlyAccounts
     ]
     const availableAccounts = allAccounts.filter(item => !isItemDisabled(item))
     
+    // Check if all available accounts are already selected
+    const allAvailableSelected = availableAccounts.every(account => 
+      accountNumbers.includes(account.number)
+    )
+    
     setAccountNumbers(prev => 
-      prev.length === availableAccounts.length ? [] : availableAccounts.map(i => i.number)
+      allAvailableSelected ? [] : availableAccounts.map(i => i.number)
     )
   }
 
@@ -243,7 +253,9 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
                     >
                       <Checkbox
                         checked={[
-                          ...groups.flatMap(g => g.accounts),
+                          ...groups
+                            .filter(group => group.name !== "Hidden Accounts")
+                            .flatMap(g => g.accounts),
                           ...tradeOnlyAccounts
                         ].every(item => isItemSelected(item))}
                         className="h-4 w-4"

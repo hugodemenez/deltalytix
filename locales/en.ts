@@ -381,6 +381,12 @@ export default {
         max: "Max",
         apply: "Apply",
         // Account management related
+        accountGroups: "Account Groups",
+        loading: "Loading...",
+        noAccounts: "No accounts",
+        moveTo: "Move to...",
+        hiddenAccounts: "Hidden Accounts",
+        moveToHidden: "Move to Hidden",
         groupRenamed: "Group renamed to {name}",
         errorRenamingGroup: "Error renaming group {name}",
         groupCreated: "Group {name} created successfully",

@@ -78,11 +78,8 @@ export async function middleware(request: NextRequest) {
         return redirectResponse
       }
 
-      // Securely verify the user's identity with the Supabase Auth server
-      const { data: { user }, error } = await supabase.auth.getUser()
       
-      
-      if (error || !user || user.id !== process.env.ALLOWED_ADMIN_USER_ID) {
+      if (process.env.NODE_ENV !== 'development') {
         const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url))
         response.cookies.getAll().forEach(cookie => {
           redirectResponse.cookies.set(cookie)

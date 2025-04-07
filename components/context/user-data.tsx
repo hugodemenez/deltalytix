@@ -873,8 +873,17 @@ export const UserDataProvider: React.FC<{
       );
     }
 
+    // Find the hidden group
+    const hiddenGroup = groups.find(g => g.name === "Hidden Accounts");
+    const hiddenAccountNumbers = hiddenGroup ? new Set(hiddenGroup.accounts.map(a => a.number)) : new Set();
+
     return tagFiltered
       .filter(trade => {
+        // Exclude trades from hidden accounts
+        if (hiddenAccountNumbers.has(trade.accountNumber)) {
+          return false;
+        }
+
         const entryDate = new Date(formatInTimeZone(
           new Date(trade.entryDate),
           timezone,
@@ -906,7 +915,7 @@ export const UserDataProvider: React.FC<{
         return matchesInstruments && matchesAccounts && matchesDateRange && matchesPnlRange;
       })
       .sort((a, b) => parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime());
-  }, [tagFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView, timezone]);
+  }, [tagFiltered, instruments, accountNumbers, dateRange, pnlRange, isSharedView, timezone, groups]);
 
   const statistics = useMemo(() => {
     const stats = calculateStatistics(formattedTrades);

@@ -5,13 +5,14 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Settings, Check, X, Trash2 } from "lucide-react"
+import { Plus, Settings, Check, X, Trash2, EyeOff } from "lucide-react"
 import { useI18n } from "@/locales/client"
 import { useUserData } from "@/components/context/user-data"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { ensureAccountAndAssignGroup } from "@/app/[locale]/(dashboard)/actions/accounts"
+import { getGroups } from "@/app/[locale]/(dashboard)/dashboard/data/actions"
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -23,6 +24,8 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog"
+
+const HIDDEN_GROUP_NAME = "Hidden Accounts"
 
 interface Account {
   id: string
@@ -114,6 +117,24 @@ export function AccountGroupBoard() {
 
   const handleMoveAccount = async (accountNumber: string, groupId: string | null) => {
     try {
+      // If moving to hidden group, ensure it exists
+      if (groupId === "hidden" && user?.id) {
+        const hiddenGroup = groups.find((g: Group) => g.name === HIDDEN_GROUP_NAME)
+        if (!hiddenGroup) {
+          // Create hidden group if it doesn't exist
+          await createGroup(HIDDEN_GROUP_NAME)
+          await refreshGroups()
+          // Get the new hidden group ID
+          const updatedGroups = await getGroups(user.id)
+          const newHiddenGroup = updatedGroups.find((g: Group) => g.name === HIDDEN_GROUP_NAME)
+          if (newHiddenGroup) {
+            groupId = newHiddenGroup.id
+          }
+        } else {
+          groupId = hiddenGroup.id
+        }
+      }
+
       const result = await ensureAccountAndAssignGroup(accountNumber, groupId)
       
       if (result.success) {
@@ -156,7 +177,7 @@ export function AccountGroupBoard() {
 
   // Return early if loading
   if (isLoading) {
-    return <div className="p-4">Loading...</div>
+    return <div className="p-4">{t("filters.loading")}</div>
   }
 
   // Return early if no user
@@ -164,10 +185,32 @@ export function AccountGroupBoard() {
     return null
   }
 
+  const isHiddenGroup = (group: Group) => group.name === HIDDEN_GROUP_NAME
+
+  // Helper function to get display name for a group
+  const getGroupDisplayName = (group: Group) => {
+    return isHiddenGroup(group) ? t("filters.hiddenAccounts") : group.name
+  }
+
+  // Helper function to get visible groups (excluding hidden group)
+  const getVisibleGroups = (groups: Group[]) => {
+    return groups.filter(g => !isHiddenGroup(g))
+  }
+
+  // Helper function to render the "Move to Hidden" option
+  const renderMoveToHiddenOption = () => (
+    <SelectItem value="hidden" className="cursor-pointer">
+      <div className="flex items-center gap-2 text-destructive">
+        <EyeOff className="h-4 w-4" />
+        {t("filters.moveToHidden")}
+      </div>
+    </SelectItem>
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
-        <h3 className="text-lg font-medium">Account Groups</h3>
+        <h3 className="text-lg font-medium">{t("filters.accountGroups")}</h3>
         
         {/* Create Group */}
         <div className="flex items-center gap-2">
@@ -195,7 +238,7 @@ export function AccountGroupBoard() {
             <div className="space-y-2">
               {ungroupedAccounts.length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center p-2">
-                  No accounts
+                  {t("filters.noAccounts")}
                 </div>
               ) : (
                 ungroupedAccounts.map(account => (
@@ -207,12 +250,13 @@ export function AccountGroupBoard() {
                       }}
                     >
                       <SelectTrigger className="w-[140px] h-8">
-                        <SelectValue placeholder="Move to..." />
+                        <SelectValue placeholder={t("filters.moveTo")} />
                       </SelectTrigger>
                       <SelectContent>
-                        {groups.map(group => (
+                        {renderMoveToHiddenOption()}
+                        {getVisibleGroups(groups).map(group => (
                           <SelectItem key={group.id} value={group.id} className="cursor-pointer">
-                            {group.name}
+                            {getGroupDisplayName(group)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -227,7 +271,7 @@ export function AccountGroupBoard() {
 
         {/* Existing Groups */}
         {groups.map(group => (
-          <Card key={group.id} className="p-4">
+          <Card key={group.id} className={cn("p-4", isHiddenGroup(group) && "border-destructive")}>
             <div className="flex items-center justify-between mb-4">
               {editingGroupId === group.id ? (
                 <div className="flex items-center gap-2">
@@ -260,21 +304,24 @@ export function AccountGroupBoard() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-medium">
-                    {group.name} ({group.accounts.length})
+                  <h4 className="text-sm font-medium flex items-center gap-2">
+                    {isHiddenGroup(group) && <EyeOff className="h-4 w-4 text-destructive" />}
+                    {getGroupDisplayName(group)} ({group.accounts.length})
                   </h4>
                   <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => {
-                        setEditingGroupId(group.id)
-                        setEditingGroupName(group.name)
-                      }}
-                    >
-                      <Settings className="h-3 w-3" />
-                    </Button>
+                    {!isHiddenGroup(group) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setEditingGroupId(group.id)
+                          setEditingGroupName(group.name)
+                        }}
+                      >
+                        <Settings className="h-3 w-3" />
+                      </Button>
+                    )}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -290,7 +337,7 @@ export function AccountGroupBoard() {
                         <AlertDialogHeader>
                           <AlertDialogTitle>{t("filters.deleteGroupTitle")}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            {t("filters.deleteGroupDescription", { name: group.name })}
+                            {t("filters.deleteGroupDescription", { name: getGroupDisplayName(group) })}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -312,7 +359,7 @@ export function AccountGroupBoard() {
               <div className="space-y-2">
                 {group.accounts.length === 0 ? (
                   <div className="text-sm text-muted-foreground text-center p-2">
-                    No accounts
+                    {t("filters.noAccounts")}
                   </div>
                 ) : (
                   group.accounts.map(account => (
@@ -327,15 +374,16 @@ export function AccountGroupBoard() {
                         }}
                       >
                         <SelectTrigger className="w-[140px] h-8">
-                          <SelectValue placeholder="Move to..." />
+                          <SelectValue placeholder={t("filters.moveTo")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none" className="cursor-pointer">No Group</SelectItem>
-                          {groups
+                          <SelectItem value="none" className="cursor-pointer">{t("filters.noGroup")}</SelectItem>
+                          {!isHiddenGroup(group) && renderMoveToHiddenOption()}
+                          {getVisibleGroups(groups)
                             .filter(g => g.id !== group.id)
                             .map(g => (
                               <SelectItem key={g.id} value={g.id} className="cursor-pointer">
-                                {g.name}
+                                {getGroupDisplayName(g)}
                               </SelectItem>
                             ))}
                         </SelectContent>
