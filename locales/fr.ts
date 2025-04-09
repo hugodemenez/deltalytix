@@ -850,7 +850,19 @@ export default {
             resetDateError: 'Erreur de date de réinitialisation',
             resetDateErrorDescription: 'Une erreur est survenue lors de la mise à jour de la date de réinitialisation',
             validationPositive: 'Toutes les valeurs numériques doivent être positives'
-        }
+        },
+        chart: {
+            balance: "Solde",
+            drawdownLevel: "Niveau de Drawdown",
+            profitTarget: "Objectif de Profit",
+            tradeNumber: "Trade n°{number}",
+            balanceAmount: "Solde : ${amount}",
+            pnlAmount: "P&L : ${amount}",
+            drawdownAmount: "Niveau de Drawdown : ${amount}",
+            highestBalance: "Solde le plus haut : ${amount}",
+            startingBalance: "Solde initial",
+            noTrades: "Aucun trade disponible"
+        },
     },
     common: {
         add: 'Ajouter',

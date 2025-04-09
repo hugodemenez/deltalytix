@@ -1110,7 +1110,19 @@ export default {
             resetDateError: 'Reset date error',
             resetDateErrorDescription: 'An error occurred while updating the reset date',
             validationPositive: 'All numeric values must be positive'
-        }
+        },
+        chart: {
+            balance: "Balance",
+            drawdownLevel: "Drawdown Level",
+            profitTarget: "Profit Target",
+            tradeNumber: "Trade #{number}",
+            balanceAmount: "Balance: ${amount}",
+            pnlAmount: "PnL: ${amount}",
+            drawdownAmount: "Drawdown Level: ${amount}",
+            highestBalance: "Highest Balance: ${amount}",
+            startingBalance: "Starting Balance",
+            noTrades: "No trades available"
+        },
     },
     rithmic: {
         savedCredentials: "Saved Credentials",
