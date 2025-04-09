@@ -277,7 +277,7 @@ function getDisplayDate(pendingChanges: PendingChanges | null, selectedAccount: 
 }
 
 export function PropFirmOverview({ size }: { size: WidgetSize }) {
-  const { trades, user } = useUserData()
+  const { trades, user, accountNumbers } = useUserData()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
@@ -310,36 +310,38 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
 
   const propFirmAccounts = useMemo(() => {
     const uniqueAccounts = new Set(trades.map(trade => trade.accountNumber))
-    return Array.from(uniqueAccounts).map(accountNumber => {
-      const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
-      const dbAccount = dbAccounts.find(acc => acc.number === accountNumber)
-      
-      // Filter trades based on reset date if it exists
-      const relevantTrades = dbAccount?.resetDate 
-        ? accountTrades.filter(t => new Date(t.entryDate) >= new Date(dbAccount.resetDate!))
-        : accountTrades
-      
-      const balance = relevantTrades.reduce((total, trade) => total + trade.pnl - (trade.commission || 0), 0)
-      const totalPayouts = dbAccount?.payouts?.reduce((sum: number, payout: { status: string, amount: number }) => 
-        sum + (payout.status === 'PAID' ? payout.amount : 0), 0) || 0
-      
-      return {
-        id: accountNumber,
-        accountNumber,
-        balanceToDate: balance - totalPayouts,
-        profitTarget: dbAccount?.profitTarget ?? 0,
-        drawdownThreshold: dbAccount?.drawdownThreshold ?? 0,
-        isPerformance: dbAccount?.isPerformance ?? false,
-        startingBalance: dbAccount?.startingBalance ?? 0,
-        propfirm: dbAccount?.propfirm ?? '',
-        payouts: dbAccount?.payouts ?? [],
-        trailingDrawdown: dbAccount?.trailingDrawdown ?? false,
-        trailingStopProfit: dbAccount?.trailingStopProfit ?? 0,
-        resetDate: dbAccount?.resetDate,
-        consistencyPercentage: dbAccount?.consistencyPercentage ?? 30,
-      }
-    })
-  }, [trades, dbAccounts])
+    return Array.from(uniqueAccounts)
+      .filter(accountNumber => accountNumbers.length === 0 || accountNumbers.includes(accountNumber))
+      .map(accountNumber => {
+        const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
+        const dbAccount = dbAccounts.find(acc => acc.number === accountNumber)
+        
+        // Filter trades based on reset date if it exists
+        const relevantTrades = dbAccount?.resetDate 
+          ? accountTrades.filter(t => new Date(t.entryDate) >= new Date(dbAccount.resetDate!))
+          : accountTrades
+        
+        const balance = relevantTrades.reduce((total, trade) => total + trade.pnl - (trade.commission || 0), 0)
+        const totalPayouts = dbAccount?.payouts?.reduce((sum: number, payout: { status: string, amount: number }) => 
+          sum + (payout.status === 'PAID' ? payout.amount : 0), 0) || 0
+        
+        return {
+          id: accountNumber,
+          accountNumber,
+          balanceToDate: balance - totalPayouts,
+          profitTarget: dbAccount?.profitTarget ?? 0,
+          drawdownThreshold: dbAccount?.drawdownThreshold ?? 0,
+          isPerformance: dbAccount?.isPerformance ?? false,
+          startingBalance: dbAccount?.startingBalance ?? 0,
+          propfirm: dbAccount?.propfirm ?? '',
+          payouts: dbAccount?.payouts ?? [],
+          trailingDrawdown: dbAccount?.trailingDrawdown ?? false,
+          trailingStopProfit: dbAccount?.trailingStopProfit ?? 0,
+          resetDate: dbAccount?.resetDate,
+          consistencyPercentage: dbAccount?.consistencyPercentage ?? 30,
+        }
+      })
+  }, [trades, dbAccounts, accountNumbers])
 
   const consistencyMetrics = useMemo(() => {
     return propFirmAccounts.map(account => {
