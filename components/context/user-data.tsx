@@ -1,5 +1,5 @@
 'use client'
-import { createClient } from '@/server/auth'
+import { createClient, signOut } from '@/server/auth'
 import { User } from '@supabase/supabase-js';
 import { useParams } from 'next/navigation';
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
@@ -520,8 +520,8 @@ export const UserDataProvider: React.FC<{
           } = cached;
 
           if (!user) {
-            const supabase = await createClient()
-            await supabase.auth.signOut()
+            localStorage.removeItem('deltalytix_user_data')
+            signOut()
           }
 
           setUser(user);
