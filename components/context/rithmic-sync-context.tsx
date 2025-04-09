@@ -859,7 +859,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
               .filter(Boolean) as number[]
             
             const oldestRecentDate = new Date(Math.min(...accountDates))
-            oldestRecentDate.setDate(oldestRecentDate.getDate() + 1)
+            // 7 days away from latest trade date
+            oldestRecentDate.setDate(oldestRecentDate.getDate() - 7)
             return oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
           })()
 
