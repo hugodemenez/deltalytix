@@ -277,7 +277,7 @@ function getDisplayDate(pendingChanges: PendingChanges | null, selectedAccount: 
 }
 
 export function PropFirmOverview({ size }: { size: WidgetSize }) {
-  const { trades, user, accountNumbers } = useUserData()
+  const { trades, user, accountNumbers, groups } = useUserData()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
@@ -310,8 +310,15 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
 
   const propFirmAccounts = useMemo(() => {
     const uniqueAccounts = new Set(trades.map(trade => trade.accountNumber))
+    // Find the hidden group
+    const hiddenGroup = groups.find(g => g.name === "Hidden Accounts")
+    const hiddenAccountNumbers = hiddenGroup ? new Set(hiddenGroup.accounts.map(a => a.number)) : new Set()
+    
     return Array.from(uniqueAccounts)
-      .filter(accountNumber => accountNumbers.length === 0 || accountNumbers.includes(accountNumber))
+      .filter(accountNumber => 
+        (accountNumbers.length === 0 || accountNumbers.includes(accountNumber)) &&
+        !hiddenAccountNumbers.has(accountNumber)
+      )
       .map(accountNumber => {
         const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
         const dbAccount = dbAccounts.find(acc => acc.number === accountNumber)
@@ -341,7 +348,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
           consistencyPercentage: dbAccount?.consistencyPercentage ?? 30,
         }
       })
-  }, [trades, dbAccounts, accountNumbers])
+  }, [trades, dbAccounts, accountNumbers, groups])
 
   const consistencyMetrics = useMemo(() => {
     return propFirmAccounts.map(account => {
