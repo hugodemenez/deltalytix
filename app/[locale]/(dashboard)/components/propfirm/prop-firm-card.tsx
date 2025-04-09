@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useMemo } from "react"
+import { TradeProgressChart } from "./trade-progress-chart"
 
 interface Trade {
   accountNumber: string
@@ -42,7 +43,7 @@ interface PropFirmCardProps {
 export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCardProps) {
   const t = useI18n()
 
-  const { drawdownProgress, remainingLoss, progress, isConfigured } = useMemo(() => {
+  const { drawdownProgress, remainingLoss, progress, isConfigured, currentBalance } = useMemo(() => {
     const isConfigured = account.profitTarget > 0 && account.drawdownThreshold > 0
     const progress = account.profitTarget > 0 
       ? (account.balanceToDate / account.profitTarget) * 100
@@ -61,7 +62,6 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
     // Calculate running balance and track highest point
     let runningBalance = account.startingBalance
     let highestBalance = account.startingBalance
-    let currentDrawdownAmount = 0
 
     // Process all trades to find highest balance
     for (const trade of sortedTrades) {
@@ -79,42 +79,35 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
     // Adjust running balance for payouts
     runningBalance -= totalPayouts
 
-    // Calculate final PnL including payouts
-    const totalPnL = runningBalance - account.startingBalance
-
+    // Calculate drawdown level based on trailing or fixed drawdown
+    let drawdownLevel
     if (account.trailingDrawdown) {
-      if (totalPnL >= account.trailingStopProfit) {
-        // We've hit trailing stop profit - lock the max level
-        const maxLevel = account.startingBalance + account.trailingStopProfit
-        currentDrawdownAmount = Math.max(0, maxLevel - runningBalance)
-      } else if (totalPnL > 0) {
-        // In profit but below trailing stop - calculate from highest point
-        // For trailing drawdown, consider payouts as drawdown from highest point
-        currentDrawdownAmount = Math.max(0, highestBalance - runningBalance)
+      const profitMade = Math.max(0, highestBalance - account.startingBalance)
+      
+      // If we've hit trailing stop profit, lock the drawdown to that level
+      if (profitMade >= account.trailingStopProfit) {
+        drawdownLevel = (account.startingBalance + account.trailingStopProfit) - account.drawdownThreshold
       } else {
-        // In loss - calculate from starting balance
-        currentDrawdownAmount = Math.abs(totalPnL)
+        // Otherwise, drawdown level trails the highest balance
+        drawdownLevel = highestBalance - account.drawdownThreshold
       }
     } else {
-      // For fixed drawdown, only consider losses from starting balance
-      if (totalPnL < 0) {
-        currentDrawdownAmount = Math.abs(totalPnL)
-      } else {
-        currentDrawdownAmount = 0
-      }
+      // Fixed drawdown - always relative to starting balance
+      drawdownLevel = account.startingBalance - account.drawdownThreshold
     }
 
-    // Calculate remaining loss before hitting drawdown
-    const remainingLoss = account.drawdownThreshold - currentDrawdownAmount
+    // Calculate remaining loss as distance between current balance and drawdown level
+    const remainingLoss = Math.max(0, runningBalance - drawdownLevel)
 
-    // Calculate drawdown progress percentage (inverted for visual representation)
+    // Calculate drawdown progress percentage
     const drawdownProgress = ((account.drawdownThreshold - remainingLoss) / account.drawdownThreshold) * 100
 
     return { 
       drawdownProgress,
       remainingLoss,
       progress, 
-      isConfigured
+      isConfigured,
+      currentBalance: runningBalance
     }
   }, [account, trades])
 
@@ -145,10 +138,20 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
       <CardContent className="flex-1 p-3 pt-0 space-y-2">
         <div className="flex justify-between items-baseline">
           <span className="text-sm text-muted-foreground">{t('propFirm.card.balance')}</span>
-          <span className="text-base font-semibold truncate ml-2">${account.balanceToDate.toFixed(2)}</span>
+          <span className="text-base font-semibold truncate ml-2">${currentBalance.toFixed(2)}</span>
         </div>
         {isConfigured ? (
           <div className="space-y-2">
+            {/* Trade Progress Chart */}
+            <TradeProgressChart
+              trades={trades}
+              startingBalance={account.startingBalance}
+              drawdownThreshold={account.drawdownThreshold}
+              profitTarget={account.profitTarget}
+              trailingDrawdown={account.trailingDrawdown}
+              trailingStopProfit={account.trailingStopProfit}
+            />
+
             {/* Profit Target Section */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs">

@@ -1038,23 +1038,16 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
               <div className="flex-none p-6 border-t">
                 <Button 
                   className="w-full"
-                  disabled={!pendingChanges || Object.keys(pendingChanges).length === 0 || Object.values(pendingChanges).some(value => 
-                    typeof value === 'number' && value <= 0
-                  ) || isSaving}
+                  disabled={!pendingChanges || 
+                    Object.keys(pendingChanges).length === 0 || 
+                    (pendingChanges.startingBalance !== undefined && pendingChanges.startingBalance <= 0) ||
+                    (pendingChanges.profitTarget !== undefined && pendingChanges.profitTarget <= 0) ||
+                    (pendingChanges.drawdownThreshold !== undefined && pendingChanges.drawdownThreshold <= 0) ||
+                    (pendingChanges.consistencyPercentage !== undefined && pendingChanges.consistencyPercentage <= 0) ||
+                    (pendingChanges.trailingDrawdown && pendingChanges.trailingStopProfit !== undefined && pendingChanges.trailingStopProfit <= 0) ||
+                    isSaving}
                   onClick={async () => {
                     if (!selectedAccountForTable || !user || !pendingChanges) return
-                    
-                    // Validate that any numeric values are positive
-                    if (Object.values(pendingChanges).some(value => 
-                      typeof value === 'number' && value <= 0
-                    )) {
-                      toast({
-                        title: t('error'),
-                        description: t('propFirm.toast.validationPositive'),
-                        variant: "destructive"
-                      })
-                      return
-                    }
                     
                     try {
                       setIsSaving(true)
