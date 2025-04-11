@@ -604,7 +604,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
               className="flex-1 overflow-y-auto h-full"
               style={{ height: 'calc(100% - 1rem)' }}
             >
-              <div className={cn("grid grid-cols-1 gap-3 mt-4", size === "medium" ? "sm:grid-cols-2" : size === "large" ? "sm:grid-cols-3" : "sm:grid-cols-4")}>
+              <div className={cn("grid grid-cols-1 gap-3 mt-4", size === "medium" ? "sm:grid-cols-1" : size === "large" ? "sm:grid-cols-2" : "sm:grid-cols-4")}>
                 {propFirmAccounts.map(account => {
                   const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
                   const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
