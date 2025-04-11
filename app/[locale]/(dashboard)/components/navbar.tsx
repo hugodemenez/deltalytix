@@ -171,6 +171,9 @@ export default function Navbar() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56">
                     <DropdownMenuLabel>{t('dashboard.myAccount')}</DropdownMenuLabel>
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      {user?.email}
+                    </div>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard">
                         <div className="flex w-full">
