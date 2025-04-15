@@ -1476,4 +1476,8 @@ export default {
     'import.steps.connectAccountDescription': 'Connect your trading account',
     'import.title': 'Import Trades',
     'import.description': 'Import your trades from various sources',
+    'shared.showMore': 'Show more',
+    'shared.showLess': 'Show less',
+    'shared.showMoreAccounts': 'Show {count} more accounts',
+    'shared.showLessAccounts': 'Show less accounts',
 } as const

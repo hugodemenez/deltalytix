@@ -1529,4 +1529,8 @@ export default {
     deleteGroupTitle: "Supprimer le Groupe",
     deleteGroupDescription: "Êtes-vous sûr de vouloir supprimer le groupe {name}? Cette action est irréversible.",
     moveToHidden: "Déplacer vers les comptes masqués",
+    'shared.showMore': 'Voir plus',
+    'shared.showLess': 'Voir moins',
+    'shared.showMoreAccounts': 'Voir {count} comptes de plus',
+    'shared.showLessAccounts': 'Voir moins de comptes',
 } as const

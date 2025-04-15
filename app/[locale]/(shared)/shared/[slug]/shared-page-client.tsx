@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
-import { Loader2 } from "lucide-react"
-import { useEffect } from "react"
+import { Loader2, ChevronDown } from "lucide-react"
+import { useEffect, useState } from "react"
 import { SharedParams } from "@/server/shared"
 import { Trade } from "@prisma/client"
 import { LanguageSelector } from "@/components/ui/language-selector"
@@ -30,6 +30,9 @@ interface SharedPageClientProps {
 function AccountsSelector({ accounts }: { accounts: string[] }) {
   const { accountNumbers, setAccountNumbers } = useUserData()
   const t = useI18n()
+  const [isExpanded, setIsExpanded] = useState(false)
+  const visibleAccounts = isExpanded ? accounts : accounts.slice(0, 2)
+  const remainingAccounts = accounts.length - 2
 
   const toggleAccount = (account: string) => {
     if (accountNumbers.includes(account)) {
@@ -51,17 +54,35 @@ function AccountsSelector({ accounts }: { accounts: string[] }) {
     <div className="flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-medium">{t('shared.tradingAccounts')}</p>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={toggleAll}
-          className="h-7 text-xs"
-        >
-          {accountNumbers.length === accounts.length ? t('shared.deselectAll') : t('shared.selectAll')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {accounts.length > 2 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="h-7 text-xs gap-1"
+            >
+              {isExpanded 
+                ? t('shared.showLessAccounts')
+                : t('shared.showMoreAccounts', { count: remainingAccounts })}
+              <ChevronDown className={cn(
+                "h-3 w-3 transition-transform",
+                isExpanded ? "rotate-180" : ""
+              )} />
+            </Button>
+          )}
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={toggleAll}
+            className="h-7 text-xs"
+          >
+            {accountNumbers.length === accounts.length ? t('shared.deselectAll') : t('shared.selectAll')}
+          </Button>
+        </div>
       </div>
       <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-        {accounts.map((account) => (
+        {visibleAccounts.map((account) => (
           <button
             key={account}
             onClick={() => toggleAccount(account)}
