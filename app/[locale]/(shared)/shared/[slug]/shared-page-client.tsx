@@ -52,21 +52,21 @@ function AccountsSelector({ accounts }: { accounts: string[] }) {
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-2 xs:gap-0 mb-2">
         <p className="text-sm font-medium">{t('shared.tradingAccounts')}</p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 w-full xs:w-auto justify-end">
           {accounts.length > 2 && (
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="h-7 text-xs gap-1"
+              className="h-7 text-xs gap-1 min-w-0"
             >
               {isExpanded 
                 ? t('shared.showLessAccounts')
                 : t('shared.showMoreAccounts', { count: remainingAccounts })}
               <ChevronDown className={cn(
-                "h-3 w-3 transition-transform",
+                "h-3 w-3 transition-transform shrink-0",
                 isExpanded ? "rotate-180" : ""
               )} />
             </Button>
@@ -75,31 +75,31 @@ function AccountsSelector({ accounts }: { accounts: string[] }) {
             variant="ghost" 
             size="sm"
             onClick={toggleAll}
-            className="h-7 text-xs"
+            className="h-7 text-xs whitespace-nowrap min-w-0"
           >
             {accountNumbers.length === accounts.length ? t('shared.deselectAll') : t('shared.selectAll')}
           </Button>
         </div>
       </div>
-      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 xs:grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1.5 xs:gap-2">
         {visibleAccounts.map((account) => (
           <button
             key={account}
             onClick={() => toggleAccount(account)}
             className={cn(
-              "flex items-center p-2 rounded-md border transition-colors hover:bg-muted/50",
+              "flex items-center p-1.5 xs:p-2 rounded-md border transition-colors hover:bg-muted/50",
               accountNumbers.includes(account) 
                 ? "bg-primary/10 border-primary/50" 
                 : "bg-background border-border"
             )}
           >
             <div className={cn(
-              "h-2 w-2 rounded-full mr-2",
+              "h-2 w-2 rounded-full mr-1.5 xs:mr-2 shrink-0",
               accountNumbers.includes(account) 
                 ? "bg-primary" 
                 : "bg-muted-foreground/30"
             )} />
-            <span className="text-sm font-medium truncate" title={account}>
+            <span className="text-xs xs:text-sm font-medium truncate" title={account}>
               {account}
             </span>
           </button>
