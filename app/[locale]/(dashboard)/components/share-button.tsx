@@ -159,13 +159,6 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       return Array.from(new Set(trades.map(trade => trade.accountNumber)))
     }, [trades])
 
-    // Set all accounts as selected by default
-    useEffect(() => {
-      if (accountNumbers.length > 0 && selectedAccounts.length === 0) {
-        setSelectedAccounts(accountNumbers)
-      }
-    }, [accountNumbers, selectedAccounts])
-
     const filteredAccounts = useMemo(() => {
       if (!searchQuery) return accountNumbers
       return accountNumbers.filter(account => 
