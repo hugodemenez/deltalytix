@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Eye, Pencil } from "lucide-react"
+import { Eye, Pencil, Loader2 } from "lucide-react"
 import { useWeeklyRecap } from "./weekly-recap-context"
 import { useDebounce } from "@/hooks/use-debounce"
 import { renderEmailPreview } from "../../server/weekly-recap"
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export function WeeklyRecapPreview() {
-  const { content, setContent } = useWeeklyRecap()
+  const { content, setContent, isLoading } = useWeeklyRecap()
   const [emailHtml, setEmailHtml] = useState("")
   const [isEditing, setIsEditing] = useState(false)
   
@@ -20,6 +20,12 @@ export function WeeklyRecapPreview() {
 
   useEffect(() => {
     const updatePreview = async () => {
+      if (isLoading) return
+      if (debouncedContent.dailyPnL.length === 0) {
+        console.log("No data to preview")
+        return
+      }
+      
       const result = await renderEmailPreview(debouncedContent)
       if (result.success && result.html) {
         setEmailHtml(result.html)
@@ -27,7 +33,17 @@ export function WeeklyRecapPreview() {
     }
 
     updatePreview()
-  }, [debouncedContent])
+  }, [debouncedContent, isLoading])
+
+  if (isLoading) {
+    return (
+      <Card className="h-full">
+        <CardContent className="flex items-center justify-center h-[calc(100vh-15rem)]">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <Card className="h-full">

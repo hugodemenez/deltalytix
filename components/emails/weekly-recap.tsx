@@ -27,7 +27,45 @@ interface TraderStatsEmailProps {
   };
   resultAnalysisIntro: string;
   tipsForNextWeek: string;
+  language?: string;
 }
+
+const translations = {
+  fr: {
+    preview: 'Vos statistiques de trading de la semaine - Deltalytix',
+    greeting: 'Bonjour',
+    disclaimer: 'Cette analyse, effectuée sur les 14 derniers jours par un algorithme, peut contenir des erreurs.',
+    dailyPerformance: 'Performances Journalières',
+    winLossDistribution: 'Distribution Gains/Pertes',
+    wins: 'Gains',
+    losses: 'Pertes',
+    successRate: 'Taux de réussite',
+    detailedStats: 'Voir mes statistiques détaillées →',
+    founder: 'Fondateur de Deltalytix',
+    unsubscribe: 'Se désabonner',
+    sentBy: 'Cet email vous a été envoyé par Deltalytix',
+    days: ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven'],
+    warmUpMessage: 'Je vois que cette semaine a été difficile. Je serais ravi de discuter avec vous pour comprendre vos défis et vous aider à améliorer vos performances. Prenons rendez-vous pour un appel personnalisé.',
+    scheduleCall: 'Planifier un appel →'
+  },
+  en: {
+    preview: 'Your weekly trading statistics - Deltalytix',
+    greeting: 'Hello',
+    disclaimer: 'This analysis, performed over the last 14 days by an algorithm, may contain errors.',
+    dailyPerformance: 'Daily Performance',
+    winLossDistribution: 'Win/Loss Distribution',
+    wins: 'Wins',
+    losses: 'Losses',
+    successRate: 'Success Rate',
+    detailedStats: 'View my detailed statistics →',
+    founder: 'Founder of Deltalytix',
+    unsubscribe: 'Unsubscribe',
+    sentBy: 'This email was sent to you by Deltalytix',
+    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    warmUpMessage: 'I see this week has been challenging. I\'d love to discuss your challenges and help you improve your performance. Let\'s schedule a personalized call.',
+    scheduleCall: 'Schedule a call →'
+  }
+};
 
 function getWeekNumber(dateStr: string) {
   const [day, month] = dateStr.split('/').map(Number);
@@ -63,18 +101,25 @@ export default function TraderStatsEmail({
   winLossStats,
   resultAnalysisIntro,
   tipsForNextWeek,
+  language = "fr",
 }: TraderStatsEmailProps) {
-  const unsubscribeUrl = email 
+  const t = translations[language as keyof typeof translations] || translations.fr;
+
+  const unsubscribeUrl = email
     ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
     : '#';
-  
+
   // Calculate win rate percentage
   const totalTrades = winLossStats.wins + winLossStats.losses;
   const winRate = ((winLossStats.wins / totalTrades) * 100).toFixed(1);
-  
+
+  // Calculate overall PnL
+  const overallPnL = dailyPnL.reduce((sum, day) => sum + day.pnl, 0);
+  const isPositivePerformance = overallPnL > 0;
+
   // Helper function to determine PnL color
   const getPnLColor = (pnl: number) => pnl >= 0 ? 'text-green-600' : 'text-red-600';
-  
+
   // Helper function to format PnL with sign
   const formatPnLWithSign = (pnl: number) => {
     const formatted = formatPnL(Math.abs(pnl));
@@ -115,115 +160,131 @@ export default function TraderStatsEmail({
   return (
     <Html>
       <Head />
-      <Preview>Vos statistiques de trading de la semaine - Deltalytix</Preview>
+      <Preview>{t.preview}</Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans">
           <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-sm">
             <Section className="px-6 py-8">
               <Heading className="text-2xl font-bold text-gray-900 mb-6">
-                Bonjour {firstName},
+                {t.greeting} {firstName},
               </Heading>
               <Text className="text-gray-400 mb-6 leading-6">
-              Cette analyse, effectuée sur les 14 derniers jours par un algorithme, peut contenir des erreurs.
+                {t.disclaimer}
               </Text>
 
-              <Text className="text-gray-800 mb-6 leading-6">
-                {resultAnalysisIntro}
-              </Text>
-
-              {/* Calendar View */}
-              <Section className="mb-8">
-                <Heading className="text-xl font-semibold text-gray-900 mb-4">
-                  Performances Journalières
-                </Heading>
-                <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
-                  <tr className="bg-gray-50">
-                    <td className="w-1/5 p-2 text-center text-sm text-gray-600 border border-gray-200">Lun</td>
-                    <td className="w-1/5 p-2 text-center text-sm text-gray-600 border border-gray-200">Mar</td>
-                    <td className="w-1/5 p-2 text-center text-sm text-gray-600 border border-gray-200">Mer</td>
-                    <td className="w-1/5 p-2 text-center text-sm text-gray-600 border border-gray-200">Jeu</td>
-                    <td className="w-1/5 p-2 text-center text-sm text-gray-600 border border-gray-200">Ven</td>
-                  </tr>
-                  {sortedWeeks.map((week, weekIndex) => (
-                    <tr key={weekIndex}>
-                      {week.map((day, dayIndex) => (
-                        <td key={dayIndex} className="w-1/5 p-2 text-center border border-gray-200 min-w-[80px]">
-                          {day ? (
-                            <div className="flex flex-col items-center justify-center min-h-[48px]">
-                              <Text className="text-xs text-gray-600 mb-1 w-full text-center">
-                                {day.date}
-                              </Text>
-                              <Text className={`text-xs font-semibold ${getPnLColor(day.pnl)} w-full text-center`}>
-                                {formatPnLWithSign(day.pnl)}€
-                              </Text>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-center min-h-[48px]">
-                              <Text className="text-xs text-gray-400">-</Text>
-                            </div>
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </table>
-              </Section>
-
-              {/* Win/Loss Distribution */}
-              <Section className="mb-8 text-center">
-                <Heading className="text-xl font-semibold text-gray-900 mb-4">
-                  Distribution Gains/Pertes
-                </Heading>
-                <Section className="bg-gray-50 rounded-lg p-4 mb-4">
-                  <table className="w-full">
-                    <tr>
-                      <td className="w-1/2 text-center">
-                        <Text className="text-2xl font-bold text-green-600 mb-2">
-                          {winLossStats.wins}
-                        </Text>
-                        <Text className="text-sm text-gray-600">Gains</Text>
-                      </td>
-                      <td className="w-1/2 text-center">
-                        <Text className="text-2xl font-bold text-red-600 mb-2">
-                          {winLossStats.losses}
-                        </Text>
-                        <Text className="text-sm text-gray-600">Pertes</Text>
-                      </td>
-                    </tr>
-                  </table>
-                  <Text className="text-lg font-semibold mt-4">
-                    Taux de réussite: {winRate}%
+              {isPositivePerformance ? (
+                <>
+                  <Text className="text-gray-800 mb-6 leading-6">
+                    {resultAnalysisIntro}
                   </Text>
-                </Section>
-              </Section>
+                  {/* Calendar View */}
+                  <Section className="mb-8">
+                    <Heading className="text-xl font-semibold text-gray-900 mb-4">
+                      {t.dailyPerformance}
+                    </Heading>
+                    <table className="w-full border-collapse" style={{ tableLayout: 'fixed' }}>
+                      <tr className="bg-gray-50">
+                        {t.days.map((day) => (
+                          <td key={day} className="w-1/5 p-2 text-center text-sm text-gray-600 border border-gray-200">
+                            {day}
+                          </td>
+                        ))}
+                      </tr>
+                      {sortedWeeks.map((week, weekIndex) => (
+                        <tr key={weekIndex}>
+                          {week.map((day, dayIndex) => (
+                            <td key={dayIndex} className="w-1/5 p-2 text-center border border-gray-200 min-w-[80px]">
+                              {day ? (
+                                <div className="flex flex-col items-center justify-center min-h-[48px]">
+                                  <Text className="text-xs text-gray-600 mb-1 w-full text-center">
+                                    {day.date}
+                                  </Text>
+                                  <Text className={`text-xs font-semibold ${getPnLColor(day.pnl)} w-full text-center`}>
+                                    {formatPnLWithSign(day.pnl)}€
+                                  </Text>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center min-h-[48px]">
+                                  <Text className="text-xs text-gray-400">-</Text>
+                                </div>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </table>
+                  </Section>
 
+                  {/* Win/Loss Distribution */}
+                  <Section className="mb-8 text-center">
+                    <Heading className="text-xl font-semibold text-gray-900 mb-4">
+                      {t.winLossDistribution}
+                    </Heading>
+                    <Section className="bg-gray-50 rounded-lg p-4 mb-4">
+                      <table className="w-full">
+                        <tr>
+                          <td className="w-1/2 text-center">
+                            <Text className="text-2xl font-bold text-green-600 mb-2">
+                              {winLossStats.wins}
+                            </Text>
+                            <Text className="text-sm text-gray-600">{t.wins}</Text>
+                          </td>
+                          <td className="w-1/2 text-center">
+                            <Text className="text-2xl font-bold text-red-600 mb-2">
+                              {winLossStats.losses}
+                            </Text>
+                            <Text className="text-sm text-gray-600">{t.losses}</Text>
+                          </td>
+                        </tr>
+                      </table>
+                      <Text className="text-lg font-semibold mt-4">
+                        {t.successRate}: {winRate}%
+                      </Text>
+                    </Section>
+                  </Section>
 
-              <Text className="text-gray-800 mb-6 leading-6">
-                {tipsForNextWeek}
-              </Text>
+                  <Text className="text-gray-800 mb-6 leading-6">
+                    {tipsForNextWeek}
+                  </Text>
 
-              <Section className="text-center mb-8">
-                <Button 
-                  className="bg-black text-white text-sm px-6 py-2.5 rounded-md font-medium box-border"
-                  href="https://deltalytix.app/dashboard"
-                >
-                  Voir mes statistiques détaillées →
-                </Button>
-              </Section>
+                  <Section className="text-center mb-8">
+                    <Button
+                      className="bg-[#3b82f6] text-white text-sm px-[24px] py-[10px] rounded-[4px] font-medium box-border"
+                      href="https://deltalytix.app/dashboard"
+                    >
+                      {t.detailedStats}
+                    </Button>
+                  </Section>
+                </>
+              ) : (
+                <>
+                  <Text className="text-gray-800 mb-6 leading-6">
+                    {t.warmUpMessage}
+                  </Text>
+                  <Section className="text-center mb-8">
+                    <Button
+                      className="bg-[#3b82f6] text-white text-sm px-[24px] py-[10px] rounded-[4px] font-medium box-border"
+                      href="https://cal.com/hugo-demenez/deltalytix"
+                    >
+                      {t.scheduleCall}
+                    </Button>
+                  </Section>
+                </>
+              )}
 
               <Text className="text-gray-800 mt-8 mb-4">
                 Hugo DEMENEZ
                 <br />
-                <span className="text-gray-600">Fondateur de Deltalytix</span>
+                <span className="text-gray-600">{t.founder}</span>
               </Text>
 
               <Hr className="border-gray-200 my-8" />
 
               <Text className="text-gray-400 text-xs text-center">
-                Cet email vous a été envoyé par Deltalytix
+                {t.sentBy}
                 {' • '}
                 <Link href={unsubscribeUrl} className="text-gray-400 underline">
-                  Se désabonner
+                  {t.unsubscribe}
                 </Link>
               </Text>
             </Section>
@@ -234,22 +295,3 @@ export default function TraderStatsEmail({
   );
 }
 
-TraderStatsEmail.PreviewProps = {
-  firstName: "Jean",
-  dailyPnL: [
-    { date: "01/05", pnl: 250.50, weekday: 0 },
-    { date: "02/05", pnl: -120.30, weekday: 1 },
-    { date: "03/05", pnl: 340.80, weekday: 2 },
-    { date: "04/05", pnl: 180.20, weekday: 3 },
-    { date: "05/05", pnl: -90.40, weekday: 4 },
-    { date: "08/05", pnl: 220.60, weekday: 0 },
-    { date: "09/05", pnl: 150.30, weekday: 1 },
-    { date: "10/05", pnl: -80.20, weekday: 2 },
-    { date: "11/05", pnl: 290.40, weekday: 3 },
-    { date: "12/05", pnl: 175.90, weekday: 4 },
-  ],
-  winLossStats: {
-    wins: 7,
-    losses: 3
-  }
-};

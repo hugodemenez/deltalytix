@@ -5,19 +5,18 @@ import { loadInitialContent, WeeklyRecapContent } from "@/app/[locale]/(admin)/s
 import { prisma } from "@/lib/prisma"
 
 const initialContent: WeeklyRecapContent = {
-  firstName: "Jean",
-  dailyPnL: [
-  ],
+  firstName: "",
+  dailyPnL: [],
   winLossStats: {
-    wins: 7,
-    losses: 3
+    wins: 0,
+    losses: 0
   }
 }
-
 
 interface WeeklyRecapContextType {
   content: WeeklyRecapContent
   setContent: React.Dispatch<React.SetStateAction<WeeklyRecapContent>>
+  isLoading: boolean
 }
 
 const WeeklyRecapContext = createContext<WeeklyRecapContextType | undefined>(undefined)
@@ -28,14 +27,21 @@ export function WeeklyRecapProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     const loadContent = async () => {
-      const content = await loadInitialContent()
-      setContent(content)
+      try {
+        setIsLoading(true)
+        const content = await loadInitialContent()
+        setContent(content)
+      } catch (error) {
+        console.error("Failed to load weekly recap content:", error)
+      } finally {
+        setIsLoading(false)
+      }
     }
     loadContent()
   }, [])
 
   return (
-    <WeeklyRecapContext.Provider value={{ content, setContent }}>
+    <WeeklyRecapContext.Provider value={{ content, setContent, isLoading }}>
       {children}
     </WeeklyRecapContext.Provider>
   )

@@ -36,12 +36,12 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
       )
     }
     
-    if (user.language === 'en') {
-      return NextResponse.json(
-        { error: 'User not french' },
-        { status: 404 }
-      )
-    }
+    // if (user.language === 'en') {
+    //   return NextResponse.json(
+    //     { error: 'User not french' },
+    //     { status: 404 }
+    //   )
+    // }
 
     // get the newsletter config for this user based on email
     const newsletter = await prisma.newsletter.findUnique({
@@ -79,6 +79,7 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
         MissingYouEmail({
           firstName: newsletter.firstName || 'trader',
           email: newsletter.email,
+          language: user.language
         })
       )
 
@@ -88,7 +89,7 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
           from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
           to: [newsletter.email],
           replyTo: 'hugo.demenez@deltalytix.app',
-          subject: 'Nous manquons de vous voir sur Deltalytix',
+          subject: user.language === 'fr' ? 'Nous manquons de vous voir sur Deltalytix' : 'We miss you on Deltalytix',
           html: missingYouEmailHtml
         }
       })
@@ -106,7 +107,7 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
 
     const dailyPnL = trades.reduce((acc, trade) => {
       const tradeDate = new Date(trade.entryDate)
-      const date = tradeDate.toLocaleDateString('fr-FR', {
+      const date = tradeDate.toLocaleDateString(user.language === 'fr' ? 'fr-FR' : 'en-US', {
         day: '2-digit',
         month: '2-digit'
       })
@@ -139,28 +140,38 @@ export async function POST(req: Request, props: { params: Promise<{ userid: stri
 
 
     // Generate AI analysis
-    const DELTALYTIX_CONTEXT = `Deltalytix est une plateforme web pour day traders de futures, avec une interface intuitive et personnalisable. Conçue à partir de mon expérience personnelle en tant que day trader de futures, utilisant des stratégies de scalping, elle propose des fonctionnalités comme la gestion de multiple compte, le suivi des challenges propfirms, et des tableaux de bord personnalisables. Notre but est de fournir aux traders des analyses approfondies sur leurs habitudes de trading pour optimiser leurs stratégies et améliorer leur prise de décision.`
+    const DELTALYTIX_CONTEXT = user.language === 'fr' 
+      ? `Deltalytix est une plateforme web pour day traders de futures, avec une interface intuitive et personnalisable. Conçue à partir de mon expérience personnelle en tant que day trader de futures, utilisant des stratégies de scalping, elle propose des fonctionnalités comme la gestion de multiple compte, le suivi des challenges propfirms, et des tableaux de bord personnalisables. Notre but est de fournir aux traders des analyses approfondies sur leurs habitudes de trading pour optimiser leurs stratégies et améliorer leur prise de décision.`
+      : `Deltalytix is a web platform for futures day traders, featuring an intuitive and customizable interface. Designed from my personal experience as a futures day trader using scalping strategies, it offers features like multiple account management, propfirm challenge tracking, and customizable dashboards. Our goal is to provide traders with in-depth analysis of their trading habits to optimize their strategies and improve decision-making.`
 
     const analysisSchema = z.object({
-      intro: z.string().describe("Une analyse très courte (1 phrase) des performances de la semaine"),
-      tips: z.string().describe("Des conseils concis (environ 18 mots) pour améliorer les performances de la semaine prochaine")
+      intro: z.string().describe(user.language === 'fr' 
+        ? "Une analyse très courte (1 phrase) des performances de la semaine"
+        : "A very short analysis (1 sentence) of the week's performance"),
+      tips: z.string().describe(user.language === 'fr'
+        ? "Des conseils concis (environ 18 mots) pour améliorer les performances de la semaine prochaine"
+        : "Concise tips (about 18 words) to improve next week's performance")
     })
 
     const thisWeekPnL = dailyPnL.reduce((sum, day) => sum + day.pnl, 0)
     const profitableDays = dailyPnL.filter(day => day.pnl > 0).length
     const totalDays = dailyPnL.length
 
-
     let analysis = {
-      resultAnalysisIntro: "Voici vos statistiques de trading de la semaine.",
-      tipsForNextWeek: "Continuez à appliquer votre stratégie avec discipline et à analyser vos trades pour progresser."
+      resultAnalysisIntro: user.language === 'fr'
+        ? "Voici vos statistiques de trading de la semaine."
+        : "Here are your trading statistics for the week.",
+      tipsForNextWeek: user.language === 'fr'
+        ? "Continuez à appliquer votre stratégie avec discipline et à analyser vos trades pour progresser."
+        : "Continue applying your strategy with discipline and analyzing your trades to improve."
     }
 
     try {
       const { partialObjectStream } = await streamObject({
         model: openai("gpt-4-turbo-preview"),
         schema: analysisSchema,
-        prompt: `Tu es un expert en trading qui analyse les performances hebdomadaires des traders.
+        prompt: user.language === 'fr'
+          ? `Tu es un expert en trading qui analyse les performances hebdomadaires des traders.
 ${DELTALYTIX_CONTEXT}
 
 Ta tâche est de générer deux éléments distincts basés sur ces métriques de trading :
@@ -182,7 +193,30 @@ Directives pour les conseils (tips) :
 4. Relie le conseil aux performances de la semaine
 5. Sois précis et actionnable
 
-Génère une analyse personnalisée basée sur ces données :`,
+Génère une analyse personnalisée basée sur ces données :`
+          : `You are a trading expert analyzing traders' weekly performance.
+${DELTALYTIX_CONTEXT}
+
+Your task is to generate two distinct elements based on these trading metrics:
+
+Performance data:
+- Total PnL: ${thisWeekPnL}€
+- Profitable days: ${profitableDays}/${totalDays}
+
+Guidelines for analysis (intro):
+1. Generate ONE SINGLE performance analysis sentence with an encouraging tone
+2. Be direct and factual
+3. Mention the most important point of the week
+4. Maximum 30 words for the analysis
+
+Guidelines for tips:
+1. Suggest a specific action using Deltalytix features
+2. About 18 words
+3. Mention a concrete platform tool (dashboards, account management, challenge tracking, analysis)
+4. Relate the tip to the week's performance
+5. Be precise and actionable
+
+Generate a personalized analysis based on this data:`,
         temperature: 0.7,
       })
 
@@ -209,7 +243,8 @@ Génère une analyse personnalisée basée sur ces données :`,
         winLossStats,
         email: newsletter.email,
         resultAnalysisIntro: analysis.resultAnalysisIntro,
-        tipsForNextWeek: analysis.tipsForNextWeek
+        tipsForNextWeek: analysis.tipsForNextWeek,
+        language: user.language
       })
     )
 
@@ -218,7 +253,7 @@ Génère une analyse personnalisée basée sur ces données :`,
       emailData: {
         from: 'Deltalytix <newsletter@eu.updates.deltalytix.app>',
         to: [user.email],
-        subject: 'Vos statistiques de trading de la semaine 📈',
+        subject: user.language === 'fr' ? 'Vos statistiques de trading de la semaine 📈' : 'Your trading statistics for the week 📈',
         html: weeklyStatsEmailHtml,
         headers: {
           'List-Unsubscribe': `<${unsubscribeUrl}>`,
