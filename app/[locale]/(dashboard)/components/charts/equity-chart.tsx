@@ -85,7 +85,7 @@ function getAccountColor(index: number): string {
 export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   const { formattedTrades: trades } = useUserData()
   const [showDailyPnL, setShowDailyPnL] = React.useState(true)
-  const [showIndividual, setShowIndividual] = React.useState(false)
+  const [showIndividual, setShowIndividual] = React.useState(true)
   const yAxisRef = React.useRef<any>(null)
   const t = useI18n()
 
