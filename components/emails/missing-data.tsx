@@ -71,13 +71,13 @@ const content = {
 };
 
 export default function MissingYouEmail({
-  email="jean.dupont@example.com",
+  email = "jean.dupont@example.com",
   firstName = "trader",
   language = "fr",
 }: MissingYouEmailProps) {
   const lang = language === "en" ? "en" : "fr";
   const t = content[lang];
-  const unsubscribeUrl = email 
+  const unsubscribeUrl = email
     ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
     : '#';
 
@@ -175,9 +175,9 @@ export default function MissingYouEmail({
               </Text>
 
               <Section className="text-center mb-8">
-                <Button 
-                  className="bg-black text-white text-sm px-6 py-2.5 rounded-md font-medium box-border"
-                  href="https://deltalytix.app/import"
+                <Button
+                  className="bg-[#3b82f6] text-white text-sm px-[24px] py-[10px] rounded-[4px] font-medium box-border"
+                  href="https://deltalytix.app/authentication"
                 >
                   {t.importButton}
                 </Button>

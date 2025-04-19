@@ -259,16 +259,22 @@ export default function TraderStatsEmail({
               ) : (
                 <>
                   <Text className="text-gray-800 mb-6 leading-6">
+                    {resultAnalysisIntro}
+                  </Text>
+                  <Text className="text-gray-800 mb-6 leading-6">
                     {t.warmUpMessage}
                   </Text>
                   <Section className="text-center mb-8">
                     <Button
                       className="bg-[#3b82f6] text-white text-sm px-[24px] py-[10px] rounded-[4px] font-medium box-border"
-                      href="https://cal.com/hugo-demenez/deltalytix"
+                      href="https://cal.com/hugo-demenez/deltalytix-discussion"
                     >
                       {t.scheduleCall}
                     </Button>
                   </Section>
+                  <Text className="text-gray-800 mb-6 leading-6">
+                    {tipsForNextWeek}
+                  </Text>
                 </>
               )}
 
