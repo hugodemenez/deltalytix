@@ -22,16 +22,27 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     });
 
     let customerId: string;
+    let isFirstOrder = false;
 
     if (existingCustomers.data.length > 0) {
         // Use existing customer
         customerId = existingCustomers.data[0].id;
+        
+        // Check if customer has any previous subscriptions
+        const subscriptions = await stripe.subscriptions.list({
+            customer: customerId,
+            status: 'all', // Include all subscription statuses
+            limit: 1
+        });
+        
+        isFirstOrder = subscriptions.data.length === 0;
     } else {
         // Create new customer if none exists
         const newCustomer = await stripe.customers.create({
             email: user.email,
         });
         customerId = newCustomer.id;
+        isFirstOrder = true;
     }
 
     const prices = await stripe.prices.list({
@@ -75,8 +86,11 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         subscription_data: trialDays > 0 ? {
             trial_period_days: trialDays,
         } : undefined,
-        // payment_method_collection: trialDays > 0 ? 'if_required' : 'always',
-        allow_promotion_codes: true,
+        discounts: isFirstOrder ? [
+            {
+                coupon: 'GynFkk27'
+            }
+        ] : undefined,
         success_url: `${websiteURL}dashboard?success=true`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
     });
