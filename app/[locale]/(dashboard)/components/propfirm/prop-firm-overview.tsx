@@ -871,7 +871,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                         placeholder="Enter amount to lock drawdown"
                       />
                       <p className="text-xs text-muted-foreground">
-                        Drawdown will trail profits until this level is reached
+                        {t('propFirm.trailingDrawdown.explanation')}
                       </p>
                     </div>
                   )}

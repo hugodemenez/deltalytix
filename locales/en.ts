@@ -963,6 +963,9 @@ export default {
             payout: "Payout",
             payoutAmount: "Payout: ${amount}"
         },
+        trailingDrawdown: {
+            explanation: 'Drawdown will trail profits until this level is reached'
+        },
     },
     rithmic: {
         savedCredentials: "Saved Credentials",

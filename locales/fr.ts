@@ -743,6 +743,9 @@ export default {
             payout: "Paiement",
             payoutAmount: "Paiement : ${amount}"
         },
+        trailingDrawdown: {
+            explanation: 'Le drawdown suivra les profits jusqu\'à ce que ce niveau soit atteint'
+        }
     },
     common: {
         add: 'Ajouter',
