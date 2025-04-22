@@ -9,10 +9,10 @@ export default function Features() {
   const features = [
     {
       id: "data-import",
-      title: t("features.data-import.title"),
+      title: t("landing.features.data-import.title"),
       icon: <Database className="h-5 w-5 text-muted-foreground" />,
-      description: t("features.data-import.description"),
-      stat: t("features.data-import.stat"),
+      description: t("landing.features.data-import.description"),
+      stat: t("landing.features.data-import.stat"),
       image: {
         light: "/field-mapping-light.jpeg",
         dark: "/field-mapping-dark.png"
@@ -20,10 +20,10 @@ export default function Features() {
     },
     {
       id: "performance-visualization",
-      title: t("features.performance-visualization.title"),
+      title: t("landing.features.performance-visualization.title"),
       icon: <BarChart3 className="h-5 w-5 text-muted-foreground" />,
-      description: t("features.performance-visualization.description"),
-      stat: t("features.performance-visualization.stat"),
+      description: t("landing.features.performance-visualization.description"),
+      stat: t("landing.features.performance-visualization.stat"),
       image: {
         light: "/charts-light.png",
         dark: "/charts-dark.png"
@@ -31,10 +31,10 @@ export default function Features() {
     },
     {
       id: "daily-performance",
-      title: t("features.daily-performance.title"),
+      title: t("landing.features.daily-performance.title"),
       icon: <Calendar className="h-5 w-5 text-muted-foreground" />,
-      description: t("features.daily-performance.description"),
-      stat: t("features.daily-performance.stat"),
+      description: t("landing.features.daily-performance.description"),
+      stat: t("landing.features.daily-performance.stat"),
       image: {
         light: "/calendar-light.png",
         dark: "/calendar-dark.png"
@@ -42,18 +42,18 @@ export default function Features() {
     },
     {
       id: "ai-journaling",
-      title: t("features.ai-journaling.title"),
+      title: t("landing.features.ai-journaling.title"),
       icon: <Brain className="h-5 w-5 text-muted-foreground" />,
-      description: t("features.ai-journaling.description"),
-      stat: t("features.ai-journaling.stat"),
+      description: t("landing.features.ai-journaling.description"),
+      stat: t("landing.features.ai-journaling.stat"),
       image: <AnimatedBeamDemo />
     }
   ]
 
   return (
     <main className="container mx-auto px-4 py-16">
-      <h1 className="text-4xl font-bold text-center mb-4">{t("features.heading")}</h1>
-      <p className="text-xl text-center text-gray-600 mb-12">{t("features.subheading")}</p>
+      <h1 className="text-4xl font-bold text-center mb-4">{t("landing.features.heading")}</h1>
+      <p className="text-xl text-center text-gray-600 mb-12">{t("landing.features.subheading")}</p>
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
         {features.map((feature, index) => (
           <Card 

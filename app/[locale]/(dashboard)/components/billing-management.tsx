@@ -28,23 +28,6 @@ type SubscriptionStatus =
   | "trialing"
   | "unpaid"
 
-// Add helper function for safe date formatting
-function formatStripeDate(
-  timestamp: number | null | undefined, 
-  locale: string, 
-  t: ReturnType<typeof useI18n>,
-  options: Intl.DateTimeFormatOptions = { 
-    month: 'long', 
-    day: 'numeric',
-    year: 'numeric'
-  }
-): string {
-  if (!timestamp) return t('billing.notApplicable')
-  // Stripe timestamps are in seconds, JavaScript needs milliseconds
-  const date = new Date(timestamp * 1000)
-  return date.toLocaleDateString(locale, options)
-}
-
 interface PlanPrice {
   yearly: number
   monthly: number
@@ -70,46 +53,20 @@ export default function BillingManagement() {
   const { toast } = useToast()
   const t = useI18n()
   const locale = useCurrentLocale()
-  const { timezone } = useUserData()
 
-  const plans: Plans = {
-    basic: {
-      name: t('pricing.basic.name'),
-      description: t('pricing.basic.description'),
-      price: { yearly: 0, monthly: 0 },
-      features: [
-        t('pricing.basic.feature1'),
-        t('pricing.basic.feature2'),
-      ]
-    },
-    plus: {
-      name: t('pricing.plus.name'),
-      description: t('pricing.plus.description'),
-      price: { 
-        yearly: 300,
-        monthly: 29.99
-      },
-      isPopular: true,
-      features: [
-        t('pricing.plus.feature1'),
-        t('pricing.plus.feature2'),
-        t('pricing.plus.feature4'),
-      ]
-    },
-    pro: {
-      name: t('pricing.pro.name'),
-      description: t('pricing.pro.description'),
-      price: { 
-        yearly: 1000,
-        monthly: 99.99
-      },
-      isComingSoon: true,
-      features: [
-        t('pricing.pro.feature1'),
-        t('pricing.pro.feature2'),
-        t('pricing.pro.feature3'),
-      ]
+  // Add helper function for safe date formatting
+  function formatStripeDate(
+    timestamp: number | null | undefined, 
+    options: Intl.DateTimeFormatOptions = { 
+      month: 'long', 
+      day: 'numeric',
+      year: 'numeric'
     }
+  ): string {
+    if (!timestamp) return t('billing.notApplicable')
+    // Stripe timestamps are in seconds, JavaScript needs milliseconds
+    const date = new Date(timestamp * 1000)
+    return date.toLocaleDateString(locale, options)
   }
 
   useEffect(() => {
@@ -120,16 +77,6 @@ export default function BillingManagement() {
     }
     loadSubscription()
   }, [])
-
-  const currentPlan = subscription?.plan?.name?.toLowerCase().includes('pro') 
-    ? 'pro' 
-    : subscription?.plan?.name?.toLowerCase().includes('plus')
-      ? 'plus'
-      : 'basic'
-
-  const handleChangeBillingPeriod = (newPeriod: BillingPeriod) => {
-    setBillingPeriod(newPeriod)
-  }
 
   const handleSubscriptionAction = async (action: 'pause' | 'resume' | 'cancel') => {
     if (!subscription?.id) return
@@ -156,30 +103,6 @@ export default function BillingManagement() {
         variant: "destructive",
       })
     }
-  }
-
-  function formatPrice(plan: Plan) {
-    if (plan.price.yearly === 0) {
-      return t('pricing.free')
-    }
-
-    const priceDisplay = (
-      <>
-        €{billingPeriod === 'monthly' ? plan.price.monthly : (plan.price.yearly / 12).toFixed(2)}
-        <span className="text-lg font-normal text-gray-500">
-          /{t('pricing.month')}
-        </span>
-        {billingPeriod === 'yearly' && (
-          <div className="text-sm font-normal text-gray-500 mt-1">
-            {t('pricing.billedYearly', {
-              total: plan.price.yearly.toString()
-            })}
-          </div>
-        )}
-      </>
-    )
-
-    return priceDisplay
   }
 
   if (isLoading) {
@@ -330,7 +253,7 @@ export default function BillingManagement() {
                           </span>
                         </>
                       )
-                      : t('pricing.free')}
+                      : t('pricing.free.name')}
                   </div>
                 )}
                 <p className="text-sm text-muted-foreground mt-1">
@@ -342,10 +265,7 @@ export default function BillingManagement() {
               {subscription?.trial_end && new Date(subscription.trial_end * 1000) > new Date() && (
                 <div className="bg-primary/10 text-primary px-4 py-2 rounded-md text-sm">
                   {t('billing.trialEndsIn', {
-                    date: formatStripeDate(subscription.trial_end, locale, t, { 
-                      month: 'long', 
-                      day: 'numeric'
-                    })
+                    date: formatStripeDate(subscription.trial_end)
                   })}
                 </div>
               )}
@@ -360,7 +280,7 @@ export default function BillingManagement() {
                     <div>
                       <p className="font-medium">
                         {t('billing.dates.activeSince', { 
-                          date: formatStripeDate(subscription.created, locale, t) 
+                          date: formatStripeDate(subscription.created) 
                         })}
                       </p>
                     </div>
@@ -370,14 +290,8 @@ export default function BillingManagement() {
                     <div>
                       <p className="font-medium">
                         {t('billing.dates.currentPeriod', {
-                          startDate: formatStripeDate(subscription.current_period_start, locale, t, { 
-                            month: 'long', 
-                            day: 'numeric'
-                          }),
-                          endDate: formatStripeDate(subscription.current_period_end, locale, t, { 
-                            month: 'long', 
-                            day: 'numeric'
-                          })
+                          startDate: formatStripeDate(subscription.current_period_start),
+                          endDate: formatStripeDate(subscription.current_period_end)
                         })}
                       </p>
                     </div>
@@ -388,13 +302,7 @@ export default function BillingManagement() {
                       <div>
                         <p className="font-medium">Trial Period</p>
                         <p className="text-sm text-muted-foreground">
-                          {formatStripeDate(subscription.trial_start, locale, t, { 
-                            month: 'long', 
-                            day: 'numeric'
-                          })} - {formatStripeDate(subscription.trial_end, locale, t, { 
-                            month: 'long', 
-                            day: 'numeric'
-                          })}
+                          {formatStripeDate(subscription.trial_start)} - {formatStripeDate(subscription.trial_end)}
                         </p>
                       </div>
                     </div>
@@ -405,7 +313,7 @@ export default function BillingManagement() {
                       <div>
                         <p className="font-medium text-destructive">Cancellation Date</p>
                         <p className="text-sm text-destructive/80">
-                          {formatStripeDate(subscription.cancel_at, locale, t)}
+                          {formatStripeDate(subscription.cancel_at)}
                         </p>
                       </div>
                     </div>
@@ -486,7 +394,7 @@ export default function BillingManagement() {
                         €{(invoice.amount_paid / 100).toFixed(2)}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {formatStripeDate(invoice.created, locale, t)}
+                        {formatStripeDate(invoice.created)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

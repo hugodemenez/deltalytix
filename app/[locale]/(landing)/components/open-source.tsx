@@ -122,9 +122,9 @@ export default function GitHubRepoCard() {
   return (
     <div className="px-4 mb-8 md:mb-16 lg:mb-32">
       <div className="mb-6 md:mb-12">
-        <h2 className="text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-4 font-medium text-primary">{t('open-source.title')}</h2>
+        <h2 className="text-2xl md:text-3xl lg:text-4xl mb-2 md:mb-4 font-medium text-primary">{t('landing.openSource.title')}</h2>
         <p className="text-sm md:text-base text-muted-foreground max-w-[500px]">
-          {t('open-source.description').split('code').map((part, index, array) => 
+          {t('landing.openSource.description').split('code').map((part, index, array) => 
             index === 1 ? (
               <React.Fragment key={index}>
                 <a 
@@ -149,13 +149,13 @@ export default function GitHubRepoCard() {
                 <AccordionTrigger className="flex items-center justify-between text-primary">
                   <div className="flex items-center space-x-2">
                     <GitBranchIcon className="h-5 w-5 md:h-6 md:w-6" />
-                    <span className="text-sm md:text-base lg:text-lg">{t('open-source.accordion.open-source.title')}</span>
+                    <span className="text-sm md:text-base lg:text-lg">{t('landing.accordion.openSource.title')}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="text-xs md:text-sm text-muted-foreground">
-                  <p>{t('open-source.accordion.open-source.description', { repoName: repoData?.name })}</p>
+                  <p>{t('landing.accordion.openSource.description', { repoName: repoData?.name })}</p>
                   <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
-                    {t('open-source.accordion.open-source.button')}
+                    {t('landing.accordion.openSource.button')}
                   </Button>
                 </AccordionContent>
               </AccordionItem>
@@ -163,14 +163,14 @@ export default function GitHubRepoCard() {
                 <AccordionTrigger className="flex items-center justify-between text-primary">
                   <div className="flex items-center space-x-2">
                     <UsersIcon className="h-5 w-5 md:h-6 md:w-6" />
-                    <span className="text-sm md:text-base lg:text-lg">{t('open-source.accordion.community.title')}</span>
+                    <span className="text-sm md:text-base lg:text-lg">{t('landing.accordion.community.title')}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="text-xs md:text-sm text-muted-foreground">
-                  <p>{t('open-source.accordion.community.description')}</p>
+                  <p>{t('landing.accordion.community.description')}</p>
                   <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
                     <a href={process.env.NEXT_PUBLIC_DISCORD_INVITATION} target="_blank" rel="noreferrer">
-                      {t('open-source.accordion.community.button')}
+                      {t('landing.accordion.community.button')}
                     </a>
                   </Button>
                 </AccordionContent>
@@ -179,13 +179,13 @@ export default function GitHubRepoCard() {
                 <AccordionTrigger className="flex items-center justify-between text-primary">
                   <div className="flex items-center space-x-2">
                     <BookOpenIcon className="h-5 w-5 md:h-6 md:w-6" />
-                    <span className="text-sm md:text-base lg:text-lg">{t('open-source.accordion.open-roadmap.title')}</span>
+                    <span className="text-sm md:text-base lg:text-lg">{t('landing.accordion.openRoadmap.title')}</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="text-xs md:text-sm text-muted-foreground">
-                  <p>{t('open-source.accordion.open-roadmap.description')}</p>
+                  <p>{t('landing.accordion.openRoadmap.description')}</p>
                   <Button variant="outline" className="mt-2 md:mt-4 mb-2 border-primary text-primary text-xs md:text-sm">
-                    <Link href="/updates">{t('open-source.accordion.open-roadmap.button')}</Link>
+                    <Link href="/updates">{t('landing.accordion.openRoadmap.button')}</Link>
                   </Button>
                 </AccordionContent>
               </AccordionItem>
@@ -247,7 +247,7 @@ export default function GitHubRepoCard() {
                   <div className="pb-6 md:pb-10 mt-6 md:mt-10 h-[100px] md:h-[130px]">
                     <ChartSSR data={getValidChartData(githubStats?.stats)} />
                     <p className="text-muted-foreground text-xs md:text-sm mt-2 md:mt-4">
-                      {t('open-source.lastUpdated', { time: formatTimeAgo(lastCommit?.commit.committer.date || new Date().toISOString()) })}
+                      {t('landing.accordion.lastUpdated', { time: formatTimeAgo(lastCommit?.commit.committer.date || new Date().toISOString()) })}
                     </p>
                   </div>
                   <a

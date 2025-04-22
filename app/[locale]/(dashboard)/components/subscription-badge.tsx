@@ -37,7 +37,7 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
                   className
                 )}
               >
-                {t('pricing.free')}
+                {t('pricing.free.name')}
               </Badge>
             </Link>
           </TooltipTrigger>

@@ -150,6 +150,7 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
               profitTarget={account.profitTarget}
               trailingDrawdown={account.trailingDrawdown}
               trailingStopProfit={account.trailingStopProfit}
+              payouts={account.payouts}
             />
 
             {/* Profit Target Section */}

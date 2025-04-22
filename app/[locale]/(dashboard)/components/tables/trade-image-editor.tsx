@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
-
+import Image from "next/image"
 interface ImageGalleryProps {
   images: string | string[]
   alt?: string
@@ -39,7 +39,7 @@ export function ImageGallery({ images, alt = "Gallery image", onDelete }: ImageG
           className="relative w-10 h-10 overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           aria-label={`View ${alt}`}
         >
-          <img
+          <Image
             src={imageArray[0] || "/placeholder.svg"}
             alt={alt}
             className="object-cover w-full h-full"

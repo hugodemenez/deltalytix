@@ -4,12 +4,41 @@ import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Refe
 import { ChartContainer } from "@/components/ui/chart"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
+import { ReactElement } from "react"
 
 interface Trade {
   accountNumber: string
   entryDate: string | Date
   pnl: number
   commission?: number
+}
+
+interface Payout {
+  id: string
+  amount: number
+  date: Date
+  status: string
+}
+
+// Add interface for event type
+interface ChartEvent {
+  date: Date
+  amount: number
+  isPayout: boolean
+  payoutStatus?: string
+}
+
+interface ChartDataPoint {
+  tradeIndex: number
+  date: string
+  balance: number
+  drawdownLevel: number
+  highestBalance: number
+  target: number
+  pnl: number
+  isPayout?: boolean
+  payoutStatus?: string
+  payoutAmount: number
 }
 
 interface TradeProgressChartProps {
@@ -19,6 +48,7 @@ interface TradeProgressChartProps {
   profitTarget: number
   trailingDrawdown?: boolean
   trailingStopProfit?: number
+  payouts?: Payout[]
   className?: string
 }
 
@@ -29,6 +59,7 @@ export function TradeProgressChart({
   profitTarget,
   trailingDrawdown = false,
   trailingStopProfit = 0,
+  payouts = [],
   className
 }: TradeProgressChartProps) {
   const t = useI18n()
@@ -46,22 +77,35 @@ export function TradeProgressChart({
       label: t('propFirm.chart.profitTarget'),
       color: "#16a34a",
     },
+    payout: {
+      label: t('propFirm.chart.payout'),
+      color: "#9333ea",
+    }
   }
 
-  // Sort trades by date first
-  const sortedTrades = [...trades].sort((a, b) => 
-    new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
-  )
+  // Create combined events array with both trades and payouts
+  const allEvents: ChartEvent[] = [
+    ...trades.map(trade => ({
+      date: new Date(trade.entryDate),
+      amount: trade.pnl - (trade.commission || 0),
+      isPayout: false
+    })),
+    ...payouts.map(payout => ({
+      date: new Date(payout.date),
+      amount: ['PENDING', 'VALIDATED', 'PAID'].includes(payout.status) ? -payout.amount : 0,
+      isPayout: true,
+      payoutStatus: payout.status
+    }))
+  ].sort((a, b) => a.date.getTime() - b.date.getTime())
 
-  // Process trades to create chart data
-  const chartData = sortedTrades.reduce((acc, trade, index) => {
+  // Process events to create chart data
+  const chartData = allEvents.reduce((acc, event, index) => {
     const prevBalance = index > 0 ? acc[index - 1].balance : startingBalance
-    const tradePnL = trade.pnl - (trade.commission || 0)
-    const balance = prevBalance + tradePnL
+    const balance = prevBalance + event.amount
     
     // Calculate highest balance up to this point
     const previousHighest = index > 0 ? acc[index - 1].highestBalance : startingBalance
-    const highestBalance = Math.max(previousHighest, balance)
+    const highestBalance = event.isPayout ? previousHighest : Math.max(previousHighest, balance)
     
     // Calculate drawdown level based on trailing or fixed drawdown
     let drawdownLevel
@@ -82,22 +126,45 @@ export function TradeProgressChart({
 
     return [...acc, {
       tradeIndex: index + 1,
-      date: new Date(trade.entryDate).toLocaleDateString(),
+      date: event.date.toLocaleDateString(),
       balance,
       drawdownLevel,
       highestBalance,
       target: startingBalance + profitTarget,
-      pnl: tradePnL
+      pnl: event.isPayout ? 0 : event.amount,
+      isPayout: event.isPayout,
+      payoutStatus: event.payoutStatus,
+      payoutAmount: event.isPayout ? -event.amount : 0
     }]
-  }, [] as Array<{
-    tradeIndex: number
-    date: string
-    balance: number
-    drawdownLevel: number
-    highestBalance: number
-    target: number
-    pnl: number
-  }>)
+  }, [] as ChartDataPoint[])
+
+  const getPayoutColor = (status: string) => {
+    switch (status) {
+      case 'PENDING': return '#9CA3AF'
+      case 'VALIDATED': return '#F97316'
+      case 'REFUSED': return '#DC2626'
+      case 'PAID': return '#16A34A'
+      default: return '#9CA3AF'
+    }
+  }
+
+  const renderDot = (props: any) => {
+    const { cx, cy, payload, index } = props
+    if (!payload?.isPayout || typeof cx !== 'number' || typeof cy !== 'number') {
+      return <circle key={`dot-${index}-empty`} cx={cx} cy={cy} r={0} fill="none" />
+    }
+    return (
+      <circle
+        key={`dot-${index}-payout`}
+        cx={cx}
+        cy={cy}
+        r={4}
+        fill={getPayoutColor(payload.payoutStatus || '')}
+        stroke="white"
+        strokeWidth={1}
+      />
+    )
+  }
 
   return (
     <div className="w-full space-y-2">
@@ -134,7 +201,7 @@ export function TradeProgressChart({
               <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
-                    const data = payload[0].payload;
+                    const data = payload[0].payload as ChartDataPoint;
                     return (
                       <div className="bg-background p-2 border rounded shadow-sm">
                         <p className="text-sm font-medium">
@@ -144,9 +211,25 @@ export function TradeProgressChart({
                         <p className="text-sm">
                           {t('propFirm.chart.balanceAmount', { amount: data.balance.toLocaleString() })}
                         </p>
-                        <p className="text-sm">
-                          {t('propFirm.chart.pnlAmount', { amount: data.pnl.toLocaleString() })}
-                        </p>
+                        {!data.isPayout && (
+                          <p className="text-sm">
+                            {t('propFirm.chart.pnlAmount', { amount: data.pnl.toLocaleString() })}
+                          </p>
+                        )}
+                        {data.isPayout && data.payoutStatus && (
+                          <p className={cn(
+                            "text-sm font-medium",
+                            {
+                              "text-gray-500": data.payoutStatus === 'PENDING',
+                              "text-orange-500": data.payoutStatus === 'VALIDATED',
+                              "text-red-500": data.payoutStatus === 'REFUSED',
+                              "text-green-500": data.payoutStatus === 'PAID',
+                            }
+                          )}>
+                            {t('propFirm.chart.payoutAmount', { amount: data.payoutAmount.toLocaleString() })}
+                            {` (${data.payoutStatus.toLowerCase()})`}
+                          </p>
+                        )}
                         <p className="text-sm text-red-600">
                           {t('propFirm.chart.drawdownAmount', { amount: data.drawdownLevel.toLocaleString() })}
                         </p>
@@ -165,7 +248,7 @@ export function TradeProgressChart({
                 name={t('propFirm.chart.balance')}
                 stroke={chartConfig.balance.color}
                 strokeWidth={2}
-                dot={false}
+                dot={renderDot}
               />
               <Line
                 type="monotone"

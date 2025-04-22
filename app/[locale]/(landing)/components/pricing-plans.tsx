@@ -87,7 +87,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
 
   function formatPrice(plan: Plan) {
     if (plan.price.yearly === 0) {
-      return t('pricing.free')
+      return t('pricing.free.name')
     }
 
     const priceDisplay = (
