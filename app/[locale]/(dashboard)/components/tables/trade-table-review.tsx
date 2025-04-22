@@ -54,6 +54,7 @@ interface ExtendedTrade extends Trade {
   direction: string
   tags: string[]
   imageBase64: string | null
+  imageBase64Second: string | null
   comment: string | null
   videoUrl: string | null
 }
@@ -362,17 +363,18 @@ export function TradeTableReview() {
     }
   }, [trades, updateTrade])
 
-  const handleImageUpload = useCallback(async (tradeId: string, file: File) => {
+  const handleImageUpload = useCallback(async (tradeId: string, file: File, isSecondImage: boolean = false) => {
     try {
       const base64 = await convertFileToBase64(file)
-      await updateTradeImage(tradeId, base64)
-      updateTrade(tradeId, { imageBase64: base64 })
+      const field = isSecondImage ? 'imageBase64Second' : 'imageBase64'
+      await updateTradeImage(tradeId, base64, field)
+      updateTrade(tradeId, { [field]: base64 })
     } catch (error) {
       console.error('Failed to upload image:', error)
     }
   }, [updateTrade])
 
-  const handleImagePaste = useCallback(async (tradeId: string, e: ClipboardEvent) => {
+  const handleImagePaste = useCallback(async (tradeId: string, e: ClipboardEvent, isSecondImage: boolean = false) => {
     const items = e.clipboardData?.items
     if (!items) return
 
@@ -380,17 +382,18 @@ export function TradeTableReview() {
       if (item.type.indexOf('image') === 0) {
         const file = item.getAsFile()
         if (file) {
-          await handleImageUpload(tradeId, file)
+          await handleImageUpload(tradeId, file, isSecondImage)
           break
         }
       }
     }
   }, [handleImageUpload])
 
-  const handleRemoveImage = useCallback(async (tradeId: string) => {
+  const handleRemoveImage = useCallback(async (tradeId: string, isSecondImage: boolean = false) => {
     try {
-      await updateTradeImage(tradeId, null)
-      updateTrade(tradeId, { imageBase64: null })
+      const field = isSecondImage ? 'imageBase64Second' : 'imageBase64'
+      await updateTradeImage(tradeId, null, field)
+      updateTrade(tradeId, { [field]: null })
     } catch (error) {
       console.error('Failed to remove image:', error)
     }
@@ -706,32 +709,61 @@ export function TradeTableReview() {
       cell: ({ row }) => {
         const trade = row.original
         return (
-          <div 
-            className="relative h-10 w-10"
-            data-trade-id={trade.id}
-            tabIndex={0}
-            role="button"
-            onPaste={(e: any) => handleImagePaste(trade.id, e)}
-          >
-            {trade.imageBase64 ? (
-              <ImageGallery 
-                images={trade.imageBase64} 
-                onDelete={() => handleRemoveImage(trade.id)}
-              />
-            ) : (
-              <label className="cursor-pointer flex items-center justify-center h-full w-full border-2 border-dashed border-muted-foreground/25 rounded hover:border-muted-foreground/50 transition-colors">
-                <Upload className="h-6 w-6 text-muted-foreground/50" />
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleImageUpload(trade.id, file)
-                  }}
+          <div className="flex gap-2">
+            <div 
+              className="relative h-10 w-10"
+              data-trade-id={trade.id}
+              tabIndex={0}
+              role="button"
+              onPaste={(e: any) => handleImagePaste(trade.id, e, false)}
+            >
+              {trade.imageBase64 ? (
+                <ImageGallery 
+                  images={trade.imageBase64} 
+                  onDelete={() => handleRemoveImage(trade.id, false)}
                 />
-              </label>
-            )}
+              ) : (
+                <label className="cursor-pointer flex items-center justify-center h-full w-full border-2 border-dashed border-muted-foreground/25 rounded hover:border-muted-foreground/50 transition-colors">
+                  <Upload className="h-6 w-6 text-muted-foreground/50" />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleImageUpload(trade.id, file, false)
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            <div 
+              className="relative h-10 w-10"
+              data-trade-id={trade.id}
+              tabIndex={0}
+              role="button"
+              onPaste={(e: any) => handleImagePaste(trade.id, e, true)}
+            >
+              {trade.imageBase64Second ? (
+                <ImageGallery 
+                  images={trade.imageBase64Second} 
+                  onDelete={() => handleRemoveImage(trade.id, true)}
+                />
+              ) : (
+                <label className="cursor-pointer flex items-center justify-center h-full w-full border-2 border-dashed border-muted-foreground/25 rounded hover:border-muted-foreground/50 transition-colors">
+                  <Upload className="h-6 w-6 text-muted-foreground/50" />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleImageUpload(trade.id, file, true)
+                    }}
+                  />
+                </label>
+              )}
+            </div>
           </div>
         )
       },

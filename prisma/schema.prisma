@@ -30,6 +30,7 @@ model Trade {
   videoUrl       String?  @db.Text
   tags           String[] @default([])
   imageBase64    String?  @db.Text
+  imageBase64Second String? @db.Text
 
   @@index([accountNumber])
   @@schema("public")

@@ -98,7 +98,7 @@ export async function deleteTagFromAllTrades(tag: string) {
   }
 }
 
-export async function updateTradeImage(tradeId: string, imageBase64: string | null) {
+export async function updateTradeImage(tradeId: string, imageBase64: string | null, field: 'imageBase64' | 'imageBase64Second' = 'imageBase64') {
   try {
     const trade = await prisma.trade.findUnique({
       where: { id: tradeId }
@@ -111,7 +111,7 @@ export async function updateTradeImage(tradeId: string, imageBase64: string | nu
     const updatedTrade = await prisma.trade.update({
       where: { id: tradeId },
       data: {
-        imageBase64
+        [field]: imageBase64
       }
     })
 
