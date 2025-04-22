@@ -482,7 +482,8 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
               comment: null,
               videoUrl: null,
               tags: [],
-              imageBase64: null
+              imageBase64: null,
+              imageBase64Second: null
             }
 
             processedTrades.push(trade)
