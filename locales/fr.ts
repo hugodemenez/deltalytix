@@ -27,9 +27,9 @@ export default {
     'features.ai-journaling.stat': 'Intelligence émotionnelle',
     'pricing.heading': 'Tarification',
     'pricing.subheading': 'Stockez, explorez et améliorez vos données de trading avec le plan adapté à vos besoins.',
-    'pricing.yearly': 'Facturation annuelle',
-    'pricing.monthly': 'Facturation mensuelle',
-    'pricing.quarterly': 'Facturation trimestrielle',
+    'pricing.yearly': 'annuel',
+    'pricing.monthly': 'mensuelle',
+    'pricing.quarterly': 'trimestrielle',
     'pricing.yearlySavings': 'Économisez jusqu\'à 20% avec la facturation annuelle',
     'pricing.quarterlySavings': 'Économisez jusqu\'à 10% avec la facturation trimestrielle',
     'pricing.monthlyFlexibility': 'Facturation mensuelle flexible',
@@ -643,7 +643,7 @@ export default {
             showingTopAccounts: 'Affichage de {count} sur {total} comptes'
         }
     },
-    'pricing.trialPeriod': 'Commencer avec toutes les fonctionnalités',
+    'pricing.trialPeriod': 'Boostez votre trading',
     'pricing.trialDescription': 'Essayez toutes les fonctionnalités pendant 14 jours, sans carte bancaire',
     'widgets.screenshot': 'Capture',
     'widgets.doneScreenshot': 'Quitter',
