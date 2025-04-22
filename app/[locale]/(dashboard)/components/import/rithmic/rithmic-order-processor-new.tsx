@@ -255,7 +255,8 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
                 comment: null,
                 videoUrl: null,
                 tags: [],
-                imageBase64: null
+                imageBase64: null,
+                imageBase64Second: null
               }
 
               processedTrades.push(trade)
