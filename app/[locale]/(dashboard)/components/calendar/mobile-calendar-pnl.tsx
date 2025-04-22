@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useState } from "react"
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, endOfWeek, addDays, getDay } from "date-fns"
-import { formatInTimeZone } from 'date-fns-tz'
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, getDay, addDays } from "date-fns"
+import { formatInTimeZone, toDate } from 'date-fns-tz'
 import { fr, enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -24,25 +24,36 @@ function formatCurrency(value: number): string {
   return value.toFixed(0);
 }
 
-function getCalendarDays(monthStart: Date, monthEnd: Date) {
-  const startDate = startOfWeek(monthStart)
-  const endDate = endOfWeek(monthEnd)
-  const days = eachDayOfInterval({ start: startDate, end: endDate })
-  
-  if (days.length === 42) return days
-  
-  const lastDay = days[days.length - 1]
-  const additionalDays = eachDayOfInterval({
-    start: addDays(lastDay, 1),
-    end: addDays(startDate, 41)
-  })
-  
-  return [...days, ...additionalDays].slice(0, 42)
+// Generates an array of 42 YYYY-MM-DD date strings for the calendar grid,
+// ensuring calculations respect the target timezone.
+function getCalendarDayStrings(currentMonthDate: Date, timezone: string): string[] {
+  // 1. Get the start of the month in the target timezone string format (YYYY-MM-01)
+  const monthStartString = formatInTimeZone(currentMonthDate, timezone, 'yyyy-MM-01');
+  // 2. Convert this string to a Date object representing midnight *in the target timezone*.
+  const firstDayOfMonthInTZ = toDate(monthStartString, { timeZone: timezone });
+  // 3. Get the day of the week (0=Sunday, 6=Saturday) for this first day *in the target timezone*.
+  const startDayOfWeek = getDay(firstDayOfMonthInTZ); // getDay uses the locale's start of week, but the Date object is timezone-correct
+
+  // 4. Calculate the actual start date of the grid (Sunday) by subtracting days from the first day.
+  // `addDays` operates on the underlying timestamp but starts from a timezone-aware Date.
+  let currentGridDate = addDays(firstDayOfMonthInTZ, -startDayOfWeek);
+
+  const dayStrings: string[] = [];
+  for (let i = 0; i < 42; i++) {
+    // Format the current grid date *in the target timezone* for the array
+    dayStrings.push(formatInTimeZone(currentGridDate, timezone, 'yyyy-MM-dd'));
+    // Increment the date for the next iteration
+    currentGridDate = addDays(currentGridDate, 1);
+  }
+
+  // Ensure we always return exactly 42 days. Should be guaranteed by the loop.
+  return dayStrings;
 }
 
-function isDateToday(date: Date, timezone: string): boolean {
-  const today = new Date()
-  return formatInTimeZone(date, timezone, 'yyyy-MM-dd') === formatInTimeZone(today, timezone, 'yyyy-MM-dd')
+// Checks if a given YYYY-MM-DD date string matches today's date in the target timezone.
+function isDateStringToday(dateString: string, timezone: string): boolean {
+  const todayString = formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd');
+  return dateString === todayString;
 }
 
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
@@ -54,28 +65,61 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const calendarDays = getCalendarDays(monthStart, monthEnd)
+  // Generate calendar date strings based on the current date and timezone
+  const calendarDayStrings = getCalendarDayStrings(currentDate, timezone)
+
+  // Get the current month and year based on the state date *in the target timezone*
+  // Use a reference date (start of the month) in the target timezone for reliable comparison.
+  const currentMonthReferenceDate = toDate(formatInTimeZone(currentDate, timezone, 'yyyy-MM-01'), { timeZone: timezone });
+  const currentMonth = currentMonthReferenceDate.getMonth()
+  const currentYear = currentMonthReferenceDate.getFullYear()
+
+  // Define weekday headers (assuming Sunday start)
+  const weekdayHeaders = [
+    { key: 'sunday', label: t('calendar.weekdays.sun') },
+    { key: 'monday', label: t('calendar.weekdays.mon') },
+    { key: 'tuesday', label: t('calendar.weekdays.tue') },
+    { key: 'wednesday', label: t('calendar.weekdays.wed') },
+    { key: 'thursday', label: t('calendar.weekdays.thu') },
+    { key: 'friday', label: t('calendar.weekdays.fri') },
+    { key: 'saturday', label: t('calendar.weekdays.sat') }
+  ]
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
 
   const calculateMonthlyTotal = () => {
+    // This calculation correctly uses dateString keys which are already YYYY-MM-DD
     return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
-      const date = new Date(dateString)
-      if (isSameMonth(date, currentDate)) {
-        return total + dayData.pnl
+      // Parse the date string to compare month and year
+      try {
+        // Use UTC for parsing the key to avoid local shifts, then compare components
+        const date = toDate(dateString + 'T00:00:00Z') 
+        if (date.getFullYear() === currentYear && date.getMonth() === currentMonth) {
+          return total + dayData.pnl
+        }
+      } catch (e) {
+        console.error("Error parsing date string in calculateMonthlyTotal:", dateString, e)
       }
       return total
     }, 0)
   }
-
+  
   const monthlyTotal = calculateMonthlyTotal()
-
+  
   const getMaxPnl = () => {
-    return Math.max(...Object.entries(calendarData)
-      .filter(([dateString]) => isSameMonth(new Date(dateString), currentDate))
+    // This calculation correctly uses dateString keys which are already YYYY-MM-DD
+    return Math.max(0, ...Object.entries(calendarData)
+      .filter(([dateString]) => {
+        try {
+          // Use UTC for parsing the key to avoid local shifts, then compare components
+          const date = toDate(dateString + 'T00:00:00Z')
+          return date.getFullYear() === currentYear && date.getMonth() === currentMonth
+        } catch (e) {
+          console.error("Error parsing date string in getMaxPnl:", dateString, e)
+          return false
+        }
+      })
       .map(([_, data]) => Math.abs(data.pnl)))
   }
 
@@ -106,25 +150,34 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
       </div>
       <div className="flex-1 min-h-0 p-1.5 sm:p-4">
         <div className="grid grid-cols-7 gap-x-[1px] mb-1">
-          {[
-            { key: 'sunday', label: t('calendar.weekdays.sun') },
-            { key: 'monday', label: t('calendar.weekdays.mon') },
-            { key: 'tuesday', label: t('calendar.weekdays.tue') },
-            { key: 'wednesday', label: t('calendar.weekdays.wed') },
-            { key: 'thursday', label: t('calendar.weekdays.thu') },
-            { key: 'friday', label: t('calendar.weekdays.fri') },
-            { key: 'saturday', label: t('calendar.weekdays.sat') }
-          ].map((day) => (
+          {weekdayHeaders.map((day) => (
             <div key={day.key} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
               {day.label}
             </div>
           ))}
         </div>
         <div className="grid grid-cols-7 auto-rows-fr gap-[1px] h-[calc(100%-20px)]">
-          {calendarDays.map((date) => {
-            const dateString = formatInTimeZone(date, timezone, 'yyyy-MM-dd')
-            const dayData = calendarData[dateString]
-            const contribution = dayData && monthlyTotal !== 0 
+          {calendarDayStrings.map((dateString) => { // Iterate over date strings
+            const dayData = calendarData[dateString] // Direct lookup using the string key
+
+            // Parse the date string *in the target timezone* to get a Date object
+            // for reliable month/year checks and display formatting.
+            let dateInTZ: Date;
+            try {
+              dateInTZ = toDate(dateString, { timeZone: timezone });
+            } catch (e) {
+              console.error("Error parsing date string for display:", dateString, e);
+              // Render a placeholder or skip if parsing fails
+              return <div key={dateString} className="text-red-500">Error</div>;
+            }
+
+            // Determine if the date belongs to the currently displayed month
+            const isCurrentMonthDay =
+              dateInTZ.getMonth() === currentMonth &&
+              dateInTZ.getFullYear() === currentYear
+
+            // contribution calculation uses dayData which is already correct
+            const contribution = dayData && monthlyTotal !== 0
               ? Math.abs(dayData.pnl / monthlyTotal) 
               : 0
             const strokeDasharray = contribution > 0 
@@ -133,12 +186,12 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
 
             return (
               <div
-                key={dateString}
+                key={dateString} // Key is the timezone-correct date string
                 className={cn(
                   "relative flex items-center justify-center",
-                  !isSameMonth(date, currentDate) && "opacity-30"
+                  !isCurrentMonthDay && "opacity-30" // Fade based on timezone-correct check
                 )}
-                onClick={() => setSelectedDate(date)}
+                onClick={() => setSelectedDate(dateInTZ)} // Pass the Date object parsed in the target timezone
               >
                 {dayData && (
                   <svg
@@ -170,15 +223,18 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
                 )}
                 <div className={cn(
                   "w-8 h-8 flex items-center justify-center rounded-full z-10",
-                  isDateToday(date, timezone) && "bg-primary text-primary-foreground",
-                  dayData && dayData.pnl !== 0 && !isDateToday(date, timezone) && (
-                    dayData.pnl > 0 
+                  // Check today using the date string and timezone
+                  isDateStringToday(dateString, timezone) && "bg-primary text-primary-foreground",
+                  // Style based on PnL, ensuring not to override 'today' style
+                  dayData && dayData.pnl !== 0 && !isDateStringToday(dateString, timezone) && (
+                    dayData.pnl > 0
                       ? "text-green-600 dark:text-green-400"
                       : "text-red-600 dark:text-red-400"
                   )
                 )}>
                   <span className="text-lg font-semibold">
-                    {formatInTimeZone(date, timezone, 'd')}
+                    {/* Display the day number from the date parsed in the target timezone */}
+                    {format(dateInTZ, 'd')}
                   </span>
                 </div>
               </div>
@@ -192,6 +248,7 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
           if (!open) setSelectedDate(null)
         }}
         selectedDate={selectedDate}
+        // Look up dayData using the selectedDate formatted back into a YYYY-MM-DD string *in the target timezone*
         dayData={selectedDate ? calendarData[formatInTimeZone(selectedDate, timezone, 'yyyy-MM-dd')] : undefined}
         isLoading={isLoading}
       />
