@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
+import { useCurrentLocale } from "@/locales/client";
 interface NewsWidgetProps {
   className?: string;
 }
@@ -17,6 +17,7 @@ export function NewsWidget({ className }: NewsWidgetProps) {
   const [isLoading, setIsLoading] = useState(true);
   const widgetId = useRef(`tradingview-widget-${Math.random().toString(36).substring(7)}`);
   const initTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const locale = useCurrentLocale()
 
   useEffect(() => {
     setIsLoading(true);
@@ -56,7 +57,7 @@ export function NewsWidget({ className }: NewsWidgetProps) {
         "height": "100%",
         "colorTheme": effectiveTheme,
         "isTransparent": true,
-        "locale": "en",
+        "locale": locale,
         "importanceFilter": "-1,0,1",
         "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,tr,gb,us,eu"
       });
