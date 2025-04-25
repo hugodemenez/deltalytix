@@ -60,8 +60,6 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
   const handleAccountSizeChange = (value: string) => {
     setSelectedAccountSize(value)
     const selectedPropFirm = pendingChanges?.propfirm ?? account.propfirm
-    console.error('selectedPropFirm:', selectedPropFirm)
-    console.error('value:', value)
     
     if (selectedPropFirm && value) {
       // Find the prop firm by name
