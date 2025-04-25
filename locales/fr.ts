@@ -404,8 +404,8 @@ export default {
     'widgets.types.commissionsPnl': 'P&L et commissions',
     'widgets.types.averagePositionTime': 'Temps moyen en position',
     'widgets.averagePositionTime': {
-    'tooltip': 'Affiche la durée moyenne pendant laquelle les traders conservent leurs positions pour chaque heure de la journée. Les barres plus longues indiquent des durées moyennes de détention plus longues.'
-},
+        'tooltip': 'Affiche la durée moyenne pendant laquelle les traders conservent leurs positions pour chaque heure de la journée. Les barres plus longues indiquent des durées moyennes de détention plus longues.'
+    },
     'widgets.types.cumulativePnl': 'P&L cumulé',
     'widgets.types.longShortPerformance': 'Performance Long/Short',
     'widgets.types.tradePerformance': 'Performance des trades',
@@ -622,6 +622,10 @@ export default {
             overview: 'Aperçu',
             consistency: 'Cohérence'
         },
+        configurator: {
+            title: 'Configuration du Compte pour {accountNumber}',
+            description: 'Configurez les paramètres du compte pour votre activité de trading prop firm',
+        },
         balance: 'Solde',
         target: 'Objectif',
         drawdown: 'Drawdown',
@@ -727,7 +731,11 @@ export default {
             resetDateClearedDescription: 'La date de réinitialisation a été supprimée avec succès',
             resetDateError: 'Erreur de date de réinitialisation',
             resetDateErrorDescription: 'Une erreur est survenue lors de la mise à jour de la date de réinitialisation',
-            validationPositive: 'Toutes les valeurs numériques doivent être positives'
+            validationPositive: 'Toutes les valeurs numériques doivent être positives',
+            deleteSuccess: 'Compte supprimé',
+            deleteSuccessDescription: 'Le compte prop firm a été supprimé avec succès',
+            deleteError: 'Échec de la suppression du compte',
+            deleteErrorDescription: 'Une erreur est survenue lors de la suppression du compte prop firm'
         },
         chart: {
             balance: "Solde",
@@ -745,7 +753,17 @@ export default {
         },
         trailingDrawdown: {
             explanation: 'Le drawdown suivra les profits jusqu\'à ce que ce niveau soit atteint'
-        }
+        },
+        delete: {
+            title: 'Supprimer le Compte',
+            description: 'Êtes-vous sûr de vouloir supprimer le compte {account} ? Cette action ne peut pas être annulée.',
+            success: 'Compte supprimé avec succès',
+            successDescription: 'Le compte prop firm a été supprimé',
+            error: 'Échec de la suppression du compte',
+            errorDescription: 'Une erreur est survenue lors de la suppression du compte prop firm',
+            confirm: 'Oui, supprimer le compte',
+            cancel: 'Annuler'
+        },
     },
     common: {
         add: 'Ajouter',
@@ -755,6 +773,7 @@ export default {
         clear: 'Effacer',
         done: 'Terminé',
         delete: 'Supprimer',
+        deleting: 'Suppression...',
         edit: 'Modifier',
         close: 'Fermer',
         back: "Retour",
@@ -1131,6 +1150,8 @@ export default {
         },
         clearFilter: 'Effacer le filtre'
     },
+    'calendar.events.title': 'Événements',
+    'calendar.events.viewSource': 'Voir la source',
     'calendar.modal.weeklyDetails': 'Détails des trades et analyse de performance pour cette semaine.',
     'calendar.charts.weeklyPnlAfterComm': 'P&L hebdomadaire (après comm.)',
     'calendar.charts.weeklyAvgTimeInPosition': 'Temps moyen hebdomadaire en position',
@@ -1161,9 +1182,9 @@ export default {
         managePaymentMethod: "Gérer le mode de paiement",
         promotionCode: "Code promo : {code}",
         promotionDuration: {
-          forever: "à vie",
-          once: "unique",
-          repeating: "pour {months} mois"
+            forever: "à vie",
+            once: "unique",
+            repeating: "pour {months} mois"
         },
         status: {
             active: "actif",

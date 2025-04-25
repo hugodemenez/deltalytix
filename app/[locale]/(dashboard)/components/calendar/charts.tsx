@@ -25,6 +25,8 @@ import { fr, enUS } from 'date-fns/locale'
 import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useDebounce } from "@/hooks/use-debounce"
+import { DailyComment } from './daily-comment'
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;
@@ -57,6 +59,8 @@ const formatDuration = (seconds: number) => {
   return `${remainingSeconds}s`
 }
 
+const STORAGE_KEY = 'daily_mood'
+
 export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const { effectiveTheme } = useTheme()
   const isDarkMode = effectiveTheme === 'dark'
@@ -67,12 +71,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const dateLocale = locale === 'fr' ? fr : enUS
   const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
   const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
-  const [comment, setComment] = React.useState<string>("")
-  const [isSavingComment, setIsSavingComment] = React.useState(false)
-  const [saveError, setSaveError] = React.useState<string | null>(null)
   
-  const STORAGE_KEY = 'daily_mood'
-
   // Calculate data for charts
   const { accountPnL, equityChartData, chartData, totalPnL, calculateCommonDomain } = React.useMemo(() => {
     if (!dayData?.trades?.length) {
@@ -154,7 +153,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     };
   }, [dayData?.trades, locale]);
 
-  // Load mood and comment from localStorage or fetch from server on mount
+  // Load mood from localStorage or fetch from server on mount
   React.useEffect(() => {
     const loadMood = async () => {
       if (!user?.id || !dayData?.trades?.[0]?.entryDate) return
@@ -167,7 +166,6 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
         const storedMood = JSON.parse(storedMoodData)
         if (storedMood.date === focusedDay) {
           setSelectedMood(storedMood.mood)
-          setComment(storedMood.comment || '')
           return
         }
       }
@@ -177,15 +175,9 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
         const mood = await getMoodForDay(user.id, new Date(dayData.trades[0].entryDate))
         if (mood) {
           setSelectedMood(mood.mood as 'bad' | 'okay' | 'great')
-          // Get the comment from the conversation array
-          const comment = mood.conversation ? 
-            (mood.conversation as Array<{ role: string; content: string }>).find(msg => msg.role === 'user')?.content || '' 
-            : ''
-          setComment(comment)
           // Update localStorage
           localStorage.setItem(STORAGE_KEY, JSON.stringify({
             mood: mood.mood,
-            comment,
             date: focusedDay
           }))
         }
@@ -212,14 +204,13 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
       const date = new Date(dayData.trades[0].entryDate)
       // Set the time to noon to avoid timezone issues
       date.setHours(12, 0, 0, 0)
-      await saveMood(user.id, mood, [{ role: 'user', content: comment }], date)
+      await saveMood(user.id, mood, [], date)
       setSelectedMood(mood)
       
       // Save to localStorage
       const focusedDay = date.toISOString().split('T')[0]
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         mood,
-        comment,
         date: focusedDay
       }))
 
@@ -237,91 +228,6 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     } finally {
       setIsLoading(null)
     }
-  }
-
-  const handleCommentChange = (newComment: string) => {
-    setComment(newComment)
-    setSaveError(null)
-  }
-
-  const handleSaveComment = async () => {
-    if (!user?.id || !dayData?.trades?.[0]?.entryDate || !selectedMood) {
-      toast({
-        title: t('error'),
-        description: t('auth.required'),
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsSavingComment(true)
-    setSaveError(null)
-    
-    try {
-      const date = new Date(dayData.trades[0].entryDate)
-      date.setHours(12, 0, 0, 0)
-      await saveMood(user.id, selectedMood, [{ role: 'user', content: comment }], date)
-      
-      // Update localStorage
-      const focusedDay = date.toISOString().split('T')[0]
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        mood: selectedMood,
-        comment,
-        date: focusedDay
-      }))
-
-      toast({
-        title: t('success'),
-        description: t('calendar.charts.commentSaved'),
-      })
-    } catch (error) {
-      console.error('Error saving comment:', error)
-      setSaveError(t('calendar.charts.commentError'))
-      toast({
-        title: t('error'),
-        description: t('calendar.charts.commentError'),
-        variant: "destructive",
-      })
-    } finally {
-      setIsSavingComment(false)
-    }
-  }
-
-  const getMoodButtonStyle = (moodType: 'bad' | 'okay' | 'great') => {
-    const baseStyle = "flex flex-col items-center h-auto py-2 px-4"
-    const hoverStyle = moodType === 'bad' ? 'hover:text-red-500' : 
-                      moodType === 'okay' ? 'hover:text-yellow-500' : 
-                      'hover:text-green-500'
-    const selectedStyle = selectedMood === moodType ? 
-                         (moodType === 'bad' ? 'text-red-500' : 
-                          moodType === 'okay' ? 'text-yellow-500' : 
-                          'text-green-500') : ''
-    
-    return `${baseStyle} ${hoverStyle} ${selectedStyle}`
-  }
-
-  const CustomEquityTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      return (
-        <div className="bg-background p-2 border rounded shadow-sm text-xs md:text-sm">
-          <p className="font-medium">
-            {isWeekly 
-              ? `${t('calendar.charts.date')}: ${data.date}`
-              : `${t('calendar.charts.time')}: ${data.time}`
-            }
-          </p>
-          <p className="font-medium">{`${t('calendar.charts.tradeNumber')}: ${data.tradeNumber}`}</p>
-          <p className={`font-medium ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {`${t('calendar.charts.tradePnl')}: ${formatCurrency(data.pnl)}`}
-          </p>
-          <p className={`font-medium ${data.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {`${t('calendar.charts.balance')}: ${formatCurrency(data.balance)}`}
-          </p>
-        </div>
-      )
-    }
-    return null
   }
 
   if (!dayData?.trades?.length) {
@@ -416,7 +322,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                 <Button
                   variant="ghost"
                   size="lg"
-                  className={getMoodButtonStyle('bad')}
+                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'bad' ? 'text-red-500' : ''}`}
                   onClick={() => handleMoodSelect('bad')}
                   disabled={isLoading !== null}
                 >
@@ -426,7 +332,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                 <Button
                   variant="ghost"
                   size="lg"
-                  className={getMoodButtonStyle('okay')}
+                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'okay' ? 'text-yellow-500' : ''}`}
                   onClick={() => handleMoodSelect('okay')}
                   disabled={isLoading !== null}
                 >
@@ -436,7 +342,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                 <Button
                   variant="ghost"
                   size="lg"
-                  className={getMoodButtonStyle('great')}
+                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'great' ? 'text-green-500' : ''}`}
                   onClick={() => handleMoodSelect('great')}
                   disabled={isLoading !== null}
                 >
@@ -456,56 +362,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
       </div>
 
       {!isWeekly && (
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="text-base md:text-lg">
-              {t('calendar.charts.dailyComment')}
-            </CardTitle>
-            <CardDescription className="text-xs md:text-sm">
-              {t('calendar.charts.addComment')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <Textarea
-                placeholder={t('calendar.charts.dailyCommentPlaceholder')}
-                value={comment}
-                onChange={(e) => handleCommentChange(e.target.value)}
-                className={cn(
-                  "min-h-[100px] resize-none",
-                  isSavingComment && "opacity-50",
-                  saveError && "border-destructive"
-                )}
-                disabled={!selectedMood || isSavingComment}
-              />
-              <div className="flex items-center justify-between">
-                {isSavingComment && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t('calendar.charts.saving')}
-                  </div>
-                )}
-                {saveError && (
-                  <p className="text-sm text-destructive">
-                    {saveError}
-                  </p>
-                )}
-                {!selectedMood && (
-                  <p className="text-sm text-muted-foreground">
-                    {t('calendar.charts.selectMoodFirst')}
-                  </p>
-                )}
-                <Button
-                  onClick={handleSaveComment}
-                  disabled={!selectedMood || isSavingComment || !comment.trim()}
-                  size="sm"
-                >
-                  {t('calendar.charts.saveComment')}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <DailyComment dayData={dayData} selectedMood={selectedMood} />
       )}
 
       <Card className="w-full">
@@ -551,7 +408,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                   width={50}
                 />
                 <Tooltip 
-                  content={<CustomEquityTooltip />}
+                  content={<CustomTooltip />}
                   wrapperStyle={{ zIndex: 1000 }}
                   cursor={{ strokeWidth: 2 }}
                 />

@@ -39,6 +39,26 @@ interface SetupPropFirmAccountParams {
   trailingStopProfit?: number
   resetDate?: Date | null 
   consistencyPercentage?: number
+  accountSize?: string
+  accountSizeName?: string
+  price?: number
+  priceWithPromo?: number
+  evaluation?: boolean
+  minDays?: number
+  dailyLoss?: number
+  rulesDailyLoss?: string
+  trailing?: string
+  tradingNewsAllowed?: boolean
+  activationFees?: number
+  isRecursively?: string
+  payoutBonus?: number
+  profitSharing?: number
+  payoutPolicy?: string
+  balanceRequired?: number
+  minTradingDaysForPayout?: number
+  minPayout?: number
+  maxPayout?: string
+  maxFundedAccounts?: number
 }
 
 export async function fetchGroupedTrades(userId: string): Promise<FetchTradesResult> {
@@ -211,6 +231,26 @@ export async function setupPropFirmAccount({
   trailingStopProfit,
   resetDate,
   consistencyPercentage = 30,
+  accountSize,
+  accountSizeName,
+  price,
+  priceWithPromo,
+  evaluation,
+  minDays,
+  dailyLoss,
+  rulesDailyLoss,
+  trailing,
+  tradingNewsAllowed,
+  activationFees,
+  isRecursively,
+  payoutBonus,
+  profitSharing,
+  payoutPolicy,
+  balanceRequired,
+  minTradingDaysForPayout,
+  minPayout,
+  maxPayout,
+  maxFundedAccounts,
 }: SetupPropFirmAccountParams) {
   const existingAccount = await prisma.account.findFirst({
     where: {
@@ -229,7 +269,28 @@ export async function setupPropFirmAccount({
     trailingStopProfit: trailingStopProfit,
     resetDate: resetDate,
     consistencyPercentage: consistencyPercentage,
+    accountSize,
+    accountSizeName,
+    price,
+    priceWithPromo,
+    evaluation,
+    minDays,
+    dailyLoss,
+    rulesDailyLoss,
+    trailing,
+    tradingNewsAllowed,
+    activationFees,
+    isRecursively,
+    payoutBonus,
+    profitSharing,
+    payoutPolicy,
+    balanceRequired,
+    minTradingDaysForPayout,
+    minPayout,
+    maxPayout,
+    maxFundedAccounts,
   }
+  console.log('accountData', accountData)
 
   if (existingAccount) {
     return await prisma.account.update({
@@ -247,6 +308,16 @@ export async function setupPropFirmAccount({
   })
 }
 
+export async function deletePropFirmAccount(accountNumber: string, userId: string) {
+  await prisma.account.delete({
+    where: {
+      number_userId: {
+        number: accountNumber,
+        userId: userId
+      }
+    }
+  })
+}
 export async function getPropFirmAccounts(userId: string) {
   try {
     // First get all accounts for the user

@@ -113,8 +113,8 @@ model Group {
 model Account {
   id                String    @id @unique @default(uuid())
   number            String
-  propfirm          String    @default("") // Keep for backward compatibility
-  groupId           String?   // New field for group reference
+  propfirm          String    @default("")
+  groupId           String?
   group             Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
   drawdownThreshold Float     @default(0)
   trailingDrawdown  Boolean   @default(false)
@@ -129,6 +129,28 @@ model Account {
   resetDate         DateTime?
   payouts           Payout[]
   consistencyPercentage Float? @default(30)
+
+  // New fields for prop firm configuration
+  accountSize       String?   // The account size key (e.g., '50K', '100K')
+  accountSizeName   String?   // The display name of the account size
+  price             Float?    // Regular price
+  priceWithPromo    Float?    // Promotional price
+  evaluation        Boolean   @default(true) // Whether it's an evaluation account
+  minDays           Int?      // Minimum trading days required
+  dailyLoss         Float?    // Daily loss limit
+  rulesDailyLoss    String?   // Rules for daily loss (Violation, No, Lock, DIRECTLY FUNDED)
+  trailing          String?   // Trailing type (EOD, Intraday, Static, DIRECTLY FUNDED)
+  tradingNewsAllowed Boolean  @default(true)
+  activationFees    Float?    // Activation fees
+  isRecursively     String?   // Recursivity type (Unique, Monthly, No)
+  payoutBonus       Float?    // Bonus for payouts
+  profitSharing     Float?    // Profit sharing percentage
+  payoutPolicy      String?   // Payout policy description
+  balanceRequired   Float?    // Required balance
+  minTradingDaysForPayout Int? // Minimum trading days for payout
+  minPayout         Float?    // Minimum payout amount
+  maxPayout         String?   // Maximum payout policy
+  maxFundedAccounts Int?      // Maximum number of funded accounts
 
   @@unique([number, userId])
   @@index([number])

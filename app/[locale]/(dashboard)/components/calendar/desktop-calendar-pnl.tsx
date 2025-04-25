@@ -18,6 +18,8 @@ import { getFinancialEvents } from "@/server/financial-events"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { WeeklyModal } from "./weekly-modal"
 import { useUserData } from "@/components/context/user-data"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 
 
 const WEEKDAYS = [
@@ -62,6 +64,118 @@ interface CalendarPnlProps {
   financialEvents?: FinancialEvent[];
 }
 
+const getEventIcon = (eventType: string) => {
+  switch (eventType.toLowerCase()) {
+    case 'economic':
+      return <Info className="h-3 w-3" />
+    case 'earnings':
+      return <BarChart className="h-3 w-3" />
+    case 'technical':
+      return <LineChart className="h-3 w-3" />
+    default:
+      return <AlertCircle className="h-3 w-3" />
+  }
+}
+
+const getEventImportanceColor = (importance: string) => {
+  switch (importance.toUpperCase()) {
+    case 'HIGH':
+      return "text-red-500 dark:text-red-400"
+    case 'MEDIUM':
+      return "text-yellow-500 dark:text-yellow-400"
+    case 'LOW':
+      return "text-blue-500 dark:text-blue-400"
+    default:
+      return "text-muted-foreground"
+  }
+}
+
+function EventBadge({ events }: { events: FinancialEvent[] }) {
+  const t = useI18n()
+  const { timezone } = useUserData()
+  
+  if (events.length === 0) return null
+
+  const highPriorityEvents = events.filter(e => e.importance === 'HIGH')
+  const mediumPriorityEvents = events.filter(e => e.importance === 'MEDIUM')
+  const lowPriorityEvents = events.filter(e => e.importance === 'LOW')
+
+  const badgeColor = highPriorityEvents.length > 0 
+    ? "bg-red-500/20 text-red-500 dark:bg-red-500/30 dark:text-red-400"
+    : mediumPriorityEvents.length > 0
+    ? "bg-yellow-500/20 text-yellow-500 dark:bg-yellow-500/30 dark:text-yellow-400"
+    : "bg-blue-500/20 text-blue-500 dark:bg-blue-500/30 dark:text-blue-400"
+
+  return (
+    <HoverCard>
+      <HoverCardTrigger asChild>
+        <Badge 
+          variant="outline" 
+          className={cn(
+            "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-20",
+            badgeColor
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {events.length}
+        </Badge>
+      </HoverCardTrigger>
+      <HoverCardContent 
+        className="w-80 p-2 z-50" 
+        align="start"
+        side="right"
+        sideOffset={5}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">{t('calendar.events.title')}</h4>
+          <div className="space-y-1.5">
+            {events.map(event => (
+              <div key={event.id} className="flex items-start gap-2 text-xs">
+                <div className={cn(
+                  "flex-shrink-0 mt-0.5",
+                  getEventImportanceColor(event.importance)
+                )}>
+                  {getEventIcon(event.type)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{event.title}</div>
+                  {event.description && (
+                    <div className="text-muted-foreground text-[11px] line-clamp-2">
+                      {event.description}
+                    </div>
+                  )}
+                  {event.sourceUrl && (
+                    <a
+                      href={event.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mt-0.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      {t('calendar.events.viewSource')}
+                    </a>
+                  )}
+                </div>
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "text-[10px] px-1.5 py-0 h-5",
+                    getEventImportanceColor(event.importance)
+                  )}
+                >
+                  {event.importance}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  )
+}
+
 export default function CalendarPnl({ calendarData, financialEvents = [] }: CalendarPnlProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -83,8 +197,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        // const events = await getFinancialEvents(currentDate)
-        const events: FinancialEvent[] = []
+        const events = await getFinancialEvents(currentDate)
         if (Array.isArray(events)) {
           setMonthEvents(events)
         } else {
@@ -148,32 +261,6 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       }
     });
   };
-
-  const getEventIcon = (eventType: string) => {
-    switch (eventType.toLowerCase()) {
-      case 'economic':
-        return <Info className="h-3 w-3" />
-      case 'earnings':
-        return <BarChart className="h-3 w-3" />
-      case 'technical':
-        return <LineChart className="h-3 w-3" />
-      default:
-        return <AlertCircle className="h-3 w-3" />
-    }
-  }
-
-  const getEventImportanceColor = (importance: string) => {
-    switch (importance.toUpperCase()) {
-      case 'HIGH':
-        return "text-red-500 dark:text-red-400"
-      case 'MEDIUM':
-        return "text-yellow-500 dark:text-yellow-400"
-      case 'LOW':
-        return "text-blue-500 dark:text-blue-400"
-      default:
-        return "text-muted-foreground"
-    }
-  }
 
   const calculateWeeklyTotal = React.useCallback((index: number, calendarDays: Date[], calendarData: CalendarData) => {
     const startOfWeekIndex = index - 6
@@ -268,77 +355,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                     )}>
                       {format(date, 'd')}
                     </span>
-                    {dateEvents.length > 0 && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="flex flex-col items-end gap-0.5 max-w-[80%]">
-                              {dateEvents.map((event, idx) => {
-                                // Trim the title to show only the main part
-                                const trimmedTitle = event.title
-                                  .replace('Data Release', '')
-                                  .replace('Report', '')
-                                  .replace('Meeting', '')
-                                  .replace('Estimate', '')
-                                  .trim()
-                                return (
-                                  <div
-                                    key={event.id}
-                                    className={cn(
-                                      getEventImportanceColor(event.importance),
-                                      !isCurrentMonth && "opacity-25",
-                                      "flex items-center justify-end gap-1 text-[8px] sm:text-[9px] w-full"
-                                    )}
-                                  >
-                                    <span className="truncate text-right">{trimmedTitle}</span>
-                                    {getEventIcon(event.type)}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent align="center" className="max-w-[300px]">
-                            <div className="space-y-2">
-                              {dateEvents.map(event => (
-                                <div key={event.id} className="space-y-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className={cn(
-                                      "flex items-center gap-1",
-                                      getEventImportanceColor(event.importance)
-                                    )}>
-                                      {getEventIcon(event.type)}
-                                      <Badge variant="outline" className={cn(
-                                        "text-[10px] px-1 py-0",
-                                        getEventImportanceColor(event.importance)
-                                      )}>
-                                        {event.importance}
-                                      </Badge>
-                                    </span>
-                                    <span className="font-medium text-sm">{event.title}</span>
-                                  </div>
-                                  {event.description && (
-                                    <p className="text-xs text-muted-foreground pl-5">
-                                      {event.description}
-                                    </p>
-                                  )}
-                                  {event.sourceUrl && (
-                                    <a
-                                      href={event.sourceUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 pl-5"
-                                    >
-                                      <ExternalLink className="h-3 w-3" />
-                                      View on Investing.com
-                                    </a>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
+                    {dateEvents.length > 0 && <EventBadge events={dateEvents} />}
                   </div>
                   <div className="flex-1 flex flex-col justify-end gap-0.5">
                     {dayData ? (

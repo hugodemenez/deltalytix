@@ -5,6 +5,7 @@ import { startOfMonth, endOfMonth, format } from 'date-fns'
 import { revalidatePath } from 'next/cache'
 
 const CALENDAR_BASE_URL = 'https://www.investing.com/economic-calendar'
+const prisma = new PrismaClient()
 
 /**
  * Synchronizes financial events for a given month from an external API.
@@ -38,7 +39,25 @@ export async function syncFinancialEvents(date: Date = new Date()): Promise<Fina
  * @returns Promise<FinancialEvent[]> - Array of financial events for the month
  */
 export async function getFinancialEvents(date: Date = new Date()): Promise<FinancialEvent[]> {
-  // Temporarily return empty array until we have proper API integration
-  console.log(`Financial events fetch skipped for ${format(date, 'MMMM yyyy')} - awaiting API integration`)
-  return []
+  try {
+    const monthStart = startOfMonth(date)
+    const monthEnd = endOfMonth(date)
+
+    const events = await prisma.financialEvent.findMany({
+      where: {
+        date: {
+          gte: monthStart,
+          lte: monthEnd
+        }
+      },
+      orderBy: {
+        date: 'asc'
+      }
+    })
+
+    return events
+  } catch (error) {
+    console.error('Error fetching financial events:', error)
+    return []
+  }
 } 

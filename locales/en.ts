@@ -316,6 +316,7 @@ export default {
         clear: 'Clear',
         done: 'Done',
         delete: 'Delete',
+        deleting: 'Deleting...',
         edit: 'Edit',
         close: 'Close',
         back: "Back",
@@ -842,6 +843,10 @@ export default {
             overview: 'Overview',
             consistency: 'Consistency'
         },
+        configurator: {
+            title: 'Account Configuration for {accountNumber}',
+            description: 'Configure the account settings for your prop firm activity',
+        },
         balance: 'Balance',
         target: 'Target',
         drawdown: 'Drawdown',
@@ -947,7 +952,11 @@ export default {
             resetDateClearedDescription: 'The reset date has been cleared successfully',
             resetDateError: 'Reset date error',
             resetDateErrorDescription: 'An error occurred while updating the reset date',
-            validationPositive: 'All numeric values must be positive'
+            validationPositive: 'All numeric values must be positive',
+            deleteSuccess: 'Account deleted',
+            deleteSuccessDescription: 'The prop firm account has been deleted successfully',
+            deleteError: 'Failed to delete account',
+            deleteErrorDescription: 'An error occurred while deleting the prop firm account'
         },
         chart: {
             balance: "Balance",
@@ -965,6 +974,16 @@ export default {
         },
         trailingDrawdown: {
             explanation: 'Drawdown will trail profits until this level is reached'
+        },
+        delete: {
+            title: 'Delete Account',
+            description: 'Are you sure you want to delete account {account}? This action cannot be undone.',
+            success: 'Account deleted successfully',
+            successDescription: 'The prop firm account has been deleted',
+            error: 'Failed to delete account',
+            errorDescription: 'An error occurred while deleting the prop firm account',
+            confirm: 'Yes, delete account',
+            cancel: 'Cancel'
         },
     },
     rithmic: {
@@ -1064,6 +1083,8 @@ export default {
         },
         clearFilter: 'Clear Filter'
     },
+    'calendar.events.title': 'Events',
+    'calendar.events.viewSource': 'View Source',
     'calendar.modal.weeklyDetails': 'Trade details and performance analysis for this week.',
     'calendar.charts.weeklyPnlAfterComm': 'Weekly P&L (after comm.)',
     'calendar.charts.weeklyAvgTimeInPosition': 'Weekly Avg Time in Position',
