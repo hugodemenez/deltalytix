@@ -56,7 +56,7 @@ export async function continueConversation(
   const tradeSummaries = generateTradeSummaries(dayData.trades);
 
   const result = await streamUI({
-    model: openai("gpt-3.5-turbo"),
+    model: openai("gpt-4.1-nano-2025-04-14"),
     messages: [
       {
         role: 'system',
@@ -137,7 +137,7 @@ export async function generateQuestionSuggestions(dayData: any, dateString: stri
 
   try {
     const { partialObjectStream } = await streamObject({
-      model: openai("gpt-3.5-turbo"),
+      model: openai("gpt-4.1-nano-2025-04-14"),
       schema: z.object({
         questions: z.array(z.string()).describe("Three concise, thought-provoking questions based on the trading data"),
       }),

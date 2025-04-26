@@ -13,7 +13,7 @@ export async function supportChat(messages: Message[]): Promise<{
 }> {
   try {
     const { partialObjectStream } = await streamObject({
-      model: openai("gpt-4o-mini"),
+      model: openai("gpt-4.1-nano-2025-04-14"),
       schema: z.object({
         response: z.string().describe("The AI's response to the user's query"),
         needsHumanHelp: z.boolean().describe("Whether the query requires human assistance"),
