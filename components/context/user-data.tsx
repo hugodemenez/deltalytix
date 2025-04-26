@@ -365,16 +365,20 @@ interface CachedData {
 function getLocalCache(): CachedData | null {
   if (typeof window === 'undefined') return null;
   const cached = localStorage.getItem(CACHE_KEY);
+  console.log('Getting cached data:', cached);
   if (!cached) return null;
   
   try {
     const parsedCache = JSON.parse(cached);
+    console.log('Parsed cache:', parsedCache);
     if (Date.now() - parsedCache.timestamp > CACHE_EXPIRY) {
+      console.log('Cache expired, clearing...');
       localStorage.removeItem(CACHE_KEY);
       return null;
     }
     return parsedCache;
-  } catch {
+  } catch (error) {
+    console.error('Error parsing cache:', error);
     localStorage.removeItem(CACHE_KEY);
     return null;
   }
@@ -420,6 +424,26 @@ export const UserDataProvider: React.FC<{
 
   // Initialize layouts with null to prevent flashing
   const [layouts, setLayouts] = useState<Layouts | null>(null);
+
+  // Create a wrapped version of setLayouts that also updates the cache
+  const setLayoutsWithCache = useCallback((newLayouts: React.SetStateAction<Layouts | null>) => {
+    setLayouts((prevLayouts) => {
+      const resolvedLayouts = typeof newLayouts === 'function' ? newLayouts(prevLayouts) : newLayouts;
+      
+      // Update the cache if we have valid layouts
+      if (resolvedLayouts) {
+        const existingCache = getLocalCache();
+        if (existingCache) {
+          setLocalCache({
+            ...existingCache,
+            layouts: resolvedLayouts
+          });
+        }
+      }
+      
+      return resolvedLayouts;
+    });
+  }, []);
 
   // Add loading state for initial data load
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -623,21 +647,25 @@ export const UserDataProvider: React.FC<{
   const saveLayouts = useCallback(async (newLayouts: Layouts) => {
     if (!user?.id || isSharedView) return; // Don't save layouts in shared view
     try {
+      console.log('Saving layouts:', newLayouts);
       // Ensure the new layouts have both desktop and mobile arrays
       const safeNewLayouts = {
         desktop: Array.isArray(newLayouts.desktop) ? newLayouts.desktop : defaultLayouts.desktop,
         mobile: Array.isArray(newLayouts.mobile) ? newLayouts.mobile : defaultLayouts.mobile,
       };
+      console.log('Safe new layouts:', safeNewLayouts);
       await saveDashboardLayout(user.id, safeNewLayouts);
       setLayouts(safeNewLayouts);
       
       // Update the localStorage cache
       const existingCache = getLocalCache();
+      console.log('Existing cache:', existingCache);
       if (existingCache) {
         setLocalCache({
           ...existingCache,
           layouts: safeNewLayouts
         });
+        console.log('Updated cache with new layouts');
       }
     } catch (error) {
       console.error('Error saving layouts:', error);
@@ -662,7 +690,7 @@ export const UserDataProvider: React.FC<{
         setTags(data.tags || []);
         setPropfirmAccounts(data.propfirmAccounts || []);
         setGroups(data.groups || []);
-        setLayouts(data.layouts || defaultLayouts);
+        setLayoutsWithCache(data.layouts || defaultLayouts);
 
         // Update cache
         setLocalCache({
@@ -1140,7 +1168,7 @@ export const UserDataProvider: React.FC<{
 
     // Add layout values
     layouts: layouts || (isSharedView ? defaultLayouts : { desktop: [], mobile: [] }),
-    setLayouts,
+    setLayouts: setLayoutsWithCache,
     saveLayouts,
 
     // Time range related
