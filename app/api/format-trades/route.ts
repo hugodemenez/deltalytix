@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         try {
           const { partialObjectStream } = await streamObject({
-            model: openai("gpt-4o-mini"),
+            model: openai("gpt-4.1-nano-2025-04-14"),
             schema: z.object({
               trades: z.array(TradeSchema.partial()).describe("Array of formatted trades"),
             }),
