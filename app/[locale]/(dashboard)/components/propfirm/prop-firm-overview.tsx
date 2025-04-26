@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -26,6 +26,12 @@ import { Switch } from "@/components/ui/switch"
 import { PropFirmConfigurator } from './prop-firm-configurator'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface PropFirmAccount {
   id: string
@@ -619,10 +625,36 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
 
   return (
     <Card className="w-full h-full flex flex-col">
-      <CardHeader>
-        <div>
-          <CardTitle>{t('propFirm.title')}</CardTitle>
-          <CardDescription>{t('propFirm.description')}</CardDescription>
+      <CardHeader 
+        className={cn(
+          "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
+          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
+        )}
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-1.5">
+            <CardTitle 
+              className={cn(
+                "line-clamp-1",
+                size === 'small-long' ? "text-sm" : "text-base"
+              )}
+            >
+              {t('propFirm.title')}
+            </CardTitle>
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className={cn(
+                    "text-muted-foreground hover:text-foreground transition-colors cursor-help",
+                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                  )} />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{t('propFirm.description')}</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">

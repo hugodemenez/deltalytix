@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
-import { createClient } from "@/server/auth"
 import { Resend } from 'resend'
 import WelcomeEmail from '@/components/emails/welcome'
-import { render } from '@react-email/render'
+import { getLatestVideoFromPlaylist } from "@/app/[locale]/(admin)/server/youtube"
 
 const prisma = new PrismaClient()
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -49,13 +48,14 @@ export async function POST(req: Request) {
       where: { email: record.email }
     })
     const userLanguage = user?.language || 'fr'
+    const youtubeId = await getLatestVideoFromPlaylist()
 
     // Use react prop instead of rendering to HTML
     const { data, error } = await resend.emails.send({
       from: 'Deltalytix <welcome@eu.auth.deltalytix.app>',
       to: record.email,
       subject: userLanguage === 'fr' ? 'Bienvenue sur Deltalytix' : 'Welcome to Deltalytix',
-      react: WelcomeEmail({ firstName, email: record.email, language: userLanguage }),
+      react: WelcomeEmail({ firstName, email: record.email, language: userLanguage, youtubeId: youtubeId || 'ugvyK1c3yPc' }),
       replyTo: 'hugo.demenez@deltalytix.app',
       headers: {
         'List-Unsubscribe': `<${unsubscribeUrl}>`,
