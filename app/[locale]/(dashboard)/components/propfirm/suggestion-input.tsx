@@ -222,12 +222,13 @@ export default function EnhancedInput({
 
   return (
     <div ref={containerRef} className={cn("relative w-full max-w-xs", className)}>
-      {label && <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>}
+      {label && <label className="mb-2 block text-sm font-medium text-foreground/80">{label}</label>}
       <div
         className={cn(
-          "relative flex items-center rounded-md border border-gray-300 transition-all",
+          "relative flex items-center rounded-md border transition-all",
+          "border-input bg-background",
           confirmed && value ? "scale-[1.02] duration-300" : "",
-          isValid === false ? "border-red-500" : "",
+          isValid === false ? "border-destructive" : "",
           isValid === true ? "border-green-500" : "",
         )}
       >
@@ -244,7 +245,9 @@ export default function EnhancedInput({
           aria-describedby={isValid === false ? "validation-message" : undefined}
           className={cn(
             "w-full rounded-md border-0 bg-transparent px-3 py-2 text-sm outline-none ring-0 focus:ring-0 pr-14",
-            isValid === false ? "text-red-500" : "",
+            "text-foreground",
+            "placeholder:text-muted-foreground",
+            isValid === false ? "text-destructive" : "",
             isValid === true ? "text-green-500" : "",
           )}
         />
@@ -253,20 +256,23 @@ export default function EnhancedInput({
             <button
               type="button"
               onClick={clearInput}
-              className="mr-1 rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+              className="mr-1 rounded-full p-1 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               aria-label="Clear input"
             >
               <X className="h-4 w-4" />
             </button>
           )}
           <ChevronDown
-            className={cn("h-4 w-4 text-gray-400 transition-transform", showSuggestions ? "rotate-180" : "")}
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              showSuggestions ? "rotate-180" : ""
+            )}
           />
         </div>
       </div>
 
       {isValid === false && validationMessage && (
-        <p id="validation-message" className="mt-1 text-xs text-red-500">
+        <p id="validation-message" className="mt-1 text-xs text-destructive">
           {validationMessage}
         </p>
       )}
@@ -274,7 +280,11 @@ export default function EnhancedInput({
       {showSuggestions && filteredSuggestions.length > 0 && (
         <ul
           ref={suggestionsRef}
-          className="absolute z-10 mt-1 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 text-sm shadow-lg max-h-[200px]"
+          className={cn(
+            "absolute z-10 mt-1 w-full overflow-auto rounded-md border py-1 text-sm shadow-lg max-h-[200px]",
+            "border-input bg-background",
+            "text-foreground"
+          )}
           role="listbox"
         >
           {filteredSuggestions.map((suggestion, index) => (
@@ -282,7 +292,11 @@ export default function EnhancedInput({
               key={suggestion}
               role="option"
               aria-selected={selectedIndex === index}
-              className={cn("cursor-pointer px-3 py-2 hover:bg-gray-100", selectedIndex === index ? "bg-gray-100" : "")}
+              className={cn(
+                "cursor-pointer px-3 py-2",
+                "hover:bg-accent hover:text-accent-foreground",
+                selectedIndex === index ? "bg-accent text-accent-foreground" : ""
+              )}
               onClick={() => handleSuggestionClick(suggestion)}
             >
               {suggestion}
