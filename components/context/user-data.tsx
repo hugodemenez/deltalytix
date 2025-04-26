@@ -662,6 +662,7 @@ export const UserDataProvider: React.FC<{
         setTags(data.tags || []);
         setPropfirmAccounts(data.propfirmAccounts || []);
         setGroups(data.groups || []);
+        setLayouts(data.layouts || defaultLayouts);
 
         // Update cache
         setLocalCache({
