@@ -10,11 +10,11 @@ import { toast } from "sonner"
 import { sendNewsletter } from "@/app/[locale]/(admin)/server/newsletter"
 import { useNewsletter } from "./newsletter-context"
 import { Loader2, Sparkles } from "lucide-react"
-import { generateNewsletterContent } from "../server/generate-newsletter"
-import { generateTranscriptSummary } from "../server/youtube"
+import { generateNewsletterContent } from "../../server/generate-newsletter"
+import { generateTranscriptSummary } from "../../server/youtube"
 import type { NewsletterContent } from "./newsletter-context"
-import { extractYouTubeId } from "../utils/youtube"
-import { fetchTranscriptServer } from "../server/youtube"
+import { extractYouTubeId } from "../../utils/youtube"
+import { fetchTranscriptServer } from "../../server/youtube"
 
 export function NewsletterEditor() {
   const [loading, setLoading] = useState(false)
@@ -33,10 +33,12 @@ export function NewsletterEditor() {
       try {
         setIsLoadingTranscript(true)
         const transcript = await fetchTranscriptServer(videoId)
+        console.log(transcript)
 
         if (transcript) {
           // Generate summary from transcript
           const summary = await generateTranscriptSummary(transcript)
+          console.log(summary)
           if (summary) {
             setDescription(summary)
           } else {

@@ -2,9 +2,16 @@
 import { render } from "@react-email/render"
 import TraderStatsEmail from "@/components/emails/weekly-recap"
 import { PrismaClient } from "@prisma/client"
-import { openai } from "@ai-sdk/openai"
-import { streamObject } from "ai"
-import { z } from "zod"
+import { createClient } from '@supabase/supabase-js'
+import { generateTradingAnalysis } from "@/app/api/email/weekly-summary/[userid]/actions/analysis"
+import { getUserData, computeTradingStats } from "@/app/api/email/weekly-summary/[userid]/actions/user-data"
+
+const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false
+  }
+})
 
 export interface WeeklyRecapContent {
   firstName: string
@@ -40,125 +47,39 @@ function formatPnL(value: number): string {
   return value.toFixed(Math.abs(value) < 10 ? 2 : 1)
 }
 
-const DELTALYTIX_CONTEXT = `Deltalytix est une plateforme web pour day traders de futures, avec une interface intuitive et personnalisable. Conçue à partir de mon expérience personnelle en tant que day trader de futures, utilisant des stratégies de scalping, elle propose des fonctionnalités comme la gestion de multiple compte, le suivi des challenges propfirms, et des tableaux de bord personnalisables. Notre but est de fournir aux traders des analyses approfondies sur leurs habitudes de trading pour optimiser leurs stratégies et améliorer leur prise de décision.`
-
-const analysisSchema = z.object({
-  intro: z.string().describe("Une analyse très courte (1 phrase) des performances de la semaine"),
-  tips: z.string().describe("Des conseils concis (environ 18 mots) pour améliorer les performances de la semaine prochaine")
-})
-
-async function generateResultAnalysisIntro(dailyPnL: { date: string, pnl: number, weekday: number }[]) {
+export async function generateAnalysis(content: WeeklyRecapContent) {
   try {
-    // Calculate key metrics
-    const totalPnL = dailyPnL.reduce((sum, day) => sum + day.pnl, 0)
-    const profitableDays = dailyPnL.filter(day => day.pnl > 0).length
-    const totalDays = dailyPnL.length
-    
-    // Sort days by date
-    const sortedDays = [...dailyPnL].sort((a, b) => compareDates(a.date, b.date))
-    
-    // Group days by week using weekday information
-    // weekday 0 = Monday, 4 = Friday
-    const weeks: Array<typeof sortedDays> = []
-    let currentWeek: typeof sortedDays = []
-    
-    for (const day of sortedDays) {
-      if (currentWeek.length === 0 || day.weekday >= currentWeek[currentWeek.length - 1].weekday) {
-        currentWeek.push(day)
-      } else {
-        // If weekday is less than previous day's weekday, it's a new week
-        weeks.push(currentWeek)
-        currentWeek = [day]
-      }
-    }
-    
-    // Add the last week if it exists
-    if (currentWeek.length > 0) {
-      weeks.push(currentWeek)
-    }
-    
-    // Get the last two weeks (if available)
-    const thisWeek = weeks[weeks.length - 1] || []
-    const lastWeek = weeks[weeks.length - 2] || []
-    
-    const thisWeekPnL = thisWeek.reduce((sum, day) => sum + day.pnl, 0)
-    const lastWeekPnL = lastWeek.reduce((sum, day) => sum + day.pnl, 0)
-    const weekOverWeekChange = lastWeekPnL !== 0 
-      ? ((thisWeekPnL - lastWeekPnL) / Math.abs(lastWeekPnL)) * 100
-      : thisWeekPnL > 0 ? 100 : thisWeekPnL < 0 ? -100 : 0
-
-    const { partialObjectStream } = await streamObject({
-      model: openai("gpt-4-turbo-preview"),
-      schema: analysisSchema,
-      prompt: `Tu es un expert en trading qui analyse les performances hebdomadaires des traders.
-${DELTALYTIX_CONTEXT}
-
-Ta tâche est de générer deux éléments distincts basés sur ces métriques de trading :
-
-Données de performance :
-- PnL total : ${formatPnL(totalPnL)}€
-- Jours profitables : ${profitableDays}/${totalDays}
-- PnL cette semaine : ${formatPnL(thisWeekPnL)}€
-- PnL semaine précédente : ${formatPnL(lastWeekPnL)}€
-- Variation semaine/semaine : ${weekOverWeekChange.toFixed(1)}%
-
-Directives pour l'analyse (intro) :
-1. Génère UNE SEULE phrase d'analyse des performances, avec un ton encourageant
-2. Sois direct et factuel
-3. Mentionne le point le plus important de la semaine
-4. Maximum 30 mots
-
-Directives pour les conseils (tips) :
-1. Suggère une action spécifique utilisant les fonctionnalités de Deltalytix
-2. Environ 18 mots
-3. Mentionne un outil concret de la plateforme (tableaux de bord, gestion de compte, suivi de challenge, analyses)
-4. Relie le conseil aux performances de la semaine
-5. Sois précis et actionnable
-6. Exemples de formulation :
-   - "Utilisez le tableau de bord X pour analyser..."
-   - "Configurez une alerte dans Deltalytix pour..."
-   - "Exploitez l'analyse de X dans votre dashboard pour..."
-   - "Suivez vos métriques de scalping avec notre outil de..."
-
-Génère une analyse personnalisée basée sur ces données :`,
-      temperature: 0.7,
-    })
-
-    let content = { intro: "", tips: "" }
-
-    for await (const partialObject of partialObjectStream) {
-      if (partialObject.intro) content.intro = partialObject.intro
-      if (partialObject.tips) content.tips = partialObject.tips
-    }
-
-    return {
-      resultAnalysisIntro: content.intro || "Voici vos statistiques de trading de la semaine.",
-      tipsForNextWeek: content.tips || "Continuez à appliquer votre stratégie avec discipline et à analyser vos trades pour progresser."
-    }
-  } catch (error) {
-    console.error('Error generating analysis intro:', error)
-    return {
-      resultAnalysisIntro: "Voici vos statistiques de trading de la semaine.",
-      tipsForNextWeek: "Continuez à appliquer votre stratégie avec discipline et à analyser vos trades pour progresser."
-    }
-  }
-}
-
-export async function renderEmailPreview(content: WeeklyRecapContent) {
-  try {
-    // Sort dailyPnL by date before rendering
+    // Sort dailyPnL by date before analysis
     const sortedContent = {
       ...content,
       dailyPnL: [...content.dailyPnL].sort((a, b) => compareDates(a.date, b.date))
     }
     
-    const analysis = await generateResultAnalysisIntro(sortedContent.dailyPnL)
+    const analysis = await generateTradingAnalysis(
+      sortedContent.dailyPnL,
+      'fr' // Default to French for now, can be made dynamic based on user preferences
+    )
 
+    return {
+      success: true,
+      analysis
+    }
+  } catch (error) {
+    console.error("Failed to generate analysis:", error)
+    return {
+      success: false,
+      error: "Failed to generate analysis"
+    }
+  }
+}
+
+export async function renderEmail(content: WeeklyRecapContent, analysis: { resultAnalysisIntro: string, tipsForNextWeek: string }) {
+  try {
     const html = await render(
       TraderStatsEmail({
-        firstName: sortedContent.firstName,
-        dailyPnL: sortedContent.dailyPnL,
-        winLossStats: sortedContent.winLossStats,
+        firstName: content.firstName,
+        dailyPnL: content.dailyPnL,
+        winLossStats: content.winLossStats,
         email: "preview@example.com",
         resultAnalysisIntro: analysis.resultAnalysisIntro,
         tipsForNextWeek: analysis.tipsForNextWeek
@@ -189,70 +110,66 @@ export async function renderEmailPreview(content: WeeklyRecapContent) {
         </html>`
     }
   } catch (error) {
-    console.error("Failed to render email preview:", error)
+    console.error("Failed to render email:", error)
     return {
       success: false,
-      error: "Failed to render email preview",
+      error: "Failed to render email"
     }
   }
 }
 
-export async function loadInitialContent() {
-  const prisma = new PrismaClient()
-  const trades = await prisma.trade.findMany({
-    where: {
-      userId: process.env.ALLOWED_ADMIN_USER_ID,
-    },
-  })
+export async function loadInitialContent(email?: string, userId?: string) {
+  // If no userId is provided, use the default admin user
+  const targetUserId = userId || process.env.ALLOWED_ADMIN_USER_ID
   
-  // Keep the last 14 days of trades to ensure we have two full weeks
-  const last14DaysTrades = trades.filter((trade) => {
-    const tradeDate = new Date(trade.entryDate)
-    const today = new Date()
-    const diffTime = Math.abs(today.getTime() - tradeDate.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-    return diffDays <= 14
-  })
-
-  const winLossStats = last14DaysTrades.reduce((acc, trade) => {
-    if (trade.pnl > 0) {
-      acc.wins++
-    } else {
-      acc.losses++
-    }
-    return acc
-  }, { wins: 0, losses: 0 })
-
-  const dailyPnL = last14DaysTrades.reduce((acc, trade) => {
-    const tradeDate = new Date(trade.entryDate)
-    const date = tradeDate.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit'
-    })
-    
-    // Get weekday (0 = Monday, 4 = Friday)
-    const weekday = (tradeDate.getDay() + 6) % 7 // Convert Sunday = 0 to Monday = 0
-    if (weekday > 4) return acc // Skip weekends
-    
-    const existingEntry = acc.find(entry => entry.date === date)
-    if (existingEntry) {
-      existingEntry.pnl = Number((existingEntry.pnl + trade.pnl - trade.commission).toFixed(2))
-    } else {
-      acc.push({
-        date,
-        pnl: Number((trade.pnl - trade.commission).toFixed(2)),
-        weekday
-      })
-    }
-    return acc
-  }, [] as { date: string, pnl: number, weekday: number }[])
-
-  // Sort by date using the compareDates function
-  dailyPnL.sort((a, b) => compareDates(a.date, b.date))
-
-  return {
-    firstName: 'Hugo',
-    dailyPnL,
-    winLossStats,
+  if (!targetUserId) {
+    throw new Error('No user ID provided and no default admin user configured')
   }
+
+  try {
+    // Get user data and compute stats
+    const { user, newsletter, trades } = await getUserData(targetUserId)
+    const stats = await computeTradingStats(trades, user.language)
+
+    return {
+      firstName: newsletter.firstName || 'Trader',
+      dailyPnL: stats.dailyPnL,
+      winLossStats: stats.winLossStats,
+    }
+  } catch (error) {
+    console.error("Failed to load initial content:", error)
+    throw error
+  }
+}
+
+export async function listUsers() {
+  let allUsers: any[] = []
+  let page = 1
+  const perPage = 1000
+  let hasMore = true
+
+  while (hasMore) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage
+    })
+
+    if (error) {
+      console.error('Error fetching users:', error)
+      break
+    }
+
+    if (data.users.length === 0) {
+      hasMore = false
+    } else {
+      allUsers = [...allUsers, ...data.users]
+      page++
+    }
+  }
+
+  return allUsers.map(user => ({
+    id: user.id,
+    email: user.email,
+    created_at: user.created_at
+  }))
 } 

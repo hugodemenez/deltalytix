@@ -1,8 +1,8 @@
 import { Suspense } from "react"
-import { NewsletterEditor } from "@/app/[locale]/(admin)/components/newsletter-editor"
-import { SubscriberTable } from "@/app/[locale]/(admin)/components/subscriber-table"
-import { NewsletterProvider } from "@/app/[locale]/(admin)/components/newsletter-context"
-import { NewsletterPreview } from "@/app/[locale]/(admin)/components/newsletter-preview"
+import { NewsletterEditor } from "@/app/[locale]/(admin)/components/newsletter/newsletter-editor"
+import { SubscriberTable } from "@/app/[locale]/(admin)/components/newsletter/subscriber-table"
+import { NewsletterProvider } from "@/app/[locale]/(admin)/components/newsletter/newsletter-context"
+import { NewsletterPreview } from "@/app/[locale]/(admin)/components/newsletter/newsletter-preview"
 import {
   ResizablePanel,
   ResizablePanelGroup,

@@ -17,6 +17,10 @@ interface WeeklyRecapContextType {
   content: WeeklyRecapContent
   setContent: React.Dispatch<React.SetStateAction<WeeklyRecapContent>>
   isLoading: boolean
+  selectedUserId: string
+  setSelectedUserId: (userId: string) => void
+  selectedEmail: string
+  setSelectedEmail: (email: string) => void
 }
 
 const WeeklyRecapContext = createContext<WeeklyRecapContextType | undefined>(undefined)
@@ -24,24 +28,28 @@ const WeeklyRecapContext = createContext<WeeklyRecapContextType | undefined>(und
 export function WeeklyRecapProvider({ children }: { children: React.ReactNode }) {
   const [content, setContent] = useState<WeeklyRecapContent>(initialContent)
   const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const loadContent = async () => {
-      try {
-        setIsLoading(true)
-        const content = await loadInitialContent()
-        setContent(content)
-      } catch (error) {
-        console.error("Failed to load weekly recap content:", error)
-      } finally {
-        setIsLoading(false)
-      }
+  const [selectedUserId, setSelectedUserId] = useState<string>("")
+  const [selectedEmail, setSelectedEmail] = useState<string>("")
+  const loadContent = useCallback(async (email: string, userId: string) => {
+    try {
+      setIsLoading(true)
+      const content = await loadInitialContent(email,userId)
+      setContent(content)
+    } catch (error) {
+      console.error("Failed to load weekly recap content:", error)
+    } finally {
+      setIsLoading(false)
     }
-    loadContent()
   }, [])
 
+  useEffect(() => {
+    if (selectedUserId) {
+      loadContent(selectedEmail,selectedUserId)
+    }
+  }, [selectedUserId, selectedEmail, loadContent])
+
   return (
-    <WeeklyRecapContext.Provider value={{ content, setContent, isLoading }}>
+    <WeeklyRecapContext.Provider value={{ content, setContent, isLoading, selectedUserId, setSelectedUserId, selectedEmail, setSelectedEmail }}>
       {children}
     </WeeklyRecapContext.Provider>
   )

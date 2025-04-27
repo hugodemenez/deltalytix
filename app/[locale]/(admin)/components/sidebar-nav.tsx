@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Mail, BarChart } from "lucide-react"
+import { Mail, BarChart, UserPlus } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -30,13 +30,15 @@ export function SidebarNav({ className, ...props }: SidebarNavProps) {
       label: "Weekly Recap",
       icon: BarChart,
     },
+    {
+      href: "/admin/welcome-email",
+      label: "Welcome Email",
+      icon: UserPlus,
+    },
   ]
 
   return (
-    <Sidebar className={className} {...props}>
-      <SidebarHeader>
-        <h2 className="px-6 text-lg font-semibold">Delatlytix</h2>
-      </SidebarHeader>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
@@ -47,6 +49,7 @@ export function SidebarNav({ className, ...props }: SidebarNavProps) {
                   <SidebarMenuButton
                     asChild
                     isActive={pathname?.includes(route.href)}
+                    tooltip={route.label}
                   >
                     <Link href={route.href}>
                       <route.icon className="h-4 w-4" />

@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useNewsletter } from "./newsletter-context"
 import { useEffect, useState } from "react"
-import { renderEmailPreview } from "../server/newsletter"
+import { renderEmailPreview } from "../../server/newsletter"
 import { useDebounce } from "@/hooks/use-debounce"
 import { Button } from "@/components/ui/button"
 import { Pencil, Eye } from "lucide-react"

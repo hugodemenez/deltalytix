@@ -1,16 +1,5 @@
-import { Suspense } from "react"
-import { Card } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
 import { WeeklyRecapProvider } from "../../components/weekly-stats/weekly-recap-context"
 import { WeeklyRecapPreview } from "../../components/weekly-stats/weekly-recap-preview"
-
-function PreviewCard() {
-  return (
-    <Card className="w-full max-w-[1200px] mx-auto">
-      <WeeklyRecapPreview />
-    </Card>
-  )
-}
 
 export default function WeeklyRecapPage() {
   return (
@@ -22,9 +11,7 @@ export default function WeeklyRecapPage() {
             Preview and customize the weekly recap email that will be sent to traders.
           </p>
         </div>
-        <Suspense fallback={<Skeleton className="w-full h-[600px]" />}>
-          <PreviewCard />
-        </Suspense>
+      <WeeklyRecapPreview />
       </div>
     </WeeklyRecapProvider>
   )
