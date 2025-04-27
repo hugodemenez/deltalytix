@@ -34,7 +34,9 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
     nbWin, nbLoss, nbBe, nbTrades, 
     averagePositionTime, 
     cumulativePnl, cumulativeFees,
-    winningStreak 
+    winningStreak,
+    grossLosses,
+    grossWin
   } = statistics
 
   // Calculate rates
@@ -181,12 +183,12 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground text-xs">{t('statistics.performance.avgWin')}</span>
-                <span className="text-sm font-medium text-green-500">${(cumulativePnl / nbWin).toFixed(2)}</span>
+                <span className="text-sm font-medium text-green-500">${(grossWin / nbWin).toFixed(2)}</span>
               </div>
               {size !== 'tiny' && (
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground text-xs">{t('statistics.performance.avgLoss')}</span>
-                  <span className="text-sm font-medium text-red-500">-${Math.abs(cumulativePnl / nbLoss).toFixed(2)}</span>
+                  <span className="text-sm font-medium text-red-500">-${(grossLosses / nbLoss).toFixed(2)}</span>
                 </div>
               )}
             </div>

@@ -40,7 +40,9 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
       nbLoss: 0,
       totalPositionTime: 0,
       averagePositionTime: '0s',
-      profitFactor: 1
+      profitFactor: 1,
+      grossLosses: 0,
+      grossWin: 0,
     }
   }
 
@@ -55,7 +57,9 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
     nbLoss: 0,
     totalPositionTime: 0,
     averagePositionTime: '0s',
-    profitFactor: 1
+    profitFactor: 1,
+    grossLosses: 0,
+    grossWin: 0,
   };
 
   const statistics = trades.reduce((acc: StatisticsProps, trade: Trade) => {
@@ -71,9 +75,11 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
     } else if (pnl > 0) {
       acc.nbWin++;
       acc.winningStreak++;
+      acc.grossWin += pnl;
     } else {
       acc.nbLoss++;
       acc.winningStreak = 0;
+      acc.grossLosses += Math.abs(pnl);
     }
 
     const totalTrades = acc.nbWin + acc.nbLoss;

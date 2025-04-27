@@ -28,6 +28,8 @@ type StatisticsProps = {
   totalPositionTime: number
   averagePositionTime: string
   profitFactor: number
+  grossLosses: number
+  grossWin: number
 }
 
 type CalendarData = {
