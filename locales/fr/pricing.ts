@@ -2,9 +2,9 @@ export default {
     pricing: {
         heading: 'Tarification',
         subheading: 'Stockez, explorez et améliorez vos données de trading avec le plan adapté à vos besoins.',
-        yearly: 'Facturation annuelle',
-        monthly: 'Facturation mensuelle',
-        quarterly: 'Facturation trimestrielle',
+        yearly: 'annuel',
+        monthly: 'mensuel',
+        quarterly: 'trimestriel',
         yearlySavings: 'Économisez jusqu\'à 20% avec la facturation annuelle',
         quarterlySavings: 'Économisez jusqu\'à 10% avec la facturation trimestrielle',
         monthlyFlexibility: 'Facturation mensuelle flexible',

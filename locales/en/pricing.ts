@@ -2,9 +2,9 @@ export default {
     pricing: {
         heading: 'Pricing',
         subheading: 'Store, explore and improve your trading data with the right plan for your needs.',
-        yearly: 'Yearly Billing',
-        monthly: 'Monthly Billing',
-        quarterly: 'Quarterly Billing',
+        yearly: 'Yearly',
+        monthly: 'Monthly',
+        quarterly: 'Quarterly',
         yearlySavings: 'Save up to 20% with yearly billing',
         quarterlySavings: 'Save up to 10% with quarterly billing',
         monthlyFlexibility: 'Flexible monthly billing',
