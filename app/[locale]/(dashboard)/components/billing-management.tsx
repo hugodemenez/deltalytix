@@ -229,7 +229,6 @@ export default function BillingManagement() {
                           : `€${(subscription.promotion.amount_off / 100).toFixed(2)} OFF`}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        {t('billing.promotionCode', { code: subscription.promotion.code })}
                         {subscription.promotion.duration.duration === 'forever' && (
                           <span className="ml-1">({t('billing.promotionDuration.forever')})</span>
                         )}
