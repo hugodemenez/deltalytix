@@ -93,7 +93,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
   const [isLoading, setIsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [tagToDelete, setTagToDelete] = useState<TagType | null>(null)
-
+  const [filteredTags, setFilteredTags] = useState<TagType[]>([])
 
   // Update parent component when selected tags change
   useEffect(() => {
@@ -288,10 +288,13 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
     setIsAddDialogOpen(true)
   }
 
-  // Filter tags based on search query
-  const filteredTags = tags.filter(tag => 
-    tag.name.includes(searchQuery)
-  )
+  useEffect(() => {
+    // Filter tags based on search query
+    const filteredTags = tags.filter(tag => 
+      tag.name.includes(searchQuery)
+    )
+    setFilteredTags(filteredTags)
+  }, [tags, searchQuery])
 
   return (
     <>

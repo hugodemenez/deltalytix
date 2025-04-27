@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Upload, ArrowUpDown, Plus, Search, Trash2, X, ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react'
 import Image from 'next/image'
-import { Trade } from '@prisma/client'
+import { Tag, Trade } from '@prisma/client'
 import {
   Command,
   CommandEmpty,
@@ -48,6 +48,17 @@ import { TradeVideoUrl } from './trade-video-url'
 import { TradeTag } from './trade-tag'
 import { formatInTimeZone } from 'date-fns-tz'
 import { ImageGallery } from './trade-image-editor'
+import { deleteTag } from '@/server/tags'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -161,6 +172,7 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
   const { tagFilter, setTagFilter } = useUserData()
   const selectedTags = tagFilter.tags
   const t = useI18n()
+  const [tagToDelete, setTagToDelete] = useState<string | null>(null)
 
   const filteredTags = availableTags.filter(tag => 
     tag.toLowerCase().includes(search.toLowerCase())
@@ -174,6 +186,19 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
     
     setTagFilter({ tags: newTags })
     column?.setFilterValue(newTags)
+  }
+
+  const handleDeleteClick = (e: React.MouseEvent, tag: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setTagToDelete(tag)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (tagToDelete) {
+      await onDeleteTag(tagToDelete)
+      setTagToDelete(null)
+    }
   }
 
   return (
@@ -240,11 +265,7 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          onDeleteTag(tag)
-                        }}
+                        onClick={(e) => handleDeleteClick(e, tag)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -256,6 +277,23 @@ function TagFilter({ column, availableTags, onDeleteTag }: TagFilterProps) {
           </Command>
         </PopoverContent>
       </Popover>
+
+      <AlertDialog open={!!tagToDelete} onOpenChange={() => setTagToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('trade-table.deleteTag.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('trade-table.deleteTag.description', { tag: tagToDelete })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('trade-table.deleteTag.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>
+              {t('trade-table.deleteTag.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
@@ -297,7 +335,8 @@ export function TradeTableReview() {
     updateTrade, 
     timezone, 
     tagFilter,
-    tags
+    tags,
+    setTags
   } = useUserData()
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -347,15 +386,20 @@ export function TradeTableReview() {
     return filteredTrades.slice(startIndex, endIndex)
   }, [filteredTrades, currentPage, tradesPerPage])
 
-  const handleDeleteTag = useCallback(async (tag: string) => {
+  const handleDeleteTag = useCallback(async (tagName: string) => {
     try {
-      await deleteTagFromAllTrades(tag)
+      await deleteTagFromAllTrades(tagName)
+      const tagId = tags.find(t => t.name === tagName)?.id
+      if (tagId) {
+        await deleteTag(tagId)
+        setTags(tags.filter(t => t.name !== tagName))
+      }
       
       trades
-        .filter(trade => trade.tags?.includes(tag))
+        .filter(trade => trade.tags?.includes(tagName))
         .forEach(trade => {
           updateTrade(trade.id, {
-            tags: trade.tags?.filter(t => t !== tag) || []
+            tags: trade.tags?.filter(t => t !== tagName) || []
           })
         })
     } catch (error) {
@@ -774,7 +818,7 @@ export function TradeTableReview() {
         <TagFilter 
           column={column}
           availableTags={tags.map(t => t.name)}
-          onDeleteTag={handleDeleteTag}
+          onDeleteTag={(tagName) => handleDeleteTag(tagName)}
         />
       ),
       cell: ({ row }) => {
@@ -782,18 +826,10 @@ export function TradeTableReview() {
         return (
           <div className="min-w-[200px]">
             <TradeTag
-              tradeId={trade.id}
-              tags={trade.tags || []}
-              availableTags={tags}
-              onTagsChange={(newTags) => handleTagsChange(trade.id, newTags)}
+              trade={trade}
             />
           </div>
         )
-      },
-      filterFn: (row, id, filterValue: string[]) => {
-        if (!filterValue?.length) return true
-        const tradeTags = row.original.tags.map(tag => tag.toLowerCase())
-        return filterValue.some(tag => tradeTags.includes(tag.toLowerCase()))
       },
       size: 200,
     }
@@ -818,11 +854,6 @@ export function TradeTableReview() {
     },
     columnResizeMode: "onChange",
   })
-
-  // Add a debug log to check sorting state
-  useEffect(() => {
-    console.log('Current sorting state:', sorting);
-  }, [sorting]);
 
   return (
     <div className="flex flex-col h-full w-full border rounded-md overflow-hidden">

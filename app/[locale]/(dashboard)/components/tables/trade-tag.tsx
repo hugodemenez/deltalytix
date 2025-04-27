@@ -21,51 +21,34 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { createTag } from '@/server/tags'
-import { Tag } from '@prisma/client'
-
-interface TagMetadata {
-  name: string
-  color: string | null
-  description?: string | null
-}
+import { Tag, Trade } from '@prisma/client'
 
 interface TradeTagProps {
-  tradeId: string
-  tags: string[]
-  availableTags: TagMetadata[]
-  onTagsChange?: (tags: string[]) => void
+  trade: Trade
 }
 
-export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChange }: TradeTagProps) {
+export function TradeTag({ trade }: TradeTagProps) {
   const t = useI18n()
   const { updateTrade, tagFilter, setTagFilter, setTags, tags } = useUserData()
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
-  const [localTags, setLocalTags] = useState(initialTags)
+  const [localTags, setLocalTags] = useState(trade.tags)
   const [isUpdating, setIsUpdating] = useState(false)
 
-  // Update local tags when initialTags change
-  useEffect(() => {
-    setLocalTags(initialTags)
-  }, [initialTags])
-
-  // Create a map of tag names to their metadata for quick lookup
-  const tagMetadataMap = useMemo(() => {
-    const map = new Map<string, TagMetadata>()
-    availableTags.forEach(tag => map.set(tag.name, tag))
-    return map
-  }, [availableTags])
-
   const handleAddTag = async (tag: string) => {
+    console.log(tag)
     const trimmedTag = tag.trim()
+    console.log(trimmedTag)
     if (!trimmedTag) return
 
     setIsUpdating(true)
+    // Update trade in context immediately (it can trigger a re-render)
+    updateTrade(trade.id, { tags: [... trade.tags, trimmedTag] })
     try {
       // If this is a new tag not in availableTags, it will be added through the sync process
-      const existingTag = availableTags.find(t => t.name === trimmedTag)
+      const existingTag = tags.find(t => t.name === trimmedTag)
       if (existingTag) {
-        await addTagToTrade(tradeId, trimmedTag)
+        await addTagToTrade(trade.id, trimmedTag)
       } else {
         // Create a new tag in database using 
         const newTag = await createTag({
@@ -73,17 +56,9 @@ export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChan
           description: '',
           color: '#CBD5E1'
         })
-        await addTagToTrade(tradeId, trimmedTag)
+        await addTagToTrade(trade.id, trimmedTag)
         setTags((tags: Tag[]) => [...tags, newTag.tag])
       }
-
-      // Update local state immediately
-      const newTags = [...localTags, trimmedTag]
-      setLocalTags(newTags)
-      onTagsChange?.(newTags)
-      
-      // Update trade in context
-      updateTrade(tradeId, { tags: newTags })
       
       setInputValue('')
       setIsOpen(false)
@@ -97,15 +72,12 @@ export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChan
   const handleRemoveTag = async (tagToRemove: string) => {
     setIsUpdating(true)
     try {
-      await removeTagFromTrade(tradeId, tagToRemove)
-      
       // Update local state immediately
-      const newTags = localTags.filter(tag => tag !== tagToRemove)
+      const newTags = trade.tags.filter(tag => tag !== tagToRemove)
       setLocalTags(newTags)
-      onTagsChange?.(newTags)
       
       // Update trade in context
-      updateTrade(tradeId, { tags: newTags })
+      updateTrade(trade.id, { tags: newTags })
       
       // Update tag filter if the removed tag was selected
       if (tagFilter.tags.includes(tagToRemove)) {
@@ -113,6 +85,7 @@ export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChan
           tags: prev.tags.filter(t => t !== tagToRemove)
         }))
       }
+      await removeTagFromTrade(trade.id, tagToRemove)
     } catch (error) {
       console.error('Failed to remove tag:', error)
     } finally {
@@ -124,7 +97,7 @@ export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChan
     <div className="flex items-center gap-2">
       <div className="flex gap-1 flex-wrap">
         {localTags.map((tag, index) => {
-          const metadata = tagMetadataMap.get(tag)
+          const metadata = tags.find(t => t.name.toLowerCase() === tag.toLowerCase())
           return (
             <div 
               key={index} 
@@ -189,9 +162,9 @@ export function TradeTag({ tradeId, tags: initialTags, availableTags, onTagsChan
                   {t('trade-table.addTag', { tag: inputValue.trim() })}
                 </CommandItem>
               )}
-              {availableTags.length > 0 && (
+              {tags.length > 0 && (
                 <CommandGroup heading={t('trade-table.existingTags')}>
-                  {availableTags
+                  {tags
                     .filter(tag => !localTags.includes(tag.name))
                     .filter(tag => {
                       const input = inputValue.trim()

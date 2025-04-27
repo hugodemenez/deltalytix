@@ -1052,7 +1052,13 @@ export default {
         'collapseAll': 'Tout réduire',
         'pageInfo': 'Page {current} sur {total}',
         'account': 'Compte',
-        'accountNumber': 'Numéro de compte'
+        'accountNumber': 'Numéro de compte',
+        'deleteTag': {
+            'title': 'Supprimer le Tag',
+            'description': 'Êtes-vous sûr de vouloir supprimer le tag "{tag}" ? Cette action ne peut pas être annulée et supprimera le tag de tous les trades.',
+            'cancel': 'Annuler',
+            'confirm': 'Supprimer'
+        }
     },
     'tickDistribution.title': 'Distribution des ticks',
     'tickDistribution.description': 'Visualisez la distribution de vos trades par ticks',

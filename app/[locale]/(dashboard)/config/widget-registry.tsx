@@ -25,8 +25,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { PropFirmOverview } from '../components/propfirm/prop-firm-overview'
 import { TagWidget } from '../components/filters/tag-widget'
-import MarketChart from '../components/charts/market-chart'
 import ProfitFactorCard from '../components/statistics/profit-factor-card'
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 
 export interface WidgetConfig {
   type: WidgetType
@@ -72,6 +72,61 @@ function createTablePreview(type: 'tradeTableReview' | 'consistencyTable') {
                     : i < 2 ? "flex-[2]" : "flex-[1]"
                 )} />
               ))}
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function createPropfirmPreview() {
+  // Sample data for the preview
+  const data = [
+    { name: '1', equity: 100, drawdown: 95 },
+    { name: '2', equity: 120, drawdown: 110 },
+    { name: '3', equity: 115, drawdown: 105 },
+    { name: '4', equity: 130, drawdown: 120 },
+    { name: '5', equity: 140, drawdown: 130 },
+    { name: '6', equity: 150, drawdown: 140 },
+  ]
+
+  return (
+    <Card className="h-[300px]">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium">Propfirm</CardTitle>
+      </CardHeader>
+      <CardContent className="pb-2">
+        <div className="w-full flex flex-col gap-3">
+          {[...Array(2)].map((_, index) => (
+            <div key={index} className="flex flex-col gap-2 p-3 bg-muted rounded-md border">
+              <div className="flex justify-between items-center">
+                <div className="h-4 w-24 bg-muted-foreground/20 rounded" />
+                <div className="h-4 w-16 bg-muted-foreground/20 rounded" />
+              </div>
+              <div className="h-20 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+                    <XAxis dataKey="name" hide />
+                    <YAxis hide />
+                    <Line
+                      type="monotone"
+                      dataKey="equity"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="drawdown"
+                      stroke="hsl(var(--destructive))"
+                      strokeWidth={2}
+                      strokeDasharray="4 2"
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           ))}
         </div>
@@ -219,11 +274,11 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
   statisticsWidget: {
     type: 'statisticsWidget',
     defaultSize: 'medium',
-    allowedSizes: ['small', 'medium'],
+    allowedSizes: ['medium'],
     category: 'statistics',
-    previewHeight: 400,
+    previewHeight: 100,
     getComponent: ({ size }) => <StatisticsWidget size={size} />,
-    getPreview: () => <StatisticsWidget size="medium" />
+    getPreview: () => <StatisticsWidget size="small" />
   },
   calendarWidget: {
     type: 'calendarWidget',
@@ -257,7 +312,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     defaultSize: 'medium',
     allowedSizes: ['medium', 'large'],
     category: 'other',
-    previewHeight: 600,
+    previewHeight: 300,
     getComponent: () => <NewsWidget />,
     getPreview: () => <div className="h-[300px]"><NewsWidget /></div>
   },
@@ -276,9 +331,9 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     defaultSize: 'extra-large',
     allowedSizes: ['medium', 'large', 'extra-large'],
     category: 'tables',
-    previewHeight: 400,
+    previewHeight: 300,
     getComponent: ({ size }) => <PropFirmOverview size={size} />,
-    getPreview: () => <PropFirmOverview size="medium" />
+    getPreview: () => createPropfirmPreview()
   },
   timeRangePerformance: {
     type: 'timeRangePerformance',

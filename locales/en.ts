@@ -677,7 +677,13 @@ export default {
         'collapseAll': 'Collapse All',
         'pageInfo': 'Page {current} of {total}',
         'account': 'Account',
-        'accountNumber': 'Account Number'
+        'accountNumber': 'Account Number',
+        'deleteTag': {
+            'title': 'Delete Tag',
+            'description': 'Are you sure you want to delete the tag "{tag}"? This action cannot be undone and will remove the tag from all trades.',
+            'cancel': 'Cancel',
+            'confirm': 'Delete'
+        }
     },
     'share.button': 'Share trades',
     'share.success': 'Trades shared successfully',

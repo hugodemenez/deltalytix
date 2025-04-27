@@ -18,7 +18,7 @@ export async function addTagToTrade(tradeId: string, tag: string) {
       where: { id: tradeId },
       data: {
         tags: {
-          push: tag.trim().toLowerCase()
+          push: tag.trim()
         }
       }
     })
