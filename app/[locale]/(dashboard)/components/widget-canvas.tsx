@@ -10,8 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Minus, Maximize2, Square, Plus, MoreVertical, GripVertical, Minimize2, Pencil, Camera, Trash2 } from 'lucide-react'
-import html2canvas from 'html2canvas'
+import { Minus, Maximize2, GripVertical } from 'lucide-react'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useUserData } from '@/components/context/user-data'
@@ -21,7 +20,6 @@ import { useAutoScroll } from '../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
 import { Widget, WidgetType, WidgetSize } from '../types/dashboard'
 import type { LayoutItem as ServerLayoutItem, Layouts } from '@/server/user-data'
-import { Skeleton } from "@/components/ui/skeleton"
 import { Toolbar } from './toolbar'
 
 // Add type for our local LayoutItem that extends the server one
@@ -131,35 +129,13 @@ function DeprecatedWidget({ onRemove }: { onRemove: () => void }) {
   )
 }
 
-// Add ScreenshotOverlay component
-function ScreenshotOverlay({ onScreenshot }: { onScreenshot: () => void }) {
-  return (
-    <div className="absolute inset-0 bg-background/50 dark:bg-background/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-      <Button
-        variant="secondary"
-        size="icon"
-        onClick={(e) => {
-          e.stopPropagation()
-          onScreenshot()
-        }}
-        className="h-10 w-10 bg-background/90 hover:bg-background/100"
-      >
-        <Camera className="h-4 w-4" />
-        <span className="sr-only">Take Screenshot</span>
-      </Button>
-    </div>
-  )
-}
-
-function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCustomizing, size, currentType, onCustomize }: { 
+function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, currentType }: { 
   children: React.ReactNode
   onRemove: () => void
-  onChangeType: (type: WidgetType) => void
   onChangeSize: (size: WidgetSize) => void
   isCustomizing: boolean
   size: WidgetSize
   currentType: WidgetType
-  onCustomize: () => void
 }) {
   const t = useI18n()
   const { isMobile } = useUserData()
@@ -171,7 +147,6 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
     setIsSizePopoverOpen(false)
   }
 
-
   // Add touch event handlers for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     if (isCustomizing) {
@@ -179,7 +154,6 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
       e.preventDefault()
     }
   }
-
 
   const isValidSize = (widgetType: WidgetType, size: WidgetSize) => {
     const config = WIDGET_REGISTRY[widgetType]
@@ -195,10 +169,10 @@ function WidgetWrapper({ children, onRemove, onChangeType, onChangeSize, isCusto
   return (
     <div 
       ref={widgetRef}
-      className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate"
+      className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate animate-[fadeIn_1.5s_ease-in-out]"
       onTouchStart={handleTouchStart}
     >
-      <div className={cn("h-full w-full transition-all duration-200", 
+      <div className={cn("h-full w-full", 
         isCustomizing && "group-hover:blur-[2px]"
       )}>
         {children}
@@ -390,11 +364,9 @@ function getWidgetDimensions(widget: LayoutItem, isMobile: boolean) {
 
 export default function WidgetCanvas() {
   const { user, isMobile, layouts, setLayouts, saveLayouts } = useUserData()
-  // Group all useState hooks together at the top
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [mounted, setMounted] = useState(false)
+
 
   // Add this state to track if the layout change is from user interaction
   const activeLayout = useMemo(() => isMobile ? 'mobile' : 'desktop', [isMobile])
@@ -709,24 +681,6 @@ export default function WidgetCanvas() {
     return getWidgetComponent(widget.type as WidgetType, effectiveSize)
   }, [isMobile, removeWidget]);
 
-  // Group all useEffect hooks together
-  useEffect(() => {
-    setMounted(true)
-    return () => setMounted(false)
-  }, []);
-
-  useEffect(() => {
-    if (layouts && mounted) {
-      const opacityTimer = setTimeout(() => {
-        setIsLoading(false)
-      }, 300)
-
-      return () => {
-        clearTimeout(opacityTimer)
-      }
-    }
-  }, [layouts, mounted]);
-
   useEffect(() => {
     if (isCustomizing) {
       document.addEventListener('click', handleOutsideClick)
@@ -736,11 +690,6 @@ export default function WidgetCanvas() {
 
   // Add auto-scroll functionality for mobile
   useAutoScroll(isMobile && isCustomizing)
-
-  // Don't render anything until mounted and layouts are loaded
-  if (!mounted || !layouts) {
-    return <Skeleton className="h-full w-full" />
-  }
 
   return (
     <div className={cn(
@@ -772,7 +721,6 @@ export default function WidgetCanvas() {
             margin={[16, 16]}
             containerPadding={[0, 0]}
             useCSSTransforms={true}
-            
           >
             {currentLayout.map((widget) => {
               const typedWidget = widget as unknown as LayoutItem
@@ -790,12 +738,10 @@ export default function WidgetCanvas() {
                 >
                   <WidgetWrapper
                     onRemove={() => removeWidget(typedWidget.i)}
-                    onChangeType={(type) => changeWidgetType(typedWidget.i, type)}
                     onChangeSize={(size) => changeWidgetSize(typedWidget.i, size)}
                     isCustomizing={isCustomizing}
                     size={typedWidget.size as WidgetSize}
                     currentType={typedWidget.type as WidgetType}
-                    onCustomize={() => setIsCustomizing(true)}
                   >
                     {renderWidget(typedWidget)}
                   </WidgetWrapper>

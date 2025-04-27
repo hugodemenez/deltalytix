@@ -531,6 +531,10 @@ export default {
         'description': 'Ce type de widget n\'est plus pris en charge',
         'remove': 'Supprimer le Widget'
     },
+    'widgets.deleteAll': 'Supprimer tous les Widgets',
+    'widgets.deleteAllConfirmTitle': 'Supprimer tous les Widgets',
+    'widgets.deleteAllConfirmDescription': 'Êtes-vous sûr de vouloir supprimer tous les widgets ? Cette action ne peut pas être annulée.',
+    'widgets.confirmDeleteAll': 'Oui, tout supprimer',
     tradeDistribution: {
         title: "Distribution des trades",
         description: "Répartition des trades gagnants, perdants et à l'équilibre",

@@ -758,6 +758,11 @@ export default {
         'description': 'This widget type is no longer supported',
         'remove': 'Remove Widget'
     },
+    'widgets.deleteAll': 'Delete All Widgets',
+    'widgets.deleteAllConfirmTitle': 'Delete All Widgets',
+    'widgets.deleteAllConfirmDescription': 'Are you sure you want to delete all widgets? This action cannot be undone.',
+    'widgets.confirmDeleteAll': 'Yes, delete all',
+    'common.cancel': 'Cancel',
     tradeDistribution: {
         title: "Trade Distribution",
         description: "Distribution of winning, losing, and breakeven trades",
