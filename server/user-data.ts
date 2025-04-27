@@ -63,7 +63,6 @@ export type SharedDataResponse = {
 }
 
 export async function loadInitialData(email?: string): Promise<InitialDataResponse> {
-  console.log('[loadInitialData] Starting data load', { email })
   try {
     // Create a new client for each request
     const supabase = await createClient()
@@ -142,7 +141,6 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       }
     }
 
-    console.log('[loadInitialData] User found', { userId: user.id })
 
     // Get user onboarding status and ETP token
     const [isFirstConnection, etpTokenData] = await Promise.all([
@@ -151,7 +149,6 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     ])
 
     // Get subscription details first
-    console.log('[loadInitialData] Fetching subscription details')
     const subscription = await getSubscriptionDetails(user.email || email || '')
 
     // Run remaining operations concurrently with subscription status
@@ -164,7 +161,6 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       getGroups(user.id).catch(() => [])
     ])
 
-    console.log('[loadInitialData] Processing tick details', { tickCount: tickDetailsResult.length })
     const tickDetails = tickDetailsResult.reduce((acc: Record<string, number>, detail: TickDetail) => {
       acc[detail.ticker] = detail.tickValue
       return acc
@@ -172,15 +168,6 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
 
     // Ensure layouts result is properly typed
     const layouts = layoutsResult as Layouts | null
-
-    console.log('[loadInitialData] Data load complete', { 
-      tradesCount: tradesResult.length,
-      tickDetailsCount: Object.keys(tickDetails).length,
-      hasSubscription: !!subscription,
-      hasLayouts: !!layouts,
-      propfirmAccountsCount: propfirmAccountsResult.length,
-      groupsCount: groupsResult.length
-    })
 
     return {
       user,
@@ -195,7 +182,6 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       groups: groupsResult
     }
   } catch (error) {
-    console.error('[loadInitialData] Error loading initial data:', error)
     return {
       user: null,
       isFirstConnection: false,
@@ -214,7 +200,6 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
 
 export async function loadSharedData(slug: string): Promise<SharedDataResponse> {
   if (!slug) {
-    console.error('[loadSharedData] No slug provided')
     return {
       trades: [],
       params: null,
@@ -223,11 +208,9 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
     }
   }
 
-  console.log('[loadSharedData] Starting shared data load', { slug })
   try {
     const sharedData = await getShared(slug)
     if (!sharedData) {
-      console.log('[loadSharedData] No shared data found for slug')
       return {
         trades: [],
         params: null,
@@ -236,18 +219,12 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
       }
     }
 
-    console.log('[loadSharedData] Data load complete', { 
-      tradesCount: sharedData.trades.length,
-      hasParams: !!sharedData.params 
-    })
-
     return {
       trades: sharedData.trades,
       params: sharedData.params,
       groups: []
     }
   } catch (error) {
-    console.error('[loadSharedData] Error loading shared data:', error)
     return {
       trades: [],
       params: null,

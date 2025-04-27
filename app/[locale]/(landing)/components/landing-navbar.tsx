@@ -65,7 +65,6 @@ const MobileNavItem = ({ href, children, onClick, className }: { href: string; c
 )
 
 export default function Component() {
-    const { user } = useUserData()
     const { theme, setTheme } = useTheme()
     const [isOpen, setIsOpen] = useState(false)
     const [hoveredItem, setHoveredItem] = useState<string | null>(null)
@@ -178,7 +177,7 @@ export default function Component() {
                 </AccordionItem>
             </Accordion>
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
-                <Link href={user ? "/dashboard" : "/authentication"}>{user ? t('navbar.dashboard') : t('navbar.signIn')}</Link>
+                <Link href={"/authentication"}>{t('navbar.signIn')}</Link>
             </Button>
             <div className="py-4 border-t space-y-4">
                 <Popover>
@@ -317,7 +316,7 @@ export default function Component() {
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
                         <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
-                            <Link href={user ? "/dashboard" : "/authentication"}>{user ? t('navbar.dashboard') : t('navbar.signIn')}</Link>
+                            <Link href={"/authentication"}>{t('navbar.signIn')}</Link>
                         </Button>
                     </NavigationMenu>
                 </div>
