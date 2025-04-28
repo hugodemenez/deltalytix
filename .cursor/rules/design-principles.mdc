@@ -1,0 +1,129 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# OpenAI-Inspired Design Principles
+
+This rule defines the core design principles inspired by OpenAI's minimalist approach for our trading journal application. These principles should be applied across all components and pages.
+
+## Core Files
+- Main layout: [app/layout.tsx](mdc:app/layout.tsx)
+- Component library: [components/ui](mdc:components/ui)
+- Theme configuration: [app/globals.css](mdc:app/globals.css)
+
+## 1. Functional Minimalism
+
+- **Single Primary Action**: Each screen should focus on one core action or piece of information
+- **Progressive Disclosure**: Show advanced options only when needed
+- **Reduced Cognitive Load**: Every UI element must serve a clear purpose
+- **Familiar Patterns**: Use common UI conventions users already know
+- **Guided Steps**: Break complex workflows into simple, sequential steps
+
+Example implementation in [components/trade-form.tsx](mdc:components/trade-form.tsx):
+```typescript
+// Progressive disclosure example
+const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+```
+
+## 2. Visual Design
+
+- **Essential Elements Only**: Remove decorative or non-functional graphics
+- **Strategic Whitespace**: Use negative space to create focus and hierarchy
+- **Limited Color Palette**: 
+  - Neutral colors defined in [app/globals.css](mdc:app/globals.css)
+  - Single accent color for primary actions
+- **Clear Typography**:
+  - Clean, legible fonts
+  - Consistent sizing hierarchy
+- **Minimal Visual Hierarchy**: Use size, weight, and placement over heavy UI elements
+
+## 3. Interaction Design
+
+- **Consistent Feedback**: All interactive elements should provide uniform feedback
+- **Standardized Components**: Reuse components from [components/ui](mdc:components/ui)
+- **Thumb/Cursor Reach**: Design for comfortable interaction zones
+- **Predictable Behavior**: Cursor interactions should be intuitive
+- **Immediate Feedback**: Every action should have clear visual response
+
+## 4. Micro-Interactions
+
+Implementation examples can be found in [components/ui/animations.tsx](mdc:components/ui/animations.tsx):
+
+```typescript
+// Animation constants
+export const ANIMATION_DURATION = 200; // ms
+export const ANIMATION_EASE = [0.4, 0, 0.2, 1];
+
+// Reusable variants
+export const fadeInVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 }
+};
+```
+
+## 5. Practical Implementation
+
+### Accessibility
+Reference implementation in [components/ui/button.tsx](mdc:components/ui/button.tsx):
+```typescript
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+  size?: 'sm' | 'md' | 'lg';
+  loading?: boolean;
+}
+
+export function Button({ 
+  children, 
+  variant = 'primary',
+  size = 'md',
+  loading,
+  ...props 
+}: ButtonProps) {
+  return (
+    <button
+      className={cn(buttonVariants({ variant, size }))}
+      disabled={loading}
+      aria-busy={loading}
+      {...props}
+    >
+      {loading ? <Spinner className="mr-2" /> : null}
+      {children}
+    </button>
+  );
+}
+```
+
+### Error Handling
+Example from [components/error-boundary.tsx](mdc:components/error-boundary.tsx):
+```typescript
+export function ErrorFallback({ error }: { error: Error }) {
+  return (
+    <div role="alert" className="p-4 border border-red-200 rounded">
+      <h2 className="text-red-600">Something went wrong</h2>
+      <pre className="text-sm">{error.message}</pre>
+    </div>
+  );
+}
+```
+
+## Best Practices
+
+1. **Keep it Simple**: Remove any element that doesn't serve a clear purpose
+2. **Be Consistent**: Use the same patterns and styles throughout
+3. **Focus on Content**: Let the trading data be the star
+4. **Test Thoroughly**: Ensure accessibility and performance
+5. **Iterate Based on Feedback**: Refine based on user testing
+
+## Component Guidelines
+
+When creating new components:
+
+1. Place shared components in [components/ui](mdc:components/ui)
+2. Place feature-specific components in their feature directory
+3. Use TypeScript interfaces for props
+4. Include proper ARIA attributes
+5. Follow the established naming conventions
+
+Remember: The goal is to create an interface that "just works" and feels natural to use, much like OpenAI's ChatGPT interface.
