@@ -52,3 +52,7 @@ next-env.d.ts
 # charting_library
 charting_library/
 datafeeds/
+
+
+# csv files
+*.csv
