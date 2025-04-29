@@ -533,7 +533,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                                           {accountNumber}
                                         </span>
                                         <div className="flex gap-2 items-center">
-                                          <span className="text-[0.65rem] font-medium" style={{ color }}>
+                                          <span className="text-[0.65rem] font-medium" style={{ color: `hsl(${color})` }}>
                                             {formatCurrency(equity)}
                                           </span>
                                           <span className={cn(
