@@ -78,8 +78,13 @@ const ACCOUNT_COLORS = Array.from({ length: 24 }, (_, index) => {
   return `hsl(${baseColor.h} / ${opacity})`
 })
 
-function getAccountColor(index: number): string {
-  return ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]
+// Create a stable color map based on account numbers
+function createAccountColorMap(accountNumbers: string[]): Map<string, string> {
+  const sortedAccounts = [...accountNumbers].sort()
+  return new Map(sortedAccounts.map((accountNumber, index) => [
+    accountNumber,
+    ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]
+  ]))
 }
 
 export default function EquityChart({ size = 'medium' }: EquityChartProps) {
@@ -118,6 +123,12 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   // State for selected accounts - now managed by the parent component through filters
   const selectedAccounts = React.useMemo(() => new Set(accountNumbers), [accountNumbers])
 
+  // Create a stable color map for accounts
+  const accountColorMap = React.useMemo(() => 
+    createAccountColorMap(accountNumbers),
+    [accountNumbers]
+  )
+
   // Memoize trades by account
   const tradesByAccount = React.useMemo(() => {
     return accountNumbers.reduce((acc, accountNumber) => {
@@ -146,14 +157,14 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       } as ChartConfig
     }
     const sortedAccounts = [...accountNumbers].sort()
-    return sortedAccounts.reduce((acc, accountNumber, index) => {
+    return sortedAccounts.reduce((acc, accountNumber) => {
       acc[`equity_${accountNumber}`] = {
         label: `Account ${accountNumber}`,
-        color: getAccountColor(index),
+        color: accountColorMap.get(accountNumber)!,
       }
       return acc
     }, {} as ChartConfig)
-  }, [accountNumbers, showIndividual])
+  }, [accountNumbers, showIndividual, accountColorMap])
 
   // Memoize initial data points map
   const initialDateMap = React.useMemo(() => {
@@ -245,7 +256,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
 
     const accountEquities: AccountEquityInfo[] = [...accountNumbers]
       .sort()
-      .map((accountNumber, index) => {
+      .map((accountNumber) => {
         const equity = data[`equity_${accountNumber}`] as number
         const currentIndex = chartData.findIndex(d => d.date === data.date)
         const previousDayData = currentIndex > 0 ? chartData[currentIndex - 1] : null
@@ -257,7 +268,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
           accountNumber,
           equity,
           dailyPnL,
-          color: getAccountColor(index),
+          color: accountColorMap.get(accountNumber)!,
           distance: cursorValue ? Math.abs(equity - cursorValue) : 0,
           hadActivity
         }
@@ -275,7 +286,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
     }
 
     return accountEquities
-  }, [accountNumbers, selectedAccounts, showIndividual, chartData])
+  }, [accountNumbers, selectedAccounts, showIndividual, chartData, accountColorMap])
 
   return (
     <Card className="h-full flex flex-col">
@@ -427,7 +438,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                             accountNumber, 
                             equity, 
                             dailyPnL,
-                            color: getAccountColor(index),
+                            color: accountColorMap.get(accountNumber)!,
                             hadActivity: dailyPnL !== 0
                           }
                         })
@@ -533,7 +544,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                                           {accountNumber}
                                         </span>
                                         <div className="flex gap-2 items-center">
-                                          <span className="text-[0.65rem] font-medium" style={{ color: `hsl(${color})` }}>
+                                          <span className="text-[0.65rem] font-medium" style={{ color }}>
                                             {formatCurrency(equity)}
                                           </span>
                                           <span className={cn(
@@ -651,9 +662,9 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                   }}
                 />
                 {showIndividual ? (
-                  [...accountNumbers].sort().map((accountNumber, index) => {
+                  [...accountNumbers].sort().map((accountNumber) => {
                     if (!selectedAccounts.has(accountNumber)) return null
-                    const color = getAccountColor(index)
+                    const color = accountColorMap.get(accountNumber)!
                     return (
                       <Line
                         key={accountNumber}
