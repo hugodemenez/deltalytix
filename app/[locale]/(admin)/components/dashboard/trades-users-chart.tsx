@@ -86,14 +86,9 @@ export function TradesUsersChart({ dailyData }: TradesUsersChartProps) {
                       <div className="rounded-lg border bg-background p-4 shadow-sm">
                         <div className="grid gap-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Period</span>
                             <span className="text-sm">{payload[0].payload.date}</span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">New Users</span>
-                            <span className="text-sm font-bold">{valueFormatter(payload[0].value as number)}</span>
-                          </div>
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-x-2">
                             <span className="text-sm font-medium">Trades</span>
                             <span className="text-sm font-bold">{valueFormatter(payload[1].value as number)}</span>
                           </div>

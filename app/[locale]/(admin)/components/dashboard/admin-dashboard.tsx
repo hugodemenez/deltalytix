@@ -7,6 +7,8 @@ import { getUserStats, getTradeStats } from '../../actions/actions'
 import { Badge } from "@/components/ui/badge"
 import { UserGrowthChart } from './user-growth-chart'
 import { TradesUsersChart } from './trades-users-chart'
+import { Button } from "@/components/ui/button"
+import { FreeUsersTable } from './free-users-table'
 
 interface TradeData {
   date: string
@@ -147,6 +149,14 @@ export function AdminDashboard() {
       <TradesUsersChart 
         dailyData={combinedDailyData}
       />
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Free Users</h3>
+          <Badge variant="secondary">Active</Badge>
+        </div>
+        <FreeUsersTable />
+      </Card>
     </div>
   )
 } 
