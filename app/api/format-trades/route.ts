@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         try {
           const { partialObjectStream } = await streamObject({
-            model: openai("gpt-4.1-nano-2025-04-14"),
+            model: openai("gpt-4.1-mini-2025-04-14"),
             schema: z.object({
               trades: z.array(TradeSchema.partial()).describe("Array of formatted trades"),
             }),
@@ -52,14 +52,15 @@ export async function POST(req: NextRequest) {
               Rules for formatting:
               1. Convert all numeric values to numbers (remove currency symbols, commas)
               2. Convert dates to ISO strings
-              3. Determine trade side based on:
+              3. If accountNumber is provided, use it as the accountNumber
+              4. Determine trade side based on:
                  - If side is provided: use it directly (normalize 'buy'/'long'/'b' to 'long', 'sell'/'short'/'s' to 'short')
                  - If not provided: determine from entry/close dates and prices when available
-              4. Convert time in position to seconds
-              5. Handle missing values appropriately:
+              5. Convert time in position to seconds
+              6. Handle missing values appropriately:
                  - Omit missing fields until they can be filled
-              6. Clean and standardize instrument names (remove futures expiration date suffixes: MESH5 becomes MES, ESZ25 becomes ES, etc.)
-              7. Ensure all required fields are populated:
+              7. Clean and standardize instrument names (remove futures expiration date suffixes: MESH5 becomes MES, ESZ25 becomes ES, etc.)
+              8. Ensure all required fields are populated:
                  - entryPrice (string)
                  - closePrice (string)
                  - commission (number) can be 0 if not available
