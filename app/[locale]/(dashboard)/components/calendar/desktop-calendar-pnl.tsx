@@ -194,28 +194,28 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const calendarDays = getCalendarDays(monthStart, monthEnd)
 
   // Fetch financial events when month changes
-  // useEffect(() => {
-  //   const fetchEvents = async () => {
-  //     try {
-  //       const events = await getFinancialEvents(currentDate)
-  //       if (Array.isArray(events)) {
-  //         setMonthEvents(events)
-  //       } else {
-  //         console.error('Unexpected events format:', events)
-  //         setMonthEvents([])
-  //       }
-  //     } catch (error) {
-  //       console.error('Error fetching financial events:', error)
-  //       toast({
-  //         title: "Error",
-  //         description: "Failed to load financial events.",
-  //         variant: "destructive",
-  //       })
-  //       setMonthEvents([])
-  //     }
-  //   }
-  //   fetchEvents()
-  // }, [currentDate])
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const events = await getFinancialEvents(currentDate)
+        if (Array.isArray(events)) {
+          setMonthEvents(events)
+        } else {
+          console.error('Unexpected events format:', events)
+          setMonthEvents([])
+        }
+      } catch (error) {
+        console.error('Error fetching financial events:', error)
+        toast({
+          title: "Error",
+          description: "Failed to load financial events.",
+          variant: "destructive",
+        })
+        setMonthEvents([])
+      }
+    }
+    fetchEvents()
+  }, [currentDate])
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
@@ -318,7 +318,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-8 auto-rows-fr gap-[1px] rounded-lg h-[calc(100%-20px)]">
+        <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
           {calendarDays.map((date, index) => {
             const dateString = format(date, 'yyyy-MM-dd')
             const dayData = calendarData[dateString]
@@ -330,16 +330,15 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
               <React.Fragment key={dateString}>
                 <div
                   className={cn(
-                    "h-full flex flex-col cursor-pointer transition-all rounded-none p-0.5 sm:p-1 ring-1 ring-border ",
-                    "hover:relative hover:ring-primary hover:z-10",
-                    dayData ? " bg-blue-300/20" : "bg-card",
-                    !isCurrentMonth && "bg-opacity-25 dark:bg-opacity-25",
+                    "h-full flex flex-col cursor-pointer transition-all rounded-none p-1",
+                    "ring-1 ring-border hover:ring-primary hover:z-10",
                     dayData && dayData.pnl >= 0
-                    ? "bg-green-50 dark:bg-green-800/40"
-                    : dayData && dayData.pnl < 0
-                    ? "bg-red-50 dark:bg-red-800/40"
-                    : "bg-card",
-                    isToday(date) && "ring-blue-500 bg-blue-100 dark:bg-blue-950/90 z-10",
+                      ? "bg-green-50 dark:bg-green-900/20"
+                      : dayData && dayData.pnl < 0
+                      ? "bg-red-50 dark:bg-red-900/20"
+                      : "bg-card",
+                    !isCurrentMonth && "bg-opacity-75 dark:bg-opacity-75",
+                    isToday(date) && "ring-blue-500 bg-blue-500/5 z-10 ring-inset",
                     index === 0 && "rounded-tl-lg",
                     index === 35 && "rounded-bl-lg",
                   )}
@@ -351,8 +350,8 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                   <div className="flex justify-between items-start gap-0.5">
                     <span className={cn(
                       "text-[9px] sm:text-[11px] font-medium min-w-[14px] text-center",
-                      isToday(date) && "text-blue-700 dark:text-blue-200 font-semibold",
-                      !isCurrentMonth && "opacity-25"
+                      isToday(date) && "text-primary font-semibold",
+                      !isCurrentMonth && "opacity-50"
                     )}>
                       {format(date, 'd')}
                     </span>
@@ -361,20 +360,23 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                   <div className="flex-1 flex flex-col justify-end gap-0.5">
                     {dayData ? (
                       <div className={cn(
-                        "text-[9px] sm:text-[11px] truncate text-center text-foreground",
-                        !isCurrentMonth && "opacity-25"
+                        "text-[9px] sm:text-[11px] font-semibold truncate text-center",
+                        dayData.pnl >= 0
+                          ? "text-green-600 dark:text-green-400"
+                          : "text-red-600 dark:text-red-400",
+                        !isCurrentMonth && "opacity-50"
                       )}>
                         {formatCurrency(dayData.pnl)}
                       </div>
                     ) : (
                       <div className={cn(
                         "text-[9px] sm:text-[11px] font-semibold invisible text-center",
-                        !isCurrentMonth && "opacity-25"
+                        !isCurrentMonth && "opacity-50"
                       )}>$0</div>
                     )}
                     <div className={cn(
                       "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
-                      !isCurrentMonth && "opacity-25"
+                      !isCurrentMonth && "opacity-50"
                     )}>
                       {dayData 
                         ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}` 
@@ -385,14 +387,18 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                 {isLastDayOfWeek && (
                   <div 
                     className={cn(
-                      "h-full flex items-center justify-center rounded-none bg-card/50 ring-1 ring-border cursor-pointer hover:ring-primary hover:z-10",
+                      "h-full flex items-center justify-center rounded-none bg-card/50 cursor-pointer",
+                      "ring-1 ring-border hover:ring-primary hover:z-10",
                       index === 6 && "rounded-tr-lg",
                       index === 41 && "rounded-br-lg"
                     )}
                     onClick={() => setSelectedWeekDate(date)}
                   >
                     <div className={cn(
-                      "text-[9px] sm:text-[11px] font-semibold truncate px-0.5"
+                       "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
+                       calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
+                         ? "text-green-600 dark:text-green-400"
+                         : "text-red-600 dark:text-red-400"
                     )}>
                       {formatCurrency(calculateWeeklyTotal(index, calendarDays, calendarData))}
                     </div>
