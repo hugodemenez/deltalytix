@@ -620,7 +620,8 @@ export default {
             remainingLoss: '${amount} restant',
             drawdownBreached: 'Drawdown dépassé',
             maxLoss: 'Perte max : ${amount}',
-            needsConfiguration: 'Le compte doit être configuré'
+            needsConfiguration: 'Le compte doit être configuré',
+            daysBeforeReset: ' jours avant réinitialisation'
         },
         tabs: {
             overview: 'Aperçu',
@@ -1025,12 +1026,13 @@ export default {
     'pnlTime.tooltip.trades_plural': 'trades',
     'pnlTime.clearFilter': 'Effacer le filtre',
     'trade-table': {
+        'accounts': 'Comptes',
         'entryDate': 'Date d\'entrée',
         'instrument': 'Instrument',
         'direction': 'Direction',
         'entryPrice': 'Prix d\'entrée',
         'exitPrice': 'Prix de sortie',
-        'positionTime': 'Durée de position',
+        'positionTime': 'Durée',
         'entryTime': 'Heure d\'entrée',
         'exitTime': 'Heure de sortie',
         'pnl': 'PnL',

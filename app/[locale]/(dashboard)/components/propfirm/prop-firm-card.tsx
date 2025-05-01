@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useMemo } from "react"
 import { TradeProgressChart } from "./trade-progress-chart"
+import { PropFirmAccount } from "./prop-firm-overview"
 
 interface Trade {
   accountNumber: string
@@ -15,23 +16,7 @@ interface Trade {
 }
 
 interface PropFirmCardProps {
-  account: {
-    accountNumber: string
-    balanceToDate: number
-    profitTarget: number
-    drawdownThreshold: number
-    isPerformance: boolean
-    startingBalance: number
-    propfirm: string
-    trailingDrawdown: boolean
-    trailingStopProfit: number
-    payouts: Array<{
-      id: string
-      amount: number
-      date: Date
-      status: string
-    }>
-  }
+  account: PropFirmAccount
   trades: Trade[]
   metrics?: {
     hasProfitableData: boolean
@@ -45,17 +30,17 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
 
   const { drawdownProgress, remainingLoss, progress, isConfigured, currentBalance } = useMemo(() => {
     const isConfigured = account.profitTarget > 0 && account.drawdownThreshold > 0
-    const progress = account.profitTarget > 0 
+    const progress = account.profitTarget > 0
       ? (account.balanceToDate / account.profitTarget) * 100
       : 0
 
     // Sort trades by date
-    const sortedTrades = [...trades].sort((a, b) => 
+    const sortedTrades = [...trades].sort((a, b) =>
       new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
     )
 
     // Get valid payouts (PAID or VALIDATED)
-    const validPayouts = account.payouts.filter(p => 
+    const validPayouts = account.payouts.filter(p =>
       ['PAID', 'VALIDATED'].includes(p.status)
     )
 
@@ -67,7 +52,7 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
     for (const trade of sortedTrades) {
       const tradePnL = trade.pnl - (trade.commission || 0)
       runningBalance += tradePnL
-      
+
       if (runningBalance > highestBalance) {
         highestBalance = runningBalance
       }
@@ -75,7 +60,7 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
 
     // Calculate total payouts
     const totalPayouts = validPayouts.reduce((sum, payout) => sum + payout.amount, 0)
-    
+
     // Adjust running balance for payouts
     runningBalance -= totalPayouts
 
@@ -83,7 +68,7 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
     let drawdownLevel
     if (account.trailingDrawdown) {
       const profitMade = Math.max(0, highestBalance - account.startingBalance)
-      
+
       // If we've hit trailing stop profit, lock the drawdown to that level
       if (profitMade >= account.trailingStopProfit) {
         drawdownLevel = (account.startingBalance + account.trailingStopProfit) - account.drawdownThreshold
@@ -102,31 +87,42 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
     // Calculate drawdown progress percentage
     const drawdownProgress = ((account.drawdownThreshold - remainingLoss) / account.drawdownThreshold) * 100
 
-    return { 
+    return {
       drawdownProgress,
       remainingLoss,
-      progress, 
+      progress,
       isConfigured,
       currentBalance: runningBalance
     }
   }, [account, trades])
 
   return (
-    <Card 
+    <Card
       className="flex flex-col cursor-pointer hover:border-primary/50 transition-colors"
       onClick={onClick}
     >
       <CardHeader className="flex-none p-3 pb-2">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="truncate">
-              <CardTitle className="text-sm truncate flex items-center gap-2">
-                <div className={cn(
-                  "h-2 w-2 rounded-full",
-                  !metrics?.hasProfitableData ? "bg-muted" :
-                  !metrics?.isConsistent ? "bg-destructive" : "bg-green-500"
-                )} />
+          <div className="flex items-center gap-2 min-w-0 w-full">
+            <div className="truncate w-full">
+              <CardTitle className="text-sm truncate flex items-center gap-2 w-full">
+
+                  <div className={cn(
+                    "h-2 w-2 rounded-full",
+                    !metrics?.hasProfitableData ? "bg-muted" :
+                      !metrics?.isConsistent ? "bg-destructive" : "bg-green-500"
+                  )} />
+                <div className="flex w-full justify-between">
                 {account.propfirm || t('propFirm.card.unnamedAccount')}
+                  {
+                    account.resetDate && (
+                      <div className={`text-xs self-center ${Math.floor((new Date(account.resetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 5 ? 'text-red-500 blink' : 'text-muted-foreground'}`}>
+                        {Math.floor((new Date(account.resetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}
+                        {t('propFirm.card.daysBeforeReset')}
+                      </div>
+                    )
+                  }
+                </div>
               </CardTitle>
               <p className="text-xs text-muted-foreground truncate">
                 {account.accountNumber}
@@ -159,17 +155,17 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
                 <span className="text-muted-foreground">{t('propFirm.card.target')}</span>
                 <span>${account.profitTarget.toFixed(2)}</span>
               </div>
-              <Progress 
-                value={progress} 
-                className="h-1.5" 
+              <Progress
+                value={progress}
+                className="h-1.5"
                 indicatorClassName={cn(
                   "transition-colors duration-300",
                   "bg-[hsl(var(--chart-6))]",
                   progress <= 20 ? "opacity-20" :
-                  progress <= 40 ? "opacity-40" :
-                  progress <= 60 ? "opacity-60" :
-                  progress <= 80 ? "opacity-80" :
-                  "opacity-100"
+                    progress <= 40 ? "opacity-40" :
+                      progress <= 60 ? "opacity-60" :
+                        progress <= 80 ? "opacity-80" :
+                          "opacity-100"
                 )}
               />
             </div>
@@ -181,24 +177,24 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
                 <span className={cn(
                   "font-medium",
                   remainingLoss > account.drawdownThreshold * 0.5 ? "text-success" :
-                  remainingLoss > account.drawdownThreshold * 0.2 ? "text-warning" : "text-destructive"
+                    remainingLoss > account.drawdownThreshold * 0.2 ? "text-warning" : "text-destructive"
                 )}>
-                  {remainingLoss > 0 
+                  {remainingLoss > 0
                     ? t('propFirm.card.remainingLoss', { amount: remainingLoss.toFixed(2) })
                     : t('propFirm.card.drawdownBreached')}
                 </span>
               </div>
-              <Progress 
-                value={drawdownProgress} 
-                className="h-1.5" 
+              <Progress
+                value={drawdownProgress}
+                className="h-1.5"
                 indicatorClassName={cn(
                   "transition-colors duration-300",
                   "bg-destructive",
                   drawdownProgress <= 20 ? "opacity-20" :
-                  drawdownProgress <= 40 ? "opacity-40" :
-                  drawdownProgress <= 60 ? "opacity-60" :
-                  drawdownProgress <= 80 ? "opacity-80" :
-                  "opacity-100"
+                    drawdownProgress <= 40 ? "opacity-40" :
+                      drawdownProgress <= 60 ? "opacity-60" :
+                        drawdownProgress <= 80 ? "opacity-80" :
+                          "opacity-100"
                 )}
               />
               <p className="text-xs text-muted-foreground">

@@ -33,7 +33,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 
-interface PropFirmAccount {
+export interface PropFirmAccount {
   id: string
   accountNumber: string
   balanceToDate: number

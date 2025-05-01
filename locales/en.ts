@@ -646,6 +646,7 @@ export default {
     'dataManagement.toast.instrumentRenamed': 'Instrument renamed successfully',
     'dataManagement.toast.instrumentRenameError': 'Failed to rename instrument',
     'trade-table': {
+        'accounts': 'Accounts',
         'entryDate': 'Entry Date',
         'instrument': 'Instrument',
         'direction': 'Direction',
@@ -848,7 +849,8 @@ export default {
             remainingLoss: '${amount} remaining',
             drawdownBreached: 'Drawdown breached',
             maxLoss: 'Max Loss: ${amount}',
-            needsConfiguration: 'Account needs to be configured'
+            needsConfiguration: 'Account needs to be configured',
+            daysBeforeReset: ' days before reset'
         },
         tabs: {
             overview: 'Overview',
