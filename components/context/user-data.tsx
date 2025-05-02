@@ -733,7 +733,7 @@ export const UserDataProvider: React.FC<{
           ...trade, 
           ...updates,
           // Ensure tags are properly handled
-          tags: updates.tags || trade.tags,
+          // tags: updates.tags || trade.tags,
           utcDateStr: updates.entryDate 
             ? formatInTimeZone(new Date(updates.entryDate), timezone, 'yyyy-MM-dd')
             : trade.utcDateStr
@@ -794,6 +794,7 @@ export const UserDataProvider: React.FC<{
 
   // Memoize filtered trades by instrument
   const instrumentFiltered = useMemo(() => {
+    if (!trades || trades.length === 0) return [];
     if (isSharedView) return trades;
     if (instruments.length === 0) return trades;
     return trades.filter(trade => instruments.includes(trade.instrument));

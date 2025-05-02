@@ -2,11 +2,14 @@ import shared from './en/shared'
 import landing from './en/landing'
 import pricing from './en/pricing'
 import auth from './en/auth'
+import dropzone from './en/dropzone'
+
 export default {
     ...shared,
     ...landing,
     ...pricing,
     ...auth,
+    ...dropzone,
     'navbar.features': 'Features',
     'navbar.dataImport': 'Data Import',
     'navbar.performanceVisualization': 'Performance Visualization',
@@ -646,6 +649,7 @@ export default {
     'dataManagement.toast.instrumentRenamed': 'Instrument renamed successfully',
     'dataManagement.toast.instrumentRenameError': 'Failed to rename instrument',
     'trade-table': {
+        'title': 'Trade Review',
         'accounts': 'Accounts',
         'entryDate': 'Entry Date',
         'instrument': 'Instrument',
@@ -663,6 +667,10 @@ export default {
         'addVideoUrl': 'Add video URL',
         'invalidVideoUrl': 'Please enter a valid video URL (YouTube, TradingView, or direct video file)',
         'image': 'Image',
+        'imageUploadSuccess': 'Image uploaded successfully',
+        'imageUploadError': 'Failed to upload image: {error}',
+        'uploadImage': 'Upload Image',
+        'uploadSecondImage': 'Upload Second Image',
         'tags': 'Tags',
         'searchTags': 'Search tags...',
         'noTagsFound': 'No tags found',
@@ -677,6 +685,8 @@ export default {
         'expandAll': 'Expand All',
         'collapseAll': 'Collapse All',
         'pageInfo': 'Page {current} of {total}',
+        'pageSize': 'Increase Page Size',
+        'resetPageSize': 'Reset Page Size',
         'account': 'Account',
         'accountNumber': 'Account Number',
         'deleteTag': {
@@ -684,7 +694,15 @@ export default {
             'description': 'Are you sure you want to delete the tag "{tag}"? This action cannot be undone and will remove the tag from all trades.',
             'cancel': 'Cancel',
             'confirm': 'Delete'
-        }
+        },
+        'uploadImageDescription': 'Upload an image for this trade',
+        'uploadSecondImageDescription': 'Upload a second image for this trade',
+        'imagePreview': 'Image Preview',
+        'removeImage': 'Remove Image',
+        'dragAndDrop': 'Drag and drop your image here',
+        'clickToBrowse': 'or click to browse',
+        'maxFileSize': 'Maximum file size: 5MB',
+        'allowedTypes': 'Allowed types: JPEG, PNG, WebP',
     },
     'share.button': 'Share trades',
     'share.success': 'Trades shared successfully',

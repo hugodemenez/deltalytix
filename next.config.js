@@ -1,8 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        hostname: 'fhvmtnvjiotzztimdxbi.supabase.co',
+      },
+    ],
+  },
   pageExtensions: ['js', 'jsx', 'mdx', 'ts', 'tsx'],
   experimental: {
     mdxRs: true,
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
   },
 }
 

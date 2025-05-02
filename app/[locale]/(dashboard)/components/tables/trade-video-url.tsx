@@ -16,12 +16,12 @@ import {
 } from '@/components/ui/dialog'
 
 interface TradeVideoUrlProps {
-  tradeId: string
+  tradeIds: string[]
   videoUrl: string | null
   onVideoUrlChange?: (videoUrl: string | null) => void
 }
 
-export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl, onVideoUrlChange }: TradeVideoUrlProps) {
+export function TradeVideoUrl({ tradeIds, videoUrl: initialVideoUrl, onVideoUrlChange }: TradeVideoUrlProps) {
   const t = useI18n()
   const [isOpen, setIsOpen] = useState(false)
   const [localUrl, setLocalUrl] = useState(initialVideoUrl || '')
@@ -80,7 +80,9 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl, onVideoUrlCh
     
     setIsUpdating(true)
     try {
-      await updateTradeVideoUrl(tradeId, draftUrl || null)
+      await Promise.all(tradeIds.map(tradeId => 
+        updateTradeVideoUrl(tradeId, draftUrl || null)
+      ))
       setLocalUrl(draftUrl)
       onVideoUrlChange?.(draftUrl || null)
       setShowSuccess(true)
@@ -98,7 +100,9 @@ export function TradeVideoUrl({ tradeId, videoUrl: initialVideoUrl, onVideoUrlCh
   const handleClear = async () => {
     setIsUpdating(true)
     try {
-      await updateTradeVideoUrl(tradeId, null)
+      await Promise.all(tradeIds.map(tradeId => 
+        updateTradeVideoUrl(tradeId, null)
+      ))
       setLocalUrl('')
       setDraftUrl('')
       onVideoUrlChange?.(null)

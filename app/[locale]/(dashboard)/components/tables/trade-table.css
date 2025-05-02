@@ -1,0 +1,53 @@
+.trade-table-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.trade-table-scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+
+.trade-table-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.trade-table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.trade-table-scroll::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.trade-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+.trade-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.trade-table th,
+.trade-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.trade-table th {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 5px solid #e5e7eb;
+}
+
+.trade-table tbody tr:hover {
+  background-color: var(--muted);
+} 

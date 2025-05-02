@@ -25,9 +25,10 @@ import { Tag, Trade } from '@prisma/client'
 
 interface TradeTagProps {
   trade: Trade
+  tradeIds: string[]
 }
 
-export function TradeTag({ trade }: TradeTagProps) {
+export function TradeTag({ trade, tradeIds }: TradeTagProps) {
   const t = useI18n()
   const { updateTrade, tagFilter, setTagFilter, setTags, tags } = useUserData()
   const [isOpen, setIsOpen] = useState(false)
@@ -35,28 +36,42 @@ export function TradeTag({ trade }: TradeTagProps) {
   const [localTags, setLocalTags] = useState(trade.tags)
   const [isUpdating, setIsUpdating] = useState(false)
 
+  // Update localTags when trade.tags changes
+  useEffect(() => {
+    setLocalTags(trade.tags)
+  }, [trade.tags])
+
   const handleAddTag = async (tag: string) => {
-    console.log(tag)
     const trimmedTag = tag.trim()
-    console.log(trimmedTag)
     if (!trimmedTag) return
 
     setIsUpdating(true)
-    // Update trade in context immediately (it can trigger a re-render)
-    updateTrade(trade.id, { tags: [... trade.tags, trimmedTag] })
     try {
+      // Update local state immediately
+      const newTags = [...localTags, trimmedTag]
+      setLocalTags(newTags)
+      
+      // Update all trades in the list
+      tradeIds.forEach(tradeId => {
+        updateTrade(tradeId, { tags: newTags })
+      })
+
       // If this is a new tag not in availableTags, it will be added through the sync process
       const existingTag = tags.find(t => t.name === trimmedTag)
       if (existingTag) {
-        await addTagToTrade(trade.id, trimmedTag)
+        await Promise.all(tradeIds.map(tradeId => 
+          addTagToTrade(tradeId, trimmedTag)
+        ))
       } else {
-        // Create a new tag in database using 
+        // Create a new tag in database
         const newTag = await createTag({
           name: trimmedTag,
           description: '',
           color: '#CBD5E1'
         })
-        await addTagToTrade(trade.id, trimmedTag)
+        await Promise.all(tradeIds.map(tradeId => 
+          addTagToTrade(tradeId, trimmedTag)
+        ))
         setTags((tags: Tag[]) => [...tags, newTag.tag])
       }
       
@@ -64,6 +79,8 @@ export function TradeTag({ trade }: TradeTagProps) {
       setIsOpen(false)
     } catch (error) {
       console.error('Failed to add tag:', error)
+      // Revert local state on error
+      setLocalTags(trade.tags)
     } finally {
       setIsUpdating(false)
     }
@@ -73,11 +90,13 @@ export function TradeTag({ trade }: TradeTagProps) {
     setIsUpdating(true)
     try {
       // Update local state immediately
-      const newTags = trade.tags.filter(tag => tag !== tagToRemove)
+      const newTags = localTags.filter(tag => tag !== tagToRemove)
       setLocalTags(newTags)
       
-      // Update trade in context
-      updateTrade(trade.id, { tags: newTags })
+      // Update all trades in the list
+      tradeIds.forEach(tradeId => {
+        updateTrade(tradeId, { tags: newTags })
+      })
       
       // Update tag filter if the removed tag was selected
       if (tagFilter.tags.includes(tagToRemove)) {
@@ -85,9 +104,15 @@ export function TradeTag({ trade }: TradeTagProps) {
           tags: prev.tags.filter(t => t !== tagToRemove)
         }))
       }
-      await removeTagFromTrade(trade.id, tagToRemove)
+
+      // Remove tag from all trades in the database
+      await Promise.all(tradeIds.map(tradeId => 
+        removeTagFromTrade(tradeId, tagToRemove)
+      ))
     } catch (error) {
       console.error('Failed to remove tag:', error)
+      // Revert local state on error
+      setLocalTags(trade.tags)
     } finally {
       setIsUpdating(false)
     }

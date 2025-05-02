@@ -2,12 +2,14 @@ import shared from './fr/shared'
 import pricing from './fr/pricing'
 import landing from './fr/landing'
 import auth from './fr/auth'
+import dropzone from './fr/dropzone'
 
 export default {
     ...shared,
     ...pricing,
     ...landing,
     ...auth,
+    ...dropzone,
     'navbar.features': 'Fonctionnalités',
     'navbar.dataImport': 'Import de données',
     'navbar.performanceVisualization': 'Visualisation des performances',
@@ -1026,6 +1028,7 @@ export default {
     'pnlTime.tooltip.trades_plural': 'trades',
     'pnlTime.clearFilter': 'Effacer le filtre',
     'trade-table': {
+        'title': 'Revue des trades',
         'accounts': 'Comptes',
         'entryDate': 'Date d\'entrée',
         'instrument': 'Instrument',
@@ -1043,6 +1046,18 @@ export default {
         'addVideoUrl': 'Ajouter une vidéo',
         'invalidVideoUrl': 'Veuillez entrer une URL de vidéo valide (YouTube, TradingView, ou fichier vidéo direct)',
         'image': 'Image',
+        'imageUploadSuccess': 'Image téléchargée avec succès',
+        'imageUploadError': 'Échec du téléchargement de l\'image : {error}',
+        'uploadImage': 'Télécharger une image',
+        'uploadSecondImage': 'Télécharger une seconde image',
+        'uploadImageDescription': 'Télécharger une image pour ce trade',
+        'uploadSecondImageDescription': 'Télécharger une seconde image pour ce trade',
+        'imagePreview': 'Aperçu de l\'image',
+        'removeImage': 'Supprimer l\'image',
+        'dragAndDrop': 'Glissez et déposez votre image ici',
+        'clickToBrowse': 'ou cliquez pour parcourir',
+        'maxFileSize': 'Taille maximale : 5MB',
+        'allowedTypes': 'Types autorisés : JPEG, PNG, WebP',
         'tags': 'Tags',
         'searchTags': 'Rechercher des tags...',
         'noTagsFound': 'Aucun tag trouvé',
@@ -1057,6 +1072,8 @@ export default {
         'expandAll': 'Tout développer',
         'collapseAll': 'Tout réduire',
         'pageInfo': 'Page {current} sur {total}',
+        'pageSize': 'Augmenter la Taille de la Page',
+        'resetPageSize': 'Réinitialiser la Taille de la Page',
         'account': 'Compte',
         'accountNumber': 'Numéro de compte',
         'deleteTag': {
@@ -1064,7 +1081,7 @@ export default {
             'description': 'Êtes-vous sûr de vouloir supprimer le tag "{tag}" ? Cette action ne peut pas être annulée et supprimera le tag de tous les trades.',
             'cancel': 'Annuler',
             'confirm': 'Supprimer'
-        }
+        },
     },
     'tickDistribution.title': 'Distribution des ticks',
     'tickDistribution.description': 'Visualisez la distribution de vos trades par ticks',

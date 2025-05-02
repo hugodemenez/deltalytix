@@ -14,12 +14,12 @@ import {
 } from '@/components/ui/popover'
 
 interface TradeCommentProps {
-  tradeId: string
+  tradeIds: string[]
   comment: string | null
   onCommentChange?: (comment: string | null) => void
 }
 
-export function TradeComment({ tradeId, comment: initialComment, onCommentChange }: TradeCommentProps) {
+export function TradeComment({ tradeIds, comment: initialComment, onCommentChange }: TradeCommentProps) {
   const t = useI18n()
   const [localComment, setLocalComment] = useState(initialComment || '')
   const [isUpdating, setIsUpdating] = useState(false)
@@ -35,7 +35,9 @@ export function TradeComment({ tradeId, comment: initialComment, onCommentChange
   const handleSave = async () => {
     setIsUpdating(true)
     try {
-      await updateTradeComment(tradeId, localComment || null)
+      await Promise.all(tradeIds.map(tradeId => 
+        updateTradeComment(tradeId, localComment || null)
+      ))
       onCommentChange?.(localComment || null)
       setHasUnsavedChanges(false)
       setShowSuccess(true)
@@ -52,7 +54,9 @@ export function TradeComment({ tradeId, comment: initialComment, onCommentChange
   const handleClear = async () => {
     setIsUpdating(true)
     try {
-      await updateTradeComment(tradeId, null)
+      await Promise.all(tradeIds.map(tradeId => 
+        updateTradeComment(tradeId, null)
+      ))
       setLocalComment('')
       onCommentChange?.(null)
       setHasUnsavedChanges(false)

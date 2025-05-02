@@ -251,7 +251,7 @@ model FinancialEvent {
 
 model Tag {
   id          String   @id @default(uuid())
-  name        String   @unique
+  name        String
   description String?
   color       String?  @default("#CBD5E1") // Default to a neutral color
   userId      String
@@ -259,6 +259,7 @@ model Tag {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([name, userId])
   @@index([userId])
   @@schema("public")
 }

@@ -290,9 +290,9 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
 
   useEffect(() => {
     // Filter tags based on search query
-    const filteredTags = tags.filter(tag => 
+    const filteredTags = tags?.filter(tag => 
       tag.name.includes(searchQuery)
-    )
+    ) ?? []
     setFilteredTags(filteredTags)
   }, [tags, searchQuery])
 

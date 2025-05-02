@@ -98,25 +98,32 @@ export async function deleteTagFromAllTrades(tag: string) {
   }
 }
 
-export async function updateTradeImage(tradeId: string, imageBase64: string | null, field: 'imageBase64' | 'imageBase64Second' = 'imageBase64') {
+export async function updateTradeImage(
+  tradeIds: string[], 
+  imageData: string | null, 
+  field: 'imageBase64' | 'imageBase64Second' = 'imageBase64'
+) {
+  console.log('Updating trade image:', tradeIds)
   try {
-    const trade = await prisma.trade.findUnique({
-      where: { id: tradeId }
+    // Verify all trades exist
+    const trades = await prisma.trade.findMany({
+      where: { id: { in: tradeIds } }
     })
 
-    if (!trade) {
-      throw new Error('Trade not found')
+    if (trades.length !== tradeIds.length) {
+      throw new Error('Some trades not found')
     }
 
-    const updatedTrade = await prisma.trade.update({
-      where: { id: tradeId },
+    // Update all trades with the image data (can be base64 or URL)
+    await prisma.trade.updateMany({
+      where: { id: { in: tradeIds } },
       data: {
-        [field]: imageBase64
+        [field]: imageData
       }
     })
 
     revalidatePath('/')
-    return updatedTrade
+    return trades
   } catch (error) {
     console.error('Failed to update trade image:', error)
     throw error
