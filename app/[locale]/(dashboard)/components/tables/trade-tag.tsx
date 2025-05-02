@@ -149,7 +149,7 @@ export function TradeTag({ trade }: TradeTagProps) {
                 }
               }}
             />
-            <CommandList>
+            <CommandList className="max-h-[200px] overflow-y-auto">
               {inputValue.trim() && (
                 <CommandItem
                   value={inputValue.trim()}
