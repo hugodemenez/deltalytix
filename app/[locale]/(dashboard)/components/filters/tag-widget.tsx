@@ -323,8 +323,10 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                       size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
                     )} />
                   </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p>{t('widgets.tags.description')}</p>
+                  <TooltipContent side="top" className="max-w-[300px]">
+                    <div className="space-y-1">
+                      <p className="font-medium break-words">{t('widgets.tags.description')}</p>
+                    </div>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -379,7 +381,11 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                           placeholder={t('widgets.tags.namePlaceholder')}
                           disabled={isLoading}
                           className="h-9"
+                          maxLength={20}
                         />
+                        <div className="text-right text-xs text-muted-foreground">
+                          {formData.name.length}/{20}
+                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="description">{t('widgets.tags.description')}</Label>
@@ -497,15 +503,26 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                             size === 'small-long' ? "text-xs" : "text-sm"
                           )}
                         >
-                          {tag.name}
-                          {tag.description && (
-                            <span className={cn(
-                              "text-muted-foreground ml-2",
-                              size === 'small-long' ? "text-[10px]" : "text-xs"
-                            )}>
-                              - {tag.description}
-                            </span>
-                          )}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={cn(
+                                  "font-medium cursor-pointer truncate flex-1",
+                                  size === 'small-long' ? "text-xs" : "text-sm"
+                                )}>
+                                  {tag.name.length > 20 ? `${tag.name.slice(0, 20)}...` : tag.name}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-[300px]">
+                                <div className="space-y-1">
+                                  <p className="font-medium break-words">{tag.name}</p>
+                                  {tag.description && (
+                                    <p className="text-sm text-muted-foreground break-words whitespace-pre-wrap">{tag.description}</p>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </label>
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
