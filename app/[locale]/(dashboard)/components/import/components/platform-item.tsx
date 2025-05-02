@@ -57,7 +57,7 @@ export function PlatformItem({
         </div>
         <div className="flex-1">
           <div className="font-medium flex items-center gap-2">
-            {t(platform.name as any, {})}
+            {t(platform.name as keyof typeof t)}
             {platform.isDisabled && (
               <>
                 <Badge variant="secondary" className="ml-2 transition-transform duration-200 hover:scale-105">
@@ -81,7 +81,7 @@ export function PlatformItem({
             )}
           </div>
           <div className="text-sm text-muted-foreground">
-            {t(platform.description as any, {})}
+            {t(platform.description as keyof typeof t)}
           </div>
         </div>
       </CommandItem>
