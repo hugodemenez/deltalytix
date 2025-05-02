@@ -609,7 +609,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       isComplete: false
     })
 
-    console.log('Creating new WebSocket connection to:', url)
     const newWs = new WebSocket(url)
 
     // Add connection timeout
@@ -648,12 +647,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         accounts,
         start_date: startDate
       }
-      console.log('Sending init message:', message)
       newWs.send(JSON.stringify(message))
     }
 
     newWs.onmessage = (event) => {
-      console.log('Received WebSocket message:', event.data)
       try {
         const message = JSON.parse(event.data)
         // Reset timeout before processing message
@@ -687,7 +684,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     }
 
     newWs.onclose = (event) => {
-      console.log('WebSocket connection closed:', event.code, event.reason)
       clearTimeout(connectionTimeout)
       setIsConnected(false)
       const closeMessage = event.reason || 'Connection closed'
