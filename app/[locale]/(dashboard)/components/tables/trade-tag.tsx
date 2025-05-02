@@ -126,7 +126,7 @@ export function TradeTag({ trade, tradeIds }: TradeTagProps) {
           return (
             <div 
               key={index} 
-              className="rounded-md px-2 py-1 text-xs flex items-center gap-1"
+              className="rounded-md px-2 py-1 text-xs flex items-center gap-1 break-words whitespace-normal h-auto max-w-[150px]"
               style={{ 
                 backgroundColor: metadata?.color || '#CBD5E1',
                 color: metadata?.color ? getContrastColor(metadata.color) : 'inherit'
@@ -207,7 +207,7 @@ export function TradeTag({ trade, tradeIds }: TradeTagProps) {
                       >
                         <div className="flex items-center gap-2">
                           <div 
-                            className="w-3 h-3 rounded-full"
+                            className="w-3 h-3 rounded-full shrink-0"
                             style={{ backgroundColor: tag.color || '#CBD5E1' }}
                           />
                           <span>{tag.name}</span>

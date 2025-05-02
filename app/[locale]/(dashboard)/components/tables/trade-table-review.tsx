@@ -432,62 +432,6 @@ export function TradeTableReview() {
       size: 100,
     },
     {
-      accessorKey: "comment",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.comment')} />
-      ),
-      cell: ({ row }) => {
-        const trade = row.original
-        const tradeIds = trade.trades.length > 0 
-          ? trade.trades.map(t => t.id) 
-          : [trade.id]
-        return (
-          <div className="min-w-[200px]">
-            <TradeComment 
-              tradeIds={tradeIds}
-              comment={trade.trades.length > 0 ? trade.trades[0].comment : trade.comment} 
-              onCommentChange={(comment) => {
-                if (trade.trades.length > 0) {
-                  trade.trades.forEach(t => updateTrade(t.id, { comment }))
-                } else {
-                  updateTrade(trade.id, { comment })
-                }
-              }}
-            />
-          </div>
-        )
-      },
-      size: 200,
-    },
-    {
-      accessorKey: "videoUrl",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.videoUrl')} />
-      ),
-      cell: ({ row }) => {
-        const trade = row.original
-        const tradeIds = trade.trades.length > 0 
-          ? trade.trades.map(t => t.id) 
-          : [trade.id]
-        return (
-          <div className="min-w-[200px]">
-            <TradeVideoUrl 
-              tradeIds={tradeIds}
-              videoUrl={trade.trades.length > 0 ? trade.trades[0].videoUrl : trade.videoUrl} 
-              onVideoUrlChange={(videoUrl) => {
-                if (trade.trades.length > 0) {
-                  trade.trades.forEach(t => updateTrade(t.id, { videoUrl }))
-                } else {
-                  updateTrade(trade.id, { videoUrl })
-                }
-              }}
-            />
-          </div>
-        )
-      },
-      size: 200,
-    },
-    {
       id: "image",
       header: ({ column }) => (
         <Button
@@ -572,6 +516,62 @@ export function TradeTableReview() {
             <TradeTag
               trade={trade}
               tradeIds={tradeIds}
+            />
+          </div>
+        )
+      },
+      size: 200,
+    },
+    {
+      accessorKey: "comment",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('trade-table.comment')} />
+      ),
+      cell: ({ row }) => {
+        const trade = row.original
+        const tradeIds = trade.trades.length > 0 
+          ? trade.trades.map(t => t.id) 
+          : [trade.id]
+        return (
+          <div className="min-w-[200px]">
+            <TradeComment 
+              tradeIds={tradeIds}
+              comment={trade.trades.length > 0 ? trade.trades[0].comment : trade.comment} 
+              onCommentChange={(comment) => {
+                if (trade.trades.length > 0) {
+                  trade.trades.forEach(t => updateTrade(t.id, { comment }))
+                } else {
+                  updateTrade(trade.id, { comment })
+                }
+              }}
+            />
+          </div>
+        )
+      },
+      size: 200,
+    },
+    {
+      accessorKey: "videoUrl",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('trade-table.videoUrl')} />
+      ),
+      cell: ({ row }) => {
+        const trade = row.original
+        const tradeIds = trade.trades.length > 0 
+          ? trade.trades.map(t => t.id) 
+          : [trade.id]
+        return (
+          <div className="min-w-[200px]">
+            <TradeVideoUrl 
+              tradeIds={tradeIds}
+              videoUrl={trade.trades.length > 0 ? trade.trades[0].videoUrl : trade.videoUrl} 
+              onVideoUrlChange={(videoUrl) => {
+                if (trade.trades.length > 0) {
+                  trade.trades.forEach(t => updateTrade(t.id, { videoUrl }))
+                } else {
+                  updateTrade(trade.id, { videoUrl })
+                }
+              }}
             />
           </div>
         )
