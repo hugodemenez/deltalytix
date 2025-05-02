@@ -310,6 +310,17 @@ export function TradeTableReview() {
           </div>
         )
       },
+      sortingFn: (rowA, rowB, columnId) => {
+        const a = rowA.original.side?.toUpperCase() || ""
+        const b = rowB.original.side?.toUpperCase() || ""
+        
+        // Sort LONG before SHORT
+        if (a === "LONG" && b === "SHORT") return -1
+        if (a === "SHORT" && b === "LONG") return 1
+        
+        // Alphabetical fallback for any other values
+        return a < b ? -1 : a > b ? 1 : 0
+      },
     },
     {
       accessorKey: "entryPrice",
