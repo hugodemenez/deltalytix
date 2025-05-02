@@ -506,7 +506,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                                   "font-medium cursor-pointer truncate flex-1",
                                   size === 'small-long' ? "text-xs" : "text-sm"
                                 )}>
-                                  {tag.name.length > 20 ? `${tag.name.slice(0, 20)}...` : tag.name}
+                                  {tag.name.length > 35 ? `${tag.name.slice(0, 35)}...` : tag.name}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-[300px]">
