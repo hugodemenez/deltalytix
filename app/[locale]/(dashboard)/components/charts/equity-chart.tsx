@@ -690,9 +690,9 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
                     isAnimationActive={false}
                     activeDot={{
                       r: 4,
-                      style: { fill: "hsl(var(--chart-1))" }
+                      style: { fill: "hsl(var(--chart-2))" }
                     }}
-                    stroke="hsl(var(--chart-1))"
+                    stroke="hsl(var(--chart-2))"
                   />
                 )}
               </LineChart>
