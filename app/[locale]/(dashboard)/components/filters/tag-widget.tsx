@@ -381,11 +381,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                           placeholder={t('widgets.tags.namePlaceholder')}
                           disabled={isLoading}
                           className="h-9"
-                          maxLength={20}
                         />
-                        <div className="text-right text-xs text-muted-foreground">
-                          {formData.name.length}/{20}
-                        </div>
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="description">{t('widgets.tags.description')}</Label>
