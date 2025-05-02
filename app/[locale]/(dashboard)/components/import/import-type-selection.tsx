@@ -68,8 +68,8 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   }
 
   const filteredPlatforms = platforms.filter(platform => 
-    t(platform.name as any, {}).toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t(platform.description as any, {}).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t(platform.name as keyof typeof t).toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t(platform.description as keyof typeof t).toLowerCase().includes(searchQuery.toLowerCase()) ||
     getTranslatedCategory(platform.category).toLowerCase().includes(searchQuery.toLowerCase())
   )
 

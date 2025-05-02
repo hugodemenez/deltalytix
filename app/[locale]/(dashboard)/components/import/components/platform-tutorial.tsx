@@ -107,7 +107,7 @@ export function PlatformTutorial({ selectedPlatform, setIsOpen }: PlatformTutori
       {selectedPlatform.details && (
         <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4">
           <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-yellow-500 animate-pulse" />
-          <p>{t(selectedPlatform.details as Parameters<typeof t>[0])}</p>
+          <p>{t(selectedPlatform.details as keyof typeof t)}</p>
         </div>
       )}
 
