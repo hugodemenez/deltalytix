@@ -32,6 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   addTagToTrade,
   removeTagFromTrade,
@@ -223,40 +224,35 @@ export function TradeTableReview() {
       ),
       cell: ({ row }) => {
         const trade = row.original
+        const accounts = trade.accountNumber.split(':')
         return (
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
-              <TooltipProvider>
-                {trade.accountNumber.split(':').length === 1 ? (
-                  <Tooltip key={`tooltip-account-${trade.accountNumber}`}>
-                    <TooltipTrigger asChild>
-                      <div
-                        className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-xs font-medium"
+              <Popover>
+                <PopoverTrigger asChild>
+                  <div
+                    className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-xs font-medium cursor-pointer hover:bg-primary/20 transition-colors"
+                  >
+                    {accounts.length === 1 ? accounts[0].slice(-2) : `+${accounts.length}`}
+                  </div>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-fit p-0" 
+                  align="start"
+                  side="right"
+                >
+                  <ScrollArea className="h-36 rounded-md border">
+                    {accounts.map((account) => (
+                      <div 
+                        key={`account-${account}`}
+                        className="px-3 py-2 text-sm hover:bg-muted/50 cursor-default"
                       >
-                        {trade.accountNumber.slice(-2)}
+                        {account}
                       </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{trade.accountNumber}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                ) : (
-                  <Tooltip key={`tooltip-accounts-${trade.accountNumber}`}>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-xs font-medium">
-                        +{trade.accountNumber.split(':').length}
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="flex flex-col gap-1">
-                        {trade.accountNumber.split(':').map((account) => (
-                          <p key={`tooltip-account-${account}`}>{account}</p>
-                        ))}
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                )}
-              </TooltipProvider>
+                    ))}
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
             </div>
             {trade.trades.length > 0 && (
               <span className="text-xs text-muted-foreground">
