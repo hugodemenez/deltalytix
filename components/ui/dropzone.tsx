@@ -200,13 +200,11 @@ const DropzoneEmptyState = ({ className }: { className?: string }) => {
       <div className="flex flex-col items-center gap-y-1">
         <p className="text-xs text-muted-foreground">
           {t('dropzone.clickToBrowse.prefix')}{' '}
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
+          <span
             className="underline cursor-pointer transition hover:text-foreground"
           >
             {t('dropzone.clickToBrowse.action')}
-          </button>{' '}
+          </span>{' '}
           {t('dropzone.clickToBrowse.suffix')}
         </p>
         {maxFileSize !== Number.POSITIVE_INFINITY && (
