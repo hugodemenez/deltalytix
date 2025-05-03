@@ -103,7 +103,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
 
   const dropzoneProps = useDropzone({
     onDrop,
-    noClick: true,
+    noClick: files.length > 0,
     accept: allowedMimeTypes.reduce((acc, type) => ({ ...acc, [type]: [] }), {}),
     maxSize: maxFileSize,
     maxFiles: maxFiles,
