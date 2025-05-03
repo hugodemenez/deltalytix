@@ -147,7 +147,7 @@ export function TradeTableReview() {
           tags: trade.tags,
           imageBase64: null,
           imageBase64Second: null,
-          comment: null,
+          comment: trade.comment,
           videoUrl: null,
           id: '',
           accountNumber: trade.accountNumber,
@@ -183,7 +183,6 @@ export function TradeTableReview() {
       }
     })
     
-    console.log('Grouped trades:', Array.from(groups.values())[0])
     return Array.from(groups.values())
   }, [trades])
 
@@ -548,13 +547,6 @@ export function TradeTableReview() {
             <TradeComment 
               tradeIds={tradeIds}
               comment={trade.trades.length > 0 ? trade.trades[0].comment : trade.comment} 
-              onCommentChange={(comment) => {
-                if (trade.trades.length > 0) {
-                  trade.trades.forEach(t => updateTrade(t.id, { comment }))
-                } else {
-                  updateTrade(trade.id, { comment })
-                }
-              }}
             />
           </div>
         )

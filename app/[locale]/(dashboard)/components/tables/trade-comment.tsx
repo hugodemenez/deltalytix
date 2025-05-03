@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Trash2, Save } from 'lucide-react'
@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import { useUserData } from '@/components/context/user-data'
 
 interface TradeCommentProps {
   tradeIds: string[]
@@ -21,31 +22,43 @@ interface TradeCommentProps {
 
 export function TradeComment({ tradeIds, comment: initialComment, onCommentChange }: TradeCommentProps) {
   const t = useI18n()
+  const { updateTrade } = useUserData()
   const [localComment, setLocalComment] = useState(initialComment || '')
   const [isUpdating, setIsUpdating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const [open, setOpen] = useState(false)
 
-  const handleCommentChange = (value: string) => {
-    setLocalComment(value)
-    setHasUnsavedChanges(true)
-  }
+  // Sync localComment with comment prop
+  useEffect(() => {
+    setLocalComment(initialComment || '')
+  }, [initialComment])
 
   const handleSave = async () => {
     setIsUpdating(true)
     try {
+      // Update local state immediately
+      const newComment = localComment || null
+      
+      // Update all trades in the list
+      tradeIds.forEach(tradeId => {
+        updateTrade(tradeId, { comment: newComment })
+      })
+
+      // Update database
       await Promise.all(tradeIds.map(tradeId => 
-        updateTradeComment(tradeId, localComment || null)
+        updateTradeComment(tradeId, newComment)
       ))
-      onCommentChange?.(localComment || null)
-      setHasUnsavedChanges(false)
+      
       setShowSuccess(true)
       setTimeout(() => {
         setShowSuccess(false)
       }, 1000)
+      setOpen(false)
     } catch (error) {
       console.error('Failed to update comment:', error)
+      // Revert local state on error
+      setLocalComment(initialComment || '')
     } finally {
       setIsUpdating(false)
     }
@@ -54,18 +67,27 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
   const handleClear = async () => {
     setIsUpdating(true)
     try {
+      // Update local state immediately
+      setLocalComment('')
+      
+      // Update all trades in the list
+      tradeIds.forEach(tradeId => {
+        updateTrade(tradeId, { comment: null })
+      })
+      
+      // Update database
       await Promise.all(tradeIds.map(tradeId => 
         updateTradeComment(tradeId, null)
       ))
-      setLocalComment('')
-      onCommentChange?.(null)
-      setHasUnsavedChanges(false)
+      
       setShowSuccess(true)
       setTimeout(() => {
         setShowSuccess(false)
       }, 1000)
     } catch (error) {
       console.error('Failed to clear comment:', error)
+      // Revert local state on error
+      setLocalComment(initialComment || '')
     } finally {
       setIsUpdating(false)
     }
@@ -73,7 +95,7 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
 
   return (
     <div className="max-w-[200px]">
-      <Popover>
+      <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <div>
             <Button 
@@ -102,7 +124,7 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
                   ref={inputRef}
                   placeholder={t('trade-table.addComment')}
                   value={localComment}
-                  onChange={(e) => handleCommentChange(e.target.value)}
+                  onChange={(e) => setLocalComment(e.target.value)}
                   className={cn(
                     "w-full px-3 py-2 text-sm bg-transparent border rounded min-h-[100px]",
                     "focus:outline-none focus:ring-2 focus:ring-primary resize-none transition-all duration-200",
@@ -147,7 +169,7 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
               </Button>
               <Button
                 size="sm"
-                disabled={isUpdating || !hasUnsavedChanges}
+                disabled={isUpdating}
                 onClick={handleSave}
               >
                 <Save className="h-4 w-4 mr-2" />

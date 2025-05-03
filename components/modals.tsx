@@ -29,20 +29,9 @@ export default function Modals() {
       const currentTime = Date.now();
       
       if (!isFirstConnection && (!lastShown || (currentTime - parseInt(lastShown)) > PAYWALL_COOLDOWN)) {
-        console.log('[Modals] Showing paywall - User not subscribed:', { 
-          email: user.email,
-          plan: subscription?.plan,
-          status: subscription?.status 
-        });
         setIsPaywallOpen(true);
         localStorage.setItem('paywall_last_shown', currentTime.toString());
       }
-    } else if (subscription?.isActive) {
-      console.log('[Modals] User has active subscription:', {
-        email: user?.email,
-        plan: subscription.plan,
-        status: subscription.status
-      });
     }
   }, [user?.email, subscription, isFirstConnection]);
 

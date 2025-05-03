@@ -367,14 +367,11 @@ interface CachedData {
 function getLocalCache(): CachedData | null {
   if (typeof window === 'undefined') return null;
   const cached = localStorage.getItem(CACHE_KEY);
-  console.log('Getting cached data:', cached);
   if (!cached) return null;
   
   try {
     const parsedCache = JSON.parse(cached);
-    console.log('Parsed cache:', parsedCache);
     if (Date.now() - parsedCache.timestamp > CACHE_EXPIRY) {
-      console.log('Cache expired, clearing...');
       localStorage.removeItem(CACHE_KEY);
       return null;
     }
