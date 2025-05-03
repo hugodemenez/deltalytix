@@ -29,7 +29,7 @@ interface ComputedStats {
     losses: number
   }
   dailyPnL: {
-    date: string
+    date: Date
     pnl: number
     weekday: number
   }[]
@@ -69,7 +69,7 @@ export async function getUserData(userId: string): Promise<UserData> {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     return diffDays <= 14
   })
-
+  
   return {
     user: {
       id: user.id,
@@ -110,35 +110,32 @@ export async function computeTradingStats(
 
   const dailyPnL = trades.reduce((acc, trade) => {
     const tradeDate = new Date(trade.entryDate)
-    const date = tradeDate.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit'
+    // Set time to 00:00:00 to ensure proper date comparison
+    tradeDate.setHours(0, 0, 0, 0)
+    
+    // Convert from Sunday-based (0-6) to Monday-based (0-6) weekday
+    const weekday = tradeDate.getDay() === 0 ? 6 : tradeDate.getDay() - 1
+    
+    const existingEntry = acc.find(entry => {
+      const entryDate = new Date(entry.date)
+      entryDate.setHours(0, 0, 0, 0)
+      return entryDate.getTime() === tradeDate.getTime()
     })
-    
-    const weekday = (tradeDate.getDay() + 6) % 7
-    
-    const existingEntry = acc.find(entry => entry.date === date)
+
     if (existingEntry) {
       existingEntry.pnl = Number((existingEntry.pnl + trade.pnl - trade.commission).toFixed(2))
     } else {
       acc.push({
-        date,
+        date: tradeDate,
         pnl: Number((trade.pnl - trade.commission).toFixed(2)),
         weekday
       })
     }
     return acc
-  }, [] as { date: string, pnl: number, weekday: number }[])
+  }, [] as { date: Date, pnl: number, weekday: number }[])
 
   // Sort by date
-  dailyPnL.sort((a, b) => {
-    const [dayA, monthA] = a.date.split('/').map(Number)
-    const [dayB, monthB] = b.date.split('/').map(Number)
-    const currentYear = new Date().getFullYear()
-    const dateObjA = new Date(currentYear, monthA - 1, dayA)
-    const dateObjB = new Date(currentYear, monthB - 1, dayB)
-    return dateObjA.getTime() - dateObjB.getTime()
-  })
+  dailyPnL.sort((a, b) => a.date.getTime() - b.date.getTime())
 
   const thisWeekPnL = dailyPnL.reduce((sum, day) => sum + day.pnl, 0)
   const profitableDays = dailyPnL.filter(day => day.pnl > 0).length

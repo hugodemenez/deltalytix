@@ -20,9 +20,8 @@ interface TraderStatsEmailProps {
   email: string;
   firstName?: string;
   dailyPnL: {
-    date: string;
+    date: Date;
     pnl: number;
-    weekday: number; // 0 = Monday, 4 = Friday
   }[];
   winLossStats: {
     wins: number;
@@ -118,22 +117,14 @@ const translations = {
   }
 };
 
-function getWeekNumber(dateStr: string) {
-  const [day, month] = dateStr.split('/').map(Number);
-  const currentYear = new Date().getFullYear();
-  const date = new Date(currentYear, month - 1, day);
-  const firstDayOfYear = new Date(currentYear, 0, 1);
+function getWeekNumber(date: Date) {
+  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
   const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
   return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
 }
 
-function compareDates(dateA: string, dateB: string) {
-  const [dayA, monthA] = dateA.split('/').map(Number);
-  const [dayB, monthB] = dateB.split('/').map(Number);
-  const currentYear = new Date().getFullYear();
-  const dateObjA = new Date(currentYear, monthA - 1, dayA);
-  const dateObjB = new Date(currentYear, monthB - 1, dayB);
-  return dateObjA.getTime() - dateObjB.getTime();
+function compareDates(dateA: Date, dateB: Date) {
+  return dateA.getTime() - dateB.getTime();
 }
 
 function formatPnL(value: number): string {
@@ -204,9 +195,9 @@ function generateTradingActivityGrid(dailyPnL: TraderStatsEmailProps['dailyPnL']
   // Sort dailyPnL by date
   const sortedDailyPnL = [...dailyPnL].sort((a, b) => compareDates(a.date, b.date));
 
-  // Get the date range - use last 2 weeks as reference
-  const lastDate = parseDate(sortedDailyPnL[sortedDailyPnL.length - 1].date);
-
+  // Get the last date from the sorted trades
+  const lastDate = sortedDailyPnL[sortedDailyPnL.length - 1].date;
+  
   // Set end date to the Friday of the current week
   const endDate = new Date(lastDate);
   const daysTillFriday = 5 - ((lastDate.getDay() + 6) % 7); // Convert Sunday=0 to Monday=0, then find days until Friday
@@ -225,14 +216,11 @@ function generateTradingActivityGrid(dailyPnL: TraderStatsEmailProps['dailyPnL']
   // Map each day's PnL to an activity level (1-4)
   sortedDailyPnL.forEach(day => {
     const level = Math.max(1, Math.min(4, Math.ceil((Math.abs(day.pnl) / maxAbsPnL) * 4)));
-    activityMap.set(day.date, level);
+    activityMap.set(day.date.toISOString().split('T')[0], level);
   });
 
   // Get current week number and previous week number
-  const now = new Date();
-  const oneJan = new Date(now.getFullYear(), 0, 1);
-  const numberOfDays = Math.floor((now.getTime() - oneJan.getTime()) / (24 * 60 * 60 * 1000));
-  const currentWeekNumber = Math.ceil((now.getDay() + 1 + numberOfDays) / 7);
+  const currentWeekNumber = getWeekNumber(endDate);
   const previousWeekNumber = currentWeekNumber - 1;
 
   const weekNumbers = [previousWeekNumber, currentWeekNumber];
@@ -240,22 +228,26 @@ function generateTradingActivityGrid(dailyPnL: TraderStatsEmailProps['dailyPnL']
 
   // Populate grid with actual trading data
   let currentDate = new Date(startDate);
+  let currentRow = 0;
 
-  for (let row = 0; row < 2 && currentDate <= endDate; row++) {
-    for (let col = 0; col < 5 && currentDate <= endDate; col++) {
-      const dateStr = currentDate.toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit'
-      });
-
-      if (activityMap.has(dateStr)) {
-        grid[row][col] = activityMap.get(dateStr) || 0;
+  while (currentDate <= endDate && currentRow < 2) {
+    // Skip weekends
+    if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+      const dateKey = currentDate.toISOString().split('T')[0];
+      const weekday = (currentDate.getDay() + 6) % 7; // Convert to Monday-based (0-4)
+      
+      if (activityMap.has(dateKey)) {
+        grid[currentRow][weekday] = activityMap.get(dateKey) || 0;
       }
-
-      // Move to next day (skip weekends)
-      do {
-        currentDate.setDate(currentDate.getDate() + 1);
-      } while (currentDate.getDay() === 0 || currentDate.getDay() === 6); // Skip Saturday and Sunday
+    }
+    
+    // Move to next day
+    currentDate.setDate(currentDate.getDate() + 1);
+    
+    // If we've reached Friday, move to next week
+    if (currentDate.getDay() === 6) { // Saturday
+      currentRow++;
+      currentDate.setDate(currentDate.getDate() + 2); // Skip to Monday
     }
   }
 
@@ -323,6 +315,19 @@ const ActionButtons = ({ t }: { t: typeof translations.fr }) => (
   </Section>
 );
 
+// Helper function to format date to DD/MM
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit'
+  });
+}
+
+// Helper function to get weekday (0 = Monday, 4 = Friday)
+function getWeekday(date: Date): number {
+  return date.getDay() === 0 ? 6 : date.getDay() - 1;
+}
+
 export default function TraderStatsEmail({
   email,
   firstName = "trader",
@@ -364,16 +369,18 @@ export default function TraderStatsEmail({
     if (!acc[weekNum]) {
       acc[weekNum] = {
         days: Array(5).fill(null),
-        firstDate: day.date // Track the first date we see for this week
+        firstDate: day.date
       };
     }
-    acc[weekNum].days[day.weekday] = day;
-    // Update firstDate if this date is earlier
+    acc[weekNum].days[getWeekday(day.date)] = {
+      ...day,
+      formattedDate: formatDate(day.date)
+    };
     if (compareDates(day.date, acc[weekNum].firstDate) < 0) {
       acc[weekNum].firstDate = day.date;
     }
     return acc;
-  }, {} as Record<number, { days: (typeof sortedDailyPnL[0] | null)[], firstDate: string }>);
+  }, {} as Record<number, { days: ((typeof sortedDailyPnL[0] & { formattedDate: string }) | null)[], firstDate: Date }>);
 
   // Sort weeks by their first date (ascending order) and get the two most recent weeks
   const sortedWeeks = Object.entries(weekData)
@@ -436,7 +443,7 @@ export default function TraderStatsEmail({
                               {day ? (
                                 <div className="flex flex-col items-center justify-center min-h-[48px]">
                                   <Text className="text-xs text-gray-600 mb-1 w-full text-center">
-                                    {day.date}
+                                    {day.formattedDate}
                                   </Text>
                                   <Text className={`text-xs font-semibold ${getPnLColor(day.pnl)} w-full text-center`}>
                                     {formatPnLWithSign(day.pnl)}€

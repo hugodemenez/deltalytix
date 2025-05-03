@@ -16,9 +16,8 @@ const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env
 export interface WeeklyRecapContent {
   firstName: string
   dailyPnL: Array<{
-    date: string
+    date: Date
     pnl: number
-    weekday: number
   }>
   winLossStats: {
     wins: number
@@ -26,16 +25,8 @@ export interface WeeklyRecapContent {
   }
 }
 
-function compareDates(dateA: string, dateB: string) {
-  const [dayA, monthA] = dateA.split('/').map(Number)
-  const [dayB, monthB] = dateB.split('/').map(Number)
-  
-  // Create full dates using current year
-  const currentYear = new Date().getFullYear()
-  const dateObjA = new Date(currentYear, monthA - 1, dayA)
-  const dateObjB = new Date(currentYear, monthB - 1, dayB)
-  
-  return dateObjA.getTime() - dateObjB.getTime()
+function compareDates(dateA: Date, dateB: Date) {
+  return dateA.getTime() - dateB.getTime()
 }
 
 function formatPnL(value: number): string {

@@ -253,12 +253,15 @@ export function WeeklyRecapPreview() {
                       <Label className="text-sm">Day {index + 1}</Label>
                       <div className="flex gap-2">
                         <Input
-                          value={day.date}
+                          value={day.date.toLocaleDateString('fr-FR', {
+                            day: '2-digit',
+                            month: '2-digit'
+                          })}
                           onChange={(e) =>
                             setContent((prev: WeeklyRecapContent) => ({
                               ...prev,
-                              dailyPnL: prev.dailyPnL.map((d: { date: string; pnl: number; weekday: number }, i: number) => 
-                                i === index ? { ...d, date: e.target.value } : d
+                              dailyPnL: prev.dailyPnL.map((d, i) => 
+                                i === index ? { ...d, date: new Date(e.target.value) } : d
                               ),
                             }))
                           }
@@ -271,8 +274,8 @@ export function WeeklyRecapPreview() {
                           onChange={(e) =>
                             setContent((prev: WeeklyRecapContent) => ({
                               ...prev,
-                              dailyPnL: prev.dailyPnL.map((d: { date: string; pnl: number; weekday: number }, i: number) =>
-                                i === index ? { ...d, pnl: Number.parseFloat(e.target.value) || 0 } : d,
+                              dailyPnL: prev.dailyPnL.map((d, i) =>
+                                i === index ? { ...d, pnl: Number.parseFloat(e.target.value) || 0 } : d
                               ),
                             }))
                           }
