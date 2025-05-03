@@ -337,8 +337,8 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                       : dayData && dayData.pnl < 0
                       ? "bg-red-50 dark:bg-red-900/20"
                       : "bg-card",
-                    !isCurrentMonth && "bg-opacity-75 dark:bg-opacity-75",
-                    isToday(date) && "ring-blue-500 bg-blue-500/5 z-10 ring-inset",
+                    !isCurrentMonth && "",
+                    isToday(date) && "ring-blue-500 bg-blue-500/5 z-10",
                     index === 0 && "rounded-tl-lg",
                     index === 35 && "rounded-bl-lg",
                   )}
@@ -387,7 +387,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                 {isLastDayOfWeek && (
                   <div 
                     className={cn(
-                      "h-full flex items-center justify-center rounded-none bg-card/50 cursor-pointer",
+                      "h-full flex items-center justify-center rounded-none cursor-pointer",
                       "ring-1 ring-border hover:ring-primary hover:z-10",
                       index === 6 && "rounded-tr-lg",
                       index === 41 && "rounded-br-lg"
