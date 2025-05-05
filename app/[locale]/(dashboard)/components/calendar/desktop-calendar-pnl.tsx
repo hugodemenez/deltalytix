@@ -129,7 +129,7 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
       >
         <div className="space-y-2">
           <h4 className="text-sm font-medium">{t('calendar.events.title')}</h4>
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
             {events.map(event => (
               <div key={event.id} className="flex items-start gap-2 text-xs">
                 <div className={cn(
