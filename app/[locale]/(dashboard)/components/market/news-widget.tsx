@@ -58,8 +58,8 @@ export function NewsWidget({ className }: NewsWidgetProps) {
         "colorTheme": effectiveTheme,
         "isTransparent": true,
         "locale": locale,
-        "importanceFilter": "-1,0,1",
-        "countryFilter": "ar,au,br,ca,cn,fr,de,in,id,it,jp,kr,mx,ru,sa,tr,gb,us,eu"
+        "importanceFilter": "0,1",
+        "countryFilter": "au,fr,de,gb,us,eu"
       });
 
       // Add load event listener to hide skeleton
