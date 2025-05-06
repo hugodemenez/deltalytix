@@ -9,7 +9,6 @@ import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { useUserData } from '@/components/context/user-data'
-import crypto from 'crypto'
 
 interface TradeImageUploadDialogProps {
   tradeIds: string[]
@@ -21,6 +20,15 @@ interface TradeImageUploadDialogProps {
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
+// Generate a UUID v4 using the Web Crypto API
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 export function TradeImageUploadDialog({ 
   tradeIds, 
   isSecondImage = false, 
@@ -30,7 +38,7 @@ export function TradeImageUploadDialog({
   const t = useI18n()
   const [open, setOpen] = useState(false)
   const { user } = useUserData()
-  const [generatedId] = useState(() => tradeIds[0]?.includes('undefined') ? crypto.randomUUID() : tradeIds[0])
+  const [generatedId] = useState(() => tradeIds[0]?.includes('undefined') ? generateUUID() : tradeIds[0])
   
   const uploadProps = useSupabaseUpload({
     bucketName: 'trade-images',
