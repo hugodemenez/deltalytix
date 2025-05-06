@@ -1029,6 +1029,7 @@ export default {
     'pnlTime.clearFilter': 'Effacer le filtre',
     'trade-table': {
         'title': 'Revue des trades',
+        'description': 'Examinez et analysez vos trades avec des informations détaillées et des options de filtrage.',
         'accounts': 'Comptes',
         'entryDate': 'Date d\'entrée',
         'instrument': 'Instrument',
@@ -1081,6 +1082,15 @@ export default {
             'description': 'Êtes-vous sûr de vouloir supprimer le tag "{tag}" ? Cette action ne peut pas être annulée et supprimera le tag de tous les trades.',
             'cancel': 'Annuler',
             'confirm': 'Supprimer'
+        },
+        'granularity': {
+            'label': 'Grouper les trades par',
+            'exact': 'Correspondance exacte',
+            'fiveSeconds': '5 secondes',
+            'tenSeconds': '10 secondes',
+            'thirtySeconds': '30 secondes',
+            'oneMinute': '1 minute',
+            'tooltip': 'Grouper les trades qui se sont produits dans l\'intervalle de temps sélectionné'
         },
     },
     'tickDistribution.title': 'Distribution des ticks',

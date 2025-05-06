@@ -650,6 +650,7 @@ export default {
     'dataManagement.toast.instrumentRenameError': 'Failed to rename instrument',
     'trade-table': {
         'title': 'Trade Review',
+        'description': 'Review and analyze your trades with detailed information and filtering options.',
         'accounts': 'Accounts',
         'entryDate': 'Entry Date',
         'instrument': 'Instrument',
@@ -703,6 +704,15 @@ export default {
         'clickToBrowse': 'or click to browse',
         'maxFileSize': 'Maximum file size: 5MB',
         'allowedTypes': 'Allowed types: JPEG, PNG, WebP',
+        'granularity': {
+            'label': 'Group trades by',
+            'exact': 'Exact match',
+            'fiveSeconds': '5 seconds',
+            'tenSeconds': '10 seconds',
+            'thirtySeconds': '30 seconds',
+            'oneMinute': '1 minute',
+            'tooltip': 'Group trades that occurred within the selected time window'
+        },
     },
     'share.button': 'Share trades',
     'share.success': 'Trades shared successfully',

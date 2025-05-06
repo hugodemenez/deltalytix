@@ -16,7 +16,7 @@ import {
   ExpandedState,
 } from "@tanstack/react-table"
 import { Button } from '@/components/ui/button'
-import { Upload, ArrowUpDown, Plus, Search, Trash2, X, ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react'
+import { Upload, ArrowUpDown, Plus, Search, Trash2, X, ChevronRight, ChevronDown, ChevronLeft, Info } from 'lucide-react'
 import Image from 'next/image'
 import { Tag, Trade } from '@prisma/client'
 import {
@@ -638,26 +638,52 @@ export function TradeTableReview() {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-base font-medium">
-          {t('trade-table.title')}
-        </CardTitle>
-        <div className="flex items-center gap-2">
-          <Select
-            value={groupingGranularity.toString()}
-            onValueChange={(value) => setGroupingGranularity(parseInt(value))}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select grouping granularity" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">Exact match</SelectItem>
-              <SelectItem value="5">5 seconds</SelectItem>
-              <SelectItem value="10">10 seconds</SelectItem>
-              <SelectItem value="30">30 seconds</SelectItem>
-              <SelectItem value="60">1 minute</SelectItem>
-            </SelectContent>
-          </Select>
+      <CardHeader 
+        className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]"
+      >
+        <div className="flex items-center justify-between w-full">
+          <div className="flex items-center gap-1.5">
+            <CardTitle className="line-clamp-1 text-base">
+              {t('trade-table.title')}
+            </CardTitle>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{t('trade-table.description')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <div className="flex items-center gap-2">
+            <Select
+              value={groupingGranularity.toString()}
+              onValueChange={(value) => setGroupingGranularity(parseInt(value))}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder={t('trade-table.granularity.label')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">{t('trade-table.granularity.exact')}</SelectItem>
+                <SelectItem value="5">{t('trade-table.granularity.fiveSeconds')}</SelectItem>
+                <SelectItem value="10">{t('trade-table.granularity.tenSeconds')}</SelectItem>
+                <SelectItem value="30">{t('trade-table.granularity.thirtySeconds')}</SelectItem>
+                <SelectItem value="60">{t('trade-table.granularity.oneMinute')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>{t('trade-table.granularity.tooltip')}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 overflow-hidden pt-0">
