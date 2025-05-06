@@ -76,6 +76,13 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -106,6 +113,7 @@ export function TradeTableReview() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [expanded, setExpanded] = useState<ExpandedState>({})
   const [pageSize, setPageSize] = useState(10)
+  const [groupingGranularity, setGroupingGranularity] = useState<number>(0) // 0 = exact match, 5 = 5 seconds, etc.
 
   const trades = contextTrades
 
@@ -134,16 +142,31 @@ export function TradeTableReview() {
     }
   }
 
-  // Group trades by instrument, entry date, and close date
+  // Group trades by instrument, entry date, and close date with granularity
   const groupedTrades = useMemo(() => {
     const groups = new Map<string, ExtendedTrade>()
     
     trades.forEach(trade => {
-      const key = `${trade.instrument}-${trade.entryDate}-${trade.closeDate}`
+      // Create a key that accounts for granularity
+      const entryDate = new Date(trade.entryDate)
+      
+      // Round dates based on granularity
+      const roundDate = (date: Date) => {
+        if (groupingGranularity === 0) return date
+        const roundedDate = new Date(date)
+        roundedDate.setSeconds(Math.floor(date.getSeconds() / groupingGranularity) * groupingGranularity)
+        roundedDate.setMilliseconds(0)
+        return roundedDate
+      }
+
+      const roundedEntryDate = roundDate(entryDate)
+      
+      const key = `${trade.instrument}-${roundedEntryDate.toISOString()}`
+      
       if (!groups.has(key)) {
         groups.set(key, {
           instrument: trade.instrument,
-          entryDate: trade.entryDate,
+          entryDate: roundedEntryDate.toISOString(),
           closeDate: trade.closeDate,
           tags: trade.tags,
           imageBase64: null,
@@ -172,20 +195,28 @@ export function TradeTableReview() {
       else {
         const group = groups.get(key)!
         group.trades.push({
-        ...trade,
-        trades: []
-      })
-      group.pnl += trade.pnl || 0
-      group.commission += trade.commission || 0
-      group.quantity += trade.quantity || 0
-      if (!group.accountNumber.includes(trade.accountNumber)) {
+          ...trade,
+          trades: []
+        })
+        group.pnl += trade.pnl || 0
+        group.commission += trade.commission || 0
+        group.quantity += trade.quantity || 0
+        // Update closeDate to the latest one
+        if (new Date(trade.closeDate) > new Date(group.closeDate)) {
+          group.closeDate = trade.closeDate
+        }
+        // Update timeInPosition to the longest one
+        if ((trade.timeInPosition || 0) > (group.timeInPosition || 0)) {
+          group.timeInPosition = trade.timeInPosition
+        }
+        if (!group.accountNumber.includes(trade.accountNumber)) {
           group.accountNumber += ':' + trade.accountNumber;
         }
       }
     })
     
     return Array.from(groups.values())
-  }, [trades])
+  }, [trades, groupingGranularity])
 
   const columns = useMemo<ColumnDef<ExtendedTrade>[]>(() => [
     {
@@ -611,6 +642,23 @@ export function TradeTableReview() {
         <CardTitle className="text-base font-medium">
           {t('trade-table.title')}
         </CardTitle>
+        <div className="flex items-center gap-2">
+          <Select
+            value={groupingGranularity.toString()}
+            onValueChange={(value) => setGroupingGranularity(parseInt(value))}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select grouping granularity" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Exact match</SelectItem>
+              <SelectItem value="5">5 seconds</SelectItem>
+              <SelectItem value="10">10 seconds</SelectItem>
+              <SelectItem value="30">30 seconds</SelectItem>
+              <SelectItem value="60">1 minute</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 overflow-hidden pt-0">
         <div className="flex h-full flex-col overflow-hidden">
@@ -643,12 +691,12 @@ export function TradeTableReview() {
                     <TableRow
                       data-state={row.getIsSelected() && "selected"}
                       className={cn(
-                        "border-b transition-colors",
+                        "border-b transition-colors hover:bg-muted",
                         row.getIsExpanded() 
-                          ? "bg-muted/50" 
+                          ? "bg-muted" 
                           : row.getCanExpand() 
-                            ? "hover:bg-muted/30" 
-                            : "bg-muted hover:bg-muted/50"
+                            ? "" 
+                            : "bg-muted/50"
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
@@ -710,7 +758,7 @@ export function TradeTableReview() {
             variant="outline" 
             size="sm" 
             onClick={() => {
-              setPageSize(pageSize+100)
+              setPageSize(pageSize+10)
               table.setPageSize(pageSize)
             }}
           >
