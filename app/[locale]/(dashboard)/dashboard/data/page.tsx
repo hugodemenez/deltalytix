@@ -6,8 +6,13 @@ import FilterLeftPane from '../../components/filters/filter-left-pane'
 import { DataManagementCard } from '../../components/data-management/data-management-card'
 import { PropFirmOverview } from "../../components/propfirm/prop-firm-overview"
 import { PropFirmCard } from "../../components/data-management/prop-firm-card"
+import { useEffect } from "react"
 
 export default function DashboardPage() {
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
+
   return (
 
     <div className="flex w-full relative  min-h-screen py-8">
