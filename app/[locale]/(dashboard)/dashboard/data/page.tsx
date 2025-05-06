@@ -17,7 +17,7 @@ export default function DashboardPage() {
           <TabsList>
             <TabsTrigger value="accounts">Accounts</TabsTrigger>
             <TabsTrigger value="trades">Trades</TabsTrigger>
-            <TabsTrigger value="propfirm">Prop Firm</TabsTrigger>
+            {/* <TabsTrigger value="propfirm">Prop Firm</TabsTrigger> */}
           </TabsList>
           <TabsContent value="accounts">
             <DataManagementCard />
@@ -25,9 +25,9 @@ export default function DashboardPage() {
           <TabsContent value="trades">
             <TradeTable />
           </TabsContent>
-          <TabsContent value="propfirm">
+          {/* <TabsContent value="propfirm">
             <PropFirmCard />
-          </TabsContent>
+          </TabsContent> */}
         </Tabs>
 
       </div>
