@@ -93,6 +93,8 @@ const getEventImportanceColor = (importance: string) => {
 function EventBadge({ events }: { events: FinancialEvent[] }) {
   const t = useI18n()
   const { timezone } = useUserData()
+  const locale = useCurrentLocale()
+  const dateLocale = locale === 'fr' ? fr : enUS
   
   if (events.length === 0) return null
 
@@ -140,6 +142,9 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{event.title}</div>
+                  <div className="text-muted-foreground text-[11px]">
+                    {formatInTimeZone(event.date, timezone, 'HH:mm', { locale: dateLocale })}
+                  </div>
                   {event.description && (
                     <div className="text-muted-foreground text-[11px] line-clamp-2">
                       {event.description}
