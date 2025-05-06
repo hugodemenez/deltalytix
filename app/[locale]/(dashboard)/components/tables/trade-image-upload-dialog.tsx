@@ -9,6 +9,7 @@ import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { useUserData } from '@/components/context/user-data'
+import crypto from 'crypto'
 
 interface TradeImageUploadDialogProps {
   tradeIds: string[]
@@ -29,10 +30,11 @@ export function TradeImageUploadDialog({
   const t = useI18n()
   const [open, setOpen] = useState(false)
   const { user } = useUserData()
+  const [generatedId] = useState(() => tradeIds[0]?.includes('undefined') ? crypto.randomUUID() : tradeIds[0])
   
   const uploadProps = useSupabaseUpload({
     bucketName: 'trade-images',
-    path: user?.id + '/' + tradeIds[0] || '',
+    path: user?.id + '/' + generatedId,
     allowedMimeTypes: ACCEPTED_IMAGE_TYPES,
     maxFileSize: MAX_FILE_SIZE,
     maxFiles: 1,
@@ -42,7 +44,7 @@ export function TradeImageUploadDialog({
   useEffect(() => {
     if (uploadProps.isSuccess && uploadProps.files.length > 0) {
       const file = uploadProps.files[0]
-      const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/trade-images/${user?.id}/${tradeIds[0]}/${file.name}`
+      const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/trade-images/${user?.id}/${generatedId}/${file.name}`
       onSuccess?.(imageUrl)
       setOpen(false)
       toast.success(t('trade-table.imageUploadSuccess'))
@@ -50,7 +52,7 @@ export function TradeImageUploadDialog({
       const error = uploadProps.errors[0].message
       toast.error(t('trade-table.imageUploadError', { error }))
     }
-  }, [uploadProps.isSuccess, uploadProps.files, uploadProps.errors, onSuccess, user?.id, t])
+  }, [uploadProps.isSuccess, uploadProps.files, uploadProps.errors, onSuccess, user?.id, t, generatedId])
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
