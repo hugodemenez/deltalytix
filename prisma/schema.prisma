@@ -91,6 +91,7 @@ model User {
   votes           Vote[]
   comments        Comment[]
   language        String           @default("en")
+  orders          Order[]
 
   @@index([email])
   @@schema("public")
@@ -352,5 +353,25 @@ enum VoteType {
   UPVOTE
   DOWNVOTE
 
+  @@schema("public")
+}
+
+model Order {
+  id                String   @id @default(uuid())
+  accountId         String
+  orderId           String   @unique
+  orderAction       String
+  quantity          Int
+  averageFilledPrice Float
+  isOpeningOrder    Boolean
+  time              DateTime
+  symbol            String
+  instrumentType    String
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+
+  @@index([accountId])
+  @@index([userId])
   @@schema("public")
 }
