@@ -96,17 +96,9 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
   
-  if (events.length === 0) return null
-
-  const highPriorityEvents = events.filter(e => e.importance === 'HIGH')
-  const mediumPriorityEvents = events.filter(e => e.importance === 'MEDIUM')
-  const lowPriorityEvents = events.filter(e => e.importance === 'LOW')
-
-  const badgeColor = highPriorityEvents.length > 0 
-    ? "bg-red-200 text-red-500 dark:bg-red-900 dark:text-red-400"
-    : mediumPriorityEvents.length > 0
-    ? "bg-yellow-200 text-yellow-500 dark:bg-yellow-900 dark:text-yellow-400"
-    : "bg-blue-200 text-blue-500 dark:bg-blue-900 dark:text-blue-400"
+  // Filter only high impact events
+  const highImpactEvents = events.filter(e => e.importance === 'HIGH')
+  if (highImpactEvents.length === 0) return null
 
   return (
     <HoverCard>
@@ -115,11 +107,11 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
           variant="outline" 
           className={cn(
             "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 border-none w-8 justify-center items-center",
-            badgeColor
+            "bg-red-200 text-red-500 dark:bg-red-900 dark:text-red-400"
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          {events.length}
+          {highImpactEvents.length}
         </Badge>
       </HoverCardTrigger>
       <HoverCardContent 
@@ -132,7 +124,7 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
         <div className="space-y-2">
           <h4 className="text-sm font-medium">{t('calendar.events.title')}</h4>
           <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-            {events.map(event => (
+            {highImpactEvents.map(event => (
               <div key={event.id} className="flex items-start gap-2 text-xs">
                 <div className={cn(
                   "flex-shrink-0 mt-0.5",
