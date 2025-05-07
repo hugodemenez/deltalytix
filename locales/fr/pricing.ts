@@ -89,6 +89,18 @@ export default {
         contactUsForCustom: 'Contactez-nous pour des besoins de développement personnalisé',
         keepBasic: 'Garder le plan Basic',
         currentlyYearly: 'Facturé annuellement',
-        currentlyMonthly: 'Facturé mensuellement'
+        currentlyMonthly: 'Facturé mensuellement',
+        cancelSubscription: {
+            title: 'Annuler l\'abonnement',
+            description: 'Êtes-vous sûr de vouloir annuler votre abonnement ?',
+            warning: 'Cet abonnement vous donne accès à des fonctionnalités clés, notamment :',
+            features: {
+                0: 'Le stockage complet de toutes vos données de trading',
+                1: 'L\'accès à l\'ensemble de vos statistiques sur comptes de propfirms',
+                2: 'Le suivi de votre drawdown, de vos payouts et de votre profit goal'
+            },
+            confirm: 'Oui, annuler l\'abonnement',
+            cancel: 'Non, garder l\'abonnement'
+        }
     }
 } as const;

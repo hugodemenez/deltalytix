@@ -90,5 +90,17 @@ export default {
         keepBasic: 'Keep Basic Plan',
         currentlyYearly: 'Billed yearly',
         currentlyMonthly: 'Billed monthly',
+        cancelSubscription: {
+            title: 'Cancel Subscription',
+            description: 'Are you sure you want to cancel your subscription?',
+            warning: 'This subscription gives you access to key features including:',
+            features: {
+                0: 'Complete storage of all your trading data',
+                1: 'Access to all your propfirm account statistics',
+                2: 'Tracking of your drawdown, payouts, and profit goals'
+            },
+            confirm: 'Yes, cancel subscription',
+            cancel: 'No, keep subscription'
+        },
     }
 } as const;

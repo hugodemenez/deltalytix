@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Check, AlertCircle, CheckCircle2, CalendarDays, Clock, CreditCard, History, Receipt, FileText } from "lucide-react"
-import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getSubscriptionData, updateSubscription, type SubscriptionWithPrice } from "../actions/billing"
@@ -50,6 +50,7 @@ export default function BillingManagement() {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly")
   const [subscription, setSubscription] = useState<SubscriptionWithPrice | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
   const { toast } = useToast()
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -327,50 +328,93 @@ export default function BillingManagement() {
       {/* Subscription Management */}
       {(subscription?.status === 'active' || subscription?.status === 'trialing') && (
         <Card className="border-none shadow-none bg-transparent">
-          <CardHeader className="px-0">
-            <CardTitle>{t('billing.manageSubscription')}</CardTitle>
-            <CardDescription>{t('billing.manageSubscriptionDesc')}</CardDescription>
-          </CardHeader>
           <CardContent className="px-0">
             <div className="flex flex-col gap-4">
               {!subscription.cancel_at_period_end && (
-                <div className="flex flex-wrap gap-4">
-                  <Button 
-                    onClick={() => handleSubscriptionAction('pause')} 
-                    variant="outline" 
+                <div className="flex flex-wrap items-center gap-4">
+                  <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="destructive" 
+                        className="sm:w-auto"
+                      >
+                        {t('billing.cancelSubscription')}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>{t('pricing.cancelSubscription.title')}</DialogTitle>
+                        <DialogDescription>
+                          {t('pricing.cancelSubscription.description')}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4 py-4">
+                        <p className="text-sm font-medium">
+                          {t('pricing.cancelSubscription.warning')}
+                        </p>
+                        <ul className="list-disc pl-6 space-y-2">
+                          {[
+                            t('pricing.cancelSubscription.features.0'),
+                            t('pricing.cancelSubscription.features.1'),
+                            t('pricing.cancelSubscription.features.2')
+                          ].map((feature, index) => (
+                            <li key={index} className="text-sm text-muted-foreground">
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsCancelDialogOpen(false)}
+                        >
+                          {t('pricing.cancelSubscription.cancel')}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => {
+                            handleSubscriptionAction('cancel')
+                            setIsCancelDialogOpen(false)
+                          }}
+                        >
+                          {t('pricing.cancelSubscription.confirm')}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                  <Button
+                    variant="outline"
                     className="sm:w-auto"
+                    asChild
                   >
-                    {t('billing.pauseSubscription')}
-                  </Button>
-                  <Button 
-                    onClick={() => handleSubscriptionAction('cancel')} 
-                    variant="destructive" 
-                    className="sm:w-auto"
-                  >
-                    {t('billing.cancelSubscription')}
+                    <Link href={process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || ""}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      {t('billing.managePaymentMethod')}
+                    </Link>
                   </Button>
                 </div>
               )}
               {subscription.cancel_at_period_end && (
-                <Button 
-                  onClick={() => handleSubscriptionAction('resume')} 
-                  className="sm:w-auto"
-                >
-                  {t('billing.resumeSubscription')}
-                </Button>
+                <div className="flex flex-wrap items-center gap-4">
+                  <Button 
+                    onClick={() => handleSubscriptionAction('resume')} 
+                    className="sm:w-auto"
+                  >
+                    {t('billing.resumeSubscription')}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="sm:w-auto"
+                    asChild
+                  >
+                    <Link href={process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || ""}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      {t('billing.managePaymentMethod')}
+                    </Link>
+                  </Button>
+                </div>
               )}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Button
-                  variant="outline"
-                  className="sm:w-auto"
-                  asChild
-                >
-                  <Link href={process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || ""}>
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    {t('billing.managePaymentMethod')}
-                  </Link>
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
