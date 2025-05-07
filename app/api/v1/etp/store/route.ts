@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { createClient } from '@/server/auth'
+import { PrismaClient } from '@prisma/client'
+
+// Create a new PrismaClient instance for this API route
+const prisma = new PrismaClient()
 
 // Common authentication function to use across all methods
 async function authenticateRequest(req: NextRequest) {
@@ -50,27 +52,39 @@ async function authenticateRequest(req: NextRequest) {
   }
   
   console.log('Token available:', token ? 'Yes' : 'No');
+  console.log('Token value:', token);
   
-  // Verify the token by finding the user
-  const user = await prisma.user.findFirst({
-    where: {
-      etpToken: token
+  try {
+    // Verify the token by finding the user
+    const user = await prisma.user.findFirst({
+      where: {
+        etpToken: token
+      }
+    });
+    
+    console.log('User found:', user ? 'Yes' : 'No');
+    
+    if (!user) {
+      return { 
+        authenticated: false, 
+        error: {
+          message: 'No user found with the provided token',
+          status: 401
+        }
+      };
     }
-  });
-  
-  console.log('User found:', user ? 'Yes' : 'No');
-  
-  if (!user) {
-    return { 
-      authenticated: false, 
+    
+    return { authenticated: true, user };
+  } catch (error) {
+    console.error('Prisma error during authentication:', error);
+    return {
+      authenticated: false,
       error: {
-        message: 'No user found with the provided token',
-        status: 401
+        message: 'Database error during authentication',
+        status: 500
       }
     };
   }
-  
-  return { authenticated: true, user };
 }
 
 export async function POST(req: NextRequest) {
@@ -141,6 +155,9 @@ export async function POST(req: NextRequest) {
       error: 'Failed to store orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
+  } finally {
+    // Disconnect Prisma client to prevent connection pool issues
+    await prisma.$disconnect();
   }
 }
 
@@ -222,6 +239,9 @@ export async function GET(req: NextRequest) {
       error: 'Failed to retrieve orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
+  } finally {
+    // Disconnect Prisma client to prevent connection pool issues
+    await prisma.$disconnect();
   }
 }
 
@@ -258,5 +278,8 @@ export async function DELETE(req: NextRequest) {
       error: 'Failed to delete orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 });
+  } finally {
+    // Disconnect Prisma client to prevent connection pool issues
+    await prisma.$disconnect();
   }
 } 
