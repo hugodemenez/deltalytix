@@ -4,31 +4,62 @@ import { createClient } from '@/server/auth'
 
 export async function POST(req: NextRequest) {
   try {
-    // Extract the token from the Authorization header
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Log all headers for debugging
+    console.log('POST - All request headers:');
+    const headerEntries = Array.from(req.headers.entries());
+    console.log(JSON.stringify(headerEntries, null, 2));
+    
+    // Try multiple ways to get the authorization header
+    const authHeader = req.headers.get('authorization') || 
+                       req.headers.get('Authorization') || 
+                       req.headers.get('Proxy-Authorization');
+    
+    console.log('Auth header found:', authHeader ? 'Yes' : 'No');
+    
+    // Check for token in query params as fallback
+    const url = new URL(req.url);
+    const queryToken = url.searchParams.get('token');
+    
+    if ((!authHeader || !authHeader.startsWith('Bearer ')) && !queryToken) {
+      console.log('No valid authorization method found');
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: 'No valid authorization header or token parameter found'
+      }, { status: 401 });
     }
     
-    const token = authHeader.split(' ')[1]
+    // Extract token from either header or query param
+    let token;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+      console.log('Using token from Authorization header');
+    } else if (queryToken) {
+      token = queryToken;
+      console.log('Using token from query parameter');
+    }
     
     // Verify the token by finding the user
     const user = await prisma.user.findFirst({
       where: {
         etpToken: token
       }
-    })
+    });
+    
+    console.log('User found:', user ? 'Yes' : 'No');
     
     if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      return NextResponse.json({ 
+        error: 'Invalid token', 
+        message: 'No user found with the provided token'
+      }, { status: 401 });
     }
     
     // Parse the request body
-    const body = await req.json()
-    const { orders } = body
+    const body = await req.json();
+    const { orders } = body;
     
     if (!orders || !Array.isArray(orders) || orders.length === 0) {
-      return NextResponse.json({ error: 'Invalid orders data' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid orders data' }, { status: 400 });
     }
     
     // Process and store each order
@@ -61,52 +92,84 @@ export async function POST(req: NextRequest) {
             instrumentType: order.Instrument.Type,
             userId: user.id
           }
-        })
+        });
       })
-    )
+    );
+    
+    console.log(`Orders stored: ${createdOrders.length}`);
     
     return NextResponse.json({ 
       success: true, 
       message: `${createdOrders.length} orders stored successfully` 
-    })
+    });
     
   } catch (error) {
-    console.error('Error storing orders:', error)
+    console.error('Error storing orders:', error);
     return NextResponse.json({ 
       error: 'Failed to store orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 })
+    }, { status: 500 });
   }
 }
 
 export async function GET(req: NextRequest) {
   try {
-    // Extract the token from the Authorization header
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Log all headers for debugging
+    console.log('GET - All request headers:');
+    const headerEntries = Array.from(req.headers.entries());
+    console.log(JSON.stringify(headerEntries, null, 2));
+    
+    // Try multiple ways to get the authorization header
+    const authHeader = req.headers.get('authorization') || 
+                       req.headers.get('Authorization') || 
+                       req.headers.get('Proxy-Authorization');
+    
+    console.log('Auth header found:', authHeader ? 'Yes' : 'No');
+    
+    // Check for token in query params as fallback
+    const url = new URL(req.url);
+    const queryToken = url.searchParams.get('token');
+    
+    if ((!authHeader || !authHeader.startsWith('Bearer ')) && !queryToken) {
+      console.log('No valid authorization method found');
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: 'No valid authorization header or token parameter found'
+      }, { status: 401 });
     }
     
-    const token = authHeader.split(' ')[1]
+    // Extract token from either header or query param
+    let token;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+      console.log('Using token from Authorization header');
+    } else if (queryToken) {
+      token = queryToken;
+      console.log('Using token from query parameter');
+    }
     
     // Verify the token by finding the user
     const user = await prisma.user.findFirst({
       where: {
         etpToken: token
       }
-    })
+    });
+    
+    console.log('User found:', user ? 'Yes' : 'No');
     
     if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      return NextResponse.json({ 
+        error: 'Invalid token', 
+        message: 'No user found with the provided token'
+      }, { status: 401 });
     }
     
     // Get query parameters
-    const url = new URL(req.url)
-    const accountId = url.searchParams.get('accountId')
-    const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 100
-    const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0
-    const fromDate = url.searchParams.get('from')
-    const toDate = url.searchParams.get('to')
+    const accountId = url.searchParams.get('accountId');
+    const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 100;
+    const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
+    const fromDate = url.searchParams.get('from');
+    const toDate = url.searchParams.get('to');
     
     // Build the query
     const query: any = {
@@ -118,32 +181,34 @@ export async function GET(req: NextRequest) {
       },
       take: limit,
       skip: offset
-    }
+    };
     
     // Add filters if provided
     if (accountId) {
-      query.where.accountId = accountId
+      query.where.accountId = accountId;
     }
     
     if (fromDate || toDate) {
-      query.where.time = {}
+      query.where.time = {};
       
       if (fromDate) {
-        query.where.time.gte = new Date(fromDate)
+        query.where.time.gte = new Date(fromDate);
       }
       
       if (toDate) {
-        query.where.time.lte = new Date(toDate)
+        query.where.time.lte = new Date(toDate);
       }
     }
     
     // Get orders
-    const orders = await prisma.order.findMany(query)
+    const orders = await prisma.order.findMany(query);
     
     // Get total count for pagination
     const totalCount = await prisma.order.count({
       where: query.where
-    })
+    });
+    
+    console.log(`Orders retrieved: ${orders.length}, total: ${totalCount}`);
     
     return NextResponse.json({ 
       success: true, 
@@ -155,36 +220,69 @@ export async function GET(req: NextRequest) {
           offset
         }
       }
-    })
+    });
     
   } catch (error) {
-    console.error('Error retrieving orders:', error)
+    console.error('Error retrieving orders:', error);
     return NextResponse.json({ 
       error: 'Failed to retrieve orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 })
+    }, { status: 500 });
   }
 }
 
 export async function DELETE(req: NextRequest) {
   try {
-    // Extract the token from the Authorization header
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Log all headers for debugging
+    console.log('All request headers:');
+    const headerEntries = Array.from(req.headers.entries());
+    console.log(JSON.stringify(headerEntries, null, 2));
+    
+    // Try multiple ways to get the authorization header
+    const authHeader = req.headers.get('authorization') || 
+                       req.headers.get('Authorization') || 
+                       req.headers.get('Proxy-Authorization');
+    
+    console.log('Auth header found:', authHeader ? 'Yes' : 'No');
+    
+    // Check for token in query params as fallback
+    const url = new URL(req.url);
+    const queryToken = url.searchParams.get('token');
+    
+    if ((!authHeader || !authHeader.startsWith('Bearer ')) && !queryToken) {
+      console.log('No valid authorization method found');
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: 'No valid authorization header or token parameter found'
+      }, { status: 401 });
     }
     
-    const token = authHeader.split(' ')[1]
+    // Extract token from either header or query param
+    let token;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+      console.log('Using token from Authorization header');
+    } else if (queryToken) {
+      token = queryToken;
+      console.log('Using token from query parameter');
+    }
+    
+    console.log('Token available:', token ? 'Yes' : 'No');
     
     // Verify the token by finding the user
     const user = await prisma.user.findFirst({
       where: {
         etpToken: token
       }
-    })
+    });
+    
+    console.log('User found:', user ? 'Yes' : 'No');
     
     if (!user) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+      return NextResponse.json({ 
+        error: 'Invalid token', 
+        message: 'No user found with the provided token'
+      }, { status: 401 });
     }
     
     // Delete all orders for this user
@@ -192,18 +290,20 @@ export async function DELETE(req: NextRequest) {
       where: {
         userId: user.id
       }
-    })
+    });
+    
+    console.log(`Orders deleted: ${result.count}`);
     
     return NextResponse.json({
       success: true,
       message: `${result.count} orders deleted successfully`
-    })
+    });
     
   } catch (error) {
-    console.error('Error deleting orders:', error)
+    console.error('Error deleting orders:', error);
     return NextResponse.json({ 
       error: 'Failed to delete orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 })
+    }, { status: 500 });
   }
 } 
