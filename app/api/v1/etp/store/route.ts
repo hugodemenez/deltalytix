@@ -2,57 +2,89 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/server/auth'
 
+// Common authentication function to use across all methods
+async function authenticateRequest(req: NextRequest) {
+  // Log all headers for debugging
+  console.log('All request headers:');
+  const headerEntries = Array.from(req.headers.entries());
+  console.log(JSON.stringify(headerEntries, null, 2));
+  
+  // Try multiple ways to get the authorization header
+  const authHeader = req.headers.get('authorization') || 
+                     req.headers.get('Authorization') || 
+                     req.headers.get('Proxy-Authorization');
+  
+  // Check for Vercel proxy signature which contains the token in production
+  const vercelProxySignature = req.headers.get('x-vercel-proxy-signature');
+  
+  console.log('Auth header found:', authHeader ? 'Yes' : 'No');
+  console.log('Vercel proxy signature found:', vercelProxySignature ? 'Yes' : 'No');
+  
+  // Check for token in query params as fallback
+  const url = new URL(req.url);
+  const queryToken = url.searchParams.get('token');
+  
+  // Extract token from available sources
+  let token;
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+    console.log('Using token from Authorization header');
+  } else if (vercelProxySignature && vercelProxySignature.startsWith('Bearer ')) {
+    token = vercelProxySignature.split(' ')[1];
+    console.log('Using token from x-vercel-proxy-signature header');
+  } else if (queryToken) {
+    token = queryToken;
+    console.log('Using token from query parameter');
+  }
+  
+  if (!token) {
+    console.log('No valid authorization method found');
+    return { 
+      authenticated: false, 
+      error: {
+        message: 'No valid authorization token found',
+        status: 401
+      }
+    };
+  }
+  
+  console.log('Token available:', token ? 'Yes' : 'No');
+  
+  // Verify the token by finding the user
+  const user = await prisma.user.findFirst({
+    where: {
+      etpToken: token
+    }
+  });
+  
+  console.log('User found:', user ? 'Yes' : 'No');
+  
+  if (!user) {
+    return { 
+      authenticated: false, 
+      error: {
+        message: 'No user found with the provided token',
+        status: 401
+      }
+    };
+  }
+  
+  return { authenticated: true, user };
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Log all headers for debugging
-    console.log('POST - All request headers:');
-    const headerEntries = Array.from(req.headers.entries());
-    console.log(JSON.stringify(headerEntries, null, 2));
+    const auth = await authenticateRequest(req);
     
-    // Try multiple ways to get the authorization header
-    const authHeader = req.headers.get('authorization') || 
-                       req.headers.get('Authorization') || 
-                       req.headers.get('Proxy-Authorization');
-    
-    console.log('Auth header found:', authHeader ? 'Yes' : 'No');
-    
-    // Check for token in query params as fallback
-    const url = new URL(req.url);
-    const queryToken = url.searchParams.get('token');
-    
-    if ((!authHeader || !authHeader.startsWith('Bearer ')) && !queryToken) {
-      console.log('No valid authorization method found');
+    if (!auth.authenticated) {
       return NextResponse.json({ 
         error: 'Unauthorized', 
-        message: 'No valid authorization header or token parameter found'
-      }, { status: 401 });
+        message: auth.error?.message 
+      }, { status: auth.error?.status || 401 });
     }
     
-    // Extract token from either header or query param
-    let token;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-      console.log('Using token from Authorization header');
-    } else if (queryToken) {
-      token = queryToken;
-      console.log('Using token from query parameter');
-    }
-    
-    // Verify the token by finding the user
-    const user = await prisma.user.findFirst({
-      where: {
-        etpToken: token
-      }
-    });
-    
-    console.log('User found:', user ? 'Yes' : 'No');
-    
-    if (!user) {
-      return NextResponse.json({ 
-        error: 'Invalid token', 
-        message: 'No user found with the provided token'
-      }, { status: 401 });
-    }
+    const user = auth.user!;
     
     // Parse the request body
     const body = await req.json();
@@ -114,57 +146,19 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    // Log all headers for debugging
-    console.log('GET - All request headers:');
-    const headerEntries = Array.from(req.headers.entries());
-    console.log(JSON.stringify(headerEntries, null, 2));
+    const auth = await authenticateRequest(req);
     
-    // Try multiple ways to get the authorization header
-    const authHeader = req.headers.get('authorization') || 
-                       req.headers.get('Authorization') || 
-                       req.headers.get('Proxy-Authorization');
-    
-    console.log('Auth header found:', authHeader ? 'Yes' : 'No');
-    
-    // Check for token in query params as fallback
-    const url = new URL(req.url);
-    const queryToken = url.searchParams.get('token');
-    
-    if ((!authHeader || !authHeader.startsWith('Bearer ')) && !queryToken) {
-      console.log('No valid authorization method found');
+    if (!auth.authenticated) {
       return NextResponse.json({ 
         error: 'Unauthorized', 
-        message: 'No valid authorization header or token parameter found'
-      }, { status: 401 });
+        message: auth.error?.message 
+      }, { status: auth.error?.status || 401 });
     }
     
-    // Extract token from either header or query param
-    let token;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-      console.log('Using token from Authorization header');
-    } else if (queryToken) {
-      token = queryToken;
-      console.log('Using token from query parameter');
-    }
-    
-    // Verify the token by finding the user
-    const user = await prisma.user.findFirst({
-      where: {
-        etpToken: token
-      }
-    });
-    
-    console.log('User found:', user ? 'Yes' : 'No');
-    
-    if (!user) {
-      return NextResponse.json({ 
-        error: 'Invalid token', 
-        message: 'No user found with the provided token'
-      }, { status: 401 });
-    }
+    const user = auth.user!;
     
     // Get query parameters
+    const url = new URL(req.url);
     const accountId = url.searchParams.get('accountId');
     const limit = url.searchParams.get('limit') ? parseInt(url.searchParams.get('limit')!) : 100;
     const offset = url.searchParams.get('offset') ? parseInt(url.searchParams.get('offset')!) : 0;
@@ -233,57 +227,16 @@ export async function GET(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    // Log all headers for debugging
-    console.log('All request headers:');
-    const headerEntries = Array.from(req.headers.entries());
-    console.log(JSON.stringify(headerEntries, null, 2));
+    const auth = await authenticateRequest(req);
     
-    // Try multiple ways to get the authorization header
-    const authHeader = req.headers.get('authorization') || 
-                       req.headers.get('Authorization') || 
-                       req.headers.get('Proxy-Authorization');
-    
-    console.log('Auth header found:', authHeader ? 'Yes' : 'No');
-    
-    // Check for token in query params as fallback
-    const url = new URL(req.url);
-    const queryToken = url.searchParams.get('token');
-    
-    if ((!authHeader || !authHeader.startsWith('Bearer ')) && !queryToken) {
-      console.log('No valid authorization method found');
+    if (!auth.authenticated) {
       return NextResponse.json({ 
         error: 'Unauthorized', 
-        message: 'No valid authorization header or token parameter found'
-      }, { status: 401 });
+        message: auth.error?.message 
+      }, { status: auth.error?.status || 401 });
     }
     
-    // Extract token from either header or query param
-    let token;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-      console.log('Using token from Authorization header');
-    } else if (queryToken) {
-      token = queryToken;
-      console.log('Using token from query parameter');
-    }
-    
-    console.log('Token available:', token ? 'Yes' : 'No');
-    
-    // Verify the token by finding the user
-    const user = await prisma.user.findFirst({
-      where: {
-        etpToken: token
-      }
-    });
-    
-    console.log('User found:', user ? 'Yes' : 'No');
-    
-    if (!user) {
-      return NextResponse.json({ 
-        error: 'Invalid token', 
-        message: 'No user found with the provided token'
-      }, { status: 401 });
-    }
+    const user = auth.user!;
     
     // Delete all orders for this user
     const result = await prisma.order.deleteMany({
