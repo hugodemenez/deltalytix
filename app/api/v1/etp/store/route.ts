@@ -1,11 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
 
 // Create a new PrismaClient instance for this API route
 const prisma = new PrismaClient()
 
 // Common authentication function to use across all methods
-async function authenticateRequest(req: NextRequest) {
+async function authenticateRequest(req: Request) {
   // Log all headers for debugging
   console.log('All request headers:');
   const headerEntries = Array.from(req.headers.entries());
@@ -87,15 +86,15 @@ async function authenticateRequest(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
     const auth = await authenticateRequest(req);
     
     if (!auth.authenticated) {
-      return NextResponse.json({ 
+      return new Response(JSON.stringify({ 
         error: 'Unauthorized', 
         message: auth.error?.message 
-      }, { status: auth.error?.status || 401 });
+      }), { status: auth.error?.status || 401 });
     }
     
     const user = auth.user!;
@@ -105,7 +104,7 @@ export async function POST(req: NextRequest) {
     const { orders } = body;
     
     if (!orders || !Array.isArray(orders) || orders.length === 0) {
-      return NextResponse.json({ error: 'Invalid orders data' }, { status: 400 });
+      return new Response(JSON.stringify({ error: 'Invalid orders data' }), { status: 400 });
     }
     
     // Process and store each order
@@ -144,32 +143,32 @@ export async function POST(req: NextRequest) {
     
     console.log(`Orders stored: ${createdOrders.length}`);
     
-    return NextResponse.json({ 
+    return new Response(JSON.stringify({ 
       success: true, 
       message: `${createdOrders.length} orders stored successfully` 
-    });
+    }), { status: 200 });
     
   } catch (error) {
     console.error('Error storing orders:', error);
-    return NextResponse.json({ 
+    return new Response(JSON.stringify({ 
       error: 'Failed to store orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 });
+    }), { status: 500 });
   } finally {
     // Disconnect Prisma client to prevent connection pool issues
     await prisma.$disconnect();
   }
 }
 
-export async function GET(req: NextRequest) {
+export async function GET(req: Request) {
   try {
     const auth = await authenticateRequest(req);
     
     if (!auth.authenticated) {
-      return NextResponse.json({ 
+      return new Response(JSON.stringify({ 
         error: 'Unauthorized', 
         message: auth.error?.message 
-      }, { status: auth.error?.status || 401 });
+      }), { status: auth.error?.status || 401 });
     }
     
     const user = auth.user!;
@@ -221,7 +220,7 @@ export async function GET(req: NextRequest) {
     
     console.log(`Orders retrieved: ${orders.length}, total: ${totalCount}`);
     
-    return NextResponse.json({ 
+    return new Response(JSON.stringify({ 
       success: true, 
       data: {
         orders,
@@ -231,29 +230,29 @@ export async function GET(req: NextRequest) {
           offset
         }
       }
-    });
+    }), { status: 200 });
     
   } catch (error) {
     console.error('Error retrieving orders:', error);
-    return NextResponse.json({ 
+    return new Response(JSON.stringify({ 
       error: 'Failed to retrieve orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 });
+    }), { status: 500 });
   } finally {
     // Disconnect Prisma client to prevent connection pool issues
     await prisma.$disconnect();
   }
 }
 
-export async function DELETE(req: NextRequest) {
+export async function DELETE(req: Request) {
   try {
     const auth = await authenticateRequest(req);
     
     if (!auth.authenticated) {
-      return NextResponse.json({ 
+      return new Response(JSON.stringify({ 
         error: 'Unauthorized', 
         message: auth.error?.message 
-      }, { status: auth.error?.status || 401 });
+      }), { status: auth.error?.status || 401 });
     }
     
     const user = auth.user!;
@@ -267,17 +266,17 @@ export async function DELETE(req: NextRequest) {
     
     console.log(`Orders deleted: ${result.count}`);
     
-    return NextResponse.json({
+    return new Response(JSON.stringify({
       success: true,
       message: `${result.count} orders deleted successfully`
-    });
+    }), { status: 200 });
     
   } catch (error) {
     console.error('Error deleting orders:', error);
-    return NextResponse.json({ 
+    return new Response(JSON.stringify({ 
       error: 'Failed to delete orders', 
       details: error instanceof Error ? error.message : 'Unknown error' 
-    }, { status: 500 });
+    }), { status: 500 });
   } finally {
     // Disconnect Prisma client to prevent connection pool issues
     await prisma.$disconnect();
