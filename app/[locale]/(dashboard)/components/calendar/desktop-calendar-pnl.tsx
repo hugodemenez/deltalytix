@@ -113,20 +113,23 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
   }
 
   return (
-    <HoverCard>
-      <HoverCardTrigger asChild>
+    <Popover>
+      <PopoverTrigger asChild>
         <Badge 
           variant="outline" 
           className={cn(
             "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 border-none w-8 justify-center items-center",
-            "bg-red-200 text-red-500 dark:bg-red-900 dark:text-red-400"
+            "bg-red-200 text-red-500 dark:bg-red-900 dark:text-red-400",
+            "transition-all duration-200 ease-in-out",
+            "hover:scale-110 hover:shadow-md hover:shadow-red-200/50 dark:hover:shadow-red-900/50",
+            "active:scale-95"
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {highImpactEvents.length}
         </Badge>
-      </HoverCardTrigger>
-      <HoverCardContent 
+      </PopoverTrigger>
+      <PopoverContent 
         className="w-80 p-2 z-50" 
         align="start"
         side="right"
@@ -180,8 +183,8 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
             ))}
           </div>
         </div>
-      </HoverCardContent>
-    </HoverCard>
+      </PopoverContent>
+    </Popover>
   )
 }
 
