@@ -242,6 +242,9 @@ model FinancialEvent {
   type        String   // FOMC, NFP, GDP, etc.
   description String?
   sourceUrl   String?  // URL to the event details
+  country     String?  // Country of the event (e.g., "United States", "Australia")
+  lang        String   @default("fr") // Language of the event (e.g., "fr", "en")
+  timezone    String   @default("UTC") // Timezone of the event (e.g., "UTC", "America/New_York")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

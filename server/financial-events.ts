@@ -36,9 +36,10 @@ export async function syncFinancialEvents(date: Date = new Date()): Promise<Fina
  * Events are ordered by date ascending and filtered to the month containing the input date.
  * 
  * @param date - Target date (defaults to current date). Used to fetch events for the entire month containing this date
+ * @param locale - Language locale (defaults to 'fr'). Used to filter events by language
  * @returns Promise<FinancialEvent[]> - Array of financial events for the month
  */
-export async function getFinancialEvents(date: Date = new Date()): Promise<FinancialEvent[]> {
+export async function getFinancialEvents(date: Date = new Date(), locale: string = 'fr'): Promise<FinancialEvent[]> {
   try {
     const monthStart = startOfMonth(date)
     const monthEnd = endOfMonth(date)
@@ -48,7 +49,8 @@ export async function getFinancialEvents(date: Date = new Date()): Promise<Finan
         date: {
           gte: monthStart,
           lte: monthEnd
-        }
+        },
+        lang: locale
       },
       orderBy: {
         date: 'asc'

@@ -100,6 +100,18 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
   const highImpactEvents = events.filter(e => e.importance === 'HIGH')
   if (highImpactEvents.length === 0) return null
 
+  // Function to format event time based on timezone
+  const formatEventTime = (date: Date) => {
+    try {
+      // First convert the UTC date to user's timezone
+      const localTime = formatInTimeZone(date, timezone, 'HH:mm', { locale: dateLocale })
+      return localTime
+    } catch (error) {
+      console.error('Error formatting event time:', error)
+      return '--:--'
+    }
+  }
+
   return (
     <HoverCard>
       <HoverCardTrigger asChild>
@@ -135,7 +147,7 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{event.title}</div>
                   <div className="text-muted-foreground text-[11px]">
-                    {formatInTimeZone(event.date, timezone, 'HH:mm', { locale: dateLocale })}
+                    {formatEventTime(event.date)}
                   </div>
                   {event.description && (
                     <div className="text-muted-foreground text-[11px] line-clamp-2">
@@ -194,7 +206,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   useEffect(() => {
     const fetchEvents = async () => {
       try {
-        const events = await getFinancialEvents(currentDate)
+        const events = await getFinancialEvents(currentDate, locale)
         if (Array.isArray(events)) {
           setMonthEvents(events)
         } else {
@@ -212,7 +224,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       }
     }
     fetchEvents()
-  }, [currentDate])
+  }, [currentDate, locale])
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
@@ -251,13 +263,35 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
     return monthEvents.filter(event => {
       if (!event.date) return false;
       try {
-        return formatInTimeZone(event.date, timezone, 'yyyy-MM-dd') === formatInTimeZone(date, timezone, 'yyyy-MM-dd');
+        // Create new Date objects to avoid modifying the originals
+        const eventDateObj = new Date(event.date)
+        const compareDateObj = new Date(date)
+        
+        // Set hours to start of day
+        eventDateObj.setHours(0, 0, 0, 0)
+        compareDateObj.setHours(0, 0, 0, 0)
+        
+        // Format dates in the user's timezone
+        const eventDate = formatInTimeZone(eventDateObj, timezone, 'yyyy-MM-dd')
+        const compareDate = formatInTimeZone(compareDateObj, timezone, 'yyyy-MM-dd')
+        
+        console.log('Comparing dates:', {
+          eventDate,
+          compareDate,
+          timezone,
+          originalEventDate: event.date,
+          originalCompareDate: date,
+          eventDateObj: eventDateObj.toISOString(),
+          compareDateObj: compareDateObj.toISOString()
+        })
+        
+        return eventDate === compareDate
       } catch (error) {
-        console.error('Error parsing event date:', error);
-        return false;
+        console.error('Error parsing event date:', error)
+        return false
       }
-    });
-  };
+    })
+  }
 
   const calculateWeeklyTotal = React.useCallback((index: number, calendarDays: Date[], calendarData: CalendarData) => {
     const startOfWeekIndex = index - 6
