@@ -164,4 +164,46 @@ export async function GET(req: NextRequest) {
       details: error instanceof Error ? error.message : 'Unknown error' 
     }, { status: 500 })
   }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    // Extract the token from the Authorization header
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const token = authHeader.split(' ')[1]
+    
+    // Verify the token by finding the user
+    const user = await prisma.user.findFirst({
+      where: {
+        etpToken: token
+      }
+    })
+    
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    }
+    
+    // Delete all orders for this user
+    const result = await prisma.order.deleteMany({
+      where: {
+        userId: user.id
+      }
+    })
+    
+    return NextResponse.json({
+      success: true,
+      message: `${result.count} orders deleted successfully`
+    })
+    
+  } catch (error) {
+    console.error('Error deleting orders:', error)
+    return NextResponse.json({ 
+      error: 'Failed to delete orders', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 })
+  }
 } 

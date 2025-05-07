@@ -212,4 +212,96 @@ export async function getFilteredOrders(filters: OrderFilters = {}) {
       error: error instanceof Error ? error.message : 'Unknown error' 
     }
   }
+}
+
+export async function deleteOrder(orderId: string) {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('Unauthorized')
+  }
+
+  try {
+    const userData = await prisma.user.findUnique({
+      where: {
+        auth_user_id: user.id
+      },
+      select: {
+        id: true
+      }
+    })
+
+    if (!userData) {
+      throw new Error('User not found')
+    }
+
+    // Check if the order exists and belongs to the user
+    const order = await prisma.order.findFirst({
+      where: {
+        orderId,
+        userId: userData.id
+      }
+    })
+
+    if (!order) {
+      throw new Error('Order not found or not authorized to delete')
+    }
+
+    // Delete the order
+    await prisma.order.delete({
+      where: {
+        orderId
+      }
+    })
+
+    revalidatePath('/dashboard')
+    return { success: true, message: 'Order deleted successfully' }
+  } catch (error) {
+    console.error('Failed to delete order:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }
+  }
+}
+
+export async function deleteAllOrders() {
+  const supabase = await createClient()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    throw new Error('Unauthorized')
+  }
+
+  try {
+    const userData = await prisma.user.findUnique({
+      where: {
+        auth_user_id: user.id
+      },
+      select: {
+        id: true
+      }
+    })
+
+    if (!userData) {
+      throw new Error('User not found')
+    }
+
+    // Delete all orders for this user
+    const result = await prisma.order.deleteMany({
+      where: {
+        userId: userData.id
+      }
+    })
+
+    revalidatePath('/dashboard')
+    return { success: true, message: `${result.count} orders deleted successfully` }
+  } catch (error) {
+    console.error('Failed to delete orders:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    }
+  }
 } 
