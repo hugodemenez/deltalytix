@@ -262,7 +262,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
 
   const monthlyTotal = calculateMonthlyTotal()
 
-  const getEventsForDate = (date: Date) => {
+  const getEventsForDate = React.useCallback((date: Date) => {
     return monthEvents.filter(event => {
       if (!event.date) return false;
       try {
@@ -278,23 +278,13 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
         const eventDate = formatInTimeZone(eventDateObj, timezone, 'yyyy-MM-dd')
         const compareDate = formatInTimeZone(compareDateObj, timezone, 'yyyy-MM-dd')
         
-        console.log('Comparing dates:', {
-          eventDate,
-          compareDate,
-          timezone,
-          originalEventDate: event.date,
-          originalCompareDate: date,
-          eventDateObj: eventDateObj.toISOString(),
-          compareDateObj: compareDateObj.toISOString()
-        })
-        
         return eventDate === compareDate
       } catch (error) {
         console.error('Error parsing event date:', error)
         return false
       }
     })
-  }
+  }, [monthEvents, timezone])
 
   const calculateWeeklyTotal = React.useCallback((index: number, calendarDays: Date[], calendarData: CalendarData) => {
     const startOfWeekIndex = index - 6
