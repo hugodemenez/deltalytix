@@ -170,7 +170,7 @@ export function TradeProgressChart({
     <div className="w-full space-y-2">
       <ChartContainer
         config={chartConfig}
-        className={cn("h-[300px] w-full", className)}
+        className={cn("h-[200px] w-full", className)}
       >
         {chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -189,6 +189,7 @@ export function TradeProgressChart({
                 tickLine={false}
                 axisLine={true}
                 tickMargin={8}
+                tick={false}
               />
               <YAxis
                 tickFormatter={(value) => `$${value.toLocaleString()}`}
@@ -199,26 +200,34 @@ export function TradeProgressChart({
                 axisLine={true}
               />
               <Tooltip
+                cursor={{ stroke: '#666', strokeWidth: 1, strokeDasharray: '3 3' }}
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     const data = payload[0].payload as ChartDataPoint;
                     return (
-                      <div className="bg-background p-2 border rounded shadow-sm">
-                        <p className="text-sm font-medium">
-                          {t('propFirm.chart.tradeNumber', { number: data.tradeIndex })}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{data.date}</p>
-                        <p className="text-sm">
-                          {t('propFirm.chart.balanceAmount', { amount: data.balance.toLocaleString() })}
-                        </p>
-                        {!data.isPayout && (
-                          <p className="text-sm">
-                            {t('propFirm.chart.pnlAmount', { amount: data.pnl.toLocaleString() })}
-                          </p>
-                        )}
+                      <div className="bg-background/80 backdrop-blur-lg p-2 border rounded shadow-sm text-xs space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">#{data.tradeIndex}</span>
+                          <span className="text-muted-foreground">{data.date}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-blue-600">${data.balance.toLocaleString()}</span>
+                          {!data.isPayout && (
+                            <span className={cn(
+                              "text-sm",
+                              data.pnl >= 0 ? "text-green-600" : "text-red-600"
+                            )}>
+                              {data.pnl >= 0 ? '+' : ''}{data.pnl.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-red-600">DD: ${data.drawdownLevel.toLocaleString()}</span>
+                          <span className="text-blue-600">High: ${data.highestBalance.toLocaleString()}</span>
+                        </div>
                         {data.isPayout && data.payoutStatus && (
-                          <p className={cn(
-                            "text-sm font-medium",
+                          <div className={cn(
+                            "flex items-center gap-2",
                             {
                               "text-gray-500": data.payoutStatus === 'PENDING',
                               "text-orange-500": data.payoutStatus === 'VALIDATED',
@@ -226,16 +235,10 @@ export function TradeProgressChart({
                               "text-green-500": data.payoutStatus === 'PAID',
                             }
                           )}>
-                            {t('propFirm.chart.payoutAmount', { amount: data.payoutAmount.toLocaleString() })}
-                            {` (${data.payoutStatus.toLowerCase()})`}
-                          </p>
+                            <span>${data.payoutAmount.toLocaleString()}</span>
+                            <span className="text-xs">({data.payoutStatus.toLowerCase()})</span>
+                          </div>
                         )}
-                        <p className="text-sm text-red-600">
-                          {t('propFirm.chart.drawdownAmount', { amount: data.drawdownLevel.toLocaleString() })}
-                        </p>
-                        <p className="text-sm text-blue-600">
-                          {t('propFirm.chart.highestBalance', { amount: data.highestBalance.toLocaleString() })}
-                        </p>
                       </div>
                     )
                   }

@@ -23,6 +23,8 @@ export interface PropFirmAccount {
   accountSizeName?: string
   price?: number
   priceWithPromo?: number
+  promoType?: 'direct' | 'percentage'
+  promoPercentage?: number
   evaluation?: boolean
   minDays?: number
   dailyLoss?: number

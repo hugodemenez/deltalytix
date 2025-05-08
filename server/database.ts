@@ -199,7 +199,6 @@ export async function loadDashboardLayout(userId: string): Promise<Layouts | nul
 }
 
 export async function saveDashboardLayout(userId: string, layouts: Layouts): Promise<Layouts | null> {
-  console.log('[saveDashboardLayout] Saving layout:', { userId, layouts })
   if (!userId || !layouts) {
     console.error('[saveDashboardLayout] Invalid input:', { userId, hasLayouts: !!layouts })
     return null

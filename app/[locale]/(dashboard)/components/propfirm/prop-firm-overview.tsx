@@ -664,81 +664,88 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
         >
           {/* Group accounts by their groups */}
           <div className="mt-4">
-            {groups.map(group => {
-              // Filter accounts for this group
-              const groupAccounts = propFirmAccounts.filter(account => {
-                // Find the account in the group's accounts
-                return group.accounts.some(a => a.number === account.accountNumber);
-              });
+            <div className="flex gap-4 flex-wrap">
+              {groups.map(group => {
+                // Filter accounts for this group
+                const groupAccounts = propFirmAccounts.filter(account => {
+                  // Find the account in the group's accounts
+                  return group.accounts.some(a => a.number === account.accountNumber);
+                });
 
-              // Skip groups with no accounts
-              if (groupAccounts.length === 0) return null;
+                // Skip groups with no accounts
+                if (groupAccounts.length === 0) return null;
 
-              return (
-                <div key={group.id} className="mb-6">
-                  <h3 className="text-base font-medium mb-3">{group.name}</h3>
-                  <div className={cn(
-                    "grid grid-cols-1 gap-3", 
-                    size === "medium" ? "sm:grid-cols-1" : 
-                    size === "large" ? "sm:grid-cols-2" : 
-                    "sm:grid-cols-4"
-                  )}>
-                    {groupAccounts.map(account => {
-                      const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
-                      const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
-                      return (
-                        <PropFirmCard
-                          key={account.accountNumber}
-                          account={account}
-                          trades={accountTrades}
-                          metrics={metrics}
-                          onClick={() => setSelectedAccountForTable(account)}
-                        />
-                      )
-                    })}
+                return (
+                  <div 
+                    key={group.id} 
+                    className={cn(
+                      "bg-muted/50 rounded-lg p-4 w-fit",
+                    )}
+                  >
+                    <h3 className="text-base font-medium mb-3">{group.name}</h3>
+                    <div className={cn(
+                      "flex flex-1 gap-4", 
+                    )}>
+                      {groupAccounts.map(account => {
+                        const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
+                        const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+                        return (
+                          <PropFirmCard
+                            key={account.accountNumber}
+                            account={account}
+                            trades={accountTrades}
+                            metrics={metrics}
+                            onClick={() => setSelectedAccountForTable(account)}
+                          />
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
 
-            {/* Show ungrouped accounts */}
-            {(() => {
-              const groupedAccountNumbers = new Set(
-                groups.flatMap(group => group.accounts.map(a => a.number))
-              );
-              
-              const ungroupedAccounts = propFirmAccounts.filter(
-                account => !groupedAccountNumbers.has(account.accountNumber)
-              );
+              {/* Show ungrouped accounts */}
+              {(() => {
+                const groupedAccountNumbers = new Set(
+                  groups.flatMap(group => group.accounts.map(a => a.number))
+                );
+                
+                const ungroupedAccounts = propFirmAccounts.filter(
+                  account => !groupedAccountNumbers.has(account.accountNumber)
+                );
 
-              if (ungroupedAccounts.length === 0) return null;
+                if (ungroupedAccounts.length === 0) return null;
 
-              return (
-                <div className="mb-6">
-                  <h3 className="text-base font-medium mb-3">{t('propFirm.ungrouped')}</h3>
-                  <div className={cn(
-                    "grid grid-cols-1 gap-3", 
-                    size === "medium" ? "sm:grid-cols-1" : 
-                    size === "large" ? "sm:grid-cols-2" : 
-                    "sm:grid-cols-4"
-                  )}>
-                    {ungroupedAccounts.map(account => {
-                      const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
-                      const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
-                      return (
-                        <PropFirmCard
-                          key={account.accountNumber}
-                          account={account}
-                          trades={accountTrades}
-                          metrics={metrics}
-                          onClick={() => setSelectedAccountForTable(account)}
-                        />
-                      )
-                    })}
+                return (
+                  <div 
+                    className={cn(
+                      "bg-muted/50 rounded-lg p-4 w-fit",
+                    )}
+                  >
+                    <h3 className="text-base font-medium mb-3">{t('propFirm.ungrouped')}</h3>
+                    <div className={cn(
+                      "flex flex-wrap gap-4", 
+                    )}>
+                      {ungroupedAccounts.map(account => {
+                        const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
+                        const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+                        return (
+                          <div className='w-44'>
+                          <PropFirmCard
+                            key={account.accountNumber}
+                            account={account}
+                            trades={accountTrades}
+                            metrics={metrics}
+                            onClick={() => setSelectedAccountForTable(account)}
+                          />
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })()}
+                );
+              })()}
+            </div>
           </div>
         </div>
 
@@ -746,7 +753,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
           open={!!selectedAccountForTable}
           onOpenChange={(open) => !open && setSelectedAccountForTable(null)}
         >
-          <DialogContent className="max-w-7xl h-[80vh] flex flex-col">
+          <DialogContent className="max-w-7xl h-[80vh] flex flex-col overflow-y-auto">
             <DialogHeader className="p-6 pb-4 flex-none border-b">
               <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
@@ -798,74 +805,82 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                 </div>
 
                 {selectedAccountForTable && (
-                  <PropFirmConfigurator
-                    account={selectedAccountForTable}
-                    onUpdate={(updatedAccount) => {
-                      setSelectedAccountForTable(updatedAccount)
-                    }}
-                    onDelete={() => {
-                      setSelectedAccountForTable(null)
-                    }}
-                    onAccountsUpdate={(accounts) => {
-                      setDbAccounts(accounts)
-                    }}
-                  />
+                  <Tabs 
+                    defaultValue={selectedAccountForTable.profitTarget === 0 ? "configurator" : "table"}
+                    className="w-full"
+                  >
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="table">Table</TabsTrigger>
+                      <TabsTrigger value="configurator">Configurator</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="table" className="mt-4">
+                      <AccountTable
+                        accountNumber={selectedAccountForTable.accountNumber}
+                        startingBalance={selectedAccountForTable.startingBalance}
+                        profitTarget={selectedAccountForTable.profitTarget}
+                        dailyMetrics={dailyMetrics}
+                        consistencyPercentage={selectedAccountForTable.consistencyPercentage}
+                        resetDate={selectedAccountForTable.resetDate ? new Date(selectedAccountForTable.resetDate) : undefined}
+                        onDeletePayout={async (payoutId) => {
+                          try {
+                            await deletePayout(payoutId)
+
+                            // Reload the accounts data
+                            const accounts = await getPropFirmAccounts(user!.id)
+                            setDbAccounts(accounts)
+
+                            // Update the selected account with new data
+                            const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.accountNumber)
+                            if (updatedDbAccount) {
+                              setSelectedAccountForTable({
+                                ...selectedAccountForTable,
+                                payouts: updatedDbAccount.payouts || []
+                              })
+                            }
+
+                            toast({
+                              title: t('propFirm.payout.deleteSuccess'),
+                              description: t('propFirm.payout.deleteSuccessDescription'),
+                              variant: "default"
+                            })
+                          } catch (error) {
+                            console.error('Failed to delete payout:', error)
+                            toast({
+                              title: t('propFirm.payout.deleteError'),
+                              description: t('propFirm.payout.deleteErrorDescription'),
+                              variant: "destructive"
+                            })
+                          }
+                        }}
+                        onEditPayout={(payout) => {
+                          setSelectedPayout({
+                            id: payout.id,
+                            date: new Date(payout.date),
+                            amount: payout.amount,
+                            status: payout.status
+                          })
+                          setPayoutDialogOpen(true)
+                        }}
+                      />
+                    </TabsContent>
+                    <TabsContent value="configurator" className="mt-4">
+                      <PropFirmConfigurator
+                        account={selectedAccountForTable}
+                        onUpdate={(updatedAccount) => {
+                          setSelectedAccountForTable(updatedAccount)
+                        }}
+                        onDelete={() => {
+                          setSelectedAccountForTable(null)
+                        }}
+                        onAccountsUpdate={(accounts) => {
+                          setDbAccounts(accounts)
+                        }}
+                      />
+                    </TabsContent>
+                  </Tabs>
                 )}
               </div>
             </DialogHeader>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              {selectedAccountForTable && (
-                <AccountTable
-                  accountNumber={selectedAccountForTable.accountNumber}
-                  startingBalance={selectedAccountForTable.startingBalance}
-                  profitTarget={selectedAccountForTable.profitTarget}
-                  dailyMetrics={dailyMetrics}
-                  consistencyPercentage={selectedAccountForTable.consistencyPercentage}
-                  resetDate={selectedAccountForTable.resetDate ? new Date(selectedAccountForTable.resetDate) : undefined}
-                  onDeletePayout={async (payoutId) => {
-                    try {
-                      await deletePayout(payoutId)
-
-                      // Reload the accounts data
-                      const accounts = await getPropFirmAccounts(user!.id)
-                      setDbAccounts(accounts)
-
-                      // Update the selected account with new data
-                      const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.accountNumber)
-                      if (updatedDbAccount) {
-                        setSelectedAccountForTable({
-                          ...selectedAccountForTable,
-                          payouts: updatedDbAccount.payouts || []
-                        })
-                      }
-
-                      toast({
-                        title: t('propFirm.payout.deleteSuccess'),
-                        description: t('propFirm.payout.deleteSuccessDescription'),
-                        variant: "default"
-                      })
-                    } catch (error) {
-                      console.error('Failed to delete payout:', error)
-                      toast({
-                        title: t('propFirm.payout.deleteError'),
-                        description: t('propFirm.payout.deleteErrorDescription'),
-                        variant: "destructive"
-                      })
-                    }
-                  }}
-                  onEditPayout={(payout) => {
-                    setSelectedPayout({
-                      id: payout.id,
-                      date: new Date(payout.date),
-                      amount: payout.amount,
-                      status: payout.status
-                    })
-                    setPayoutDialogOpen(true)
-                  }}
-                />
-              )}
-            </div>
           </DialogContent>
         </Dialog>
       </CardContent>

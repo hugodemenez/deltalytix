@@ -100,7 +100,7 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
 
   return (
     <Card
-      className="flex flex-col cursor-pointer hover:border-primary/50 transition-colors"
+      className="w-96 flex flex-col cursor-pointer hover:border-primary/50 transition-colors"
       onClick={onClick}
     >
       <CardHeader className="flex-none p-3 pb-2">
@@ -218,18 +218,14 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
                       metrics.isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
                   </span>
                 </div>
-                {metrics.hasProfitableData && metrics.highestProfitDay !== undefined && (
-                  <>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{t('propFirm.card.maxAllowedDailyProfit')}</span>
-                      <span>${metrics.maxAllowedDailyProfit?.toFixed(2) || '0.00'}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{t('propFirm.card.highestDailyProfit')}</span>
-                      <span>${metrics.highestProfitDay.toFixed(2)}</span>
-                    </div>
-                  </>
-                )}
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{t('propFirm.card.maxAllowedDailyProfit')}</span>
+                  <span>${metrics.maxAllowedDailyProfit?.toFixed(2) || '-'}</span>
+                </div>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>{t('propFirm.card.highestDailyProfit')}</span>
+                  <span>${metrics.highestProfitDay?.toFixed(2) || '-'}</span>
+                </div>
               </div>
             )}
           </div>
