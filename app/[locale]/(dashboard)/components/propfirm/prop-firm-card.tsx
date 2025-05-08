@@ -21,6 +21,8 @@ interface PropFirmCardProps {
   metrics?: {
     hasProfitableData: boolean
     isConsistent: boolean
+    highestProfitDay?: number
+    maxAllowedDailyProfit?: number | null
   }
   onClick?: () => void
 }
@@ -201,6 +203,35 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
                 {t('propFirm.card.maxLoss', { amount: account.drawdownThreshold.toFixed(2) })}
               </p>
             </div>
+
+            {/* Consistency Section */}
+            {metrics && (
+              <div className="space-y-1 pt-2 border-t">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">{t('propFirm.card.consistency')}</span>
+                  <span className={cn(
+                    "font-medium",
+                    !metrics.hasProfitableData ? "text-muted-foreground italic" :
+                      metrics.isConsistent ? "text-success" : "text-destructive"
+                  )}>
+                    {!metrics.hasProfitableData ? t('propFirm.status.unprofitable') :
+                      metrics.isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
+                  </span>
+                </div>
+                {metrics.hasProfitableData && metrics.highestProfitDay !== undefined && (
+                  <>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{t('propFirm.card.maxAllowedDailyProfit')}</span>
+                      <span>${metrics.maxAllowedDailyProfit?.toFixed(2) || '0.00'}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{t('propFirm.card.highestDailyProfit')}</span>
+                      <span>${metrics.highestProfitDay.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground text-center pt-2">

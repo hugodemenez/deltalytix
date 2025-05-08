@@ -658,231 +658,89 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
         </div>
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden">
-        <Tabs defaultValue="overview" className="h-full flex flex-col">
-          <TabsList className="flex-none">
-            <TabsTrigger value="overview">{t('propFirm.tabs.overview')}</TabsTrigger>
-            <TabsTrigger value="consistency">{t('propFirm.tabs.consistency')}</TabsTrigger>
-          </TabsList>
-          <TabsContent value="overview" className="flex-1 overflow-hidden data-[state=active]:flex flex-col">
-            <div
-              className="flex-1 overflow-y-auto h-full"
-              style={{ height: 'calc(100% - 1rem)' }}
-            >
-              {/* Group accounts by their groups */}
-              <div className="mt-4">
-                {groups.map(group => {
-                  // Filter accounts for this group
-                  const groupAccounts = propFirmAccounts.filter(account => {
-                    // Find the account in the group's accounts
-                    return group.accounts.some(a => a.number === account.accountNumber);
-                  });
+        <div
+          className="flex-1 overflow-y-auto h-full"
+          style={{ height: 'calc(100% - 1rem)' }}
+        >
+          {/* Group accounts by their groups */}
+          <div className="mt-4">
+            {groups.map(group => {
+              // Filter accounts for this group
+              const groupAccounts = propFirmAccounts.filter(account => {
+                // Find the account in the group's accounts
+                return group.accounts.some(a => a.number === account.accountNumber);
+              });
 
-                  // Skip groups with no accounts
-                  if (groupAccounts.length === 0) return null;
+              // Skip groups with no accounts
+              if (groupAccounts.length === 0) return null;
 
-                  return (
-                    <div key={group.id} className="mb-6">
-                      <h3 className="text-base font-medium mb-3">{group.name}</h3>
-                      <div className={cn(
-                        "grid grid-cols-1 gap-3", 
-                        size === "medium" ? "sm:grid-cols-1" : 
-                        size === "large" ? "sm:grid-cols-2" : 
-                        "sm:grid-cols-4"
-                      )}>
-                        {groupAccounts.map(account => {
-                          const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
-                          const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
-                          return (
-                            <PropFirmCard
-                              key={account.accountNumber}
-                              account={account}
-                              trades={accountTrades}
-                              metrics={metrics}
-                              onClick={() => setSelectedAccountForTable(account)}
-                            />
-                          )
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Show ungrouped accounts */}
-                {(() => {
-                  const groupedAccountNumbers = new Set(
-                    groups.flatMap(group => group.accounts.map(a => a.number))
-                  );
-                  
-                  const ungroupedAccounts = propFirmAccounts.filter(
-                    account => !groupedAccountNumbers.has(account.accountNumber)
-                  );
-
-                  if (ungroupedAccounts.length === 0) return null;
-
-                  return (
-                    <div className="mb-6">
-                      <h3 className="text-base font-medium mb-3">{t('propFirm.ungrouped')}</h3>
-                      <div className={cn(
-                        "grid grid-cols-1 gap-3", 
-                        size === "medium" ? "sm:grid-cols-1" : 
-                        size === "large" ? "sm:grid-cols-2" : 
-                        "sm:grid-cols-4"
-                      )}>
-                        {ungroupedAccounts.map(account => {
-                          const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
-                          const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
-                          return (
-                            <PropFirmCard
-                              key={account.accountNumber}
-                              account={account}
-                              trades={accountTrades}
-                              metrics={metrics}
-                              onClick={() => setSelectedAccountForTable(account)}
-                            />
-                          )
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="consistency" className="flex-1 overflow-hidden data-[state=active]:flex flex-col">
-            <div
-              className="flex-1 overflow-y-auto h-full"
-              style={{ height: 'calc(100% - 1rem)' }}
-            >
-              <div className="rounded-md border mt-4">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px]">{t('consistency.account')}</TableHead>
-                      <TableHead className="text-right">{t('consistency.maxAllowedDailyProfit')}</TableHead>
-                      <TableHead className="text-right">{t('consistency.highestDailyProfit')}</TableHead>
-                      <TableHead className="text-right">{t('consistency.modal.percentageOfTotal')}</TableHead>
-                      <TableHead className="text-right">{t('consistency.status')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {consistencyMetrics.map(metrics => {
-                      if (!metrics.isConfigured) {
-                        return (
-                          <TableRow key={metrics.accountNumber}>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-muted" />
-                                {metrics.accountNumber}
-                              </div>
-                            </TableCell>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground">
-                              <div className="flex items-center justify-center gap-2">
-                                <Info className="h-4 w-4" />
-                                {t('propFirm.setup.configureFirst.title')}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )
-                      }
-
-                      const shouldHighlight = metrics.hasProfitableData && !metrics.isConsistent
-                      const isInsufficientData = !metrics.hasProfitableData
-                      const highestProfitPercentage = metrics.totalProfit > 0
-                        ? (metrics.highestProfitDay / metrics.totalProfit) * 100
-                        : 0
-
+              return (
+                <div key={group.id} className="mb-6">
+                  <h3 className="text-base font-medium mb-3">{group.name}</h3>
+                  <div className={cn(
+                    "grid grid-cols-1 gap-3", 
+                    size === "medium" ? "sm:grid-cols-1" : 
+                    size === "large" ? "sm:grid-cols-2" : 
+                    "sm:grid-cols-4"
+                  )}>
+                    {groupAccounts.map(account => {
+                      const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
+                      const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
                       return (
-                        <TableRow
-                          key={metrics.accountNumber}
-                          className={cn(
-                            "cursor-pointer hover:bg-muted/50",
-                            !metrics.isConsistent && metrics.hasProfitableData && "bg-destructive/5",
-                            !metrics.hasProfitableData && "bg-muted/30"
-                          )}
-                          onClick={() => setSelectedAccount(metrics)}
-                        >
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className={cn(
-                                "h-2 w-2 rounded-full",
-                                isInsufficientData ? "bg-muted" :
-                                  shouldHighlight ? "bg-destructive" : "bg-green-500"
-                              )} />
-                              {metrics.accountNumber}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {metrics.maxAllowedDailyProfit ? `$${metrics.maxAllowedDailyProfit.toFixed(2)}` : '-'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            ${metrics.highestProfitDay.toFixed(2)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {highestProfitPercentage > 0 ? `${highestProfitPercentage.toFixed(1)}%` : '-'}
-                          </TableCell>
-                          <TableCell className={cn(
-                            "text-right font-medium",
-                            isInsufficientData ? "text-muted-foreground italic" :
-                              !metrics.isConsistent ? "text-destructive" : "text-green-500"
-                          )}>
-                            {!metrics?.hasProfitableData ? t('propFirm.status.unprofitable') :
-                              metrics?.isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
-                          </TableCell>
-                        </TableRow>
+                        <PropFirmCard
+                          key={account.accountNumber}
+                          account={account}
+                          trades={accountTrades}
+                          metrics={metrics}
+                          onClick={() => setSelectedAccountForTable(account)}
+                        />
                       )
                     })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+                  </div>
+                </div>
+              );
+            })}
 
-        <Dialog open={!!selectedAccount} onOpenChange={(open) => !open && setSelectedAccount(null)}>
-          <DialogContent className="max-w-7xl h-[80vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedAccount && t('consistency.modal.title', { account: selectedAccount.accountNumber })}
-              </DialogTitle>
-              <DialogDescription>
-                {t('consistency.modal.description')}
-              </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4 overflow-y-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('consistency.modal.date')}</TableHead>
-                    <TableHead className="text-right">{t('consistency.modal.pnl')}</TableHead>
-                    <TableHead className="text-right">{t('consistency.modal.percentageOfTotal')}</TableHead>
-                    <TableHead className="text-right">{t('consistency.status')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dailyPnLPercentages.map(({ date, pnl, percentageOfTotal, isConsistent }) => (
-                    <TableRow
-                      key={date}
-                      className={cn(
-                        !isConsistent && "bg-destructive/5"
-                      )}
-                    >
-                      <TableCell>{format(new Date(date), 'PP')}</TableCell>
-                      <TableCell className="text-right">${pnl.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{percentageOfTotal.toFixed(1)}%</TableCell>
-                      <TableCell className={cn(
-                        "text-right font-medium",
-                        isConsistent ? "text-green-500" : "text-destructive"
-                      )}>
-                        {isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </DialogContent>
-        </Dialog>
+            {/* Show ungrouped accounts */}
+            {(() => {
+              const groupedAccountNumbers = new Set(
+                groups.flatMap(group => group.accounts.map(a => a.number))
+              );
+              
+              const ungroupedAccounts = propFirmAccounts.filter(
+                account => !groupedAccountNumbers.has(account.accountNumber)
+              );
+
+              if (ungroupedAccounts.length === 0) return null;
+
+              return (
+                <div className="mb-6">
+                  <h3 className="text-base font-medium mb-3">{t('propFirm.ungrouped')}</h3>
+                  <div className={cn(
+                    "grid grid-cols-1 gap-3", 
+                    size === "medium" ? "sm:grid-cols-1" : 
+                    size === "large" ? "sm:grid-cols-2" : 
+                    "sm:grid-cols-4"
+                  )}>
+                    {ungroupedAccounts.map(account => {
+                      const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
+                      const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+                      return (
+                        <PropFirmCard
+                          key={account.accountNumber}
+                          account={account}
+                          trades={accountTrades}
+                          metrics={metrics}
+                          onClick={() => setSelectedAccountForTable(account)}
+                        />
+                      )
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
 
         <Dialog
           open={!!selectedAccountForTable}

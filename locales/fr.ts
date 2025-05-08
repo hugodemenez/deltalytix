@@ -625,7 +625,10 @@ export default {
             drawdownBreached: 'Drawdown dépassé',
             maxLoss: 'Perte max : ${amount}',
             needsConfiguration: 'Le compte doit être configuré',
-            daysBeforeReset: ' jours avant réinitialisation'
+            daysBeforeReset: ' jours avant réinitialisation',
+            consistency: 'Cohérence',
+            highestDailyProfit: 'Plus Haut Profit Journalier',
+            maxAllowedDailyProfit: 'Profit Journalier Maximum Autorisé'
         },
         ungrouped: 'Non regroupé',
         tabs: {
