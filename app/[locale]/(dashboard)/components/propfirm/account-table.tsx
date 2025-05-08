@@ -3,10 +3,11 @@
 import { format } from "date-fns"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
-import { useI18n } from "@/locales/client"
+import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { fr, enUS } from 'date-fns/locale'
 
 interface DailyMetric {
   date: Date
@@ -46,6 +47,8 @@ export function AccountTable({
   onEditPayout
 }: AccountTableProps) {
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const dateLocale = locale === 'fr' ? fr : enUS
 
   // Check if account is configured and has no pending changes
   const isConfigured = profitTarget > 0 && startingBalance > 0 && !hasPendingChanges
@@ -136,7 +139,7 @@ export function AccountTable({
 
     return (
       <TableRow key={metric.date.toISOString()}>
-        <TableCell>{format(metric.date, 'PP')}</TableCell>
+        <TableCell>{format(metric.date, 'PP', { locale: dateLocale })}</TableCell>
         <TableCell className={cn(
           "text-right font-medium",
           metric.pnl > 0 ? "text-green-500" : metric.pnl < 0 ? "text-destructive" : ""
@@ -296,7 +299,7 @@ export function AccountTable({
           <div className="flex items-center justify-between">
             <div>
               <div className="font-medium">{t('propFirm.resetDate.label')}</div>
-              <div className="text-sm text-muted-foreground">{format(resetDate, 'PP')}</div>
+              <div className="text-sm text-muted-foreground">{format(resetDate, 'PP', { locale: dateLocale })}</div>
             </div>
             <div className="text-right">
               <div className="text-sm text-muted-foreground">{t('propFirm.startingBalance')}</div>
