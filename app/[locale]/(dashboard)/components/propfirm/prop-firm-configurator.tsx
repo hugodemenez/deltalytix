@@ -324,7 +324,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                           <div className="flex flex-col">
                             <span>{accountSize.name}</span>
                             <span className="text-xs text-muted-foreground">
-                              {accountSize.balance.toLocaleString()} - {accountSize.target}% Target
+                              {accountSize.balance.toLocaleString()} - {accountSize.target}$ Target
                             </span>
                           </div>
                         </CommandItem>
