@@ -754,133 +754,133 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
           onOpenChange={(open) => !open && setSelectedAccountForTable(null)}
         >
           <DialogContent className="max-w-7xl h-[80vh] flex flex-col overflow-y-auto">
-            <DialogHeader className="p-6 pb-4 flex-none border-b">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <DialogTitle>{t('propFirm.configurator.title', { accountNumber: selectedAccountForTable?.accountNumber })}</DialogTitle>
-                    <DialogDescription>{t('propFirm.configurator.description')}</DialogDescription>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedPayout(undefined)
-                        setPayoutDialogOpen(true)
-                      }}
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      {t('propFirm.payout.add')}
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          disabled={isDeleting || !canDeleteAccount}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          {t('common.delete')}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t('propFirm.delete.title')}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t('propFirm.delete.description', { account: selectedAccountForTable?.accountNumber })}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleDelete}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            {isDeleting ? t('common.deleting') : t('common.delete')}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+            <DialogHeader className="pb-4 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle>{t('propFirm.configurator.title', { accountNumber: selectedAccountForTable?.accountNumber })}</DialogTitle>
+                  <DialogDescription>{t('propFirm.configurator.description')}</DialogDescription>
                 </div>
-
-                {selectedAccountForTable && (
-                  <Tabs 
-                    defaultValue={selectedAccountForTable.profitTarget === 0 ? "configurator" : "table"}
-                    className="w-full"
+                <div className="flex items-center gap-2 pr-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedPayout(undefined)
+                      setPayoutDialogOpen(true)
+                    }}
                   >
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="table">Table</TabsTrigger>
-                      <TabsTrigger value="configurator">Configurator</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="table" className="mt-4">
-                      <AccountTable
-                        accountNumber={selectedAccountForTable.accountNumber}
-                        startingBalance={selectedAccountForTable.startingBalance}
-                        profitTarget={selectedAccountForTable.profitTarget}
-                        dailyMetrics={dailyMetrics}
-                        consistencyPercentage={selectedAccountForTable.consistencyPercentage}
-                        resetDate={selectedAccountForTable.resetDate ? new Date(selectedAccountForTable.resetDate) : undefined}
-                        onDeletePayout={async (payoutId) => {
-                          try {
-                            await deletePayout(payoutId)
-
-                            // Reload the accounts data
-                            const accounts = await getPropFirmAccounts(user!.id)
-                            setDbAccounts(accounts)
-
-                            // Update the selected account with new data
-                            const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.accountNumber)
-                            if (updatedDbAccount) {
-                              setSelectedAccountForTable({
-                                ...selectedAccountForTable,
-                                payouts: updatedDbAccount.payouts || []
-                              })
-                            }
-
-                            toast({
-                              title: t('propFirm.payout.deleteSuccess'),
-                              description: t('propFirm.payout.deleteSuccessDescription'),
-                              variant: "default"
-                            })
-                          } catch (error) {
-                            console.error('Failed to delete payout:', error)
-                            toast({
-                              title: t('propFirm.payout.deleteError'),
-                              description: t('propFirm.payout.deleteErrorDescription'),
-                              variant: "destructive"
-                            })
-                          }
-                        }}
-                        onEditPayout={(payout) => {
-                          setSelectedPayout({
-                            id: payout.id,
-                            date: new Date(payout.date),
-                            amount: payout.amount,
-                            status: payout.status
-                          })
-                          setPayoutDialogOpen(true)
-                        }}
-                      />
-                    </TabsContent>
-                    <TabsContent value="configurator" className="mt-4">
-                      <PropFirmConfigurator
-                        account={selectedAccountForTable}
-                        onUpdate={(updatedAccount) => {
-                          setSelectedAccountForTable(updatedAccount)
-                        }}
-                        onDelete={() => {
-                          setSelectedAccountForTable(null)
-                        }}
-                        onAccountsUpdate={(accounts) => {
-                          setDbAccounts(accounts)
-                        }}
-                      />
-                    </TabsContent>
-                  </Tabs>
-                )}
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('propFirm.payout.add')}
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={isDeleting || !canDeleteAccount}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        {t('common.delete')}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{t('propFirm.delete.title')}</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('propFirm.delete.description', { account: selectedAccountForTable?.accountNumber })}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          {isDeleting ? t('common.deleting') : t('common.delete')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </DialogHeader>
+            
+            <div className="p-6 pt-4 flex-1 overflow-y-auto">
+              {selectedAccountForTable && (
+                <Tabs 
+                  defaultValue={selectedAccountForTable.profitTarget === 0 ? "configurator" : "table"}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="table">Table</TabsTrigger>
+                    <TabsTrigger value="configurator">Configurator</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="table" className="mt-4">
+                    <AccountTable
+                      accountNumber={selectedAccountForTable.accountNumber}
+                      startingBalance={selectedAccountForTable.startingBalance}
+                      profitTarget={selectedAccountForTable.profitTarget}
+                      dailyMetrics={dailyMetrics}
+                      consistencyPercentage={selectedAccountForTable.consistencyPercentage}
+                      resetDate={selectedAccountForTable.resetDate ? new Date(selectedAccountForTable.resetDate) : undefined}
+                      onDeletePayout={async (payoutId) => {
+                        try {
+                          await deletePayout(payoutId)
+
+                          // Reload the accounts data
+                          const accounts = await getPropFirmAccounts(user!.id)
+                          setDbAccounts(accounts)
+
+                          // Update the selected account with new data
+                          const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.accountNumber)
+                          if (updatedDbAccount) {
+                            setSelectedAccountForTable({
+                              ...selectedAccountForTable,
+                              payouts: updatedDbAccount.payouts || []
+                            })
+                          }
+
+                          toast({
+                            title: t('propFirm.payout.deleteSuccess'),
+                            description: t('propFirm.payout.deleteSuccessDescription'),
+                            variant: "default"
+                          })
+                        } catch (error) {
+                          console.error('Failed to delete payout:', error)
+                          toast({
+                            title: t('propFirm.payout.deleteError'),
+                            description: t('propFirm.payout.deleteErrorDescription'),
+                            variant: "destructive"
+                          })
+                        }
+                      }}
+                      onEditPayout={(payout) => {
+                        setSelectedPayout({
+                          id: payout.id,
+                          date: new Date(payout.date),
+                          amount: payout.amount,
+                          status: payout.status
+                        })
+                        setPayoutDialogOpen(true)
+                      }}
+                    />
+                  </TabsContent>
+                  <TabsContent value="configurator" className="mt-4">
+                    <PropFirmConfigurator
+                      account={selectedAccountForTable}
+                      onUpdate={(updatedAccount) => {
+                        setSelectedAccountForTable(updatedAccount)
+                      }}
+                      onDelete={() => {
+                        setSelectedAccountForTable(null)
+                      }}
+                      onAccountsUpdate={(accounts) => {
+                        setDbAccounts(accounts)
+                      }}
+                    />
+                  </TabsContent>
+                </Tabs>
+              )}
+            </div>
           </DialogContent>
         </Dialog>
       </CardContent>
