@@ -613,7 +613,13 @@ export default {
         location: "Localisation",
         lastSync: "Dernière Synchro",
         nextSync: "Prochaine Synchro",
-        actions: "Actions",
+        actions: {
+            title: "Actions",
+            sync: "Synchroniser",
+            edit: "Modifier",
+            delete: "Supprimer",
+            loadMore: "Charger Plus"
+        },
         noSavedCredentials: "Aucun identifiant sauvegardé",
         deleteCredentials: "Supprimer les Identifiants",
         deleteCredentialsConfirm: "Êtes-vous sûr de vouloir supprimer ces identifiants ? Cette action ne peut pas être annulée.",
@@ -635,7 +641,8 @@ export default {
             timeout: "La connexion a expiré. Veuillez vérifier vos identifiants et réessayer.",
             invalidCredentials: "Identifiants invalides. Veuillez vérifier votre nom d'utilisateur et votre mot de passe.",
             rateLimit: "Limite d'essais atteinte. Veuillez patienter avant de réessayer.",
-            syncError: "Une erreur est survenue lors de la synchronisation. Veuillez réessayer."
+            syncError: "Une erreur est survenue lors de la synchronisation. Veuillez réessayer.",
+            authError: "Authentification échouée. Veuillez vérifier vos identifiants et réessayer."
         },
         credentials: {
             updated: "Identifiants Mis à Jour",

@@ -852,7 +852,13 @@ export default {
         location: "Location",
         lastSync: "Last Sync",
         nextSync: "Next Sync",
-        actions: "Actions",
+        actions: {
+            title: "Actions",
+            sync: "Sync",
+            edit: "Edit",
+            delete: "Delete",
+            loadMore: "Load More"
+        },
         noSavedCredentials: "No saved credentials",
         deleteCredentials: "Delete Credentials",
         deleteCredentialsConfirm: "Are you sure you want to delete these credentials? This action cannot be undone.",
@@ -874,7 +880,8 @@ export default {
             timeout: "Connection timed out. Please check your credentials and try again.",
             invalidCredentials: "Invalid credentials. Please check your username and password.",
             rateLimit: "Rate limit exceeded. Please wait before trying again.",
-            syncError: "An error occurred during synchronization. Please try again."
+            syncError: "An error occurred during synchronization. Please try again.",
+            authError: "Authentication failed. Please check your credentials and try again.",
         },
         editCredentials: "Edit Credentials",
         addNewCredentials: "Add New Credentials",
