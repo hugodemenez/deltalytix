@@ -532,7 +532,7 @@ export const platforms: PlatformConfig[] = [
       path: '/logos/etp.png',
       alt: 'ETP Logo'
     },
-    isComingSoon: true,
+    // isComingSoon: true,
     customComponent: EtpSync,
     steps: [
       {
