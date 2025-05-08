@@ -730,7 +730,6 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                         const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
                         const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
                         return (
-                          <div className='w-44'>
                           <PropFirmCard
                             key={account.accountNumber}
                             account={account}
@@ -738,7 +737,6 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                             metrics={metrics}
                             onClick={() => setSelectedAccountForTable(account)}
                           />
-                          </div>
                         )
                       })}
                     </div>
