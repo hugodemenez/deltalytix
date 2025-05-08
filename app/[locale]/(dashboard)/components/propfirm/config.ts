@@ -798,7 +798,7 @@ export const propFirms: Record<string, PropFirm> = {
         priceWithPromo: 16,
         evaluation: true,
         minDays: 1,
-        target: 3000,
+        target: 4000,
         dailyLoss: 1000,
         drawdown: 2500,
         rulesDailyLoss: 'No',
