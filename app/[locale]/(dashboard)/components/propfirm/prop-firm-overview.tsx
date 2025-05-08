@@ -668,20 +668,83 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
               className="flex-1 overflow-y-auto h-full"
               style={{ height: 'calc(100% - 1rem)' }}
             >
-              <div className={cn("grid grid-cols-1 gap-3 mt-4", size === "medium" ? "sm:grid-cols-1" : size === "large" ? "sm:grid-cols-2" : "sm:grid-cols-4")}>
-                {propFirmAccounts.map(account => {
-                  const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
-                  const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+              {/* Group accounts by their groups */}
+              <div className="mt-4">
+                {groups.map(group => {
+                  // Filter accounts for this group
+                  const groupAccounts = propFirmAccounts.filter(account => {
+                    // Find the account in the group's accounts
+                    return group.accounts.some(a => a.number === account.accountNumber);
+                  });
+
+                  // Skip groups with no accounts
+                  if (groupAccounts.length === 0) return null;
+
                   return (
-                    <PropFirmCard
-                      key={account.accountNumber}
-                      account={account}
-                      trades={accountTrades}
-                      metrics={metrics}
-                      onClick={() => setSelectedAccountForTable(account)}
-                    />
-                  )
+                    <div key={group.id} className="mb-6">
+                      <h3 className="text-base font-medium mb-3">{group.name}</h3>
+                      <div className={cn(
+                        "grid grid-cols-1 gap-3", 
+                        size === "medium" ? "sm:grid-cols-1" : 
+                        size === "large" ? "sm:grid-cols-2" : 
+                        "sm:grid-cols-4"
+                      )}>
+                        {groupAccounts.map(account => {
+                          const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
+                          const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+                          return (
+                            <PropFirmCard
+                              key={account.accountNumber}
+                              account={account}
+                              trades={accountTrades}
+                              metrics={metrics}
+                              onClick={() => setSelectedAccountForTable(account)}
+                            />
+                          )
+                        })}
+                      </div>
+                    </div>
+                  );
                 })}
+
+                {/* Show ungrouped accounts */}
+                {(() => {
+                  const groupedAccountNumbers = new Set(
+                    groups.flatMap(group => group.accounts.map(a => a.number))
+                  );
+                  
+                  const ungroupedAccounts = propFirmAccounts.filter(
+                    account => !groupedAccountNumbers.has(account.accountNumber)
+                  );
+
+                  if (ungroupedAccounts.length === 0) return null;
+
+                  return (
+                    <div className="mb-6">
+                      <h3 className="text-base font-medium mb-3">{t('propFirm.ungrouped')}</h3>
+                      <div className={cn(
+                        "grid grid-cols-1 gap-3", 
+                        size === "medium" ? "sm:grid-cols-1" : 
+                        size === "large" ? "sm:grid-cols-2" : 
+                        "sm:grid-cols-4"
+                      )}>
+                        {ungroupedAccounts.map(account => {
+                          const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
+                          const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+                          return (
+                            <PropFirmCard
+                              key={account.accountNumber}
+                              account={account}
+                              trades={accountTrades}
+                              metrics={metrics}
+                              onClick={() => setSelectedAccountForTable(account)}
+                            />
+                          )
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </TabsContent>

@@ -3,6 +3,7 @@ import landing from './en/landing'
 import pricing from './en/pricing'
 import auth from './en/auth'
 import dropzone from './en/dropzone'
+import mindset from './en/mindset'
 
 export default {
     ...shared,
@@ -10,6 +11,7 @@ export default {
     ...pricing,
     ...auth,
     ...dropzone,
+    ...mindset,
     'navbar.features': 'Features',
     'navbar.dataImport': 'Data Import',
     'navbar.performanceVisualization': 'Performance Visualization',
@@ -880,6 +882,7 @@ export default {
             needsConfiguration: 'Account needs to be configured',
             daysBeforeReset: ' days before reset'
         },
+        ungrouped: 'Ungrouped',
         tabs: {
             overview: 'Overview',
             consistency: 'Consistency'

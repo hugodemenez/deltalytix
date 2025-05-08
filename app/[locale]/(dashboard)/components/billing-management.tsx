@@ -113,9 +113,9 @@ export default function BillingManagement() {
           <CardHeader className="px-0">
             <CardTitle>{t('billing.currentPlan')}</CardTitle>
             <div className="mt-1.5 text-sm text-muted-foreground flex items-center gap-2">
-              <Skeleton className="h-4 w-[100px]" /> {/* Plan name */}
+              <Skeleton className="h-4 w-[120px]" /> {/* Plan name */}
               <span className="text-muted-foreground">•</span>
-              <Skeleton className="h-4 w-[60px]" /> {/* Status */}
+              <Skeleton className="h-4 w-[100px]" /> {/* Status */}
             </div>
           </CardHeader>
           <CardContent className="px-0">
@@ -123,11 +123,10 @@ export default function BillingManagement() {
               {/* Current Plan Details */}
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="space-y-2">
-                  <Skeleton className="h-8 w-[100px]" /> {/* Price */}
-                  <div className="flex items-center gap-2">
-                    <Skeleton className="h-4 w-[140px]" /> {/* Billing interval */}
-                  </div>
+                  <Skeleton className="h-8 w-[140px]" /> {/* Price */}
+                  <Skeleton className="h-4 w-[160px]" /> {/* Billing interval */}
                 </div>
+                <Skeleton className="h-8 w-[200px]" /> {/* Trial badge */}
               </div>
 
               {/* Subscription Timeline */}
@@ -135,16 +134,16 @@ export default function BillingManagement() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="flex items-start gap-2">
                     <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
+                    <div className="w-full">
                       <div className="font-medium">Active Since</div>
-                      <Skeleton className="h-4 w-[120px] mt-1" />
+                      <Skeleton className="h-4 w-[180px] mt-1" />
                     </div>
                   </div>
                   <div className="flex items-start gap-2">
                     <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
+                    <div className="w-full">
                       <div className="font-medium">Current Period</div>
-                      <Skeleton className="h-4 w-[200px] mt-1" />
+                      <Skeleton className="h-4 w-[240px] mt-1" />
                     </div>
                   </div>
                 </div>
@@ -155,13 +154,37 @@ export default function BillingManagement() {
 
         {/* Subscription Management */}
         <Card className="border-none shadow-none bg-transparent">
-          <CardHeader className="px-0">
-            <CardTitle>{t('billing.manageSubscription')}</CardTitle>
-            <CardDescription>{t('billing.manageSubscriptionDesc')}</CardDescription>
-          </CardHeader>
           <CardContent className="px-0">
             <div className="flex flex-wrap gap-4">
-              <Skeleton className="h-10 w-[150px]" /> {/* Action button */}
+              <Skeleton className="h-10 w-[180px]" /> {/* Cancel button */}
+              <Skeleton className="h-10 w-[200px]" /> {/* Manage payment button */}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment History */}
+        <Card className="border-none shadow-none bg-transparent">
+          <CardHeader className="px-0">
+            <CardTitle>{t('billing.paymentHistory')}</CardTitle>
+            <CardDescription>{t('billing.paymentHistoryDesc')}</CardDescription>
+          </CardHeader>
+          <CardContent className="px-0">
+            <div className="rounded-lg border bg-card">
+              <div className="p-4 space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-[100px]" /> {/* Amount */}
+                      <Skeleton className="h-4 w-[140px]" /> {/* Date */}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-6 w-[100px]" /> {/* Status badge */}
+                      <Skeleton className="h-8 w-[120px]" /> {/* View invoice button */}
+                      <Skeleton className="h-8 w-[120px]" /> {/* Download PDF button */}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -186,22 +209,32 @@ export default function BillingManagement() {
         <CardHeader className="px-0">
           <CardTitle>{t('billing.currentPlan')}</CardTitle>
           <div className="mt-1.5 text-sm text-muted-foreground flex items-center gap-2">
-            <span>{subscription?.plan?.name || t('pricing.basic.name')}</span>
-            <span className="text-muted-foreground">•</span>
-            {subscription?.status === 'active' ? (
-              <span className="text-green-500 dark:text-green-400 inline-flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {t('billing.status.active')}
-              </span>
-            ) : subscription?.cancel_at_period_end ? (
-              <span className="text-yellow-500 dark:text-yellow-400 inline-flex items-center gap-1">
-                <Clock className="h-3.5 w-3.5" />
-                {t('billing.scheduledToCancel')}
-              </span>
+            {isLoading ? (
+              <>
+                <Skeleton className="h-4 w-[120px]" />
+                <span className="text-muted-foreground">•</span>
+                <Skeleton className="h-4 w-[100px]" />
+              </>
             ) : (
-              <span className="text-gray-500 dark:text-gray-400">
-                {subscription?.status ? t(`billing.status.${subscription.status as SubscriptionStatus}`) : t('billing.notApplicable')}
-              </span>
+              <>
+                <span>{subscription?.plan?.name || t('pricing.basic.name')}</span>
+                <span className="text-muted-foreground">•</span>
+                {subscription?.status === 'active' ? (
+                  <span className="text-green-500 dark:text-green-400 inline-flex items-center gap-1">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    {t('billing.status.active')}
+                  </span>
+                ) : subscription?.cancel_at_period_end ? (
+                  <span className="text-yellow-500 dark:text-yellow-400 inline-flex items-center gap-1">
+                    <Clock className="h-3.5 w-3.5" />
+                    {t('billing.scheduledToCancel')}
+                  </span>
+                ) : (
+                  <span className="text-gray-500 dark:text-gray-400">
+                    {subscription?.status ? t(`billing.status.${subscription.status as SubscriptionStatus}`) : t('billing.notApplicable')}
+                  </span>
+                )}
+              </>
             )}
           </div>
         </CardHeader>
@@ -209,124 +242,155 @@ export default function BillingManagement() {
           <div className="rounded-lg border bg-card p-6 space-y-6">
             {/* Current Plan Details */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-              <div>
-                {subscription?.promotion ? (
-                  <div className="space-y-1">
-                    <div className="text-2xl font-bold flex items-center gap-2">
-                      <span className="text-muted-foreground line-through">
-                        €{(subscription.plan.amount / 100).toFixed(2)}
-                      </span>
-                      <span>
-                        €{((subscription.plan.amount - (subscription.promotion.amount_off || (subscription.promotion.percent_off ? subscription.plan.amount * subscription.promotion.percent_off / 100 : 0))) / 100).toFixed(2)}
-                        <span className="text-lg font-normal text-gray-500">
-                          /{subscription.plan.interval}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                        {subscription.promotion.percent_off 
-                          ? `${subscription.promotion.percent_off}% OFF`
-                          : `€${(subscription.promotion.amount_off / 100).toFixed(2)} OFF`}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {subscription.promotion.duration.duration === 'forever' && (
-                          <span className="ml-1">({t('billing.promotionDuration.forever')})</span>
-                        )}
-                        {subscription.promotion.duration.duration === 'once' && (
-                          <span className="ml-1">({t('billing.promotionDuration.once')})</span>
-                        )}
-                        {subscription.promotion.duration.duration === 'repeating' && subscription.promotion.duration.duration_in_months && (
-                          <span className="ml-1">({t('billing.promotionDuration.repeating', { months: subscription.promotion.duration.duration_in_months })})</span>
-                        )}
-                      </span>
-                    </div>
+              {isLoading ? (
+                <>
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 w-[140px]" />
+                    <Skeleton className="h-4 w-[160px]" />
                   </div>
-                ) : (
-                  <div className="text-2xl font-bold">
-                    {subscription?.plan?.amount 
-                      ? (
-                        <>
-                          €{(subscription.plan.amount / 100).toFixed(2)}
-                          <span className="text-lg font-normal text-gray-500">
-                            /{subscription.plan.interval}
+                  <Skeleton className="h-8 w-[200px]" />
+                </>
+              ) : (
+                <>
+                  <div>
+                    {subscription?.promotion ? (
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold flex items-center gap-2">
+                          <span className="text-muted-foreground line-through">
+                            €{(subscription.plan.amount / 100).toFixed(2)}
                           </span>
-                        </>
-                      )
-                      : t('pricing.free.name')}
+                          <span>
+                            €{((subscription.plan.amount - (subscription.promotion.amount_off || (subscription.promotion.percent_off ? subscription.plan.amount * subscription.promotion.percent_off / 100 : 0))) / 100).toFixed(2)}
+                            <span className="text-lg font-normal text-gray-500">
+                              /{subscription.plan.interval}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                            {subscription.promotion.percent_off 
+                              ? `${subscription.promotion.percent_off}% OFF`
+                              : `€${(subscription.promotion.amount_off / 100).toFixed(2)} OFF`}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {subscription.promotion.duration.duration === 'forever' && (
+                              <span className="ml-1">({t('billing.promotionDuration.forever')})</span>
+                            )}
+                            {subscription.promotion.duration.duration === 'once' && (
+                              <span className="ml-1">({t('billing.promotionDuration.once')})</span>
+                            )}
+                            {subscription.promotion.duration.duration === 'repeating' && subscription.promotion.duration.duration_in_months && (
+                              <span className="ml-1">({t('billing.promotionDuration.repeating', { months: subscription.promotion.duration.duration_in_months })})</span>
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-2xl font-bold">
+                        {subscription?.plan?.amount 
+                          ? (
+                            <>
+                              €{(subscription.plan.amount / 100).toFixed(2)}
+                              <span className="text-lg font-normal text-gray-500">
+                                /{subscription.plan.interval}
+                              </span>
+                            </>
+                          )
+                          : t('pricing.free.name')}
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {subscription?.plan?.interval === 'year' 
+                        ? t('pricing.currentlyYearly') 
+                        : t('pricing.currentlyMonthly')}
+                    </p>
                   </div>
-                )}
-                <p className="text-sm text-muted-foreground mt-1">
-                  {subscription?.plan?.interval === 'year' 
-                    ? t('pricing.currentlyYearly') 
-                    : t('pricing.currentlyMonthly')}
-                </p>
-              </div>
-              {subscription?.trial_end && new Date(subscription.trial_end * 1000) > new Date() && (
-                <div className="bg-primary/10 text-primary px-4 py-2 rounded-md text-sm">
-                  {t('billing.trialEndsIn', {
-                    date: formatStripeDate(subscription.trial_end)
-                  })}
-                </div>
+                  {subscription?.trial_end && new Date(subscription.trial_end * 1000) > new Date() && (
+                    <div className="bg-primary/10 text-primary px-4 py-2 rounded-md text-sm">
+                      {t('billing.trialEndsIn', {
+                        date: formatStripeDate(subscription.trial_end)
+                      })}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
             {/* Subscription Timeline */}
-            {subscription && (
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-start gap-2">
-                    <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">
-                        {t('billing.dates.activeSince', { 
-                          date: formatStripeDate(subscription.created) 
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-medium">
-                        {t('billing.dates.currentPeriod', {
-                          startDate: formatStripeDate(subscription.current_period_start),
-                          endDate: formatStripeDate(subscription.current_period_end)
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  {subscription.trial_start && subscription.trial_end && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {isLoading ? (
+                  <>
                     <div className="flex items-start gap-2">
-                      <CreditCard className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                      <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                      <div className="w-full">
+                        <div className="font-medium">Active Since</div>
+                        <Skeleton className="h-4 w-[180px] mt-1" />
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                      <div className="w-full">
+                        <div className="font-medium">Current Period</div>
+                        <Skeleton className="h-4 w-[240px] mt-1" />
+                      </div>
+                    </div>
+                  </>
+                ) : subscription && (
+                  <>
+                    <div className="flex items-start gap-2">
+                      <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium">Trial Period</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatStripeDate(subscription.trial_start)} - {formatStripeDate(subscription.trial_end)}
+                        <p className="font-medium">
+                          {t('billing.dates.activeSince', { 
+                            date: formatStripeDate(subscription.created) 
+                          })}
                         </p>
                       </div>
                     </div>
-                  )}
-                  {subscription.cancel_at && (
                     <div className="flex items-start gap-2">
-                      <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                      <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                       <div>
-                        <p className="font-medium text-destructive">Cancellation Date</p>
-                        <p className="text-sm text-destructive/80">
-                          {formatStripeDate(subscription.cancel_at)}
+                        <p className="font-medium">
+                          {t('billing.dates.currentPeriod', {
+                            startDate: formatStripeDate(subscription.current_period_start),
+                            endDate: formatStripeDate(subscription.current_period_end)
+                          })}
                         </p>
                       </div>
                     </div>
-                  )}
-                </div>
+                    {subscription.trial_start && subscription.trial_end && (
+                      <div className="flex items-start gap-2">
+                        <CreditCard className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium">Trial Period</p>
+                          <p className="text-sm text-muted-foreground">
+                            {formatStripeDate(subscription.trial_start)} - {formatStripeDate(subscription.trial_end)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {subscription.cancel_at && (
+                      <div className="flex items-start gap-2">
+                        <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-destructive">Cancellation Date</p>
+                          <p className="text-sm text-destructive/80">
+                            {formatStripeDate(subscription.cancel_at)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Subscription Management */}
-      {(subscription?.status === 'active' || subscription?.status === 'trialing') && (
+      {!isLoading && (subscription?.status === 'active' || subscription?.status === 'trialing') && (
         <Card className="border-none shadow-none bg-transparent">
           <CardContent className="px-0">
             <div className="flex flex-col gap-4">
@@ -428,7 +492,23 @@ export default function BillingManagement() {
         </CardHeader>
         <CardContent className="px-0">
           <div className="rounded-lg border bg-card">
-            {subscription?.invoices && subscription.invoices.length > 0 ? (
+            {isLoading ? (
+              <div className="p-4 space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <Skeleton className="h-4 w-[100px]" />
+                      <Skeleton className="h-4 w-[140px]" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-6 w-[100px]" />
+                      <Skeleton className="h-8 w-[120px]" />
+                      <Skeleton className="h-8 w-[120px]" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : subscription?.invoices && subscription.invoices.length > 0 ? (
               <div className="divide-y">
                 {subscription.invoices.map((invoice) => (
                   <div key={invoice.id} className="flex items-center justify-between p-4">
