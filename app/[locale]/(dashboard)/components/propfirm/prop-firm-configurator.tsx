@@ -263,8 +263,8 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
       <div className="flex flex-col gap-4 p-4 border rounded-lg bg-muted/50">
         <div className="flex items-center justify-between">
           <div className="flex flex-col gap-1">
-            <h3 className="text-sm font-medium">Load Template</h3>
-            <p className="text-sm text-muted-foreground">Quickly load predefined prop firm configurations</p>
+            <h3 className="text-sm font-medium">{t('propFirm.configurator.template.title')}</h3>
+            <p className="text-sm text-muted-foreground">{t('propFirm.configurator.template.description')}</p>
           </div>
         </div>
         
@@ -280,13 +280,13 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                   <>
                     {(() => {
                       const firmKey = Object.keys(propFirms).find(key => propFirms[key].name === (pendingChanges?.propfirm ?? account.propfirm))
-                      return firmKey ? propFirms[firmKey]?.accountSizes[selectedAccountSize]?.name : "Select a template..."
+                      return firmKey ? propFirms[firmKey]?.accountSizes[selectedAccountSize]?.name : t('propFirm.configurator.template.select')
                     })()}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </>
                 ) : (
                   <>
-                    Select a template...
+                    {t('propFirm.configurator.template.select')}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </>
                 )}
@@ -294,8 +294,8 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0 max-h-[400px] overflow-y-auto">
               <Command>
-                <CommandInput placeholder="Search by prop firm or template..." />
-                <CommandEmpty>No template found.</CommandEmpty>
+                <CommandInput placeholder={t('propFirm.configurator.template.search')} />
+                <CommandEmpty>{t('propFirm.configurator.template.noTemplate')}</CommandEmpty>
                 {Object.entries(propFirms).map(([firmKey, firm]) => {
                   const items = Object.entries(firm.accountSizes).map(([sizeKey, accountSize]) => ({
                     sizeKey,
@@ -306,10 +306,10 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
 
                   return (
                     <CommandGroup key={firmKey} heading={firm.name}>
-                      {items.map(({ sizeKey, accountSize, value, searchValue }) => (
+                      {items.map(({ sizeKey, accountSize, value }) => (
                         <CommandItem
-                          key={sizeKey}
-                          value={searchValue}
+                          key={`${firmKey}-${sizeKey}`}
+                          value={value}
                           onSelect={() => {
                             setSelectedAccountSize(sizeKey)
                             handleTemplateChange(firmKey, sizeKey)
@@ -318,13 +318,13 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                           <Check
                             className={cn(
                               "mr-2 h-4 w-4",
-                              selectedAccountSize === sizeKey ? "opacity-100" : "opacity-0"
+                              selectedAccountSize === sizeKey && pendingChanges?.propfirm === firm.name ? "opacity-100" : "opacity-0"
                             )}
                           />
                           <div className="flex flex-col">
                             <span>{accountSize.name}</span>
                             <span className="text-xs text-muted-foreground">
-                              {accountSize.balance.toLocaleString()} - {accountSize.target}$ Target
+                              {accountSize.balance.toLocaleString()} - {accountSize.target}$ {t('propFirm.configurator.template.target')}
                             </span>
                           </div>
                         </CommandItem>
@@ -369,7 +369,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
               }))
             }}
           >
-            Clear Template
+            {t('propFirm.configurator.template.clear')}
           </Button>
         </div>
       </div>
@@ -377,138 +377,138 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
       <Accordion type="multiple" className="w-full">
         {/* Basic Account Info */}
         <AccordionItem value="basic-info">
-          <AccordionTrigger>Basic Account Info</AccordionTrigger>
+          <AccordionTrigger>{t('propFirm.configurator.sections.basicInfo')}</AccordionTrigger>
           <AccordionContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
-        <div className="flex flex-col gap-2">
-          <Label>{t('propFirm.accountSize')}</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Input
-                type="number"
-                value={pendingChanges?.startingBalance ?? account.startingBalance ?? 0}
-                onChange={(e) => setPendingChanges(prev => ({
-                  ...prev,
-                  startingBalance: parseFloat(e.target.value)
-                }))}
-              />
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="grid grid-cols-2 gap-2">
-                {[25000, 50000, 100000, 150000, 300000].map((size) => (
-                  <Button
-                    key={size}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      setPendingChanges(prev => ({
+              <div className="flex flex-col gap-2">
+                <Label>{t('propFirm.accountSize')}</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Input
+                      type="number"
+                      value={pendingChanges?.startingBalance ?? account.startingBalance ?? 0}
+                      onChange={(e) => setPendingChanges(prev => ({
                         ...prev,
-                        startingBalance: size
-                      }))
-                    }}
-                  >
-                    {size.toLocaleString()}
-                  </Button>
-                ))}
+                        startingBalance: parseFloat(e.target.value)
+                      }))}
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80">
+                    <div className="grid grid-cols-2 gap-2">
+                      {[25000, 50000, 100000, 150000, 300000].map((size) => (
+                        <Button
+                          key={size}
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setPendingChanges(prev => ({
+                              ...prev,
+                              startingBalance: size
+                            }))
+                          }}
+                        >
+                          {size.toLocaleString()}
+                        </Button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label>{t('propFirm.target')}</Label>
-          <Input
-            type="number"
-            value={pendingChanges?.profitTarget ?? account.profitTarget ?? 0}
-            onChange={(e) => setPendingChanges(prev => ({
-              ...prev,
-              profitTarget: parseFloat(e.target.value)
-            }))}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label>Coherence</Label>
-          <Input
-            type="number"
-            value={pendingChanges?.consistencyPercentage ?? account.consistencyPercentage ?? 30}
-            onChange={(e) => setPendingChanges(prev => ({
-              ...prev,
-              consistencyPercentage: parseFloat(e.target.value)
-            }))}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label>Account Type</Label>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isPerformance"
-              checked={pendingChanges?.isPerformance ?? account.isPerformance ?? false}
-              onCheckedChange={(checked) => setPendingChanges(prev => ({
-                ...prev,
-                isPerformance: checked
-              }))}
-            />
-            <Label htmlFor="isPerformance" className="cursor-pointer">
-              {pendingChanges?.isPerformance ?? account.isPerformance ? 'Funded' : 'Challenge'}
-            </Label>
-          </div>
-        </div>
-      </div>
+              <div className="flex flex-col gap-2">
+                <Label>{t('propFirm.target')}</Label>
+                <Input
+                  type="number"
+                  value={pendingChanges?.profitTarget ?? account.profitTarget ?? 0}
+                  onChange={(e) => setPendingChanges(prev => ({
+                    ...prev,
+                    profitTarget: parseFloat(e.target.value)
+                  }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>{t('propFirm.coherence')}</Label>
+                <Input
+                  type="number"
+                  value={pendingChanges?.consistencyPercentage ?? account.consistencyPercentage ?? 30}
+                  onChange={(e) => setPendingChanges(prev => ({
+                    ...prev,
+                    consistencyPercentage: parseFloat(e.target.value)
+                  }))}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>{t('propFirm.configurator.fields.accountType')}</Label>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isPerformance"
+                    checked={pendingChanges?.isPerformance ?? account.isPerformance ?? false}
+                    onCheckedChange={(checked) => setPendingChanges(prev => ({
+                      ...prev,
+                      isPerformance: checked
+                    }))}
+                  />
+                  <Label htmlFor="isPerformance" className="cursor-pointer">
+                    {pendingChanges?.isPerformance ?? account.isPerformance ? t('propFirm.configurator.fields.funded') : t('propFirm.configurator.fields.challenge')}
+                  </Label>
+                </div>
+              </div>
+            </div>
           </AccordionContent>
         </AccordionItem>
 
         {/* Drawdown & Trading Rules */}
         <AccordionItem value="drawdown-rules">
-          <AccordionTrigger>Drawdown & Trading Rules</AccordionTrigger>
+          <AccordionTrigger>{t('propFirm.configurator.sections.drawdownRules')}</AccordionTrigger>
           <AccordionContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
               {/* Drawdown Configuration */}
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Drawdown</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.drawdown')}</Label>
                   <Input
                     type="number"
                     value={pendingChanges?.drawdownThreshold ?? account.drawdownThreshold ?? 0}
                     onChange={(e) => setPendingChanges(prev => ({
                       ...prev,
                       drawdownThreshold: parseFloat(e.target.value)
-            }))}
-          />
-        </div>
+                    }))}
+                  />
+                </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Drawdown Type</Label>
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="trailingDrawdown"
-                checked={pendingChanges?.trailingDrawdown ?? account.trailingDrawdown ?? false}
-                onCheckedChange={(checked) => setPendingChanges(prev => ({
-                  ...prev,
-                  trailingDrawdown: checked,
-                  trailingStopProfit: checked ? (prev?.trailingStopProfit ?? account.trailingStopProfit ?? 0) : 0
-                }))}
-              />
-              <Label htmlFor="trailingDrawdown" className="cursor-pointer">Trailing Drawdown</Label>
-          </div>
-        </div>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.drawdownType')}</Label>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="trailingDrawdown"
+                      checked={pendingChanges?.trailingDrawdown ?? account.trailingDrawdown ?? false}
+                      onCheckedChange={(checked) => setPendingChanges(prev => ({
+                        ...prev,
+                        trailingDrawdown: checked,
+                        trailingStopProfit: checked ? (prev?.trailingStopProfit ?? account.trailingStopProfit ?? 0) : 0
+                      }))}
+                    />
+                    <Label htmlFor="trailingDrawdown" className="cursor-pointer">{t('propFirm.configurator.fields.trailingDrawdown')}</Label>
+                  </div>
+                </div>
 
-        {(pendingChanges?.trailingDrawdown ?? account.trailingDrawdown) && (
-          <div className="flex flex-col gap-2">
-                    <Label className="text-sm text-muted-foreground">Trailing Stop Profit</Label>
-            <Input
-              type="number"
-              value={pendingChanges?.trailingStopProfit ?? account.trailingStopProfit ?? 0}
-              onChange={(e) => setPendingChanges(prev => ({
-                ...prev,
-                trailingStopProfit: parseFloat(e.target.value)
-              }))}
-              placeholder="Enter amount to lock drawdown"
-            />
-          </div>
-        )}
+                {(pendingChanges?.trailingDrawdown ?? account.trailingDrawdown) && (
+                  <div className="flex flex-col gap-2">
+                    <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.trailingStopProfit')}</Label>
+                    <Input
+                      type="number"
+                      value={pendingChanges?.trailingStopProfit ?? account.trailingStopProfit ?? 0}
+                      onChange={(e) => setPendingChanges(prev => ({
+                        ...prev,
+                        trailingStopProfit: parseFloat(e.target.value)
+                      }))}
+                      placeholder="Enter amount to lock drawdown"
+                    />
+                  </div>
+                )}
 
-        <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Trailing Type</Label>
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.trailingType')}</Label>
                   <Select
                     value={pendingChanges?.trailing ?? account.trailing ?? 'Static'}
                     onValueChange={(value) => setPendingChanges(prev => ({
@@ -520,9 +520,9 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                       <SelectValue placeholder="Select trailing type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Static">Static</SelectItem>
-                      <SelectItem value="EOD">End of Day</SelectItem>
-                      <SelectItem value="Intraday">Intraday</SelectItem>
+                      <SelectItem value="Static">{t('propFirm.configurator.trailingTypes.static')}</SelectItem>
+                      <SelectItem value="EOD">{t('propFirm.configurator.trailingTypes.eod')}</SelectItem>
+                      <SelectItem value="Intraday">{t('propFirm.configurator.trailingTypes.intraday')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -531,7 +531,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
               {/* Daily Loss Rules */}
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Daily Loss</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.dailyLoss')}</Label>
                   <Input
                     type="number"
                     value={pendingChanges?.dailyLoss ?? account.dailyLoss ?? 0}
@@ -543,7 +543,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Rules Daily Loss</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.rulesDailyLoss')}</Label>
                   <Select
                     value={pendingChanges?.rulesDailyLoss ?? account.rulesDailyLoss ?? 'No'}
                     onValueChange={(value) => setPendingChanges(prev => ({
@@ -555,15 +555,15 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                       <SelectValue placeholder="Select rule" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="No">No</SelectItem>
-                      <SelectItem value="Lock">Lock</SelectItem>
-                      <SelectItem value="Violation">Violation</SelectItem>
+                      <SelectItem value="No">{t('propFirm.configurator.rulesDailyLoss.no')}</SelectItem>
+                      <SelectItem value="Lock">{t('propFirm.configurator.rulesDailyLoss.lock')}</SelectItem>
+                      <SelectItem value="Violation">{t('propFirm.configurator.rulesDailyLoss.violation')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Trading News Allowed</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.tradingNewsAllowed')}</Label>
                   <div className="flex items-center space-x-2">
                     <Switch
                       id="tradingNewsAllowed"
@@ -573,7 +573,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                         tradingNewsAllowed: checked
                       }))}
                     />
-                    <Label htmlFor="tradingNewsAllowed" className="cursor-pointer">Allow News Trading</Label>
+                    <Label htmlFor="tradingNewsAllowed" className="cursor-pointer">{t('propFirm.configurator.fields.allowNewsTrading')}</Label>
                   </div>
                 </div>
               </div>
@@ -583,13 +583,13 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
 
         {/* Pricing & Payout Section */}
         <AccordionItem value="pricing-payout">
-          <AccordionTrigger>Pricing & Payout</AccordionTrigger>
+          <AccordionTrigger>{t('propFirm.configurator.sections.pricingPayout')}</AccordionTrigger>
           <AccordionContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
               {/* Price Section */}
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Base Price</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.basePrice')}</Label>
                   <Input
                     type="number"
                     value={pendingChanges?.price ?? account.price ?? 0}
@@ -614,7 +614,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Promo</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.promo')}</Label>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center space-x-2">
                       <Switch
@@ -631,7 +631,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                           }
                         }}
                       />
-                      <Label htmlFor="hasPromo" className="cursor-pointer">Has Promo</Label>
+                      <Label htmlFor="hasPromo" className="cursor-pointer">{t('propFirm.configurator.fields.hasPromo')}</Label>
                     </div>
                   </div>
 
@@ -664,11 +664,11 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                           }}
                         >
                           <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select promo type" />
+                            <SelectValue placeholder={t('propFirm.configurator.fields.promoType')} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="direct">Direct Price</SelectItem>
-                            <SelectItem value="percentage">Percentage</SelectItem>
+                            <SelectItem value="direct">{t('propFirm.configurator.fields.directPrice')}</SelectItem>
+                            <SelectItem value="percentage">{t('propFirm.configurator.fields.percentage')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -705,7 +705,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Activation Fees</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.activationFees')}</Label>
                   <Input
                     type="number"
                     value={pendingChanges?.activationFees ?? account.activationFees ?? 0}
@@ -720,7 +720,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
               {/* Payout Section */}
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Balance Required</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.balanceRequired')}</Label>
                   <Input
                     type="number"
                     value={pendingChanges?.balanceRequired ?? account.balanceRequired ?? 0}
@@ -732,7 +732,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Min Trading Days for Payout</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.minTradingDays')}</Label>
                   <Input
                     type="number"
                     value={pendingChanges?.minTradingDaysForPayout ?? account.minTradingDaysForPayout ?? 0}
@@ -749,76 +749,76 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
 
         {/* Reset Date Section */}
         <AccordionItem value="reset-date">
-          <AccordionTrigger>Reset Date</AccordionTrigger>
+          <AccordionTrigger>{t('propFirm.configurator.sections.resetDate')}</AccordionTrigger>
           <AccordionContent>
             <div className="p-4">
-          <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <DialogTrigger asChild>
-              <div className="relative w-full">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal pr-10",
-                    !pendingChanges?.resetDate && !account.resetDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {pendingChanges?.resetDate || account.resetDate ? (
-                    format(pendingChanges?.resetDate || account.resetDate!, 'PPP', { locale: localeMap[params.locale as string] })
-                  ) : (
-                    <span>{t('propFirm.resetDate.noDate')}</span>
-                  )}
-                </Button>
-                {(pendingChanges?.resetDate || account.resetDate) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full hover:bg-transparent"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setPendingChanges(prev => ({
-                        ...prev,
-                        resetDate: undefined
-                      }));
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>{t('propFirm.resetDate.title')}</DialogTitle>
-                <DialogDescription>
-                  {t('propFirm.resetDate.description')}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="py-6">
-                <Calendar
-                  mode="single"
-                  numberOfMonths={2}
-                  showOutsideDays={true}
-                  fixedWeeks={true}
-                  selected={pendingChanges?.resetDate || account.resetDate || undefined}
-                  onSelect={(date) => {
-                    setPendingChanges(prev => ({
-                      ...prev,
-                      resetDate: date || undefined
-                    }));
-                    setCalendarOpen(false);
-                  }}
-                  initialFocus
-                  locale={localeMap[params.locale as string]}
-                  className="mx-auto"
-                />
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+              <Dialog open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <DialogTrigger asChild>
+                  <div className="relative w-full">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal pr-10",
+                        !pendingChanges?.resetDate && !account.resetDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {pendingChanges?.resetDate || account.resetDate ? (
+                        format(pendingChanges?.resetDate || account.resetDate!, 'PPP', { locale: localeMap[params.locale as string] })
+                      ) : (
+                        <span>{t('propFirm.resetDate.noDate')}</span>
+                      )}
+                    </Button>
+                    {(pendingChanges?.resetDate || account.resetDate) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full hover:bg-transparent"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setPendingChanges(prev => ({
+                            ...prev,
+                            resetDate: undefined
+                          }));
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>{t('propFirm.resetDate.title')}</DialogTitle>
+                    <DialogDescription>
+                      {t('propFirm.resetDate.description')}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-6">
+                    <Calendar
+                      mode="single"
+                      numberOfMonths={2}
+                      showOutsideDays={true}
+                      fixedWeeks={true}
+                      selected={pendingChanges?.resetDate || account.resetDate || undefined}
+                      onSelect={(date) => {
+                        setPendingChanges(prev => ({
+                          ...prev,
+                          resetDate: date || undefined
+                        }));
+                        setCalendarOpen(false);
+                      }}
+                      initialFocus
+                      locale={localeMap[params.locale as string]}
+                      className="mx-auto"
+                    />
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </AccordionContent>
         </AccordionItem>
       </Accordion>

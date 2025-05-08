@@ -104,7 +104,7 @@ export function AccountTable({
           <TableHead className="text-right">{t('propFirm.dailyStats.pnl')}</TableHead>
           <TableHead className="text-right">{t('propFirm.dailyStats.balance')}</TableHead>
           <TableHead className="text-right">{t('propFirm.dailyStats.target')}</TableHead>
-          <TableHead className="text-right">{t('consistency.modal.percentageOfTotal')}</TableHead>
+          <TableHead className="text-right">{t('propFirm.consistency.modal.percentageOfTotal')}</TableHead>
           <TableHead className="text-right">{t('propFirm.dailyStats.maxAllowed')}</TableHead>
           <TableHead className="text-right">{t('propFirm.dailyStats.status')}</TableHead>
           <TableHead className="text-right">{t('propFirm.dailyStats.payout')}</TableHead>
@@ -246,8 +246,8 @@ export function AccountTable({
           hasInconsistentDays ? "text-destructive" : "text-green-500"
         )}>
           {hasInconsistentDays ? 
-            t('consistency.inconsistent') : 
-            t('consistency.consistent')
+            t('propFirm.consistency.inconsistent') : 
+            t('propFirm.consistency.consistent')
           }
         </TableCell>
         <TableCell className="text-right">

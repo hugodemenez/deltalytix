@@ -777,7 +777,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                         disabled={isDeleting || !canDeleteAccount}
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
-                        {t('common.delete')}
+                        {t('propFirm.common.delete')}
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -788,12 +788,12 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                        <AlertDialogCancel>{t('propFirm.common.cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={handleDelete}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          {isDeleting ? t('common.deleting') : t('common.delete')}
+                          {isDeleting ? t('propFirm.common.deleting') : t('propFirm.common.delete')}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -809,8 +809,8 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                   className="w-full"
                 >
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="table">Table</TabsTrigger>
-                    <TabsTrigger value="configurator">Configurator</TabsTrigger>
+                    <TabsTrigger value="table">{t('propFirm.table.title')}</TabsTrigger>
+                    <TabsTrigger value="configurator">{t('propFirm.table.configurator')}</TabsTrigger>
                   </TabsList>
                   <TabsContent value="table" className="mt-4">
                     <AccountTable
