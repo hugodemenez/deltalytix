@@ -205,10 +205,15 @@ model Mood {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   day           DateTime
   mood          String
+  emotionValue  Int      @default(50)  // Stores the emotion slider value (0-100)
+  hasTradingExperience Boolean?  // Stores whether user has trading experience
+  selectedNews  String[] @default([])  // Stores IDs of selected news events
+  journalContent String? @db.Text  // Stores the journal entry content
   conversation  Json?    // Stores the conversation history as JSON
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@unique([userId, day])
   @@index([userId])
   @@index([day])
   @@schema("public")
