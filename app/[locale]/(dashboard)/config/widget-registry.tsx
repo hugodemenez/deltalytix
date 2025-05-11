@@ -370,18 +370,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     category: 'other',
     previewHeight: 300,
     getComponent: ({ size }) => <MindsetWidget size={size} />,
-    getPreview: () => (
-      <div className="h-[300px]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Mindset Tracker</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Track your trading mindset and emotions</p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+    getPreview: () => <MindsetWidget size="large" />
   },
   // marketChart: {
   //   type: 'marketChart',
