@@ -24,6 +24,7 @@ export type WidgetType =
   | 'timeRangePerformance'
   | 'tagWidget'
   | 'riskRewardRatio'
+  | 'mindsetWidget'
   // | 'marketChart'
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 

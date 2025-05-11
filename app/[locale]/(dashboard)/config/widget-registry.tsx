@@ -27,6 +27,7 @@ import { PropFirmOverview } from '../components/propfirm/prop-firm-overview'
 import { TagWidget } from '../components/filters/tag-widget'
 import ProfitFactorCard from '../components/statistics/profit-factor-card'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
+import { MindsetWidget } from '../components/mindset/mindset-widget'
 
 export interface WidgetConfig {
   type: WidgetType
@@ -361,6 +362,26 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 100,
     getComponent: ({ size }) => <RiskRewardRatioCard size={size} />,
     getPreview: () => <RiskRewardRatioCard size="tiny" />
+  },
+  mindsetWidget: {
+    type: 'mindsetWidget',
+    defaultSize: 'large',
+    allowedSizes: ['medium', 'large'],
+    category: 'other',
+    previewHeight: 300,
+    getComponent: ({ size }) => <MindsetWidget size={size} />,
+    getPreview: () => (
+      <div className="h-[300px]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Mindset Tracker</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">Track your trading mindset and emotions</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   },
   // marketChart: {
   //   type: 'marketChart',

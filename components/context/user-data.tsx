@@ -11,7 +11,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { loadInitialData, loadSharedData, LayoutItem as ServerLayoutItem, Layouts as ServerLayouts } from '@/server/user-data'
 import { saveDashboardLayout } from '@/server/database'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
-import type { Account as PropFirmAccount } from '@prisma/client'
+import type { FinancialEvent, Mood, Account as PropFirmAccount } from '@prisma/client'
 import { setupPropFirmAccount, getPropFirmAccounts } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
 import { createGroup as createGroupAction, updateGroup as updateGroupAction, deleteGroup as deleteGroupAction, getGroups, moveAccountToGroup as moveAccountToGroupAction } from '@/server/groups'
 
@@ -317,6 +317,14 @@ interface UserDataContextType {
   updateGroup: (groupId: string, name: string) => Promise<void>
   deleteGroup: (groupId: string) => Promise<void>
   moveAccountToGroup: (accountId: string, targetGroupId: string | null) => Promise<void>
+
+  // Add financial events related properties
+  financialEvents: FinancialEvent[]
+  setFinancialEvents: React.Dispatch<React.SetStateAction<FinancialEvent[]>>
+
+  // Add mood history related properties
+  moodHistory: Mood[]
+  setMoodHistory: React.Dispatch<React.SetStateAction<Mood[]>>
 }
 
 
@@ -361,6 +369,8 @@ interface CachedData {
   propfirmAccounts: PropFirmAccount[];
   layouts: Layouts;
   groups: Group[];
+  financialEvents: FinancialEvent[];
+  moodHistory: Mood[];
 }
 
 // Add this function before the UserDataProvider
@@ -411,6 +421,7 @@ export const UserDataProvider: React.FC<{
   const [isLoading, setIsLoading] = useState(false);
   const [tickDetails, setTickDetails] = useState<Record<string, number>>({});
   const [tags, setTags] = useState<Tag[]>([]);
+  const [moodHistory, setMoodHistory] = useState<Mood[]>([]);
 
   // Trades state
   const [trades, setTrades] = useState<TradeWithUTC[]>([]);
@@ -423,6 +434,9 @@ export const UserDataProvider: React.FC<{
 
   // Initialize layouts with null to prevent flashing
   const [layouts, setLayouts] = useState<Layouts | null>(null);
+
+  // Financial events
+  const [financialEvents, setFinancialEvents] = useState<FinancialEvent[]>([]);
 
   // Create a wrapped version of setLayouts that also updates the cache
   const setLayoutsWithCache = useCallback((newLayouts: React.SetStateAction<Layouts | null>) => {
@@ -540,6 +554,8 @@ export const UserDataProvider: React.FC<{
             propfirmAccounts,
             layouts,
             groups,
+            financialEvents,
+            moodHistory,
           } = cached;
 
           if (!user) {
@@ -556,6 +572,8 @@ export const UserDataProvider: React.FC<{
           setPropfirmAccounts(propfirmAccounts);
           setLayouts(layouts);
           setGroups(groups);
+          setFinancialEvents(financialEvents);
+          setMoodHistory(moodHistory);
 
           // Update date range if needed
           if (trades?.length > 0) {
@@ -595,6 +613,8 @@ export const UserDataProvider: React.FC<{
           setTags(fetchedData.tags || []);
           setPropfirmAccounts(fetchedData.propfirmAccounts || []);
           setGroups(fetchedData.groups || []);
+          setFinancialEvents(fetchedData.financialEvents || []);
+          setMoodHistory(fetchedData.moodHistory || []);
 
           // Handle layouts
           const newLayouts = fetchedData.layouts || defaultLayouts;
@@ -611,6 +631,8 @@ export const UserDataProvider: React.FC<{
             propfirmAccounts: fetchedData.propfirmAccounts || [],
             layouts: newLayouts,
             groups: fetchedData.groups || [],
+            financialEvents: fetchedData.financialEvents || [],
+            moodHistory: fetchedData.moodHistory || [],
           });
 
           // Update date range if needed
@@ -698,6 +720,8 @@ export const UserDataProvider: React.FC<{
           tags: data.tags || [],
           propfirmAccounts: data.propfirmAccounts || [],
           groups: data.groups || [],
+          financialEvents: data.financialEvents || [],
+          moodHistory: data.moodHistory || [],
         });
 
         // Update date range if needed
@@ -989,6 +1013,7 @@ export const UserDataProvider: React.FC<{
       setTags(data.tags || []);
       setPropfirmAccounts(data.propfirmAccounts || []);
       setGroups(data.groups || []);
+      setMoodHistory(data.moodHistory || []);
 
       // Update cache
       setLocalCache({
@@ -998,6 +1023,7 @@ export const UserDataProvider: React.FC<{
         tags: data.tags || [],
         propfirmAccounts: data.propfirmAccounts || [],
         groups: data.groups || [],
+        moodHistory: data.moodHistory || [],
       });
     }
   }, [isSharedView]);
@@ -1124,6 +1150,22 @@ export const UserDataProvider: React.FC<{
     });
   };
 
+  // Add wrapped version of setMoodHistory
+  const setMoodHistoryWithCache: React.Dispatch<React.SetStateAction<Mood[]>> = (value) => {
+    setMoodHistory((prevMoodHistory) => {
+      const newMoodHistory = typeof value === 'function' ? value(prevMoodHistory) : value;
+      // Update cache
+      const existingCache = getLocalCache();
+      if (existingCache) {
+        setLocalCache({
+          ...existingCache,
+          moodHistory: newMoodHistory
+        });
+      }
+      return newMoodHistory;
+    });
+  };
+
   const contextValue = {
     // User related
     user,
@@ -1218,6 +1260,14 @@ export const UserDataProvider: React.FC<{
     updateGroup,
     deleteGroup,
     moveAccountToGroup,
+
+    // Add financial events related values
+    financialEvents,
+    setFinancialEvents,
+
+    // Add mood history related values
+    moodHistory,
+    setMoodHistory: setMoodHistoryWithCache,
   };
 
   // If we're still loading initial data, return null or a loading state

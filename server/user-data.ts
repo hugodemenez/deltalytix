@@ -10,9 +10,11 @@ import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboa
 import { getTags } from './tags'
 import { getOnboardingStatus } from './onboarding'
 import { getPropFirmAccounts } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
-import type { Account as PropFirmAccount } from '@prisma/client'
+import type { FinancialEvent, Mood, Account as PropFirmAccount } from '@prisma/client'
 import { getEtpToken } from './etp'
 import { getGroups, GroupWithAccounts } from './groups'
+import { getFinancialEvents } from './financial-events'
+import { getMoodHistory } from './mood'
 
 // Update the interface declarations to export them
 export interface LayoutItem {
@@ -53,6 +55,8 @@ export type InitialDataResponse = {
   tags: Tag[]
   propfirmAccounts: PropFirmAccount[]
   groups: GroupWithAccounts[]
+  financialEvents: FinancialEvent[]
+  moodHistory: Mood[]
 }
 
 export type SharedDataResponse = {
@@ -83,6 +87,8 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         tags: [],
         propfirmAccounts: [],
         groups: [],
+        financialEvents: [],
+        moodHistory: [],
         error: 'Session not found'
       }
     }
@@ -100,6 +106,8 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         tags: [],
         propfirmAccounts: [],
         groups: [],
+        financialEvents: [],
+        moodHistory: [],
         error: 'No active session'
       }
     }
@@ -120,6 +128,8 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         tags: [],
         propfirmAccounts: [],
         groups: [],
+        financialEvents: [],
+        moodHistory: [],
         error: 'Authentication failed'
       }
     }
@@ -137,6 +147,8 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         tags: [],
         propfirmAccounts: [],
         groups: [],
+        financialEvents: [],
+        moodHistory: [],
         error: 'User not found'
       }
     }
@@ -152,13 +164,15 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     const subscription = await getSubscriptionDetails(user.email || email || '')
 
     // Run remaining operations concurrently with subscription status
-    const [tradesResult, tickDetailsResult, layoutsResult, tagsResult, propfirmAccountsResult, groupsResult] = await Promise.all([
+    const [tradesResult, tickDetailsResult, layoutsResult, tagsResult, propfirmAccountsResult, groupsResult, financialEventsResult, moodHistoryResult] = await Promise.all([
       getTrades(user.id, subscription?.isActive ?? false).catch(() => []),
       getTickDetails().catch(() => []),
       loadDashboardLayout(user.id).catch(() => null),
       getTags(user.id).catch(() => []),
       getPropFirmAccounts(user.id).catch(() => []),
-      getGroups(user.id).catch(() => [])
+      getGroups(user.id).catch(() => []),
+      getFinancialEvents().catch(() => []),
+      getMoodHistory(user.id).catch(() => [])
     ])
 
     const tickDetails = tickDetailsResult.reduce((acc: Record<string, number>, detail: TickDetail) => {
@@ -179,7 +193,9 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       layouts,
       tags: tagsResult,
       propfirmAccounts: propfirmAccountsResult as PropFirmAccount[],
-      groups: groupsResult
+      groups: groupsResult,
+      financialEvents: financialEventsResult,
+      moodHistory: moodHistoryResult
     }
   } catch (error) {
     return {
@@ -193,6 +209,8 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       tags: [],
       propfirmAccounts: [],
       groups: [],
+      financialEvents: [],
+      moodHistory: [],
       error: 'Failed to load initial data'
     }
   }

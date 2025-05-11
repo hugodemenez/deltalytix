@@ -4,9 +4,30 @@ export default {
     description: 'Track your trading mindset and emotions',
     back: 'Back',
     next: 'Next',
+    saveSuccess: 'Success',
+    saveSuccessDescription: 'Your mindset entry has been saved successfully.',
+    saveError: 'Error',
+    saveErrorDescription: 'Failed to save your mindset entry. Please try again.',
+    loadError: 'Error',
+    loadErrorDescription: 'Failed to load mindset data. Please try again.',
+    noEntries: 'No entries found for the last 30 days',
+    addEntry: 'Add Entry',
+    selectDate: 'Select Date',
+    edit: 'Edit',
+    noData: 'No data available',
+    today: 'Today',
+    delete: 'Delete',
+    cancel: 'Cancel',
+    deleteSuccess: 'Success',
+    deleteSuccessDescription: 'The entry has been deleted successfully.',
+    deleteError: 'Error',
+    deleteErrorDescription: 'Failed to delete the entry. Please try again.',
+    deleteConfirmTitle: 'Delete Entry',
+    deleteConfirmDescription: 'Are you sure you want to delete this entry? This action cannot be undone.',
     tradingQuestion: {
       title: 'Trading Activity',
-      question: 'Did you trade today?',
+      question: 'Did you trade on {date}?',
+      questionToday: 'Did you trade today?',
       yes: 'Yes',
       no: 'No'
     },
@@ -38,12 +59,20 @@ export default {
       },
       filters: 'Filters',
       searchFilters: 'Search filters...',
-      sortBy: 'Sort by'
+      sortBy: 'Sort by',
+      moreEvents: '{count} more events'
     },
     journaling: {
       title: 'Trading Journal',
       placeholder: 'Write your trading thoughts and reflections here...',
       save: 'Save Entry'
+    },
+    tradingStats: {
+      title: 'Trading Statistics',
+      winningTrades: 'Winning Trades',
+      losingTrades: 'Losing Trades',
+      totalPnL: 'Total P&L',
+      winRate: 'Win Rate',
     }
   }
 } as const 

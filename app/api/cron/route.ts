@@ -27,22 +27,6 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = MAX_R
   }
 }
 
-// List of emails to exclude from weekly emails
-const EXCLUDED_EMAILS = new Set([
-  'trader.propfirm@gmail.com',
-  'zalman2618@gmail.com',
-  'nicolas.baula@gmail.com',
-  'theodesreumaux186@gmail.com',
-  'steweirdooculus@gmail.com',
-  'luciensgtrading@gmail.com',
-  'maxence.lecat1@gmail.com',
-  'o.tanjaoui@smit-finance.com',
-  'louislllmnd@gmail.com',
-  'cedricc72@gmail.com',
-  'contact@phidiaspropfirm.com',
-  'ectasia.mc@gmail.com'
-])
-
 // Vercel cron job handler - runs every Sunday at 8 AM UTC+1
 export async function GET(req: Request) {
   try {
@@ -58,13 +42,7 @@ export async function GET(req: Request) {
     }
 
     // Get all users and filter out excluded emails
-    const users = await prisma.user.findMany({
-      where: {
-        email: {
-          notIn: Array.from(EXCLUDED_EMAILS)
-        }
-      }
-    })
+    const users = await prisma.user.findMany()
 
     if (users.length === 0) {
       return NextResponse.json(

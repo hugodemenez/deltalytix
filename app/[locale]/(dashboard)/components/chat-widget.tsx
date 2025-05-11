@@ -94,10 +94,10 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
           content: extractTextContent(msg.content)
         }));
 
-        const todayMood = await getMoodForDay(userId, new Date());
+        const todayMood = await getMoodForDay(new Date());
         const currentMood = todayMood?.mood as MoodType || 'okay';
         
-        await saveMood(userId, currentMood, conversationToSave);
+        await saveMood(currentMood, conversationToSave);
       } catch (error) {
         console.error('Error saving conversation:', error);
       }
@@ -116,7 +116,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
     initRef.current = true;
 
     try {
-      const todayMood = await getMoodForDay(user.id, new Date());
+      const todayMood = await getMoodForDay(new Date());
       
       if (todayMood?.conversation) {
         const savedMessages = (todayMood.conversation as SavedMessage[]);
@@ -139,7 +139,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
         setMessages([newMessage]);
         
         // Save initial greeting without triggering a reload
-        await saveMood(user.id, 'okay', [{
+        await saveMood('okay', [{
           role: 'assistant' as const,
           content: extractTextContent(greeting.display)
         }]);
@@ -262,7 +262,7 @@ export default function ChatWidget({ size = 'medium' }: ChatWidgetProps) {
       
       // Save the reset conversation immediately
       await debouncedSave.cancel();
-      await saveMood(user.id, 'okay', [{
+      await saveMood('okay', [{
         role: 'assistant' as const,
         content: extractTextContent(greeting.display)
       }]);
