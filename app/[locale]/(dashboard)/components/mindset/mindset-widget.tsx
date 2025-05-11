@@ -39,7 +39,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [journalContent, setJournalContent] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isEditing, setIsEditing] = useState(true)
-  const { moodHistory, setMoodHistory } = useUserData()
+  const { moodHistory = [], setMoodHistory } = useUserData()
   const t = useI18n()
 
   useEffect(() => {
