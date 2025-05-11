@@ -167,7 +167,6 @@ export function MindsetSummary({
           <HourlyFinancialTimeline
             date={date}
             events={events}
-            className="h-[300px]"
           />
         </div>
       </div>

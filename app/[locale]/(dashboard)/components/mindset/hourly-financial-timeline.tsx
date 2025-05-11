@@ -6,7 +6,6 @@ import { formatInTimeZone } from "date-fns-tz"
 import { fr, enUS } from "date-fns/locale"
 import { useUserData } from "@/components/context/user-data"
 import { useCurrentLocale, useI18n } from "@/locales/client"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -90,8 +89,8 @@ export function HourlyFinancialTimeline({ date, events, onEventClick, className 
       {/* Header with date */}
       <div className="p-2 text-center font-medium border-b bg-muted/20">{formattedDate}</div>
 
-      {/* Scrollable timeline */}
-      <ScrollArea className="flex-1">
+      {/* Timeline content */}
+      <div className="flex-1 overflow-y-auto">
         <div className="flex flex-col divide-y">
           {hours.map((hour) => {
             const hourEvents = eventsByHour.get(hour.getHours()) || []
@@ -153,7 +152,7 @@ export function HourlyFinancialTimeline({ date, events, onEventClick, className 
             )
           })}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   )
 }
