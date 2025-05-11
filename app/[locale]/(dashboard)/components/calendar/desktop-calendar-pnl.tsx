@@ -191,43 +191,32 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
 export default function CalendarPnl({ calendarData, financialEvents = [] }: CalendarPnlProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
-  const { timezone } = useUserData()
+  const { timezone, financialEvents: userFinancialEvents = [] } = useUserData()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [aiComment, setAiComment] = useState<string>("")
   const [aiEmotion, setAiEmotion] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
-  const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>(financialEvents)
+  const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
   const [selectedWeekDate, setSelectedWeekDate] = useState<Date | null>(null)
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
   const calendarDays = getCalendarDays(monthStart, monthEnd)
 
-  // Fetch financial events when month changes
+  // Update monthEvents when currentDate or financialEvents change
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const events = await getFinancialEvents(currentDate, locale)
-        if (Array.isArray(events)) {
-          setMonthEvents(events)
-        } else {
-          console.error('Unexpected events format:', events)
-          setMonthEvents([])
-        }
-      } catch (error) {
-        console.error('Error fetching financial events:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load financial events.",
-          variant: "destructive",
-        })
-        setMonthEvents([])
-      }
-    }
-    fetchEvents()
-  }, [currentDate, locale])
+    const monthStart = startOfMonth(currentDate)
+    const monthEnd = endOfMonth(currentDate)
+    
+    const filteredEvents = userFinancialEvents.filter(event => {
+      const eventDate = new Date(event.date)
+      return eventDate >= monthStart && eventDate <= monthEnd && event.lang === locale
+    })
+    
+    setMonthEvents(filteredEvents)
+  }, [currentDate, userFinancialEvents, locale])
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))

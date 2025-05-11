@@ -101,7 +101,9 @@ export function HourlyFinancialTimeline({ date, events, onEventClick, className 
             return (
               <div key={hour.getTime()} className={cn("relative min-h-[60px]", hasEvents ? "bg-muted/5" : "")}>
                 {/* Time indicator */}
-                <div className="absolute left-0 top-0 text-xs text-muted-foreground p-1">{format(hour, "HH:mm")}</div>
+                <div className="absolute left-0 top-0 text-xs text-muted-foreground p-1">
+                  {formatInTimeZone(hour, timezone, "HH:mm", { locale: dateLocale })}
+                </div>
 
                 {/* Events for this hour */}
                 <div className="pt-6 px-1 space-y-1">

@@ -44,7 +44,7 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
   const [sortByImpact, setSortByImpact] = useState<'asc' | 'desc' | null>(null)
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const t = useI18n()
-  const { timezone } = useUserData()
+  const { timezone, financialEvents = [] } = useUserData()
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
 
@@ -62,35 +62,15 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
     return 'ASIA' // Default to ASIA for any remaining hours (21-24)
   }
 
+  // Filter events for the selected date
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const fetchedEvents = await getFinancialEvents(date)
-        if (Array.isArray(fetchedEvents)) {
-          // Filter events for selected date only
-          const dateEvents = fetchedEvents.filter(event => {
-            const eventDate = new Date(event.date)
-            return eventDate.toDateString() === date.toDateString()
-          })
-          setEvents(dateEvents)
-        } else {
-          console.error('Unexpected events format:', fetchedEvents)
-          setEvents([])
-        }
-      } catch (error) {
-        console.error('Error fetching financial events:', error)
-        toast({
-          title: "Error",
-          description: "Failed to load financial events.",
-          variant: "destructive",
-        })
-        setEvents([])
-      } finally {
-        setIsLoading(false)
-      }
-    }
-    fetchEvents()
-  }, [date])
+    const dateEvents = financialEvents.filter(event => {
+      const eventDate = new Date(event.date)
+      return eventDate.toDateString() === date.toDateString() && event.lang === locale
+    })
+    setEvents(dateEvents)
+    setIsLoading(false)
+  }, [date, financialEvents, locale])
 
   const toggleNews = (eventId: string) => {
     const newSelectedNews = selectedNews.includes(eventId)

@@ -35,24 +35,18 @@ export function MindsetSummary({
   const t = useI18n()
   const { locale } = useParams()
   const dateLocale = locale === 'fr' ? fr : enUS
-  const { trades = [] } = useUserData()
+  const { trades = [], financialEvents = [] } = useUserData()
   const { timezone } = useUserData()
   const [events, setEvents] = useState<FinancialEvent[]>([])
 
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const fetchedEvents = await getFinancialEvents(date)
-        if (Array.isArray(fetchedEvents)) {
-          setEvents(fetchedEvents)
-        }
-      } catch (error) {
-        console.error('Error fetching financial events:', error)
-        setEvents([])
-      }
-    }
-    fetchEvents()
-  }, [date])
+    // Filter events for the selected date and locale
+    const dateEvents = financialEvents.filter(event => {
+      const eventDate = new Date(event.date)
+      return eventDate.toDateString() === date.toDateString() && event.lang === locale
+    })
+    setEvents(dateEvents)
+  }, [date, financialEvents, locale])
 
   const getEmotionLabel = (value: number) => {
     if (value < 20) return { label: t('mindset.emotion.verySad'), color: "text-red-500" }

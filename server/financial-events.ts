@@ -39,21 +39,16 @@ export async function syncFinancialEvents(date: Date = new Date()): Promise<Fina
  * @param locale - Language locale (defaults to 'fr'). Used to filter events by language
  * @returns Promise<FinancialEvent[]> - Array of financial events for the month
  */
-export async function getFinancialEvents(date: Date = new Date(), locale: string = 'fr'): Promise<FinancialEvent[]> {
+export async function getFinancialEvents(locale: string|undefined = undefined): Promise<FinancialEvent[]> {
   try {
-    const monthStart = startOfMonth(date)
-    const monthEnd = endOfMonth(date)
 
+    const where = locale ? {
+      lang: locale
+    } : {}
     const events = await prisma.financialEvent.findMany({
-      where: {
-        date: {
-          gte: monthStart,
-          lte: monthEnd
-        },
-        lang: locale
-      },
+      where,
       orderBy: {
-        date: 'asc'
+        date: 'desc'
       }
     })
 
