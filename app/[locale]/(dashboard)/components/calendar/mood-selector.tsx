@@ -47,7 +47,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
 
       // If no valid localStorage data, fetch from server
       try {
-        const mood = await getMoodForDay(user.id, new Date())
+        const mood = await getMoodForDay(new Date())
         if (mood) {
           setSelectedMood(mood.mood as 'bad' | 'okay' | 'great')
           // Update localStorage
@@ -76,7 +76,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
 
     setIsLoading(mood)
     try {
-      await saveMood(user.id, mood)
+      await saveMood(mood)
       setSelectedMood(mood)
       onMoodSelect?.(mood)
       

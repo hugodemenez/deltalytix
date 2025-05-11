@@ -99,7 +99,7 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
       initRef.current = true;
 
       try {
-        const dayMood = await getMoodForDay(user.id, new Date(dateString));
+        const dayMood = await getMoodForDay(new Date(dateString));
         
         if (dayMood?.conversation) {
           const savedMessages = dayMood.conversation as Array<{
@@ -149,13 +149,13 @@ export default function Chat({ dayData, dateString }: { dayData: any, dateString
         content: extractTextContent(msg.display)
       }));
 
-      const dayMood = await getMoodForDay(userId, new Date(date));
+      const dayMood = await getMoodForDay(new Date(date));
       let currentMood: MoodType = 'okay';
       if (dayMood?.mood && ['bad', 'okay', 'great'].includes(dayMood.mood)) {
         currentMood = dayMood.mood as MoodType;
       }
       
-      await saveMood(userId, currentMood, conversationToSave, new Date(date));
+      await saveMood(currentMood, conversationToSave, new Date(date));
     } catch (error) {
       console.error('Error saving conversation:', error);
     }

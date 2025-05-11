@@ -44,7 +44,7 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
       }
 
       try {
-        const mood = await getMoodForDay(user.id, new Date(dayData.trades[0].entryDate))
+        const mood = await getMoodForDay(new Date(dayData.trades[0].entryDate))
         if (mood) {
           const comment = mood.conversation ? 
             (mood.conversation as Array<{ role: string; content: string }>).find(msg => msg.role === 'user')?.content || '' 
@@ -75,7 +75,7 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
     try {
       const date = new Date(dayData.trades[0].entryDate)
       date.setHours(12, 0, 0, 0)
-      await saveMood(user.id, selectedMood, [{ role: 'user', content: comment }], date)
+      await saveMood(selectedMood, [{ role: 'user', content: comment }], date)
       
       // Update localStorage
       const focusedDay = date.toISOString().split('T')[0]

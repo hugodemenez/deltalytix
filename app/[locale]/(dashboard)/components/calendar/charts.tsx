@@ -172,7 +172,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
 
       // If no valid localStorage data, fetch from server
       try {
-        const mood = await getMoodForDay(user.id, new Date(dayData.trades[0].entryDate))
+        const mood = await getMoodForDay(new Date(dayData.trades[0].entryDate))
         if (mood) {
           setSelectedMood(mood.mood as 'bad' | 'okay' | 'great')
           // Update localStorage
@@ -204,7 +204,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
       const date = new Date(dayData.trades[0].entryDate)
       // Set the time to noon to avoid timezone issues
       date.setHours(12, 0, 0, 0)
-      await saveMood(user.id, mood, [], date)
+      await saveMood(mood, [], date)
       setSelectedMood(mood)
       
       // Save to localStorage
