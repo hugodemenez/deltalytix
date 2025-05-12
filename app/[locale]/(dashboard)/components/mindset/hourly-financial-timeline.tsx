@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useRef, useEffect } from "react"
 import { format } from "date-fns"
 import { formatInTimeZone } from "date-fns-tz"
 import { fr, enUS } from "date-fns/locale"
@@ -19,13 +19,41 @@ interface HourlyFinancialTimelineProps {
   events: FinancialEvent[]
   onEventClick?: (event: FinancialEvent) => void
   className?: string
+  preventScrollPropagation?: boolean
 }
 
-export function HourlyFinancialTimeline({ date, events, onEventClick, className }: HourlyFinancialTimelineProps) {
+export function HourlyFinancialTimeline({ 
+  date, 
+  events, 
+  onEventClick, 
+  className,
+  preventScrollPropagation = false 
+}: HourlyFinancialTimelineProps) {
   const { timezone } = useUserData()
   const locale = useCurrentLocale()
   const dateLocale = locale === "fr" ? fr : enUS
   const t = useI18n()
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!preventScrollPropagation) return
+
+    const container = containerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const isAtTop = scrollTop === 0
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight
+
+      if ((isAtTop && e.deltaY < 0) || (isAtBottom && e.deltaY > 0)) {
+        e.preventDefault()
+      }
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+    return () => container.removeEventListener('wheel', handleWheel)
+  }, [preventScrollPropagation])
 
   // Get impact weight for sorting
   const getImpactWeight = (importance: string) => {
@@ -90,7 +118,13 @@ export function HourlyFinancialTimeline({ date, events, onEventClick, className 
       <div className="p-2 text-center font-medium border-b bg-muted/20">{formattedDate}</div>
 
       {/* Timeline content */}
-      <div className="flex-1 overflow-y-auto">
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-y-auto"
+        style={{ 
+          overscrollBehavior: preventScrollPropagation ? 'contain' : 'auto'
+        }}
+      >
         <div className="flex flex-col divide-y">
           {hours.map((hour) => {
             const hourEvents = eventsByHour.get(hour.getHours()) || []

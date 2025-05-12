@@ -153,6 +153,7 @@ function EventBadge({ events, impactFilter }: { events: FinancialEvent[], impact
           date={filteredEvents.length > 0 ? new Date(filteredEvents[0].date) : new Date()}
           events={filteredEvents}
           className="h-[400px]"
+          preventScrollPropagation={true}
         />
       </PopoverContent>
     </Popover>
