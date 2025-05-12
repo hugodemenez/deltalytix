@@ -63,6 +63,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       setEmotionValue(mood.emotionValue ?? 50)
       setSelectedNews(mood.selectedNews ?? [])
       setJournalContent(mood.journalContent ?? "")
+      // Scroll to the summary view
+      api?.scrollTo(4)
     } else {
       // Reset all values if no mood data exists for the selected date
       setHasTradingExperience(null)
