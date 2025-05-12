@@ -1228,4 +1228,9 @@ export default {
     'import.type.thorSync.name': 'Thor',
     'import.type.thorSync.description': 'Direct account synchronization with Thor',
     'import.type.thorSync.details': 'Direct sync with your Thor account. Requires API token authentication.',
+    'calendar.impactFilter.title': 'Impact Filter',
+    'calendar.impactFilter.low': 'Low',
+    'calendar.impactFilter.medium': 'Medium',
+    'calendar.impactFilter.high': 'High',
+    'calendar.impactFilter.allSelected': 'All selected',
 } as const

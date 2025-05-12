@@ -4,10 +4,12 @@ import React, { useState, useEffect } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays, isSameDay } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { fr, enUS } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink } from "lucide-react"
+import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink, Newspaper, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Toggle } from "@/components/ui/toggle"
 import { cn } from "@/lib/utils"
 import { FinancialEvent } from "@prisma/client"
 import { toast } from "@/hooks/use-toast"
@@ -20,6 +22,13 @@ import { WeeklyModal } from "./weekly-modal"
 import { useUserData } from "@/components/context/user-data"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 
 const WEEKDAYS = [
@@ -90,26 +99,29 @@ const getEventImportanceColor = (importance: string) => {
   }
 }
 
-function EventBadge({ events }: { events: FinancialEvent[] }) {
+function EventBadge({ events, impactFilter }: { events: FinancialEvent[], impactFilter: { LOW: boolean; MEDIUM: boolean; HIGH: boolean } }) {
   const t = useI18n()
   const { timezone } = useUserData()
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
-  
-  // Filter only high impact events
-  const highImpactEvents = events.filter(e => e.importance === 'HIGH')
-  if (highImpactEvents.length === 0) return null
 
-  // Function to format event time based on timezone
-  const formatEventTime = (date: Date) => {
-    try {
-      // First convert the UTC date to user's timezone
-      const localTime = formatInTimeZone(date, timezone, 'HH:mm', { locale: dateLocale })
-      return localTime
-    } catch (error) {
-      console.error('Error formatting event time:', error)
-      return '--:--'
-    }
+  // Filter events by impact
+  const filteredEvents = events.filter(e => impactFilter[e.importance as keyof typeof impactFilter])
+  if (filteredEvents.length === 0) return null
+
+  // Get the highest importance level for color coding
+  const highestImportance = filteredEvents.reduce((highest, event) => {
+    const importance = event.importance
+    if (importance === 'HIGH') return 'HIGH'
+    if (importance === 'MEDIUM' && highest !== 'HIGH') return 'MEDIUM'
+    if (importance === 'LOW' && highest !== 'HIGH' && highest !== 'MEDIUM') return 'LOW'
+    return highest
+  }, 'LOW' as 'LOW' | 'MEDIUM' | 'HIGH')
+
+  const badgeStyles = {
+    HIGH: "bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20",
+    MEDIUM: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20",
+    LOW: "bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20"
   }
 
   return (
@@ -118,71 +130,30 @@ function EventBadge({ events }: { events: FinancialEvent[] }) {
         <Badge 
           variant="outline" 
           className={cn(
-            "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 border-none w-8 justify-center items-center",
-            "bg-red-200 text-red-500 dark:bg-red-900 dark:text-red-400",
+            "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
+            badgeStyles[highestImportance],
             "transition-all duration-200 ease-in-out",
-            "hover:scale-110 hover:shadow-md hover:shadow-red-200/50 dark:hover:shadow-red-900/50",
+            "hover:scale-110 hover:shadow-md",
             "active:scale-95"
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          {highImpactEvents.length}
+          <Newspaper className="h-2.5 w-2.5" />
+          {filteredEvents.length}
         </Badge>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-80 p-2 z-50" 
+        className="w-[400px] p-0 z-50" 
         align="start"
         side="right"
         sideOffset={5}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">{t('calendar.events.title')}</h4>
-          <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
-            {highImpactEvents.map(event => (
-              <div key={event.id} className="flex items-start gap-2 text-xs">
-                <div className={cn(
-                  "flex-shrink-0 mt-0.5",
-                  getEventImportanceColor(event.importance)
-                )}>
-                  {getEventIcon(event.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{event.title}</div>
-                  <div className="text-muted-foreground text-[11px]">
-                    {formatEventTime(event.date)}
-                  </div>
-                  {event.description && (
-                    <div className="text-muted-foreground text-[11px] line-clamp-2">
-                      {event.description}
-                    </div>
-                  )}
-                  {event.sourceUrl && (
-                    <a
-                      href={event.sourceUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 mt-0.5"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      {t('calendar.events.viewSource')}
-                    </a>
-                  )}
-                </div>
-                <Badge 
-                  variant="outline" 
-                  className={cn(
-                    "text-[10px] px-1.5 py-0 h-5",
-                    getEventImportanceColor(event.importance)
-                  )}
-                >
-                  {event.importance}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </div>
+        <HourlyFinancialTimeline
+          date={filteredEvents.length > 0 ? new Date(filteredEvents[0].date) : new Date()}
+          events={filteredEvents}
+          className="h-[400px]"
+        />
       </PopoverContent>
     </Popover>
   )
@@ -200,8 +171,13 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const [isLoading, setIsLoading] = useState(false)
   const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
   const [selectedWeekDate, setSelectedWeekDate] = useState<Date | null>(null)
+  // Impact filter state
+  const [impactFilter, setImpactFilter] = useState<{ LOW: boolean; MEDIUM: boolean; HIGH: boolean }>({ LOW: true, MEDIUM: true, HIGH: true })
 
-  
+  const handleImpactChange = (level: 'LOW' | 'MEDIUM' | 'HIGH') => {
+    setImpactFilter((prev) => ({ ...prev, [level]: !prev[level] }))
+  }
+
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
   const calendarDays = getCalendarDays(monthStart, monthEnd)
@@ -222,6 +198,10 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
 
+  // Filter events by impact
+  function filterByImpact(events: FinancialEvent[]) {
+    return events.filter(e => impactFilter[e.importance as keyof typeof impactFilter])
+  }
 
   const initializeComment = (dayData: CalendarEntry | undefined) => {
     if (dayData && dayData.trades.length > 0) {
@@ -303,25 +283,105 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
             {formatCurrency(monthlyTotal)}
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={handlePrevMonth} 
-            className="h-7 w-7 sm:h-8 sm:w-8"
-            aria-label="Previous month"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={handleNextMonth} 
-            className="h-7 w-7 sm:h-8 sm:w-8"
-            aria-label="Next month"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-4">
+          {/* Impact Filter */}
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs font-medium flex items-center gap-1.5"
+                >
+                  <Newspaper className="h-3.5 w-3.5" />
+                  {t('calendar.impactFilter.title')}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[200px]">
+                {!impactFilter.HIGH && (
+                  <DropdownMenuItem
+                    onClick={() => handleImpactChange('HIGH')}
+                    className="text-red-500 hover:bg-red-500/10"
+                  >
+                    {t('calendar.impactFilter.high')}
+                  </DropdownMenuItem>
+                )}
+                {!impactFilter.MEDIUM && (
+                  <DropdownMenuItem
+                    onClick={() => handleImpactChange('MEDIUM')}
+                    className="text-yellow-500 hover:bg-yellow-500/10"
+                  >
+                    {t('calendar.impactFilter.medium')}
+                  </DropdownMenuItem>
+                )}
+                {!impactFilter.LOW && (
+                  <DropdownMenuItem
+                    onClick={() => handleImpactChange('LOW')}
+                    className="text-blue-500 hover:bg-blue-500/10"
+                  >
+                    {t('calendar.impactFilter.low')}
+                  </DropdownMenuItem>
+                )}
+                {Object.values(impactFilter).every(Boolean) && (
+                  <DropdownMenuItem className="text-muted-foreground italic">
+                    {t('calendar.impactFilter.allSelected')}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <div className="flex items-center gap-1.5">
+              {impactFilter.HIGH && (
+                <Badge
+                  variant="secondary"
+                  className="h-5 px-1.5 text-[10px] font-medium bg-red-500/20 text-red-500 hover:bg-red-500/30 cursor-pointer flex items-center gap-1 border border-red-500/20"
+                  onClick={() => handleImpactChange('HIGH')}
+                >
+                  {t('calendar.impactFilter.high')}
+                  <X className="h-3 w-3" />
+                </Badge>
+              )}
+              {impactFilter.MEDIUM && (
+                <Badge
+                  variant="secondary"
+                  className="h-5 px-1.5 text-[10px] font-medium bg-yellow-500/20 text-yellow-500 hover:bg-yellow-500/30 cursor-pointer flex items-center gap-1 border border-yellow-500/20"
+                  onClick={() => handleImpactChange('MEDIUM')}
+                >
+                  {t('calendar.impactFilter.medium')}
+                  <X className="h-3 w-3" />
+                </Badge>
+              )}
+              {impactFilter.LOW && (
+                <Badge
+                  variant="secondary"
+                  className="h-5 px-1.5 text-[10px] font-medium bg-blue-500/20 text-blue-500 hover:bg-blue-500/30 cursor-pointer flex items-center gap-1 border border-blue-500/20"
+                  onClick={() => handleImpactChange('LOW')}
+                >
+                  {t('calendar.impactFilter.low')}
+                  <X className="h-3 w-3" />
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handlePrevMonth} 
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={handleNextMonth} 
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              aria-label="Next month"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1.5 sm:p-4">
@@ -338,7 +398,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
             const dayData = calendarData[dateString]
             const isLastDayOfWeek = getDay(date) === 6
             const isCurrentMonth = isSameMonth(date, currentDate)
-            const dateEvents = getEventsForDate(date)
+            const dateEvents = filterByImpact(getEventsForDate(date))
 
             return (
               <React.Fragment key={dateString}>
@@ -369,7 +429,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                     )}>
                       {format(date, 'd')}
                     </span>
-                    {dateEvents.length > 0 && <EventBadge events={dateEvents} />}
+                    {dateEvents.length > 0 && <EventBadge events={dateEvents} impactFilter={impactFilter} />}
                   </div>
                   <div className="flex-1 flex flex-col justify-end gap-0.5">
                     {dayData ? (
