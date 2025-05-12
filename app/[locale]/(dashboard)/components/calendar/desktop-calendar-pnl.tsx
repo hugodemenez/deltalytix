@@ -299,7 +299,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
           {/* Star Filter */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              {t('calendar.importanceFilter')}
+              {t('calendar.importanceFilter.title')}
             </span>
             <ImportanceFilter
               onChange={setStarFilter}

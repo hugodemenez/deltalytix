@@ -1306,5 +1306,10 @@ export default {
     'calendar.impactFilter.medium': 'Moyen',
     'calendar.impactFilter.high': 'Élevé',
     'calendar.impactFilter.allSelected': 'Tout sélectionné',
-    'calendar.importanceFilter': 'Filtrer les news par importance',
+    'calendar.importanceFilter': {
+        low: 'Faible',
+        medium: 'Moyen',
+        high: 'Élevé',
+        title: 'Filtrer les news par importance',
+    },
 } as const
