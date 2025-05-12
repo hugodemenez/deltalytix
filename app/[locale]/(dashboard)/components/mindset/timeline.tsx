@@ -89,7 +89,8 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
   }
 
   // Sort mood history by date in descending order
-  const sortedMoodHistory = [...moodHistory].sort((a, b) => {
+  const sortedMoodHistory = [...(moodHistory || [])].sort((a, b) => {
+    if (!a?.day || !b?.day) return 0
     const dateA = a.day instanceof Date ? a.day : new Date(a.day)
     const dateB = b.day instanceof Date ? b.day : new Date(b.day)
     return compareDesc(dateA, dateB)
@@ -102,7 +103,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
         "w-[180px] sm:w-[200px] md:w-[220px]",
         className
       )}>
-        {sortedMoodHistory.length === 0 ? (
+        {!sortedMoodHistory?.length ? (
           <div className="flex flex-col items-center justify-center h-full p-4 text-center">
             <Calendar className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">
@@ -113,6 +114,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
           <ScrollArea className="flex-1">
             <div className="space-y-1 p-2">
               {sortedMoodHistory.map((mood) => {
+                if (!mood?.day) return null
                 const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
                 const isSelected = moodDate.toDateString() === selectedDate.toDateString()
                 const isCurrentDay = isToday(moodDate)
