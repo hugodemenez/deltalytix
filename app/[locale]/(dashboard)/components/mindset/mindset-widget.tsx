@@ -98,9 +98,11 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       }, selectedDate)
 
       // Update the moodHistory in context
-      const updatedMoodHistory = moodHistory.filter(mood => 
-        new Date(mood.day).toISOString() !== selectedDate.toISOString()
-      )
+      const updatedMoodHistory = moodHistory?.filter(mood => {
+        if (!mood?.day) return true
+        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+        return moodDate.toISOString() !== selectedDate.toISOString()
+      }) || []
       setMoodHistory([...updatedMoodHistory, savedMood])
 
       toast({
@@ -124,10 +126,11 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       await deleteMindset(date)
 
       // Update the moodHistory in context
-      const updatedMoodHistory = moodHistory.filter(mood => {
+      const updatedMoodHistory = moodHistory?.filter(mood => {
+        if (!mood?.day) return true
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
         return moodDate.toDateString() !== date.toDateString()
-      })
+      }) || []
       setMoodHistory(updatedMoodHistory)
 
       // If the deleted entry was the selected date, reset the form
