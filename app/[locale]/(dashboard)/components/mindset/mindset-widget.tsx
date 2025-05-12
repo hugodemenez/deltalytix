@@ -54,14 +54,15 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     if (!moodHistory) return
 
     const mood = moodHistory.find(mood => {
+      if (!mood?.day) return false
       const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
       return moodDate.toDateString() === selectedDate.toDateString()
     })
     if (mood) {
-      setHasTradingExperience(mood.hasTradingExperience)
-      setEmotionValue(mood.emotionValue)
-      setSelectedNews(mood.selectedNews)
-      setJournalContent(mood.journalContent || "")
+      setHasTradingExperience(mood.hasTradingExperience ?? null)
+      setEmotionValue(mood.emotionValue ?? 50)
+      setSelectedNews(mood.selectedNews ?? [])
+      setJournalContent(mood.journalContent ?? "")
     } else {
       // Reset all values if no mood data exists for the selected date
       setHasTradingExperience(null)
@@ -150,10 +151,11 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
     // Show edit mode if it's today or if there's no data for the selected date
-    const hasData = moodHistory.some(mood => {
+    const hasData = moodHistory?.some(mood => {
+      if (!mood?.day) return false
       const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
       return moodDate.toDateString() === date.toDateString()
-    })
+    }) ?? false
     if (isToday(date) || !hasData) {
       setIsEditing(true)
       api?.scrollTo(0)
