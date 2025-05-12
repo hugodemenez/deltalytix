@@ -156,7 +156,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
       return moodDate.toDateString() === date.toDateString()
     }) ?? false
-    if (isToday(date) || !hasData) {
+    if (isToday(date) && !hasData) {
       setIsEditing(true)
       api?.scrollTo(0)
     } else {
