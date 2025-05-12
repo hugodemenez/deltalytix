@@ -60,7 +60,8 @@ export default {
       filters: 'Filters',
       searchFilters: 'Search filters...',
       sortBy: 'Sort by',
-      moreEvents: '{count} more events'
+      moreEvents: '{count} more events',
+      showOnlyTraded: 'Show only traded hours'
     },
     journaling: {
       title: 'Trading Journal',
@@ -73,6 +74,11 @@ export default {
       losingTrades: 'Losing Trades',
       totalPnL: 'Total P&L',
       winRate: 'Win Rate',
+      symbol: 'Symbol',
+      pnl: 'P&L',
+      commission: 'Commission',
+      netPnL: 'Net P&L',
+      entryTime: 'Entry Time'
     }
   }
 } as const 

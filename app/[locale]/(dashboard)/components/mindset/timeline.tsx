@@ -1,6 +1,5 @@
 "use client"
 
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { format, isToday, compareDesc } from "date-fns"
@@ -111,7 +110,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
             </p>
           </div>
         ) : (
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto">
             <div className="space-y-1 p-2">
               {sortedMoodHistory.map((mood) => {
                 if (!mood?.day) return null
@@ -162,7 +161,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                 )
               })}
             </div>
-          </ScrollArea>
+          </div>
         )}
         
         <div className="p-2 border-t">

@@ -9,11 +9,13 @@ import { useCurrentLocale, useI18n } from "@/locales/client"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { Clock, ExternalLink, MoreHorizontal } from "lucide-react"
+import { Clock, ExternalLink, MoreHorizontal, DollarSign } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import type { FinancialEvent } from "@prisma/client"
 import type { Locale } from "date-fns"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 interface Session {
   name: string
@@ -46,9 +48,18 @@ const SESSIONS: Session[] = [
 interface HourlyFinancialTimelineProps {
   date: Date
   events: FinancialEvent[]
+  trades?: Array<{
+    id: string
+    entryDate: string
+    instrument: string
+    pnl: number
+    commission: number
+  }>
   onEventClick?: (event: FinancialEvent) => void
+  onTradeClick?: (trade: any) => void
   className?: string
   preventScrollPropagation?: boolean
+  showOnlyTradedHours?: boolean
 }
 
 function SessionIndicator({ session, hourElements, containerRef }: { 
@@ -123,10 +134,13 @@ function SessionLegend({ containerRef }: { containerRef: React.RefObject<HTMLDiv
 
 export function HourlyFinancialTimeline({ 
   date, 
-  events, 
-  onEventClick, 
+  events,
+  trades = [],
+  onEventClick,
+  onTradeClick,
   className,
-  preventScrollPropagation = false 
+  preventScrollPropagation = false,
+  showOnlyTradedHours = false
 }: HourlyFinancialTimelineProps) {
   const { timezone } = useUserData()
   const locale = useCurrentLocale()
@@ -199,21 +213,34 @@ export function HourlyFinancialTimeline({
 
   // Generate all hours of the day
   const hours = useMemo(() => {
-    return Array.from({ length: 24 }, (_, i) => {
+    let allHours = Array.from({ length: 24 }, (_, i) => {
       const hour = i
       const hourDate = new Date(date)
       hourDate.setHours(hour, 0, 0, 0)
       return hourDate
     })
-  }, [date])
 
-  // Group events by hour and sort by importance
+    if (showOnlyTradedHours) {
+      // Get unique hours from trades
+      const tradedHours = new Set(
+        trades.map(trade => new Date(trade.entryDate).getHours())
+      )
+      // Filter hours to only include those with trades
+      allHours = allHours.filter(hour => tradedHours.has(hour.getHours()))
+    }
+
+    return allHours
+  }, [date, trades, showOnlyTradedHours])
+
+  // Group events and trades by hour and sort by importance
   const eventsByHour = useMemo(() => {
-    const hourMap = new Map<number, FinancialEvent[]>()
+    const hourMap = new Map<number, Array<FinancialEvent | any>>()
+    const tradesByHour = new Map<number, Array<any>>()
 
     // Initialize all hours with empty arrays
     hours.forEach((hour) => {
       hourMap.set(hour.getHours(), [])
+      tradesByHour.set(hour.getHours(), [])
     })
 
     // Place events in their respective hours
@@ -226,9 +253,39 @@ export function HourlyFinancialTimeline({
       hourMap.set(eventHour, hourEvents)
     })
 
+    // Group trades by hour
+    trades.forEach((trade) => {
+      const tradeDate = new Date(trade.entryDate)
+      const tradeHour = tradeDate.getHours()
+
+      const hourTrades = tradesByHour.get(tradeHour) || []
+      hourTrades.push(trade)
+      tradesByHour.set(tradeHour, hourTrades)
+    })
+
+    // Add aggregated trades to the hour map
+    tradesByHour.forEach((hourTrades, hour) => {
+      if (hourTrades.length > 0) {
+        const totalPnL = hourTrades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0)
+        const uniqueSymbols = new Set(hourTrades.map(trade => trade.instrument))
+        
+        hourMap.get(hour)?.push({
+          type: 'trade',
+          id: `trade-${hour}`,
+          hour,
+          totalPnL,
+          tradeCount: hourTrades.length,
+          symbols: Array.from(uniqueSymbols),
+          trades: hourTrades
+        })
+      }
+    })
+
     // Sort events within each hour by importance
     hourMap.forEach((hourEvents, hour) => {
       const sortedEvents = [...hourEvents].sort((a, b) => {
+        if (a.type === 'trade') return -1 // Trades come first
+        if (b.type === 'trade') return 1
         const weightA = getImpactWeight(a.importance)
         const weightB = getImpactWeight(b.importance)
         return weightB - weightA // Sort in descending order (HIGH to LOW)
@@ -237,7 +294,7 @@ export function HourlyFinancialTimeline({
     })
 
     return hourMap
-  }, [hours, events])
+  }, [hours, events, trades])
 
   // Format the date for display
   const formattedDate = useMemo(() => {
@@ -289,14 +346,25 @@ export function HourlyFinancialTimeline({
 
                 {/* Events for this hour */}
                 <div className="pt-6 px-1 space-y-1">
-                  {displayEvents.map((event) => (
-                    <FinancialEventCard
-                      key={event.id}
-                      event={event}
-                      onClick={() => onEventClick?.(event)}
-                      timezone={timezone}
-                      dateLocale={dateLocale}
-                    />
+                  {displayEvents.map((item) => (
+                    item.type === 'trade' ? (
+                      <TradeCard
+                        key={item.id}
+                        trade={item}
+                        onClick={() => onTradeClick?.(item)}
+                        timezone={timezone}
+                        dateLocale={dateLocale}
+                        date={date}
+                      />
+                    ) : (
+                      <FinancialEventCard
+                        key={item.id}
+                        event={item}
+                        onClick={() => onEventClick?.(item)}
+                        timezone={timezone}
+                        dateLocale={dateLocale}
+                      />
+                    )
                   ))}
 
                   {/* "More" popover for hours with many events */}
@@ -316,15 +384,27 @@ export function HourlyFinancialTimeline({
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium">{format(hour, "HH:mm")}</h4>
                           <div className="space-y-2">
-                            {hourEvents.slice(2).map((event) => (
-                              <FinancialEventCard
-                                key={event.id}
-                                event={event}
-                                onClick={() => onEventClick?.(event)}
-                                timezone={timezone}
-                                dateLocale={dateLocale}
-                                expanded
-                              />
+                            {hourEvents.slice(2).map((item) => (
+                              item.type === 'trade' ? (
+                                <TradeCard
+                                  key={item.id}
+                                  trade={item}
+                                  onClick={() => onTradeClick?.(item)}
+                                  timezone={timezone}
+                                  dateLocale={dateLocale}
+                                  expanded
+                                  date={date}
+                                />
+                              ) : (
+                                <FinancialEventCard
+                                  key={item.id}
+                                  event={item}
+                                  onClick={() => onEventClick?.(item)}
+                                  timezone={timezone}
+                                  dateLocale={dateLocale}
+                                  expanded
+                                />
+                              )
                             ))}
                           </div>
                         </div>
@@ -407,5 +487,118 @@ function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = f
         </a>
       )}
     </div>
+  )
+}
+
+interface TradeCardProps {
+  trade: {
+    id: string
+    hour: number
+    totalPnL: number
+    tradeCount: number
+    symbols: string[]
+    trades: Array<{
+      id: string
+      entryDate: string
+      instrument: string
+      pnl: number
+      commission: number
+    }>
+  }
+  onClick?: () => void
+  timezone: string
+  dateLocale: Locale
+  expanded?: boolean
+  date: Date
+}
+
+function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, date }: TradeCardProps) {
+  const t = useI18n()
+  const hourDate = new Date(date)
+  hourDate.setHours(trade.hour)
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <div
+          className={cn(
+            "border-l-4 rounded-r-md p-2 cursor-pointer transition-colors hover:opacity-90",
+            trade.totalPnL > 0 
+              ? "bg-green-100 border-green-300 text-green-800 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400"
+              : "bg-red-100 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400"
+          )}
+        >
+          <div className="font-medium text-sm">
+            {trade.tradeCount} {trade.tradeCount === 1 ? 'Trade' : 'Trades'}
+          </div>
+
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
+            <div className="flex items-center">
+              <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span>{formatInTimeZone(hourDate, timezone, "HH:mm", { locale: dateLocale })}</span>
+            </div>
+
+            <div className="flex items-center">
+              <DollarSign className="h-3 w-3 mr-1 flex-shrink-0" />
+              <span>{trade.totalPnL.toFixed(2)}</span>
+            </div>
+          </div>
+        </div>
+      </PopoverTrigger>
+      <PopoverContent className="w-[500px] p-0" align="start">
+        <div className="p-4 border-b">
+          <h4 className="font-medium">
+            {formatInTimeZone(hourDate, timezone, "HH:mm", { locale: dateLocale })} - {trade.tradeCount} {trade.tradeCount === 1 ? 'Trade' : 'Trades'}
+          </h4>
+          <div className="flex items-center gap-2 mt-1">
+            <DollarSign className="h-4 w-4" />
+            <span className={cn(
+              "font-medium",
+              trade.totalPnL > 0 ? "text-green-500" : "text-red-500"
+            )}>
+              {trade.totalPnL.toFixed(2)}
+            </span>
+          </div>
+        </div>
+        <ScrollArea className="h-[300px]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('mindset.tradingStats.symbol')}</TableHead>
+                <TableHead>{t('mindset.tradingStats.entryTime')}</TableHead>
+                <TableHead className="text-right">{t('mindset.tradingStats.pnl')}</TableHead>
+                <TableHead className="text-right">{t('mindset.tradingStats.commission')}</TableHead>
+                <TableHead className="text-right">{t('mindset.tradingStats.netPnL')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {trade.trades.map((t) => (
+                <TableRow key={t.id}>
+                  <TableCell className="font-medium">{t.instrument}</TableCell>
+                  <TableCell>
+                    {formatInTimeZone(new Date(t.entryDate), timezone, "HH:mm:ss", { locale: dateLocale })}
+                  </TableCell>
+                  <TableCell className={cn(
+                    "text-right",
+                    t.pnl > 0 ? "text-green-500" : "text-red-500"
+                  )}>
+                    {t.pnl.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right text-muted-foreground">
+                    {t.commission.toFixed(2)}
+                  </TableCell>
+                  <TableCell className={cn(
+                    "text-right font-medium",
+                    (t.pnl - t.commission) > 0 ? "text-green-500" : "text-red-500"
+                  )}>
+                    {(t.pnl - t.commission).toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
   )
 } 

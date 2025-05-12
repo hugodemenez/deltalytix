@@ -60,7 +60,8 @@ export default {
       filters: 'Filtres',
       searchFilters: 'Rechercher des filtres...',
       sortBy: 'Trier par',
-      moreEvents: '{count} événements supplémentaires'
+      moreEvents: '{count} événements supplémentaires',
+      showOnlyTraded: 'Afficher uniquement les heures tradées'
     },
     journaling: {
       title: 'Journal de Trading',
@@ -73,6 +74,11 @@ export default {
       losingTrades: 'Trades perdants',
       totalPnL: 'P&L total',
       winRate: 'Taux de réussite',
+      symbol: 'Symbole',
+      pnl: 'P&L',
+      commission: 'Commission',
+      netPnL: 'P&L Net',
+      entryTime: 'Heure d\'entrée'
     },
   }
 } as const; 

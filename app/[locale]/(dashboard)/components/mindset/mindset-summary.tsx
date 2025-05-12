@@ -14,6 +14,8 @@ import { HourlyFinancialTimeline } from "./hourly-financial-timeline"
 import { getFinancialEvents } from "@/server/financial-events"
 import { useState, useEffect } from "react"
 import type { FinancialEvent } from "@prisma/client"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 
 interface MindsetSummaryProps {
   date: Date
@@ -38,6 +40,7 @@ export function MindsetSummary({
   const { trades = [], financialEvents = [] } = useUserData()
   const { timezone } = useUserData()
   const [events, setEvents] = useState<FinancialEvent[]>([])
+  const [showOnlyTradedHours, setShowOnlyTradedHours] = useState(true)
 
   useEffect(() => {
     // Filter events for the selected date and locale
@@ -168,17 +171,31 @@ export function MindsetSummary({
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground">
-              {t('mindset.newsImpact.title')}
-            </p>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('news')}>
-              <Pencil className="h-3 w-3" />
-            </Button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                {t('mindset.newsImpact.title')}
+              </p>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('news')}>
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="show-only-traded" className="text-xs text-muted-foreground">
+                {t('mindset.newsImpact.showOnlyTraded')}
+              </Label>
+              <Switch
+                id="show-only-traded"
+                checked={showOnlyTradedHours}
+                onCheckedChange={setShowOnlyTradedHours}
+              />
+            </div>
           </div>
           <HourlyFinancialTimeline
             date={date}
             events={events}
+            trades={dayTrades}
+            showOnlyTradedHours={showOnlyTradedHours}
           />
         </div>
       </div>
