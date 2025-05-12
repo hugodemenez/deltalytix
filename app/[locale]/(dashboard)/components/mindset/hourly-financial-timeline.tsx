@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useEffect } from "react"
+import { useMemo, useRef, useEffect, useState } from "react"
 import { format } from "date-fns"
 import { formatInTimeZone } from "date-fns-tz"
 import { fr, enUS } from "date-fns/locale"
@@ -11,8 +11,37 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { Clock, ExternalLink, MoreHorizontal } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import type { FinancialEvent } from "@prisma/client"
 import type { Locale } from "date-fns"
+
+interface Session {
+  name: string
+  startHour: number
+  endHour: number
+  color: string
+}
+
+const SESSIONS: Session[] = [
+  {
+    name: "Tokyo Session",
+    startHour: 0,
+    endHour: 8,
+    color: "bg-red-500/20 border-red-500"
+  },
+  {
+    name: "London Session",
+    startHour: 8,
+    endHour: 16,
+    color: "bg-blue-500/20 border-blue-500"
+  },
+  {
+    name: "New York Session",
+    startHour: 13,
+    endHour: 21,
+    color: "bg-green-500/20 border-green-500"
+  }
+]
 
 interface HourlyFinancialTimelineProps {
   date: Date
@@ -20,6 +49,76 @@ interface HourlyFinancialTimelineProps {
   onEventClick?: (event: FinancialEvent) => void
   className?: string
   preventScrollPropagation?: boolean
+}
+
+function SessionIndicator({ session, hourElements, containerRef }: { 
+  session: Session; 
+  hourElements: HTMLDivElement[];
+  containerRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  if (!hourElements.length) return null
+
+  // Find the start and end hour elements
+  const startHourElement = hourElements[session.startHour]
+  const endHourElement = hourElements[session.endHour === 0 ? 23 : session.endHour - 1]
+
+  if (!startHourElement || !endHourElement) return null
+
+  const startPosition = startHourElement.offsetTop
+  const endPosition = endHourElement.offsetTop + endHourElement.offsetHeight
+  const height = endPosition - startPosition
+
+  const handleClick = () => {
+    if (!containerRef.current) return
+    containerRef.current.scrollTo({
+      top: startPosition,
+      behavior: 'smooth'
+    })
+  }
+
+  return (
+    <div 
+      className={cn(
+        "absolute left-0 w-1 border-l cursor-pointer transition-all hover:w-2 hover:opacity-100",
+        session.color,
+        "opacity-60"
+      )}
+      style={{
+        top: `${startPosition}px`,
+        height: `${height}px`
+      }}
+      onClick={handleClick}
+      role="button"
+      aria-label={`Scroll to ${session.name}`}
+    />
+  )
+}
+
+function SessionLegend({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
+  return (
+    <div className="p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t shadow-lg">
+      <div className="flex items-center justify-center gap-4 text-xs">
+        {SESSIONS.map((session) => (
+          <div 
+            key={session.name} 
+            className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => {
+              if (!containerRef.current) return
+              const hourElement = containerRef.current.querySelector(`[data-hour="${session.startHour}"]`)
+              if (!hourElement) return
+              containerRef.current.scrollTo({
+                top: hourElement.getBoundingClientRect().top - containerRef.current.getBoundingClientRect().top + containerRef.current.scrollTop,
+                behavior: 'smooth'
+              })
+            }}
+          >
+            <div className={cn("w-2 h-2 rounded-full", session.color.replace("border", "bg"))} />
+            <span className="text-muted-foreground">{session.name}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function HourlyFinancialTimeline({ 
@@ -34,6 +133,15 @@ export function HourlyFinancialTimeline({
   const dateLocale = locale === "fr" ? fr : enUS
   const t = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
+  const [hourElements, setHourElements] = useState<HTMLDivElement[]>([])
+
+  // Update hour elements after render
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const elements = Array.from(containerRef.current.querySelectorAll('[data-hour]')) as HTMLDivElement[]
+    setHourElements(elements)
+  }, [events]) // Re-run when events change
 
   // Scroll to first event on mount when preventScrollPropagation is true
   useEffect(() => {
@@ -137,19 +245,31 @@ export function HourlyFinancialTimeline({
   }, [date, timezone, dateLocale])
 
   return (
-    <div className={cn("flex flex-col h-full border rounded-lg overflow-hidden", className)}>
+    <div className={cn("flex flex-col h-full border rounded-lg overflow-hidden relative", className)}>
       {/* Header with date */}
       <div className="p-2 text-center font-medium border-b bg-muted/20">{formattedDate}</div>
 
       {/* Timeline content */}
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto relative "
         style={{ 
           overscrollBehavior: preventScrollPropagation ? 'contain' : 'auto'
         }}
       >
-        <div className="flex flex-col divide-y">
+        {/* Session indicators */}
+        <div className="absolute left-0 top-0 bottom-0 w-1">
+          {SESSIONS.map((session) => (
+            <SessionIndicator 
+              key={session.name} 
+              session={session} 
+              hourElements={hourElements}
+              containerRef={containerRef}
+            />
+          ))}
+        </div>
+
+        <div className="flex flex-col divide-y pl-2 pb-16">
           {hours.map((hour) => {
             const hourEvents = eventsByHour.get(hour.getHours()) || []
             const hasEvents = hourEvents.length > 0
@@ -217,6 +337,9 @@ export function HourlyFinancialTimeline({
           })}
         </div>
       </div>
+
+      {/* Session legend - now fixed at the bottom */}
+      <SessionLegend containerRef={containerRef} />
     </div>
   )
 }
