@@ -51,6 +51,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   }, [api])
 
   useEffect(() => {
+    if (!moodHistory) return
+
     const mood = moodHistory.find(mood => {
       const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
       return moodDate.toDateString() === selectedDate.toDateString()
