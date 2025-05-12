@@ -87,6 +87,7 @@ model User {
   isBeta          Boolean          @default(false)
   isFirstConnection Boolean        @default(true)
   etpToken        String?
+  thorToken       String?
   posts           Post[]
   votes           Vote[]
   comments        Comment[]

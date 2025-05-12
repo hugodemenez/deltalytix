@@ -1278,4 +1278,27 @@ export default {
     deleteGroupTitle: "Supprimer le Groupe",
     deleteGroupDescription: "Êtes-vous sûr de vouloir supprimer le groupe {name}? Cette action est irréversible.",
     moveToHidden: "Déplacer vers les comptes masqués",
+    'thor': {
+        'title': 'Token API Thor',
+        'description': 'Générez et gérez votre token API Thor. Ce token est nécessaire pour synchroniser vos trades depuis Thor.',
+        'noToken': 'Aucun token généré',
+        'revealToken': 'Afficher le Token API',
+        'revealWarning': 'Êtes-vous sûr de vouloir afficher votre token API ? Assurez-vous que personne d\'autre ne peut voir votre écran.',
+        'cancel': 'Annuler',
+        'reveal': 'Afficher le Token',
+        'copied': 'Token copié dans le presse-papiers',
+        'generated': 'Token généré avec succès',
+        'error': {
+            'generation': 'Échec de la génération du token',
+        },
+        'invalidation': 'Note : La génération d\'un nouveau token invalidera tout token existant.',
+        'tutorial': {
+            'title': 'Comment Utiliser Votre Token Thor',
+            'description': 'Regardez ce tutoriel pour apprendre à configurer et utiliser votre token Thor pour la synchronisation des trades.',
+            'notAvailable': 'La vidéo tutoriel n\'est pas encore disponible.'
+        }
+    },
+    'import.type.thorSync.name': 'Thor',
+    'import.type.thorSync.description': 'Synchronisation directe de vos comptes connectés à Thor',
+    'import.type.thorSync.details': 'Synchronisation directe avec votre compte Thor. Nécessite une authentification par token API.',
 } as const

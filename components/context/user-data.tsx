@@ -221,6 +221,7 @@ interface UserDataContextType {
   // User related
   user: User | null
   etpToken: string | null
+  thorToken: string | null
   subscription: {
     isActive: boolean
     plan: string | null
@@ -362,6 +363,7 @@ interface CachedData {
   timestamp: number;
   user: User | null;
   etpToken: string | null;
+  thorToken: string | null;
   subscription: UserDataContextType['subscription'];
   trades: TradeWithUTC[];
   tickDetails: Record<string, number>;
@@ -416,6 +418,7 @@ export const UserDataProvider: React.FC<{
   // User state - null for shared views
   const [user, setUser] = useState<User | null>(null);
   const [etpToken, setEtpToken] = useState<string | null>(null);
+  const [thorToken, setThorToken] = useState<string | null>(null);
   const [isFirstConnection, setIsFirstConnection] = useState<boolean>(false);
   const [subscription, setSubscription] = useState<UserDataContextType['subscription']>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -547,6 +550,7 @@ export const UserDataProvider: React.FC<{
           const {
             user,
             etpToken,
+            thorToken,
             subscription,
             trades,
             tickDetails,
@@ -565,6 +569,7 @@ export const UserDataProvider: React.FC<{
 
           setUser(user);
           setEtpToken(etpToken);
+          setThorToken(thorToken);
           setSubscription(subscription);
           setTrades(trades);
           setTickDetails(tickDetails);
@@ -606,6 +611,7 @@ export const UserDataProvider: React.FC<{
           // Update state
           setUser(fetchedData.user);
           setEtpToken(fetchedData.etpToken);
+          setThorToken(fetchedData.thorToken);
           setIsFirstConnection(fetchedData.isFirstConnection);
           setSubscription(fetchedData.subscription);
           setTrades(processedTrades);
@@ -624,6 +630,7 @@ export const UserDataProvider: React.FC<{
           setLocalCache({
             user: fetchedData.user,
             etpToken: fetchedData.etpToken,
+            thorToken: fetchedData.thorToken,
             subscription: fetchedData.subscription,
             trades: processedTrades,
             tickDetails: fetchedData.tickDetails || {},
@@ -1009,6 +1016,7 @@ export const UserDataProvider: React.FC<{
     if (!data.error) {
       setUser(data.user);
       setEtpToken(data.etpToken);
+      setThorToken(data.thorToken);
       setIsFirstConnection(data.isFirstConnection);
       setSubscription(data.subscription);
       setTags(data.tags || []);
@@ -1020,6 +1028,7 @@ export const UserDataProvider: React.FC<{
       setLocalCache({
         user: data.user,
         etpToken: data.etpToken,
+        thorToken: data.thorToken,
         subscription: data.subscription,
         tags: data.tags || [],
         propfirmAccounts: data.propfirmAccounts || [],
@@ -1171,6 +1180,7 @@ export const UserDataProvider: React.FC<{
     // User related
     user,
     etpToken,
+    thorToken,
     subscription,
     isPlusUser,
     isLoading,

@@ -1,5 +1,6 @@
 import { Trade } from '@prisma/client'
 import { EtpSync } from '../etp/etp-sync'
+import { ThorSync } from '../thor/thor-sync'
 import { ImportType } from '../import-type-selection'
 import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-new'
 import type { ComponentType } from 'react'
@@ -57,6 +58,7 @@ type StepComponent =
   | typeof RithmicOrderProcessor
   | typeof RithmicSyncWrapper
   | typeof EtpSync
+  | typeof ThorSync
 
 export interface PlatformConfig {
   platformName: string
@@ -546,6 +548,36 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.connectAccount',
         description: 'import.steps.connectAccountDescription',
         component: EtpSync,
+        isLastStep: true
+      }
+    ]
+  },
+  {
+    platformName: 'thor-sync',
+    type: 'thor-sync',
+    name: 'import.type.thorSync.name',
+    description: 'import.type.thorSync.description',
+    category: 'Direct Account Sync',
+    videoUrl: process.env.NEXT_PUBLIC_THOR_SYNC_TUTORIAL_VIDEO || '',
+    details: 'import.type.thorSync.details',
+    logo: {
+      path: '/logos/thor.png',
+      alt: 'Thor Logo'
+    },
+    customComponent: ThorSync,
+    isComingSoon: true,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'complete',
+        title: 'import.steps.connectAccount',
+        description: 'import.steps.connectAccountDescription',
+        component: ThorSync,
         isLastStep: true
       }
     ]

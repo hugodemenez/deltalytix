@@ -1205,4 +1205,27 @@ export default {
     'import.steps.connectAccountDescription': 'Connect your trading account',
     'import.title': 'Import Trades',
     'import.description': 'Import your trades from various sources',
+    'thor': {
+        'title': 'Thor API Token',
+        'description': 'Generate and manage your Thor API token. This token is required to sync your trades from Thor.',
+        'noToken': 'No token generated',
+        'revealToken': 'Reveal API Token',
+        'revealWarning': 'Are you sure you want to reveal your API token? Make sure no one else can see your screen.',
+        'cancel': 'Cancel',
+        'reveal': 'Reveal Token',
+        'copied': 'Token copied to clipboard',
+        'generated': 'Token generated successfully',
+        'error': {
+            'generation': 'Failed to generate token',
+        },
+        'invalidation': 'Note: Generating a new token will invalidate any existing token.',
+        'tutorial': {
+            'title': 'How to Use Your Thor Token',
+            'description': 'Watch this tutorial to learn how to set up and use your Thor token for trade synchronization.',
+            'notAvailable': 'Tutorial video is not yet available.'
+        }
+    },
+    'import.type.thorSync.name': 'Thor',
+    'import.type.thorSync.description': 'Direct account synchronization with Thor',
+    'import.type.thorSync.details': 'Direct sync with your Thor account. Requires API token authentication.',
 } as const
