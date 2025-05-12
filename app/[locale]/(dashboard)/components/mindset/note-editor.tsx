@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { EditorContent, useEditor } from "@tiptap/react"
 import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
@@ -30,28 +30,32 @@ import { cn } from "@/lib/utils"
 interface NoteEditorProps {
   initialContent?: string
   onChange?: (content: string) => void
-  onSave?: (content: string) => void
   className?: string
   height?: string
   width?: string
-  autoSave?: boolean
-  autoSaveInterval?: number
 }
 
 export function NoteEditor({
   initialContent = "",
   onChange,
-  onSave,
   className,
   height = "400px",
   width = "100%",
-  autoSave = false,
-  autoSaveInterval = 1000,
 }: NoteEditorProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
-  const [content, setContent] = useState(initialContent)
+  const debounceTimer = useRef<NodeJS.Timeout | null>(null)
+
+  const debouncedOnChange = useCallback((content: string) => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current)
+    }
+    
+    debounceTimer.current = setTimeout(() => {
+      onChange?.(content)
+    }, 500) // 500ms debounce
+  }, [onChange])
 
   const editor = useEditor({
     extensions: [
@@ -68,17 +72,24 @@ export function NoteEditor({
     ],
     content: initialContent,
     onUpdate: ({ editor }) => {
-      const html = editor.getHTML()
-      setContent(html)
-      onChange?.(html)
+      const content = editor.getHTML()
+      debouncedOnChange(content)
     },
   })
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current)
+      }
+    }
+  }, [])
 
   // Update editor content when initialContent changes
   useEffect(() => {
     if (editor && initialContent !== undefined && editor.getHTML() !== initialContent) {
       editor.commands.setContent(initialContent)
-      setContent(initialContent)
     }
   }, [editor, initialContent])
 
@@ -89,21 +100,15 @@ export function NoteEditor({
     }
   }, [])
 
-  // Autosave functionality with debounce
-  useEffect(() => {
-    if (!autoSave || !content) return
+  const handleManualSave = useCallback(() => {
+    if (!editor) return
 
-    const timer = setTimeout(() => {
-      if (typeof window !== "undefined" && content) {
-        setIsSaving(true)
-        onSave?.(content)
-        setLastSaved(new Date())
-        setTimeout(() => setIsSaving(false), 1000)
-      }
-    }, autoSaveInterval)
-
-    return () => clearTimeout(timer)
-  }, [content, autoSave, autoSaveInterval])
+    const content = editor.getHTML()
+    setIsSaving(true)
+    setLastSaved(new Date())
+    onChange?.(content)
+    setTimeout(() => setIsSaving(false), 500)
+  }, [editor, onChange])
 
   const setLink = useCallback(() => {
     if (!editor) return
@@ -133,14 +138,6 @@ export function NoteEditor({
     }
   }, [editor])
 
-  const handleManualSave = useCallback(() => {
-    if (!content) return
-
-    setIsSaving(true)
-    setLastSaved(new Date())
-    onSave?.(content)
-    setTimeout(() => setIsSaving(false), 500)
-  }, [content, onSave])
 
   if (!isMounted) {
     return null
@@ -338,22 +335,6 @@ export function NoteEditor({
               </TooltipTrigger>
               <TooltipContent>Clear formatting</TooltipContent>
             </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleManualSave}
-                    className={cn("h-8 w-8 ml-auto", isSaving && "text-green-500")}
-                  >
-                    <Save className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isSaving ? "Saving..." : lastSaved ? `Last saved: ${lastSaved.toLocaleTimeString()}` : "Save"}
-                </TooltipContent>
-              </Tooltip>
           </TooltipProvider>
         </div>
       )}

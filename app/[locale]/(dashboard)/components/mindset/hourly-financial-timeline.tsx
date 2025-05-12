@@ -35,6 +35,30 @@ export function HourlyFinancialTimeline({
   const t = useI18n()
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Scroll to first event on mount when preventScrollPropagation is true
+  useEffect(() => {
+    if (!preventScrollPropagation || !events.length) return
+
+    // Sort events by date to find the earliest one
+    const sortedEvents = [...events].sort((a, b) => 
+      new Date(a.date).getTime() - new Date(b.date).getTime()
+    )
+    const firstEvent = sortedEvents[0]
+    const firstEventDate = new Date(firstEvent.date)
+    const firstEventHour = firstEventDate.getHours()
+
+    // Use a small timeout to ensure content is rendered
+    const timeoutId = setTimeout(() => {
+      // Find the hour element
+      const hourElement = containerRef.current?.querySelector(`[data-hour="${firstEventHour}"]`)
+      if (hourElement) {
+        hourElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
+
+    return () => clearTimeout(timeoutId)
+  }, [events, preventScrollPropagation])
+
   useEffect(() => {
     if (!preventScrollPropagation) return
 
@@ -133,7 +157,11 @@ export function HourlyFinancialTimeline({
             const displayEvents = hasMultipleEvents ? hourEvents.slice(0, 2) : hourEvents
 
             return (
-              <div key={hour.getTime()} className={cn("relative min-h-[60px]", hasEvents ? "bg-muted/5" : "")}>
+              <div 
+                key={hour.getTime()} 
+                className={cn("relative min-h-[60px]", hasEvents ? "bg-muted/5" : "")}
+                data-hour={hour.getHours()}
+              >
                 {/* Time indicator */}
                 <div className="absolute left-0 top-0 text-xs text-muted-foreground p-1">
                   {formatInTimeZone(hour, timezone, "HH:mm", { locale: dateLocale })}

@@ -7,7 +7,7 @@ import { fr, enUS } from "date-fns/locale"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, DollarSign, BarChart2 } from "lucide-react"
+import { TrendingUp, TrendingDown, DollarSign, BarChart2, Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useUserData } from "@/components/context/user-data"
 import { HourlyFinancialTimeline } from "./hourly-financial-timeline"
@@ -21,7 +21,7 @@ interface MindsetSummaryProps {
   emotionValue: number
   selectedNews: string[]
   journalContent: string
-  onEdit: () => void
+  onEdit: (section?: 'trading' | 'emotion' | 'journal' | 'news') => void
 }
 
 export function MindsetSummary({ 
@@ -81,18 +81,20 @@ export function MindsetSummary({
         <h2 className="text-xl font-semibold">
           {format(date, 'MMMM d, yyyy', { locale: dateLocale })}
         </h2>
-        <Button onClick={onEdit} size="sm">
-          {t('mindset.edit')}
-        </Button>
       </div>
 
       <div className="grid gap-4">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">
-                {t('mindset.tradingQuestion.title')}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {t('mindset.tradingQuestion.title')}
+                </p>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('trading')}>
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
               <p className="text-sm">
                 {hasTradingExperience === null 
                   ? t('mindset.noData')
@@ -102,9 +104,14 @@ export function MindsetSummary({
               </p>
             </div>
             <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">
-                {t('mindset.emotion.title')}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {t('mindset.emotion.title')}
+                </p>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('emotion')}>
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </div>
               <p className={cn("text-sm font-medium", emotion.color)}>
                 {emotion.label}
               </p>
@@ -141,9 +148,14 @@ export function MindsetSummary({
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            {t('mindset.journaling.title')}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              {t('mindset.journaling.title')}
+            </p>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('journal')}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </div>
           {!journalContent ? (
             <p className="text-sm text-muted-foreground">{t('mindset.noData')}</p>
           ) : (
@@ -156,9 +168,14 @@ export function MindsetSummary({
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">
-            {t('mindset.newsImpact.title')}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              {t('mindset.newsImpact.title')}
+            </p>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('news')}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+          </div>
           <HourlyFinancialTimeline
             date={date}
             events={events}

@@ -113,6 +113,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   }
 
   const handleSave = async () => {
+      // Scroll to summary view after saving
+      api?.scrollTo(4)
     try {
       const savedMood = await saveMindset({
         emotionValue,
@@ -136,8 +138,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         description: t('mindset.saveSuccessDescription'),
       })
 
-      // Scroll to summary view after saving
-      api?.scrollTo(4)
     } catch (error) {
       toast({
         title: t('mindset.saveError'),
@@ -204,9 +204,26 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     }
   }
 
-  const handleEdit = () => {
+  const handleEdit = (section?: 'trading' | 'emotion' | 'journal' | 'news') => {
     setIsEditing(true)
-    api?.scrollTo(0)
+    
+    // Navigate to the appropriate section
+    switch (section) {
+      case 'trading':
+        api?.scrollTo(0)
+        break
+      case 'emotion':
+        api?.scrollTo(1)
+        break
+      case 'news':
+        api?.scrollTo(2)
+        break
+      case 'journal':
+        api?.scrollTo(3)
+        break
+      default:
+        api?.scrollTo(0)
+    }
   }
 
   const steps = [
@@ -240,7 +257,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         content={journalContent}
         onChange={handleJournalChange}
         onSave={handleSave}
-        autoSave={false}
       />
     },
     {

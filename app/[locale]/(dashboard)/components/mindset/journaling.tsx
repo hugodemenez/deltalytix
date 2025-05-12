@@ -9,22 +9,19 @@ interface JournalingProps {
   content: string
   onChange: (content: string) => void
   onSave: () => void
-  autoSave?: boolean
 }
 
-export function Journaling({ onBack, content, onChange, onSave, autoSave = true }: JournalingProps) {
+export function Journaling({ onBack, content, onChange, onSave }: JournalingProps) {
   const t = useI18n()
 
   return (
     <div className="h-full flex flex-col">
       <div className="flex-1 overflow-hidden">
         <NoteEditor
-          onSave={onSave}
           initialContent={content}
           onChange={onChange}
           height="h-96"
           width="100%"
-          autoSave={autoSave}
         />
       </div>
 

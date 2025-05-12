@@ -1306,4 +1306,5 @@ export default {
     'calendar.impactFilter.medium': 'Moyen',
     'calendar.impactFilter.high': 'Élevé',
     'calendar.impactFilter.allSelected': 'Tout sélectionné',
+    'calendar.importanceFilter': 'Filtrer par importance',
 } as const
