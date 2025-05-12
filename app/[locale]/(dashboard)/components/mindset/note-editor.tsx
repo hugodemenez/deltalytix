@@ -45,8 +45,8 @@ export function NoteEditor({
   className,
   height = "400px",
   width = "100%",
-  autoSave = true,
-  autoSaveInterval = 500,
+  autoSave = false,
+  autoSaveInterval = 1000,
 }: NoteEditorProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)

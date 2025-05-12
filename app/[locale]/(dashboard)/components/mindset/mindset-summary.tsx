@@ -148,6 +148,7 @@ export function MindsetSummary({
             <p className="text-sm text-muted-foreground">{t('mindset.noData')}</p>
           ) : (
             <div 
+              key={journalContent}
               className="prose prose-sm dark:prose-invert max-w-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:relative [&_.ProseMirror]:h-full"
               dangerouslySetInnerHTML={{ __html: journalContent }}
             />

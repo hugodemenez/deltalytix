@@ -42,37 +42,58 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const { moodHistory = [], setMoodHistory } = useUserData()
   const t = useI18n()
 
+  // Consolidated effect for carousel and mood data handling
   useEffect(() => {
     if (!api) return
 
+    // Handle carousel selection
     api.on("select", () => {
       setCurrent(api.selectedScrollSnap())
     })
-  }, [api])
 
-  useEffect(() => {
-    if (!moodHistory) return
+    // Handle initial load and mood data
+    if (moodHistory) {
+      const today = new Date()
+      const hasTodayData = moodHistory.some(mood => {
+        if (!mood?.day) return false
+        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+        return moodDate.toDateString() === today.toDateString()
+      })
+            // Handle selected date mood data
+            const mood = moodHistory.find(mood => {
+              if (!mood?.day) return false
+              const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+              return moodDate.toDateString() === selectedDate.toDateString()
+            })
 
-    const mood = moodHistory.find(mood => {
-      if (!mood?.day) return false
-      const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-      return moodDate.toDateString() === selectedDate.toDateString()
-    })
-    if (mood) {
-      setHasTradingExperience(mood.hasTradingExperience ?? null)
-      setEmotionValue(mood.emotionValue ?? 50)
-      setSelectedNews(mood.selectedNews ?? [])
-      setJournalContent(mood.journalContent ?? "")
-      // Scroll to the summary view
-      api?.scrollTo(4)
-    } else {
-      // Reset all values if no mood data exists for the selected date
-      setHasTradingExperience(null)
-      setEmotionValue(50)
-      setSelectedNews([])
-      setJournalContent("")
+      // If it's today and we have data, show summary
+      if (isToday(selectedDate) && hasTodayData) {
+        // Set data to today's data
+        setHasTradingExperience(mood?.hasTradingExperience ?? null)
+        setEmotionValue(mood?.emotionValue ?? 50)
+        setSelectedNews(mood?.selectedNews ?? [])
+        setJournalContent(mood?.journalContent ?? "")
+        setIsEditing(true)
+        api.scrollTo(4)
+        return
+      }
+
+
+      if (mood) {
+        setHasTradingExperience(mood.hasTradingExperience ?? null)
+        setEmotionValue(mood.emotionValue ?? 50)
+        setSelectedNews(mood.selectedNews ?? [])
+        setJournalContent(mood.journalContent ?? "")
+        api.scrollTo(4)
+      } else {
+        // Reset all values if no mood data exists for the selected date
+        setHasTradingExperience(null)
+        setEmotionValue(50)
+        setSelectedNews([])
+        setJournalContent("")
+      }
     }
-  }, [selectedDate, moodHistory])
+  }, [api, selectedDate, moodHistory])
 
   const handleTradingQuestion = (hasExperience: boolean) => {
     setHasTradingExperience(hasExperience)
@@ -104,7 +125,9 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       const updatedMoodHistory = moodHistory?.filter(mood => {
         if (!mood?.day) return true
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        return moodDate.toISOString() !== selectedDate.toISOString()
+        const selectedDateStr = selectedDate.toISOString().split('T')[0]
+        const moodDateStr = moodDate.toISOString().split('T')[0]
+        return moodDateStr !== selectedDateStr
       }) || []
       setMoodHistory([...updatedMoodHistory, savedMood])
 
@@ -152,18 +175,32 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
 
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date)
-    // Show edit mode if it's today or if there's no data for the selected date
-    const hasData = moodHistory?.some(mood => {
+    
+    // Find if we have data for the selected date
+    const moodForDate = moodHistory?.find(mood => {
       if (!mood?.day) return false
       const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-      return moodDate.toDateString() === date.toDateString()
-    }) ?? false
-    if (isToday(date) && !hasData) {
-      setIsEditing(true)
-      api?.scrollTo(0)
-    } else {
+      const moodDateStr = moodDate.toISOString().split('T')[0]
+      const selectedDateStr = date.toISOString().split('T')[0]
+      return moodDateStr === selectedDateStr
+    })
+
+    if (moodForDate) {
+      // If we have data, update all the state values
+      setHasTradingExperience(moodForDate.hasTradingExperience ?? null)
+      setEmotionValue(moodForDate.emotionValue ?? 50)
+      setSelectedNews(moodForDate.selectedNews ?? [])
+      setJournalContent(moodForDate.journalContent ?? "")
       setIsEditing(true)
       api?.scrollTo(4)
+    } else {
+      // If no data exists, reset the form
+      setHasTradingExperience(null)
+      setEmotionValue(50)
+      setSelectedNews([])
+      setJournalContent("")
+      setIsEditing(true)
+      api?.scrollTo(0)
     }
   }
 
