@@ -145,3 +145,136 @@ export async function POST(req: NextRequest) {
     await prisma.$disconnect();
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const auth = await authenticateRequest(req);
+    
+    if (!auth.authenticated) {
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: auth.error?.message 
+      }, { status: auth.error?.status || 401 });
+    }
+    
+    const user = auth.user!;
+    
+    // Get query parameters
+    const searchParams = req.nextUrl.searchParams;
+    const accountNumber = searchParams.get('accountNumber');
+    
+    if (!accountNumber) {
+      return NextResponse.json({ 
+        error: 'Bad Request', 
+        message: 'accountNumber parameter is required' 
+      }, { status: 400 });
+    }
+    
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 100;
+    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
+    const fromDate = searchParams.get('from');
+    const toDate = searchParams.get('to');
+    
+    // Build the query
+    const query: any = {
+      where: {
+        userId: user.id,
+        accountNumber: accountNumber
+      },
+      orderBy: {
+        entryDate: 'desc' as const
+      },
+      take: limit,
+      skip: offset
+    };
+    
+    if (fromDate || toDate) {
+      query.where.entryDate = {};
+      
+      if (fromDate) {
+        query.where.entryDate.gte = new Date(fromDate);
+      }
+      
+      if (toDate) {
+        query.where.entryDate.lte = new Date(toDate);
+      }
+    }
+    
+    // Get trades
+    const trades = await prisma.trade.findMany(query);
+    
+    // Get total count for pagination
+    const totalCount = await prisma.trade.count({
+      where: query.where
+    });
+    
+    return NextResponse.json({ 
+      success: true, 
+      data: {
+        trades,
+        pagination: {
+          total: totalCount,
+          limit,
+          offset
+        }
+      }
+    }, { status: 200 });
+    
+  } catch (error) {
+    console.error('[thor/store] Error retrieving trades:', error);
+    return NextResponse.json({ 
+      error: 'Failed to retrieve trades', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const auth = await authenticateRequest(req);
+    
+    if (!auth.authenticated) {
+      return NextResponse.json({ 
+        error: 'Unauthorized', 
+        message: auth.error?.message 
+      }, { status: auth.error?.status || 401 });
+    }
+    
+    const user = auth.user!;
+    
+    // Get accountNumber from query parameters
+    const searchParams = req.nextUrl.searchParams;
+    const accountNumber = searchParams.get('accountNumber');
+    
+    if (!accountNumber) {
+      return NextResponse.json({ 
+        error: 'Bad Request', 
+        message: 'accountNumber parameter is required' 
+      }, { status: 400 });
+    }
+    
+    // Delete trades for this user and specific account
+    const result = await prisma.trade.deleteMany({
+      where: {
+        userId: user.id,
+        accountNumber: accountNumber
+      }
+    });
+    
+    return NextResponse.json({
+      success: true,
+      message: `${result.count} trades deleted successfully for account ${accountNumber}`
+    }, { status: 200 });
+    
+  } catch (error) {
+    console.error('[thor/store] Error deleting trades:', error);
+    return NextResponse.json({ 
+      error: 'Failed to delete trades', 
+      details: error instanceof Error ? error.message : 'Unknown error' 
+    }, { status: 500 });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
