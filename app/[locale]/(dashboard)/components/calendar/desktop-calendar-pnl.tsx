@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from "react"
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays } from "date-fns"
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays, isSameDay } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { fr, enUS } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink } from "lucide-react"
@@ -201,6 +201,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
   const [selectedWeekDate, setSelectedWeekDate] = useState<Date | null>(null)
 
+  
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
   const calendarDays = getCalendarDays(monthStart, monthEnd)

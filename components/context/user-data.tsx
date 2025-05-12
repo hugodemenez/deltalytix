@@ -712,6 +712,7 @@ export const UserDataProvider: React.FC<{
         setPropfirmAccounts(data.propfirmAccounts || []);
         setGroups(data.groups || []);
         setLayoutsWithCache(data.layouts || defaultLayouts);
+        setFinancialEvents(data.financialEvents || []);
 
         // Update cache
         setLocalCache({
