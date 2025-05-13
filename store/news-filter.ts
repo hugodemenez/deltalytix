@@ -1,16 +1,18 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
 
+type ImpactLevel = "low" | "medium" | "high"
+
 interface NewsFilterState {
-  importance: number
-  setImportance: (value: number) => void
+  impactLevels: ImpactLevel[]
+  setImpactLevels: (levels: ImpactLevel[]) => void
 }
 
 export const useNewsFilterStore = create<NewsFilterState>()(
   persist(
     (set) => ({
-      importance: 0,
-      setImportance: (value) => set({ importance: value }),
+      impactLevels: ["high"],
+      setImpactLevels: (levels) => set({ impactLevels: levels }),
     }),
     {
       name: "news-filter-store",

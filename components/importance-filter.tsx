@@ -12,48 +12,89 @@ import {
 } from "@/components/ui/tooltip"
 import { useI18n } from "@/locales/client"
 
+type ImpactLevel = "low" | "medium" | "high"
+
 interface ImportanceFilterProps {
-  onChange?: (value: number) => void
-  initialValue?: number
+  onChange?: (levels: ImpactLevel[]) => void
   className?: string
 }
 
-export function ImportanceFilter({ onChange, initialValue = 0, className }: ImportanceFilterProps) {
+const IMPACT_LEVELS: ImpactLevel[] = ["low", "medium", "high"]
+
+export function ImportanceFilter({ onChange, className }: ImportanceFilterProps) {
   const t = useI18n()
-  const importance = useNewsFilterStore((s) => s.importance)
-  const setImportance = useNewsFilterStore((s) => s.setImportance)
-  const [hoverValue, setHoverValue] = useState<number | null>(null)
+  const impactLevels = useNewsFilterStore((s) => s.impactLevels)
+  const setImpactLevels = useNewsFilterStore((s) => s.setImpactLevels)
+  const [hoverLevel, setHoverLevel] = useState<ImpactLevel | null>(null)
 
-  const handleMouseEnter = (value: number) => {
-    setHoverValue(value)
+  const handleClick = (level: ImpactLevel) => {
+    const newLevels = impactLevels.includes(level)
+      ? impactLevels.filter(l => l !== level)
+      : [...impactLevels, level].sort((a, b) => 
+          IMPACT_LEVELS.indexOf(a) - IMPACT_LEVELS.indexOf(b)
+        )
+    setImpactLevels(newLevels)
+    onChange?.(newLevels)
   }
 
-  const handleMouseLeave = () => {
-    setHoverValue(null)
+  const getStarColor = (level: ImpactLevel) => {
+    const isSelected = impactLevels.includes(level)
+    const levelIndex = IMPACT_LEVELS.indexOf(level)
+    const hoverIndex = hoverLevel ? IMPACT_LEVELS.indexOf(hoverLevel) : -1
+    
+    // If this level is selected, show full yellow
+    if (isSelected) return "text-yellow-500"
+    
+    // If a higher level is selected, show lighter yellow for lower levels
+    const hasHigherSelected = IMPACT_LEVELS.some((l, i) => 
+      i > levelIndex && impactLevels.includes(l)
+    )
+    if (hasHigherSelected) return "text-yellow-300"
+    
+    // If hovering over a higher level, show lighter yellow for lower levels
+    if (hoverLevel && levelIndex <= hoverIndex) {
+      // Calculate opacity based on distance from hovered level
+      const distance = hoverIndex - levelIndex
+      return distance === 0 ? "text-yellow-300" : "text-yellow-200"
+    }
+    
+    // Default gray
+    return "text-gray-300"
   }
 
-  const handleClick = (value: number) => {
-    // Toggle off if clicking the same value
-    const newValue = importance === value ? 0 : value
-    setImportance(newValue)
-    onChange?.(newValue)
+  const getStarFill = (level: ImpactLevel) => {
+    const isSelected = impactLevels.includes(level)
+    const levelIndex = IMPACT_LEVELS.indexOf(level)
+    const hoverIndex = hoverLevel ? IMPACT_LEVELS.indexOf(hoverLevel) : -1
+    
+    // If this level is selected, show full fill
+    if (isSelected) return "fill-current"
+    
+    // If a higher level is selected, show lighter fill for lower levels
+    const hasHigherSelected = IMPACT_LEVELS.some((l, i) => 
+      i > levelIndex && impactLevels.includes(l)
+    )
+    if (hasHigherSelected) return "fill-current opacity-50"
+    
+    // If hovering over a higher level, show lighter fill for lower levels
+    if (hoverLevel && levelIndex <= hoverIndex) {
+      // Calculate opacity based on distance from hovered level
+      const distance = hoverIndex - levelIndex
+      return distance === 0 ? "fill-current opacity-70" : "fill-current opacity-30"
+    }
+    
+    // Default transparent
+    return "fill-transparent"
   }
 
-  const getStarColor = (index: number) => {
-    const value = hoverValue !== null ? hoverValue : importance
-    return index + 1 <= value ? "text-yellow-500" : "text-gray-300"
-  }
-
-  const getTooltipLabel = (value: number) => {
-    switch (value) {
-      case 1:
+  const getTooltipLabel = (level: ImpactLevel) => {
+    switch (level) {
+      case "low":
         return t('calendar.importanceFilter.low')
-      case 2:
+      case "medium":
         return t('calendar.importanceFilter.medium')
-      case 3:
+      case "high":
         return t('calendar.importanceFilter.high')
-      default:
-        return ""
     }
   }
 
@@ -64,48 +105,45 @@ export function ImportanceFilter({ onChange, initialValue = 0, className }: Impo
           "inline-flex items-center gap-1 p-2 rounded-md transition-all duration-300",
           className,
         )}
-        onMouseLeave={handleMouseLeave}
-        role="radiogroup"
-        aria-label="Importance level"
+        role="group"
+        aria-label="Impact level filter"
       >
-        {[0, 1, 2].map((index) => (
-          <Tooltip key={index}>
+        {IMPACT_LEVELS.map((level) => (
+          <Tooltip key={level}>
             <TooltipTrigger asChild>
               <button
                 className={cn(
-                  "relative p-1 rounded-full transition-transform duration-200",
-                  hoverValue === index + 1 || importance === index + 1 ? "scale-110" : "",
+                  "relative p-1 rounded-full transition-all duration-200",
+                  (impactLevels.includes(level) || hoverLevel === level) && "scale-110",
                   "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary",
+                  "hover:bg-yellow-50 dark:hover:bg-yellow-950/20",
                 )}
-                onMouseEnter={() => handleMouseEnter(index + 1)}
-                onClick={() => handleClick(index + 1)}
-                role="radio"
-                aria-checked={importance === index + 1}
-                aria-label={`${index + 1} star${index !== 0 ? "s" : ""}`}
+                onClick={() => handleClick(level)}
+                onMouseEnter={() => setHoverLevel(level)}
+                onMouseLeave={() => setHoverLevel(null)}
+                role="checkbox"
+                aria-checked={impactLevels.includes(level)}
+                aria-label={`${level} impact`}
               >
                 <Star
                   className={cn(
                     "h-4 w-4 transition-colors duration-300",
-                    getStarColor(index),
-                    importance >= index + 1
-                      ? "fill-current"
-                      : hoverValue === index + 1
-                        ? "fill-current opacity-70"
-                        : "fill-transparent",
+                    getStarColor(level),
+                    getStarFill(level),
                   )}
                   strokeWidth={1.5}
                 />
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{getTooltipLabel(index + 1)}</p>
+              <p>{getTooltipLabel(level)}</p>
             </TooltipContent>
           </Tooltip>
         ))}
         <span className="sr-only">
-          {importance === 0
-            ? "No importance level selected"
-            : `Importance level: ${importance} star${importance !== 1 ? "s" : ""}`}
+          {impactLevels.length === 0
+            ? "No impact levels selected"
+            : `Selected impact levels: ${impactLevels.join(", ")}`}
         </span>
       </div>
     </TooltipProvider>

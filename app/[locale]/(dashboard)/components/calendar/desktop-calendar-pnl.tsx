@@ -101,39 +101,43 @@ const getEventImportanceColor = (importance: string) => {
   }
 }
 
-const getEventImportanceStars = (importance: string): number => {
+type ImpactLevel = "low" | "medium" | "high"
+const IMPACT_LEVELS: ImpactLevel[] = ["low", "medium", "high"]
+
+const getEventImportanceStars = (importance: string): ImpactLevel => {
   switch (importance.toUpperCase()) {
     case 'HIGH':
-      return 3
+      return "high"
     case 'MEDIUM':
-      return 2
+      return "medium"
     case 'LOW':
-      return 1
+      return "low"
     default:
-      return 0
+      return "low"
   }
 }
 
-function EventBadge({ events, starFilter }: { events: FinancialEvent[], starFilter: number }) {
+function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impactLevels: ImpactLevel[] }) {
   const t = useI18n()
   const { timezone } = useUserData()
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
 
-  // Filter events by star rating
-  const filteredEvents = events.filter(e => getEventImportanceStars(e.importance) >= starFilter)
+  // Filter events by impact level
+  const filteredEvents = events.filter(e => impactLevels.includes(getEventImportanceStars(e.importance)))
   if (filteredEvents.length === 0) return null
 
   // Get the highest importance level for color coding
   const highestImportance = filteredEvents.reduce((highest, event) => {
-    const stars = getEventImportanceStars(event.importance)
-    return Math.max(highest, stars)
+    const level = getEventImportanceStars(event.importance)
+    const levelIndex = IMPACT_LEVELS.indexOf(level)
+    return Math.max(highest, levelIndex)
   }, 0)
 
   const badgeStyles = {
-    3: "bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20",
-    2: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20",
-    1: "bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20"
+    2: "bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20",
+    1: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20",
+    0: "bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20"
   }
 
   return (
@@ -186,8 +190,8 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const [selectedWeekDate, setSelectedWeekDate] = useState<Date | null>(null)
 
   // Use the global news filter store
-  const starFilter = useNewsFilterStore((s) => s.importance)
-  const setStarFilter = useNewsFilterStore((s) => s.setImportance)
+  const impactLevels = useNewsFilterStore((s) => s.impactLevels)
+  const setImpactLevels = useNewsFilterStore((s) => s.setImpactLevels)
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -271,10 +275,10 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
     }, 0)
   }, [timezone])
 
-  // Filter events by star rating
-  function filterByStars(events: FinancialEvent[]) {
-    if (starFilter === 0) return events
-    return events.filter(e => getEventImportanceStars(e.importance) >= starFilter)
+  // Filter events by impact level
+  function filterByImpactLevel(events: FinancialEvent[]) {
+    if (impactLevels.length === 0) return events
+    return events.filter(e => impactLevels.includes(getEventImportanceStars(e.importance)))
   }
 
   return (
@@ -296,13 +300,13 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
           </div>
         </div>
         <div className="flex items-center gap-4">
-          {/* Star Filter */}
+          {/* Impact Level Filter */}
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
               {t('calendar.importanceFilter.title')}
             </span>
             <ImportanceFilter
-              onChange={setStarFilter}
+              onChange={setImpactLevels}
               className="h-8"
             />
           </div>
@@ -342,7 +346,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
             const dayData = calendarData[dateString]
             const isLastDayOfWeek = getDay(date) === 6
             const isCurrentMonth = isSameMonth(date, currentDate)
-            const dateEvents = filterByStars(getEventsForDate(date))
+            const dateEvents = filterByImpactLevel(getEventsForDate(date))
 
             return (
               <React.Fragment key={dateString}>
@@ -373,7 +377,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                     )}>
                       {format(date, 'd')}
                     </span>
-                    {dateEvents.length > 0 && <EventBadge events={dateEvents} starFilter={starFilter} />}
+                    {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
                   </div>
                   <div className="flex-1 flex flex-col justify-end gap-0.5">
                     {dayData ? (
