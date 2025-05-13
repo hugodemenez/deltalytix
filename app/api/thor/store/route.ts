@@ -123,7 +123,8 @@ export async function POST(req: NextRequest) {
 
     const result = await saveTrades(trades)
 
-    if (result.error) {
+    // Handle duplicate trades as success, but return errors for other cases
+    if (result.error && result.error !== 'DUPLICATE_TRADES') {
       return NextResponse.json(
         { error: result.error, details: result.details },
         { status: 400 }
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      tradesAdded: result.numberOfTradesAdded
+      tradesAdded: result.numberOfTradesAdded,
     })
 
   } catch (error) {
