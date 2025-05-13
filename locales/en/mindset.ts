@@ -43,6 +43,7 @@ export default {
     newsImpact: {
       title: 'News Impact',
       description: 'Select the news events that impacted your trading',
+      selectImportantNews: 'Select important news',
       highImpact: 'High impact news',
       selectCountry: 'Select Country',
       allCountries: 'All Countries',
@@ -61,7 +62,16 @@ export default {
       searchFilters: 'Search filters...',
       sortBy: 'Sort by',
       moreEvents: '{count} more events',
-      showOnlyTraded: 'Show only traded hours'
+      showOnlyTraded: 'Show only traded hours',
+      showOnlySelectedNews: 'Show selected news only',
+      tradedHour: 'Traded hour',
+      clickToSeeMore: 'Click to see more',
+      importanceFilter: {
+        title: 'Filter by Importance',
+        low: 'Low Impact',
+        medium: 'Medium Impact',
+        high: 'High Impact'
+      }
     },
     journaling: {
       title: 'Trading Journal',

@@ -14,8 +14,11 @@ import { HourlyFinancialTimeline } from "./hourly-financial-timeline"
 import { getFinancialEvents } from "@/server/financial-events"
 import { useState, useEffect } from "react"
 import type { FinancialEvent } from "@prisma/client"
-import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { ImportanceFilter } from "@/components/importance-filter"
+
+type ImpactLevel = "low" | "medium" | "high"
 
 interface MindsetSummaryProps {
   date: Date
@@ -41,15 +44,22 @@ export function MindsetSummary({
   const { timezone } = useUserData()
   const [events, setEvents] = useState<FinancialEvent[]>([])
   const [showOnlyTradedHours, setShowOnlyTradedHours] = useState(true)
+  const [showOnlySelectedNews, setShowOnlySelectedNews] = useState(false)
+  const [impactLevels, setImpactLevels] = useState<ImpactLevel[]>(['high'])
 
   useEffect(() => {
-    // Filter events for the selected date and locale
+    // Filter events for the selected date, locale, selected news, and impact levels
     const dateEvents = financialEvents.filter(event => {
       const eventDate = new Date(event.date)
-      return eventDate.toDateString() === date.toDateString() && event.lang === locale
+      const matchesDate = eventDate.toDateString() === date.toDateString()
+      const matchesLocale = event.lang === locale
+      const matchesSelectedNews = !showOnlySelectedNews || selectedNews.includes(event.id)
+      const matchesImpactLevel = impactLevels.length === 0 || impactLevels.includes(event.importance.toLowerCase() as ImpactLevel)
+      
+      return matchesDate && matchesLocale && matchesSelectedNews && matchesImpactLevel
     })
     setEvents(dateEvents)
-  }, [date, financialEvents, locale])
+  }, [date, financialEvents, locale, selectedNews, showOnlySelectedNews, impactLevels])
 
   const getEmotionLabel = (value: number) => {
     if (value < 20) return { label: t('mindset.emotion.verySad'), color: "text-red-500" }
@@ -171,7 +181,7 @@ export function MindsetSummary({
         </div>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex justify-between flex-col gap-2">
             <div className="flex items-center gap-2">
               <p className="text-sm text-muted-foreground">
                 {t('mindset.newsImpact.title')}
@@ -180,14 +190,35 @@ export function MindsetSummary({
                 <Pencil className="h-3 w-3" />
               </Button>
             </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="show-only-selected"
+                  checked={showOnlySelectedNews}
+                  onCheckedChange={(checked) => setShowOnlySelectedNews(checked === true)}
+                />
+                <Label htmlFor="show-only-selected" className="text-xs text-muted-foreground">
+                  {t('mindset.newsImpact.showOnlySelectedNews')}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="show-only-traded"
+                  checked={showOnlyTradedHours}
+                  onCheckedChange={(checked) => setShowOnlyTradedHours(checked === true)}
+                />
+                <Label htmlFor="show-only-traded" className="text-xs text-muted-foreground">
+                  {t('mindset.newsImpact.showOnlyTraded')}
+                </Label>
+              </div>
+            </div>
             <div className="flex items-center gap-2">
-              <Label htmlFor="show-only-traded" className="text-xs text-muted-foreground">
-                {t('mindset.newsImpact.showOnlyTraded')}
-              </Label>
-              <Switch
-                id="show-only-traded"
-                checked={showOnlyTradedHours}
-                onCheckedChange={setShowOnlyTradedHours}
+              <p className="text-xs text-muted-foreground">
+                {t('mindset.newsImpact.importanceFilter.title')}
+              </p>
+              <ImportanceFilter 
+                value={impactLevels}
+                onChange={setImpactLevels}
               />
             </div>
           </div>
@@ -196,6 +227,7 @@ export function MindsetSummary({
             events={events}
             trades={dayTrades}
             showOnlyTradedHours={showOnlyTradedHours}
+            selectedEventIds={selectedNews}
           />
         </div>
       </div>

@@ -12,7 +12,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { useUserData } from "@/components/context/user-data"
 import { useCurrentLocale } from "@/locales/client"
 import { fr, enUS } from 'date-fns/locale'
-import { ExternalLink, ChevronDown, ArrowUpDown, Clock, Filter } from "lucide-react"
+import { ExternalLink, ChevronDown, ArrowUpDown, Clock, Filter, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
@@ -155,8 +155,19 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
 
   return (
     <div className="flex h-full flex-col space-y-4 overflow-hidden">
-      <div className="flex items-center justify-end">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{t('mindset.newsImpact.selectImportantNews')}</h2>
         <div className="flex items-center gap-2">
+          {selectedNews.length > 0 && (
+            <Badge 
+              variant="secondary" 
+              className="text-xs cursor-pointer flex items-center gap-1"
+              onClick={() => onNewsSelection([])}
+            >
+              {selectedNews.length} selected
+              <X className="h-3 w-3 opacity-50 hover:opacity-100 transition-opacity" />
+            </Badge>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -278,6 +289,7 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
             events={sortedAndFilteredEvents}
             onEventClick={handleEventClick}
             className="h-full"
+            selectedEventIds={selectedNews}
           />
         )}
       </div>

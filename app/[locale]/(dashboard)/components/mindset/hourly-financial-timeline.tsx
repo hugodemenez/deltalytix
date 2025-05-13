@@ -60,6 +60,7 @@ interface HourlyFinancialTimelineProps {
   className?: string
   preventScrollPropagation?: boolean
   showOnlyTradedHours?: boolean
+  selectedEventIds?: string[]
 }
 
 function SessionIndicator({ session, hourElements, containerRef }: { 
@@ -140,7 +141,8 @@ export function HourlyFinancialTimeline({
   onTradeClick,
   className,
   preventScrollPropagation = false,
-  showOnlyTradedHours = false
+  showOnlyTradedHours = false,
+  selectedEventIds = []
 }: HourlyFinancialTimelineProps) {
   const { timezone } = useUserData()
   const locale = useCurrentLocale()
@@ -363,6 +365,7 @@ export function HourlyFinancialTimeline({
                         onClick={() => onEventClick?.(item)}
                         timezone={timezone}
                         dateLocale={dateLocale}
+                        isSelected={selectedEventIds.includes(item.id)}
                       />
                     )
                   ))}
@@ -380,7 +383,7 @@ export function HourlyFinancialTimeline({
                           {t('mindset.newsImpact.moreEvents', { count: hourEvents.length - 2 })}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-72 p-2">
+                      <PopoverContent className="w-72 p-2 max-h-96 overflow-y-auto">
                         <div className="space-y-2">
                           <h4 className="text-sm font-medium">{format(hour, "HH:mm")}</h4>
                           <div className="space-y-2">
@@ -403,6 +406,7 @@ export function HourlyFinancialTimeline({
                                   timezone={timezone}
                                   dateLocale={dateLocale}
                                   expanded
+                                  isSelected={selectedEventIds.includes(item.id)}
                                 />
                               )
                             ))}
@@ -430,9 +434,10 @@ interface FinancialEventCardProps {
   timezone: string
   dateLocale: Locale
   expanded?: boolean
+  isSelected?: boolean
 }
 
-function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = false }: FinancialEventCardProps) {
+function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = false, isSelected = false }: FinancialEventCardProps) {
   const t = useI18n()
 
   // Get color class based on event importance
@@ -452,8 +457,10 @@ function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = f
   return (
     <div
       className={cn(
-        "border-l-4 rounded-r-md p-2 cursor-pointer transition-colors hover:opacity-90",
+        "rounded-md p-2 cursor-pointer transition-colors hover:opacity-90",
         getImportanceColorClass(event.importance),
+        !isSelected && "border-l-4",
+        isSelected && "border-2 border-current"
       )}
       onClick={onClick}
     >
@@ -517,6 +524,20 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
   const hourDate = new Date(date)
   hourDate.setHours(trade.hour)
 
+  // Get the earliest trade time
+  const earliestTrade = trade.trades.reduce((earliest, current) => {
+    const earliestDate = new Date(earliest.entryDate)
+    const currentDate = new Date(current.entryDate)
+    return currentDate < earliestDate ? current : earliest
+  }, trade.trades[0])
+
+  // Sort trades by entry time in ascending order
+  const sortedTrades = [...trade.trades].sort((a, b) => {
+    const dateA = new Date(a.entryDate)
+    const dateB = new Date(b.entryDate)
+    return dateA.getTime() - dateB.getTime()
+  })
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -529,13 +550,13 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
           )}
         >
           <div className="font-medium text-sm">
-            {trade.tradeCount} {trade.tradeCount === 1 ? 'Trade' : 'Trades'}
+            {t('mindset.newsImpact.tradedHour')}
           </div>
 
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
             <div className="flex items-center">
               <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
-              <span>{formatInTimeZone(hourDate, timezone, "HH:mm", { locale: dateLocale })}</span>
+              <span>{formatInTimeZone(new Date(earliestTrade.entryDate), timezone, "HH:mm", { locale: dateLocale })}</span>
             </div>
 
             <div className="flex items-center">
@@ -543,12 +564,16 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
               <span>{trade.totalPnL.toFixed(2)}</span>
             </div>
           </div>
+
+          <div className="mt-1 text-xs text-muted-foreground underline">
+            {t('mindset.newsImpact.clickToSeeMore')}
+          </div>
         </div>
       </PopoverTrigger>
       <PopoverContent className="w-[500px] p-0" align="start">
         <div className="p-4 border-b">
           <h4 className="font-medium">
-            {formatInTimeZone(hourDate, timezone, "HH:mm", { locale: dateLocale })} - {trade.tradeCount} {trade.tradeCount === 1 ? 'Trade' : 'Trades'}
+            {formatInTimeZone(new Date(earliestTrade.entryDate), timezone, "HH:mm", { locale: dateLocale })} - {trade.tradeCount} {trade.tradeCount === 1 ? 'Trade' : 'Trades'}
           </h4>
           <div className="flex items-center gap-2 mt-1">
             <DollarSign className="h-4 w-4" />
@@ -572,7 +597,7 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trade.trades.map((t) => (
+              {sortedTrades.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.instrument}</TableCell>
                   <TableCell>

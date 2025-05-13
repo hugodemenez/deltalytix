@@ -43,6 +43,7 @@ export default {
     newsImpact: {
       title: 'Impact des news',
       description: 'Sélectionnez les événements d\'actualité qui ont impacté votre trading',
+      selectImportantNews: 'Sélectionner les news importantes',
       highImpact: 'News à fort impact',
       selectCountry: 'Sélectionner le pays',
       allCountries: 'Tous les pays',
@@ -61,7 +62,16 @@ export default {
       searchFilters: 'Rechercher des filtres...',
       sortBy: 'Trier par',
       moreEvents: '{count} événements supplémentaires',
-      showOnlyTraded: 'Afficher uniquement les heures tradées'
+      showOnlyTraded: 'Afficher uniquement les heures tradées',
+      showOnlySelectedNews: 'Afficher uniquement les news sélectionnées',
+      tradedHour: 'Heure tradée',
+      clickToSeeMore: 'Cliquer pour voir plus',
+      importanceFilter: {
+        title: 'Filtrer par Importance',
+        low: 'Impact Faible',
+        medium: 'Impact Moyen',
+        high: 'Impact Élevé'
+      }
     },
     journaling: {
       title: 'Journal de Trading',

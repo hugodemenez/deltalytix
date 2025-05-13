@@ -16,16 +16,21 @@ type ImpactLevel = "low" | "medium" | "high"
 
 interface ImportanceFilterProps {
   onChange?: (levels: ImpactLevel[]) => void
+  value?: ImpactLevel[]
   className?: string
+  useStore?: boolean
 }
 
 const IMPACT_LEVELS: ImpactLevel[] = ["low", "medium", "high"]
 
-export function ImportanceFilter({ onChange, className }: ImportanceFilterProps) {
+export function ImportanceFilter({ onChange, value, className, useStore = false }: ImportanceFilterProps) {
   const t = useI18n()
-  const impactLevels = useNewsFilterStore((s) => s.impactLevels)
-  const setImpactLevels = useNewsFilterStore((s) => s.setImpactLevels)
+  const storeImpactLevels = useNewsFilterStore((s) => s.impactLevels)
+  const setStoreImpactLevels = useNewsFilterStore((s) => s.setImpactLevels)
   const [hoverLevel, setHoverLevel] = useState<ImpactLevel | null>(null)
+
+  // Use either the provided value or the store value
+  const impactLevels = useStore ? storeImpactLevels : (value || [])
 
   const handleClick = (level: ImpactLevel) => {
     const newLevels = impactLevels.includes(level)
@@ -33,7 +38,10 @@ export function ImportanceFilter({ onChange, className }: ImportanceFilterProps)
       : [...impactLevels, level].sort((a, b) => 
           IMPACT_LEVELS.indexOf(a) - IMPACT_LEVELS.indexOf(b)
         )
-    setImpactLevels(newLevels)
+    
+    if (useStore) {
+      setStoreImpactLevels(newLevels)
+    }
     onChange?.(newLevels)
   }
 
@@ -90,11 +98,11 @@ export function ImportanceFilter({ onChange, className }: ImportanceFilterProps)
   const getTooltipLabel = (level: ImpactLevel) => {
     switch (level) {
       case "low":
-        return t('calendar.importanceFilter.low')
+        return t('mindset.newsImpact.importanceFilter.low')
       case "medium":
-        return t('calendar.importanceFilter.medium')
+        return t('mindset.newsImpact.importanceFilter.medium')
       case "high":
-        return t('calendar.importanceFilter.high')
+        return t('mindset.newsImpact.importanceFilter.high')
     }
   }
 
