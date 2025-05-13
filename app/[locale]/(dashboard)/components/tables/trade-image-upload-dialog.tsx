@@ -20,13 +20,14 @@ interface TradeImageUploadDialogProps {
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 
-// Generate a UUID v4 using the Web Crypto API
-function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
+// Generate a random 6-character alphanumeric ID
+function generateShortId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
 export function TradeImageUploadDialog({ 
@@ -38,7 +39,13 @@ export function TradeImageUploadDialog({
   const t = useI18n()
   const [open, setOpen] = useState(false)
   const { user } = useUserData()
-  const [generatedId] = useState(() => tradeIds[0]?.includes('undefined') ? generateUUID() : tradeIds[0])
+  const [generatedId] = useState(() => {
+    if (tradeIds[0]?.includes('undefined')) {
+      return generateShortId()
+    }
+    // Take first 6 characters of the trade ID
+    return tradeIds[0].slice(0, 6)
+  })
   
   const uploadProps = useSupabaseUpload({
     bucketName: 'trade-images',
