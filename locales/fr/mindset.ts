@@ -27,7 +27,7 @@ export default {
     tradingQuestion: {
       title: 'Activité de Trading',
       question: 'Avez-vous tradé le {date} ?',
-      questionToday: 'Avez-vous tradé aujourd\'hui ?',
+      questionToday: 'Tradez-vous aujourd\'hui ?',
       yes: 'Oui',
       no: 'Non'
     },
