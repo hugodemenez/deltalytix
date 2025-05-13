@@ -28,6 +28,7 @@ import { TagWidget } from '../components/filters/tag-widget'
 import ProfitFactorCard from '../components/statistics/profit-factor-card'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import { MindsetWidget } from '../components/mindset/mindset-widget'
+// import MarketChart from '../components/market/market-chart'
 
 export interface WidgetConfig {
   type: WidgetType
@@ -366,7 +367,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
   mindsetWidget: {
     type: 'mindsetWidget',
     defaultSize: 'large',
-    allowedSizes: ['medium', 'large'],
+    allowedSizes: ['extra-large', 'large'],
     category: 'other',
     previewHeight: 300,
     getComponent: ({ size }) => <MindsetWidget size={size} />,
@@ -374,7 +375,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
   },
   // marketChart: {
   //   type: 'marketChart',
-  //   defaultSize: 'medium',
+  //   defaultSize: 'large',
   //   allowedSizes: ['small', 'medium', 'large'],
   //   category: 'charts',
   //   previewHeight: 300,
