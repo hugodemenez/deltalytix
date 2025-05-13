@@ -218,7 +218,7 @@ export function MindsetSummary({
               </p>
               <ImportanceFilter 
                 value={impactLevels}
-                onChange={setImpactLevels}
+                onValueChange={setImpactLevels}
               />
             </div>
           </div>

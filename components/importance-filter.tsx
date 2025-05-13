@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Star } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useNewsFilterStore } from "@/store/news-filter"
 import {
   Tooltip,
   TooltipContent,
@@ -15,38 +14,29 @@ import { useI18n } from "@/locales/client"
 type ImpactLevel = "low" | "medium" | "high"
 
 interface ImportanceFilterProps {
-  onChange?: (levels: ImpactLevel[]) => void
-  value?: ImpactLevel[]
+  value: ImpactLevel[]
+  onValueChange: (levels: ImpactLevel[]) => void
   className?: string
-  useStore?: boolean
 }
 
 const IMPACT_LEVELS: ImpactLevel[] = ["low", "medium", "high"]
 
-export function ImportanceFilter({ onChange, value, className, useStore = false }: ImportanceFilterProps) {
+export function ImportanceFilter({ value, onValueChange, className }: ImportanceFilterProps) {
   const t = useI18n()
-  const storeImpactLevels = useNewsFilterStore((s) => s.impactLevels)
-  const setStoreImpactLevels = useNewsFilterStore((s) => s.setImpactLevels)
   const [hoverLevel, setHoverLevel] = useState<ImpactLevel | null>(null)
 
-  // Use either the provided value or the store value
-  const impactLevels = useStore ? storeImpactLevels : (value || [])
-
   const handleClick = (level: ImpactLevel) => {
-    const newLevels = impactLevels.includes(level)
-      ? impactLevels.filter(l => l !== level)
-      : [...impactLevels, level].sort((a, b) => 
+    const newLevels = value.includes(level)
+      ? value.filter(l => l !== level)
+      : [...value, level].sort((a, b) => 
           IMPACT_LEVELS.indexOf(a) - IMPACT_LEVELS.indexOf(b)
         )
     
-    if (useStore) {
-      setStoreImpactLevels(newLevels)
-    }
-    onChange?.(newLevels)
+    onValueChange(newLevels)
   }
 
   const getStarColor = (level: ImpactLevel) => {
-    const isSelected = impactLevels.includes(level)
+    const isSelected = value.includes(level)
     const levelIndex = IMPACT_LEVELS.indexOf(level)
     const hoverIndex = hoverLevel ? IMPACT_LEVELS.indexOf(hoverLevel) : -1
     
@@ -55,7 +45,7 @@ export function ImportanceFilter({ onChange, value, className, useStore = false 
     
     // If a higher level is selected, show lighter yellow for lower levels
     const hasHigherSelected = IMPACT_LEVELS.some((l, i) => 
-      i > levelIndex && impactLevels.includes(l)
+      i > levelIndex && value.includes(l)
     )
     if (hasHigherSelected) return "text-yellow-300"
     
@@ -71,7 +61,7 @@ export function ImportanceFilter({ onChange, value, className, useStore = false 
   }
 
   const getStarFill = (level: ImpactLevel) => {
-    const isSelected = impactLevels.includes(level)
+    const isSelected = value.includes(level)
     const levelIndex = IMPACT_LEVELS.indexOf(level)
     const hoverIndex = hoverLevel ? IMPACT_LEVELS.indexOf(hoverLevel) : -1
     
@@ -80,7 +70,7 @@ export function ImportanceFilter({ onChange, value, className, useStore = false 
     
     // If a higher level is selected, show lighter fill for lower levels
     const hasHigherSelected = IMPACT_LEVELS.some((l, i) => 
-      i > levelIndex && impactLevels.includes(l)
+      i > levelIndex && value.includes(l)
     )
     if (hasHigherSelected) return "fill-current opacity-50"
     
@@ -122,7 +112,7 @@ export function ImportanceFilter({ onChange, value, className, useStore = false 
               <button
                 className={cn(
                   "relative p-1 rounded-full transition-all duration-200",
-                  (impactLevels.includes(level) || hoverLevel === level) && "scale-110",
+                  (value.includes(level) || hoverLevel === level) && "scale-110",
                   "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary",
                   "hover:bg-yellow-50 dark:hover:bg-yellow-950/20",
                 )}
@@ -130,7 +120,7 @@ export function ImportanceFilter({ onChange, value, className, useStore = false 
                 onMouseEnter={() => setHoverLevel(level)}
                 onMouseLeave={() => setHoverLevel(null)}
                 role="checkbox"
-                aria-checked={impactLevels.includes(level)}
+                aria-checked={value.includes(level)}
                 aria-label={`${level} impact`}
               >
                 <Star
@@ -149,9 +139,9 @@ export function ImportanceFilter({ onChange, value, className, useStore = false 
           </Tooltip>
         ))}
         <span className="sr-only">
-          {impactLevels.length === 0
+          {value.length === 0
             ? "No impact levels selected"
-            : `Selected impact levels: ${impactLevels.join(", ")}`}
+            : `Selected impact levels: ${value.join(", ")}`}
         </span>
       </div>
     </TooltipProvider>
