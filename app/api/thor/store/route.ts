@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
           id: `${dateData.date}-${trade.symbol}-${trade.entry_time}-${trade.quantity}`,
           userId: user.id,
           accountNumber: data.account_id,
-          instrument: trade.symbol,
+          instrument: trade.symbol.slice(0, -2),
           entryDate: entryTime.toISOString(),
           closeDate: exitTime.toISOString(),
           entryPrice: trade.entry_price.toString(),
