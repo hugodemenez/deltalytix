@@ -716,6 +716,8 @@ export default {
             'oneMinute': '1 minute',
             'tooltip': 'Group trades that occurred within the selected time window'
         },
+        'groupTrades': 'Group trades',
+        'ungroupTrades': 'Ungroup trades',
     },
     'share.button': 'Share trades',
     'share.success': 'Trades shared successfully',

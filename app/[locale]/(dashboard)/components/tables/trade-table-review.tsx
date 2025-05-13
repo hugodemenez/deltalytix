@@ -83,6 +83,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { groupTrades, ungroupTrades } from '@/server/database'
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -96,7 +97,6 @@ interface ExtendedTrade extends Trade {
 
 const supabase = createClient()
 
-
 export function TradeTableReview() {
   const t = useI18n()
   const { 
@@ -104,7 +104,8 @@ export function TradeTableReview() {
     updateTrade, 
     timezone, 
     tags,
-    setTags
+    setTags,
+    updateTrades
   } = useUserData()
   const [sorting, setSorting] = useState<SortingState>([
     { id: "entryDate", desc: true }
@@ -113,7 +114,8 @@ export function TradeTableReview() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [expanded, setExpanded] = useState<ExpandedState>({})
   const [pageSize, setPageSize] = useState(10)
-  const [groupingGranularity, setGroupingGranularity] = useState<number>(0) // 0 = exact match, 5 = 5 seconds, etc.
+  const [groupingGranularity, setGroupingGranularity] = useState<number>(0)
+  const [selectedTrades, setSelectedTrades] = useState<string[]>([])
 
   const trades = contextTrades
 
@@ -142,6 +144,43 @@ export function TradeTableReview() {
     }
   }
 
+  const handleGroupTrades = async () => {
+    if (selectedTrades.length < 2) return
+    
+    // Generate a temporary groupId using timestamp + random number
+    const tempGroupId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    
+    // Update local state immediately
+    updateTrades(selectedTrades.map(tradeId => ({
+      id: tradeId,
+      updates: { groupId: tempGroupId }
+    })))
+
+    // Reset table selection
+    table.resetRowSelection()
+    setSelectedTrades([])
+
+    // Then update the database
+    await groupTrades(selectedTrades)
+  }
+
+  const handleUngroupTrades = async () => {
+    if (selectedTrades.length === 0) return
+    
+    // Update local state immediately
+    updateTrades(selectedTrades.map(tradeId => ({
+      id: tradeId,
+      updates: { groupId: "" }
+    })))
+
+    // Reset table selection
+    table.resetRowSelection()
+    setSelectedTrades([])
+
+    // Then update the database
+    await ungroupTrades(selectedTrades)
+  }
+
   // Group trades by instrument, entry date, and close date with granularity
   const groupedTrades = useMemo(() => {
     const groups = new Map<string, ExtendedTrade>()
@@ -161,7 +200,7 @@ export function TradeTableReview() {
 
       const roundedEntryDate = roundDate(entryDate)
       
-      const key = `${trade.instrument}-${roundedEntryDate.toISOString()}`
+      const key = trade.groupId ? `${trade.groupId}` : `${trade.instrument}-${roundedEntryDate.toISOString()}`
       
       if (!groups.has(key)) {
         groups.set(key, {
@@ -190,6 +229,7 @@ export function TradeTableReview() {
             trades: []
           }],
           createdAt: new Date(),
+          groupId: trade.groupId || null,
         })
       }
       else {
@@ -219,6 +259,48 @@ export function TradeTableReview() {
   }, [trades, groupingGranularity])
 
   const columns = useMemo<ColumnDef<ExtendedTrade>[]>(() => [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(value) => {
+            table.toggleAllPageRowsSelected(!!value)
+            // Get all trade IDs including subrows
+            const allTradeIds = table.getRowModel().rows.flatMap(row => {
+              const subTradeIds = row.original.trades.map(t => t.id)
+              return [row.original.id, ...subTradeIds]
+            })
+            setSelectedTrades(value ? allTradeIds : [])
+          }}
+          aria-label="Select all"
+          className="translate-y-[2px]"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => {
+            row.toggleSelected(!!value)
+            // Get all trade IDs for this row including subrows
+            const tradeIds = [
+              row.original.id,
+              ...row.original.trades.map(t => t.id)
+            ]
+            setSelectedTrades(prev => 
+              value 
+                ? [...prev, ...tradeIds]
+                : prev.filter(id => !tradeIds.includes(id))
+            )
+          }}
+          aria-label="Select row"
+          className="translate-y-[2px]"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+      size: 40,
+    },
     {
       id: "expand",
       header: () => null,
@@ -658,6 +740,24 @@ export function TradeTableReview() {
             </TooltipProvider>
           </div>
           <div className="flex items-center gap-2">
+            {selectedTrades.length >= 2 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGroupTrades}
+              >
+                {t('trade-table.groupTrades')}
+              </Button>
+            )}
+            {selectedTrades.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleUngroupTrades}
+              >
+                {t('trade-table.ungroupTrades')}
+              </Button>
+            )}
             <Select
               value={groupingGranularity.toString()}
               onValueChange={(value) => setGroupingGranularity(parseInt(value))}

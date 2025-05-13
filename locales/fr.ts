@@ -917,6 +917,8 @@ export default {
             'oneMinute': '1 minute',
             'tooltip': 'Grouper les trades qui se sont produits dans l\'intervalle de temps sélectionné'
         },
+        'groupTrades': 'Grouper les trades',
+        'ungroupTrades': 'Dégrouper les trades',
     },
     'tickDistribution.title': 'Distribution des ticks',
     'tickDistribution.description': 'Visualisez la distribution de vos trades par ticks',

@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     const data: ThorRequest = await req.json();
     
     // Transform the data to match the Trade schema
-    const trades: Trade[] = data.dates.flatMap(dateData => 
+    const trades: Partial<Trade>[] = data.dates.flatMap(dateData => 
       dateData.trades.map(trade => {
         const entryTime = new Date(trade.entry_time)
         const exitTime = new Date(trade.exit_time)
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       })
     )
 
-    const result = await saveTrades(trades)
+    const result = await saveTrades(trades as Trade[])
 
     // Handle duplicate trades as success, but return errors for other cases
     if (result.error && result.error !== 'DUPLICATE_TRADES') {

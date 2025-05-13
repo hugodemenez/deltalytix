@@ -31,8 +31,10 @@ model Trade {
   tags           String[] @default([])
   imageBase64    String?  @db.Text
   imageBase64Second String? @db.Text
+  groupId        String?  @default("")
 
   @@index([accountNumber])
+  @@index([groupId])
   @@schema("public")
 }
 

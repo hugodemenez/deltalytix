@@ -2,7 +2,7 @@
 import { PrismaClient, Trade, Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/(dashboard)/types/dashboard'
-import { createClient } from './auth'
+import { createClient, getUserId } from './auth'
 import { parseISO, startOfDay, endOfDay } from 'date-fns'
 import { CalendarEntry } from '@/types/calendar'
 import { generateAIComment } from './generate-ai-comment'
@@ -230,5 +230,48 @@ export async function saveDashboardLayout(userId: string, layouts: Layouts): Pro
   } catch (error) {
     console.error('[saveDashboardLayout] Database error:', error)
     return null
+  }
+}
+
+export async function groupTrades(tradeIds: string[]): Promise<boolean> {
+  try {
+    const userId = await getUserId()
+    // Generate a new group ID
+    const groupId = crypto.randomUUID()
+
+    // Update all selected trades with the new group ID
+    await prisma.trade.updateMany({
+      where: { 
+        id: { in: tradeIds },
+        userId // Ensure we only update the user's own trades
+      },
+      data: { groupId }
+    })
+
+    revalidatePath('/')
+    return true
+  } catch (error) {
+    console.error('[groupTrades] Database error:', error)
+    return false
+  }
+}
+
+export async function ungroupTrades(tradeIds: string[]): Promise<boolean> {
+  try {
+    const userId = await getUserId()
+    // Remove group ID from selected trades
+    await prisma.trade.updateMany({
+      where: { 
+        id: { in: tradeIds },
+        userId // Ensure we only update the user's own trades
+      },
+      data: { groupId: "" }
+    })
+
+    revalidatePath('/')
+    return true
+  } catch (error) {
+    console.error('[ungroupTrades] Database error:', error)
+    return false
   }
 }

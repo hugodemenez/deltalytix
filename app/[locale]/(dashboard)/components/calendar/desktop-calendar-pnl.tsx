@@ -308,6 +308,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
             <ImportanceFilter
               onChange={setImpactLevels}
               className="h-8"
+              useStore={true}
             />
           </div>
           <div className="flex items-center gap-1.5">

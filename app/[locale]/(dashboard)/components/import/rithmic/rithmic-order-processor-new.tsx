@@ -234,7 +234,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
               // Close position
               const pnl = calculatePnL(openPosition.entryOrders, openPosition.exitOrders, contractSpec, openPosition.side)
 
-              const trade: Trade = {
+              const trade: Partial<Trade> = {
                 id: `${openPosition.entryOrders.map(o => o.orderId).join('-')}-${openPosition.exitOrders.map(o => o.orderId).join('-')}`,
                 accountNumber: account,
                 quantity: openPosition.originalQuantity,
@@ -256,10 +256,11 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
                 videoUrl: null,
                 tags: [],
                 imageBase64: null,
-                imageBase64Second: null
+                imageBase64Second: null,
+                groupId: null
               }
 
-              processedTrades.push(trade)
+              processedTrades.push(trade as Trade)
 
               if (openPosition.quantity < 0) {
                 // Reverse position
