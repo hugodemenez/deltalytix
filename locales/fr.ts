@@ -1314,4 +1314,20 @@ export default {
         high: 'Élevé',
         title: 'Filtrer les news par importance',
     },
+    notification: {
+      title: 'Progression en cours',
+      noAccount: 'Aucun compte en cours de traitement',
+      processingAccount: 'Traitement du compte {account}',
+      processingDate: 'Traitement des données pour {date}',
+      completed: 'Traitement terminé avec succès',
+      days: 'Jours',
+      orders: 'Ordres',
+      collapse: 'Réduire la notification',
+      expand: 'Développer la notification',
+      status: {
+        success: 'Succès',
+        info: 'Info',
+        error: 'Erreur'
+      }
+    },
 } as const

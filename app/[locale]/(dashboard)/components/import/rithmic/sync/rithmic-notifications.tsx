@@ -3,10 +3,13 @@
 import { useEffect, useState, useRef } from 'react'
 import { useWebSocket } from '@/components/context/rithmic-sync-context'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { XCircle, CheckCircle2, Info } from 'lucide-react'
+import { XCircle, CheckCircle2, Info, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Progress } from "@/components/ui/progress"
 import { useUserData } from '@/components/context/user-data'
+import { Button } from "@/components/ui/button"
+import { useNotificationStore } from '@/store/notification'
+import { useI18n } from '@/locales/client'
 
 interface Notification {
   id: string
@@ -23,13 +26,26 @@ interface Notification {
   }
 }
 
-export function WebSocketNotifications() {
+interface WebSocketNotificationsProps {
+  isMockMode?: boolean
+}
+
+function formatYYYYMMDD(dateStr: string): string {
+  if (!dateStr || dateStr.length !== 8) return dateStr
+  const year = dateStr.slice(0, 4)
+  const month = dateStr.slice(4, 6)
+  const day = dateStr.slice(6, 8)
+  return `${day}/${month}/${year}`
+}
+
+export function WebSocketNotifications({ isMockMode = false }: WebSocketNotificationsProps) {
+  const t = useI18n()
   const [notifications, setNotifications] = useState<Record<string, Notification>>({
     progress: {
       id: 'progress',
       type: 'info',
-      title: 'Current Progress',
-      message: 'No account being processed',
+      title: t('notification.title'),
+      message: t('notification.noAccount'),
       timestamp: Date.now(),
       progress: {
         current: 0,
@@ -39,16 +55,93 @@ export function WebSocketNotifications() {
     }
   })
   const [isComplete, setIsComplete] = useState(false)
+  const { isCollapsed, setIsCollapsed } = useNotificationStore()
   const { lastMessage, isConnected, accountsProgress, currentAccount } = useWebSocket()
   const { refreshTrades } = useUserData()
   const refreshTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const mockIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
+
+  // Mock synchronization logic
+  useEffect(() => {
+    if (isMockMode) {
+      let currentDay = 1
+      const totalDays = 300
+      let ordersProcessed = 0
+      const mockAccount = 'MOCK-ACCOUNT-123'
+
+      // Reset state
+      setIsComplete(false)
+      setNotifications(prev => ({
+        ...prev,
+        progress: {
+          ...prev.progress,
+          type: 'info',
+          message: t('notification.processingAccount', { account: mockAccount }),
+          timestamp: Date.now(),
+          progress: {
+            current: 0,
+            total: totalDays,
+            ordersProcessed: 0
+          }
+        }
+      }))
+
+      // Start mock progress
+      mockIntervalRef.current = setInterval(() => {
+        const currentDate = new Date()
+        currentDate.setDate(currentDate.getDate() - (totalDays - currentDay))
+        const formattedDate = currentDate.toISOString().slice(0, 10).replace(/-/g, '')
+
+        ordersProcessed += Math.floor(Math.random() * 10) + 1
+
+        setNotifications(prev => ({
+          ...prev,
+          progress: {
+            ...prev.progress,
+            type: 'info',
+            message: t('notification.processingDate', { date: formatYYYYMMDD(formattedDate) }),
+            timestamp: Date.now(),
+            progress: {
+              current: currentDay,
+              total: totalDays,
+              ordersProcessed,
+              currentDate: formattedDate,
+              currentDayNumber: currentDay
+            }
+          }
+        }))
+
+        currentDay++
+
+        if (currentDay > totalDays) {
+          clearInterval(mockIntervalRef.current)
+          setIsComplete(true)
+          setNotifications(prev => ({
+            ...prev,
+            progress: {
+              ...prev.progress,
+              type: 'success',
+              message: t('notification.completed'),
+              timestamp: Date.now()
+            }
+          }))
+        }
+      }, 2000) // Update every 2 seconds
+
+      return () => {
+        if (mockIntervalRef.current) {
+          clearInterval(mockIntervalRef.current)
+        }
+      }
+    }
+  }, [isMockMode, t])
 
   // Reset complete state when connection is established
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected && !isMockMode) {
       setIsComplete(false)
     }
-  }, [isConnected])
+  }, [isConnected, isMockMode])
 
   // Update progress notification when current account changes
   useEffect(() => {
@@ -59,7 +152,7 @@ export function WebSocketNotifications() {
         progress: {
           ...prev.progress,
           type: 'info',
-          message: `Processing account ${currentAccount}`,
+          message: t('notification.processingAccount', { account: currentAccount }),
           timestamp: Date.now(),
           progress: {
             current: progress.daysProcessed,
@@ -75,7 +168,7 @@ export function WebSocketNotifications() {
         ...prev,
         progress: {
           ...prev.progress,
-          message: 'No account being processed',
+          message: t('notification.noAccount'),
           timestamp: Date.now(),
           progress: {
             current: 0,
@@ -85,7 +178,7 @@ export function WebSocketNotifications() {
         }
       }))
     }
-  }, [currentAccount, accountsProgress])
+  }, [currentAccount, accountsProgress, t])
 
   useEffect(() => {
     if (lastMessage) {
@@ -97,7 +190,7 @@ export function WebSocketNotifications() {
             progress: {
               ...prev.progress,
               type: 'success',
-              message: 'Processing completed successfully',
+              message: t('notification.completed'),
               timestamp: Date.now()
             }
           }))
@@ -112,7 +205,7 @@ export function WebSocketNotifications() {
             progress: {
               ...prev.progress,
               type: 'info',
-              message: `Processing data for ${date}`,
+              message: t('notification.processingDate', { date: formatYYYYMMDD(date) }),
               timestamp: Date.now(),
               progress: {
                 current: parseInt(current),
@@ -148,7 +241,7 @@ export function WebSocketNotifications() {
             progress: {
               ...prev.progress,
               type: 'info',
-              message: `Processing account ${accountId}`,
+              message: t('notification.processingAccount', { account: accountId }),
               timestamp: Date.now(),
               progress: {
                 current: parseInt(current),
@@ -162,7 +255,7 @@ export function WebSocketNotifications() {
         }
       }
     }
-  }, [lastMessage, refreshTrades])
+  }, [lastMessage, refreshTrades, t])
 
   // Remove stale notifications
   useEffect(() => {
@@ -176,7 +269,7 @@ export function WebSocketNotifications() {
             updated[key] = {
               ...updated[key],
               type: 'info',
-              message: 'No account being processed',
+              message: t('notification.noAccount'),
               progress: {
                 current: 0,
                 total: 0,
@@ -190,7 +283,7 @@ export function WebSocketNotifications() {
     }, 30000)
 
     return () => clearInterval(interval)
-  }, [])
+  }, [t])
 
   // Setup debounced refresh
   useEffect(() => {
@@ -216,44 +309,93 @@ export function WebSocketNotifications() {
   }, [lastMessage, refreshTrades])
 
   // Don't render if process is complete or no active notifications
-  if (isComplete || notifications.progress.message === 'No account being processed') {
+  if (isComplete || notifications.progress.message === t('notification.noAccount')) {
     return null
   }
+
+  const progress = notifications.progress.progress
+  const progressPercentage = progress ? (progress.current / progress.total) * 100 : 0
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full">
       <Alert
         key={notifications.progress.id}
         className={cn(
-          "transition-all duration-300 hover:translate-x-[-5px]",
-          notifications.progress.type === 'success' && "border-green-500"
+          notifications.progress.type === 'success' && "border-green-500",
+          isCollapsed && "w-16 h-16 p-0 ml-auto"
         )}
       >
-        <div className="flex items-start gap-2">
-          {notifications.progress.type === 'success' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-          {notifications.progress.type === 'info' && <Info className="h-4 w-4 text-blue-500" />}
-          <div className="space-y-1 w-full">
-            <AlertTitle>{notifications.progress.title}</AlertTitle>
-            <AlertDescription>
-              <div>{notifications.progress.message}</div>
-              {notifications.progress.progress && notifications.progress.progress.total > 0 && (
-                <div className="mt-2 space-y-2">
-                  <Progress 
-                    value={(notifications.progress.progress.current / notifications.progress.progress.total) * 100} 
-                    className="w-full h-2" 
-                  />
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Days: {notifications.progress.progress.current} / {notifications.progress.progress.total}</span>
+        <div className={cn("flex items-start gap-2", isCollapsed && "justify-center items-center h-full")}>
+          {isCollapsed ? (
+            <div 
+              className="relative w-12 h-12 cursor-pointer" 
+              onClick={() => setIsCollapsed(false)}
+              title={t('notification.expand')}
+            >
+              <svg className="w-12 h-12 -rotate-90">
+                <circle
+                  className="text-muted-foreground/20"
+                  strokeWidth="2"
+                  stroke="currentColor"
+                  fill="transparent"
+                  r="20"
+                  cx="24"
+                  cy="24"
+                />
+                <circle
+                  className="text-primary"
+                  strokeWidth="2"
+                  strokeDasharray={125.6}
+                  strokeDashoffset={125.6 - (125.6 * progressPercentage) / 100}
+                  strokeLinecap="round"
+                  stroke="currentColor"
+                  fill="transparent"
+                  r="20"
+                  cx="24"
+                  cy="24"
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                {Math.round(progressPercentage)}%
+              </span>
+            </div>
+          ) : (
+            <>
+              {notifications.progress.type === 'success' && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+              {notifications.progress.type === 'info' && <Info className="h-4 w-4 text-blue-500" />}
+              <div className="space-y-1 w-full">
+                <div className="flex items-center justify-between">
+                  <AlertTitle>{t('notification.title')}</AlertTitle>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => setIsCollapsed(true)}
+                      title={t('notification.collapse')}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
                   </div>
-                  {notifications.progress.progress.currentDate && notifications.progress.progress.currentDayNumber && (
-                    <div className="text-xs text-muted-foreground">
-                      Processing day {notifications.progress.progress.currentDayNumber} - {notifications.progress.progress.currentDate}
+                </div>
+                <AlertDescription>
+                  <div>{notifications.progress.message}</div>
+                  {progress && progress.total > 0 && (
+                    <div className="mt-2 space-y-2">
+                      <Progress 
+                        value={progressPercentage} 
+                        className="w-full h-2" 
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{t('notification.days')}: {progress.current} / {progress.total}</span>
+                        <span>{t('notification.orders')}: {progress.ordersProcessed}</span>
+                      </div>
                     </div>
                   )}
-                </div>
-              )}
-            </AlertDescription>
-          </div>
+                </AlertDescription>
+              </div>
+            </>
+          )}
         </div>
       </Alert>
     </div>
