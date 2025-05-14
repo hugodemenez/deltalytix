@@ -221,7 +221,7 @@ export function ConsentBanner() {
   return (
     <AnimatePresence>
       <motion.div 
-        className="fixed bottom-0 inset-x-0 z-[9999]"
+        className="fixed bottom-0 sm:inset-x-0 z-[9999]"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 10, opacity: 0 }}
@@ -300,15 +300,15 @@ export function ConsentBanner() {
           </Dialog>
         ) : (
           <Drawer open={showDetails} onOpenChange={setShowDetails}>
-            <DrawerContent>
-              <div className="max-h-[85vh]">
+            <DrawerContent className="z-[10000]">
+              <div className="h-[85vh] flex flex-col">
                 <DrawerHeader className="text-left">
                   <DrawerTitle>Cookie Preferences</DrawerTitle>
                   <DrawerDescription>
                     Customize your cookie preferences. Essential cookies are always enabled as they are required for the website to function properly.
                   </DrawerDescription>
                 </DrawerHeader>
-                <div className="px-4 py-2 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto px-4 py-2">
                   <PreferencesContent
                     settings={settings}
                     setSettings={setSettings}
