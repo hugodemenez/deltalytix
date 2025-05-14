@@ -241,4 +241,64 @@ export async function deleteMindset(date: Date) {
     console.error('Error deleting mood:', error)
     throw error
   }
+}
+
+export async function saveJournal(
+  journalContent: string,
+  date?: Date
+) {
+  try {
+    const supabase = await createClient() 
+    
+    const { data: { user }, error } = await supabase.auth.getUser()
+    if (error || !user) {
+      throw new Error('Unauthorized')
+    }
+
+    // Get current date with time set to start of day in user's timezone
+    const now = new Date()
+    const targetDate = date || now
+    const today = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 12) // Set to noon to avoid timezone issues
+
+    // Check if mood already exists for today
+    const existingMood = await prisma.mood.findFirst({
+      where: {
+        userId: user.id,
+        day: {
+          gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
+          lt: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
+        },
+      },
+    })
+
+    if (existingMood) {
+      // Update existing mood with only journal content
+      const updatedMood = await prisma.mood.update({
+        where: { id: existingMood.id },
+        data: {
+          journalContent,
+          updatedAt: now,
+        },
+      })
+      revalidatePath('/')
+      return updatedMood
+    }
+
+    // Create new mood with only journal content
+    const newMood = await prisma.mood.create({
+      data: {
+        userId: user.id,
+        day: today,
+        journalContent,
+        mood: 'NEUTRAL', // Default mood
+        emotionValue: 50, // Default emotion value
+      },
+    })
+
+    revalidatePath('/')
+    return newMood
+  } catch (error) {
+    console.error('Error saving journal:', error)
+    throw error
+  }
 } 

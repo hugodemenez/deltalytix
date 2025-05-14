@@ -29,7 +29,7 @@ interface NewsImpactProps {
 export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date }: NewsImpactProps) {
   const [events, setEvents] = useState<FinancialEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const { impactLevels, setImpactLevels, selectedCountries } = useNewsFilterStore()
+  const { impactLevels, setImpactLevels, selectedCountries, setSelectedCountries } = useNewsFilterStore()
   const t = useI18n()
   const { timezone, financialEvents = [] } = useUserData()
   const locale = useCurrentLocale()
@@ -56,11 +56,7 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
   const countries = Array.from(new Set(events
     .map(event => event.country)
     .filter((country): country is string => country !== null && country !== undefined)
-  )).sort((a, b) => {
-    if (a === "United States") return -1;
-    if (b === "United States") return 1;
-    return a.localeCompare(b);
-  });
+  ))
 
   // Filter events based on selected countries and impact levels
   const filteredEvents = events.filter(event => {
@@ -97,7 +93,7 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
             onValueChange={setImpactLevels}
             className="h-8"
           />
-          <CountryFilter countries={countries} />
+          <CountryFilter value={selectedCountries} onValueChange={setSelectedCountries} countries={countries} />
         </div>
       </div>
 

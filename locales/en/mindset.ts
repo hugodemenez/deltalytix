@@ -76,7 +76,8 @@ export default {
     journaling: {
       title: 'Trading Journal',
       placeholder: 'Write your trading thoughts and reflections here...',
-      save: 'Save Entry'
+      save: 'Save Entry',
+      editorPlaceholder: 'Start writing...'
     },
     tradingStats: {
       title: 'Trading Statistics',

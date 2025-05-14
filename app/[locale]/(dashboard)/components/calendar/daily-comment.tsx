@@ -3,14 +3,14 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useUserData } from "@/components/context/user-data"
 import { useToast } from "@/hooks/use-toast"
 import { CalendarEntry } from "@/types/calendar"
-import { saveMood, getMoodForDay } from '@/server/mood'
+import { saveJournal, getMoodForDay } from '@/server/mood'
+import { NoteEditor } from "@/app/[locale]/(dashboard)/components/mindset/note-editor"
 
 const STORAGE_KEY = 'daily_mood'
 
@@ -32,23 +32,11 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
     const loadComment = async () => {
       if (!user?.id || !dayData?.trades?.[0]?.entryDate) return
 
-      const focusedDay = new Date(dayData.trades[0].entryDate).toISOString().split('T')[0]
-      const storedMoodData = localStorage.getItem(STORAGE_KEY)
-      
-      if (storedMoodData) {
-        const storedMood = JSON.parse(storedMoodData)
-        if (storedMood.date === focusedDay) {
-          setComment(storedMood.comment || '')
-          return
-        }
-      }
 
       try {
         const mood = await getMoodForDay(new Date(dayData.trades[0].entryDate))
         if (mood) {
-          const comment = mood.conversation ? 
-            (mood.conversation as Array<{ role: string; content: string }>).find(msg => msg.role === 'user')?.content || '' 
-            : ''
+          const comment = mood.journalContent || ''
           setComment(comment)
         }
       } catch (error) {
@@ -60,7 +48,7 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
   }, [user?.id, dayData?.trades])
 
   const handleSaveComment = async () => {
-    if (!user?.id || !dayData?.trades?.[0]?.entryDate || !selectedMood) {
+    if (!user?.id || !dayData?.trades?.[0]?.entryDate) {
       toast({
         title: t('error'),
         description: t('auth.required'),
@@ -75,15 +63,8 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
     try {
       const date = new Date(dayData.trades[0].entryDate)
       date.setHours(12, 0, 0, 0)
-      await saveMood(selectedMood, [{ role: 'user', content: comment }], date)
+      await saveJournal(comment, date)
       
-      // Update localStorage
-      const focusedDay = date.toISOString().split('T')[0]
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        mood: selectedMood,
-        comment,
-        date: focusedDay
-      }))
 
       toast({
         title: t('success'),
@@ -114,17 +95,18 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          <Textarea
-            placeholder={t('calendar.charts.dailyCommentPlaceholder')}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            className={cn(
-              "min-h-[100px] resize-none",
-              isSavingComment && "opacity-50",
-              saveError && "border-destructive"
-            )}
-            disabled={!selectedMood || isSavingComment}
-          />
+          <div className={cn(
+            "min-h-[200px]",
+            isSavingComment && "opacity-50",
+            saveError && "border-destructive"
+          )}>
+            <NoteEditor
+              initialContent={comment}
+              onChange={setComment}
+              height="200px"
+              width="100%"
+            />
+          </div>
           <div className="flex items-center justify-between">
             {isSavingComment && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -137,14 +119,9 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
                 {saveError}
               </p>
             )}
-            {!selectedMood && (
-              <p className="text-sm text-muted-foreground">
-                {t('calendar.charts.selectMoodFirst')}
-              </p>
-            )}
             <Button
               onClick={handleSaveComment}
-              disabled={!selectedMood || isSavingComment || !comment.trim()}
+              disabled={isSavingComment || !comment.trim()}
               size="sm"
             >
               {t('calendar.charts.saveComment')}

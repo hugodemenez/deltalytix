@@ -18,16 +18,13 @@ import { useNewsFilterStore } from "@/store/news-filter"
 
 interface CountryFilterProps {
   countries: string[]
+  value: string[]
+  onValueChange: (countries: string[]) => void
   className?: string
 }
 
-export function CountryFilter({ countries, className }: CountryFilterProps) {
+export function CountryFilter({ countries, value, onValueChange, className }: CountryFilterProps) {
   const [searchTerm, setSearchTerm] = useState("")
-  const { 
-    selectedCountries,
-    toggleCountry,
-    selectAllCountries,
-  } = useNewsFilterStore()
   const t = useI18n()
 
   // Filter countries based on search term
@@ -37,7 +34,19 @@ export function CountryFilter({ countries, className }: CountryFilterProps) {
       )
     : countries
 
-  const isCountrySelected = (country: string) => selectedCountries.includes(country)
+  const isCountrySelected = (country: string) => value.includes(country)
+
+  const handleCountryToggle = (country: string) => {
+    onValueChange(
+      isCountrySelected(country)
+        ? value.filter(c => c !== country)
+        : [...value, country]
+    )
+  }
+
+  const handleSelectAll = () => {
+    onValueChange(value.length === countries.length ? [] : countries)
+  }
 
   return (
     <DropdownMenu>
@@ -47,14 +56,14 @@ export function CountryFilter({ countries, className }: CountryFilterProps) {
           size="sm"
           className={cn(
             "flex items-center gap-2",
-            selectedCountries.length > 0 && "bg-accent",
+            value.length > 0 && "bg-accent",
             className
           )}
         >
           <Globe className="h-4 w-4" />
-          {selectedCountries.length > 0 && (
+          {value.length > 0 && (
             <Badge variant="secondary" className="ml-1">
-              {selectedCountries.length}
+              {value.length}
             </Badge>
           )}
           <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
@@ -70,11 +79,11 @@ export function CountryFilter({ countries, className }: CountryFilterProps) {
           <CommandList>
             <CommandGroup heading={t('mindset.newsImpact.filterByCountry')}>
               <CommandItem
-                onSelect={() => selectAllCountries(countries)}
+                onSelect={handleSelectAll}
                 className="flex items-center gap-2"
               >
                 <Checkbox
-                  checked={selectedCountries.length === countries.length}
+                  checked={value.length === countries.length}
                   className="h-4 w-4"
                 />
                 <span className="text-sm">{t('mindset.newsImpact.allCountries')}</span>
@@ -83,7 +92,7 @@ export function CountryFilter({ countries, className }: CountryFilterProps) {
                 {filteredCountries.map(country => (
                   <CommandItem
                     key={country}
-                    onSelect={() => toggleCountry(country)}
+                    onSelect={() => handleCountryToggle(country)}
                     className="flex items-center gap-2"
                   >
                     <Checkbox

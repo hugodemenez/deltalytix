@@ -76,7 +76,8 @@ export default {
     journaling: {
       title: 'Journal de Trading',
       placeholder: 'Écrivez vos pensées et réflexions sur votre trading ici...',
-      save: 'Enregistrer'
+      save: 'Enregistrer',
+      editorPlaceholder: 'Commencez à écrire...'
     },
     tradingStats: {
       title: 'Statistiques de trading',

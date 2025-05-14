@@ -8,27 +8,15 @@ interface NewsFilterState {
   setImpactLevels: (levels: ImpactLevel[]) => void
   selectedCountries: string[]
   setSelectedCountries: (countries: string[]) => void
-  toggleCountry: (country: string) => void
-  selectAllCountries: (countries: string[]) => void
-  clearCountries: () => void
 }
 
 export const useNewsFilterStore = create<NewsFilterState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       impactLevels: ["high"],
       setImpactLevels: (levels) => set({ impactLevels: levels }),
       selectedCountries: [],
-      setSelectedCountries: (countries) => set({ selectedCountries: countries }),
-      toggleCountry: (country) => set((state) => ({
-        selectedCountries: state.selectedCountries.includes(country)
-          ? state.selectedCountries.filter(c => c !== country)
-          : [...state.selectedCountries, country]
-      })),
-      selectAllCountries: (countries) => set((state) => ({
-        selectedCountries: state.selectedCountries.length === countries.length ? [] : countries
-      })),
-      clearCountries: () => set({ selectedCountries: [] })
+      setSelectedCountries: (countries) => set({ selectedCountries: countries })
     }),
     {
       name: "news-filter-store",

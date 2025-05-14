@@ -193,6 +193,8 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   // Use the global news filter store
   const impactLevels = useNewsFilterStore((s) => s.impactLevels)
   const setImpactLevels = useNewsFilterStore((s) => s.setImpactLevels)
+  const selectedCountries = useNewsFilterStore((s) => s.selectedCountries)
+  const setSelectedCountries = useNewsFilterStore((s) => s.setSelectedCountries)
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -331,7 +333,12 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
               className="h-8"
             />
           </div>
-          <CountryFilter countries={countries} className="h-8" />
+          <CountryFilter 
+            countries={countries} 
+            value={selectedCountries}
+            onValueChange={setSelectedCountries}
+            className="h-8" 
+          />
           <div className="flex items-center gap-1.5">
             <Button 
               variant="outline" 

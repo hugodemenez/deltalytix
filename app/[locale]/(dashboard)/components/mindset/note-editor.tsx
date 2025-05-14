@@ -7,6 +7,7 @@ import Underline from "@tiptap/extension-underline"
 import Link from "@tiptap/extension-link"
 import Image from "@tiptap/extension-image"
 import Placeholder from "@tiptap/extension-placeholder"
+import { useI18n } from "@/locales/client"
 import {
   Bold,
   Italic,
@@ -42,6 +43,7 @@ export function NoteEditor({
   height = "400px",
   width = "100%",
 }: NoteEditorProps) {
+  const t = useI18n()
   const [isMounted, setIsMounted] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -66,7 +68,7 @@ export function NoteEditor({
       }),
       Image,
       Placeholder.configure({
-        placeholder: "Start writing...",
+        placeholder: t('mindset.journaling.editorPlaceholder'),
         emptyEditorClass: "cursor-text before:content-[attr(data-placeholder)] before:absolute before:opacity-50 before:pointer-events-none",
       }),
     ],
