@@ -10,6 +10,7 @@ interface TopstepProcessorProps {
     headers: string[];
     csvData: string[][];
     setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
+    accountNumber: string;
 }
 
 const mappings: { [key: string]: string } = {
@@ -25,13 +26,12 @@ const mappings: { [key: string]: string } = {
     "ExitedAt": "closeDate",
 }
 
-export default function TopstepProcessor({ headers, csvData, setProcessedTrades }: TopstepProcessorProps) {
+export default function TopstepProcessor({ headers, csvData, setProcessedTrades, accountNumber }: TopstepProcessorProps) {
     const [trades, setTrades] = useState<Trade[]>([])
     const { timezone } = useUserData()
 
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
-        const accountNumber = 'topstep-account';
 
         csvData.forEach(row => {
             const item: Partial<Trade> = {};
@@ -173,7 +173,7 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
 
         setTrades(newTrades);
         setProcessedTrades(newTrades);
-    }, [csvData, headers, setProcessedTrades]);
+    }, [csvData, headers, setProcessedTrades, accountNumber]);
 
     useEffect(() => {
         processTrades();
@@ -192,6 +192,7 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>Account</TableHead>
                                     <TableHead>Instrument</TableHead>
                                     <TableHead>Side</TableHead>
                                     <TableHead>Quantity</TableHead>
@@ -206,6 +207,7 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades 
                             <TableBody>
                                 {trades.map((trade) => (
                                     <TableRow key={trade.id}>
+                                        <TableCell>{trade.accountNumber}</TableCell>
                                         <TableCell>{trade.instrument}</TableCell>
                                         <TableCell>{trade.side}</TableCell>
                                         <TableCell>{trade.quantity}</TableCell>

@@ -372,6 +372,7 @@ export const platforms: PlatformConfig[] = [
       path: '/logos/topstep.png',
       alt: 'Topstep Logo'
     },
+    requiresAccountSelection: true,
     processFile: processStandardCsv,
     processorComponent: TopstepProcessor,
     tutorialLink: 'https://help.topstep.com/en/articles/9424086-exporting-trades-on-topstepx',
@@ -393,6 +394,12 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.selectHeaders',
         description: 'import.steps.selectHeadersDescription',
         component: HeaderSelection
+      },
+      {
+        id: 'select-account',
+        title: 'import.steps.selectAccount',
+        description: 'import.steps.selectAccountDescription',
+        component: AccountSelection
       },
       {
         id: 'preview-trades',
