@@ -39,6 +39,7 @@ import { SharedLayoutsManager } from "./shared-layouts-manager"
 import { cn } from "@/lib/utils"
 import confetti from 'canvas-confetti'
 import { fr } from 'date-fns/locale'
+import { Switch } from "@/components/ui/switch"
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -123,6 +124,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [shareUrl, setShareUrl] = useState<string>("")
     const [showManager, setShowManager] = useState(false)
     const [shareTitle, setShareTitle] = useState("")
+    const [shareAllAccounts, setShareAllAccounts] = useState(true)
 
     // Get the earliest and latest trade dates
     const defaultDateRange = useMemo(() => {
@@ -177,7 +179,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           return
         }
 
-        if (selectedAccounts.length === 0) {
+        if (!shareAllAccounts && selectedAccounts.length === 0) {
           toast({
             title: t('share.error'),
             description: t('share.error.noAccount'),
@@ -200,7 +202,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const filteredTrades = trades.filter(trade => {
           const tradeDate = new Date(trade.entryDate)
-          return selectedAccounts.includes(trade.accountNumber) &&
+          return (shareAllAccounts || selectedAccounts.includes(trade.accountNumber)) &&
             tradeDate >= fromDate &&
             (!toDate || tradeDate <= toDate)
         })
@@ -216,10 +218,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const slug = await createShared({
           userId: user.id,
-          title: shareTitle || `Shared trades for ${selectedAccounts.length} accounts`,
+          title: shareTitle || `Shared trades${shareAllAccounts ? ' for all accounts' : ` for ${selectedAccounts.length} accounts`}`,
           description: `Trades from ${selectedDateRange.from.toLocaleDateString()}${selectedDateRange.to ? ` to ${selectedDateRange.to.toLocaleDateString()}` : ''}`,
           isPublic: true,
-          accountNumbers: selectedAccounts,
+          accountNumbers: shareAllAccounts ? [] : selectedAccounts,
           dateRange: {
             from: fromDate,
             ...(toDate && { to: toDate })
@@ -387,6 +389,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           setShowManager(false)
           setShareUrl("")
           setShareTitle("")
+          setShareAllAccounts(false)
         }
       }}>
         <DialogTrigger asChild>
@@ -467,82 +470,91 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                         onChange={(e) => setShareTitle(e.target.value)}
                       />
                     </div>
-                    <div className="space-y-2 relative">
-                      <Label>{t("share.accountsLabel")}</Label>
-                      <Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={comboboxOpen}
-                            className="w-full justify-between"
-                          >
-                            <span className="flex items-center gap-2">
-                              {selectedAccounts.length === 0 && t("share.accountsPlaceholder")}
-                              {selectedAccounts.length > 0 && (
-                                <span>
-                                  {selectedAccounts.length} / {accountNumbers.length} {t("share.accounts")}
-                                </span>
-                              )}
-                            </span>
-                            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent 
-                          className="w-[var(--radix-popover-trigger-width)] p-0" 
-                          align="start" 
-                          side="bottom" 
-                          sideOffset={4}
-                          style={{ zIndex: 99999 }}
-                        >
-                          <Command shouldFilter={false}>
-                            <CommandInput 
-                              placeholder={t("share.searchAccounts")} 
-                              value={searchQuery}
-                              onValueChange={setSearchQuery}
-                            />
-                            <CommandEmpty>{t("share.noAccountFound")}</CommandEmpty>
-                            <CommandList>
-                              <CommandGroup>
-                                <CommandItem
-                                  value="select-all"
-                                  onSelect={() => {
-                                    if (selectedAccounts.length === accountNumbers.length) {
-                                      deselectAll()
-                                    } else {
-                                      selectAll()
-                                    }
-                                  }}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Check
-                                    className="h-4 w-4 opacity-0 data-[selected=true]:opacity-100"
-                                    data-selected={selectedAccounts.length === accountNumbers.length}
-                                  />
-                                  <span className="flex-1">{t("filters.selectAllAccounts")}</span>
-                                </CommandItem>
-                                <ScrollArea className="h-48">
-                                  {filteredAccounts.map((account) => (
-                                    <CommandItem
-                                      key={account}
-                                      value={account}
-                                      onSelect={() => toggleAccount(account)}
-                                      className="flex items-center gap-2 cursor-pointer"
-                                    >
-                                      <Check
-                                        className="h-4 w-4 opacity-0 data-[selected=true]:opacity-100"
-                                        data-selected={selectedAccounts.includes(account)}
-                                      />
-                                      <span className="flex-1">{account}</span>
-                                    </CommandItem>
-                                  ))}
-                                </ScrollArea>
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="share-all-accounts"
+                        checked={shareAllAccounts}
+                        onCheckedChange={setShareAllAccounts}
+                      />
+                      <Label htmlFor="share-all-accounts">{t("share.shareAllAccounts")}</Label>
                     </div>
+                    {!shareAllAccounts && (
+                      <div className="space-y-2 relative">
+                        <Popover open={comboboxOpen} onOpenChange={setComboboxOpen} modal>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={comboboxOpen}
+                              className="w-full justify-between"
+                            >
+                              <span className="flex items-center gap-2">
+                                {selectedAccounts.length === 0 && t("share.accountsPlaceholder")}
+                                {selectedAccounts.length > 0 && (
+                                  <span>
+                                    {selectedAccounts.length} / {accountNumbers.length} {t("share.accounts")}
+                                  </span>
+                                )}
+                              </span>
+                              <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent 
+                            className="w-[var(--radix-popover-trigger-width)] p-0" 
+                            align="start" 
+                            side="bottom" 
+                            sideOffset={4}
+                            style={{ zIndex: 99999 }}
+                          >
+                            <Command shouldFilter={false}>
+                              <CommandInput 
+                                placeholder={t("share.searchAccounts")} 
+                                value={searchQuery}
+                                onValueChange={setSearchQuery}
+                              />
+                              <CommandEmpty>{t("share.noAccountFound")}</CommandEmpty>
+                              <CommandList>
+                                <CommandGroup>
+                                  <CommandItem
+                                    value="select-all"
+                                    onSelect={() => {
+                                      if (selectedAccounts.length === accountNumbers.length) {
+                                        deselectAll()
+                                      } else {
+                                        selectAll()
+                                      }
+                                    }}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Check
+                                      className="h-4 w-4 opacity-0 data-[selected=true]:opacity-100"
+                                      data-selected={selectedAccounts.length === accountNumbers.length}
+                                    />
+                                    <span className="flex-1">{t("filters.selectAllAccounts")}</span>
+                                  </CommandItem>
+                                  <ScrollArea className="h-48">
+                                    {filteredAccounts.map((account) => (
+                                      <CommandItem
+                                        key={account}
+                                        value={account}
+                                        onSelect={() => toggleAccount(account)}
+                                        className="flex items-center gap-2 cursor-pointer"
+                                      >
+                                        <Check
+                                          className="h-4 w-4 opacity-0 data-[selected=true]:opacity-100"
+                                          data-selected={selectedAccounts.includes(account)}
+                                        />
+                                        <span className="flex-1">{account}</span>
+                                      </CommandItem>
+                                    ))}
+                                  </ScrollArea>
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    )}
                     <div className="grid gap-4">
                       <div className="flex flex-col md:flex-row gap-4">
                         <div className="flex-1">

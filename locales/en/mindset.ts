@@ -1,6 +1,6 @@
 export default {
   mindset: {
-    title: 'Mindset Tracker',
+    title: 'Trading Journal',
     description: 'Track your trading mindset and emotions',
     back: 'Back',
     next: 'Next',

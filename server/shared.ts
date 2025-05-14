@@ -37,10 +37,6 @@ export async function createShared(data: SharedParams): Promise<string> {
       throw new Error('Start date is required')
     }
 
-    // Validate account numbers
-    if (!data.accountNumbers?.length) {
-      throw new Error('At least one account number must be selected')
-    }
 
     // Generate a unique slug
     let slug = generateSlug()
@@ -124,9 +120,11 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
         tx.trade.findMany({
           where: {
             userId: shared.userId,
-            accountNumber: {
-              in: shared.accountNumbers,
-            },
+            ...(shared.accountNumbers.length > 0 && {
+              accountNumber: {
+                in: shared.accountNumbers,
+              },
+            }),
             entryDate: {
               gte: fromDate.toISOString(),
               ...(toDate && { lte: toDate.toISOString() })

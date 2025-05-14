@@ -268,6 +268,7 @@ export default {
         hideAccountNumbers: "Masquer les numéros de compte",
         openFilters: "Ouvrir les filtres",
         pnl: "PnL",
+        instrument: "Instrument",
         allTrades: "Tous les trades",
         profitableTrades: "Trades gagnants",
         losingTrades: "Trades perdants",
@@ -751,6 +752,7 @@ export default {
     'share.refreshDescription': 'Les trades ont été actualisés avec succès',
     'share.manageLayouts': 'Gérer les layouts partagés',
     'share.backToShare': 'Retour au partage',
+    'share.shareAllAccounts': 'Partager pour tous les comptes',
     widgets: {
         types: {
             equityChart: "Graphique du capital",

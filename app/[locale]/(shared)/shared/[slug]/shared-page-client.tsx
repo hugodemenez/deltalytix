@@ -142,14 +142,26 @@ function TopBanner({ t }: { t: any }) {
 
 export function SharedPageClient({ params, initialData }: SharedPageClientProps) {
   const t = useI18n()
-  const { isLoading, sharedParams, setSharedParams } = useUserData()
+  const { isLoading, sharedParams, setSharedParams, setAccountNumbers } = useUserData()
 
   // Hydrate the initial data
   useEffect(() => {
     if (initialData) {
-      setSharedParams(initialData.params)
+      // If accountNumbers is empty, deduce them from trades
+      const deducedAccountNumbers = initialData.params.accountNumbers.length === 0
+        ? Array.from(new Set(initialData.trades.map(trade => trade.accountNumber)))
+        : initialData.params.accountNumbers
+
+      // Update both sharedParams and accountNumbers
+      setSharedParams({
+        ...initialData.params,
+        accountNumbers: deducedAccountNumbers
+      })
+      
+      // Initialize accountNumbers with all accounts
+      setAccountNumbers(deducedAccountNumbers)
     }
-  }, [initialData, setSharedParams])
+  }, [initialData, setSharedParams, setAccountNumbers])
 
   if (isLoading) {
     return (

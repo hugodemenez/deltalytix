@@ -1,6 +1,6 @@
 export default {
   mindset: {
-    title: 'Suivi de l\'État d\'Esprit',
+    title: 'Journal de Trading',
     description: 'Suivez votre état d\'esprit et vos émotions en trading',
     back: 'Retour',
     next: 'Suivant',
