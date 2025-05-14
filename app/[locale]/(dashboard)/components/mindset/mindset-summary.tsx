@@ -16,7 +16,6 @@ import { useState, useEffect } from "react"
 import type { FinancialEvent } from "@prisma/client"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
-import { ImportanceFilter } from "@/components/importance-filter"
 
 type ImpactLevel = "low" | "medium" | "high"
 
@@ -43,23 +42,20 @@ export function MindsetSummary({
   const { trades = [], financialEvents = [] } = useUserData()
   const { timezone } = useUserData()
   const [events, setEvents] = useState<FinancialEvent[]>([])
-  const [showOnlyTradedHours, setShowOnlyTradedHours] = useState(true)
-  const [showOnlySelectedNews, setShowOnlySelectedNews] = useState(false)
-  const [impactLevels, setImpactLevels] = useState<ImpactLevel[]>(['high'])
+  const [showOnlySelectedNews, setShowOnlySelectedNews] = useState(true)
 
   useEffect(() => {
-    // Filter events for the selected date, locale, selected news, and impact levels
+    // Filter events for the selected date, locale, and selected news
     const dateEvents = financialEvents.filter(event => {
       const eventDate = new Date(event.date)
       const matchesDate = eventDate.toDateString() === date.toDateString()
       const matchesLocale = event.lang === locale
       const matchesSelectedNews = !showOnlySelectedNews || selectedNews.includes(event.id)
-      const matchesImpactLevel = impactLevels.length === 0 || impactLevels.includes(event.importance.toLowerCase() as ImpactLevel)
       
-      return matchesDate && matchesLocale && matchesSelectedNews && matchesImpactLevel
+      return matchesDate && matchesLocale && matchesSelectedNews
     })
     setEvents(dateEvents)
-  }, [date, financialEvents, locale, selectedNews, showOnlySelectedNews, impactLevels])
+  }, [date, financialEvents, locale, selectedNews, showOnlySelectedNews])
 
   const getEmotionLabel = (value: number) => {
     if (value < 20) return { label: t('mindset.emotion.verySad'), color: "text-red-500" }
@@ -201,32 +197,12 @@ export function MindsetSummary({
                   {t('mindset.newsImpact.showOnlySelectedNews')}
                 </Label>
               </div>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="show-only-traded"
-                  checked={showOnlyTradedHours}
-                  onCheckedChange={(checked) => setShowOnlyTradedHours(checked === true)}
-                />
-                <Label htmlFor="show-only-traded" className="text-xs text-muted-foreground">
-                  {t('mindset.newsImpact.showOnlyTraded')}
-                </Label>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-muted-foreground">
-                {t('mindset.newsImpact.importanceFilter.title')}
-              </p>
-              <ImportanceFilter 
-                value={impactLevels}
-                onValueChange={setImpactLevels}
-              />
             </div>
           </div>
           <HourlyFinancialTimeline
             date={date}
             events={events}
             trades={dayTrades}
-            showOnlyTradedHours={showOnlyTradedHours}
             selectedEventIds={selectedNews}
           />
         </div>
