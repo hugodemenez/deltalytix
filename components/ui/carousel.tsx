@@ -87,6 +87,13 @@ const Carousel = React.forwardRef<
 
     const handleKeyDown = React.useCallback(
       (event: React.KeyboardEvent<HTMLDivElement>) => {
+        // Don't handle arrow keys if the target is an editor element
+        if (event.target instanceof HTMLElement && 
+            (event.target.closest('.ProseMirror') || 
+             event.target.closest('[contenteditable="true"]'))) {
+          return
+        }
+
         if (event.key === "ArrowLeft") {
           event.preventDefault()
           scrollPrev()
