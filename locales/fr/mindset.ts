@@ -63,7 +63,7 @@ export default {
       sortBy: 'Trier par',
       moreEvents: '{count} événements supplémentaires',
       showOnlyTraded: 'Afficher uniquement les heures tradées',
-      showOnlySelectedNews: 'Afficher uniquement les news sélectionnées',
+      showOnlySelectedNews: 'Afficher uniquement les news sélectionnées à l\'étape de sélection des news',
       tradedHour: 'Heure tradée',
       clickToSeeMore: 'Cliquer pour voir plus',
       importanceFilter: {
