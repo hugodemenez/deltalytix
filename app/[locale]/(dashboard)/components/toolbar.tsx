@@ -46,8 +46,8 @@ export function Toolbar({
   const { isMobile } = useUserData()
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   return (
-    <div className="fixed bottom-4 left-0 right-0 z-50 flex justify-center">
-      <div className="mx-auto flex items-center justify-around gap-4 p-3 bg-background/80 backdrop-blur-md border rounded-full shadow-lg overflow-visible">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+      <div className="flex items-center justify-around gap-4 p-3 bg-background/80 backdrop-blur-md border rounded-full shadow-lg">
             <Button
               variant={isCustomizing ? "default" : "ghost"}
               onClick={onEditToggle}
