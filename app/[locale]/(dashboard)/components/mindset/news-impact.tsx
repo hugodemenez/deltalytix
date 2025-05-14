@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Checkbox } from "@/components/ui/checkbox"
 import { useI18n } from "@/locales/client"
 import { getFinancialEvents } from "@/server/financial-events"
 import { FinancialEvent } from "@prisma/client"
@@ -12,18 +10,13 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { useUserData } from "@/components/context/user-data"
 import { useCurrentLocale } from "@/locales/client"
 import { fr, enUS } from 'date-fns/locale'
-import { ExternalLink, ChevronDown, ArrowUpDown, Clock, Filter, X } from "lucide-react"
-import { cn } from "@/lib/utils"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
+import { ExternalLink, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { HourlyFinancialTimeline } from "@/app/[locale]/(dashboard)/components/mindset/hourly-financial-timeline"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ImportanceFilter } from "@/components/importance-filter"
+import { useNewsFilterStore } from "@/store/news-filter"
+import { CountryFilter } from "@/components/country-filter"
 
 interface NewsImpactProps {
   onNext: () => void
@@ -33,34 +26,14 @@ interface NewsImpactProps {
   date: Date
 }
 
-type Session = 'LONDON' | 'US' | 'ASIA'
-
 export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date }: NewsImpactProps) {
   const [events, setEvents] = useState<FinancialEvent[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([])
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [sortByImpact, setSortByImpact] = useState<'asc' | 'desc' | null>(null)
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null)
+  const { impactLevels, setImpactLevels, selectedCountries } = useNewsFilterStore()
   const t = useI18n()
   const { timezone, financialEvents = [] } = useUserData()
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
-
-  // Function to determine session based on time
-  const getSessionForTime = (date: Date): Session => {
-    const hour = date.getUTCHours()
-    
-    // London session: 8:00-16:00 UTC
-    if (hour >= 8 && hour < 16) return 'LONDON'
-    // US session: 13:00-21:00 UTC
-    if (hour >= 13 && hour < 21) return 'US'
-    // Asia session: 0:00-8:00 UTC
-    if (hour >= 0 && hour < 8) return 'ASIA'
-    // Late US/Early Asia transition: 21:00-24:00 UTC
-    return 'ASIA' // Default to ASIA for any remaining hours (21-24)
-  }
 
   // Filter events for the selected date
   useEffect(() => {
@@ -89,65 +62,16 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
     return a.localeCompare(b);
   });
 
-  // Filter countries based on search term
-  const filteredCountries = searchTerm
-    ? countries.filter(country => 
-        country.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : countries
-
-  // Filter events based on selected countries and session
+  // Filter events based on selected countries and impact levels
   const filteredEvents = events.filter(event => {
     const matchesCountry = selectedCountries.length === 0 || 
       (event.country && selectedCountries.includes(event.country))
     
-    const matchesSession = !selectedSession || 
-      getSessionForTime(new Date(event.date)) === selectedSession
+    const matchesImpact = impactLevels.length === 0 || 
+      impactLevels.includes(event.importance.toLowerCase() as "low" | "medium" | "high")
     
-    return matchesCountry && matchesSession
+    return matchesCountry && matchesImpact
   })
-
-  const handleSelectCountry = (country: string) => {
-    setSelectedCountries(prev =>
-      prev.includes(country)
-        ? prev.filter(c => c !== country)
-        : [...prev, country]
-    )
-  }
-
-  const handleSelectAllCountries = () => {
-    setSelectedCountries(prev =>
-      prev.length === countries.length ? [] : countries
-    )
-  }
-
-  const isCountrySelected = (country: string) => selectedCountries.includes(country)
-
-  // Get impact weight for sorting
-  const getImpactWeight = (importance: string) => {
-    switch (importance) {
-      case 'HIGH': return 3;
-      case 'MEDIUM': return 2;
-      case 'LOW': return 1;
-      default: return 0;
-    }
-  }
-
-  // Sort events by impact
-  const sortedAndFilteredEvents = [...filteredEvents].sort((a, b) => {
-    if (!sortByImpact) return 0;
-    const weightA = getImpactWeight(a.importance);
-    const weightB = getImpactWeight(b.importance);
-    return sortByImpact === 'desc' ? weightB - weightA : weightA - weightB;
-  });
-
-  const getActiveFiltersCount = () => {
-    let count = 0
-    if (selectedCountries.length > 0) count++
-    if (selectedSession) count++
-    if (sortByImpact) count++
-    return count
-  }
 
   const handleEventClick = (event: FinancialEvent) => {
     toggleNews(event.id)
@@ -168,106 +92,12 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
               <X className="h-3 w-3 opacity-50 hover:opacity-100 transition-opacity" />
             </Badge>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "flex items-center gap-2",
-                  (selectedSession || sortByImpact || selectedCountries.length > 0) && "bg-accent"
-                )}
-              >
-                <Filter className="h-4 w-4" />
-                {t('mindset.newsImpact.filters')}
-                {getActiveFiltersCount() > 0 && (
-                  <Badge variant="secondary" className="ml-1">
-                    {getActiveFiltersCount()}
-                  </Badge>
-                )}
-                <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[300px]">
-              <Command>
-                <CommandInput placeholder={t('mindset.newsImpact.searchFilters')} />
-                <CommandList>
-                  <CommandGroup heading={t('mindset.newsImpact.sortBy')}>
-                    <CommandItem
-                      onSelect={() => setSortByImpact(current => {
-                        if (current === null) return 'desc'
-                        if (current === 'desc') return 'asc'
-                        return null
-                      })}
-                      className="flex items-center justify-between"
-                    >
-                      <span>{t('mindset.newsImpact.sortByImpact')}</span>
-                      {sortByImpact && (
-                        <ArrowUpDown className={cn(
-                          "h-4 w-4",
-                          sortByImpact === 'asc' && "rotate-180"
-                        )} />
-                      )}
-                    </CommandItem>
-                  </CommandGroup>
-                  <DropdownMenuSeparator />
-                  <CommandGroup heading={t('mindset.newsImpact.filterBySession')}>
-                    <CommandItem
-                      onSelect={() => setSelectedSession(null)}
-                      className="flex items-center gap-2"
-                    >
-                      <Checkbox
-                        checked={selectedSession === null}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-sm">{t('mindset.newsImpact.allSessions')}</span>
-                    </CommandItem>
-                    {(['LONDON', 'US', 'ASIA'] as Session[]).map((session) => (
-                      <CommandItem
-                        key={session}
-                        onSelect={() => setSelectedSession(session)}
-                        className="flex items-center gap-2"
-                      >
-                        <Checkbox
-                          checked={selectedSession === session}
-                          className="h-4 w-4"
-                        />
-                        <span className="text-sm">{t(`mindset.newsImpact.session.${session}`)}</span>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  <DropdownMenuSeparator />
-                  <CommandGroup heading={t('mindset.newsImpact.filterByCountry')}>
-                    <CommandItem
-                      onSelect={handleSelectAllCountries}
-                      className="flex items-center gap-2"
-                    >
-                      <Checkbox
-                        checked={selectedCountries.length === countries.length}
-                        className="h-4 w-4"
-                      />
-                      <span className="text-sm">{t('mindset.newsImpact.allCountries')}</span>
-                    </CommandItem>
-                    <ScrollArea className="h-[200px]">
-                      {filteredCountries.map(country => (
-                        <CommandItem
-                          key={country}
-                          onSelect={() => handleSelectCountry(country)}
-                          className="flex items-center gap-2"
-                        >
-                          <Checkbox
-                            checked={isCountrySelected(country)}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm">{country}</span>
-                        </CommandItem>
-                      ))}
-                    </ScrollArea>
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ImportanceFilter
+            value={impactLevels}
+            onValueChange={setImpactLevels}
+            className="h-8"
+          />
+          <CountryFilter countries={countries} />
         </div>
       </div>
 
@@ -286,7 +116,7 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
         ) : (
           <HourlyFinancialTimeline
             date={date}
-            events={sortedAndFilteredEvents}
+            events={filteredEvents}
             onEventClick={handleEventClick}
             className="h-full"
             selectedEventIds={selectedNews}

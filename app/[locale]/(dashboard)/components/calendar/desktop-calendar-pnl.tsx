@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { ImportanceFilter } from "@/components/importance-filter"
+import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/news-filter"
 import {
   DropdownMenu,
@@ -275,10 +276,29 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
     }, 0)
   }, [timezone])
 
-  // Filter events by impact level
+  // Get unique countries from events
+  const countries = Array.from(new Set(monthEvents
+    .map(event => event.country)
+    .filter((country): country is string => country !== null && country !== undefined)
+  )).sort((a, b) => {
+    if (a === "United States") return -1;
+    if (b === "United States") return 1;
+    return a.localeCompare(b);
+  });
+
+  // Filter events by impact level and country
   function filterByImpactLevel(events: FinancialEvent[]) {
-    if (impactLevels.length === 0) return events
-    return events.filter(e => impactLevels.includes(getEventImportanceStars(e.importance)))
+    const { impactLevels, selectedCountries } = useNewsFilterStore.getState()
+    
+    return events.filter(e => {
+      const matchesImpact = impactLevels.length === 0 || 
+        impactLevels.includes(getEventImportanceStars(e.importance))
+      
+      const matchesCountry = selectedCountries.length === 0 || 
+        (e.country && selectedCountries.includes(e.country))
+      
+      return matchesImpact && matchesCountry
+    })
   }
 
   return (
@@ -311,6 +331,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
               className="h-8"
             />
           </div>
+          <CountryFilter countries={countries} className="h-8" />
           <div className="flex items-center gap-1.5">
             <Button 
               variant="outline" 
