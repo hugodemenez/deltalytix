@@ -15,18 +15,8 @@ import {
 } from "@/components/ui/chart"
 import { CalendarEntry } from "@/types/calendar"
 import { useTheme } from "@/components/context/theme-provider"
-import { Button } from "@/components/ui/button"
-import { FaRegSadTear, FaRegMeh, FaRegSmileBeam } from "react-icons/fa"
-import { saveMood, getMoodForDay } from '@/server/mood'
-import { useUserData } from '@/components/context/user-data'
-import { useToast } from '@/hooks/use-toast'
 import { useI18n, useCurrentLocale } from '@/locales/client'
-import { fr, enUS } from 'date-fns/locale'
-import { Textarea } from "@/components/ui/textarea"
-import { Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useDebounce } from "@/hooks/use-debounce"
-import { DailyComment } from './daily-comment'
+import { DailyStats } from './daily-stats'
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;
@@ -49,28 +39,11 @@ const formatCurrency = (value: number | undefined | null) => {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-const formatDuration = (seconds: number) => {
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  const remainingSeconds = Math.floor(seconds % 60)
-  
-  if (hours > 0) return `${hours}h ${minutes}m ${remainingSeconds}s`
-  if (minutes > 0) return `${minutes}m ${remainingSeconds}s`
-  return `${remainingSeconds}s`
-}
-
-const STORAGE_KEY = 'daily_mood'
-
 export function Charts({ dayData, isWeekly = false }: ChartsProps) {
   const { effectiveTheme } = useTheme()
   const isDarkMode = effectiveTheme === 'dark'
-  const { user } = useUserData()
-  const { toast } = useToast()
   const t = useI18n()
   const locale = useCurrentLocale()
-  const dateLocale = locale === 'fr' ? fr : enUS
-  const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
-  const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
   
   // Calculate data for charts
   const { accountPnL, equityChartData, chartData, totalPnL, calculateCommonDomain } = React.useMemo(() => {
@@ -153,83 +126,6 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     };
   }, [dayData?.trades, locale]);
 
-  // Load mood from localStorage or fetch from server on mount
-  React.useEffect(() => {
-    const loadMood = async () => {
-      if (!user?.id || !dayData?.trades?.[0]?.entryDate) return
-
-      // Check localStorage first
-      const focusedDay = new Date(dayData.trades[0].entryDate).toISOString().split('T')[0]
-      const storedMoodData = localStorage.getItem(STORAGE_KEY)
-      
-      if (storedMoodData) {
-        const storedMood = JSON.parse(storedMoodData)
-        if (storedMood.date === focusedDay) {
-          setSelectedMood(storedMood.mood)
-          return
-        }
-      }
-
-      // If no valid localStorage data, fetch from server
-      try {
-        const mood = await getMoodForDay(new Date(dayData.trades[0].entryDate))
-        if (mood) {
-          setSelectedMood(mood.mood as 'bad' | 'okay' | 'great')
-          // Update localStorage
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            mood: mood.mood,
-            date: focusedDay
-          }))
-        }
-      } catch (error) {
-        console.error('Error loading mood:', error)
-      }
-    }
-
-    loadMood()
-  }, [user?.id, dayData?.trades])
-
-  const handleMoodSelect = async (mood: 'bad' | 'okay' | 'great') => {
-    if (!user?.id || !dayData?.trades?.[0]?.entryDate) {
-      toast({
-        title: t('error'),
-        description: t('auth.required'),
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(mood)
-    try {
-      const date = new Date(dayData.trades[0].entryDate)
-      // Set the time to noon to avoid timezone issues
-      date.setHours(12, 0, 0, 0)
-      await saveMood(mood, [], date)
-      setSelectedMood(mood)
-      
-      // Save to localStorage
-      const focusedDay = date.toISOString().split('T')[0]
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        mood,
-        date: focusedDay
-      }))
-
-      toast({
-        title: t('success'),
-        description: t('mood.saved'),
-      })
-    } catch (error) {
-      console.error('Error saving mood:', error)
-      toast({
-        title: t('error'),
-        description: t('mood.error'),
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(null)
-    }
-  }
-
   if (!dayData?.trades?.length) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -266,105 +162,8 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     return null
   }
 
-  // Calculate average time in position
-  const avgTimeInPosition = dayData?.trades?.length
-    ? dayData.trades.reduce((sum, trade) => sum + trade.timeInPosition, 0) / dayData.trades.length
-    : 0
-
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="flex flex-col">
-          <CardHeader className="pb-1 flex-1">
-            <CardTitle className="text-base md:text-lg">
-              {isWeekly ? t('calendar.charts.weeklyPnlAfterComm') : t('calendar.charts.dailyPnlAfterComm')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2 mt-auto">
-            <p className={`text-xl md:text-2xl font-bold ${totalPnL >= 0 ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'}`}>
-              {formatCurrency(totalPnL)}
-            </p>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1">
-              {t('calendar.charts.across')} {Object.keys(accountPnL).length} {Object.keys(accountPnL).length > 1 
-                ? t('calendar.charts.accounts') 
-                : t('calendar.charts.account')}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader className="pb-1 flex-1">
-            <CardTitle className="text-base md:text-lg">
-              {isWeekly ? t('calendar.charts.weeklyAvgTimeInPosition') : t('calendar.charts.avgTimeInPosition')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-2 mt-auto">
-            <p className="text-xl md:text-2xl font-bold">
-              {formatDuration(avgTimeInPosition)}
-            </p>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1">
-              {t('calendar.charts.over')} {dayData.trades.length} {dayData.trades.length > 1 
-                ? t('calendar.charts.trades') 
-                : t('calendar.charts.trade')}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="flex flex-col">
-          <CardHeader className="pb-1 flex-1">
-            <CardTitle className="text-base md:text-lg">
-              {isWeekly ? t('calendar.charts.weeklyMood') : t('calendar.charts.howWasYourDay')}
-            </CardTitle>
-          </CardHeader>
-          {!isWeekly && (
-            <CardContent className="pt-2 mt-auto">
-              <div className="flex justify-around items-center">
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'bad' ? 'text-red-500' : ''}`}
-                  onClick={() => handleMoodSelect('bad')}
-                  disabled={isLoading !== null}
-                >
-                  <FaRegSadTear className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'okay' ? 'text-yellow-500' : ''}`}
-                  onClick={() => handleMoodSelect('okay')}
-                  disabled={isLoading !== null}
-                >
-                  <FaRegMeh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
-                </Button>
-                
-                <Button
-                  variant="ghost"
-                  size="lg"
-                  className={`flex flex-col items-center h-auto py-2 px-4 ${selectedMood === 'great' ? 'text-green-500' : ''}`}
-                  onClick={() => handleMoodSelect('great')}
-                  disabled={isLoading !== null}
-                >
-                  <FaRegSmileBeam className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
-                </Button>
-              </div>
-            </CardContent>
-          )}
-          {isWeekly && (
-            <CardContent className="pt-2 mt-auto">
-              <p className="text-sm text-muted-foreground">
-                {t('calendar.charts.weeklyMoodNotAvailable')}
-              </p>
-            </CardContent>
-          )}
-        </Card>
-      </div>
-
-      {!isWeekly && (
-        <DailyComment dayData={dayData} selectedMood={selectedMood} />
-      )}
-
       <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-base md:text-lg">

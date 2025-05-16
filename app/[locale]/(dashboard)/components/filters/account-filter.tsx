@@ -1,17 +1,12 @@
-import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+"use client"
+
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
-import { FilterItem } from "@/types/filter"
 import { useState, useEffect } from "react"
-import { ChevronDown, Settings } from "lucide-react"
+import { Settings } from "lucide-react"
 import { AccountGroupBoard } from "./account-group-board"
 import { getGroups, createGroup, updateGroup, moveAccountToGroup } from "@/app/[locale]/(dashboard)/dashboard/data/actions"
 import { toast } from "sonner"
@@ -26,6 +21,7 @@ import { getAccounts } from "../../actions/accounts"
 interface AccountFilterProps {
   showAccountNumbers: boolean
   className?: string
+  onModalOpen?: () => void
 }
 
 interface Account {
@@ -34,24 +30,20 @@ interface Account {
   groupId: string | null
 }
 
-interface Group {
-  id: string
-  name: string
-  accounts: Account[]
-}
-
 interface TradeAccount {
   number: string
 }
 
-export function AccountFilter({ showAccountNumbers, className }: AccountFilterProps) {
+export function AccountFilter({ showAccountNumbers, className, onModalOpen }: AccountFilterProps) {
   const { trades = [], accountNumbers = [], setAccountNumbers, user, groups, setGroups } = useUserData()
-  const [filterOpen, setFilterOpen] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const t = useI18n()
 
-  
+  const handleModalOpen = () => {
+    setModalOpen(true)
+    onModalOpen?.()
+  }
 
   // Get unique account numbers from trades
   const tradeAccounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
@@ -161,192 +153,114 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
     )
   }
 
-  const handleRenameGroup = async (groupId: string, newName: string) => {
-    try {
-      await updateGroup(groupId, newName)
-      setGroups(prev => prev.map(group => 
-        group.id === groupId ? { ...group, name: newName } : group
-      ))
-      toast.success(t('filters.groupRenamed', { name: newName }))
-    } catch (error) {
-      console.error('Error renaming group:', error)
-      toast.error(t('filters.errorRenamingGroup', { name: newName }))
-    }
-  }
-
-  const handleCreateGroup = async (name: string) => {
-    if (!user?.id) return
-    try {
-      const newGroup = await createGroup(user.id, name)
-      setGroups(prev => [...prev, { ...newGroup, accounts: [] }])
-      toast.success(t('filters.groupCreated', { name }))
-    } catch (error) {
-      console.error('Error creating group:', error)
-      toast.error(t('filters.errorCreatingGroup', { name }))
-    }
-  }
-
-  const handleMoveAccount = async (accountId: string, targetGroupId: string | null) => {
-    try {
-      await moveAccountToGroup(accountId, targetGroupId)
-      setGroups(prev => {
-        const newGroups = [...prev]
-        // Remove account from current group
-        newGroups.forEach(group => {
-          group.accounts = group.accounts.filter(acc => acc.id !== accountId)
-        })
-        // Add account to target group
-        if (targetGroupId) {
-          const targetGroup = newGroups.find(g => g.id === targetGroupId)
-          if (targetGroup) {
-            const account = prev.flatMap(g => g.accounts).find(acc => acc.id === accountId)
-            if (account) {
-              targetGroup.accounts.push({ ...account, groupId: targetGroupId })
-            }
-          }
-        }
-        return newGroups
-      })
-      toast.success(t('filters.accountMoved', { account: anonymizeAccount(accountId) }))
-    } catch (error) {
-      console.error('Error moving account:', error)
-      toast.error(t('filters.errorMovingAccount', { account: anonymizeAccount(accountId) }))
-    }
-  }
-
   return (
-    <>
-      <div className="flex items-center gap-2">
-        <DropdownMenu open={filterOpen} onOpenChange={setFilterOpen}>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className={`flex-1 ${className || ''}`}>
-              <span className="flex-1 text-left">{t('filters.accounts')}</span>
-              <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[300px]" align="start">
-            <Command shouldFilter={false}>
-              <CommandInput 
-                placeholder={t('filters.search')} 
-                value={searchTerm}
-                onValueChange={setSearchTerm}
-              />
-              <CommandEmpty>{t('filters.noResults')}</CommandEmpty>
-              <CommandList>
-                <ScrollArea className="h-[300px]">
-                  <CommandGroup>
-                    <CommandItem
-                      onSelect={() => {
-                        setFilterOpen(false)
-                        setModalOpen(true)
-                      }}
-                      className="flex items-center gap-2"
-                    >
-                      <Settings className="h-4 w-4" />
-                      <span className="text-sm">{t('filters.manageAccounts')}</span>
-                    </CommandItem>
-                    <CommandSeparator />
+    <div className="p-2">
+      <Command shouldFilter={false}>
+        <CommandInput 
+          placeholder={t('filters.search')} 
+          value={searchTerm}
+          onValueChange={setSearchTerm}
+        />
+        <CommandEmpty>{t('filters.noResults')}</CommandEmpty>
+        <CommandList>
+          <ScrollArea className="h-[300px]">
+            <CommandGroup>
+              <CommandItem
+                onSelect={() => onModalOpen?.()}
+                className="flex items-center gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="text-sm">{t('filters.manageAccounts')}</span>
+              </CommandItem>
+              <CommandSeparator />
 
+              <CommandItem
+                onSelect={handleSelectAll}
+                className="flex items-center gap-2"
+              >
+                <Checkbox
+                  checked={[
+                    ...groups
+                      .filter(group => group.name !== "Hidden Accounts")
+                      .flatMap(g => g.accounts),
+                    ...tradeOnlyAccounts
+                  ].every(item => isItemSelected(item))}
+                  className="h-4 w-4"
+                />
+                <span className="text-sm">{t('filters.selectAllAccounts')}</span>
+              </CommandItem>
+
+              {/* Show trade-only accounts first */}
+              {filteredTradeOnlyAccounts.length > 0 && (
+                <CommandGroup className="px-2">
+                  <CommandItem
+                    onSelect={() => handleSelectGroup('trade-only', filteredTradeOnlyAccounts)}
+                    className="flex items-center gap-2 bg-muted/50"
+                  >
+                    <Checkbox
+                      checked={isGroupSelected(filteredTradeOnlyAccounts)}
+                      className="h-4 w-4"
+                      data-state={isGroupIndeterminate(filteredTradeOnlyAccounts) ? 'indeterminate' : undefined}
+                    />
+                    <span className="text-sm font-medium">{t('filters.tradeOnlyAccounts')}</span>
+                  </CommandItem>
+                  {filteredTradeOnlyAccounts.map(account => (
                     <CommandItem
-                      onSelect={handleSelectAll}
-                      className="flex items-center gap-2"
+                      key={account.number}
+                      onSelect={() => handleSelect(account.number)}
+                      disabled={isItemDisabled(account)}
+                      className="flex items-center gap-2 pl-6"
                     >
                       <Checkbox
-                        checked={[
-                          ...groups
-                            .filter(group => group.name !== "Hidden Accounts")
-                            .flatMap(g => g.accounts),
-                          ...tradeOnlyAccounts
-                        ].every(item => isItemSelected(item))}
-                        className="h-4 w-4"
+                        checked={isItemSelected(account)}
+                        className="h-4 w-4 flex-shrink-0"
+                        disabled={isItemDisabled(account)}
                       />
-                      <span className="text-sm">{t('filters.selectAllAccounts')}</span>
+                      <span className="text-sm break-all pr-2">
+                        {anonymizeAccount(account.number)}
+                      </span>
                     </CommandItem>
+                  ))}
+                </CommandGroup>
+              )}
 
-                    {/* Show trade-only accounts first */}
-                    {filteredTradeOnlyAccounts.length > 0 && (
-                      <CommandGroup className="px-2">
-                        <CommandItem
-                          onSelect={() => handleSelectGroup('trade-only', filteredTradeOnlyAccounts)}
-                          className="flex items-center gap-2 bg-muted/50"
-                        >
-                          <Checkbox
-                            checked={isGroupSelected(filteredTradeOnlyAccounts)}
-                            className="h-4 w-4"
-                            data-state={isGroupIndeterminate(filteredTradeOnlyAccounts) ? 'indeterminate' : undefined}
-                          />
-                          <span className="text-sm font-medium">{t('filters.tradeOnlyAccounts')}</span>
-                        </CommandItem>
-                        {filteredTradeOnlyAccounts.map(account => (
-                          <CommandItem
-                            key={account.number}
-                            onSelect={() => handleSelect(account.number)}
-                            disabled={isItemDisabled(account)}
-                            className="flex items-center gap-2 pl-6"
-                          >
-                            <Checkbox
-                              checked={isItemSelected(account)}
-                              className="h-4 w-4 flex-shrink-0"
-                              disabled={isItemDisabled(account)}
-                            />
-                            <span className="text-sm break-all pr-2">
-                              {anonymizeAccount(account.number)}
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    )}
-
-                    {/* Show grouped accounts */}
-                    {filteredGroups.map((group) => (
-                      <CommandGroup key={group.id} className="px-2">
-                        <CommandItem
-                          onSelect={() => handleSelectGroup(group.id, group.accounts)}
-                          className="flex items-center gap-2 bg-muted/50"
-                        >
-                          <Checkbox
-                            checked={isGroupSelected(group.accounts)}
-                            className="h-4 w-4"
-                            data-state={isGroupIndeterminate(group.accounts) ? 'indeterminate' : undefined}
-                          />
-                          <span className="text-sm font-medium">{group.name}</span>
-                        </CommandItem>
-                        {group.accounts.map(account => (
-                          <CommandItem
-                            key={account.id}
-                            onSelect={() => handleSelect(account.number)}
-                            disabled={isItemDisabled(account)}
-                            className="flex items-center gap-2 pl-6"
-                          >
-                            <Checkbox
-                              checked={isItemSelected(account)}
-                              className="h-4 w-4 flex-shrink-0"
-                              disabled={isItemDisabled(account)}
-                            />
-                            <span className="text-sm break-all pr-2">
-                              {anonymizeAccount(account.number)}
-                            </span>
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    ))}
-                  </CommandGroup>
-                </ScrollArea>
-              </CommandList>
-            </Command>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {/* Replace the custom modal with Dialog */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('filters.manageAccounts')}</DialogTitle>
-          </DialogHeader>
-          <AccountGroupBoard/>
-        </DialogContent>
-      </Dialog>
-    </>
+              {/* Show grouped accounts */}
+              {filteredGroups.map((group) => (
+                <CommandGroup key={group.id} className="px-2">
+                  <CommandItem
+                    onSelect={() => handleSelectGroup(group.id, group.accounts)}
+                    className="flex items-center gap-2 bg-muted/50"
+                  >
+                    <Checkbox
+                      checked={isGroupSelected(group.accounts)}
+                      className="h-4 w-4"
+                      data-state={isGroupIndeterminate(group.accounts) ? 'indeterminate' : undefined}
+                    />
+                    <span className="text-sm font-medium">{group.name}</span>
+                  </CommandItem>
+                  {group.accounts.map(account => (
+                    <CommandItem
+                      key={account.id}
+                      onSelect={() => handleSelect(account.number)}
+                      disabled={isItemDisabled(account)}
+                      className="flex items-center gap-2 pl-6"
+                    >
+                      <Checkbox
+                        checked={isItemSelected(account)}
+                        className="h-4 w-4 flex-shrink-0"
+                        disabled={isItemDisabled(account)}
+                      />
+                      <span className="text-sm break-all pr-2">
+                        {anonymizeAccount(account.number)}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ))}
+            </CommandGroup>
+          </ScrollArea>
+        </CommandList>
+      </Command>
+    </div>
   )
 } 

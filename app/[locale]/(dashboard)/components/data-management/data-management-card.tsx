@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TrashIcon, AlertCircle, ChevronDown, ChevronUp, MoreVertical, Edit2, Loader2 } from "lucide-react"
 import { 
-  deleteAccounts, 
+  removeAccountsFromTrades, 
   deleteInstrumentGroup, 
   updateCommissionForGroup, 
   renameAccount,
@@ -81,7 +81,7 @@ export function DataManagementCard() {
     try {
       setDeleteLoading(true)
       const accountsToDelete = deleteMode === 'all' ? Object.keys(groupedTrades) : selectedAccounts
-      await deleteAccounts(accountsToDelete, user.id)
+      await removeAccountsFromTrades(accountsToDelete)
       await refreshTrades()
       setGroupedTrades(getGroupedTrades)
       setSelectedAccounts([])
@@ -127,7 +127,7 @@ export function DataManagementCard() {
   }
 
   const debouncedUpdateCommission = useMemo(
-    () => debounce(async (accountNumber: string, instrumentGroup: string, newCommission: number, userId: string) => {
+    () => debounce(async (accountNumber: string, instrumentGroup: string, newCommission: number) => {
       try {
         await updateCommissionForGroup(accountNumber, instrumentGroup, newCommission)
         await refreshTrades()
@@ -149,9 +149,8 @@ export function DataManagementCard() {
     [refreshTrades, getGroupedTrades, t]
   )
 
-  const handleUpdateCommission = useCallback((accountNumber: string, instrumentGroup: string, newCommission: number, user: User | null) => {
-    if (!user) return
-    debouncedUpdateCommission(accountNumber, instrumentGroup, newCommission, user.id)
+  const handleUpdateCommission = useCallback((accountNumber: string, instrumentGroup: string, newCommission: number) => {
+    debouncedUpdateCommission(accountNumber, instrumentGroup, newCommission)
   }, [debouncedUpdateCommission])
 
   const toggleAccountExpansion = (accountNumber: string) => {
@@ -165,7 +164,7 @@ export function DataManagementCard() {
     if (!user || !instrumentToRename.currentName || !newInstrumentName) return
     try {
       setRenameLoading(true)
-      await renameInstrument(instrumentToRename.accountNumber, instrumentToRename.currentName, newInstrumentName, user.id)
+      await renameInstrument(instrumentToRename.accountNumber, instrumentToRename.currentName, newInstrumentName)
       await refreshTrades()
       toast({
         title: t('dataManagement.toast.instrumentRenamed'),
@@ -378,7 +377,7 @@ export function DataManagementCard() {
                               placeholder="Commission"
                               defaultValue={trades[0].commission / trades[0].quantity}
                               className="w-full"
-                              onChange={(e) => handleUpdateCommission(accountNumber, instrumentGroup, parseFloat(e.target.value), user)}
+                              onChange={(e) => handleUpdateCommission(accountNumber, instrumentGroup, parseFloat(e.target.value))}
                               aria-label={`Update commission for ${instrumentGroup}`}
                             />
                           </div>

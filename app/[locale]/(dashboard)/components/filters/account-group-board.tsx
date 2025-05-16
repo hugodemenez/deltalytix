@@ -125,7 +125,7 @@ export function AccountGroupBoard() {
           await createGroup(HIDDEN_GROUP_NAME)
           await refreshGroups()
           // Get the new hidden group ID
-          const updatedGroups = await getGroups(user.id)
+          const updatedGroups = await getGroups()
           const newHiddenGroup = updatedGroups.find((g: Group) => g.name === HIDDEN_GROUP_NAME)
           if (newHiddenGroup) {
             groupId = newHiddenGroup.id

@@ -1,7 +1,7 @@
 export default {
     propFirm: {
-        title: 'Comptes Prop Firm',
-        description: 'Gérez vos comptes prop firm et suivez vos performances.',
+        title: 'Comptes',
+        description: 'Gérez vos comptes et suivez vos performances.',
         card: {
             unnamedAccount: 'Compte sans nom',
             balance: 'Solde',

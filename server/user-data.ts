@@ -9,8 +9,8 @@ import { Tag, Trade, Group } from '@prisma/client'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
 import { getTags } from './tags'
 import { getOnboardingStatus } from './onboarding'
-import { getPropFirmAccounts } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
-import type { FinancialEvent, Mood, Account as PropFirmAccount } from '@prisma/client'
+import { getAccounts } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
+import type { Account, FinancialEvent, Mood } from '@prisma/client'
 import { getEtpToken } from './etp'
 import { getThorToken } from './thor'
 import { getGroups, GroupWithAccounts } from './groups'
@@ -55,7 +55,7 @@ export type InitialDataResponse = {
   layouts: Layouts | null
   error?: string
   tags: Tag[]
-  propfirmAccounts: PropFirmAccount[]
+  accounts: Account[]
   groups: GroupWithAccounts[]
   financialEvents: FinancialEvent[]
   moodHistory: Mood[]
@@ -88,7 +88,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         tickDetails: {},
         layouts: null,
         tags: [],
-        propfirmAccounts: [],
+        accounts: [],
         groups: [],
         financialEvents: [],
         moodHistory: [],
@@ -108,7 +108,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         tickDetails: {},
         layouts: null,
         tags: [],
-        propfirmAccounts: [],
+        accounts: [],
         groups: [],
         financialEvents: [],
         moodHistory: [],
@@ -131,7 +131,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         tickDetails: {},
         layouts: null,
         tags: [],
-        propfirmAccounts: [],
+        accounts: [],
         groups: [],
         financialEvents: [],
         moodHistory: [],
@@ -151,7 +151,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
         tickDetails: {},
         layouts: null,
         tags: [],
-        propfirmAccounts: [],
+        accounts: [],
         groups: [],
         financialEvents: [],
         moodHistory: [],
@@ -171,12 +171,12 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
     const subscription = await getSubscriptionDetails(user.email || email || '')
 
     // Run remaining operations concurrently with subscription status
-    const [tradesResult, tickDetailsResult, layoutsResult, tagsResult, propfirmAccountsResult, groupsResult, financialEventsResult, moodHistoryResult] = await Promise.all([
+    const [tradesResult, tickDetailsResult, layoutsResult, tagsResult, accountsResult, groupsResult, financialEventsResult, moodHistoryResult] = await Promise.all([
       getTrades(user.id, subscription?.isActive ?? false).catch(() => []),
       getTickDetails().catch(() => []),
       loadDashboardLayout(user.id).catch(() => null),
       getTags(user.id).catch(() => []),
-      getPropFirmAccounts(user.id).catch(() => []),
+      getAccounts().catch(() => []),
       getGroups(user.id).catch(() => []),
       getFinancialEvents().catch(() => []),
       getMoodHistory(user.id).catch(() => [])
@@ -200,7 +200,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       tickDetails,
       layouts,
       tags: tagsResult,
-      propfirmAccounts: propfirmAccountsResult as PropFirmAccount[],
+      accounts: accountsResult,
       groups: groupsResult,
       financialEvents: financialEventsResult,
       moodHistory: moodHistoryResult
@@ -216,7 +216,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
       tickDetails: {},
       layouts: null,
       tags: [],
-      propfirmAccounts: [],
+      accounts: [],
       groups: [],
       financialEvents: [],
       moodHistory: [],

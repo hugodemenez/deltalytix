@@ -89,46 +89,50 @@ export default function Navbar() {
       <nav className="fixed py-2 top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-sm w-screen">
         <div className="flex items-center justify-between px-10 h-16">
           <div className="flex items-center gap-x-2">
-            <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="p-0">
-                  <Logo className='fill-black h-6 w-6 dark:fill-white' />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48" align="start">
-                <div className="space-y-2">
-                  <h4 className="font-medium leading-none mb-3">{t('navbar.logo.title')}</h4>
-                  <div className="grid gap-2">
-                    <Link 
-                      href="/dashboard" 
-                      className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
-                      onClick={() => setIsLogoPopoverOpen(false)}
-                    >
-                      <div className="flex-shrink-0 w-4 h-4">
-                        <LayoutDashboard className="h-full w-full" />
-                      </div>
-                      {t('navbar.logo.dashboard')}
-                    </Link>
-                    <Link 
-                      href="/" 
-                      className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
-                      onClick={() => setIsLogoPopoverOpen(false)}
-                    >
-                      <div className="flex-shrink-0 w-4 h-4">
-                        <Home className="h-full w-full" />
-                      </div>
-                      {t('navbar.logo.home')}
-                    </Link>
+            <div className="flex flex-col items-center">
+              <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="p-0">
+                    <Logo className='fill-black h-6 w-6 dark:fill-white' />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48" align="start">
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none mb-3">{t('navbar.logo.title')}</h4>
+                    <div className="grid gap-2">
+                      <Link 
+                        href="/dashboard" 
+                        className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
+                        onClick={() => setIsLogoPopoverOpen(false)}
+                      >
+                        <div className="flex-shrink-0 w-4 h-4">
+                          <LayoutDashboard className="h-full w-full" />
+                        </div>
+                        {t('navbar.logo.dashboard')}
+                      </Link>
+                      <Link 
+                        href="/" 
+                        className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
+                        onClick={() => setIsLogoPopoverOpen(false)}
+                      >
+                        <div className="flex-shrink-0 w-4 h-4">
+                          <Home className="h-full w-full" />
+                        </div>
+                        {t('navbar.logo.home')}
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <SubscriptionBadge 
-              plan={subscription?.plan || null} 
-              endDate={subscription?.endDate || null}
-              trialEndsAt={subscription?.trialEndsAt || null}
-              status={subscription?.status || ''}
-            />
+                </PopoverContent>
+              </Popover>
+              <div className="mt-[-8px]">
+                <SubscriptionBadge 
+                  plan={subscription?.plan?.split(' ')[0] || null} 
+                  endDate={subscription?.endDate || null}
+                  trialEndsAt={subscription?.trialEndsAt || null}
+                  status={subscription?.status || ''}
+                />
+              </div>
+            </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className='hidden md:flex gap-x-4'>
@@ -154,7 +158,6 @@ export default function Navbar() {
                 </Tooltip>
               </TooltipProvider>
               <DateCalendarFilter />
-              <FilterDropdowns showAccountNumbers={showAccountNumbers} />
               <ImportButton />
             </div>
             <div className="flex items-center gap-2">

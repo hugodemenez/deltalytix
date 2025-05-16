@@ -188,7 +188,21 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleSync(cred)}
+                      disabled={isAutoSyncing || cooldownId === id}
+                    >
+                      {syncingId === id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : cooldownId === id ? (
+                        <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </Button>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button 
@@ -201,22 +215,6 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                       </PopoverTrigger>
                       <PopoverContent className="w-48 p-2" align="end">
                         <div className="flex flex-col space-y-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="justify-start"
-                            onClick={() => handleSync(cred)}
-                            disabled={isAutoSyncing || cooldownId === id}
-                          >
-                            {syncingId === id ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : cooldownId === id ? (
-                              <RefreshCw className="h-4 w-4 text-muted-foreground mr-2" />
-                            ) : (
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                            )}
-                            {t('rithmic.actions.sync')}
-                          </Button>
                           <Button 
                             variant="ghost" 
                             size="sm"

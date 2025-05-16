@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useMemo } from "react"
 import { TradeProgressChart } from "./trade-progress-chart"
-import { PropFirmAccount } from "./prop-firm-overview"
+import { Account } from "@/components/context/user-data"
 
 interface Trade {
   accountNumber: string
@@ -15,8 +15,8 @@ interface Trade {
   commission?: number
 }
 
-interface PropFirmCardProps {
-  account: PropFirmAccount
+interface AccountCardProps {
+  account: Account
   trades: Trade[]
   metrics?: {
     hasProfitableData: boolean
@@ -27,13 +27,13 @@ interface PropFirmCardProps {
   onClick?: () => void
 }
 
-export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCardProps) {
+export function AccountCard({ account, trades, metrics, onClick }: AccountCardProps) {
   const t = useI18n()
 
   const { drawdownProgress, remainingLoss, progress, isConfigured, currentBalance } = useMemo(() => {
     const isConfigured = account.profitTarget > 0 && account.drawdownThreshold > 0
     const progress = account.profitTarget > 0
-      ? (account.balanceToDate / account.profitTarget) * 100
+      ? ((account.balanceToDate ?? account.startingBalance) / account.profitTarget) * 100
       : 0
 
     // Sort trades by date
@@ -42,9 +42,9 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
     )
 
     // Get valid payouts (PAID or VALIDATED)
-    const validPayouts = account.payouts.filter(p =>
+    const validPayouts = account.payouts?.filter(p =>
       ['PAID', 'VALIDATED'].includes(p.status)
-    )
+    ) ?? []
 
     // Calculate running balance and track highest point
     let runningBalance = account.startingBalance
@@ -72,7 +72,7 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
       const profitMade = Math.max(0, highestBalance - account.startingBalance)
 
       // If we've hit trailing stop profit, lock the drawdown to that level
-      if (profitMade >= account.trailingStopProfit) {
+      if (account.trailingStopProfit && profitMade >= account.trailingStopProfit) {
         drawdownLevel = (account.startingBalance + account.trailingStopProfit) - account.drawdownThreshold
       } else {
         // Otherwise, drawdown level trails the highest balance
@@ -127,7 +127,7 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
                 </div>
               </CardTitle>
               <p className="text-xs text-muted-foreground truncate">
-                {account.accountNumber}
+                {account.number}
               </p>
             </div>
           </div>
@@ -147,7 +147,7 @@ export function PropFirmCard({ account, trades, metrics, onClick }: PropFirmCard
               drawdownThreshold={account.drawdownThreshold}
               profitTarget={account.profitTarget}
               trailingDrawdown={account.trailingDrawdown}
-              trailingStopProfit={account.trailingStopProfit}
+              trailingStopProfit={account.trailingStopProfit ?? undefined}
               payouts={account.payouts}
             />
 

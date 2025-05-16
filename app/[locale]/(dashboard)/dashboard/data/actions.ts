@@ -1,5 +1,6 @@
 'use server'
 
+import { getUserId } from '@/server/auth'
 import { PrismaClient, Trade, Account } from '@prisma/client'
 
 const globalForPrisma = globalThis as unknown as {
@@ -15,50 +16,6 @@ type GroupedTrades = Record<string, Record<string, Trade[]>>
 interface FetchTradesResult {
   groupedTrades: GroupedTrades;
   flattenedTrades: Trade[];
-}
-
-interface PropFirmAccountSetup {
-  accountNumber: string
-  userId: string
-  propfirm: string
-  profitTarget: number
-  drawdownThreshold: number
-  startingBalance: number
-  isPerformance: boolean
-}
-
-interface SetupPropFirmAccountParams {
-  accountNumber: string
-  userId: string
-  propfirm: string
-  profitTarget: number
-  drawdownThreshold: number
-  startingBalance: number
-  isPerformance: boolean
-  trailingDrawdown: boolean
-  trailingStopProfit?: number
-  resetDate?: Date | null 
-  consistencyPercentage?: number
-  accountSize?: string
-  accountSizeName?: string
-  price?: number
-  priceWithPromo?: number
-  evaluation?: boolean
-  minDays?: number
-  dailyLoss?: number
-  rulesDailyLoss?: string
-  trailing?: string
-  tradingNewsAllowed?: boolean
-  activationFees?: number
-  isRecursively?: string
-  payoutBonus?: number
-  profitSharing?: number
-  payoutPolicy?: string
-  balanceRequired?: number
-  minTradingDaysForPayout?: number
-  minPayout?: number
-  maxPayout?: string
-  maxFundedAccounts?: number
 }
 
 export async function fetchGroupedTrades(userId: string): Promise<FetchTradesResult> {
@@ -89,7 +46,8 @@ export async function fetchGroupedTrades(userId: string): Promise<FetchTradesRes
   }
 }
 
-export async function deleteAccounts(accountNumbers: string[], userId: string): Promise<void> {
+export async function removeAccountsFromTrades(accountNumbers: string[]): Promise<void> {
+  const userId = await getUserId()
   await prisma.trade.deleteMany({
     where: {
       accountNumber: { in: accountNumbers },
@@ -98,7 +56,8 @@ export async function deleteAccounts(accountNumbers: string[], userId: string): 
   })
 }
 
-export async function deleteAccount(accountNumber: string, userId: string): Promise<void> {
+export async function removeAccountFromTrades(accountNumber: string): Promise<void> {
+  const userId = await getUserId()
   await prisma.trade.deleteMany({
     where: {
       accountNumber: accountNumber,
@@ -119,9 +78,6 @@ export async function deleteInstrumentGroup(accountNumber: string, instrumentGro
 
 export async function updateCommissionForGroup(accountNumber: string, instrumentGroup: string, newCommission: number): Promise<void> {
   // We have to update the commission for all trades in the group and compute based on the quantity
-  console.log('accountNumber', accountNumber)
-  console.log('instrumentGroup', instrumentGroup)
-  console.log('newCommission', newCommission)
   const trades = await prisma.trade.findMany({
     where: {
       accountNumber: accountNumber,
@@ -131,7 +87,6 @@ export async function updateCommissionForGroup(accountNumber: string, instrument
   // For each trade, update the commission
   for (const trade of trades) {
     const updatedCommission = newCommission * trade.quantity
-    console.log('updatedCommission', updatedCommission)
     await prisma.trade.update({
       where: {
         id: trade.id
@@ -219,9 +174,8 @@ export async function deleteTradesByIds(tradeIds: string[]): Promise<void> {
   })
 }
 
-export async function setupPropFirmAccount({
-  accountNumber,
-  userId,
+export async function setupAccount({
+  number,
   propfirm,
   profitTarget,
   drawdownThreshold,
@@ -251,10 +205,11 @@ export async function setupPropFirmAccount({
   minPayout,
   maxPayout,
   maxFundedAccounts,
-}: SetupPropFirmAccountParams) {
+}: Account) {
+  const userId = await getUserId()
   const existingAccount = await prisma.account.findFirst({
     where: {
-      number: accountNumber,
+      number: number,
       userId: userId
     }
   })
@@ -301,14 +256,15 @@ export async function setupPropFirmAccount({
 
   return await prisma.account.create({
     data: {
-      number: accountNumber,
+      number: number,
       userId: userId,
       ...accountData
     }
   })
 }
 
-export async function deletePropFirmAccount(accountNumber: string, userId: string) {
+export async function deleteAccount(accountNumber: string) {
+  const userId = await getUserId()
   await prisma.account.delete({
     where: {
       number_userId: {
@@ -318,9 +274,10 @@ export async function deletePropFirmAccount(accountNumber: string, userId: strin
     }
   })
 }
-export async function getPropFirmAccounts(userId: string) {
+export async function getAccounts() {
   try {
     // First get all accounts for the user
+    const userId = await getUserId()
     const accounts = await prisma.account.findMany({
       where: {
         userId: userId,
@@ -348,19 +305,19 @@ export async function getPropFirmAccounts(userId: string) {
   }
 }
 
-export async function addPropFirmPayout(data: {
+export async function addPayout(data: {
   accountNumber: string
-  userId: string
   date: Date
   amount: number
   status: string
 }) {
   try {
     // First find the account to get its ID
+    const userId = await getUserId()
     const account = await prisma.account.findFirst({
       where: {
         number: data.accountNumber,
-        userId: data.userId
+        userId: userId
       }
     })
 
@@ -390,8 +347,9 @@ export async function addPropFirmPayout(data: {
 
 export async function deletePayout(payoutId: string) {
   try {
+    const userId = await getUserId()
     const payout = await prisma.payout.findUnique({
-      where: { id: payoutId },
+      where: { id: payoutId, account: { userId: userId } },
       include: {
         account: true
       }
@@ -449,8 +407,9 @@ export async function updatePayout(data: {
   }
 }
 
-export async function renameInstrument(accountNumber: string, oldInstrumentName: string, newInstrumentName: string, userId: string): Promise<void> {
+export async function renameInstrument(accountNumber: string, oldInstrumentName: string, newInstrumentName: string): Promise<void> {
   try {
+    const userId = await getUserId()
     // Update all trades for this instrument in this account
     await prisma.trade.updateMany({
       where: {
@@ -495,8 +454,9 @@ export async function checkAndResetAccounts() {
   }
 }
 
-export async function createGroup(userId: string, name: string) {
+export async function createGroup(name: string) {
   try {
+    const userId = await getUserId()
     const group = await prisma.group.create({
       data: {
         name,
@@ -547,8 +507,9 @@ export async function moveAccountToGroup(accountId: string, groupId: string | nu
   }
 }
 
-export async function getGroups(userId: string) {
+export async function getGroups() {
   try {
+    const userId = await getUserId()
     const groups = await prisma.group.findMany({
       where: { userId },
       include: {
@@ -562,8 +523,9 @@ export async function getGroups(userId: string) {
   }
 }
 
-export async function createAccount(userId: string, accountNumber: string) {
+export async function createAccount(accountNumber: string) {
   try {
+    const userId = await getUserId()
     const account = await prisma.account.create({
       data: {
         number: accountNumber,

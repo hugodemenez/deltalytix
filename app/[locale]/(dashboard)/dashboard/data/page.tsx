@@ -2,10 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import TradeTable from '../../components/filters/trade-table'
-import FilterLeftPane from '../../components/filters/filter-left-pane'
 import { DataManagementCard } from '../../components/data-management/data-management-card'
-import { PropFirmOverview } from "../../components/propfirm/prop-firm-overview"
-import { PropFirmCard } from "../../components/data-management/prop-firm-card"
 import { useEffect } from "react"
 
 export default function DashboardPage() {
@@ -30,9 +27,6 @@ export default function DashboardPage() {
           <TabsContent value="trades">
             <TradeTable />
           </TabsContent>
-          {/* <TabsContent value="propfirm">
-            <PropFirmCard />
-          </TabsContent> */}
         </Tabs>
 
       </div>

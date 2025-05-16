@@ -23,7 +23,7 @@ import { NewsWidget } from '../components/market/news-widget'
 import TradeDistributionChart from '../components/charts/trade-distribution'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { PropFirmOverview } from '../components/propfirm/prop-firm-overview'
+import { AccountsOverview } from '../components/propfirm/accounts-overview'
 import { TagWidget } from '../components/filters/tag-widget'
 import ProfitFactorCard from '../components/statistics/profit-factor-card'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
@@ -334,7 +334,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     allowedSizes: ['medium', 'large', 'extra-large'],
     category: 'tables',
     previewHeight: 300,
-    getComponent: ({ size }) => <PropFirmOverview size={size} />,
+    getComponent: ({ size }) => <AccountsOverview size={size} />,
     getPreview: () => createPropfirmPreview()
   },
   timeRangePerformance: {

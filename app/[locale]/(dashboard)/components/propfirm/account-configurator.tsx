@@ -14,22 +14,25 @@ import { useI18n } from "@/locales/client"
 import { useParams } from 'next/navigation'
 import { enUS, fr } from 'date-fns/locale'
 import { toast } from "@/hooks/use-toast"
-import { setupPropFirmAccount, getPropFirmAccounts, deletePropFirmAccount } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
+import { setupAccount, getAccounts, deleteAccount } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
 import { useUserData } from "@/components/context/user-data"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { propFirms } from './config'
-import SuggestionInput from './suggestion-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { PropFirmAccount } from './types'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Account as PrismaAccount } from '@prisma/client' 
 
-interface PropFirmConfiguratorProps {
-  account: PropFirmAccount
-  onUpdate: (updatedAccount: PropFirmAccount) => void
+interface Account extends PrismaAccount {
+  promoType?: 'direct' | 'percentage'
+  promoPercentage?: number
+}
+
+interface AccountConfiguratorProps {
+  account: Account
+  onUpdate: (updatedAccount: Account) => void
   onDelete: () => void
-  onAccountsUpdate: (accounts: PropFirmAccount[]) => void
+  onAccountsUpdate: (accounts: Account[]) => void
 }
 
 const localeMap: { [key: string]: Locale } = {
@@ -37,83 +40,15 @@ const localeMap: { [key: string]: Locale } = {
   fr: fr
 }
 
-export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUpdate }: PropFirmConfiguratorProps) {
+export function AccountConfigurator({ account, onUpdate, onDelete, onAccountsUpdate }: AccountConfiguratorProps) {
   const { user } = useUserData()
   const t = useI18n()
   const params = useParams()
-  const [pendingChanges, setPendingChanges] = useState<Partial<PropFirmAccount> | null>(null)
+  const [pendingChanges, setPendingChanges] = useState<Partial<Account> | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [open, setOpen] = useState(false)
-  const [searchValue, setSearchValue] = useState("")
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
   const [selectedAccountSize, setSelectedAccountSize] = useState<string>("")
 
-  const handlePropFirmChange = (value: string) => {
-    setPendingChanges(prev => ({
-      ...prev,
-      propfirm: value
-    }))
-    setSelectedAccountSize("") // Reset account size when prop firm changes
-  }
-
-  const handleAccountSizeChange = (value: string) => {
-    setSelectedAccountSize(value)
-    const selectedPropFirm = pendingChanges?.propfirm ?? account.propfirm
-    
-    if (selectedPropFirm && value) {
-      // Find the prop firm by name
-      const propFirmKey = Object.keys(propFirms).find(key => propFirms[key].name === selectedPropFirm)
-      
-      if (!propFirmKey) {
-        console.error('Prop firm not found:', selectedPropFirm)
-        return
-      }
-      
-      const propFirm = propFirms[propFirmKey]
-      
-      const accountSize = propFirm.accountSizes[value]
-      
-      if (!accountSize) {
-        console.error('Account size not found:', value)
-        return
-      }
-
-      setPendingChanges(prev => ({
-        ...prev,
-        // Basic account info
-        startingBalance: accountSize.balance,
-        profitTarget: accountSize.target,
-        drawdownThreshold: accountSize.drawdown,
-        consistencyPercentage: typeof accountSize.consistency === 'number' ? accountSize.consistency : 0,
-        trailingDrawdown: accountSize.trailing === 'EOD' || accountSize.trailing === 'Intraday',
-        trailingStopProfit: accountSize.trailing === 'EOD' || accountSize.trailing === 'Intraday' ? accountSize.target : 0,
-        
-        // Account size details
-        accountSize: value,
-        accountSizeName: accountSize.name,
-        price: accountSize.price,
-        priceWithPromo: accountSize.priceWithPromo,
-        evaluation: accountSize.evaluation,
-        minDays: typeof accountSize.minDays === 'number' ? accountSize.minDays : 0,
-        dailyLoss: accountSize.dailyLoss ?? 0,
-        rulesDailyLoss: accountSize.rulesDailyLoss ?? 'No',
-        trailing: accountSize.trailing ?? 'Static',
-        tradingNewsAllowed: accountSize.tradingNewsAllowed ?? false,
-        activationFees: accountSize.activationFees ?? 0,
-        isRecursively: accountSize.isRecursively ?? 'No',
-        payoutBonus: accountSize.payoutBonus ?? 0,
-        profitSharing: accountSize.profitSharing ?? 0,
-        payoutPolicy: accountSize.payoutPolicy ?? '',
-        balanceRequired: accountSize.balanceRequired ?? 0,
-        minTradingDaysForPayout: accountSize.minTradingDaysForPayout ?? 0,
-        minPayout: accountSize.minPayout ?? 0,
-        maxPayout: accountSize.maxPayout ?? 'No',
-        maxFundedAccounts: accountSize.maxFundedAccounts ?? 0
-      }))
-    }
-  }
 
   const handleTemplateChange = (firmKey: string, sizeKey: string) => {
     const firm = propFirms[firmKey]
@@ -167,7 +102,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
         drawdownThreshold: pendingChanges?.drawdownThreshold ?? account.drawdownThreshold,
         consistencyPercentage: pendingChanges?.consistencyPercentage ?? account.consistencyPercentage,
         propfirm: pendingChanges?.propfirm ?? account.propfirm,
-        resetDate: pendingChanges?.resetDate instanceof Date ? pendingChanges.resetDate : undefined,
+        resetDate: pendingChanges?.resetDate instanceof Date ? pendingChanges.resetDate : null,
         trailingDrawdown: pendingChanges?.trailingDrawdown ?? account.trailingDrawdown,
         trailingStopProfit: pendingChanges?.trailingStopProfit ?? account.trailingStopProfit,
         // Include all the new fields
@@ -187,46 +122,54 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
         minTradingDaysForPayout: pendingChanges?.minTradingDaysForPayout ?? account.minTradingDaysForPayout
       }
 
-      await setupPropFirmAccount(accountUpdate)
+      await setupAccount(accountUpdate)
       
-      // Reload the accounts data
-      const accounts = await getPropFirmAccounts(user.id)
-      
-      // Update the selected account with new data
-      const updatedDbAccount = accounts.find(acc => acc.number === account.accountNumber)
-      if (updatedDbAccount) {
-        const updatedAccount = {
-          ...account,
-          startingBalance: updatedDbAccount.startingBalance,
-          profitTarget: updatedDbAccount.profitTarget,
-          drawdownThreshold: updatedDbAccount.drawdownThreshold,
-          consistencyPercentage: updatedDbAccount.consistencyPercentage ?? 30,
-          propfirm: updatedDbAccount.propfirm,
-          trailingDrawdown: updatedDbAccount.trailingDrawdown ?? false,
-          trailingStopProfit: updatedDbAccount.trailingStopProfit ?? 0,
-          resetDate: updatedDbAccount.resetDate ? new Date(updatedDbAccount.resetDate) : null
-        }
-
-        // Update local storage
-        const storedAccounts = localStorage.getItem('propFirmAccounts')
-        if (storedAccounts) {
-          const parsedAccounts = JSON.parse(storedAccounts)
-          const updatedAccounts = parsedAccounts.map((acc: PropFirmAccount) => 
-            acc.accountNumber === updatedAccount.accountNumber ? updatedAccount : acc
-          )
-          localStorage.setItem('propFirmAccounts', JSON.stringify(updatedAccounts))
-        }
+      // Update local storage with just the current account
+      const storedAccounts = localStorage.getItem('accounts')
+      if (storedAccounts) {
+        const parsedAccounts = JSON.parse(storedAccounts)
+        const updatedAccounts = parsedAccounts.map((acc: Account) => 
+          acc.number === account.number ? {
+            ...acc,
+            startingBalance: accountUpdate.startingBalance,
+            profitTarget: accountUpdate.profitTarget,
+            drawdownThreshold: accountUpdate.drawdownThreshold,
+            consistencyPercentage: accountUpdate.consistencyPercentage,
+            propfirm: accountUpdate.propfirm,
+            trailingDrawdown: accountUpdate.trailingDrawdown,
+            trailingStopProfit: accountUpdate.trailingStopProfit,
+            resetDate: accountUpdate.resetDate,
+            // Include all the new fields
+            accountSize: accountUpdate.accountSize,
+            accountSizeName: accountUpdate.accountSizeName,
+            price: accountUpdate.price,
+            priceWithPromo: accountUpdate.priceWithPromo,
+            evaluation: accountUpdate.evaluation,
+            minDays: accountUpdate.minDays,
+            dailyLoss: accountUpdate.dailyLoss,
+            rulesDailyLoss: accountUpdate.rulesDailyLoss,
+            trailing: accountUpdate.trailing,
+            tradingNewsAllowed: accountUpdate.tradingNewsAllowed,
+            activationFees: accountUpdate.activationFees,
+            isRecursively: accountUpdate.isRecursively,
+            balanceRequired: accountUpdate.balanceRequired,
+            minTradingDaysForPayout: accountUpdate.minTradingDaysForPayout,
+            minPayout: accountUpdate.minPayout,
+            maxPayout: accountUpdate.maxPayout,
+            maxFundedAccounts: accountUpdate.maxFundedAccounts,
+            payoutBonus: accountUpdate.payoutBonus,
+            profitSharing: accountUpdate.profitSharing,
+            payoutPolicy: accountUpdate.payoutPolicy
+          } : acc
+        )
+        localStorage.setItem('accounts', JSON.stringify(updatedAccounts))
         
-        // Update parent component's accounts list
-        const transformedAccounts = accounts.map(acc => ({
-          ...acc,
-          accountNumber: acc.number,
-          balanceToDate: 0 // You might want to calculate this based on your business logic
-        }))
-        onAccountsUpdate(transformedAccounts as PropFirmAccount[])
-        // Update the selected account
-        onUpdate(updatedAccount)
+        // Update parent component's accounts list with the updated accounts
+        onAccountsUpdate(updatedAccounts)
       }
+      
+      // Update the selected account
+      onUpdate(accountUpdate)
       
       setPendingChanges(null)
       
@@ -250,11 +193,11 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
 
   const isSaveDisabled = !pendingChanges || 
     Object.keys(pendingChanges).length === 0 || 
-    (pendingChanges.startingBalance !== undefined && pendingChanges.startingBalance <= 0) ||
-    (pendingChanges.profitTarget !== undefined && pendingChanges.profitTarget <= 0) ||
-    (pendingChanges.drawdownThreshold !== undefined && pendingChanges.drawdownThreshold <= 0) ||
-    (pendingChanges.consistencyPercentage !== undefined && pendingChanges.consistencyPercentage < 0) ||
-    (pendingChanges.trailingDrawdown && pendingChanges.trailingStopProfit !== undefined && pendingChanges.trailingStopProfit <= 0) ||
+    (pendingChanges?.startingBalance !== undefined && pendingChanges?.startingBalance <= 0) ||
+    (pendingChanges?.profitTarget !== undefined && pendingChanges?.profitTarget <= 0) ||
+    (pendingChanges?.drawdownThreshold !== undefined && pendingChanges?.drawdownThreshold <= 0) ||
+    (typeof pendingChanges?.consistencyPercentage === 'number' && pendingChanges.consistencyPercentage < 0) ||
+    (pendingChanges?.trailingDrawdown && typeof pendingChanges?.trailingStopProfit === 'number' && pendingChanges.trailingStopProfit <= 0) ||
     isSaving
 
   return (
@@ -374,7 +317,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
         </div>
       </div>
 
-      <Accordion type="multiple" className="w-full">
+      <Accordion type="multiple" defaultValue={["basic-info"]} className="w-full">
         {/* Basic Account Info */}
         <AccordionItem value="basic-info">
           <AccordionTrigger>{t('propFirm.configurator.sections.basicInfo')}</AccordionTrigger>
@@ -543,26 +486,6 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.rulesDailyLoss')}</Label>
-                  <Select
-                    value={pendingChanges?.rulesDailyLoss ?? account.rulesDailyLoss ?? 'No'}
-                    onValueChange={(value) => setPendingChanges(prev => ({
-                      ...prev,
-                      rulesDailyLoss: value
-                    }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select rule" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="No">{t('propFirm.configurator.rulesDailyLoss.no')}</SelectItem>
-                      <SelectItem value="Lock">{t('propFirm.configurator.rulesDailyLoss.lock')}</SelectItem>
-                      <SelectItem value="Violation">{t('propFirm.configurator.rulesDailyLoss.violation')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.tradingNewsAllowed')}</Label>
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -619,12 +542,20 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                     <div className="flex items-center space-x-2">
                       <Switch
                         id="hasPromo"
-                        checked={!!(pendingChanges?.priceWithPromo ?? account.priceWithPromo ?? 0)}
+                        checked={pendingChanges?.promoType !== undefined || account.promoType !== undefined}
                         onCheckedChange={(checked) => {
                           if (!checked) {
                             setPendingChanges(prev => ({
                               ...prev,
                               priceWithPromo: 0,
+                              promoType: undefined,
+                              promoPercentage: 0
+                            }))
+                          } else {
+                            const basePrice = pendingChanges?.price ?? account.price ?? 0;
+                            setPendingChanges(prev => ({
+                              ...prev,
+                              priceWithPromo: basePrice,
                               promoType: 'direct' as const,
                               promoPercentage: 0
                             }))
@@ -635,7 +566,7 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
                     </div>
                   </div>
 
-                  {(pendingChanges?.priceWithPromo ?? account.priceWithPromo ?? 0) > 0 && (
+                  {(pendingChanges?.promoType !== undefined || account.promoType !== undefined) && (
                     <div className="flex flex-col gap-2 mt-2">
                       <div className="flex items-center gap-2">
                         <Select
@@ -719,18 +650,6 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
 
               {/* Payout Section */}
               <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.balanceRequired')}</Label>
-                  <Input
-                    type="number"
-                    value={pendingChanges?.balanceRequired ?? account.balanceRequired ?? 0}
-                    onChange={(e) => setPendingChanges(prev => ({
-                      ...prev,
-                      balanceRequired: parseFloat(e.target.value)
-                    }))}
-                  />
-                </div>
-
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.minTradingDays')}</Label>
                   <Input
@@ -836,4 +755,4 @@ export function PropFirmConfigurator({ account, onUpdate, onDelete, onAccountsUp
       )}
     </div>
   )
-} 
+}

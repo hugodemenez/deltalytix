@@ -3,7 +3,7 @@ import { createClient, signOut } from '@/server/auth'
 import { User } from '@supabase/supabase-js';
 import { useParams } from 'next/navigation';
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
-import { Trade as PrismaTrade, Tag, Group as PrismaGroup, Account as PrismaAccount } from '@prisma/client'
+import { Trade as PrismaTrade, Tag, Group as PrismaGroup, Account as PrismaAccount, FinancialEvent, Mood, Payout } from '@prisma/client'
 import { calculateStatistics, formatCalendarData } from '@/lib/utils'
 import { parseISO, isValid, startOfDay, endOfDay } from 'date-fns'
 import { SharedParams } from '@/server/shared'
@@ -11,8 +11,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { loadInitialData, loadSharedData, LayoutItem as ServerLayoutItem, Layouts as ServerLayouts } from '@/server/user-data'
 import { saveDashboardLayout } from '@/server/database'
 import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
-import type { FinancialEvent, Mood, Account as PropFirmAccount } from '@prisma/client'
-import { setupPropFirmAccount, getPropFirmAccounts } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
+import { setupAccount, getAccounts, deletePayout as deletePayoutAction, addPayout as addPayoutAction, updatePayout as updatePayoutAction, deleteAccount as deleteAccountAction } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
 import { createGroup as createGroupAction, updateGroup as updateGroupAction, deleteGroup as deleteGroupAction, getGroups, moveAccountToGroup as moveAccountToGroupAction } from '@/server/groups'
 
 // Types from trades-data.tsx
@@ -95,18 +94,14 @@ interface TagFilter {
   tags: string[]
 }
 
-interface Account {
-  id: string
-  number: string
-  groupId: string | null
+interface Group extends PrismaGroup {
+  accounts: PrismaAccount[]
 }
 
-interface Group {
-  id: string
-  name: string
-  accounts: Account[]
-  createdAt: Date
-  updatedAt: Date
+// Update Account type to include payouts and balanceToDate
+export interface Account extends Omit<PrismaAccount, 'payouts'> {
+  payouts?: Payout[]
+  balanceToDate?: number
 }
 
 // Add after the interfaces and before the UserDataContext
@@ -304,8 +299,8 @@ interface UserDataContextType {
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>
 
   // Add propfirm accounts
-  propfirmAccounts: PropFirmAccount[]
-  setPropfirmAccounts: React.Dispatch<React.SetStateAction<PropFirmAccount[]>>
+  accounts: Account[]
+  setAccounts: React.Dispatch<React.SetStateAction<Account[]>>
 
   // New functions
   updateAccount: (accountNumber: string, updates: { propfirm?: string }) => Promise<void>
@@ -326,6 +321,14 @@ interface UserDataContextType {
   // Add mood history related properties
   moodHistory: Mood[]
   setMoodHistory: React.Dispatch<React.SetStateAction<Mood[]>>
+
+  // Add deletePayout function
+  deletePayout: (payoutId: string) => Promise<void>
+
+  // Add payout and account management functions
+  addPayout: (data: { accountNumber: string; date: Date; amount: number; status: string }) => Promise<void>
+  updatePayout: (data: { id: string; date: Date; amount: number; status: string }) => Promise<void>
+  deleteAccount: (accountNumber: string) => Promise<void>
 }
 
 
@@ -368,7 +371,7 @@ interface CachedData {
   trades: TradeWithUTC[];
   tickDetails: Record<string, number>;
   tags: Tag[];
-  propfirmAccounts: PropFirmAccount[];
+  accounts: Account[];
   layouts: Layouts;
   groups: Group[];
   financialEvents: FinancialEvent[];
@@ -404,6 +407,24 @@ function setLocalCache(data: Partial<CachedData>) {
     timestamp: Date.now(),
   };
   localStorage.setItem(CACHE_KEY, JSON.stringify(newCache));
+}
+
+// Add this function before the UserDataProvider component
+function calculateAccountBalance(account: Account, trades: TradeWithUTC[]): number {
+  // Start with the account's starting balance
+  let balance = account.startingBalance || 0;
+
+  // Add all trades' PnL for this account
+  const accountTrades = trades.filter(trade => trade.accountNumber === account.number);
+  const tradesPnL = accountTrades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0);
+  balance += tradesPnL;
+
+  // Add all payouts for this account
+  const payouts = account.payouts || [];
+  const payoutsSum = payouts.reduce((sum, payout) => sum + payout.amount, 0);
+  balance += payoutsSum;
+
+  return balance;
 }
 
 export const UserDataProvider: React.FC<{ 
@@ -499,7 +520,7 @@ export const UserDataProvider: React.FC<{
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] })
 
   // Add propfirm accounts state
-  const [propfirmAccounts, setPropfirmAccounts] = useState<PropFirmAccount[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
 
   // Add groups state
   const [groups, setGroups] = useState<Group[]>([])
@@ -536,7 +557,15 @@ export const UserDataProvider: React.FC<{
               setTickDetails(sharedData.params.tickDetails);
             }
 
-            setGroups(sharedData.groups || [])
+            // Calculate balanceToDate for each account
+            const accountsWithBalance = sharedData.groups?.flatMap(group => 
+              group.accounts.map(account => ({
+                ...account,
+                balanceToDate: calculateAccountBalance(account, processedSharedTrades)
+              }))
+            ) || [];
+            setGroups(sharedData.groups || []);
+            setAccounts(accountsWithBalance);
           }
           return;
         }
@@ -555,7 +584,7 @@ export const UserDataProvider: React.FC<{
             trades,
             tickDetails,
             tags,
-            propfirmAccounts,
+            accounts,
             layouts,
             groups,
             financialEvents,
@@ -574,7 +603,14 @@ export const UserDataProvider: React.FC<{
           setTrades(trades);
           setTickDetails(tickDetails);
           setTags(tags);
-          setPropfirmAccounts(propfirmAccounts);
+          
+          // Calculate balanceToDate for each account
+          const accountsWithBalance = accounts.map(account => ({
+            ...account,
+            balanceToDate: calculateAccountBalance(account, trades)
+          }));
+          setAccounts(accountsWithBalance);
+          
           setLayouts(layouts);
           setGroups(groups);
           setFinancialEvents(financialEvents);
@@ -617,7 +653,14 @@ export const UserDataProvider: React.FC<{
           setTrades(processedTrades);
           setTickDetails(fetchedData.tickDetails || {});
           setTags(fetchedData.tags || []);
-          setPropfirmAccounts(fetchedData.propfirmAccounts || []);
+          
+          // Calculate balanceToDate for each account
+          const accountsWithBalance = (fetchedData.accounts || []).map(account => ({
+            ...account,
+            balanceToDate: calculateAccountBalance(account, processedTrades)
+          }));
+          setAccounts(accountsWithBalance);
+          
           setGroups(fetchedData.groups || []);
           setFinancialEvents(fetchedData.financialEvents || []);
           setMoodHistory(fetchedData.moodHistory || []);
@@ -635,7 +678,7 @@ export const UserDataProvider: React.FC<{
             trades: processedTrades,
             tickDetails: fetchedData.tickDetails || {},
             tags: fetchedData.tags || [],
-            propfirmAccounts: fetchedData.propfirmAccounts || [],
+            accounts: accountsWithBalance,
             layouts: newLayouts,
             groups: fetchedData.groups || [],
             financialEvents: fetchedData.financialEvents || [],
@@ -660,8 +703,8 @@ export const UserDataProvider: React.FC<{
         }
       } catch (error) {
         console.error('Error loading data:', error);
-          const supabase = await createClient()
-          await supabase.auth.signOut()
+        const supabase = await createClient()
+        await supabase.auth.signOut()
       } finally {
         setIsLoading(false);
         setIsInitialLoad(false);
@@ -716,7 +759,7 @@ export const UserDataProvider: React.FC<{
         setTrades(processedTrades);
         setTickDetails(data.tickDetails || {});
         setTags(data.tags || []);
-        setPropfirmAccounts(data.propfirmAccounts || []);
+        setAccounts(data.accounts || []);
         setGroups(data.groups || []);
         setLayoutsWithCache(data.layouts || defaultLayouts);
         setFinancialEvents(data.financialEvents || []);
@@ -726,7 +769,7 @@ export const UserDataProvider: React.FC<{
           trades: processedTrades,
           tickDetails: data.tickDetails || {},
           tags: data.tags || [],
-          propfirmAccounts: data.propfirmAccounts || [],
+          accounts: data.accounts || [],
           groups: data.groups || [],
           financialEvents: data.financialEvents || [],
           moodHistory: data.moodHistory || [],
@@ -1020,7 +1063,7 @@ export const UserDataProvider: React.FC<{
       setIsFirstConnection(data.isFirstConnection);
       setSubscription(data.subscription);
       setTags(data.tags || []);
-      setPropfirmAccounts(data.propfirmAccounts || []);
+      setAccounts(data.accounts || []);
       setGroups(data.groups || []);
       setMoodHistory(data.moodHistory || []);
 
@@ -1031,7 +1074,7 @@ export const UserDataProvider: React.FC<{
         thorToken: data.thorToken,
         subscription: data.subscription,
         tags: data.tags || [],
-        propfirmAccounts: data.propfirmAccounts || [],
+        accounts: data.accounts || [],
         groups: data.groups || [],
         moodHistory: data.moodHistory || [],
       });
@@ -1043,41 +1086,62 @@ export const UserDataProvider: React.FC<{
 
     try {
       // Get the current account to preserve other properties
-      const currentAccount = propfirmAccounts.find(acc => acc.number === accountNumber)
+      const currentAccount = accounts.find(acc => acc.number === accountNumber)
       if (!currentAccount) return
 
-      // Update the account
-      await setupPropFirmAccount({
-        accountNumber,
+      // Update the account in the database
+      await setupAccount({
+        ...currentAccount,
+        number: accountNumber,
         userId: user.id,
         propfirm: updates.propfirm ?? currentAccount.propfirm,
-        profitTarget: currentAccount.profitTarget,
-        drawdownThreshold: currentAccount.drawdownThreshold,
-        startingBalance: currentAccount.startingBalance,
-        isPerformance: currentAccount.isPerformance,
-        trailingDrawdown: currentAccount.trailingDrawdown ?? undefined,
-        trailingStopProfit: currentAccount.trailingStopProfit ?? undefined,
-        resetDate: currentAccount.resetDate,
-        consistencyPercentage: currentAccount.consistencyPercentage ?? undefined,
+        profitTarget: currentAccount.profitTarget ?? 0,
+        drawdownThreshold: currentAccount.drawdownThreshold ?? 0,
+        startingBalance: currentAccount.startingBalance ?? 0,
+        isPerformance: currentAccount.isPerformance ?? false,
+        trailingDrawdown: currentAccount.trailingDrawdown ?? false,
+        trailingStopProfit: currentAccount.trailingStopProfit ?? null,
+        resetDate: currentAccount.resetDate ?? null,
+        consistencyPercentage: currentAccount.consistencyPercentage ?? 30,
+        accountSize: currentAccount.accountSize ?? '',
+        accountSizeName: currentAccount.accountSizeName ?? '',
+        price: currentAccount.price ?? 0,
+        priceWithPromo: currentAccount.priceWithPromo ?? 0,
+        evaluation: currentAccount.evaluation ?? false,
+        minDays: currentAccount.minDays ?? 0,
+        dailyLoss: currentAccount.dailyLoss ?? 0,
+        rulesDailyLoss: currentAccount.rulesDailyLoss ?? '',
+        trailing: currentAccount.trailing ?? '',
+        tradingNewsAllowed: currentAccount.tradingNewsAllowed ?? false,
+        activationFees: currentAccount.activationFees ?? 0,
+        isRecursively: currentAccount.isRecursively ?? '',
+        payoutBonus: currentAccount.payoutBonus ?? 0,
+        profitSharing: currentAccount.profitSharing ?? 0,
+        payoutPolicy: currentAccount.payoutPolicy ?? '',
+        balanceRequired: currentAccount.balanceRequired ?? 0,
+        minTradingDaysForPayout: currentAccount.minTradingDaysForPayout ?? 0,
+        minPayout: currentAccount.minPayout ?? 0,
+        maxPayout: currentAccount.maxPayout ?? '',
+        maxFundedAccounts: currentAccount.maxFundedAccounts ?? null,
+        createdAt: currentAccount.createdAt ?? new Date(),
+        payoutCount: currentAccount.payoutCount ?? 0
       })
-
-      // Refresh the accounts list
-      const accounts = await getPropFirmAccounts(user.id)
-      setPropfirmAccounts(accounts)
+      // Update the account in the local state
+      setAccounts(accounts.map(acc => acc.number === accountNumber ? { ...acc, ...updates } : acc))
 
       // Update cache
       const existingCache = getLocalCache()
       if (existingCache) {
         setLocalCache({
           ...existingCache,
-          propfirmAccounts: accounts
+          accounts: accounts
         })
       }
     } catch (error) {
       console.error('Error updating account:', error)
       throw error
     }
-  }, [user?.id, propfirmAccounts])
+  }, [user?.id, accounts])
 
   // Add refreshGroups function
   const refreshGroups = useCallback(async () => {
@@ -1176,6 +1240,154 @@ export const UserDataProvider: React.FC<{
     });
   };
 
+  // Add wrapped version of setAccounts to handle cache
+  const setAccountsWithCache: React.Dispatch<React.SetStateAction<Account[]>> = (value) => {
+    setAccounts((prevAccounts) => {
+      const newAccounts = typeof value === 'function' ? value(prevAccounts) : value;
+      // Update cache
+      const existingCache = getLocalCache();
+      if (existingCache) {
+        setLocalCache({
+          ...existingCache,
+          accounts: newAccounts
+        });
+      }
+      return newAccounts;
+    });
+  };
+
+  // Add addPayout function
+  const addPayout = useCallback(async (data: { accountNumber: string; date: Date; amount: number; status: string }) => {
+    if (!user?.id || isSharedView) return;
+
+    try {
+      // Add to database
+      const newPayout = await addPayoutAction(data);
+
+      // Update local state
+      setAccounts(prevAccounts => {
+        const updatedAccounts = prevAccounts.map(account => {
+          if (account.number === data.accountNumber) {
+            return {
+              ...account,
+              payouts: [...(account.payouts || []), newPayout]
+            };
+          }
+          return account;
+        });
+
+        // Update cache
+        const existingCache = getLocalCache();
+        if (existingCache) {
+          setLocalCache({
+            ...existingCache,
+            accounts: updatedAccounts
+          });
+        }
+
+        return updatedAccounts;
+      });
+    } catch (error) {
+      console.error('Error adding payout:', error);
+      throw error;
+    }
+  }, [user?.id, isSharedView]);
+
+  // Add updatePayout function
+  const updatePayout = useCallback(async (data: { id: string; date: Date; amount: number; status: string }) => {
+    if (!user?.id || isSharedView) return;
+
+    try {
+      // Update in database
+      const updatedPayout = await updatePayoutAction(data);
+
+      // Update local state
+      setAccounts(prevAccounts => {
+        const updatedAccounts = prevAccounts.map(account => ({
+          ...account,
+          payouts: account.payouts?.map(p => 
+            p.id === data.id ? { ...p, ...updatedPayout } : p
+          ) || []
+        }));
+
+        // Update cache
+        const existingCache = getLocalCache();
+        if (existingCache) {
+          setLocalCache({
+            ...existingCache,
+            accounts: updatedAccounts
+          });
+        }
+
+        return updatedAccounts;
+      });
+    } catch (error) {
+      console.error('Error updating payout:', error);
+      throw error;
+    }
+  }, [user?.id, isSharedView]);
+
+  // Add deleteAccount function
+  const deleteAccount = useCallback(async (accountNumber: string) => {
+    if (!user?.id || isSharedView) return;
+
+    try {
+      // Delete from database
+      await deleteAccountAction(accountNumber);
+
+      // Update local state
+      setAccounts(prevAccounts => {
+        const updatedAccounts = prevAccounts.filter(acc => acc.number !== accountNumber);
+
+        // Update cache
+        const existingCache = getLocalCache();
+        if (existingCache) {
+          setLocalCache({
+            ...existingCache,
+            accounts: updatedAccounts
+          });
+        }
+
+        return updatedAccounts;
+      });
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      throw error;
+    }
+  }, [user?.id, isSharedView]);
+
+  // Add deletePayout function
+  const deletePayout = useCallback(async (payoutId: string) => {
+    if (!user?.id || isSharedView) return;
+
+    try {
+      // Delete from database
+      await deletePayoutAction(payoutId);
+
+      // Update local state
+      setAccounts(prevAccounts => {
+        const updatedAccounts = prevAccounts.map(account => ({
+          ...account,
+          payouts: account.payouts?.filter(p => p.id !== payoutId) || []
+        }));
+
+        // Update cache
+        const existingCache = getLocalCache();
+        if (existingCache) {
+          setLocalCache({
+            ...existingCache,
+            accounts: updatedAccounts
+          });
+        }
+
+        return updatedAccounts;
+      });
+    } catch (error) {
+      console.error('Error deleting payout:', error);
+      throw error;
+    }
+  }, [user?.id, isSharedView]);
+
   const contextValue = {
     // User related
     user,
@@ -1257,8 +1469,8 @@ export const UserDataProvider: React.FC<{
     setTags: setTagsWithCache,
 
     // Add propfirm accounts
-    propfirmAccounts,
-    setPropfirmAccounts,
+    accounts,
+    setAccounts: setAccountsWithCache,
 
     // New functions
     updateAccount,
@@ -1279,6 +1491,14 @@ export const UserDataProvider: React.FC<{
     // Add mood history related values
     moodHistory,
     setMoodHistory: setMoodHistoryWithCache,
+
+    // Add deletePayout function
+    deletePayout,
+
+    // Add payout and account management functions
+    addPayout,
+    updatePayout,
+    deleteAccount,
   };
 
   // If we're still loading initial data, return null or a loading state

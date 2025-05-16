@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils"
 import { useMemo, useState, useEffect } from "react"
 import { toast } from "@/hooks/use-toast"
 import { useUserData } from "@/components/context/user-data"
-import { setupPropFirmAccount, getPropFirmAccounts, addPropFirmPayout, deletePayout, updatePayout, checkAndResetAccounts } from "@/app/[locale]/(dashboard)/dashboard/data/actions"
+import { setupAccount, getAccounts, addPayout, deletePayout, updatePayout, checkAndResetAccounts } from "@/app/[locale]/(dashboard)/dashboard/data/actions"
 import { AccountEquityChart } from "./account-equity-chart"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Gauge } from "@/components/ui/gauge"
@@ -38,9 +38,32 @@ interface PropFirmAccount {
     status: string
   }>
   trailingDrawdown: boolean
-  trailingStopProfit: number
-  resetDate?: Date
+  trailingStopProfit: number | null
+  resetDate: Date | null
   consistencyPercentage: number
+  accountSize?: string
+  accountSizeName?: string
+  price?: number
+  priceWithPromo?: number
+  evaluation?: boolean
+  minDays?: number
+  dailyLoss?: number
+  rulesDailyLoss?: string
+  trailing?: string
+  tradingNewsAllowed?: boolean
+  activationFees?: number
+  isRecursively?: string
+  payoutBonus?: number
+  profitSharing?: number
+  payoutPolicy?: string
+  balanceRequired?: number
+  minTradingDaysForPayout?: number
+  minPayout?: number
+  maxPayout?: string
+  maxFundedAccounts?: number | null
+  createdAt: Date
+  groupId: string | null
+  payoutCount: number
 }
 
 interface PropFirmSetupDialogProps {
@@ -58,7 +81,7 @@ function PropFirmSetupDialog({ open, onOpenChange, accountNumber, onSubmit }: Pr
     startingBalance: 0,
     isPerformance: false,
     trailingDrawdown: false,
-    trailingStopProfit: 0,
+    trailingStopProfit: null,
     resetDate: new Date(),
     consistencyPercentage: 0,
   })
@@ -120,7 +143,7 @@ function PropFirmSetupDialog({ open, onOpenChange, accountNumber, onSubmit }: Pr
                 setFormData(prev => ({ 
                   ...prev, 
                   trailingDrawdown: checked as boolean,
-                  trailingStopProfit: checked ? prev.trailingStopProfit : 0
+                  trailingStopProfit: checked ? prev.trailingStopProfit : null
                 }))
               }
             />
@@ -133,8 +156,8 @@ function PropFirmSetupDialog({ open, onOpenChange, accountNumber, onSubmit }: Pr
                 id="trailingStopProfit"
                 type="number"
                 className="col-span-3"
-                value={formData.trailingStopProfit}
-                onChange={(e) => setFormData(prev => ({ ...prev, trailingStopProfit: Number(e.target.value) }))}
+                value={formData.trailingStopProfit || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, trailingStopProfit: Number(e.target.value) } as any))}
               />
             </div>
           )}
@@ -144,7 +167,7 @@ function PropFirmSetupDialog({ open, onOpenChange, accountNumber, onSubmit }: Pr
               <Calendar
                 mode="single"
                 selected={formData.resetDate || undefined}
-                onSelect={(date) => setFormData(prev => ({ ...prev, resetDate: date || undefined }))}
+                onSelect={(date) => setFormData(prev => ({ ...prev, resetDate: date || null }))}
                 initialFocus
                 className="rounded-md border"
               />
@@ -378,7 +401,7 @@ function AccountEditDialog({ open, onOpenChange, account, onSubmit }: AccountEdi
     isPerformance: account.isPerformance,
     trailingDrawdown: account.trailingDrawdown,
     trailingStopProfit: account.trailingStopProfit,
-    resetDate: account.resetDate || new Date(),
+    resetDate: account.resetDate || null,
     consistencyPercentage: account.consistencyPercentage,
   })
 
@@ -427,7 +450,7 @@ function AccountEditDialog({ open, onOpenChange, account, onSubmit }: AccountEdi
               <Calendar
                 mode="single"
                 selected={formData.resetDate || undefined}
-                onSelect={(date) => setFormData(prev => ({ ...prev, resetDate: date || undefined }))}
+                onSelect={(date) => setFormData(prev => ({ ...prev, resetDate: date || null }))}
                 initialFocus
                 className="rounded-md border"
               />
@@ -585,7 +608,7 @@ function AccountTab({ account, onAddPayout, onEditPayout, onEditDrawdown, onEdit
           startingBalance={account.startingBalance}
           payouts={account.payouts}
           trailingDrawdown={account.trailingDrawdown}
-          trailingStopProfit={account.trailingStopProfit}
+          trailingStopProfit={account.trailingStopProfit ?? undefined}
           resetDate={account.resetDate ? format(new Date(account.resetDate), "yyyy-MM-dd") : undefined}
         />
       </div>
@@ -805,7 +828,7 @@ export function PropFirmCard() {
     async function fetchAccounts() {
       if (!user) return
       try {
-        const accounts = await getPropFirmAccounts(user.id)
+        const accounts = await getAccounts()
         setDbAccounts(accounts)
       } catch (error) {
         console.error('Failed to fetch accounts:', error)
@@ -839,9 +862,32 @@ export function PropFirmCard() {
         propfirm: dbAccount?.propfirm ?? '',
         payouts: dbAccount?.payouts ?? [],
         trailingDrawdown: dbAccount?.trailingDrawdown ?? false,
-        trailingStopProfit: dbAccount?.trailingStopProfit ?? 0,
-        resetDate: dbAccount?.resetDate,
+        trailingStopProfit: dbAccount?.trailingStopProfit ?? null,
+        resetDate: dbAccount?.resetDate || null,
         consistencyPercentage: dbAccount?.consistencyPercentage ?? 0,
+        accountSize: dbAccount?.accountSize || '',
+        accountSizeName: dbAccount?.accountSizeName || '',
+        price: dbAccount?.price || 0,
+        priceWithPromo: dbAccount?.priceWithPromo || 0,
+        evaluation: dbAccount?.evaluation || true,
+        minDays: dbAccount?.minDays || 0,
+        dailyLoss: dbAccount?.dailyLoss || 0,
+        rulesDailyLoss: dbAccount?.rulesDailyLoss || '',
+        trailing: dbAccount?.trailing || '',
+        tradingNewsAllowed: dbAccount?.tradingNewsAllowed || true,
+        activationFees: dbAccount?.activationFees || 0,
+        isRecursively: dbAccount?.isRecursively || '',
+        payoutBonus: dbAccount?.payoutBonus || 0,
+        profitSharing: dbAccount?.profitSharing || 0,
+        payoutPolicy: dbAccount?.payoutPolicy || '',
+        balanceRequired: dbAccount?.balanceRequired || 0,
+        minTradingDaysForPayout: dbAccount?.minTradingDaysForPayout || 0,
+        minPayout: dbAccount?.minPayout || 0,
+        maxPayout: dbAccount?.maxPayout || '',
+        maxFundedAccounts: dbAccount?.maxFundedAccounts || null,
+        createdAt: dbAccount?.createdAt || new Date(),
+        groupId: dbAccount?.groupId || null,
+        payoutCount: dbAccount?.payoutCount || 0,
       }
     })
   }, [trades, dbAccounts])
@@ -850,8 +896,8 @@ export function PropFirmCard() {
     if (!user) return
 
     try {
-      await setupPropFirmAccount({
-        accountNumber: selectedAccount,
+      await setupAccount({
+        number: selectedAccount,
         userId: user.id,
         propfirm: data.propfirm || '',
         profitTarget: data.profitTarget || 0,
@@ -859,9 +905,33 @@ export function PropFirmCard() {
         startingBalance: data.startingBalance || 0,
         isPerformance: data.isPerformance || false,
         trailingDrawdown: data.trailingDrawdown || false,
-        trailingStopProfit: data.trailingStopProfit || 0,
-        resetDate: data.resetDate || undefined,
+        trailingStopProfit: data.trailingStopProfit || null,
+        resetDate: data.resetDate || null,
         consistencyPercentage: data.consistencyPercentage || 0,
+        accountSize: data.accountSize || '',
+        accountSizeName: data.accountSizeName || '',
+        price: data.price || 0,
+        priceWithPromo: data.priceWithPromo || 0,
+        evaluation: data.evaluation || true,
+        minDays: data.minDays || 0,
+        dailyLoss: data.dailyLoss || 0,
+        rulesDailyLoss: data.rulesDailyLoss || '',
+        trailing: data.trailing || '',
+        tradingNewsAllowed: data.tradingNewsAllowed || true,
+        activationFees: data.activationFees || 0,
+        isRecursively: data.isRecursively || '',
+        payoutBonus: data.payoutBonus || 0,
+        profitSharing: data.profitSharing || 0,
+        payoutPolicy: data.payoutPolicy || '',
+        balanceRequired: data.balanceRequired || 0,
+        minTradingDaysForPayout: data.minTradingDaysForPayout || 0,
+        minPayout: data.minPayout || 0,
+        maxPayout: data.maxPayout || '',
+        maxFundedAccounts: data.maxFundedAccounts || null,
+        id: '',
+        createdAt: new Date(),
+        groupId: null,
+        payoutCount: 0
       })
 
       toast({
@@ -910,7 +980,7 @@ export function PropFirmCard() {
     //   }
 
       // Refresh the accounts data
-      const accounts = await getPropFirmAccounts(userId)
+      const accounts = await getAccounts()
       setDbAccounts(accounts)
 
       toast({
@@ -936,7 +1006,7 @@ export function PropFirmCard() {
       await deletePayout(selectedPayout.id)
       
       // Refresh the accounts data
-      const accounts = await getPropFirmAccounts(user!.id)
+      const accounts = await getAccounts()
       setDbAccounts(accounts)
 
       toast({
@@ -971,8 +1041,8 @@ export function PropFirmCard() {
     if (!selectedAccountForDrawdown || !user) return
 
     try {
-      await setupPropFirmAccount({
-        accountNumber: selectedAccountForDrawdown.accountNumber,
+      await setupAccount({
+        number: selectedAccountForDrawdown.accountNumber,
         userId: user.id,
         propfirm: selectedAccountForDrawdown.propfirm,
         profitTarget: selectedAccountForDrawdown.profitTarget,
@@ -980,13 +1050,37 @@ export function PropFirmCard() {
         startingBalance: selectedAccountForDrawdown.startingBalance,
         isPerformance: selectedAccountForDrawdown.isPerformance,
         trailingDrawdown: data.trailingDrawdown,
-        trailingStopProfit: data.trailingStopProfit,
-        resetDate: selectedAccountForDrawdown.resetDate,
+        trailingStopProfit: data.trailingStopProfit || null,
+        resetDate: selectedAccountForDrawdown.resetDate || null,
         consistencyPercentage: selectedAccountForDrawdown.consistencyPercentage,
+        accountSize: selectedAccountForDrawdown.accountSize || '',
+        accountSizeName: selectedAccountForDrawdown.accountSizeName || '',
+        price: selectedAccountForDrawdown.price || 0,
+        priceWithPromo: selectedAccountForDrawdown.priceWithPromo || 0,
+        evaluation: selectedAccountForDrawdown.evaluation || true,
+        minDays: selectedAccountForDrawdown.minDays || 0,
+        dailyLoss: selectedAccountForDrawdown.dailyLoss || 0,
+        rulesDailyLoss: selectedAccountForDrawdown.rulesDailyLoss || '',
+        trailing: selectedAccountForDrawdown.trailing || '',
+        tradingNewsAllowed: selectedAccountForDrawdown.tradingNewsAllowed || true,
+        activationFees: selectedAccountForDrawdown.activationFees || 0,
+        isRecursively: selectedAccountForDrawdown.isRecursively || '',
+        payoutBonus: selectedAccountForDrawdown.payoutBonus || 0,
+        profitSharing: selectedAccountForDrawdown.profitSharing || 0,
+        payoutPolicy: selectedAccountForDrawdown.payoutPolicy || '',
+        balanceRequired: selectedAccountForDrawdown.balanceRequired || 0,
+        minTradingDaysForPayout: selectedAccountForDrawdown.minTradingDaysForPayout || 0,
+        minPayout: selectedAccountForDrawdown.minPayout || 0,
+        maxPayout: selectedAccountForDrawdown.maxPayout || '',
+        maxFundedAccounts: selectedAccountForDrawdown.maxFundedAccounts || null,
+        id: selectedAccountForDrawdown.id,
+        createdAt: selectedAccountForDrawdown.createdAt,
+        groupId: selectedAccountForDrawdown.groupId,
+        payoutCount: selectedAccountForDrawdown.payoutCount
       })
 
       // Refresh accounts
-      const accounts = await getPropFirmAccounts(user.id)
+      const accounts = await getAccounts()
       setDbAccounts(accounts)
 
       toast({
@@ -1017,8 +1111,8 @@ export function PropFirmCard() {
         return
       }
 
-      await setupPropFirmAccount({
-        accountNumber: selectedAccountForEdit.accountNumber,
+      await setupAccount({
+        number: selectedAccountForEdit.accountNumber,
         userId: user.id,
         propfirm: data.propfirm,
         profitTarget: data.profitTarget ?? selectedAccountForEdit.profitTarget,
@@ -1026,12 +1120,36 @@ export function PropFirmCard() {
         isPerformance: data.isPerformance ?? selectedAccountForEdit.isPerformance,
         drawdownThreshold: selectedAccountForEdit.drawdownThreshold,
         trailingDrawdown: selectedAccountForEdit.trailingDrawdown,
-        trailingStopProfit: selectedAccountForEdit.trailingStopProfit,
-        resetDate: data.resetDate || undefined,
+        trailingStopProfit: selectedAccountForEdit.trailingStopProfit || null,
+        resetDate: data.resetDate || null,
         consistencyPercentage: data.consistencyPercentage ?? selectedAccountForEdit.consistencyPercentage,
+        accountSize: selectedAccountForEdit.accountSize || '',
+        accountSizeName: selectedAccountForEdit.accountSizeName || '',
+        price: selectedAccountForEdit.price || 0,
+        priceWithPromo: selectedAccountForEdit.priceWithPromo || 0,
+        evaluation: selectedAccountForEdit.evaluation || true,
+        minDays: selectedAccountForEdit.minDays || 0,
+        dailyLoss: selectedAccountForEdit.dailyLoss || 0,
+        rulesDailyLoss: selectedAccountForEdit.rulesDailyLoss || '',
+        trailing: selectedAccountForEdit.trailing || '',
+        tradingNewsAllowed: selectedAccountForEdit.tradingNewsAllowed || true,
+        activationFees: selectedAccountForEdit.activationFees || 0,
+        isRecursively: selectedAccountForEdit.isRecursively || '',
+        payoutBonus: selectedAccountForEdit.payoutBonus || 0,
+        profitSharing: selectedAccountForEdit.profitSharing || 0,
+        payoutPolicy: selectedAccountForEdit.payoutPolicy || '',
+        balanceRequired: selectedAccountForEdit.balanceRequired || 0,
+        minTradingDaysForPayout: selectedAccountForEdit.minTradingDaysForPayout || 0,
+        minPayout: selectedAccountForEdit.minPayout || 0,
+        maxPayout: selectedAccountForEdit.maxPayout || '',
+        maxFundedAccounts: selectedAccountForEdit.maxFundedAccounts || null,
+        id: selectedAccountForEdit.id,
+        createdAt: selectedAccountForEdit.createdAt,
+        groupId: selectedAccountForEdit.groupId,
+        payoutCount: selectedAccountForEdit.payoutCount
       })
 
-      const accounts = await getPropFirmAccounts(user.id)
+      const accounts = await getAccounts()
       setDbAccounts(accounts)
 
       toast({

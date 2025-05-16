@@ -13,17 +13,14 @@ import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useUserData } from "@/components/context/user-data"
-import { setupPropFirmAccount, getPropFirmAccounts, addPropFirmPayout, deletePayout, updatePayout, deletePropFirmAccount } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
 import { useI18n } from "@/locales/client"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AccountTable } from './account-table'
 import { toast } from "@/hooks/use-toast"
 import { WidgetSize } from '../../types/dashboard'
 import { enUS, fr } from 'date-fns/locale'
 import { useParams } from 'next/navigation'
-import { PropFirmCard } from './prop-firm-card'
-import { Switch } from "@/components/ui/switch"
-import { PropFirmConfigurator } from './prop-firm-configurator'
+import { AccountCard } from './account-card'
+import { AccountConfigurator } from './account-configurator'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import {
@@ -32,30 +29,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-
-export interface PropFirmAccount {
-  id: string
-  accountNumber: string
-  balanceToDate: number
-  profitTarget: number
-  drawdownThreshold: number
-  isPerformance: boolean
-  startingBalance: number
-  propfirm: string
-  lastBalanceUpdate?: Date
-  lastBalanceAmount?: number
-  payouts: Array<{
-    id: string
-    amount: number
-    date: Date
-    status: string
-  }>
-  trailingDrawdown: boolean
-  trailingStopProfit: number
-  resetDate: Date | null | undefined
-  consistencyPercentage: number
-}
-
+import { Account } from '@/components/context/user-data'
 interface ConsistencyMetrics {
   accountNumber: string
   totalProfit: number
@@ -264,14 +238,24 @@ function PayoutDialog({
   )
 }
 
-export function PropFirmOverview({ size }: { size: WidgetSize }) {
-  const { trades, user, accountNumbers, groups } = useUserData()
+export function AccountsOverview({ size }: { size: WidgetSize }) {
+  const {
+    trades,
+    user,
+    accountNumbers,
+    groups,
+    setAccounts,
+    accounts,
+    updateAccount,
+    deleteAccount,
+    addPayout,
+    updatePayout,
+    deletePayout
+  } = useUserData()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
-  const [dbAccounts, setDbAccounts] = useState<any[]>([])
-  const [selectedAccount, setSelectedAccount] = useState<ConsistencyMetrics | null>(null)
-  const [selectedAccountForTable, setSelectedAccountForTable] = useState<PropFirmAccount | null>(null)
+  const [selectedAccountForTable, setSelectedAccountForTable] = useState<Account | null>(null)
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false)
   const [selectedPayout, setSelectedPayout] = useState<{
     id: string;
@@ -279,39 +263,11 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
     amount: number;
     status: string;
   } | undefined>()
-  const [calendarOpen, setCalendarOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [canDeleteAccount, setCanDeleteAccount] = useState(false)
 
-  useEffect(() => {
-    async function fetchAccounts() {
-      if (!user) return
-      try {
-        const accounts = await getPropFirmAccounts(user.id)
-        setDbAccounts(accounts)
-      } catch (error) {
-        console.error('Failed to fetch accounts:', error)
-      }
-    }
-    fetchAccounts()
-  }, [user])
 
-  useEffect(() => {
-    async function checkAccountExists() {
-      if (!user || !selectedAccountForTable) {
-        setCanDeleteAccount(false)
-        return
-      }
-
-      const accounts = await getPropFirmAccounts(user.id)
-      const accountExists = accounts.some(acc => acc.number === selectedAccountForTable.accountNumber)
-      setCanDeleteAccount(accountExists)
-    }
-
-    checkAccountExists()
-  }, [user, selectedAccountForTable])
-
-  const propFirmAccounts = useMemo(() => {
+  const filteredAccounts = useMemo(() => {
     const uniqueAccounts = new Set(trades.map(trade => trade.accountNumber))
     // Find the hidden group
     const hiddenGroup = groups.find(g => g.name === "Hidden Accounts")
@@ -324,7 +280,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
       )
       .map(accountNumber => {
         const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
-        const dbAccount = dbAccounts.find(acc => acc.number === accountNumber)
+        const dbAccount = accounts.find(acc => acc.number === accountNumber)
 
         // Filter trades based on reset date if it exists
         const relevantTrades = dbAccount?.resetDate
@@ -336,26 +292,16 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
           sum + (payout.status === 'PAID' ? payout.amount : 0), 0) || 0
 
         return {
-          id: accountNumber,
-          accountNumber,
+          ...dbAccount,
           balanceToDate: balance - totalPayouts,
-          profitTarget: dbAccount?.profitTarget ?? 0,
-          drawdownThreshold: dbAccount?.drawdownThreshold ?? 0,
-          isPerformance: dbAccount?.isPerformance ?? false,
-          startingBalance: dbAccount?.startingBalance ?? 0,
-          propfirm: dbAccount?.propfirm ?? '',
-          payouts: dbAccount?.payouts ?? [],
-          trailingDrawdown: dbAccount?.trailingDrawdown ?? false,
-          trailingStopProfit: dbAccount?.trailingStopProfit ?? 0,
-          resetDate: dbAccount?.resetDate,
-          consistencyPercentage: dbAccount?.consistencyPercentage ?? 30,
+          payouts: dbAccount?.payouts ?? []
         }
       })
-  }, [trades, dbAccounts, accountNumbers, groups])
+  }, [trades, accounts, accountNumbers, groups])
 
   const consistencyMetrics = useMemo(() => {
-    return propFirmAccounts.map(account => {
-      const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+    return filteredAccounts.map(account => {
+      const accountTrades = trades.filter(t => t.accountNumber === account.number)
       const dailyPnL: { [key: string]: number } = {}
 
       // First calculate total profit including commissions
@@ -363,7 +309,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
       const hasProfitableData = totalProfit > 0
 
       // Check if account is properly configured
-      const isConfigured = account.profitTarget > 0 && account.consistencyPercentage > 0
+      const isConfigured = (account.profitTarget ?? 0) > 0 && (account.consistencyPercentage ?? 0) > 0
 
       // Then calculate daily PnLs
       accountTrades.forEach(trade => {
@@ -377,15 +323,15 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
       // Only calculate consistency metrics if we have profitable data and account is configured
       if (hasProfitableData && isConfigured) {
         // Use profit target as base until profits exceed it
-        const baseAmount = totalProfit <= account.profitTarget
-          ? account.profitTarget
+        const baseAmount = totalProfit <= (account.profitTarget ?? 0)
+          ? (account.profitTarget ?? 0)
           : totalProfit
 
-        const maxAllowedDailyProfit = baseAmount * (account.consistencyPercentage / 100)
+        const maxAllowedDailyProfit = baseAmount * ((account.consistencyPercentage ?? 0) / 100)
         const isConsistent = highestProfitDay <= maxAllowedDailyProfit
 
         return {
-          accountNumber: account.accountNumber,
+          accountNumber: account.number,
           totalProfit,
           maxAllowedDailyProfit,
           highestProfitDay,
@@ -399,7 +345,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
 
       // Return default values for unconfigured or unprofitable accounts
       return {
-        accountNumber: account.accountNumber,
+        accountNumber: account.number,
         totalProfit,
         maxAllowedDailyProfit: null,
         highestProfitDay,
@@ -410,27 +356,12 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
         totalProfitableDays: Object.values(dailyPnL).filter(pnl => pnl > 0).length
       }
     })
-  }, [trades, propFirmAccounts])
-
-  const dailyPnLPercentages = useMemo(() => {
-    if (!selectedAccount || !selectedAccount.totalProfit) return []
-
-    return Object.entries(selectedAccount.dailyPnL)
-      .map(([date, pnl]) => ({
-        date,
-        pnl,
-        percentageOfTotal: (pnl / selectedAccount.totalProfit) * 100,
-        isConsistent: selectedAccount.maxAllowedDailyProfit
-          ? pnl <= selectedAccount.maxAllowedDailyProfit
-          : true
-      }))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [selectedAccount])
+  }, [trades, filteredAccounts])
 
   const dailyMetrics = useMemo(() => {
     if (!selectedAccountForTable) return []
 
-    const accountTrades = trades.filter(t => t.accountNumber === selectedAccountForTable.accountNumber)
+    const accountTrades = trades.filter(t => t.accountNumber === selectedAccountForTable.number)
     const dailyPnL: { [key: string]: number[] } = {}
 
     // Calculate total profit first
@@ -507,19 +438,14 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
         })
       } else {
         // Add new payout
-        await addPropFirmPayout({
-          userId: user.id,
-          accountNumber: selectedAccountForTable.accountNumber,
+        await addPayout({
+          accountNumber: selectedAccountForTable.number,
           ...payout
         })
       }
 
-      // Reload the accounts data
-      const accounts = await getPropFirmAccounts(user.id)
-      setDbAccounts(accounts)
-
       // Update the selected account with new data
-      const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.accountNumber)
+      const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.number)
       if (updatedDbAccount) {
         setSelectedAccountForTable({
           ...selectedAccountForTable,
@@ -551,12 +477,16 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
     try {
       await deletePayout(selectedPayout.id)
 
-      // Reload the accounts data
-      const accounts = await getPropFirmAccounts(user.id)
-      setDbAccounts(accounts)
+      // Update the accounts data locally
+      const accountsWithoutPayout = accounts.map(account => ({
+        ...account,
+        payouts: account.payouts?.filter(p => p.id !== selectedPayout.id)
+      }))
+
+      setAccounts(accountsWithoutPayout)
 
       // Update the selected account with new data
-      const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.accountNumber)
+      const updatedDbAccount = accountsWithoutPayout.find(acc => acc.number === selectedAccountForTable.number)
       if (updatedDbAccount) {
         setSelectedAccountForTable({
           ...selectedAccountForTable,
@@ -587,23 +517,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
 
     try {
       setIsDeleting(true)
-      await deletePropFirmAccount(selectedAccountForTable.accountNumber, user.id)
-
-      // Update local storage
-      const storedAccounts = localStorage.getItem('propFirmAccounts')
-      if (storedAccounts) {
-        const parsedAccounts = JSON.parse(storedAccounts)
-        const updatedAccounts = parsedAccounts.filter((acc: PropFirmAccount) =>
-          acc.accountNumber !== selectedAccountForTable.accountNumber
-        )
-        localStorage.setItem('propFirmAccounts', JSON.stringify(updatedAccounts))
-      }
-
-      // Update the accounts list
-      const updatedAccounts = await getPropFirmAccounts(user.id)
-      setDbAccounts(updatedAccounts)
-
-      // Close the dialog
+      await deleteAccount(selectedAccountForTable.number)
       setSelectedAccountForTable(null)
 
       toast({
@@ -623,9 +537,14 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
     }
   }
 
+  // Update the handleAccountsUpdate function
+  const handleAccountsUpdate = (updatedAccounts: Account[]) => {
+    setAccounts(updatedAccounts)
+  }
+
   return (
     <Card className="w-full h-full flex flex-col">
-      <CardHeader 
+      <CardHeader
         className={cn(
           "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
           size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
@@ -633,7 +552,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
       >
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle 
+            <CardTitle
               className={cn(
                 "line-clamp-1",
                 size === 'small-long' ? "text-sm" : "text-base"
@@ -667,35 +586,36 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
             <div className="flex gap-4 flex-wrap">
               {groups.map(group => {
                 // Filter accounts for this group
-                const groupAccounts = propFirmAccounts.filter(account => {
+                const groupAccounts = filteredAccounts.filter(account => {
                   // Find the account in the group's accounts
-                  return group.accounts.some(a => a.number === account.accountNumber);
+                  return group.accounts.some(a => a.number === account.number);
                 });
 
                 // Skip groups with no accounts
                 if (groupAccounts.length === 0) return null;
 
                 return (
-                  <div 
-                    key={group.id} 
+                  <div
+                    key={group.id}
                     className={cn(
                       "bg-muted/50 rounded-lg p-4 w-fit",
                     )}
                   >
                     <h3 className="text-base font-medium mb-3">{group.name}</h3>
                     <div className={cn(
-                      "flex flex-1 gap-4", 
+                      "flex flex-1 gap-4",
                     )}>
                       {groupAccounts.map(account => {
-                        const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
-                        const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+                        const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
+                        const accountTrades = trades.filter(t => t.accountNumber === account.number)
+                        if (!account.number) return null;
                         return (
-                          <PropFirmCard
-                            key={account.accountNumber}
-                            account={account}
+                          <AccountCard
+                            key={account.number}
+                            account={account as Account}
                             trades={accountTrades}
                             metrics={metrics}
-                            onClick={() => setSelectedAccountForTable(account)}
+                            onClick={() => setSelectedAccountForTable(account as Account)}
                           />
                         )
                       })}
@@ -709,33 +629,34 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                 const groupedAccountNumbers = new Set(
                   groups.flatMap(group => group.accounts.map(a => a.number))
                 );
-                
-                const ungroupedAccounts = propFirmAccounts.filter(
-                  account => !groupedAccountNumbers.has(account.accountNumber)
+
+                const ungroupedAccounts = filteredAccounts.filter(
+                  account => !groupedAccountNumbers.has(account.number ?? '')
                 );
 
                 if (ungroupedAccounts.length === 0) return null;
 
                 return (
-                  <div 
+                  <div
                     className={cn(
                       "bg-muted/50 rounded-lg p-4 w-fit",
                     )}
                   >
                     <h3 className="text-base font-medium mb-3">{t('propFirm.ungrouped')}</h3>
                     <div className={cn(
-                      "flex flex-wrap gap-4", 
+                      "flex flex-wrap gap-4",
                     )}>
                       {ungroupedAccounts.map(account => {
-                        const metrics = consistencyMetrics.find(m => m.accountNumber === account.accountNumber)
-                        const accountTrades = trades.filter(t => t.accountNumber === account.accountNumber)
+                        const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
+                        const accountTrades = trades.filter(t => t.accountNumber === account.number)
+                        if (!account.number) return null;
                         return (
-                          <PropFirmCard
-                            key={account.accountNumber}
-                            account={account}
+                          <AccountCard
+                            key={account.number}
+                            account={account as Account}
                             trades={accountTrades}
                             metrics={metrics}
-                            onClick={() => setSelectedAccountForTable(account)}
+                            onClick={() => setSelectedAccountForTable(account as Account)}
                           />
                         )
                       })}
@@ -755,7 +676,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
             <DialogHeader className="pb-4 border-b">
               <div className="flex items-center justify-between">
                 <div>
-                  <DialogTitle>{t('propFirm.configurator.title', { accountNumber: selectedAccountForTable?.accountNumber })}</DialogTitle>
+                  <DialogTitle>{t('propFirm.configurator.title', { accountNumber: selectedAccountForTable?.number })}</DialogTitle>
                   <DialogDescription>{t('propFirm.configurator.description')}</DialogDescription>
                 </div>
                 <div className="flex items-center gap-2 pr-4">
@@ -784,7 +705,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                       <AlertDialogHeader>
                         <AlertDialogTitle>{t('propFirm.delete.title')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                          {t('propFirm.delete.description', { account: selectedAccountForTable?.accountNumber })}
+                          {t('propFirm.delete.description', { account: selectedAccountForTable?.number })}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -801,10 +722,10 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                 </div>
               </div>
             </DialogHeader>
-            
+
             <div className="p-6 pt-4 flex-1 overflow-y-auto">
               {selectedAccountForTable && (
-                <Tabs 
+                <Tabs
                   defaultValue={selectedAccountForTable.profitTarget === 0 ? "configurator" : "table"}
                   className="w-full"
                 >
@@ -814,22 +735,18 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                   </TabsList>
                   <TabsContent value="table" className="mt-4">
                     <AccountTable
-                      accountNumber={selectedAccountForTable.accountNumber}
+                      accountNumber={selectedAccountForTable.number}
                       startingBalance={selectedAccountForTable.startingBalance}
                       profitTarget={selectedAccountForTable.profitTarget}
                       dailyMetrics={dailyMetrics}
-                      consistencyPercentage={selectedAccountForTable.consistencyPercentage}
+                      consistencyPercentage={selectedAccountForTable.consistencyPercentage ?? 30}
                       resetDate={selectedAccountForTable.resetDate ? new Date(selectedAccountForTable.resetDate) : undefined}
                       onDeletePayout={async (payoutId) => {
                         try {
-                          await deletePayout(payoutId)
-
-                          // Reload the accounts data
-                          const accounts = await getPropFirmAccounts(user!.id)
-                          setDbAccounts(accounts)
+                          deletePayout(payoutId)
 
                           // Update the selected account with new data
-                          const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.accountNumber)
+                          const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.number)
                           if (updatedDbAccount) {
                             setSelectedAccountForTable({
                               ...selectedAccountForTable,
@@ -863,7 +780,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                     />
                   </TabsContent>
                   <TabsContent value="configurator" className="mt-4">
-                    <PropFirmConfigurator
+                    <AccountConfigurator
                       account={selectedAccountForTable}
                       onUpdate={(updatedAccount) => {
                         setSelectedAccountForTable(updatedAccount)
@@ -871,9 +788,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
                       onDelete={() => {
                         setSelectedAccountForTable(null)
                       }}
-                      onAccountsUpdate={(accounts) => {
-                        setDbAccounts(accounts)
-                      }}
+                      onAccountsUpdate={handleAccountsUpdate}
                     />
                   </TabsContent>
                 </Tabs>
@@ -891,7 +806,7 @@ export function PropFirmOverview({ size }: { size: WidgetSize }) {
             setSelectedPayout(undefined)
           }
         }}
-        accountNumber={selectedAccountForTable?.accountNumber ?? ''}
+        accountNumber={selectedAccountForTable?.number ?? ''}
         existingPayout={selectedPayout}
         onSubmit={handleAddPayout}
         onDelete={selectedPayout ? handleDeletePayout : undefined}

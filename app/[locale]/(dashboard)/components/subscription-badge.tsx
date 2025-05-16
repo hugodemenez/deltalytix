@@ -79,7 +79,7 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
       
       case 'ACTIVE':
         return {
-          text: `${formattedPlan} • ${t('billing.status.active')}`,
+          text: `${formattedPlan}`,
           variant: 'active',
           tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
         }

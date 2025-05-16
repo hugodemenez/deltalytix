@@ -16,12 +16,25 @@ const STORAGE_KEY = 'daily_mood'
 
 interface DailyCommentProps {
   dayData: CalendarEntry | undefined
-  selectedMood: 'bad' | 'okay' | 'great' | null
+  selectedDate: Date
 }
 
-export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
+interface Mood {
+  id: string
+  userId: string
+  day: Date
+  emotionValue: number
+  hasTradingExperience: boolean | null
+  selectedNews: string[]
+  journalContent: string | null
+  conversation: any
+  createdAt: Date
+  updatedAt: Date
+}
+
+export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   const t = useI18n()
-  const { user } = useUserData()
+  const { user, moodHistory, setMoodHistory } = useUserData()
   const { toast } = useToast()
   const [comment, setComment] = React.useState<string>("")
   const [isSavingComment, setIsSavingComment] = React.useState(false)
@@ -30,14 +43,26 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
   // Load comment from localStorage or server on mount
   React.useEffect(() => {
     const loadComment = async () => {
-      if (!user?.id || !dayData?.trades?.[0]?.entryDate) return
-
+      if (!user?.id) return
 
       try {
-        const mood = await getMoodForDay(new Date(dayData.trades[0].entryDate))
+        // Try to load from local storage first
+        const date = new Date(selectedDate)
+        date.setHours(12, 0, 0, 0)
+        const storageKey = `${STORAGE_KEY}_${date.toISOString().split('T')[0]}`
+        const localComment = localStorage.getItem(storageKey)
+        
+        if (localComment) {
+          setComment(localComment)
+        }
+
+        // Then try to load from server
+        const mood = await getMoodForDay(selectedDate)
         if (mood) {
           const comment = mood.journalContent || ''
           setComment(comment)
+          // Update local storage with server data
+          localStorage.setItem(storageKey, comment)
         }
       } catch (error) {
         console.error('Error loading comment:', error)
@@ -45,10 +70,10 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
     }
 
     loadComment()
-  }, [user?.id, dayData?.trades])
+  }, [user?.id, selectedDate])
 
   const handleSaveComment = async () => {
-    if (!user?.id || !dayData?.trades?.[0]?.entryDate) {
+    if (!user?.id) {
       toast({
         title: t('error'),
         description: t('auth.required'),
@@ -61,10 +86,25 @@ export function DailyComment({ dayData, selectedMood }: DailyCommentProps) {
     setSaveError(null)
     
     try {
-      const date = new Date(dayData.trades[0].entryDate)
+      const date = new Date(selectedDate)
       date.setHours(12, 0, 0, 0)
-      await saveJournal(comment, date)
       
+      // Save to server
+      const savedMood = await saveJournal(comment, date)
+      
+      // Save locally
+      const storageKey = `${STORAGE_KEY}_${date.toISOString().split('T')[0]}`
+      localStorage.setItem(storageKey, comment)
+
+      // Update the moodHistory in context
+      const updatedMoodHistory = moodHistory?.filter((mood: Mood) => {
+        if (!mood?.day) return true
+        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+        const selectedDateStr = date.toISOString().split('T')[0]
+        const moodDateStr = moodDate.toISOString().split('T')[0]
+        return moodDateStr !== selectedDateStr
+      }) || []
+      setMoodHistory([...updatedMoodHistory, savedMood])
 
       toast({
         title: t('success'),

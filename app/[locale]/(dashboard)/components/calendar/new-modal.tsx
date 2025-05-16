@@ -16,6 +16,9 @@ import { CalendarEntry } from "@/types/calendar"
 import { Charts } from "./charts"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { useUserData } from "@/components/context/user-data"
+import { DailyMood } from "./daily-mood"
+import { DailyStats } from "./daily-stats"
+import { DailyComment } from "./daily-comment"
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -51,7 +54,7 @@ export function CalendarModal({
   const locale = useCurrentLocale()
   const { timezone } = useUserData()
   const dateLocale = locale === 'fr' ? fr : enUS
-  const [activeTab, setActiveTab] = useState("charts")
+  const [activeTab, setActiveTab] = useState("analysis")
 
   if (!selectedDate) return null;
 
@@ -67,7 +70,7 @@ export function CalendarModal({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
           <TabsList className="px-6">
             <TabsTrigger value="table">{t('calendar.modal.table')}</TabsTrigger>
-            <TabsTrigger value="charts">{t('calendar.modal.charts')}</TabsTrigger>
+            <TabsTrigger value="analysis">{t('calendar.modal.analysis')}</TabsTrigger>
             {/* <TabsTrigger value="reflection">{t('calendar.modal.reflection')}</TabsTrigger> */}
           </TabsList>
           <TabsContent value="table" className="flex-grow overflow-auto p-6 pt-2">
@@ -135,9 +138,14 @@ export function CalendarModal({
           </TabsContent>
 
           {/* <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
-            <Chat dayData={dayData} dateString={dateString}></Chat>
+            <Chat dayData={dayData} dateString={formatInTimeZone(selectedDate, timezone, 'yyyy-MM-dd', { locale: dateLocale })}></Chat>
+            <DailyStats dayData={dayData} isWeekly={false} />
+            <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} />
           </TabsContent> */}
-          <TabsContent value="charts" className="flex-grow overflow-auto p-6 pt-2">
+          <TabsContent value="analysis" className="flex-grow overflow-auto p-6 pt-2 space-y-4">
+            <DailyStats dayData={dayData} isWeekly={false} />
+            <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} />
+            <DailyComment dayData={dayData} selectedDate={selectedDate} />
             <Charts dayData={dayData} />
           </TabsContent>
         </Tabs>

@@ -1,7 +1,7 @@
 export default {
     propFirm: {
-        title: 'Prop Firm Accounts',
-        description: 'Manage your prop firm accounts and track your performance.',
+        title: 'Accounts',
+        description: 'Manage your accounts and track your performance.',
         card: {
             unnamedAccount: 'Unnamed Account',
             balance: 'Balance',

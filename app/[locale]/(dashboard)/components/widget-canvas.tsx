@@ -89,7 +89,7 @@ const generateResponsiveLayout = (widgets: LayoutItem[]) => {
     })),
     md: widgets.map(widget => ({
       ...widget,
-      ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize)
+      ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize),
     })),
     sm: widgets.map(widget => ({
       ...widget,

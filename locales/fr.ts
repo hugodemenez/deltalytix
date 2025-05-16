@@ -1021,6 +1021,7 @@ export default {
     'calendar.events.title': 'Événements',
     'calendar.events.viewSource': 'Voir la source',
     'calendar.modal.weeklyDetails': 'Détails des trades et analyse de performance pour cette semaine.',
+    'calendar.modal.analysis': 'Analyse',
     'calendar.charts.weeklyPnlAfterComm': 'P&L hebdomadaire (après comm.)',
     'calendar.charts.weeklyAvgTimeInPosition': 'Temps moyen hebdomadaire en position',
     'calendar.charts.weeklyMood': 'Humeur hebdomadaire',
