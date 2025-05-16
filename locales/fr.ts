@@ -619,7 +619,8 @@ export default {
             sync: "Synchroniser",
             edit: "Modifier",
             delete: "Supprimer",
-            loadMore: "Charger Plus"
+            loadMore: "Charger Plus",
+            syncAll: "Synchroniser tous les comptes"
         },
         noSavedCredentials: "Aucun identifiant sauvegardé",
         deleteCredentials: "Supprimer les Identifiants",

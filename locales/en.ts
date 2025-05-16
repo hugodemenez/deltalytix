@@ -859,6 +859,7 @@ export default {
         actions: {
             title: "Actions",
             sync: "Sync",
+            syncAll: "Sync All",
             edit: "Edit",
             delete: "Delete",
             loadMore: "Load More"
