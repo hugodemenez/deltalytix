@@ -658,6 +658,7 @@ export default {
     'dataManagement.toast.renameError': 'Failed to rename account',
     'dataManagement.toast.instrumentRenamed': 'Instrument renamed successfully',
     'dataManagement.toast.instrumentRenameError': 'Failed to rename instrument',
+    'dataManagement.renameAccount.warning': 'Do not rename a synchronized account as it would create duplicates.',
     'trade-table': {
         'title': 'Trade Review',
         'description': 'Review and analyze your trades with detailed information and filtering options.',

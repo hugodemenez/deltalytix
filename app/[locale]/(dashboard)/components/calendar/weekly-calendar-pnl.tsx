@@ -225,7 +225,7 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
                 const pnl = getWeekPnl(weekStart)
                 const trades = getWeekTrades(weekStart)
                 return (
-                  <Popover>
+                  <Popover key={`${weekStart.toISOString()}-${weekIndex}`}>
                     <PopoverTrigger asChild>
                       <div
                         className={cn(

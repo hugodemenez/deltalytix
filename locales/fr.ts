@@ -1000,6 +1000,7 @@ export default {
     'dataManagement.toast.renameError': 'Échec du renommage du compte',
     'dataManagement.toast.instrumentRenamed': 'Instrument renommé avec succès',
     'dataManagement.toast.instrumentRenameError': 'Échec du renommage de l\'instrument',
+    'dataManagement.renameAccount.warning': 'Ne renommez pas un compte synchronisé car cela créerait des doublons.',
     timeRangePerformance: {
         title: 'Performance par Durée',
         description: 'Distribution du P&L moyen et du taux de réussite selon les durées de trades',
