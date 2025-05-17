@@ -98,8 +98,9 @@ export async function updateCommissionForGroup(accountNumber: string, instrument
   }
 }
 
-export async function renameAccount(oldAccountNumber: string, newAccountNumber: string, userId: string): Promise<void> {
+export async function renameAccount(oldAccountNumber: string, newAccountNumber: string): Promise<void> {
   try {
+    const userId = await getUserId()
     // First check if the account exists and get its ID
     const existingAccount = await prisma.account.findFirst({
       where: {

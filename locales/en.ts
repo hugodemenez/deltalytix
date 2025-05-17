@@ -450,6 +450,7 @@ export default {
     'widgets.tags.cancel': 'Cancel',
     'widgets.tags.confirmDelete': 'Delete',
     'widgets.tags.deleting': 'Deleting...',
+    'calendar.week': 'Week',
     'calendar.weekdays.sun': 'Sun',
     'calendar.weekdays.mon': 'Mon',
     'calendar.weekdays.tue': 'Tue',
@@ -640,6 +641,10 @@ export default {
     'dataManagement.renameInstrument.description': 'Enter a new name for the instrument.',
     'dataManagement.renameInstrument.newName': 'New Name',
     'dataManagement.renameInstrument.placeholder': 'Enter new instrument name',
+    'dataManagement.renameAccount.title': 'Rename Account',
+    'dataManagement.renameAccount.description': 'Enter a new account number.',
+    'dataManagement.renameAccount.newNumber': 'New Account Number',
+    'dataManagement.renameAccount.placeholder': 'Enter new account number',
     'dataManagement.toast.accountDeleted': 'Account deleted successfully',
     'dataManagement.toast.accountsDeleted': 'Accounts deleted successfully',
     'dataManagement.toast.deleteError': 'Failed to delete accounts',
@@ -649,6 +654,7 @@ export default {
     'dataManagement.toast.commissionUpdated': 'Commission updated successfully',
     'dataManagement.toast.commissionError': 'Failed to update commission',
     'dataManagement.toast.accountRenamed': 'Account renamed successfully',
+    'dataManagement.toast.accountRenameError': 'Failed to rename account',
     'dataManagement.toast.renameError': 'Failed to rename account',
     'dataManagement.toast.instrumentRenamed': 'Instrument renamed successfully',
     'dataManagement.toast.instrumentRenameError': 'Failed to rename instrument',
@@ -1244,6 +1250,11 @@ export default {
         medium: 'Medium',
         high: 'High',
         title: 'Filter news by importance',
+    },
+    'calendar.viewMode': {
+        daily: 'Daily View',
+        weekly: 'Weekly View',
+        title: 'Calendar View Mode'
     },
     notification: {
         title: 'Current Progress',

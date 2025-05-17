@@ -1,11 +1,11 @@
 'use client'
 
 import React, { useState, useEffect } from "react"
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays, isSameDay } from "date-fns"
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays, isSameDay, getYear } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { fr, enUS } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink, Newspaper, X, Star } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink, Newspaper, X, Star, Calendar, CalendarDays } from "lucide-react"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -26,12 +26,14 @@ import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { ImportanceFilter } from "@/components/importance-filter"
 import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/news-filter"
+import { useCalendarViewStore } from "@/store/calendar-view"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import WeeklyCalendarPnl from "./weekly-calendar-pnl"
 
 
 const WEEKDAYS = [
@@ -183,12 +185,20 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const { timezone, financialEvents: userFinancialEvents = [] } = useUserData()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [aiComment, setAiComment] = useState<string>("")
   const [aiEmotion, setAiEmotion] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
-  const [selectedWeekDate, setSelectedWeekDate] = useState<Date | null>(null)
+
+  // Use the calendar view store
+  const { 
+    viewMode, 
+    setViewMode, 
+    selectedDate, 
+    setSelectedDate, 
+    selectedWeekDate, 
+    setSelectedWeekDate 
+  } = useCalendarViewStore()
 
   // Use the global news filter store
   const impactLevels = useNewsFilterStore((s) => s.impactLevels)
@@ -244,6 +254,18 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   }
 
   const monthlyTotal = calculateMonthlyTotal()
+
+  const calculateYearTotal = () => {
+    return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
+      const date = new Date(dateString)
+      if (getYear(date) === getYear(currentDate)) {
+        return total + dayData.pnl
+      }
+      return total
+    }, 0)
+  }
+
+  const yearTotal = calculateYearTotal()
 
   const getEventsForDate = React.useCallback((date: Date) => {
     return monthEvents.filter(event => {
@@ -310,15 +332,17 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       >
         <div className="flex items-center gap-3">
           <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">
-            {formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })}
+            {viewMode === 'daily' 
+              ? formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })
+              : formatInTimeZone(currentDate, timezone, 'yyyy', { locale: dateLocale })}
           </CardTitle>
           <div className={cn(
             "text-sm sm:text-base font-semibold truncate",
-            monthlyTotal >= 0
+            (viewMode === 'daily' ? monthlyTotal : yearTotal) >= 0
               ? "text-green-600 dark:text-green-400"
               : "text-red-600 dark:text-red-400"
           )}>
-            {formatCurrency(monthlyTotal)}
+            {formatCurrency(viewMode === 'daily' ? monthlyTotal : yearTotal)}
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -343,18 +367,18 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
             <Button 
               variant="outline" 
               size="icon" 
-              onClick={handlePrevMonth} 
+              onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))} 
               className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label="Previous month"
+              aria-label={viewMode === 'daily' ? "Previous month" : "Previous year"}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <Button 
               variant="outline" 
               size="icon" 
-              onClick={handleNextMonth} 
+              onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))} 
               className="h-7 w-7 sm:h-8 sm:w-8"
-              aria-label="Next month"
+              aria-label={viewMode === 'daily' ? "Next month" : "Next year"}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -362,103 +386,112 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
         </div>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-1.5 sm:p-4">
-        <div className="grid grid-cols-8 gap-x-[1px] mb-1">
-          {[...WEEKDAYS, 'calendar.weekdays.weekly' as const].map((day) => (
-            <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
-              {t(day)}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
-          {calendarDays.map((date, index) => {
-            const dateString = format(date, 'yyyy-MM-dd')
-            const dayData = calendarData[dateString]
-            const isLastDayOfWeek = getDay(date) === 6
-            const isCurrentMonth = isSameMonth(date, currentDate)
-            const dateEvents = filterByImpactLevel(getEventsForDate(date))
-
-            return (
-              <React.Fragment key={dateString}>
-                <div
-                  className={cn(
-                    "h-full flex flex-col cursor-pointer transition-all rounded-none p-1",
-                    "ring-1 ring-border hover:ring-primary hover:z-10",
-                    dayData && dayData.pnl >= 0
-                      ? "bg-green-50 dark:bg-green-900/20"
-                      : dayData && dayData.pnl < 0
-                      ? "bg-red-50 dark:bg-red-900/20"
-                      : "bg-card",
-                    !isCurrentMonth && "",
-                    isToday(date) && "ring-blue-500 bg-blue-500/5 z-10",
-                    index === 0 && "rounded-tl-lg",
-                    index === 35 && "rounded-bl-lg",
-                  )}
-                  onClick={() => {
-                    setSelectedDate(date)
-                    initializeComment(dayData)
-                  }}
-                >
-                  <div className="flex justify-between items-start gap-0.5">
-                    <span className={cn(
-                      "text-[9px] sm:text-[11px] font-medium min-w-[14px] text-center",
-                      isToday(date) && "text-primary font-semibold",
-                      !isCurrentMonth && "opacity-50"
-                    )}>
-                      {format(date, 'd')}
-                    </span>
-                    {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
-                  </div>
-                  <div className="flex-1 flex flex-col justify-end gap-0.5">
-                    {dayData ? (
-                      <div className={cn(
-                        "text-[9px] sm:text-[11px] font-semibold truncate text-center",
-                        dayData.pnl >= 0
-                          ? "text-green-600 dark:text-green-400"
-                          : "text-red-600 dark:text-red-400",
-                        !isCurrentMonth && "opacity-50"
-                      )}>
-                        {formatCurrency(dayData.pnl)}
-                      </div>
-                    ) : (
-                      <div className={cn(
-                        "text-[9px] sm:text-[11px] font-semibold invisible text-center",
-                        !isCurrentMonth && "opacity-50"
-                      )}>$0</div>
-                    )}
-                    <div className={cn(
-                      "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
-                      !isCurrentMonth && "opacity-50"
-                    )}>
-                      {dayData 
-                        ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}` 
-                        : t('calendar.noTrades')}
-                    </div>
-                  </div>
+        {viewMode === 'daily' ? (
+          <>
+            <div className="grid grid-cols-8 gap-x-[1px] mb-1">
+              {[...WEEKDAYS, 'calendar.weekdays.weekly' as const].map((day) => (
+                <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
+                  {t(day)}
                 </div>
-                {isLastDayOfWeek && (
-                  <div 
-                    className={cn(
-                      "h-full flex items-center justify-center rounded-none cursor-pointer",
-                      "ring-1 ring-border hover:ring-primary hover:z-10",
-                      index === 6 && "rounded-tr-lg",
-                      index === 41 && "rounded-br-lg"
-                    )}
-                    onClick={() => setSelectedWeekDate(date)}
-                  >
-                    <div className={cn(
-                       "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
-                       calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
-                         ? "text-green-600 dark:text-green-400"
-                         : "text-red-600 dark:text-red-400"
-                    )}>
-                      {formatCurrency(calculateWeeklyTotal(index, calendarDays, calendarData))}
+              ))}
+            </div>
+            <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
+              {calendarDays.map((date, index) => {
+                const dateString = format(date, 'yyyy-MM-dd', { locale: dateLocale })
+                const dayData = calendarData[dateString]
+                const isLastDayOfWeek = getDay(date) === 6
+                const isCurrentMonth = isSameMonth(date, currentDate)
+                const dateEvents = filterByImpactLevel(getEventsForDate(date))
+
+                return (
+                  <React.Fragment key={dateString}>
+                    <div
+                      className={cn(
+                        "h-full flex flex-col cursor-pointer transition-all rounded-none p-1",
+                        "ring-1 ring-border hover:ring-primary hover:z-10",
+                        dayData && dayData.pnl >= 0
+                          ? "bg-green-50 dark:bg-green-900/20"
+                          : dayData && dayData.pnl < 0
+                          ? "bg-red-50 dark:bg-red-900/20"
+                          : "bg-card",
+                        !isCurrentMonth && "",
+                        isToday(date) && "ring-blue-500 bg-blue-500/5 z-10",
+                        index === 0 && "rounded-tl-lg",
+                        index === 35 && "rounded-bl-lg",
+                      )}
+                      onClick={() => {
+                        setSelectedDate(date)
+                        initializeComment(dayData)
+                      }}
+                    >
+                      <div className="flex justify-between items-start gap-0.5">
+                        <span className={cn(
+                          "text-[9px] sm:text-[11px] font-medium min-w-[14px] text-center",
+                          isToday(date) && "text-primary font-semibold",
+                          !isCurrentMonth && "opacity-50"
+                        )}>
+                          {format(date, 'd')}
+                        </span>
+                        {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
+                      </div>
+                      <div className="flex-1 flex flex-col justify-end gap-0.5">
+                        {dayData ? (
+                          <div className={cn(
+                            "text-[9px] sm:text-[11px] font-semibold truncate text-center",
+                            dayData.pnl >= 0
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400",
+                            !isCurrentMonth && "opacity-50"
+                          )}>
+                            {formatCurrency(dayData.pnl)}
+                          </div>
+                        ) : (
+                          <div className={cn(
+                            "text-[9px] sm:text-[11px] font-semibold invisible text-center",
+                            !isCurrentMonth && "opacity-50"
+                          )}>$0</div>
+                        )}
+                        <div className={cn(
+                          "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
+                          !isCurrentMonth && "opacity-50"
+                        )}>
+                          {dayData 
+                            ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}` 
+                            : t('calendar.noTrades')}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </React.Fragment>
-            )
-          })}
-        </div>
+                    {isLastDayOfWeek && (
+                      <div 
+                        className={cn(
+                          "h-full flex items-center justify-center rounded-none cursor-pointer",
+                          "ring-1 ring-border hover:ring-primary hover:z-10",
+                          index === 6 && "rounded-tr-lg",
+                          index === 41 && "rounded-br-lg"
+                        )}
+                        onClick={() => setSelectedWeekDate(date)}
+                      >
+                        <div className={cn(
+                           "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
+                           calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
+                             ? "text-green-600 dark:text-green-400"
+                             : "text-red-600 dark:text-red-400"
+                        )}>
+                          {formatCurrency(calculateWeeklyTotal(index, calendarDays, calendarData))}
+                        </div>
+                      </div>
+                    )}
+                  </React.Fragment>
+                )
+              })}
+            </div>
+          </>
+        ) : (
+          <WeeklyCalendarPnl 
+            calendarData={calendarData}
+            year={getYear(currentDate)}
+          />
+        )}
       </CardContent>
       <CalendarModal
         isOpen={selectedDate !== null}
@@ -466,7 +499,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
           if (!open) setSelectedDate(null)
         }}
         selectedDate={selectedDate}
-        dayData={selectedDate ? calendarData[format(selectedDate, 'yyyy-MM-dd')] : undefined}
+        dayData={selectedDate ? calendarData[format(selectedDate, 'yyyy-MM-dd', { locale: dateLocale })] : undefined}
         isLoading={isLoading}
       />
       <WeeklyModal
@@ -478,6 +511,35 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
         calendarData={calendarData}
         isLoading={isLoading}
       />
+      <CardFooter className="flex justify-end">
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted">
+          <Button
+            variant={viewMode === 'daily' ? 'default' : 'ghost'}
+            size="sm"
+            className={cn(
+              "h-7 px-2 transition-colors",
+              viewMode === 'daily' && "bg-primary text-primary-foreground shadow font-semibold"
+            )}
+            onClick={() => setViewMode('daily')}
+          >
+            <Calendar className="h-4 w-4 mr-1" />
+            <span className="text-xs">{t('calendar.viewMode.daily')}</span>
+          </Button>
+          <Button
+            variant={viewMode === 'weekly' ? 'default' : 'ghost'}
+            size="sm"
+            className={cn(
+              "h-7 px-2 transition-colors",
+              viewMode === 'weekly' && "bg-primary text-primary-foreground shadow font-semibold"
+            )}
+            onClick={() => setViewMode('weekly')}
+          >
+            <CalendarDays className="h-4 w-4 mr-1" />
+            <span className="text-xs">{t('calendar.viewMode.weekly')}</span>
+          </Button>
+        </div>
+      </CardFooter>
     </Card>
   )
 }

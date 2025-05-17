@@ -41,8 +41,23 @@ export async function GET(req: Request) {
       )
     }
 
-    // Get all users and filter out excluded emails
-    const users = await prisma.user.findMany()
+    // Get all users with newsletter enabled
+    const usersWithNewsletter = await prisma.newsletter.findMany({
+      where: {
+        isActive: {
+          equals: true
+        }
+      }
+    })
+
+    // Get all users id with newsletter enabled
+    const users = await prisma.user.findMany({
+      where: {
+        email: {
+          in: usersWithNewsletter.map(newsletter => newsletter.email)
+        }
+      }
+    })
 
     if (users.length === 0) {
       return NextResponse.json(
@@ -50,6 +65,7 @@ export async function GET(req: Request) {
         { status: 200 }
       )
     }
+
 
     // Process subscribers in batches of 100 (Resend's batch limit)
     const batchSize = 100
