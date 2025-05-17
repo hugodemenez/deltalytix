@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import { CalendarEntry } from "@/types/calendar"
 import { saveJournal, getMoodForDay } from '@/server/mood'
 import { NoteEditor } from "@/app/[locale]/(dashboard)/components/mindset/note-editor"
+import { formatInTimeZone } from 'date-fns-tz'
 
 const STORAGE_KEY = 'daily_mood'
 
@@ -34,7 +35,7 @@ interface Mood {
 
 export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   const t = useI18n()
-  const { user, moodHistory, setMoodHistory } = useUserData()
+  const { user, moodHistory, setMoodHistory, timezone } = useUserData()
   const { toast } = useToast()
   const [comment, setComment] = React.useState<string>("")
   const [isSavingComment, setIsSavingComment] = React.useState(false)
@@ -46,10 +47,9 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
       if (!user?.id) return
 
       try {
-        // Try to load from local storage first
-        const date = new Date(selectedDate)
-        date.setHours(12, 0, 0, 0)
-        const storageKey = `${STORAGE_KEY}_${date.toISOString().split('T')[0]}`
+        // Format date in user's timezone for storage key
+        const dateKey = formatInTimeZone(selectedDate, timezone, 'yyyy-MM-dd')
+        const storageKey = `${STORAGE_KEY}_${dateKey}`
         const localComment = localStorage.getItem(storageKey)
         
         if (localComment) {
@@ -70,7 +70,7 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
     }
 
     loadComment()
-  }, [user?.id, selectedDate])
+  }, [user?.id, selectedDate, timezone])
 
   const handleSaveComment = async () => {
     if (!user?.id) {
@@ -86,23 +86,22 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
     setSaveError(null)
     
     try {
-      const date = new Date(selectedDate)
-      date.setHours(12, 0, 0, 0)
+      // Format date in user's timezone for storage key
+      const dateKey = formatInTimeZone(selectedDate, timezone, 'yyyy-MM-dd')
       
       // Save to server
-      const savedMood = await saveJournal(comment, date)
+      const savedMood = await saveJournal(comment, selectedDate)
       
       // Save locally
-      const storageKey = `${STORAGE_KEY}_${date.toISOString().split('T')[0]}`
+      const storageKey = `${STORAGE_KEY}_${dateKey}`
       localStorage.setItem(storageKey, comment)
 
       // Update the moodHistory in context
       const updatedMoodHistory = moodHistory?.filter((mood: Mood) => {
         if (!mood?.day) return true
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        const selectedDateStr = date.toISOString().split('T')[0]
-        const moodDateStr = moodDate.toISOString().split('T')[0]
-        return moodDateStr !== selectedDateStr
+        const moodDateKey = formatInTimeZone(moodDate, timezone, 'yyyy-MM-dd')
+        return moodDateKey !== dateKey
       }) || []
       setMoodHistory([...updatedMoodHistory, savedMood])
 
