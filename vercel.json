@@ -1,7 +1,11 @@
 {
   "crons": [
     {
-      "path": "/api/investing",
+      "path": "/api/investing?lang=fr",
+      "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/investing?lang=en",
       "schedule": "0 6 * * 1"
     }
   ]
