@@ -41,7 +41,7 @@ const localeMap: { [key: string]: Locale } = {
 }
 
 export function AccountConfigurator({ account, onUpdate, onDelete, onAccountsUpdate }: AccountConfiguratorProps) {
-  const { user } = useUserData()
+  const { user, accounts } = useUserData()
   const t = useI18n()
   const params = useParams()
   const [pendingChanges, setPendingChanges] = useState<Partial<Account> | null>(null)
@@ -124,52 +124,13 @@ export function AccountConfigurator({ account, onUpdate, onDelete, onAccountsUpd
 
       await setupAccount(accountUpdate)
       
-      // Update local storage with just the current account
-      const storedAccounts = localStorage.getItem('accounts')
-      if (storedAccounts) {
-        const parsedAccounts = JSON.parse(storedAccounts)
-        const updatedAccounts = parsedAccounts.map((acc: Account) => 
-          acc.number === account.number ? {
-            ...acc,
-            startingBalance: accountUpdate.startingBalance,
-            profitTarget: accountUpdate.profitTarget,
-            drawdownThreshold: accountUpdate.drawdownThreshold,
-            consistencyPercentage: accountUpdate.consistencyPercentage,
-            propfirm: accountUpdate.propfirm,
-            trailingDrawdown: accountUpdate.trailingDrawdown,
-            trailingStopProfit: accountUpdate.trailingStopProfit,
-            resetDate: accountUpdate.resetDate,
-            // Include all the new fields
-            accountSize: accountUpdate.accountSize,
-            accountSizeName: accountUpdate.accountSizeName,
-            price: accountUpdate.price,
-            priceWithPromo: accountUpdate.priceWithPromo,
-            evaluation: accountUpdate.evaluation,
-            minDays: accountUpdate.minDays,
-            dailyLoss: accountUpdate.dailyLoss,
-            rulesDailyLoss: accountUpdate.rulesDailyLoss,
-            trailing: accountUpdate.trailing,
-            tradingNewsAllowed: accountUpdate.tradingNewsAllowed,
-            activationFees: accountUpdate.activationFees,
-            isRecursively: accountUpdate.isRecursively,
-            balanceRequired: accountUpdate.balanceRequired,
-            minTradingDaysForPayout: accountUpdate.minTradingDaysForPayout,
-            minPayout: accountUpdate.minPayout,
-            maxPayout: accountUpdate.maxPayout,
-            maxFundedAccounts: accountUpdate.maxFundedAccounts,
-            payoutBonus: accountUpdate.payoutBonus,
-            profitSharing: accountUpdate.profitSharing,
-            payoutPolicy: accountUpdate.payoutPolicy
-          } : acc
-        )
-        localStorage.setItem('accounts', JSON.stringify(updatedAccounts))
-        
-        // Update parent component's accounts list with the updated accounts
-        onAccountsUpdate(updatedAccounts)
-      }
-      
       // Update the selected account
       onUpdate(accountUpdate)
+      
+      // Update parent component's accounts list with the updated accounts
+      onAccountsUpdate(accounts.map(acc => 
+        acc.number === account.number ? accountUpdate : acc
+      ))
       
       setPendingChanges(null)
       
