@@ -162,13 +162,15 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
         <h2 className="text-lg font-semibold">{t('rithmic.savedCredentials')}</h2>
         <div className="flex gap-2">
           <Button 
+          
             onClick={() => {
               const allCredentials = Object.values(credentials)
               allCredentials.forEach(cred => handleSync(cred))
             }} 
             size="sm"
             variant="outline"
-            disabled={isAutoSyncing || Object.values(credentials).some(cred => cooldownId === cred.id)}
+            // disabled={isAutoSyncing || Object.values(credentials).some(cred => cooldownId === cred.id)}
+            disabled={true}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('rithmic.actions.syncAll')}
