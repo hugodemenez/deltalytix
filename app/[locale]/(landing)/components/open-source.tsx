@@ -10,7 +10,7 @@ import { MdOutlineBrightness1, MdBalance, MdOutlineAdjust } from 'react-icons/md
 import { LuGitFork } from 'react-icons/lu'
 import { ChartSSR } from './chart-ssr'
 import Link from 'next/link'
-import { getGithubData } from '@/server/github-data'
+import { getGithubData } from '../actions/github-data'
 import { Skeleton } from '../../../../components/ui/skeleton'
 import { useI18n } from "@/locales/client"
 

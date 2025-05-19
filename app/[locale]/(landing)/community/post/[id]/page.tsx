@@ -1,4 +1,4 @@
-import { getPost, getComments } from '@/server/community'
+import { getPost, getComments } from '@/app/[locale]/(landing)/actions/community'
 import { PostCard } from '../../components/post-card'
 import { notFound } from 'next/navigation'
 import { ExtendedPost } from '../../types'

@@ -1,4 +1,4 @@
-import { Milestone } from "@/types/milestone";
+import { Milestone } from "@/app/[locale]/(landing)/types/milestone";
 
 export const roadmapData: Milestone[] = [
   {

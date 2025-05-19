@@ -10,8 +10,8 @@ import { SharedParams } from '@/server/shared'
 import { formatInTimeZone } from 'date-fns-tz'
 import { loadInitialData, loadSharedData, LayoutItem as ServerLayoutItem, Layouts as ServerLayouts } from '@/server/user-data'
 import { saveDashboardLayout } from '@/server/database'
-import { WidgetType, WidgetSize } from '@/app/[locale]/(dashboard)/types/dashboard'
-import { setupAccount, getAccounts, deletePayout as deletePayoutAction, addPayout as addPayoutAction, updatePayout as updatePayoutAction, deleteAccount as deleteAccountAction } from '@/app/[locale]/(dashboard)/dashboard/data/actions'
+import { WidgetType, WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
+import { setupAccount, getAccounts, deletePayout as deletePayoutAction, addPayout as addPayoutAction, updatePayout as updatePayoutAction, deleteAccount as deleteAccountAction } from '@/app/[locale]/dashboard/data/actions/actions'
 import { createGroup as createGroupAction, updateGroup as updateGroupAction, deleteGroup as deleteGroupAction, getGroups, moveAccountToGroup as moveAccountToGroupAction } from '@/server/groups'
 
 // Types from trades-data.tsx

@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import matter from 'gray-matter'
-import { Post, PostMeta } from '@/types/post'
+import { Post, PostMeta } from '@/app/[locale]/(landing)/types/post'
 import { cache } from 'react'
 
 const POSTS_PATH = path.join(process.cwd(), 'content/updates')

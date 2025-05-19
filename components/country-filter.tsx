@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Badge } from "@/components/ui/badge"
-import { useNewsFilterStore } from "@/store/news-filter"
 
 interface CountryFilterProps {
   countries: string[]

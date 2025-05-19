@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 import { chatAI } from "@/server/chat-actions"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ContactForm } from '@/components/emails/contact-form'
-import { sendSupportEmail } from '@/server/send-support-email'
+import { sendSupportEmail } from '@/app/[locale]/(landing)/actions/send-support-email'
 import { useToast } from '@/hooks/use-toast'
 
 type ActiveButton = "none" | "add" | "deepSearch" | "think"

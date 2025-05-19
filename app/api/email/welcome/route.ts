@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 import { Resend } from 'resend'
 import WelcomeEmail from '@/components/emails/welcome'
-import { getLatestVideoFromPlaylist } from "@/app/[locale]/(admin)/server/youtube"
+import { getLatestVideoFromPlaylist } from "@/app/[locale]/admin/actions/youtube"
 
 const prisma = new PrismaClient()
 const resend = new Resend(process.env.RESEND_API_KEY)

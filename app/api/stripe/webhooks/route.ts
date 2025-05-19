@@ -2,9 +2,9 @@
 
 import type { Stripe } from "stripe";
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/server/stripe";
+import { stripe } from "@/app/[locale]/(landing)/actions/stripe";
 import { PrismaClient } from "@prisma/client";
-import { sendSubscriptionErrorEmail } from "@/server/send-support-email";
+import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
 
 export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Hello, world!' })

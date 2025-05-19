@@ -17,8 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from '@/hooks/use-toast'
-import { supportChat } from '@/server/support-chat'
-import { sendSupportEmail } from '@/server/send-support-email'
+import { supportChat } from '@/app/[locale]/(landing)/actions/support-chat'
+import { sendSupportEmail } from '@/app/[locale]/(landing)/actions/send-support-email'
 import { ContactForm } from '@/components/emails/contact-form'
 import { useI18n } from '@/locales/client'
 
@@ -41,7 +41,7 @@ export default function SupportPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    if (lastMessageRef.current) {
+    if (lastMessageRef.current && window.innerWidth < 768) {
       lastMessageRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
@@ -160,7 +160,6 @@ export default function SupportPage() {
                 >
                   <div className={`flex items-start ${message.role === 'user' ? 'flex-row-reverse' : ''} max-w-[80%] sm:max-w-[70%]`}>
                     <Avatar className={`w-6 h-6 sm:w-8 sm:h-8 ${message.role === 'user' ? 'ml-2' : 'mr-2'}`}>
-                      <AvatarImage src={message.role === 'user' ? "/user-avatar.png" : "/bot-avatar.png"} alt={message.role} />
                       <AvatarFallback>{message.role === 'user' ? 'U' : 'AI'}</AvatarFallback>
                     </Avatar>
                     <div className={`rounded-lg p-2 sm:p-3 text-base ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>

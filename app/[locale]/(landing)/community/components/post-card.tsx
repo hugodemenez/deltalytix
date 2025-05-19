@@ -30,7 +30,7 @@ import {
   DialogContent,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { votePost, deletePost, getComments, addComment, editComment, deleteComment, editPost, updatePostStatus } from '@/server/community'
+import { votePost, deletePost, getComments, addComment, editComment, deleteComment, editPost, updatePostStatus } from '@/app/[locale]/(landing)/actions/community'
 import { toast } from 'sonner'
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'

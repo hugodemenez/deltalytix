@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
 import { useI18n } from '@/locales/client'
-import { TranslationKeys } from "@/types/translations"
+import { TranslationKeys } from "@/app/[locale]/(landing)/types/translations"
 import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'

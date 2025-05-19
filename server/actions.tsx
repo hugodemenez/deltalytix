@@ -6,7 +6,7 @@ import { ReactNode } from 'react';
 import { z } from 'zod';
 import { generateId, streamObject } from 'ai';
 import { groupBy } from '@/lib/utils';
-import AIPNLChart from '../app/[locale]/(dashboard)/components/ai-pnl-chart';
+import AIPNLChart from '../app/[locale]/dashboard/components/ai-pnl-chart';
 
 export interface ServerMessage {
   role: 'user' | 'assistant';

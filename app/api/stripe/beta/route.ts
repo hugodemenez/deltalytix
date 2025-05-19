@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient, getWebsiteURL } from "@/server/auth";
-import { stripe } from "@/server/stripe";
+import { stripe } from "@/app/[locale]/(landing)/actions/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
 import { PrismaClient } from "@prisma/client";
 

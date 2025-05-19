@@ -60,8 +60,8 @@ export function LanguageSelector({
           <Globe className="h-5 w-5" />
           {showLabel && (
             <>
-              <span className="sr-only">{t('navbar.changeLanguage')}</span>
-              <span className="ml-2">{t('navbar.changeLanguage')}</span>
+              <span className="sr-only">{t('landing.navbar.changeLanguage')}</span>
+              <span className="ml-2">{t('landing.navbar.changeLanguage')}</span>
             </>
           )}
         </Button>

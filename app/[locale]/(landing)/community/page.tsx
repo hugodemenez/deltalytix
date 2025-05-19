@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { getPosts } from '@/server/community'
+import { getPosts } from '@/app/[locale]/(landing)/actions/community'
 import { PostList } from './components/post-list'
 import { CreatePost } from './components/create-post'
 import { Button } from '@/components/ui/button'

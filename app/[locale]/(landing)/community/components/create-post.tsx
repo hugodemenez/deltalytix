@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { PostType } from '@prisma/client'
-import { createPost } from '@/server/community'
+import { createPost } from '@/app/[locale]/(landing)/actions/community'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/locales/client'
 import { useRouter } from 'next/navigation'

@@ -4,12 +4,12 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { useUserData } from '@/components/context/user-data'
-import LoadingOverlay from '../app/[locale]/(dashboard)/components/loading-overlay'
-import ImportButton from '../app/[locale]/(dashboard)/components/import/import-button'
+import LoadingOverlay from '../app/[locale]/dashboard/components/loading-overlay'
+import ImportButton from '../app/[locale]/dashboard/components/import/import-button'
 import { useI18n } from "@/locales/client"
 import { signOut } from '@/server/auth'
 import PricingPlans from '@/app/[locale]/(landing)/components/pricing-plans'
-import { useSearchParams } from 'next/navigation'
+import { redirect, useSearchParams } from 'next/navigation'
 import OnboardingModal from './onboarding-modal'
 
 const PAYWALL_COOLDOWN = 30 * 60 * 1000; // 30 minutes in milliseconds
@@ -80,7 +80,12 @@ export default function Modals() {
           </DialogHeader>
           <div className="flex justify-center">
             <Button
-              onClick={() => window.location.href = process.env.NEXT_PUBLIC_STRIPE_CUSTOMER_PORTAL || ''}
+              onClick={() => {
+                setTimeout(() => {
+                  redirect('/dashboard/billing')
+                }, 100)
+                  setIsAlreadySubscribedOpen(false)
+              }}
             >
               {t('modals.subscription.manage')}
             </Button>

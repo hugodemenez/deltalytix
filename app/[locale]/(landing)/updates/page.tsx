@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { getI18n } from '@/locales/server'
 import CompletedTimeline from '../components/completed-timeline'
 import { getAllPosts } from '@/lib/posts'
-import { Post } from '@/types/post'
+import { Post } from '@/app/[locale]/(landing)/types/post'
 
 interface PageProps {
   params: Promise<{
