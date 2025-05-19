@@ -19,7 +19,6 @@ import StatisticsWidget from '../components/statistics/statistics-widget'
 import { TradeTableReview } from '../components/tables/trade-table-review'
 import { MoodSelector } from '../components/calendar/mood-selector'
 import ChatWidget from '../components/chat-widget'
-import { NewsWidget } from '../components/market/news-widget'
 import TradeDistributionChart from '../components/charts/trade-distribution'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -308,15 +307,6 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 300,
     getComponent: ({ size }) => <ChatWidget size={size} />,
     getPreview: () => <div className="h-[300px]"><ChatWidget size="large" /></div>
-  },
-  newsWidget: {
-    type: 'newsWidget',
-    defaultSize: 'medium',
-    allowedSizes: ['medium', 'large'],
-    category: 'other',
-    previewHeight: 300,
-    getComponent: () => <NewsWidget />,
-    getPreview: () => <div className="h-[300px]"><NewsWidget /></div>
   },
   tradeTableReview: {
     type: 'tradeTableReview',

@@ -18,7 +18,6 @@ export type WidgetType =
   | 'tradeTableReview'
   | 'moodSelector'
   | 'chatWidget'
-  | 'newsWidget'
   | 'tradeDistribution'
   | 'propFirm'
   | 'timeRangePerformance'
