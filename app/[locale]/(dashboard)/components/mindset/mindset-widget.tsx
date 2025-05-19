@@ -24,7 +24,7 @@ import type { EmblaCarouselType as CarouselApi } from "embla-carousel"
 import { toast } from "@/hooks/use-toast"
 import { getMoodForDay, saveMindset, deleteMindset } from "@/server/mood"
 import { useUserData } from "@/components/context/user-data"
-import { isToday } from "date-fns"
+import { isToday, format } from "date-fns"
 
 interface MindsetWidgetProps {
   size: WidgetSize
@@ -57,14 +57,15 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       const hasTodayData = moodHistory.some(mood => {
         if (!mood?.day) return false
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        return moodDate.toDateString() === today.toDateString()
+        return format(moodDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
       })
-            // Handle selected date mood data
-            const mood = moodHistory.find(mood => {
-              if (!mood?.day) return false
-              const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-              return moodDate.toDateString() === selectedDate.toDateString()
-            })
+
+      // Handle selected date mood data
+      const mood = moodHistory.find(mood => {
+        if (!mood?.day) return false
+        const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+        return format(moodDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+      })
 
       // If it's today and we have data, show summary
       if (isToday(selectedDate) && hasTodayData) {
@@ -77,7 +78,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         api.scrollTo(4)
         return
       }
-
 
       if (mood) {
         setHasTradingExperience(mood.hasTradingExperience ?? null)
@@ -113,8 +113,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   }
 
   const handleSave = async () => {
-      // Scroll to summary view after saving
-      api?.scrollTo(4)
+    // Scroll to summary view after saving
+    api?.scrollTo(4)
     try {
       const savedMood = await saveMindset({
         emotionValue,
@@ -127,9 +127,9 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       const updatedMoodHistory = moodHistory?.filter(mood => {
         if (!mood?.day) return true
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        const selectedDateStr = selectedDate.toISOString().split('T')[0]
-        const moodDateStr = moodDate.toISOString().split('T')[0]
-        return moodDateStr !== selectedDateStr
+        const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
+        const moodDateKey = format(moodDate, 'yyyy-MM-dd')
+        return moodDateKey !== selectedDateKey
       }) || []
       setMoodHistory([...updatedMoodHistory, savedMood])
 
@@ -155,12 +155,12 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       const updatedMoodHistory = moodHistory?.filter(mood => {
         if (!mood?.day) return true
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-        return moodDate.toDateString() !== date.toDateString()
+        return format(moodDate, 'yyyy-MM-dd') !== format(date, 'yyyy-MM-dd')
       }) || []
       setMoodHistory(updatedMoodHistory)
 
       // If the deleted entry was the selected date, reset the form
-      if (date.toDateString() === selectedDate.toDateString()) {
+      if (format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')) {
         setHasTradingExperience(null)
         setEmotionValue(50)
         setSelectedNews([])
@@ -180,9 +180,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     const moodForDate = moodHistory?.find(mood => {
       if (!mood?.day) return false
       const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
-      const moodDateStr = moodDate.toISOString().split('T')[0]
-      const selectedDateStr = date.toISOString().split('T')[0]
-      return moodDateStr === selectedDateStr
+      return format(moodDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
     })
 
     if (moodForDate) {

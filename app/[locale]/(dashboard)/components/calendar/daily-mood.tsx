@@ -14,7 +14,6 @@ import { useUserData } from '@/components/context/user-data'
 import { useToast } from '@/hooks/use-toast'
 import { useI18n } from '@/locales/client'
 import { saveMood, getMoodForDay } from '@/server/mood'
-import { DailyComment } from './daily-comment'
 
 interface DailyMoodProps {
   dayData: CalendarEntry | undefined;

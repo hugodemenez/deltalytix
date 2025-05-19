@@ -4,36 +4,24 @@ import React, { useState, useEffect } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays, isSameDay, getYear } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { fr, enUS } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, AlertCircle, Info, LineChart, BarChart, ExternalLink, Newspaper, X, Star, Calendar, CalendarDays } from "lucide-react"
+import { ChevronLeft, ChevronRight, Newspaper, Calendar, CalendarDays } from "lucide-react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Toggle } from "@/components/ui/toggle"
 import { cn } from "@/lib/utils"
 import { FinancialEvent } from "@prisma/client"
-import { toast } from "@/hooks/use-toast"
-import { CalendarEntry, CalendarData } from "@/types/calendar"
 import { CalendarModal } from "./new-modal"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { getFinancialEvents } from "@/server/financial-events"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { WeeklyModal } from "./weekly-modal"
 import { useUserData } from "@/components/context/user-data"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { ImportanceFilter } from "@/components/importance-filter"
 import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/news-filter"
 import { useCalendarViewStore } from "@/store/calendar-view"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import WeeklyCalendarPnl from "./weekly-calendar-pnl"
+import { CalendarData } from "@/types/calendar"
 
 
 const WEEKDAYS = [
@@ -78,31 +66,6 @@ interface CalendarPnlProps {
   financialEvents?: FinancialEvent[];
 }
 
-const getEventIcon = (eventType: string) => {
-  switch (eventType.toLowerCase()) {
-    case 'economic':
-      return <Info className="h-3 w-3" />
-    case 'earnings':
-      return <BarChart className="h-3 w-3" />
-    case 'technical':
-      return <LineChart className="h-3 w-3" />
-    default:
-      return <AlertCircle className="h-3 w-3" />
-  }
-}
-
-const getEventImportanceColor = (importance: string) => {
-  switch (importance.toUpperCase()) {
-    case 'HIGH':
-      return "text-red-500 dark:text-red-400"
-    case 'MEDIUM':
-      return "text-yellow-500 dark:text-yellow-400"
-    case 'LOW':
-      return "text-blue-500 dark:text-blue-400"
-    default:
-      return "text-muted-foreground"
-  }
-}
 
 type ImpactLevel = "low" | "medium" | "high"
 const IMPACT_LEVELS: ImpactLevel[] = ["low", "medium", "high"]
@@ -121,11 +84,6 @@ const getEventImportanceStars = (importance: string): ImpactLevel => {
 }
 
 function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impactLevels: ImpactLevel[] }) {
-  const t = useI18n()
-  const { timezone } = useUserData()
-  const locale = useCurrentLocale()
-  const dateLocale = locale === 'fr' ? fr : enUS
-
   // Filter events by impact level
   const filteredEvents = events.filter(e => impactLevels.includes(getEventImportanceStars(e.importance)))
   if (filteredEvents.length === 0) return null
@@ -179,16 +137,26 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
   )
 }
 
-export default function CalendarPnl({ calendarData, financialEvents = [] }: CalendarPnlProps) {
+export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
   const { timezone, financialEvents: userFinancialEvents = [] } = useUserData()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [aiComment, setAiComment] = useState<string>("")
-  const [aiEmotion, setAiEmotion] = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
   const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
+  const [calendarDays, setCalendarDays] = useState<Date[]>([])
+
+  // Memoize monthStart and monthEnd calculations
+  const { monthStart, monthEnd } = React.useMemo(() => ({
+    monthStart: startOfMonth(currentDate),
+    monthEnd: endOfMonth(currentDate)
+  }), [currentDate])
+
+  // Update calendarDays when currentDate changes
+  useEffect(() => {
+    setCalendarDays(getCalendarDays(monthStart, monthEnd))
+  }, [currentDate, monthStart, monthEnd])
 
   // Use the calendar view store
   const { 
@@ -206,10 +174,6 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
   const selectedCountries = useNewsFilterStore((s) => s.selectedCountries)
   const setSelectedCountries = useNewsFilterStore((s) => s.setSelectedCountries)
 
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const calendarDays = getCalendarDays(monthStart, monthEnd)
-
   // Update monthEvents when currentDate or financialEvents change
   useEffect(() => {
     const monthStart = startOfMonth(currentDate)
@@ -223,27 +187,15 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
     setMonthEvents(filteredEvents)
   }, [currentDate, userFinancialEvents, locale])
 
-  const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
-  const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))
+  const handlePrevMonth = React.useCallback(() => {
+    setCurrentDate(subMonths(currentDate, 1))
+  }, [currentDate])
 
-  const initializeComment = (dayData: CalendarEntry | undefined) => {
-    if (dayData && dayData.trades.length > 0) {
-      const lastTrade = dayData.trades[dayData.trades.length - 1]
-      if (lastTrade.comment) {
-        const commentParts = lastTrade.comment.split('(Emotion:')
-        setAiComment(commentParts[0].trim())
-        setAiEmotion(commentParts[1] ? commentParts[1].replace(')', '').trim() : '')
-      } else {
-        setAiComment("")
-        setAiEmotion("")
-      }
-    } else {
-      setAiComment("")
-      setAiEmotion("")
-    }
-  }
+  const handleNextMonth = React.useCallback(() => {
+    setCurrentDate(addMonths(currentDate, 1))
+  }, [currentDate])
 
-  const calculateMonthlyTotal = () => {
+  const calculateMonthlyTotal = React.useCallback(() => {
     return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
       const date = new Date(dateString)
       if (isSameMonth(date, currentDate)) {
@@ -251,11 +203,11 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       }
       return total
     }, 0)
-  }
+  }, [calendarData, currentDate])
 
   const monthlyTotal = calculateMonthlyTotal()
 
-  const calculateYearTotal = () => {
+  const calculateYearTotal = React.useCallback(() => {
     return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
       const date = new Date(dateString)
       if (getYear(date) === getYear(currentDate)) {
@@ -263,7 +215,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
       }
       return total
     }, 0)
-  }
+  }, [calendarData, currentDate])
 
   const yearTotal = calculateYearTotal()
 
@@ -397,7 +349,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
             </div>
             <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
               {calendarDays.map((date, index) => {
-                const dateString = format(date, 'yyyy-MM-dd', { locale: dateLocale })
+                const dateString = format(date, 'yyyy-MM-dd')
                 const dayData = calendarData[dateString]
                 const isLastDayOfWeek = getDay(date) === 6
                 const isCurrentMonth = isSameMonth(date, currentDate)
@@ -421,7 +373,6 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
                       )}
                       onClick={() => {
                         setSelectedDate(date)
-                        initializeComment(dayData)
                       }}
                     >
                       <div className="flex justify-between items-start gap-0.5">
@@ -494,7 +445,7 @@ export default function CalendarPnl({ calendarData, financialEvents = [] }: Cale
         )}
       </CardContent>
       <CalendarModal
-        isOpen={selectedDate !== null}
+        isOpen={selectedDate !== null && selectedDate !== undefined}
         onOpenChange={(open) => {
           if (!open) setSelectedDate(null)
         }}

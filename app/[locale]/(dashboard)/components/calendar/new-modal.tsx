@@ -3,15 +3,12 @@
 import React, { useState } from "react"
 import { format } from "date-fns"
 import { fr, enUS } from 'date-fns/locale'
-import { formatInTimeZone } from 'date-fns-tz'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn, parsePositionTime } from "@/lib/utils"
 import { Trade } from "@prisma/client"
-import Chat from "./chat"
 import { CalendarEntry } from "@/types/calendar"
 import { Charts } from "./charts"
 import { useI18n, useCurrentLocale } from "@/locales/client"
@@ -55,6 +52,13 @@ export function CalendarModal({
   const { timezone } = useUserData()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [activeTab, setActiveTab] = useState("analysis")
+  const [formattedDate, setFormattedDate] = useState<string>("")
+
+  React.useEffect(() => {
+    if (selectedDate) {
+      setFormattedDate(format(selectedDate, 'MMMM d, yyyy', { locale: dateLocale }))
+    }
+  }, [selectedDate])
 
   if (!selectedDate) return null;
 
@@ -62,7 +66,7 @@ export function CalendarModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-full h-[100dvh] sm:h-[90vh] p-0 flex flex-col">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle>{formatInTimeZone(selectedDate, timezone, 'MMMM d, yyyy', { locale: dateLocale })}</DialogTitle>
+          <DialogTitle>{formattedDate}</DialogTitle>
           <DialogDescription>
             {t('calendar.modal.tradeDetails')}
           </DialogDescription>
@@ -71,7 +75,6 @@ export function CalendarModal({
           <TabsList className="px-6">
             <TabsTrigger value="table">{t('calendar.modal.table')}</TabsTrigger>
             <TabsTrigger value="analysis">{t('calendar.modal.analysis')}</TabsTrigger>
-            {/* <TabsTrigger value="reflection">{t('calendar.modal.reflection')}</TabsTrigger> */}
           </TabsList>
           <TabsContent value="table" className="flex-grow overflow-auto p-6 pt-2">
             <ScrollArea className="h-full">
@@ -136,15 +139,9 @@ export function CalendarModal({
               )}
             </ScrollArea>
           </TabsContent>
-
-          {/* <TabsContent value="reflection" className="flex-grow overflow-hidden sm:p-6 pt-2">
-            <Chat dayData={dayData} dateString={formatInTimeZone(selectedDate, timezone, 'yyyy-MM-dd', { locale: dateLocale })}></Chat>
-            <DailyStats dayData={dayData} isWeekly={false} />
-            <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} />
-          </TabsContent> */}
           <TabsContent value="analysis" className="flex-grow overflow-auto p-6 pt-2 space-y-4">
             <DailyStats dayData={dayData} isWeekly={false} />
-            <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} />
+            {/* <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} /> */}
             <DailyComment dayData={dayData} selectedDate={selectedDate} />
             <Charts dayData={dayData} />
           </TabsContent>
