@@ -234,7 +234,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     if (!message) return
     
     setLastMessage(message)
-    console.log('Processing message:', message)
     
     // Add message to history
     setMessageHistory(prev => [...prev, message])
@@ -298,7 +297,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
             if (accountId && currentDay && totalDays) {
               setAccountsProgress(prev => {
-                console.log('Updating progress for day:', { accountId, currentDay, totalDays, currentDate })
 
                 // Calculate the actual days processed based on the current day number
                 const daysProcessed = Math.max(parseInt(currentDay) - 1, 0)
@@ -324,7 +322,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             const date = message.message.match(/date (\d{8})/)?.[1]
             const accountId = currentAccount || message.account_id
             if (date && accountId) {
-              console.log('Successfully processed date:', { accountId, date })
               setAccountsProgress(prev => {
                 const currentProgress = prev[accountId] || {
                   ordersProcessed: 0,
@@ -355,7 +352,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           else if (message.message.includes('Successfully added account')) {
             const accountId = message.message.match(/account ([^"]+)/)?.[1]
             if (accountId) {
-              console.log('Adding new account:', accountId)
               setAccountsProgress(prev => ({
                 ...prev,
                 [accountId]: {
@@ -378,7 +374,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             const accountMatch = message.message.match(/account \d+ of \d+: ([^"\s]+)/)
             const accountId = accountMatch?.[1]
             if (accountId) {
-              console.log('Starting to process account:', accountId)
               setCurrentAccount(accountId)
               
               setAccountsProgress(prev => ({
@@ -402,7 +397,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
             if (match) {
               const [, accountId, ordersStr] = match
               const ordersCount = parseInt(ordersStr, 10)
-              console.log('Completed processing account:', { accountId, ordersCount })
               setAccountsProgress(prev => ({
                 ...prev,
                 [accountId]: {
