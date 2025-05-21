@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserData } from "@/components/context/user-data"
-import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff, Clock, RefreshCw, Home } from "lucide-react"
+import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff, Clock, RefreshCw, Home, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -45,6 +45,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ThemeSwitcher } from "@/components/theme-switcher"
+import { AccountFilter } from './filters/account-filter'
 
 type Theme = 'light' | 'dark' | 'system'
 type Locale = 'en' | 'fr'
@@ -157,6 +158,20 @@ export default function Navbar() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="justify-start text-left font-normal"
+                  >
+                    <Users className="mr-2 h-4 w-4" />
+                    {t('filters.accounts')}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-[300px]">
+                  <AccountFilter showAccountNumbers={showAccountNumbers} />
+                </DropdownMenuContent>
+              </DropdownMenu>
               <DateCalendarFilter />
               <ImportButton />
             </div>
