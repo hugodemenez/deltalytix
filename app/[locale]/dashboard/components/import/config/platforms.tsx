@@ -572,7 +572,6 @@ export const platforms: PlatformConfig[] = [
       alt: 'Thor Logo'
     },
     customComponent: ThorSync,
-    isComingSoon: true,
     steps: [
       {
         id: 'select-import-type',
