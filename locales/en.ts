@@ -217,7 +217,7 @@ export default {
         errorCreatingGroup: "Error creating group {name}",
         accountMoved: "Account {account} moved successfully",
         errorMovingAccount: "Error moving account {account}",
-        tradeOnlyAccounts: "Trade-only Accounts",
+        tradeOnlyAccounts: "Accounts without group",
         manageAccounts: "Manage Accounts",
         createGroup: "Create Group",
         groupName: "Group Name",
