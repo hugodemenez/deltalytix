@@ -835,24 +835,26 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       setAvailableAccounts(data.accounts)
       const wsUrl = getWebSocketUrl(data.websocket_url)
 
-      // Calculate start date based on existing trades
-      const accountTrades = trades.filter(trade => accountsToSync.includes(trade.accountNumber))
-      const startDate = accountTrades.length === 0
-        ? new Date(Date.now() - 200 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replace(/-/g, '')
-        : (() => {
-            // Get oldest date for each account
-            const oldestDates = accountsToSync.map((accountId: string) => {
-              const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
-              if (accountTrades.length === 0) return null
-              return Math.min(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
-            }).filter(Boolean) as number[]
-            
-            // Find earliest date across all accounts
-            const earliestDate = new Date(Math.min(...oldestDates))
-            // Add 3 days buffer
-            earliestDate.setDate(earliestDate.getDate() - 3)
-            return earliestDate.toISOString().slice(0, 10).replace(/-/g, '')
-          })()
+      // Get most recent date for each account
+      const mostRecentDates = accountsToSync.map((accountId: string) => {
+        const accountTrades = trades.filter(trade => trade.accountNumber === accountId)
+        if (accountTrades.length === 0) return null
+        return Math.max(...accountTrades.map(trade => new Date(trade.entryDate).getTime()))
+      }).filter(Boolean) as number[]
+      
+      let startDate: string
+      
+      // If no valid dates found, use 200 days ago as default
+      if (mostRecentDates.length === 0) {
+        const defaultDate = new Date(Date.now() - 200 * 24 * 60 * 60 * 1000)
+        startDate = defaultDate.toISOString().slice(0, 10).replace(/-/g, '')
+      } else {
+        // Find oldest of the most recent dates
+        const oldestRecentDate = new Date(Math.min(...mostRecentDates))
+        // Add 3 days buffer
+        oldestRecentDate.setDate(oldestRecentDate.getDate() - 3)
+        startDate = oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+      }
 
       // Connect and start syncing
       connect(wsUrl, data.token, accountsToSync, startDate)
