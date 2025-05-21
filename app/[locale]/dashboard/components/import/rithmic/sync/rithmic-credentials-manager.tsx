@@ -203,7 +203,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
             }} 
             size="sm"
             variant="outline"
-            disabled={isAutoSyncing}
+            disabled={true}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('rithmic.actions.syncAll')}
