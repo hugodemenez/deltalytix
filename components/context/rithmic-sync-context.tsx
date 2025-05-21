@@ -5,6 +5,7 @@ import { getRithmicData, getAllRithmicData, updateLastSyncTime, clearRithmicData
 import { useUserData } from '@/components/context/user-data'
 import { toast } from "@/hooks/use-toast"
 import { useI18n } from "@/locales/client"
+import { useRithmicSyncStore, SyncInterval } from '@/app/[locale]/dashboard/store/rithmic-sync-store'
 
 interface AccountProgress {
   ordersProcessed: number
@@ -135,6 +136,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   const [wsUrl, setWsUrl] = useState<string | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const t = useI18n()
+  const { syncInterval } = useRithmicSyncStore()
 
   // Helper function to check if it's a weekday
   const isWeekday = () => {
@@ -744,12 +746,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     return baseUrl.replace('ws://your-domain', `${ws}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}`)
   }, [getProtocols])
 
-  // Extract sync timing logic
+  // Update the shouldSync function to use the store's interval
   const shouldSync = useCallback((lastSyncTime: number) => {
     const now = Date.now()
-    const hoursSinceLastSync = (now - lastSyncTime) / (1000 * 60 * 60)
-    return hoursSinceLastSync >= 1
-  }, [])
+    const minutesSinceLastSync = (now - lastSyncTime) / (1000 * 60)
+    return minutesSinceLastSync >= syncInterval
+  }, [syncInterval])
 
   // Modify performAutoSyncForCredential
   const performAutoSyncForCredential = useCallback(async (credentialId: string) => {
@@ -966,7 +968,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     })
   }, [t])
 
-  // Add merging to the initial mount effect
+  // Update the interval setup in useEffect
   useEffect(() => {
     // Only perform initial check on mount if it's the first mount
     if (isInitialMountRef.current) {
@@ -975,10 +977,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       isInitialMountRef.current = false
     }
 
-    // Set up interval for future checks with a longer interval
+    // Set up interval for future checks using the store's interval
     syncIntervalRef.current = setInterval(() => {
       performAutoSync()
-    }, 60 * 60 * 1000) // Check every hour
+    }, syncInterval * 60 * 1000) // Convert minutes to milliseconds
 
     // Listen for storage events from other tabs
     const handleStorageChange = (e: StorageEvent) => {
@@ -998,7 +1000,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       // Release lock when component unmounts
       releaseSyncLock()
     }
-  }, [performAutoSync, releaseSyncLock, mergeDuplicateCredentials])
+  }, [performAutoSync, releaseSyncLock, mergeDuplicateCredentials, syncInterval])
 
   // Clear interval and release lock when user changes
   useEffect(() => {

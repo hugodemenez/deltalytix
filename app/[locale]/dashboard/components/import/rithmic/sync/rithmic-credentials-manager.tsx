@@ -30,6 +30,14 @@ import { SyncCountdown } from './sync-countdown'
 import { useWebSocket } from '@/components/context/rithmic-sync-context'
 import { useI18n } from '@/locales/client'
 import { toast } from "sonner"
+import { useRithmicSyncStore, SyncInterval } from '@/app/[locale]/dashboard/store/rithmic-sync-store'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface RithmicCredentialsManagerProps {
   onSelectCredential: (credential: RithmicCredentialSet) => void
@@ -46,6 +54,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   const syncTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({})
   const t = useI18n()
   const { user } = useUserData()
+  const { syncInterval, setSyncInterval } = useRithmicSyncStore()
 
   const handleSync = useCallback(async (credential: RithmicCredentialSet) => {
     // Prevent multiple syncs for the same credential
@@ -158,26 +167,46 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">{t('rithmic.savedCredentials')}</h2>
-        <div className="flex gap-2">
-          <Button 
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold">{t('rithmic.savedCredentials')}</h2>
+          <Button onClick={onAddNew} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            {t('rithmic.addNew')}
+          </Button>
+        </div>
+        
+        <div className="flex items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{t('rithmic.syncInterval')}</span>
+              <Select
+                value={syncInterval.toString()}
+                onValueChange={(value) => setSyncInterval(parseInt(value) as SyncInterval)}
+              >
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="15">15 min</SelectItem>
+                  <SelectItem value="30">30 min</SelectItem>
+                  <SelectItem value="60">60 min</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           
+          <Button 
             onClick={() => {
               const allCredentials = Object.values(credentials)
               allCredentials.forEach(cred => handleSync(cred))
             }} 
             size="sm"
             variant="outline"
-            // disabled={isAutoSyncing || Object.values(credentials).some(cred => cooldownId === cred.id)}
-            disabled={true}
+            disabled={isAutoSyncing}
           >
             <RefreshCw className="h-4 w-4 mr-2" />
             {t('rithmic.actions.syncAll')}
-          </Button>
-          <Button onClick={onAddNew} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            {t('rithmic.addNew')}
           </Button>
         </div>
       </div>

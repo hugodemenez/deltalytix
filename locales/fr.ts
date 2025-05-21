@@ -572,13 +572,14 @@ export default {
         location: "Localisation",
         lastSync: "Dernière Synchro",
         nextSync: "Prochaine Synchro",
+        syncInterval: "Intervalle de synchronisation",
         actions: {
             title: "Actions",
             sync: "Synchroniser",
+            syncAll: "Tout synchroniser",
             edit: "Modifier",
             delete: "Supprimer",
-            loadMore: "Charger Plus",
-            syncAll: "Synchroniser tous les comptes"
+            loadMore: "Charger Plus"
         },
         noSavedCredentials: "Aucun identifiant sauvegardé",
         deleteCredentials: "Supprimer les Identifiants",

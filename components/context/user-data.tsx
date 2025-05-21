@@ -636,7 +636,28 @@ export const UserDataProvider: React.FC<{
 
         // Fetch fresh data if needed
         setIsLoading(true);
-        const fetchedData = await loadInitialData();
+        let fetchedData;
+        try {
+          fetchedData = await loadInitialData();
+        } catch (error) {
+          console.error('Error loading initial data:', error);
+          fetchedData = {
+            user: null,
+            isFirstConnection: false,
+            etpToken: null,
+            thorToken: null,
+            subscription: null,
+            trades: [],
+            tickDetails: {},
+            layouts: null,
+            tags: [],
+            accounts: [],
+            groups: [],
+            financialEvents: [],
+            moodHistory: [],
+            error: 'Failed to load initial data'
+          };
+        }
         
         if (!fetchedData.error) {
           const processedTrades = fetchedData.trades.map(trade => ({

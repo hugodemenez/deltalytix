@@ -820,6 +820,7 @@ export default {
         location: "Location",
         lastSync: "Last Sync",
         nextSync: "Next Sync",
+        syncInterval: "Sync Interval",
         actions: {
             title: "Actions",
             sync: "Sync",
