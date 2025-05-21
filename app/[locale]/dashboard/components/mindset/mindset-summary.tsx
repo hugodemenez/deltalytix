@@ -127,7 +127,6 @@ export function MindsetSummary({
             </div>
           </div>
 
-          {hasTradingExperience && (
             <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
@@ -153,7 +152,6 @@ export function MindsetSummary({
                 <p className="text-lg font-semibold">{stats.winRate.toFixed(1)}%</p>
               </div>
             </div>
-          )}
         </div>
 
         <div className="space-y-2">
