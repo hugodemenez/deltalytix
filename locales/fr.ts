@@ -245,7 +245,7 @@ export default {
         errorCreatingGroup: "Erreur lors de la création du groupe {name}",
         accountMoved: "Compte {account} déplacé avec succès",
         errorMovingAccount: "Erreur lors du déplacement du compte {account}",
-        tradeOnlyAccounts: "Comptes de trading uniquement",
+        tradeOnlyAccounts: "Comptes sans groupe",
         manageAccounts: "Gérer les comptes",
         createGroup: "Créer un groupe",
         groupName: "Nom du groupe",
