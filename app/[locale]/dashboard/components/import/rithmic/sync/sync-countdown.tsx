@@ -1,57 +1,51 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRithmicSyncStore } from '@/app/[locale]/dashboard/store/rithmic-sync-store'
 import { Badge } from "@/components/ui/badge"
 import { Clock } from 'lucide-react'
 
 interface SyncCountdownProps {
-  lastSyncTime: string | null
+  lastSyncTime: string
   isAutoSyncing: boolean
 }
 
 export function SyncCountdown({ lastSyncTime, isAutoSyncing }: SyncCountdownProps) {
-  const [timeUntilSync, setTimeUntilSync] = useState<string>('')
+  const [timeLeft, setTimeLeft] = useState<string>('')
+  const { syncInterval } = useRithmicSyncStore()
 
   useEffect(() => {
-    function updateCountdown() {
-      if (!lastSyncTime) {
-        setTimeUntilSync('Sync needed')
+    const calculateTimeLeft = () => {
+      const lastSync = new Date(lastSyncTime)
+      const now = new Date()
+      const nextSync = new Date(lastSync.getTime() + syncInterval * 60 * 1000) // Convert minutes to milliseconds
+      const diff = nextSync.getTime() - now.getTime()
+
+      if (diff <= 0) {
+        setTimeLeft('Ready')
         return
       }
 
-      const now = new Date().getTime()
-      const lastSync = new Date(lastSyncTime).getTime()
-      const hoursSinceLastSync = (now - lastSync) / (1000 * 60 * 60)
-      
-      if (isAutoSyncing) {
-        setTimeUntilSync('Syncing...')
-        return
-      }
+      const minutes = Math.floor(diff / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
 
-      if (hoursSinceLastSync >= 1) {
-        setTimeUntilSync('Sync needed')
-        return
-      }
-
-      const minutesUntilSync = 60 - (hoursSinceLastSync * 60)
-      const minutes = Math.floor(minutesUntilSync)
-      const seconds = Math.floor((minutesUntilSync - minutes) * 60)
-      
-      setTimeUntilSync(`${minutes}m ${seconds}s`)
+      setTimeLeft(`${minutes}m ${seconds}s`)
     }
 
-    // Update immediately
-    updateCountdown()
+    calculateTimeLeft()
+    const interval = setInterval(calculateTimeLeft, 1000)
 
-    // Update every second
-    const interval = setInterval(updateCountdown, 1000)
     return () => clearInterval(interval)
-  }, [lastSyncTime, isAutoSyncing])
+  }, [lastSyncTime, syncInterval])
+
+  if (isAutoSyncing) {
+    return <span className="text-primary">Syncing...</span>
+  }
 
   return (
     <Badge variant={isAutoSyncing ? "default" : "secondary"} className="ml-2">
       <Clock className="h-3 w-3 mr-1" />
-      {timeUntilSync}
+      {timeLeft}
     </Badge>
   )
 } 
