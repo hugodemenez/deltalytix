@@ -96,9 +96,9 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
   }, 0)
 
   const badgeStyles = {
-    2: "bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20",
-    1: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20",
-    0: "bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20"
+    2: "bg-background text-foreground border-border hover:bg-accent",
+    1: "bg-background text-foreground border-border hover:bg-accent",
+    0: "bg-background text-foreground border-border hover:bg-accent"
   }
 
   return (
