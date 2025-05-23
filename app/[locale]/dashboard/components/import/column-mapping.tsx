@@ -2,11 +2,16 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { XIcon, AlertTriangleIcon, InfoIcon } from 'lucide-react'
+import { XIcon, AlertTriangleIcon, InfoIcon, RefreshCwIcon, SparklesIcon } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { readStreamableValue } from 'ai/rsc'
+import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { ImportType } from './import-type-selection'
-import { generateCsvMapping } from '@/server/generate-csv-mappings'
+import { mappingSchema } from '@/app/api/mappings/schema'
+import { cn } from '@/lib/utils'
+import { z } from 'zod'
+
+type MappingObject = z.infer<typeof mappingSchema>
+type MappingKey = keyof MappingObject
 
 type ColumnConfig = {
   [key: string]: {
@@ -43,55 +48,31 @@ interface ColumnMappingProps {
 }
 
 export default function ColumnMapping({ headers, csvData, mappings, setMappings, error, importType }: ColumnMappingProps) {
-  const [isGeneratingMappings, setIsGeneratingMappings] = useState(false);
 
-  const generateAIMappings = useCallback(async () => {
-    setIsGeneratingMappings(true);
-    try {
-      const firstRows = csvData.slice(1, 6).map(row => {
-        const rowData: Record<string, string> = {};
-        headers.forEach((header, i) => {
-          rowData[header] = row[i];
-        });
-        return rowData;
-      });
-      const aiMappings = await generateCsvMapping(headers, firstRows);
-
-      const newMappings: { [key: string]: string } = {};
-
-      for await (const partialObject of readStreamableValue(aiMappings.object)) {
-        if (partialObject) {
-          Object.entries(partialObject).forEach(([field, value]) => {
-            if (typeof value === 'string' && headers.includes(value) && Object.keys(columnConfig).includes(field)) {
-              newMappings[value] = field;
+  const { object, submit, isLoading } = useObject<MappingObject>({
+    api: '/api/mappings',
+    schema: mappingSchema,
+    onError(error) {
+      console.error('Error generating AI mappings:', error);
+    },
+    onFinish({ object }) {
+      
+      setMappings(prev => {
+        const newMappings = { ...prev };
+        // For each destination column in the object
+        if (object) {
+          Object.entries(object).forEach(([destinationColumn, header]) => {
+            // If this header exists in our CSV and isn't already mapped
+            if (headers.includes(header) && !Object.values(prev).includes(destinationColumn)) {
+              newMappings[header] = destinationColumn;
             }
           });
         }
-      }
-      console.log('newMappings', newMappings)
-
-      headers.forEach(header => {
-        if (!newMappings[header]) {
-          const defaultMapping = Object.entries(columnConfig).find(([_, config]) =>
-            config.defaultMapping.includes(header.toLowerCase())
-          );
-          if (defaultMapping) {
-            newMappings[header] = defaultMapping[0];
-          }
-        }
+        return newMappings;
       });
 
-      setMappings(newMappings);
-    } catch (error) {
-      console.error('Error generating AI mappings:', error);
-    } finally {
-      setIsGeneratingMappings(false);
     }
-  }, [headers, csvData, setMappings]);
-
-  useEffect(() => {
-    generateAIMappings();
-  }, [generateAIMappings]);
+  });
 
   const handleMapping = (header: string, value: string) => {
     setMappings(prev => {
@@ -123,17 +104,34 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
     )
   }
 
-  if (isGeneratingMappings) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="h-full flex flex-col">
       <div className="mb-4">
+        {getRemainingFieldsToMap().length > 0 && (
+          <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r mb-4" role="alert">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <SparklesIcon className="h-6 w-6 text-yellow-500 animate-pulse" />
+                  <div className="absolute -inset-1 bg-yellow-200 rounded-full blur-sm opacity-50 animate-ping" />
+                </div>
+                <div>
+                  <p className="font-bold">Unmapped Fields</p>
+                  <p className="text-sm mt-1">Use AI to automatically map your CSV columns to the correct fields.</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => submit({ fieldColumns: headers, firstRows: csvData.slice(1, 6) })}
+                className="flex items-center gap-2 hover:bg-yellow-200 transition-colors"
+              >
+                <RefreshCwIcon className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                Use AI for mapping
+              </Button>
+            </div>
+          </div>
+        )}
         <div className="flex flex-wrap gap-2">
           {getRemainingFieldsToMap().map((field, index) => (
             <span key={index} className={`bg-secondary text-secondary-foreground px-2 py-1 rounded-md text-sm`}>
@@ -174,7 +172,10 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
                   ))}
                 </TableCell>
                 <TableCell>
-                  <Select onValueChange={(value) => handleMapping(header, value)} value={mappings[header] || undefined}>
+                  <Select 
+                    onValueChange={(value) => handleMapping(header, value)} 
+                    value={Object.entries(object || {}).find(([_, value]) => value === header)?.[0]}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select one" />
                     </SelectTrigger>

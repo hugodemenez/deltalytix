@@ -212,12 +212,6 @@ export const platforms: PlatformConfig[] = [
         component: FileUpload
       },
       {
-        id: 'select-headers',
-        title: 'import.steps.selectHeaders',
-        description: 'import.steps.selectHeadersDescription',
-        component: HeaderSelection
-      },
-      {
         id: 'map-columns',
         title: 'import.steps.mapColumns',
         description: 'import.steps.mapColumnsDescription',
