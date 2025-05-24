@@ -13,7 +13,8 @@ export default {
                     description: "Ask questions in plain language"
                 }
             },
-            startButton: "Start Conversation"
+            startButton: "Start Conversation",
+            resumeScroll: "Resume Scroll"
         },
         copy: "Copy"
     },

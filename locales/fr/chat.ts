@@ -13,7 +13,8 @@ export default {
                     description: "Posez vos questions en langage courant"
                 }
             },
-            startButton: "Démarrer la Conversation"
+            startButton: "Démarrer la Conversation",
+            resumeScroll: "Reprendre le défilement"
         },
         copy: "Copier"
     },

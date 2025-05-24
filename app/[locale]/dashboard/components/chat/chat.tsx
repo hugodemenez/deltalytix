@@ -99,7 +99,9 @@ function useMessageVirtualization(messages: Message[]) {
 }
 
 // Resume Scroll Button Component
-const ResumeScrollButton = ({ onClick, show }: { onClick: () => void; show: boolean }) => (
+const ResumeScrollButton = ({ onClick, show }: { onClick: () => void; show: boolean }) => {
+    const t = useI18n()
+    return (
     <AnimatePresence>
         {show && (
             <motion.div
@@ -111,12 +113,13 @@ const ResumeScrollButton = ({ onClick, show }: { onClick: () => void; show: bool
             >
                 <Button onClick={onClick} size="sm" className="shadow-lg hover:shadow-xl transition-shadow" variant="secondary">
                     <ChevronDown className="h-4 w-4 mr-1" />
-                    Resume Scroll
+                    {t('chat.overlay.resumeScroll')}
                 </Button>
             </motion.div>
-        )}
-    </AnimatePresence>
-)
+            )}
+        </AnimatePresence>
+    )
+}
 
 // Main Component
 export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
@@ -371,21 +374,21 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
             </CardContent>
 
             {!isStarted && !isLoadingMessages && storedMessages.length === 0 && (
-                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center">
-                    <div className="w-full max-w-md p-6 space-y-6 text-center">
+                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="w-full max-w-md p-4 sm:p-6 space-y-4 sm:space-y-6 text-center">
                         <div className="flex justify-center">
-                            <div className="p-3 rounded-full bg-primary/10">
-                                <MessageSquare className="w-8 h-8 text-primary" />
+                            <div className="p-2 sm:p-3 rounded-full bg-primary/10">
+                                <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
                             </div>
                         </div>
                         <div className="space-y-2">
-                            <h3 className="text-2xl font-semibold tracking-tight">{t('chat.overlay.welcome')}</h3>
-                            <p className="text-muted-foreground">
+                            <h3 className="text-xl sm:text-2xl font-semibold tracking-tight">{t('chat.overlay.welcome')}</h3>
+                            <p className="text-sm sm:text-base text-muted-foreground">
                                 {t('chat.overlay.description')}
                             </p>
                         </div>
                         <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="hidden sm:grid grid-cols-2 gap-4 text-sm">
                                 <Card className="p-3 rounded-lg">
                                     <CardHeader>
                                         <CardTitle>
@@ -412,7 +415,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                             <Button
                                 onClick={() => setIsStarted(true)}
                                 size="lg"
-                                className="w-full animate-in fade-in zoom-in"
+                                className="w-full text-sm sm:text-base animate-in fade-in zoom-in"
                             >
                                 {t('chat.overlay.startButton')}
                             </Button>
