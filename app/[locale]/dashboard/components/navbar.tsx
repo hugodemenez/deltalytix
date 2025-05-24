@@ -1,44 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserData } from "@/components/context/user-data"
-import { Search, LifeBuoy, Cloud, CreditCard, Database, Keyboard, LogOut, Mail, MessageSquare, Settings, User, UserPlus, Moon, Sun, Laptop, Globe, LayoutDashboard, HelpCircle, Eye, EyeOff, Clock, RefreshCw, Home, Users } from "lucide-react"
+import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { signOut } from "@/server/auth"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
-import { useTheme } from '@/components/context/theme-provider'
 import ImportButton from './import/import-button'
 import { SubscriptionBadge } from './subscription-badge'
-import { LanguageSelector } from "@/components/ui/language-selector"
 import { useI18n, useChangeLocale, useCurrentLocale } from "@/locales/client"
 import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
 import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
 import { useOnborda } from 'onborda'
 import DateCalendarFilter from './filters/date-calendar-filter'
-import { FilterDropdowns } from './filters/filter-dropdowns'
 import { ActiveFilterTags } from './filters/active-filter-tags'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useRouter, usePathname } from 'next/navigation'
 import {
   Popover,
   PopoverContent,
@@ -46,8 +37,8 @@ import {
 } from "@/components/ui/popover"
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { AccountFilter } from './filters/account-filter'
+import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/users'
 
-type Theme = 'light' | 'dark' | 'system'
 type Locale = 'en' | 'fr'
 
 // Add timezone list
@@ -65,16 +56,14 @@ const timezones = [
 
 export default function Navbar() {
   const { user, subscription, timezone, setTimezone, refreshTrades } = useUserData()
-  const { theme } = useTheme()
   const t = useI18n()
   const changeLocale = useChangeLocale()
   const currentLocale = useCurrentLocale()
-  const router = useRouter()
-  const pathname = usePathname()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
-  const { startOnborda, closeOnborda } = useOnborda();
+  const { startOnborda } = useOnborda();
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
+  const usersIconRef = useRef<UsersIconHandle>(null)
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
@@ -137,34 +126,15 @@ export default function Navbar() {
           </div>
           <div className="flex items-center space-x-4">
             <div className='hidden md:flex gap-x-4'>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => setShowAccountNumbers(!showAccountNumbers)}
-                      className="h-9 w-9"
-                    >
-                      {showAccountNumbers ? (
-                        <Eye className="h-4 w-4" />
-                      ) : (
-                        <EyeOff className="h-4 w-4" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {showAccountNumbers ? t('filters.hideAccountNumbers') : t('filters.showAccountNumbers')}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="outline" 
                     className="justify-start text-left font-normal"
+                    onMouseEnter={() => usersIconRef.current?.startAnimation()}
+                    onMouseLeave={() => usersIconRef.current?.stopAnimation()}
                   >
-                    <Users className="mr-2 h-4 w-4" />
+                    <UsersIcon ref={usersIconRef} className="h-4 w-4 mr-2" />
                     {t('filters.accounts')}
                   </Button>
                 </DropdownMenuTrigger>

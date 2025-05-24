@@ -74,8 +74,16 @@ export async function saveTrades(data: Trade[]): Promise<TradeResponse> {
     }
 }
 
-export async function getTrades(userId: string, isSubscribed: boolean): Promise<Trade[]> {
+export async function getTrades(): Promise<Trade[]> {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const userId = user?.id
+    if (!userId) {
+      throw new Error('User not found')
+    }
+    const {isActive: isSubscribed} = await getSubscriptionDetails(user?.email || '') || {isSubscribed: false}
+    console.log('[getTrades] isSubscribed:', isSubscribed)
     const where: Prisma.TradeWhereInput = { userId }
     
     // If not subscribed, limit to last week's trades

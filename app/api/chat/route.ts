@@ -1,20 +1,13 @@
-import { openai } from "@ai-sdk/openai";
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { Trade as PrismaTrade } from "@prisma/client";
 import { groupBy } from "@/lib/utils";
-import { getCurrentLocale } from "@/locales/server";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { z } from "zod";
+import { getTrades } from "@/server/database";
+import { openai } from "@ai-sdk/openai";
 
-interface SavedMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-}
-
-interface MoodHistoryEntry {
-  date: string;
-  mood: string;
-  conversation: SavedMessage[];
-}
+export const maxDuration = 30;
 
 interface TradeSummary {
   accountNumber: string;
@@ -36,7 +29,7 @@ function generateTradeSummary(trades: PrismaTrade[]): TradeSummary[] {
     const longTrades = trades.filter(t => t.side === 'long').length;
     const shortTrades = trades.filter(t => t.side === 'short').length;
     const instruments = [...new Set(trades.map(t => t.instrument))];
-    
+
     return {
       accountNumber,
       pnl: accountPnL - accountCommission,
@@ -49,173 +42,127 @@ function generateTradeSummary(trades: PrismaTrade[]): TradeSummary[] {
   });
 }
 
-function getTimeOfDay(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "morning";
-  if (hour < 17) return "afternoon";
-  return "evening";
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const { input, todayTrades, weekTrades, monthTrades, conversationHistory, userMoodHistory, isInitialGreeting, username } = await req.json();
-    const encoder = new TextEncoder();
-    const locale = await getCurrentLocale();
+    const { messages, username, locale } = await req.json();
 
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          const todaySummary = generateTradeSummary(todayTrades);
-          const weekSummary = generateTradeSummary(weekTrades);
-          const monthSummary = generateTradeSummary(monthTrades || []);
+    const result = streamText({
+      model: openai("gpt-4o-mini"),
+      system: `
+      You are a friendly and supportive trading psychology coach. Create a natural, engaging greeting that shows interest in the trader's day.
+      You MUST respond in ${locale} language.
 
-          let pastChatInsights = '';
-          if (userMoodHistory && Array.isArray(userMoodHistory) && userMoodHistory.length > 0) {
-            pastChatInsights = userMoodHistory
-              .slice(-2)
-              .map(entry => {
-                const relevantExchanges = entry.conversation
-                  .slice(-2)
-                  .map((msg: SavedMessage) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.substring(0, 75)}${msg.content.length > 75 ? '...' : ''}`)
-                  .join('\n    ');
-                return `- On ${entry.date} (mood: ${entry.mood}):\n    ${relevantExchanges}`;
-              })
-              .join('\n\n');
-          }
-          if (pastChatInsights) {
-            pastChatInsights = `\n\nRecent Chat Snippets:\n${pastChatInsights}`;
-          }
+      Context:
+      ${username ? `- Trader: ${username}` : ''} - Current date: ${new Date().toISOString()}
 
-          const model = openai.chat('gpt-4.1-mini-2025-04-14');
-
-          if (isInitialGreeting) {
-            const timeOfDay = getTimeOfDay();
-            const { textStream } = await streamText({
-              model,
-              messages: [
-                {
-                  role: 'system',
-                  content: `
-                    You are a friendly and supportive trading psychology coach. Create a natural, engaging greeting that shows interest in the trader's day.
-                    You MUST respond in ${locale} language.
-
-                    Context:
-                    ${username ? `- Trader: ${username}` : ''}
-                    
-                    Today's Performance:
-                    ${todaySummary.length > 0 
-                      ? todaySummary.map(summary => 
-                          `Account ${summary.accountNumber}: ${summary.tradeCount} trades, P&L: $${summary.pnl.toFixed(2)}`
-                        ).join('\n')
-                      : '- No trades yet today'}
-
-                    This Week's Performance:
-                    ${weekSummary.length > 0 
-                      ? weekSummary.map(summary => 
-                          `Account ${summary.accountNumber}: ${summary.tradeCount} trades, P&L: $${summary.pnl.toFixed(2)}`
-                        ).join('\n')
-                      : '- No trades this week'}
-
-                    This Month's Performance:
-                    ${monthSummary.length > 0
-                      ? monthSummary.map(summary =>
-                          `Account ${summary.accountNumber}: ${summary.tradeCount} trades, P&L: $${summary.pnl.toFixed(2)}`
-                        ).join('\n')
-                      : '- No trades this month yet'}
-                    ${pastChatInsights}
-
-                    Guidelines:
-                    - Take into account past exchanges and conversations
-                    - Keep it under 2-3 sentences
-                    - Start with a greeting appropriate for ${timeOfDay} in ${locale} language
-                    - Make it conversational and natural
-                    - If they have trades today, share a brief observation about their activity or performance
-                    - If no trades today but trades this week, mention the week's progress
-                    - If no trades at all, express interest in their preparation
-                    - End with an open-ended invitation to share their thoughts
-                  `
-                }
-              ],
-              temperature: 0.7,
-              maxTokens: 150,
-            });
-
-            for await (const chunk of textStream) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", content: chunk })}\n\n`));
+      Guidelines:
+      - Vary your response types naturally:
+        * Share observations about their trading patterns
+        * Offer gentle insights when appropriate
+        * Ask thoughtful questions when relevant
+        * Acknowledge and validate their experiences
+        * Provide supportive comments
+      - Be conversational and empathetic
+      - Reference specific trading data when relevant
+      - Avoid being overly formal or repetitive
+      - Don't force a question into every response
+    `,
+      toolCallStreaming: true,
+      messages: messages,
+      maxSteps: 5,
+      tools: {
+        // server-side tool with execute function:
+        getTradeDetails: {
+          description: 'Only use this tool if the user asks for trade details. Get trade details for a maximum of 10 trades with specific filters',
+          parameters: z.object({
+            instrument: z.string().describe('Instrument').optional(),
+            startDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z').optional(),
+            endDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z').optional(),
+            accountNumber: z.string().describe('Account number').optional(),
+            side: z.string().describe('Side').optional(),
+          }),
+          execute: async ({ instrument, startDate, endDate, accountNumber, side }: { instrument: string, startDate: string, endDate: string, accountNumber: string, side: string }) => {
+            console.log(`[getTradeDetails] instrument: ${instrument}, startDate: ${startDate}, endDate: ${endDate}, accountNumber: ${accountNumber}, side: ${side}`)
+            let trades = await getTrades();
+            if (accountNumber) {
+              trades = trades.filter(trade => trade.accountNumber === accountNumber);
             }
-          } else {
-            const { textStream } = await streamText({
-              model,
-              messages: [
-                {
-                  role: 'system',
-                  content: `
-                    You are a supportive trading psychology coach engaging in a natural conversation.
-                    You MUST respond in ${locale} language.
-
-                    Trading Context:
-                    Today's Performance:
-                    ${todaySummary.map(summary => 
-                      `Account ${summary.accountNumber}: ${summary.tradeCount} trades, P&L: $${summary.pnl.toFixed(2)}`
-                    ).join('\n')}
-
-                    This Week's Performance:
-                    ${weekSummary.map(summary => 
-                      `Account ${summary.accountNumber}: ${summary.tradeCount} trades, P&L: $${summary.pnl.toFixed(2)}`
-                    ).join('\n')}
-
-                    This Month's Performance:
-                    ${monthSummary.map(summary =>
-                      `Account ${summary.accountNumber}: ${summary.tradeCount} trades, P&L: $${summary.pnl.toFixed(2)}`
-                    ).join('\n')}
-                    ${pastChatInsights}
-
-                    Guidelines:
-                    - Vary your response types naturally:
-                      * Share observations about their trading patterns
-                      * Offer gentle insights when appropriate
-                      * Ask thoughtful questions when relevant
-                      * Acknowledge and validate their experiences
-                      * Provide supportive comments
-                    - Be conversational and empathetic
-                    - Reference specific trading data when relevant
-                    - Avoid being overly formal or repetitive
-                    - Don't force a question into every response
-                  `
-                },
-                ...conversationHistory,
-                { role: 'user', content: input }
-              ],
-              temperature: 0.8,
-              maxTokens: 500,
-            });
-
-            for await (const chunk of textStream) {
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "text", content: chunk })}\n\n`));
+            if (instrument) {
+              trades = trades.filter(trade => trade.instrument === instrument);
             }
-          }
-
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
-          controller.close();
-        } catch (error) {
-          console.error("Error in stream processing:", error);
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: "error", message: "Processing failed" })}\n\n`)
-          );
-          controller.close();
-        }
+            if (startDate) {
+              trades = trades.filter(trade => trade.entryDate >= startDate);
+            }
+            if (endDate) {
+              trades = trades.filter(trade => trade.entryDate <= endDate);
+            }
+            if (side) {
+              trades = trades.filter(trade => trade.side === side);
+            }
+            return trades.slice(0, 10).map(trade => ({
+              accountNumber: trade.accountNumber,
+              instrument: trade.instrument,
+              entryDate: trade.entryDate,
+              closeDate: trade.closeDate,
+              pnl: trade.pnl,
+              commission: trade.commission,
+              side: trade.side,
+              quantity: trade.quantity,
+              entryPrice: trade.entryPrice,
+              closePrice: trade.closePrice,
+              images: [trade.imageBase64,trade.imageBase64Second],
+            }));
+          },
+        },
+        getTradeSummary: {
+          description: 'Get trades between two dates',
+          parameters: z.object({
+            startDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z'),
+            endDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z')
+          }),
+          execute: async ({ startDate, endDate }: { startDate: string, endDate: string }) => {
+            console.log(`[getTradeSummary] startDate: ${startDate}, endDate: ${endDate}`)
+            const trades = await getTrades();
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const filteredTrades = trades.filter(trade => {
+              const tradeDate = new Date(trade.entryDate);
+              return tradeDate >= start && tradeDate <= end;
+            });
+            return generateTradeSummary(filteredTrades);
+          },
+        },
+        // client-side tool that starts user interaction:
+        askForConfirmation: {
+          description: 'Ask the user for confirmation to perform specific actions explaining your thoughts.',
+          parameters: z.object({
+            message: z.string().describe('The message to ask for confirmation. Explaining what next actions are'),
+          }),
+          execute: async ({ message }: { message: string }) => {
+            console.log(`[askForConfirmation] message: ${message}`)
+            return {
+              message: message,
+              state: 'call'
+            };
+          },
+        },
+        // client-side tool that is automatically executed on the client:
+        getLocation: {
+          description:
+            'Get the user location. Always ask for confirmation before using this tool.',
+          parameters: z.object({}),
+        },
       },
     });
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Accel-Buffering": "no",
-      },
-    });
+    return result.toDataStreamResponse();
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return new Response(JSON.stringify({ error: error.errors }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     console.error("Error in chat route:", error);
     return new Response(JSON.stringify({ error: "Failed to process chat" }), {
       status: 500,

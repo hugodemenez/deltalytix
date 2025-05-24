@@ -1,10 +1,10 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
-import { UploadIcon } from 'lucide-react'
+import { UploadIcon, type UploadIconHandle } from '@/components/animated-icons/upload'
 import { Trade } from '@prisma/client'
 import { saveTrades } from '@/server/database'
 import ImportTypeSelection, { ImportType } from './import-type-selection'
@@ -18,6 +18,7 @@ import { ImportDialogHeader } from './components/import-dialog-header'
 import { ImportDialogFooter } from './components/import-dialog-footer'
 import { platforms } from './config/platforms'
 import { FormatPreview } from './components/format-preview'
+import { cn } from '@/lib/utils'
 
 type ColumnConfig = {
   [key: string]: {
@@ -67,6 +68,7 @@ export default function ImportButton() {
   const [isSaving, setIsSaving] = useState<boolean>(false)
   const [processedTrades, setProcessedTrades] = useState<Trade[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(false)
+  const uploadIconRef = useRef<UploadIconHandle>(null)
 
   const { toast } = useToast()
   const { trades, refreshTrades, user } = useUserData()
@@ -349,8 +351,17 @@ export default function ImportButton() {
 
   return (
     <div>
-      <Button onClick={() => setIsOpen(true)} className='w-full' id="import-data">
-        <UploadIcon className="sm:mr-2 h-4 w-4" /> 
+      <Button 
+        onClick={() => setIsOpen(true)} 
+        variant="default"
+        className={cn(
+          "justify-start text-left font-normal w-full",
+        )}
+        id="import-data"
+        onMouseEnter={() => uploadIconRef.current?.startAnimation()}
+        onMouseLeave={() => uploadIconRef.current?.stopAnimation()}
+      >
+        <UploadIcon ref={uploadIconRef} className="h-4 w-4 mr-2" /> 
         <span className='hidden md:block'>{t('import.button')}</span>
       </Button>
       

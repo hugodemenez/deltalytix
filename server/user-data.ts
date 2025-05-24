@@ -172,7 +172,7 @@ export async function loadInitialData(email?: string): Promise<InitialDataRespon
 
     // Run remaining operations concurrently with subscription status
     const [tradesResult, tickDetailsResult, layoutsResult, tagsResult, accountsResult, groupsResult, financialEventsResult, moodHistoryResult] = await Promise.all([
-      getTrades(user.id, subscription?.isActive ?? false).catch(() => []),
+      getTrades().catch(() => []),
       getTickDetails().catch(() => []),
       loadDashboardLayout(user.id).catch(() => null),
       getTags(user.id).catch(() => []),

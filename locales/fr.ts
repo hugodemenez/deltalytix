@@ -5,6 +5,7 @@ import auth from './fr/auth'
 import dropzone from './fr/dropzone'
 import mindset from './fr/mindset'
 import propfirm from './fr/propfirm'
+import chat from './fr/chat'
 
 export default {
     ...shared,
@@ -14,6 +15,7 @@ export default {
     ...dropzone,
     ...mindset,
     ...propfirm,
+    ...chat,
     'footer.heading': 'Pied de page',
     'footer.description': 'Analyses avancées pour les traders modernes.',
     'footer.product.title': 'Produit',

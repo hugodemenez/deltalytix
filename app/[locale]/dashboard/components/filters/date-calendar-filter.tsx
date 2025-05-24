@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { useUserData } from "@/components/context/user-data"
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
 import { DateRange, SelectRangeEventHandler, SelectSingleEventHandler } from "react-day-picker"
@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { useI18n } from "@/locales/client"
 import { useParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { CalendarDaysIcon, type CalendarDaysIconHandle } from "@/components/animated-icons/calendar-days"
 
 export default function DateCalendarFilter() {
   const { dateRange, setDateRange } = useUserData()
@@ -22,6 +23,7 @@ export default function DateCalendarFilter() {
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
+  const calendarIconRef = useRef<CalendarDaysIconHandle>(null)
   
   const dateLocale = locale === 'fr' ? fr : undefined
 
@@ -59,8 +61,10 @@ export default function DateCalendarFilter() {
         !dateRange && "text-muted-foreground"
       )}
       onClick={() => setCalendarOpen(true)}
+      onMouseEnter={() => calendarIconRef.current?.startAnimation()}
+      onMouseLeave={() => calendarIconRef.current?.stopAnimation()}
     >
-      <CalendarIcon className="mr-2 h-4 w-4" />
+      <CalendarDaysIcon ref={calendarIconRef} className="h-4 w-4 mr-2" />
       {dateRange?.from ? (
         dateRange.to && dateRange.from.getTime() !== dateRange.to.getTime() ? (
           <>
