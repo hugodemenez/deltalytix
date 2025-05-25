@@ -7,12 +7,12 @@ import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
 import { useState, useEffect } from "react"
 import { Settings } from "lucide-react"
+import { useModalStateStore } from "../../store/modal-state-store"
 
 
 interface AccountFilterProps {
   showAccountNumbers: boolean
   className?: string
-  onModalOpen?: () => void
 }
 
 interface Account {
@@ -25,16 +25,11 @@ interface TradeAccount {
   number: string
 }
 
-export function AccountFilter({ showAccountNumbers, className, onModalOpen }: AccountFilterProps) {
+export function AccountFilter({ showAccountNumbers, className }: AccountFilterProps) {
   const { trades = [], accountNumbers = [], setAccountNumbers, user, groups, setGroups } = useUserData()
-  const [modalOpen, setModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const t = useI18n()
-
-  const handleModalOpen = () => {
-    setModalOpen(true)
-    onModalOpen?.()
-  }
+  const { setAccountGroupBoardOpen } = useModalStateStore()
 
   // Get unique account numbers from trades
   const tradeAccounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
@@ -157,7 +152,7 @@ export function AccountFilter({ showAccountNumbers, className, onModalOpen }: Ac
           <ScrollArea className="h-[300px]">
             <CommandGroup>
               <CommandItem
-                onSelect={() => onModalOpen?.()}
+                onSelect={() => setAccountGroupBoardOpen(true)}
                 className="flex items-center gap-2"
               >
                 <Settings className="h-4 w-4" />

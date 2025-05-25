@@ -11,6 +11,8 @@ import { signOut } from '@/server/auth'
 import PricingPlans from '@/app/[locale]/(landing)/components/pricing-plans'
 import { redirect, useSearchParams } from 'next/navigation'
 import OnboardingModal from './onboarding-modal'
+import { AccountGroupBoard } from '@/app/[locale]/dashboard/components/filters/account-group-board'
+import { useModalStateStore } from '@/app/[locale]/dashboard/store/modal-state-store'
 
 const PAYWALL_COOLDOWN = 30 * 60 * 1000; // 30 minutes in milliseconds
 
@@ -21,6 +23,7 @@ export default function Modals() {
   const [isTradesDialogOpen, setIsTradesDialogOpen] = useState(false)
   const t = useI18n()
   const searchParams = useSearchParams()
+  const { accountGroupBoardOpen, setAccountGroupBoardOpen } = useModalStateStore()
 
   const checkSubscription = useCallback(() => {
     if (user?.email && !subscription?.isActive) {
@@ -68,6 +71,16 @@ export default function Modals() {
     <>
       {(userLoading || tradesLoading) && <LoadingOverlay />}
       <OnboardingModal />
+
+      {/* Account Group Board */}
+      <Dialog open={accountGroupBoardOpen} onOpenChange={setAccountGroupBoardOpen}>
+        <DialogContent className="sm:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('filters.manageAccounts')}</DialogTitle>
+          </DialogHeader>
+          <AccountGroupBoard/>
+        </DialogContent>
+      </Dialog>
       
 
       <Dialog open={isAlreadySubscribedOpen} onOpenChange={setIsAlreadySubscribedOpen}>

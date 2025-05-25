@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserData } from "@/components/context/user-data"
 import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home } from "lucide-react"
@@ -38,6 +38,7 @@ import {
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { AccountFilter } from './filters/account-filter'
 import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/users'
+import { useModalStateStore } from '../store/modal-state-store'
 
 type Locale = 'en' | 'fr'
 
@@ -64,6 +65,15 @@ export default function Navbar() {
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
   const usersIconRef = useRef<UsersIconHandle>(null)
+  const { accountGroupBoardOpen } = useModalStateStore()
+  const [accountFilterOpen, setAccountFilterOpen] = useState(false)
+
+  // Close account filter when account board is open
+  useEffect(() => {
+    if (accountGroupBoardOpen) {
+      setAccountFilterOpen(false)
+    }
+  }, [accountGroupBoardOpen])
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
@@ -126,7 +136,7 @@ export default function Navbar() {
           </div>
           <div className="flex items-center space-x-4">
             <div className='hidden md:flex gap-x-4'>
-              <DropdownMenu>
+              <DropdownMenu open={accountFilterOpen} onOpenChange={setAccountFilterOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button 
                     variant="outline" 

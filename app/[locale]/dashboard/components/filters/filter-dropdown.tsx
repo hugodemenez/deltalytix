@@ -18,7 +18,7 @@ import { InstrumentFilter } from "./instrument-filter"
 import { AccountFilter } from "./account-filter"
 import { useUserData } from "@/components/context/user-data"
 import { cn } from "@/lib/utils"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -26,17 +26,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AccountGroupBoard } from "./account-group-board"
+import { useModalStateStore } from "../../store/modal-state-store"
 
 export function FilterDropdown() {
   const t = useI18n()
   const { isMobile } = useUserData()
   const [open, setOpen] = useState(false)
-  const [modalOpen, setModalOpen] = useState(false)
+  const [accountFilterOpen, setAccountFilterOpen] = useState(false)
+  const { accountGroupBoardOpen } = useModalStateStore()
 
-  const handleModalOpen = () => {
-    setModalOpen(true)
-    setOpen(false)
-  }
+  // Close both dropdowns when account board is open
+  useEffect(() => {
+    if (accountGroupBoardOpen) {
+      setOpen(false)
+    }
+  }, [accountGroupBoardOpen])
 
   return (
     <>
@@ -64,7 +68,7 @@ export function FilterDropdown() {
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent className="w-[300px]">
-                <AccountFilter showAccountNumbers={true} onModalOpen={handleModalOpen} />
+                <AccountFilter showAccountNumbers={true}/>
               </DropdownMenuSubContent>
             </DropdownMenuPortal>
           </DropdownMenuSub>
@@ -93,14 +97,6 @@ export function FilterDropdown() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('filters.manageAccounts')}</DialogTitle>
-          </DialogHeader>
-          <AccountGroupBoard/>
-        </DialogContent>
-      </Dialog>
     </>
   )
 }
