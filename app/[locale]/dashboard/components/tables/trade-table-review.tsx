@@ -344,9 +344,9 @@ export function TradeTableReview() {
               <Popover>
                 <PopoverTrigger asChild>
                   <div
-                    className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-xs font-medium cursor-pointer hover:bg-primary/20 transition-colors"
+                    className="flex items-center justify-center w-fit min-w-6 px-2 h-6 rounded-full bg-primary/10 text-xs font-medium cursor-pointer hover:bg-primary/20 transition-colors"
                   >
-                    {accounts.length === 1 ? accounts[0].slice(-2) : `+${accounts.length}`}
+                    {accounts.length === 1 ? `${accounts[0].slice(0, 2)}${accounts[0].slice(-2)}` : `+${accounts.length}`}
                   </div>
                 </PopoverTrigger>
                 <PopoverContent 
