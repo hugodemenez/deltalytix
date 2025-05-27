@@ -22,10 +22,11 @@ export default {
         basic: {
             name: 'Basique',
             description: 'Parfait pour essayer Deltalytix et débuter avec l\'analyse de trading.',
-            feature1: '1 compte de trading',
-            feature2: '1 semaine de stockage de données',
-            feature3: 'Imports CSV',
-            feature4: 'Graphiques de base (Calendrier & Profits)',
+            feature1: 'Comptes de trading multiples',
+            feature2: '1 semaine de stockage incluse',
+            feature3: 'Imports CSV basiques uniquement',
+            feature4: 'Toutes les statistiques et graphiques (données limitées à 1 semaine)',
+            feature5: 'Pas de fonctionnalités IA',
         },
         premium: {
             name: 'Premium',
@@ -49,6 +50,7 @@ export default {
         perYear: '/an',
         perMonth: '/mois',
         perQuarter: '/trimestre',
+        fullVersion: 'Version Complète',
         mostPopular: 'Le Plus Populaire',
         free: {
             name: 'Gratuit',
@@ -61,10 +63,12 @@ export default {
         plus: {
             name: 'Plus',
             description: 'Pour les traders sérieux qui veulent libérer leur plein potentiel.',
-            feature1: 'Comptes illimités',
-            feature2: 'Stockage de données illimité',
+            feature1: 'Comptes illimités (aucune limite sur le nombre de comptes à importer)',
+            feature2: 'Stockage de données illimité (stockez autant de trades que vous le souhaitez)',
             feature3: 'Connexion directe Rithmic',
             feature4: 'Toutes les statistiques et graphiques',
+            feature5: 'Insights de trading alimentés par l\'IA',
+            feature6: 'Discutez avec vos données en utilisant des modèles d\'IA avancés pour l\'analyse et le journal de trading',
             promo: {
                 price: '19,99 €',
                 originalPrice: '29,99 €',

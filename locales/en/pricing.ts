@@ -22,10 +22,11 @@ export default {
         basic: {
             name: 'Basic',
             description: 'Perfect for trying out Deltalytix and getting started with trading analytics.',
-            feature1: '1 trading account',
-            feature2: '1 week of data storage',
-            feature3: 'CSV imports',
-            feature4: 'Basic charts (Calendar & Equity)',
+            feature1: 'Multiple trading accounts',
+            feature2: '1 week of data storage included',
+            feature3: 'Basic CSV imports only',
+            feature4: 'All statistics and charts (data limited to 1 week)',
+            feature5: 'No AI features available',
         },
         premium: {
             name: 'Premium',
@@ -49,6 +50,7 @@ export default {
         perYear: '/year',
         perMonth: '/month',
         perQuarter: '/quarter',
+        fullVersion: 'Full Version',
         mostPopular: 'Most Popular',
         free: {
             name: 'Free',
@@ -61,10 +63,12 @@ export default {
         plus: {
             name: 'Plus',
             description: 'For serious traders who want to unlock their full potential.',
-            feature1: 'Unlimited accounts',
-            feature2: 'Unlimited data storage',
+            feature1: 'Unlimited accounts (no limit on how many accounts to import)',
+            feature2: 'Unlimited data storage (store as many trades as you want)',
             feature3: 'Rithmic direct connection',
             feature4: 'All statistics and charts',
+            feature5: 'AI-powered trading insights',
+            feature6: 'Chat with your data using advanced AI models for trading analysis and journaling',
             promo: {
                 price: '€19.99',
                 originalPrice: '€29.99',

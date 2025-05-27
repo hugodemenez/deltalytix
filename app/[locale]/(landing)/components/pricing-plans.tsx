@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Check } from "lucide-react"
+import { Check, X } from "lucide-react"
 import { useI18n } from "@/locales/client"
 import {
   Dialog,
@@ -49,7 +49,11 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       description: t('pricing.basic.description'),
       price: { yearly: 0, quarterly: 0, monthly: 0 },
       features: [
+        t('pricing.basic.feature1'),
         t('pricing.basic.feature2'),
+        t('pricing.basic.feature3'),
+        t('pricing.basic.feature4'),
+        t('pricing.basic.feature5'),
       ]
     },
     plus: {
@@ -64,23 +68,10 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       features: [
         t('pricing.plus.feature1'),
         t('pricing.plus.feature2'),
+        t('pricing.plus.feature3'),
         t('pricing.plus.feature4'),
-      ]
-    },
-    pro: {
-      name: t('pricing.pro.name'),
-      description: t('pricing.pro.description'),
-      price: { 
-        yearly: 800,
-        quarterly: 200,
-        monthly: 99.99
-      },
-      isComingSoon: true,
-      features: [
-        t('pricing.pro.feature1'),
-        t('pricing.pro.feature2'),
-        t('pricing.pro.feature3'),
-        t('pricing.pro.feature4'),
+        t('pricing.plus.feature5'),
+        t('pricing.plus.feature6'),
       ]
     }
   }
@@ -173,7 +164,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
       </div>
 
       {/* Add margin top for mobile to account for sticky header */}
-      <div className="mt-4 md:mt-0 grid md:grid-cols-3 gap-8 max-w-7xl mx-auto">
+      <div className="mt-4 md:mt-0 grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
         {Object.entries(plans).map(([key, plan]) => (
           <div key={key} className={`relative ${plan.isPopular ? 'z-10' : ''}`}>
             {plan.isPopular && (
@@ -187,7 +178,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
               {plan.isPopular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <span className="bg-primary text-primary-foreground text-sm font-medium px-3 py-1 rounded-full whitespace-nowrap">
-                    {t('pricing.mostPopular')}
+                    {t('pricing.fullVersion')}
                   </span>
                 </div>
               )}
@@ -202,7 +193,11 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                 <ul className="space-y-2">
                   {plan.features.map((feature, index) => (
                     <li key={index} className="flex items-start">
-                      <Check className="h-4 w-4 text-green-500 mr-2 mt-1 shrink-0" />
+                      {key === 'basic' && index !== 1 && index !== 0 ? (
+                        <X className="h-4 w-4 text-red-500 mr-2 mt-1 shrink-0" />
+                      ) : (
+                        <Check className="h-4 w-4 text-green-500 mr-2 mt-1 shrink-0" />
+                      )}
                       <span className="text-sm">{feature}</span>
                     </li>
                   ))}
