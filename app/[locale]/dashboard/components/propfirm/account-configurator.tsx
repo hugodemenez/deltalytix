@@ -173,7 +173,7 @@ export function AccountConfigurator({ account, onUpdate, onDelete, onAccountsUpd
         </div>
         
         <div className="flex items-center gap-4">
-          <Popover>
+          <Popover modal>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
