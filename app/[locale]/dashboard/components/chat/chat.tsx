@@ -3,14 +3,10 @@
 import type React from "react"
 import { useRef, useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Plus, Camera, Folder, Send, RotateCcw, ChevronDown, StopCircle, MessageSquare, Sparkles } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { RotateCcw, ChevronDown, MessageSquare } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
 import { Message, useChat } from "@ai-sdk/react"
-import ReactMarkdown from "react-markdown"
 import { WidgetSize } from "../../types/dashboard"
 import { BotMessage } from "./bot-message"
 import { UserMessage } from "./user-message"
@@ -19,8 +15,6 @@ import { ChatHeader } from "./header"
 import { useUserData } from "@/components/context/user-data"
 import { useCurrentLocale } from "@/locales/client"
 import { useI18n } from "@/locales/client"
-import { generateGreeting } from "./actions/generate-greeting"
-import { formatInTimeZone } from "date-fns-tz"
 import { loadChat, saveChat } from "./actions/chat-store"
 
 // Types
@@ -126,8 +120,6 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const { user, timezone } = useUserData()
     const locale = useCurrentLocale();
     const t = useI18n()
-    const [initialGreeting, setInitialGreeting] = useState<string>("")
-    const hasGeneratedGreeting = useRef(false)
     const [isStarted, setIsStarted] = useState(false)
     const [storedMessages, setStoredMessages] = useState<Message[]>([])
     const [isLoadingMessages, setIsLoadingMessages] = useState(true)
@@ -153,32 +145,16 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
         loadStoredMessages()
     }, [user?.id])
 
-    const generateInitialGreeting = useCallback(async () => {
-        if (hasGeneratedGreeting.current || !isStarted || isLoadingMessages || storedMessages.length > 0) return
-        hasGeneratedGreeting.current = true
+   
 
-        const greeting = await generateGreeting(
-            locale,
-            user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
-            formatInTimeZone(new Date(), timezone, 'yyyy-MM-dd')
-        )
-        setInitialGreeting(greeting)
-    }, [locale, user, timezone, isStarted, storedMessages, isLoadingMessages])
-
-    const { messages, input, handleInputChange, handleSubmit, status, stop, setMessages, addToolResult, error, reload } =
+    const { messages, input, handleInputChange, handleSubmit, status, stop, setMessages, addToolResult, error, reload, append } =
         useChat({
+            api: "/api/ai/chat",
             body: {
                 username: user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
                 locale: locale,
+                timezone,
             },
-            experimental_throttle: 100,
-            initialMessages: storedMessages.length > 0 ? storedMessages : initialGreeting ? [
-                {
-                    id: 'init-1',
-                    role: 'assistant',
-                    content: initialGreeting,
-                },
-            ] : [],
             onFinish: () => {
                 const saveMessages = async () => {
                     if (!user?.id || messages.length === 0) return
@@ -187,6 +163,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 saveMessages()
             },
         })
+
 
     // Custom scroll management
     useEffect(() => {
@@ -227,15 +204,8 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const handleReset = useCallback(async () => {
         setMessages([])
         setStoredMessages([])
-        hasGeneratedGreeting.current = false
         setIsStarted(false)
-        await generateInitialGreeting()
-        setMessages([{
-            id: 'init-1',
-            role: 'assistant',
-            content: initialGreeting,
-        }])
-    }, [setMessages, setStoredMessages, hasGeneratedGreeting, setIsStarted, generateInitialGreeting, initialGreeting])
+    }, [setMessages, setStoredMessages, setIsStarted])
 
     return (
         <Card className="h-full flex flex-col bg-background relative">
@@ -246,7 +216,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                     style={{ overscrollBehavior: "contain" }}
                     ref={scrollContainerRef}
                 >
-                    <div className="p-4 pb-24">
+                    <div className="p-4">
                         {hasMoreMessages && (
                             <div className="text-center mb-4">
                                 <Button variant="outline" size="sm" onClick={loadMoreMessages} className="text-xs">
@@ -286,6 +256,8 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                                 {message.content}
                                             </BotMessage>
                                         )
+                                    case "system":
+                                        return
                                     default:
                                         return message.parts?.map((part, index) => {
                                             switch (part.type) {
@@ -387,39 +359,19 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 {t('chat.overlay.description')}
                             </p>
                         </div>
-                        <div className="space-y-4">
-                            <div className="hidden sm:grid grid-cols-2 gap-4 text-sm">
-                                <Card className="p-3 rounded-lg">
-                                    <CardHeader>
-                                        <CardTitle>
-                                            <Sparkles className="w-4 h-4 mb-2 text-primary" />
-                                            {t('chat.overlay.features.smartAnalysis.title')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {t('chat.overlay.features.smartAnalysis.description')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                </Card>
-                                <Card className="p-3 rounded-lg">
-                                    <CardHeader>
-                                        <CardTitle>
-                                            <MessageSquare className="w-4 h-4 mb-2 text-primary" />
-                                            {t('chat.overlay.features.naturalChat.title')}
-                                        </CardTitle>
-                                        <CardDescription>
-                                            {t('chat.overlay.features.naturalChat.description')}
-                                        </CardDescription>
-                                    </CardHeader>
-                                </Card>
-                            </div>
                             <Button
-                                onClick={() => setIsStarted(true)}
+                                onClick={() => {
+                                    setIsStarted(true)
+                                    append({
+                                        role: 'system',
+                                        content: 'Say hello to the user when the chat starts remind the time of date and current trading data for week and day',
+                                    })
+                                }}
                                 size="lg"
                                 className="w-full text-sm sm:text-base animate-in fade-in zoom-in"
                             >
                                 {t('chat.overlay.startButton')}
                             </Button>
-                        </div>
                     </div>
                 </div>
             )}

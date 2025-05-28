@@ -11,7 +11,6 @@ export type Conversation = {
 
 export type MindsetData = {
   emotionValue: number;
-  hasTradingExperience: boolean | null;
   selectedNews: string[];
   journalContent: string;
 };
@@ -65,7 +64,6 @@ export async function saveMindset(
         where: { id: existingMood.id },
         data: {
           emotionValue: data.emotionValue,
-          hasTradingExperience: data.hasTradingExperience,
           selectedNews: data.selectedNews,
           journalContent: data.journalContent,
           mood: getMoodLabel(data.emotionValue),
@@ -82,7 +80,6 @@ export async function saveMindset(
         userId: user.id,
         day: today,
         emotionValue: data.emotionValue,
-        hasTradingExperience: data.hasTradingExperience,
         selectedNews: data.selectedNews,
         journalContent: data.journalContent,
         mood: getMoodLabel(data.emotionValue),

@@ -21,16 +21,14 @@ type ImpactLevel = "low" | "medium" | "high"
 
 interface MindsetSummaryProps {
   date: Date
-  hasTradingExperience: boolean | null
   emotionValue: number
   selectedNews: string[]
   journalContent: string
-  onEdit: (section?: 'trading' | 'emotion' | 'journal' | 'news') => void
+  onEdit: (section?: 'emotion' | 'journal' | 'news') => void
 }
 
 export function MindsetSummary({ 
   date, 
-  hasTradingExperience, 
   emotionValue, 
   selectedNews, 
   journalContent,
@@ -98,60 +96,17 @@ export function MindsetSummary({
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <p className="text-sm text-muted-foreground">
-                  {t('mindset.tradingQuestion.title')}
-                </p>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('trading')}>
-                  <Pencil className="h-3 w-3" />
-                </Button>
-              </div>
-              <p className="text-sm">
-                {hasTradingExperience === null 
-                  ? t('mindset.noData')
-                  : hasTradingExperience 
-                    ? t('mindset.tradingQuestion.yes')
-                    : t('mindset.tradingQuestion.no')}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground">
                   {t('mindset.emotion.title')}
                 </p>
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onEdit('emotion')}>
                   <Pencil className="h-3 w-3" />
                 </Button>
               </div>
-              <p className={cn("text-sm font-medium", emotion.color)}>
+              <p className={cn("text-sm", emotion.color)}>
                 {emotion.label}
               </p>
             </div>
           </div>
-
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">
-                    {t('mindset.tradingStats.totalPnL')}
-                  </span>
-                </div>
-                <p className={cn(
-                  "text-lg font-semibold",
-                  stats.totalPnL > 0 ? "text-green-500" : "text-red-500"
-                )}>
-                  {stats.totalPnL.toFixed(2)}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <BarChart2 className="h-4 w-4 text-primary" />
-                  <span className="text-xs text-muted-foreground">
-                    {t('mindset.tradingStats.winRate')}
-                  </span>
-                </div>
-                <p className="text-lg font-semibold">{stats.winRate.toFixed(1)}%</p>
-              </div>
-            </div>
         </div>
 
         <div className="space-y-2">
@@ -173,7 +128,6 @@ export function MindsetSummary({
             />
           )}
         </div>
-
         <div className="space-y-2">
           <div className="flex justify-between flex-col gap-2">
             <div className="flex items-center gap-2">

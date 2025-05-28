@@ -2,10 +2,10 @@ import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { Trade as PrismaTrade } from "@prisma/client";
 import { groupBy } from "@/lib/utils";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { z } from "zod";
 import { getTrades } from "@/server/database";
 import { openai } from "@ai-sdk/openai";
+import { getFinancialEvents } from "@/server/financial-events";
 
 export const maxDuration = 30;
 
@@ -44,16 +44,17 @@ function generateTradeSummary(trades: PrismaTrade[]): TradeSummary[] {
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, username, locale } = await req.json();
+      const { messages, username, locale, timezone } = await req.json();
 
     const result = streamText({
       model: openai("gpt-4o-mini"),
+      
       system: `
       You are a friendly and supportive trading psychology coach. Create a natural, engaging greeting that shows interest in the trader's day.
       You MUST respond in ${locale} language.
 
       Context:
-      ${username ? `- Trader: ${username}` : ''} - Current date: ${new Date().toISOString()}
+      ${username ? `- Trader: ${username}` : ''} - Current date: ${new Date().toISOString()} - User timezone: ${timezone}
 
       Guidelines:
       - Vary your response types naturally:
@@ -72,6 +73,20 @@ export async function POST(req: NextRequest) {
       maxSteps: 5,
       tools: {
         // server-side tool with execute function:
+        getLastTradesData:{
+          description: 'Get X last trades from user can be useful to understand which instrument he is currently trading or trading time',
+          parameters: z.object({
+            number: z.number().describe('Number of trades to retrieve')
+          }),
+          execute: async({number}) => {
+            console.log(`Getting last ${number} trade(s)`)
+            let trades = await getTrades();
+            // Keeps trades from most recent accountNumber
+            trades = trades.sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime());
+            trades = trades.slice(0, number);
+            return trades;
+          }
+        },
         getTradeDetails: {
           description: 'Only use this tool if the user asks for trade details. Get trade details for a maximum of 10 trades with specific filters',
           parameters: z.object({
@@ -130,6 +145,23 @@ export async function POST(req: NextRequest) {
               return tradeDate >= start && tradeDate <= end;
             });
             return generateTradeSummary(filteredTrades);
+          },
+        },
+        getNews: {
+          description: 'Get the news for a given date range',
+          parameters: z.object({
+            startDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z'),
+            endDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z')
+          }),
+          execute: async ({ startDate, endDate }: { startDate: string, endDate: string }) => {
+            const events = await getFinancialEvents(locale);
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const filteredEvents = events.filter(event => {
+              const eventDate = new Date(event.date);
+              return eventDate >= start && eventDate <= end;
+            });
+            return filteredEvents;
           },
         },
         // client-side tool that starts user interaction:

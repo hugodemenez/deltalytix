@@ -148,9 +148,11 @@ export function NoteEditor({
   return (
     <div className={cn("flex flex-col border rounded-md bg-background h-full", className)} style={{ width }}>
       <div 
-        className="relative flex-1 min-h-0" 
-        style={{ overflow: "auto" }}
+        className="flex-1 min-h-0 overflow-auto" 
         onClick={() => editor?.commands.focus()}
+        style={{ 
+          overscrollBehavior: 'contain'
+        }}
       >
         <EditorContent 
           editor={editor} 
@@ -159,7 +161,7 @@ export function NoteEditor({
       </div>
 
       {editor && (
-        <div className="border-t flex flex-wrap items-center p-2 gap-1 bg-muted/20 shrink-0">
+        <div className="flex-none border-t flex flex-wrap items-center p-2 gap-1 bg-muted/20">
           <TooltipProvider delayDuration={300}>
             <Tooltip>
               <TooltipTrigger asChild>

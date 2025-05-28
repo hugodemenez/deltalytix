@@ -659,7 +659,7 @@ export const UserDataProvider: React.FC<{
           };
         }
         
-        if (!fetchedData.error) {
+        if (fetchedData && !fetchedData.error) {
           const processedTrades = fetchedData.trades.map(trade => ({
             ...trade,
             utcDateStr: formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
