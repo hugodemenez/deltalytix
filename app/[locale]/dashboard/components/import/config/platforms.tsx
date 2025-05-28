@@ -530,6 +530,7 @@ export const platforms: PlatformConfig[] = [
     description: 'import.type.etpSync.description',
     category: 'Direct Account Sync',
     videoUrl: process.env.NEXT_PUBLIC_ETP_SYNC_TUTORIAL_VIDEO || '',
+    isComingSoon: true,
     details: 'import.type.etpSync.details',
     logo: {
       path: '/logos/etp.png',
