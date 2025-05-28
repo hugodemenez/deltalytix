@@ -248,7 +248,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                         <RefreshCw className="h-4 w-4" />
                       )}
                     </Button>
-                    <Popover>
+                    <Popover modal>
                       <PopoverTrigger asChild>
                         <Button 
                           variant="ghost" 
