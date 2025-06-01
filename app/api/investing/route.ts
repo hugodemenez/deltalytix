@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { parseISO, isValid } from 'date-fns'
+import { chromium } from 'playwright-core'
+import sparticuzChromium from '@sparticuz/chromium-min'
 
 interface InvestingEvent {
   time: string
@@ -45,6 +47,7 @@ function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
 }
 
 async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
+  let browser = null;
   try {
     // Map language to Investing.com language code
     const langMap = {
@@ -52,37 +55,51 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
       en: '1'   // English
     }
 
-    const response = await fetch(`https://sslecal2.investing.com/?timeZone=55&lang=${langMap[lang]}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"macOS"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
-      }
-    })
-
-    if (!response.ok) {
-      console.error('Investing.com response:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries())
-      })
-      throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`)
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+    
+    if (isProduction) {
+      console.log('Launching Playwright with @sparticuz/chromium-min for production...');
+      browser = await chromium.launch({
+        args: sparticuzChromium.args,
+        executablePath: await sparticuzChromium.executablePath(),
+        headless: true,
+      });
+    } else {
+      console.log('Launching Playwright with local Chromium for development...');
+      browser = await chromium.launch({
+        headless: true 
+      });
     }
 
-    const html = await response.text()
-    console.log('HTML length:', html.length)
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      // Consider reducing resource usage for serverless:
+      // javaScriptEnabled: false, // If the site works without JS after initial challenge
+      // viewport: null, // Disables viewport emulation if not strictly needed
+    });
+    const page = await context.newPage();
+
+    // Navigate to the page
+    const targetUrl = `https://sslecal2.investing.com/?timeZone=55&lang=${langMap[lang]}`;
+    console.log(`Navigating to ${targetUrl} with Playwright...`);
+    
+    const response = await page.goto(targetUrl, {
+      waitUntil: 'domcontentloaded', // Or 'networkidle' for more sensitive cases
+      timeout: 60000 // Increase timeout as page loading + JS challenges can take time
+    });
+
+    if (!response || !response.ok()) {
+      console.error('Playwright navigation response:', {
+        status: response?.status(),
+        statusText: response?.statusText(),
+        headers: response?.headers()
+      });
+      throw new Error(`Playwright navigation failed! status: ${response?.status()} - ${response?.statusText()}`);
+    }
+
+    console.log('Page loaded successfully. Getting HTML content...');
+    const html = await page.content();
+    console.log('HTML length:', html.length);
     
     // Parse the HTML table
     const events: InvestingEvent[] = []
@@ -331,9 +348,11 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
       lang: event.lang,
       timezone: event.timezone
     }))
-  } catch (error) {
-    console.error('Error fetching Investing.com calendar events:', error)
-    return []
+  } finally {
+    if (browser) {
+      console.log('Closing Playwright browser...');
+      await browser.close();
+    }
   }
 }
 
@@ -439,12 +458,38 @@ export async function POST(request: Request) {
   }
 }
 
-// Keep the GET method for backward compatibility or remove it if not needed
 export async function GET(request: Request) {
-  return NextResponse.json({
-    success: false,
-    error: 'Please use POST method with HTML content in the request body',
-  }, { status: 405 })
+  try {
+    // Get the URL and search params
+    const { searchParams } = new URL(request.url)
+    const lang = (searchParams.get('lang') || 'fr') as 'fr' | 'en'
+
+    // Fetch events directly from Investing.com
+    const events = await fetchInvestingCalendarEvents(lang)
+
+    if (events.length === 0) {
+      return NextResponse.json({
+        success: false,
+        error: 'No events found',
+      }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      events: events,
+      count: events.length
+    })
+  } catch (error) {
+    console.error('Error in GET route:', error)
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Failed to fetch events from Investing.com', 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      },
+      { status: 500 }
+    )
+  }
 }
 
 // New function to process HTML content directly
