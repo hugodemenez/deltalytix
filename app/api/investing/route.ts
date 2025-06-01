@@ -59,10 +59,16 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
     
     if (isProduction) {
       console.log('Launching Playwright with @sparticuz/chromium-min for production...');
+      const userDataDir = '/tmp/playwright_user_data';
       browser = await chromium.launch({
-        args: sparticuzChromium.args,
+        args: [
+          ...sparticuzChromium.args,
+          `--user-data-dir=${userDataDir}`,
+          '--disable-dev-shm-usage', // Common for Docker/serverless
+          '--no-sandbox' // Often required in serverless/Docker
+        ],
         executablePath: await sparticuzChromium.executablePath(),
-        headless: true,
+        headless: true, 
       });
     } else {
       console.log('Launching Playwright with local Chromium for development...');
