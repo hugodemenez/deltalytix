@@ -154,7 +154,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
           </CardHeader>
           <CardContent>
             <div className="mb-6 p-4 bg-muted rounded-lg">
-              <div className="flex justify-between items-center mb-3">
+              <div className="flex justify-between items-center mb-3 flex-col sm:flex-row">
                 <span className="text-sm font-medium">{t('pricing.billingPeriod')}</span>
                 <div className="flex gap-2">
                   <Button

@@ -66,7 +66,7 @@ export function ImportFeature() {
             <Image src="/logos/rithmic.png" alt="Rithmic" width={24} height={24} />
           </Circle>
           <Circle ref={div7Ref}>
-            <Image src="/logos/thor.png" alt="Thor" width={24} height={24} />
+            <Image src="/logos/etp.png" alt="Thor" width={24} height={24} />
           </Circle>
         </div>
       </div>
