@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useI18n } from '@/locales/client'
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/tooltip"
 import { HexColorPicker } from 'react-colorful'
 import { cn } from '@/lib/utils'
-import { createTag, updateTag, deleteTag, syncTradeTagsToTagTable } from '@/server/tags'
+import { createTagAction, updateTagAction, deleteTagAction, syncTradeTagsToTagTableAction } from '@/server/tags'
 import { useToast } from '@/hooks/use-toast'
 import { Trade, Tag } from '@prisma/client'
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
@@ -49,6 +49,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { useTradesStore } from '../../../../../store/trades-store'
+import { useUserStore } from '../../../../../store/user-store'
 
 interface TagType {
   id: string
@@ -73,15 +75,13 @@ interface TagWidgetProps {
 export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetProps) {
   const t = useI18n()
   const { 
-    user, 
     tagFilter, 
     setTagFilter, 
-    removeTagFromAllTrades, 
-    updateTrades, 
-    trades: contextTrades,
-    tags,
-    setTags
-  } = useUserData()
+  updateTrades,
+  } = useData()
+  const contextTrades = useTradesStore(state => state.trades)
+  const tags = useUserStore(state => state.tags)
+  const setTags = useUserStore(state => state.setTags)
   const { toast } = useToast()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingTag, setEditingTag] = useState<TagType | null>(null)
@@ -138,40 +138,41 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
           return
         }
 
-        const updatedTag = await updateTag(editingTag.id, {
+        const updatedTag = await updateTagAction(editingTag.id, {
           name: trimmedName,
           description: formData.description || undefined,
           color: formData.color
         })
 
         // Update tag metadata in context and cache
-        setTags((prevTags: Tag[]) => {
-          const newTags = prevTags.map(tag => 
-            tag.name === oldTagName
-              ? { ...tag, name: newTagName, color: formData.color, description: formData.description }
-              : tag
-          )
-          return newTags
-        })
+        const newTags = tags.map(tag => 
+          tag.name === oldTagName
+            ? { ...tag, name: newTagName, color: formData.color, description: formData.description }
+            : tag
+        )
+        setTags(newTags)
 
         // If tag name changed, update all trades that use this tag
         if (oldTagName !== newTagName) {
           // Update trades that have this tag
-          const updatedTrades = contextTrades
-            .filter((trade: Trade) => trade.tags.includes(oldTagName))
-            .map((trade: Trade) => ({
-              id: trade.id,
-              updates: {
+          // We need to update trade by trade, as some trades may have multiple tags
+          // and we need to update each one individually
+          // This is a bit of a hack, but it's the only way to ensure that the trades are updated correctly
+
+          // We need to find each trade which include the old tag name and replace it with the new tag name
+          contextTrades.forEach((trade: Trade) => {
+            if (trade.tags.includes(oldTagName)) {
+              trade.tags = trade.tags.map((tag: string) => 
+                tag === oldTagName ? newTagName : tag
+              )
+              updateTrades([trade.id], {
                 tags: trade.tags.map((tag: string) => 
                   tag === oldTagName ? newTagName : tag
                 )
-              }
-            }))
+              })
+            }
+          })
           
-          if (updatedTrades.length > 0) {
-            updateTrades(updatedTrades)
-          }
-
           // Update tag filter if the renamed tag was selected
           if (tagFilter.tags.includes(oldTagName)) {
             setTagFilter(prev => ({
@@ -202,17 +203,14 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
         }
 
         // Create new tag
-        const newTag = await createTag({
+        const newTag = await createTagAction({
           name: trimmedName,
           description: formData.description || undefined,
           color: formData.color
         })
 
         // Update tag metadata in context and cache
-        setTags((prevTags: Tag[]) => {
-          const newTags = [...prevTags, newTag.tag]
-          return newTags
-        })
+        setTags([...tags, newTag.tag])
 
         toast({
           title: t('widgets.tags.success'),
@@ -243,16 +241,20 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
     
     setIsLoading(true)
     try {
-      await deleteTag(tagToDelete.id)
+      await deleteTagAction(tagToDelete.id)
       
       // Update local tags state and cache
-      setTags(prevTags => {
-        const newTags = prevTags.filter(tag => tag.id !== tagToDelete.id)
-        return newTags
-      })
+      setTags(tags.filter(tag => tag.id !== tagToDelete.id))
       
-      // Remove the tag from all trades in the context
-      removeTagFromAllTrades(tagToDelete.name)
+      // Remove the tag from all trades 
+      contextTrades.forEach((trade: Trade) => {
+        if (trade.tags.includes(tagToDelete.name)) {
+          trade.tags = trade.tags.filter(tag => tag !== tagToDelete.name)
+          updateTrades([trade.id], {
+            tags: trade.tags
+          })
+        }
+      })
       
       // Also remove from tag filter if it's selected
       if (tagFilter.tags.includes(tagToDelete.name)) {

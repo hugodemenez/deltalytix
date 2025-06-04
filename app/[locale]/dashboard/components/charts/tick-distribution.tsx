@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { Info } from 'lucide-react'
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/tooltip"
 import { useI18n } from "@/locales/client"
 import { Button } from "@/components/ui/button"
+import { useTickDetailsStore } from "../../../../../store/tick-details-store"
+import { useUserStore } from "../../../../../store/user-store"
 
 interface TickDistributionProps {
   size?: WidgetSize
@@ -79,7 +81,8 @@ const formatCount = (value: number) => {
 }
 
 export default function TickDistributionChart({ size = 'medium' }: TickDistributionProps) {
-  const { formattedTrades: trades, tickDetails, tickFilter, setTickFilter } = useUserData()
+  const { formattedTrades: trades, tickFilter, setTickFilter } = useData()
+  const tickDetails = useTickDetailsStore(state => state.tickDetails)
   const t = useI18n()
 
   const chartData = React.useMemo(() => {
@@ -93,7 +96,7 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
       const matchingTicker = Object.keys(tickDetails).find(ticker => 
         trade.instrument.includes(ticker)
       )
-      const tickValue = matchingTicker ? tickDetails[matchingTicker] : 1
+      const tickValue = matchingTicker ? tickDetails[matchingTicker].tickSize : 1
       // Calculate PnL per contract first
       const pnlPerContract = Number(trade.pnl) / Number(trade.quantity)
       const ticks = Math.round(pnlPerContract / tickValue)

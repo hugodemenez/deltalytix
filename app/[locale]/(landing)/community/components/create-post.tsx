@@ -37,8 +37,8 @@ import * as z from 'zod'
 import { toast } from 'sonner'
 import { ImagePlus, X } from 'lucide-react'
 import Image from 'next/image'
-import { useUserData } from '@/components/context/user-data'
 import { AuthPrompt } from './auth-prompt'
+import { useUserStore } from '@/store/user-store'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
@@ -57,7 +57,7 @@ type Props = {
 export function CreatePost({ children }: Props) {
   const t = useI18n()
   const router = useRouter()
-  const { user } = useUserData()
+  const user = useUserStore(state => state.user)
   const [open, setOpen] = useState(false)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [isUploading, setIsUploading] = useState(false)

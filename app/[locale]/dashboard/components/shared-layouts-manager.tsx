@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
 import { getUserShared, deleteShared } from "@/server/shared"
 import { useToast } from "@/hooks/use-toast"
@@ -25,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useUserStore } from "../../../../store/user-store"
 
 interface SharedLayout {
   id: string
@@ -76,7 +76,7 @@ function SkeletonCard() {
 export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
   const t = useI18n()
   const { toast } = useToast()
-  const { user } = useUserData()
+  const user = useUserStore(state => state.user)
   const [sharedLayouts, setSharedLayouts] = useState<SharedLayout[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)

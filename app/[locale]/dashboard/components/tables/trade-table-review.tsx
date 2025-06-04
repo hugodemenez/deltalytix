@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef, Fragment, useCallback } from 'react'
-import { useUserData } from '@/components/context/user-data'
+import React, { useState, useMemo } from 'react'
+import { useData } from '@/context/data-provider'
 import {
   ColumnDef,
   flexRender,
@@ -16,42 +16,21 @@ import {
   ExpandedState,
 } from "@tanstack/react-table"
 import { Button } from '@/components/ui/button'
-import { Upload, ArrowUpDown, Plus, Search, Trash2, X, ChevronRight, ChevronDown, ChevronLeft, Info } from 'lucide-react'
-import Image from 'next/image'
-import { Tag, Trade } from '@prisma/client'
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
+import { ChevronRight, ChevronDown, ChevronLeft, Info } from 'lucide-react'
+import { Trade } from '@prisma/client'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  addTagToTrade,
-  removeTagFromTrade,
-  deleteTagFromAllTrades,
-  updateTradeImage,
-} from '@/server/trades'
 import { cn, parsePositionTime } from '@/lib/utils'
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useI18n } from '@/locales/client'
 import { TradeComment } from './trade-comment'
 import { TradeVideoUrl } from './trade-video-url'
 import { TradeTag } from './trade-tag'
 import { formatInTimeZone } from 'date-fns-tz'
-import { ImageGallery } from './trade-image-editor'
 import {
   Tooltip,
   TooltipContent,
@@ -67,7 +46,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { TradeImageUploadDialog } from './trade-image-upload-dialog'
 import { createClient } from '@/lib/supabase'
 import {
   Card,
@@ -83,7 +61,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { groupTrades, ungroupTrades } from '@/server/database'
+import { useUserStore } from '@/store/user-store'
+import { TradeImageEditor } from './trade-image-editor'
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -99,14 +78,15 @@ const supabase = createClient()
 
 export function TradeTableReview() {
   const t = useI18n()
-  const { 
-    formattedTrades: contextTrades, 
-    updateTrade, 
-    timezone, 
-    tags,
-    setTags,
-    updateTrades
-  } = useUserData()
+  const {
+    formattedTrades: contextTrades,
+    updateTrades,
+    groupTrades,
+    ungroupTrades,
+  } = useData()
+  const tags = useUserStore(state => state.tags)
+  const timezone = useUserStore(state => state.timezone)
+
   const [sorting, setSorting] = useState<SortingState>([
     { id: "entryDate", desc: true }
   ])
@@ -121,15 +101,12 @@ export function TradeTableReview() {
 
   const handleRemoveImage = async (tradeIds: string[], isSecondImage: boolean, imageUrl?: string | null) => {
     try {
-      // First update the database
-      await updateTradeImage(tradeIds, null, isSecondImage ? 'imageBase64Second' : 'imageBase64')
-      
-      // Then update the local state
-      await Promise.all(tradeIds.map(tradeId => 
-        updateTrade(tradeId, {
-          [isSecondImage ? 'imageBase64Second' : 'imageBase64']: null
-        })
-      ))
+      const update = {
+        [isSecondImage ? 'imageBase64Second' : 'imageBase64']: null
+      }
+      // Update trades
+      await updateTrades(tradeIds, update)
+
 
       // Remove the image from Supabase storage
       if (imageUrl) {
@@ -144,17 +121,21 @@ export function TradeTableReview() {
     }
   }
 
+  const handleUpdateImage = async (tradeIds: string[], imageBase64: string, isSecondImage: boolean) => {
+    const update = {
+      [isSecondImage ? 'imageBase64Second' : 'imageBase64']: imageBase64
+    }
+    await updateTrades(tradeIds, update)
+  }
+
   const handleGroupTrades = async () => {
     if (selectedTrades.length < 2) return
-    
+
     // Generate a temporary groupId using timestamp + random number
     const tempGroupId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+
     // Update local state immediately
-    updateTrades(selectedTrades.map(tradeId => ({
-      id: tradeId,
-      updates: { groupId: tempGroupId }
-    })))
+    await updateTrades(selectedTrades, { groupId: tempGroupId })
 
     // Reset table selection
     table.resetRowSelection()
@@ -166,12 +147,9 @@ export function TradeTableReview() {
 
   const handleUngroupTrades = async () => {
     if (selectedTrades.length === 0) return
-    
+
     // Update local state immediately
-    updateTrades(selectedTrades.map(tradeId => ({
-      id: tradeId,
-      updates: { groupId: "" }
-    })))
+    await updateTrades(selectedTrades, { groupId: null })
 
     // Reset table selection
     table.resetRowSelection()
@@ -184,11 +162,11 @@ export function TradeTableReview() {
   // Group trades by instrument, entry date, and close date with granularity
   const groupedTrades = useMemo(() => {
     const groups = new Map<string, ExtendedTrade>()
-    
+
     trades.forEach(trade => {
       // Create a key that accounts for granularity
       const entryDate = new Date(trade.entryDate)
-      
+
       // Round dates based on granularity
       const roundDate = (date: Date) => {
         if (groupingGranularity === 0) return date
@@ -199,17 +177,17 @@ export function TradeTableReview() {
       }
 
       const roundedEntryDate = roundDate(entryDate)
-      
+
       const key = trade.groupId ? `${trade.groupId}` : `${trade.instrument}-${roundedEntryDate.toISOString()}`
-      
+
       if (!groups.has(key)) {
         groups.set(key, {
           instrument: trade.instrument,
           entryDate: roundedEntryDate.toISOString(),
           closeDate: trade.closeDate,
           tags: trade.tags,
-          imageBase64: null,
-          imageBase64Second: null,
+          imageBase64: trade.imageBase64,
+          imageBase64Second: trade.imageBase64Second,
           comment: trade.comment,
           videoUrl: null,
           id: '',
@@ -254,7 +232,7 @@ export function TradeTableReview() {
         }
       }
     })
-    
+
     return Array.from(groups.values())
   }, [trades, groupingGranularity])
 
@@ -287,8 +265,8 @@ export function TradeTableReview() {
               row.original.id,
               ...row.original.trades.map(t => t.id)
             ]
-            setSelectedTrades(prev => 
-              value 
+            setSelectedTrades(prev =>
+              value
                 ? [...prev, ...tradeIds]
                 : prev.filter(id => !tradeIds.includes(id))
             )
@@ -307,7 +285,7 @@ export function TradeTableReview() {
       cell: ({ row }) => {
         const trade = row.original
         if (trade.trades.length <= 1) return null
-        
+
         return (
           <Button
             variant="ghost"
@@ -329,9 +307,10 @@ export function TradeTableReview() {
       id: "accounts",
       header: () => (
         <Button
-          variant="ghost"
-          className="hover:bg-transparent px-0 font-medium w-full justify-start"
-        >
+            variant="ghost"
+            size="sm"
+            className="-ml-3 h-8 data-[state=open]:bg-accent"
+          >
           {t('trade-table.accounts')}
         </Button>
       ),
@@ -349,14 +328,14 @@ export function TradeTableReview() {
                     {accounts.length === 1 ? `${accounts[0].slice(0, 2)}${accounts[0].slice(-2)}` : `+${accounts.length}`}
                   </div>
                 </PopoverTrigger>
-                <PopoverContent 
-                  className="w-fit p-0" 
+                <PopoverContent
+                  className="w-fit p-0"
                   align="start"
                   side="right"
                 >
                   <ScrollArea className="h-36 rounded-md border">
                     {accounts.map((account) => (
-                      <div 
+                      <div
                         key={`account-${account}`}
                         className="px-3 py-2 text-sm hover:bg-muted/50 cursor-default"
                       >
@@ -421,11 +400,11 @@ export function TradeTableReview() {
       sortingFn: (rowA, rowB, columnId) => {
         const a = rowA.original.side?.toUpperCase() || ""
         const b = rowB.original.side?.toUpperCase() || ""
-        
+
         // Sort LONG before SHORT
         if (a === "LONG" && b === "SHORT") return -1
         if (a === "SHORT" && b === "LONG") return 1
-        
+
         // Alphabetical fallback for any other values
         return a < b ? -1 : a > b ? 1 : 0
       },
@@ -554,62 +533,25 @@ export function TradeTableReview() {
       id: "image",
       header: ({ column }) => (
         <Button
-          variant="ghost"
-          className="hover:bg-transparent px-0 font-medium w-full justify-start"
-        >
+            variant="ghost"
+            size="sm"
+            className="-ml-3 h-8 data-[state=open]:bg-accent"
+          >
           {t('trade-table.image')}
         </Button>
       ),
       cell: ({ row }) => {
         const trade = row.original
-        const tradeIds = trade.trades.length > 0 
-          ? trade.trades.map(t => t.id) 
+        const tradeIds = trade.trades.length > 0
+          ? trade.trades.map(t => t.id)
           : [trade.id]
-        const imageBase64 = trade.trades.length > 0 ? trade.trades[0].imageBase64 : trade.imageBase64
-        const imageBase64Second = trade.trades.length > 0 ? trade.trades[0].imageBase64Second : trade.imageBase64Second
         return (
           <div className="flex gap-2">
             <div className="relative h-10 w-10">
-              {imageBase64 ? (
-                <ImageGallery 
-                  images={imageBase64} 
-                  onDelete={() => handleRemoveImage(tradeIds, false, imageBase64)}
-                />
-              ) : (
-                <TradeImageUploadDialog
-                  tradeIds={tradeIds}
-                  onSuccess={async (imageUrl) => {
-                    console.log('Image URL:', imageUrl)
-                    // First update the database
-                    await updateTradeImage(tradeIds, imageUrl, 'imageBase64')
-                    // Then update the local state
-                    Promise.all(tradeIds.map(tradeId => 
-                      updateTrade(tradeId, { imageBase64: imageUrl })
-                    ))
-                  }}
-                />
-              )}
-            </div>
-            <div className="relative h-10 w-10">
-              {imageBase64Second ? (
-                <ImageGallery 
-                  images={imageBase64Second} 
-                  onDelete={() => handleRemoveImage(tradeIds, true, imageBase64Second)}
-                />
-              ) : (
-                <TradeImageUploadDialog
-                  tradeIds={tradeIds}
-                  isSecondImage
-                  onSuccess={(imageUrl) => {
-                    // First update the database
-                    updateTradeImage(tradeIds, imageUrl, 'imageBase64Second')
-                    // Then update the local state
-                    Promise.all(tradeIds.map(tradeId => 
-                      updateTrade(tradeId, { imageBase64Second: imageUrl })
-                    ))
-                  }}
-                />
-              )}
+              <TradeImageEditor
+                trade={trade}
+                tradeIds={tradeIds}
+              />
             </div>
           </div>
         )
@@ -619,16 +561,17 @@ export function TradeTableReview() {
       id: "tags",
       header: ({ column }) => (
         <Button
-          variant="ghost"
-          className="hover:bg-transparent px-0 font-medium w-full justify-start"
-        >
+            variant="ghost"
+            size="sm"
+            className="-ml-3 h-8 data-[state=open]:bg-accent"
+          >
           {t('trade-table.tags')}
         </Button>
       ),
       cell: ({ row }) => {
         const trade = row.original
-        const tradeIds = trade.trades.length > 0 
-          ? trade.trades.map(t => t.id) 
+        const tradeIds = trade.trades.length > 0
+          ? trade.trades.map(t => t.id)
           : [trade.id]
         return (
           <div className="min-w-[200px]">
@@ -648,14 +591,14 @@ export function TradeTableReview() {
       ),
       cell: ({ row }) => {
         const trade = row.original
-        const tradeIds = trade.trades.length > 0 
-          ? trade.trades.map(t => t.id) 
+        const tradeIds = trade.trades.length > 0
+          ? trade.trades.map(t => t.id)
           : [trade.id]
         return (
           <div className="min-w-[200px]">
-            <TradeComment 
+            <TradeComment
               tradeIds={tradeIds}
-              comment={trade.trades.length > 0 ? trade.trades[0].comment : trade.comment} 
+              comment={trade.trades.length > 0 ? trade.trades[0].comment : trade.comment}
             />
           </div>
         )
@@ -669,20 +612,16 @@ export function TradeTableReview() {
       ),
       cell: ({ row }) => {
         const trade = row.original
-        const tradeIds = trade.trades.length > 0 
-          ? trade.trades.map(t => t.id) 
+        const tradeIds = trade.trades.length > 0
+          ? trade.trades.map(t => t.id)
           : [trade.id]
         return (
           <div className="min-w-[200px]">
-            <TradeVideoUrl 
+            <TradeVideoUrl
               tradeIds={tradeIds}
-              videoUrl={trade.trades.length > 0 ? trade.trades[0].videoUrl : trade.videoUrl} 
-              onVideoUrlChange={(videoUrl) => {
-                if (trade.trades.length > 0) {
-                  trade.trades.forEach(t => updateTrade(t.id, { videoUrl }))
-                } else {
-                  updateTrade(trade.id, { videoUrl })
-                }
+              videoUrl={trade.trades.length > 0 ? trade.trades[0].videoUrl : trade.videoUrl}
+              onVideoUrlChange={async (videoUrl) => {
+                await updateTrades(tradeIds, { videoUrl })
               }}
             />
           </div>
@@ -701,6 +640,7 @@ export function TradeTableReview() {
       columnVisibility,
       expanded,
     },
+    paginateExpandedRows: false,
     onExpandedChange: setExpanded,
     getSubRows: (row) => row.trades,
     getCoreRowModel: getCoreRowModel(),
@@ -720,7 +660,7 @@ export function TradeTableReview() {
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader 
+      <CardHeader
         className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]"
       >
         <div className="flex items-center justify-between w-full">
@@ -786,24 +726,24 @@ export function TradeTableReview() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 overflow-hidden pt-0">
+      <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
         <div className="flex h-full flex-col overflow-hidden">
           <Table className="w-full">
             <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <TableHead 
-                      key={header.id} 
+                    <TableHead
+                      key={header.id}
                       className="whitespace-nowrap px-4 py-3 text-left text-sm"
                       style={{ width: header.getSize() }}
                     >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -818,16 +758,16 @@ export function TradeTableReview() {
                       data-state={row.getIsSelected() && "selected"}
                       className={cn(
                         "border-b transition-colors hover:bg-muted",
-                        row.getIsExpanded() 
-                          ? "bg-muted" 
-                          : row.getCanExpand() 
-                            ? "" 
+                        row.getIsExpanded()
+                          ? "bg-muted"
+                          : row.getCanExpand()
+                            ? ""
                             : "bg-muted/50"
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell 
-                          key={cell.id} 
+                        <TableCell
+                          key={cell.id}
                           className="whitespace-nowrap px-4 py-2.5 text-sm"
                           style={{ width: cell.column.getSize() }}
                         >
@@ -866,9 +806,9 @@ export function TradeTableReview() {
             {t('trade-table.previous')}
           </Button>
           <span className="text-sm">
-            {t('trade-table.pageInfo', { 
-              current: table.getState().pagination.pageIndex + 1, 
-              total: table.getPageCount() 
+            {t('trade-table.pageInfo', {
+              current: table.getState().pagination.pageIndex + 1,
+              total: table.getPageCount()
             })}
           </span>
           <Button
@@ -880,19 +820,19 @@ export function TradeTableReview() {
             {t('trade-table.next')}
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
-              setPageSize(pageSize+10)
+              setPageSize(pageSize + 10)
               table.setPageSize(pageSize)
             }}
           >
             {t('trade-table.pageSize')}
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => {
               setPageSize(10)
               table.resetPageSize()

@@ -16,7 +16,7 @@ import { useI18n } from "@/locales/client"
 import { PnlFilter } from "./pnl-filter"
 import { InstrumentFilter } from "./instrument-filter"
 import { AccountFilter } from "./account-filter"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { useState, useEffect } from "react"
 import {
@@ -26,11 +26,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { AccountGroupBoard } from "./account-group-board"
-import { useModalStateStore } from "../../store/modal-state-store"
+import { useModalStateStore } from "../../../../../store/modal-state-store"
 
 export function FilterDropdown() {
   const t = useI18n()
-  const { isMobile } = useUserData()
+  const { isMobile } = useData()
   const [open, setOpen] = useState(false)
   const [accountFilterOpen, setAccountFilterOpen] = useState(false)
   const { accountGroupBoardOpen } = useModalStateStore()

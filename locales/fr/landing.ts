@@ -13,8 +13,8 @@ export default {
             subheading: 'Les bons outils pour vous aider à améliorer votre trading.',
             'data-import': {
                 title: 'Importation de données',
-                description: 'Importez des données de divers fournisseurs. Notre plateforme permet d\'importer vos données automatiquement avec Rithmic via une synchronisation ou avec des imports .CSV permettant de supporter la plupart des courtiers et plateformes de trading comme Tradovate, Quantower ou TopstepX.',
-                stat: 'Imports CSV avec de nombreux fournisseurs',
+                description: 'Notre plateforme offre une synchronisation automatique avec Rithmic et Tradovate, ainsi que des intégrations avec des copiers comme ETP et Thor. Grâce à notre système unique de mapping intelligent, vous pouvez importer n\'importe quel fichier CSV, quelle que soit sa structure.',
+                stat: 'Intégrations multiples et synchronisation',
             },
             'performance-visualization': {
                 title: 'Visualisation des performances',
@@ -30,6 +30,97 @@ export default {
                 title: 'Journal assisté par IA',
                 description: 'Améliorez vos émotions de trading grâce à un journal assisté par IA. Nos algorithmes avancés analysent vos entrées pour identifier les modèles émotionnels et les biais.',
                 stat: 'Intelligence émotionnelle',
+            },
+            'chat-feature': {
+                title: 'Coach de Trading IA',
+                description: 'Obtenez des insights et analyses personnalisés de notre coach IA. Comprenez vos patterns de trading, identifiez vos forces et faiblesses, et recevez des recommandations actionnables.',
+                stat: 'Analyse en Temps Réel',
+                conversation: {
+                    analyze: 'Analysez ma performance de trading du mois dernier et identifiez les facteurs clés affectant mon P&L',
+                    patterns: 'Quels patterns psychologiques observez-vous dans mes trades perdants ? Y a-t-il des conditions de marché spécifiques où j\'ai systématiquement des difficultés ?',
+                    riskManagement: 'Comment puis-je améliorer ma gestion des risques ? Mon drawdown maximum semble trop élevé pour la taille de mon compte',
+                    profitableSetup: 'Quelle est ma configuration la plus rentable et dans quelles conditions de marché fonctionne-t-elle le mieux ?',
+                    journalInsights: 'Basé sur mes entrées de journal de trading, quels états émotionnels corrèlent avec mes meilleurs et pires jours de trading ?',
+                    marketTiming: 'Analysez mon timing d\'entrée et de sortie - est-ce que j\'entre trop tôt ou trop tard par rapport aux niveaux clés ?',
+                    positionSizing: 'Ma taille de position est-elle optimale pour mon taux de réussite et mes ratios risque-récompense selon les différentes configurations ?'
+                },
+                responses: {
+                    analyze: 'J\'ai analysé vos 127 trades du mois dernier. Votre performance globale montre une exécution technique solide mais une interférence émotionnelle significative pendant les périodes de drawdown.',
+                    patterns: 'Vos entrées de journal révèlent un pattern clair : après 2+ pertes consécutives, vous augmentez la taille de position de 40% et abandonnez vos critères de configuration. Ce trading de revanche représente 73% de vos plus grandes pertes.',
+                    riskManagement: 'Votre drawdown maximum de 12% dépasse les niveaux optimaux pour votre taille de compte. Je recommande d\'implémenter une réduction de taille de position après les pertes et d\'utiliser la règle des 2% de manière cohérente.',
+                    profitableSetup: 'Votre stratégie de breakout matinal montre des résultats exceptionnels avec 82% de taux de réussite pendant 9h30-10h30 EST lorsqu\'elle est combinée avec une confirmation de volume supérieure à 1.5x la moyenne.',
+                    journalInsights: 'Forte corrélation entre la qualité du sommeil et les performances - vos trades de mardi-mercredi montrent 23% de P&L plus élevé quand vous mentionnez "bien reposé" dans vos entrées de journal.',
+                    marketTiming: 'L\'analyse montre que vous entrez 15-30 minutes trop tôt sur les breakouts. Attendre la confirmation améliorerait votre taux de réussite de 68% à environ 78%.',
+                    positionSizing: 'Votre sizing actuel est à 87% de l\'optimal Kelly. Considérez augmenter la taille sur vos configurations à plus haute probabilité tout en maintenant une approche conservatrice sur les trades expérimentaux.'
+                },
+                analysis: {
+                    winRate: {
+                        metric: 'Taux de Réussite Global',
+                        value: '68%',
+                        trend: 'positive',
+                        insight: 'Au-dessus de la moyenne mais risque de concentration sur les trades de breakout (45% du volume) nécessite diversification'
+                    },
+                    revengeTrading: {
+                        metric: 'Impact du Trading de Revanche',
+                        value: '73% taux de perte',
+                        trend: 'negative',
+                        insight: 'Fuite majeure de profits : trades de revanche après 2+ pertes montrent 73% de taux de perte vs 32% normal'
+                    },
+                    fomo: {
+                        metric: 'Analyse des Trades FOMO',
+                        value: '12 occurrences',
+                        trend: 'negative',
+                        insight: 'Entrées FOMO typiquement 15-30 minutes après breakout initial montrent 83% de taux de perte'
+                    },
+                    bestSetup: {
+                        metric: 'Performance Configuration Optimale',
+                        value: '82% taux de réussite',
+                        trend: 'positive',
+                        insight: 'Breakouts matinaux (9h30-10h30 EST) avec confirmation de volume montrent le plus haut succès'
+                    },
+                    bestDays: {
+                        metric: 'Performance par Jour',
+                        value: 'Pic Mar-Mer',
+                        trend: 'neutral',
+                        insight: 'Mardi-Mercredi montrent 23% de P&L moyen plus élevé, probablement dû à un horaire de sommeil cohérent'
+                    },
+                    riskReward: {
+                        metric: 'Optimisation Risque-Récompense',
+                        value: '1:1.8 moyenne',
+                        trend: 'positive',
+                        insight: 'Actuel R:R de 1:1.8 est optimal pour votre taux de réussite de 68%, mais pourrait améliorer placement des stops'
+                    },
+                    emotionalState: {
+                        metric: 'Corrélation Trading Émotionnel',
+                        value: '34% variance',
+                        trend: 'negative',
+                        insight: 'Entrées de journal mentionnant "stress" ou "pressé" corrèlent avec 34% de performance inférieure'
+                    },
+                    marketConditions: {
+                        metric: 'Adaptation au Marché',
+                        value: 'Tendance: 78% TR',
+                        trend: 'positive',
+                        insight: 'Performance forte les jours de tendance mais difficultés en conditions hachées (45% TR)'
+                    },
+                    executionQuality: {
+                        metric: 'Analyse Exécution des Trades',
+                        value: '12.3% impact slippage',
+                        trend: 'negative',
+                        insight: 'Moyenne de 2.3 ticks de slippage sur entrées suggère amélioration du timing des ordres au marché'
+                    },
+                    positionSizing: {
+                        metric: 'Efficacité Taille de Position',
+                        value: '87% Kelly optimal',
+                        trend: 'positive',
+                        insight: 'Taille de position est 87% de Kelly optimal - légèrement conservateur mais approprié pour tolérance au risque'
+                    },
+                    trends: {
+                        positive: 'FORCE',
+                        negative: 'FAIBLESSE',
+                        neutral: 'INSIGHT',
+                        warning: 'ATTENTION'
+                    }
+                }
             },
         },
         openSource: {

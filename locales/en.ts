@@ -984,6 +984,17 @@ export default {
             succeeded: "Paid",
             pending: "Pending",
             failed: "Failed"
+        },
+        cancellationReason: "Why are you canceling?",
+        selectReason: "Select a reason",
+        additionalFeedback: "Additional feedback (optional)",
+        feedbackPlaceholder: "Tell us more about your experience...",
+        reasons: {
+            tooExpensive: "Too expensive",
+            missingFeatures: "Missing features I need",
+            notUsing: "Not using it enough",
+            switching: "Switching to another service",
+            other: "Other reason"
         }
     },
     'onboarding.welcome': 'Welcome to Deltalytix!',

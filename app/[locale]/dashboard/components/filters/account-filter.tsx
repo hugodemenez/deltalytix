@@ -3,11 +3,13 @@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useUserData } from "@/components/context/user-data"
 import { useI18n } from "@/locales/client"
 import { useState, useEffect } from "react"
 import { Settings } from "lucide-react"
-import { useModalStateStore } from "../../store/modal-state-store"
+import { useModalStateStore } from "../../../../../store/modal-state-store"
+import { useData } from "@/context/data-provider"
+import { useTradesStore } from "../../../../../store/trades-store"
+import { useUserStore } from "../../../../../store/user-store"
 
 
 interface AccountFilterProps {
@@ -26,7 +28,9 @@ interface TradeAccount {
 }
 
 export function AccountFilter({ showAccountNumbers, className }: AccountFilterProps) {
-  const { trades = [], accountNumbers = [], setAccountNumbers, user, groups, setGroups } = useUserData()
+  const { accountNumbers = [], setAccountNumbers} = useData()
+  const groups = useUserStore(state => state.groups)
+  const trades = useTradesStore(state => state.trades)
   const [searchTerm, setSearchTerm] = useState("")
   const t = useI18n()
   const { setAccountGroupBoardOpen } = useModalStateStore()

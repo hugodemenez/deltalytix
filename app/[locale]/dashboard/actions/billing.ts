@@ -3,10 +3,13 @@
 import { createClient } from '@/server/auth'
 import { cookies } from 'next/headers'
 import Stripe from 'stripe'
+import { PrismaClient } from '@prisma/client'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-06-20',
 })
+
+const prisma = new PrismaClient()
 
 export type SubscriptionWithPrice = {
   id: string
@@ -152,5 +155,35 @@ export async function updateSubscription(action: 'pause' | 'resume' | 'cancel', 
   } catch (error) {
     console.error('Error updating subscription:', error)
     return { success: false, error: 'Failed to update subscription' }
+  }
+}
+
+export async function collectSubscriptionFeedback(
+  email: string,
+  event: string,
+  cancellationReason?: string,
+  feedback?: string
+) {
+  try {
+    const supabase = await createClient()
+    
+    // Get the current user
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.email) throw new Error('User not found')
+
+    // Create feedback record
+    await prisma.subscriptionFeedback.create({
+      data: {
+        email,
+        event,
+        cancellationReason,
+        feedback,
+      }
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error collecting subscription feedback:', error)
+    return { success: false, error: 'Failed to collect feedback' }
   }
 } 

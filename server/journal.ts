@@ -193,11 +193,20 @@ export async function getMoodForDay(date: string) {
   }
 }
 
-export async function getMoodHistory(userId: string) {
+export async function getMoodHistory(fromDate?: Date, toDate?: Date) {
+  const supabase = await createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+  if (error || !user) {
+    throw new Error('Unauthorized')
+  }
   try {
     const moods = await prisma.mood.findMany({
       where: {
-        userId,
+        userId: user.id,
+        day: fromDate ? {
+          gte: fromDate,
+          lt: toDate ? toDate : undefined,
+        } : undefined,
       },
       orderBy: {
         day: 'desc',

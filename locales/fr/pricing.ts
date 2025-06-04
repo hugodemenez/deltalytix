@@ -5,6 +5,7 @@ export default {
         yearly: 'annuel',
         monthly: 'mensuel',
         quarterly: 'trimestriel',
+        billingPeriod: 'Période de facturation',
         yearlySavings: 'Économisez jusqu\'à 20% avec la facturation annuelle',
         quarterlySavings: 'Économisez jusqu\'à 10% avec la facturation trimestrielle',
         monthlyFlexibility: 'Facturation mensuelle flexible',

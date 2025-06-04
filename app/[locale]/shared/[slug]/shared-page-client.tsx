@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { format } from "date-fns"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { SharedWidgetCanvas } from "./shared-widget-canvas"
 import { Logo } from "@/components/logo"
 import { Button } from "@/components/ui/button"
@@ -28,7 +28,7 @@ interface SharedPageClientProps {
 
 // Create a client component for the accounts selection
 function AccountsSelector({ accounts }: { accounts: string[] }) {
-  const { accountNumbers, setAccountNumbers } = useUserData()
+  const { accountNumbers, setAccountNumbers } = useData()
   const t = useI18n()
   const [isExpanded, setIsExpanded] = useState(false)
   const visibleAccounts = isExpanded ? accounts : accounts.slice(0, 2)
@@ -142,7 +142,7 @@ function TopBanner({ t }: { t: any }) {
 
 export function SharedPageClient({ params, initialData }: SharedPageClientProps) {
   const t = useI18n()
-  const { isLoading, sharedParams, setSharedParams, setAccountNumbers } = useUserData()
+  const { isLoading, sharedParams, setSharedParams, setAccountNumbers } = useData()
 
   // Hydrate the initial data
   useEffect(() => {

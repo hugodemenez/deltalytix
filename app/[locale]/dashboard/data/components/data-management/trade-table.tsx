@@ -8,10 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowUpDown, Trash, ChevronLeft, ChevronRight } from "lucide-react"
-import { saveTrades } from '@/server/database'
+import { saveTradesAction } from '@/server/database'
 import { useToast } from "@/hooks/use-toast"
-import { deleteTradesByIds } from '@/app/[locale]/dashboard/data/actions/actions'
-import { useUserData } from '@/components/context/user-data'
+import { deleteTradesByIdsAction } from '@/server/accounts'
+import { useData } from '@/context/data-provider'
 
 type SortConfig = {
   key: keyof Trade
@@ -19,7 +19,7 @@ type SortConfig = {
 }
 
 export default function TradeTable() {
-  const { refreshTrades, formattedTrades } = useUserData()
+  const { refreshTrades, formattedTrades } = useData()
   const [filterValue, setFilterValue] = useState('')
   const [filterKey, setFilterKey] = useState<keyof Trade>('instrument')
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'entryDate', direction: 'desc' })
@@ -61,21 +61,12 @@ export default function TradeTable() {
   }
 
   const handleDelete = async (ids: string[]) => {
-    await deleteTradesByIds(ids)
+    await deleteTradesByIdsAction(ids)
     setSelectedTrades(new Set())
     refreshTrades()
     toast({
       title: "Trades Deleted",
       description: `${ids.length} trade(s) have been deleted.`,
-    })
-  }
-
-  const handleAddTrade = async (newTrade: Partial<Trade>) => {
-    await saveTrades([newTrade as Trade])
-    refreshTrades()
-    toast({
-      title: "Trade Added",
-      description: "A new trade has been added successfully.",
     })
   }
 

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { formatDistanceToNow } from 'date-fns'
-import { useUserData } from '@/components/context/user-data'
+import { useUserStore } from '@/store/user-store'
 import { useI18n } from '@/locales/client'
 import {
   DropdownMenu,
@@ -48,7 +48,7 @@ function CommentComponent({
   level?: number
 }) {
   const t = useI18n()
-  const { user } = useUserData()
+  const user = useUserStore(state => state.user)
   const [isReplying, setIsReplying] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [content, setContent] = useState(comment.content)
@@ -248,7 +248,7 @@ export function CommentSection({
   const t = useI18n()
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { user } = useUserData()
+  const user = useUserStore(state => state.user)
 
   const handleAddComment = async () => {
     if (isSubmitting || !newComment.trim()) return

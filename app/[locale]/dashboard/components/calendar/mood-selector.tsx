@@ -8,8 +8,8 @@ import { useI18n } from '@/locales/client'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { saveMood, getMoodForDay } from '@/server/journal'
 import { useToast } from '@/hooks/use-toast'
-import { useUserData } from '@/components/context/user-data'
 import { format } from 'date-fns'
+import { useUserStore } from '../../../../../store/user-store'
 
 interface MoodSelectorProps {
   onMoodSelect?: (mood: 'bad' | 'okay' | 'great') => void;
@@ -25,7 +25,7 @@ type StoredMood = {
 export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
   const t = useI18n()
   const { toast } = useToast()
-  const { user } = useUserData()
+  const user = useUserStore(state => state.user)
   const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
   const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
 

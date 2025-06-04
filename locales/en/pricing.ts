@@ -5,6 +5,7 @@ export default {
         yearly: 'Yearly',
         monthly: 'Monthly',
         quarterly: 'Quarterly',
+        billingPeriod: 'Billing Period',
         yearlySavings: 'Save up to 20% with yearly billing',
         quarterlySavings: 'Save up to 10% with quarterly billing',
         monthlyFlexibility: 'Flexible monthly billing',

@@ -3,12 +3,13 @@
 import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import { useI18n, useCurrentLocale } from '@/locales/client'
-import { updateFirstConnectionStatus } from '@/server/onboarding'
+import { useUserStore } from '@/store/user-store'
 
 export default function OnboardingModal() {
-  const { isFirstConnection, setIsFirstConnection } = useUserData()
+  const { setIsFirstConnection } = useData()
+  const isFirstConnection = useUserStore(state => state.user?.isFirstConnection)
   const t = useI18n()
   const locale = useCurrentLocale()
 
@@ -19,7 +20,6 @@ export default function OnboardingModal() {
 
   const handleClose = async () => {
     try {
-      await updateFirstConnectionStatus()
       setIsFirstConnection(false)
     } catch (error) {
       console.error('Failed to update onboarding status:', error)

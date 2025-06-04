@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CopyIcon, RefreshCwIcon, EyeIcon } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
-import { generateEtpToken } from "@/server/etp"
+import { generateEtpToken } from "./action"
 import { useToast } from "@/hooks/use-toast"
-import { useUserData } from "@/components/context/user-data"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import {
@@ -21,12 +20,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useI18n } from "@/locales/client"
+import { useUserStore } from "@/store/user-store"
 
 export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRevealed, setIsRevealed] = useState(false)
   const { toast } = useToast()
-  const { etpToken, refreshUser } = useUserData()
+  const user = useUserStore(state => state.user)
+  const setUser = useUserStore(state => state.setUser)
   const t = useI18n()
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -67,7 +68,7 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
       setIsGenerating(true)
       setIsRevealed(false)
       const result = await generateEtpToken()
-      if (result.error) {
+      if (result.error || !result.token) {
         toast({
           title: "Error",
           description: t('etp.error.generation'),
@@ -75,7 +76,8 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
         })
         return
       }
-      await refreshUser()
+      if (!user) return
+      setUser({ ...user, etpToken: result.token })
       toast({
         title: "Success",
         description: t('etp.generated'),
@@ -92,8 +94,8 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
   }
 
   const handleCopyToken = () => {
-    if (!etpToken) return
-    navigator.clipboard.writeText(etpToken)
+    if (!user?.etpToken) return
+    navigator.clipboard.writeText(user.etpToken)
     toast({
       title: "Success",
       description: t('etp.copied'),
@@ -101,8 +103,8 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
   }
 
   const getMaskedToken = () => {
-    if (!etpToken) return ''
-    return '•'.repeat(etpToken.length)
+    if (!user?.etpToken) return ''
+    return '•'.repeat(user.etpToken.length)
   }
 
   return (
@@ -119,7 +121,7 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
           <Skeleton className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" />
         ) : (
           <Input
-            value={isRevealed ? (etpToken || '') : getMaskedToken()}
+            value={isRevealed ? (user?.etpToken || '') : getMaskedToken()}
             readOnly
             placeholder={t('etp.noToken')}
             className="font-mono"
@@ -130,7 +132,7 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
             <Button
               variant="outline"
               size="icon"
-              disabled={!etpToken || isGenerating}
+              disabled={!user?.etpToken || isGenerating}
             >
               <EyeIcon className="h-4 w-4" />
             </Button>
@@ -152,7 +154,7 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
           variant="outline"
           size="icon"
           onClick={handleCopyToken}
-          disabled={!etpToken || isGenerating}
+          disabled={!user?.etpToken || isGenerating}
         >
           <CopyIcon className="h-4 w-4" />
         </Button>

@@ -8,6 +8,7 @@ export async function ensureAccountAndAssignGroup(
   accountNumber: string,
   groupId: string | null
 ) {
+  console.log('WE ARE MOVING AN ACCOUNT WHICH DOES NOT EXIST YET')
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {

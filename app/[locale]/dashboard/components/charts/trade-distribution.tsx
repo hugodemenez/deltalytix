@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, Label } from
 import type { Props } from 'recharts/types/component/Label'
 import type { PolarViewBox } from 'recharts/types/util/types'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { Info } from 'lucide-react'
@@ -65,7 +65,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
 };
 
 export default function TradeDistributionChart({ size = 'medium' }: TradeDistributionProps) {
-  const { statistics: { nbWin, nbLoss, nbBe, nbTrades } } = useUserData()
+  const { statistics: { nbWin, nbLoss, nbBe, nbTrades } } = useData()
   const t = useI18n()
 
   const chartData = React.useMemo(() => {

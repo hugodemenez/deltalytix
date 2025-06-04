@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useWebSocket } from '@/components/context/rithmic-sync-context'
+import { useWebSocket } from '@/context/rithmic-sync-context'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { XCircle, CheckCircle2, Info, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Progress } from "@/components/ui/progress"
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import { Button } from "@/components/ui/button"
-import { useNotificationStore } from '@/app/[locale]/dashboard/store/notification'
+import { useNotificationStore } from '@/store/notification'
 import { useI18n } from '@/locales/client'
 
 interface Notification {
@@ -57,7 +57,7 @@ export function WebSocketNotifications({ isMockMode = false }: WebSocketNotifica
   const [isComplete, setIsComplete] = useState(false)
   const { isCollapsed, setIsCollapsed } = useNotificationStore()
   const { lastMessage, isConnected, accountsProgress, currentAccount } = useWebSocket()
-  const { refreshTrades } = useUserData()
+  const { refreshTrades } = useData()
   const refreshTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const mockIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
 

@@ -2,14 +2,14 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { useState } from "react"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 
 export function PnlFilter() {
   const t = useI18n()
-  const { pnlRange, setPnlRange } = useUserData()
+  const { pnlRange, setPnlRange } = useData()
   const [customMin, setCustomMin] = useState<string>("")
   const [customMax, setCustomMax] = useState<string>("")
 

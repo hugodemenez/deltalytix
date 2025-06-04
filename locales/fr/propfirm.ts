@@ -60,7 +60,8 @@ export default {
                 percentage: 'Pourcentage',
                 activationFees: 'Frais d\'Activation',
                 balanceRequired: 'Solde Requis',
-                minTradingDays: 'Jours de Trading Minimum pour Paiement'
+                minTradingDays: 'Jours de Trading Minimum pour Paiement',
+                propfirmName: 'Nom de la Prop Firm'
             },
             trailingTypes: {
                 static: 'Statique',

@@ -13,7 +13,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { useUserData } from "@/components/context/user-data"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { addDays, startOfDay, endOfDay, format } from "date-fns"
 import { createShared } from "@/server/shared"
@@ -40,6 +39,8 @@ import { cn } from "@/lib/utils"
 import confetti from 'canvas-confetti'
 import { fr } from 'date-fns/locale'
 import { Switch } from "@/components/ui/switch"
+import { useTradesStore } from "../../../../store/trades-store"
+import { useUserStore } from "../../../../store/user-store"
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -116,7 +117,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const dateLocale = locale === 'fr' ? fr : undefined
     const isMobile = useIsMobile()
     const { toast } = useToast()
-    const { user, trades } = useUserData()
+    const user = useUserStore(state => state.user)
+    const trades = useTradesStore(state => state.trades)
     const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
     const [open, setOpen] = useState(false)
     const [comboboxOpen, setComboboxOpen] = useState(false)

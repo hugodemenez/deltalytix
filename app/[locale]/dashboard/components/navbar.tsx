@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -23,11 +23,8 @@ import ImportButton from './import/import-button'
 import { SubscriptionBadge } from './subscription-badge'
 import { useI18n, useChangeLocale, useCurrentLocale } from "@/locales/client"
 import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
-import { KeyboardShortcutsDialog } from './keyboard-shortcuts-dialog'
-import { useOnborda } from 'onborda'
 import DateCalendarFilter from './filters/date-calendar-filter'
 import { ActiveFilterTags } from './filters/active-filter-tags'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AnimatePresence } from 'framer-motion'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
@@ -38,7 +35,8 @@ import {
 import { ThemeSwitcher } from "@/components/theme-switcher"
 import { AccountFilter } from './filters/account-filter'
 import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/users'
-import { useModalStateStore } from '../store/modal-state-store'
+import { useModalStateStore } from '../../../../store/modal-state-store'
+import { useUserStore } from '../../../../store/user-store'
 
 type Locale = 'en' | 'fr'
 
@@ -56,17 +54,20 @@ const timezones = [
 ];
 
 export default function Navbar() {
-  const { user, subscription, timezone, setTimezone, refreshTrades } = useUserData()
+  const  user = useUserStore(state => state.supabaseUser)
+  const  subscription = useUserStore(state => state.subscription)
   const t = useI18n()
   const changeLocale = useChangeLocale()
   const currentLocale = useCurrentLocale()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
-  const { startOnborda } = useOnborda();
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
   const usersIconRef = useRef<UsersIconHandle>(null)
   const { accountGroupBoardOpen } = useModalStateStore()
   const [accountFilterOpen, setAccountFilterOpen] = useState(false)
+  const timezone = useUserStore(state => state.timezone)
+  const setTimezone = useUserStore(state => state.setTimezone)
+  const {refreshTrades} = useData()
 
   // Close account filter when account board is open
   useEffect(() => {
@@ -209,10 +210,6 @@ export default function Navbar() {
                         <span>{t('dashboard.support')}</span>
                       </DropdownMenuItem>
                     </Link>
-                    <DropdownMenuItem onClick={() => startOnborda("main")}>
-                      <HelpCircle className="mr-2 h-4 w-4" />
-                      <span>{t('dashboard.startTour')}</span>
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel className="flex items-center">
                       <Globe className="mr-2 h-4 w-4" />
@@ -267,10 +264,6 @@ export default function Navbar() {
         </AnimatePresence>
       </nav>
       <div className="h-[72px]" />
-      <KeyboardShortcutsDialog 
-        open={shortcutsDialogOpen} 
-        onOpenChange={setShortcutsDialogOpen} 
-      />
     </>
   )
 }

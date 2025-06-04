@@ -1051,6 +1051,17 @@ export default {
             pending: "En attente",
             failed: "Échoué"
         },
+        cancellationReason: "Pourquoi annulez-vous ?",
+        selectReason: "Sélectionnez une raison",
+        additionalFeedback: "Commentaires supplémentaires (optionnel)",
+        feedbackPlaceholder: "Dites-nous en plus sur votre expérience...",
+        reasons: {
+            tooExpensive: "Trop cher",
+            missingFeatures: "Fonctionnalités manquantes",
+            notUsing: "Je ne l'utilise pas assez",
+            switching: "Je passe à un autre service",
+            other: "Autre raison"
+        }
     },
     'onboarding.welcome': 'Bienvenue sur Deltalytix !',
     'onboarding.description': 'Regardez ce tutoriel rapide pour commencer votre parcours de trading',

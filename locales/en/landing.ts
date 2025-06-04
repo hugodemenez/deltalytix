@@ -31,6 +31,97 @@ export default {
                 description: 'Improve your trading emotions with AI-assisted journaling. Our advanced algorithms analyze your entries to identify emotional patterns and biases.',
                 stat: 'Emotional Intelligence',
             },
+            'chat-feature': {
+                title: 'AI Trading Coach',
+                description: 'Get personalized trading insights and analysis from our AI coach. Understand your trading patterns, identify strengths and weaknesses, and receive actionable recommendations.',
+                stat: 'Real-time Analysis',
+                conversation: {
+                    analyze: 'Analyze my trading performance from last month and identify the key factors affecting my P&L',
+                    patterns: 'What psychological patterns do you see in my losing trades? Are there specific market conditions where I consistently struggle?',
+                    riskManagement: 'How can I improve my risk management? My max drawdown seems too high for my account size',
+                    profitableSetup: 'What\'s my most profitable setup and what market conditions make it work best?',
+                    journalInsights: 'Based on my trading journal entries, what emotional states correlate with my best and worst trading days?',
+                    marketTiming: 'Analyze my entry and exit timing - am I getting in too early or too late relative to key levels?',
+                    positionSizing: 'Is my position sizing optimal for my win rate and risk-reward ratios across different setups?'
+                },
+                responses: {
+                    analyze: 'I\'ve analyzed your 127 trades from last month. Your overall performance shows strong technical execution but significant emotional interference during drawdown periods.',
+                    patterns: 'Your journal entries reveal a clear pattern: after 2+ consecutive losses, you increase position size by 40% and abandon your setup criteria. This revenge trading accounts for 73% of your largest losses.',
+                    riskManagement: 'Your maximum drawdown of 12% exceeds optimal levels for your account size. I recommend implementing position size reduction after losses and using the 2% rule consistently.',
+                    profitableSetup: 'Your morning breakout strategy shows exceptional results with 82% win rate during 9:30-10:30 EST when combined with volume confirmation above 1.5x average.',
+                    journalInsights: 'Strong correlation between sleep quality and performance - your Tuesday-Wednesday trades show 23% higher P&L when you mention "well-rested" in journal entries.',
+                    marketTiming: 'Analysis shows you\'re entering 15-30 minutes too early on breakouts. Waiting for confirmation would improve your win rate from 68% to estimated 78%.',
+                    positionSizing: 'Your current sizing is 87% of Kelly optimal. Consider increasing size on your highest probability setups while maintaining conservative approach on experimental trades.'
+                },
+                analysis: {
+                    winRate: {
+                        metric: 'Overall Win Rate',
+                        value: '68%',
+                        trend: 'positive',
+                        insight: 'Above average but concentration risk in breakout trades (45% of volume) needs diversification'
+                    },
+                    revengeTrading: {
+                        metric: 'Revenge Trading Impact',
+                        value: '73% loss rate',
+                        trend: 'negative',
+                        insight: 'Major profit leak: revenge trades after 2+ losses show 73% loss rate vs 32% normal rate'
+                    },
+                    fomo: {
+                        metric: 'FOMO Trade Analysis',
+                        value: '12 instances',
+                        trend: 'negative',
+                        insight: 'FOMO entries typically 15-30 minutes after initial breakout show 83% loss rate'
+                    },
+                    bestSetup: {
+                        metric: 'Optimal Setup Performance',
+                        value: '82% win rate',
+                        trend: 'positive',
+                        insight: 'Morning breakouts (9:30-10:30 EST) with volume confirmation show highest success'
+                    },
+                    bestDays: {
+                        metric: 'Performance by Day',
+                        value: 'Tue-Wed peak',
+                        trend: 'neutral',
+                        insight: 'Tuesday-Wednesday show 23% higher average P&L, likely due to consistent sleep schedule'
+                    },
+                    riskReward: {
+                        metric: 'Risk-Reward Optimization',
+                        value: '1:1.8 average',
+                        trend: 'positive',
+                        insight: 'Current 1:1.8 R:R is optimal for your 68% win rate, but could improve stop placement'
+                    },
+                    emotionalState: {
+                        metric: 'Emotional Trading Correlation',
+                        value: '34% variance',
+                        trend: 'negative',
+                        insight: 'Journal entries mentioning "stress" or "rushed" correlate with 34% lower performance'
+                    },
+                    marketConditions: {
+                        metric: 'Market Adaptation',
+                        value: 'Trending: 78% WR',
+                        trend: 'positive',
+                        insight: 'Strong trending day performance but struggle in choppy conditions (45% WR)'
+                    },
+                    executionQuality: {
+                        metric: 'Trade Execution Analysis',
+                        value: '12.3% slippage impact',
+                        trend: 'negative',
+                        insight: 'Average 2.3 ticks slippage on entries suggests market order timing needs improvement'
+                    },
+                    positionSizing: {
+                        metric: 'Position Size Efficiency',
+                        value: '87% Kelly optimal',
+                        trend: 'positive',
+                        insight: 'Position sizing is 87% of Kelly optimal - slightly conservative but appropriate for risk tolerance'
+                    },
+                    trends: {
+                        positive: 'STRENGTH',
+                        negative: 'WEAKNESS',
+                        neutral: 'INSIGHT',
+                        warning: 'ATTENTION'
+                    }
+                }
+            },
         },
         openSource: {
             title: 'Open and Transparent',

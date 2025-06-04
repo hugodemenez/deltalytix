@@ -1,4 +1,4 @@
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Award, HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -16,7 +16,7 @@ interface WinningStreakCardProps {
 }
 
 export default function WinningStreakCard({ size = 'medium' }: WinningStreakCardProps) {
-  const { statistics: { winningStreak } } = useUserData()
+  const { statistics: { winningStreak } } = useData()
   const  t  = useI18n()
 
     return (

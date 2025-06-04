@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRithmicSyncStore } from '@/app/[locale]/dashboard/store/rithmic-sync-store'
+import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { Badge } from "@/components/ui/badge"
 import { Clock } from 'lucide-react'
 

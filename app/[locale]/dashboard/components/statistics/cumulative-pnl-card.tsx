@@ -1,4 +1,4 @@
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { PiggyBank, HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -16,7 +16,7 @@ interface CumulativePnlCardProps {
 }
 
 export default function CumulativePnlCard({ size = 'medium' }: CumulativePnlCardProps) {
-  const { statistics: { cumulativePnl, cumulativeFees } } = useUserData()
+  const { statistics: { cumulativePnl, cumulativeFees } } = useData()
   const totalPnl = cumulativePnl - cumulativeFees
   const isPositive = totalPnl > 0
   const t = useI18n()

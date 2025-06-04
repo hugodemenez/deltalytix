@@ -10,11 +10,11 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
-import { useUserData } from '@/components/context/user-data'
 import { useToast } from '@/hooks/use-toast'
 import { useI18n } from '@/locales/client'
 import { saveMood, getMoodForDay } from '@/server/journal'
 import { format } from 'date-fns'
+import { useUserStore } from '../../../../../store/user-store'
 
 interface DailyMoodProps {
   dayData: CalendarEntry | undefined;
@@ -25,7 +25,7 @@ interface DailyMoodProps {
 const STORAGE_KEY = 'daily_mood'
 
 export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMoodProps) {
-  const { user } = useUserData()
+  const user = useUserStore(state => state.user)
   const { toast } = useToast()
   const t = useI18n()
   const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)

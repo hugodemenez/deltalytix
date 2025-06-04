@@ -4,16 +4,15 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/client"
 import { FinancialEvent } from "@prisma/client"
-import { useUserData } from "@/components/context/user-data"
 import { useCurrentLocale } from "@/locales/client"
-import { fr, enUS } from 'date-fns/locale'
 import { X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { HourlyFinancialTimeline } from "@/app/[locale]/dashboard/components/mindset/hourly-financial-timeline"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ImportanceFilter } from "@/components/importance-filter"
-import { useNewsFilterStore } from "@/app/[locale]/dashboard/store/news-filter"
+import { useNewsFilterStore } from "@/store/filters/news-filter-store"
 import { CountryFilter } from "@/components/country-filter"
+import { useFinancialEventsStore } from "../../../../../store/financial-events-store"
 
 interface NewsImpactProps {
   onNext: () => void
@@ -28,7 +27,7 @@ export function NewsImpact({ onNext, onBack, selectedNews, onNewsSelection, date
   const [isLoading, setIsLoading] = useState(true)
   const { impactLevels, setImpactLevels, selectedCountries, setSelectedCountries } = useNewsFilterStore()
   const t = useI18n()
-  const { financialEvents = [] } = useUserData()
+  const financialEvents = useFinancialEventsStore(state => state.events)
   const locale = useCurrentLocale()
 
   // Filter events for the selected date

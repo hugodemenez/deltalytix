@@ -5,7 +5,7 @@ import { CreatePost } from './components/create-post'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import { getI18n } from '@/locales/server'
-import { UserDataProvider } from '@/components/context/user-data'
+import { DataProvider } from '@/context/data-provider'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getI18n()
@@ -21,7 +21,7 @@ export default async function CommunityPage() {
   const t = await getI18n()
 
   return (
-    <UserDataProvider>
+    <DataProvider>
       <div className="container mx-auto max-w-4xl py-6 space-y-8">
         <div className="flex items-center justify-between">
           <div>
@@ -39,6 +39,6 @@ export default async function CommunityPage() {
       </div>
       <PostList initialPosts={posts} />
     </div>
-    </UserDataProvider>
+    </DataProvider>
   )
 } 

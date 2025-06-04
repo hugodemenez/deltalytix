@@ -1,73 +1,200 @@
 "use client"
 
-import { useState, useCallback } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { useState, useCallback, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, X } from "lucide-react"
+import { ZoomIn, ZoomOut, X, Upload } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
+import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
+import { toast } from 'sonner'
+import { useI18n } from '@/locales/client'
+import { useUserStore } from '@/store/user-store'
 import Image from "next/image"
-interface ImageGalleryProps {
-  images: string | string[]
-  alt?: string
-  onDelete?: () => void
+import { createClient } from '@/lib/supabase'
+import { useData } from '@/context/data-provider'
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
+import { cn } from "@/lib/utils"
+
+const supabase = createClient()
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+
+// Generate a random 6-character alphanumeric ID
+function generateShortId(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
 }
 
-export function ImageGallery({ images, alt = "Gallery image", onDelete }: ImageGalleryProps) {
+interface TradeImageEditorProps {
+  trade: any
+  tradeIds: string[]
+}
+
+export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
+  const t = useI18n()
+  const user = useUserStore(state => state.user)
+  const { updateTrades } = useData()
   const [isOpen, setIsOpen] = useState(false)
-  const [currentIndex, setCurrentIndex] = useState(0)
   const [scale, setScale] = useState(1)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [isSecondImage, setIsSecondImage] = useState(false)
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
 
-  const imageArray = Array.isArray(images) ? images : [images]
+  const [generatedId] = useState(() => {
+    if (tradeIds[0]?.includes('undefined')) {
+      return generateShortId()
+    }
+    // Take first 6 characters of the trade ID
+    return tradeIds[0].slice(0, 6)
+  })
 
-  const handlePrev = useCallback(() => {
-    setCurrentIndex((prev) => (prev === 0 ? imageArray.length - 1 : prev - 1))
-    setScale(1)
-  }, [imageArray.length])
+  const uploadProps = useSupabaseUpload({
+    bucketName: 'trade-images',
+    path: user?.id + '/' + generatedId,
+    allowedMimeTypes: ACCEPTED_IMAGE_TYPES,
+    maxFileSize: MAX_FILE_SIZE,
+    maxFiles: 1,
+  })
 
-  const handleNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev === imageArray.length - 1 ? 0 : prev + 1))
-    setScale(1)
-  }, [imageArray.length])
+  const handleRemoveImage = async (isSecondImage: boolean, imageUrl?: string | null) => {
+    try {
+      const update = {
+        [isSecondImage ? 'imageBase64Second' : 'imageBase64']: null
+      }
+      // Update trades
+      await updateTrades(tradeIds, update)
+      
+      // Remove the image from Supabase storage
+      if (imageUrl) {
+        // Extract the path from the full URL
+        const path = imageUrl.split('/storage/v1/object/public/trade-images/')[1]
+        if (path) {
+          await supabase.storage.from('trade-images').remove([path])
+        }
+      }
+    } catch (error) {
+      console.error('Error removing image:', error)
+    }
+  }
+
+  const handleUpdateImage = async (imageBase64: string, isSecondImage: boolean) => {
+    const update = {
+      [isSecondImage ? 'imageBase64Second' : 'imageBase64']: imageBase64
+    }
+    await updateTrades(tradeIds, update)
+  }
+
+  // Listen for successful uploads
+  useEffect(() => {
+    if (uploadProps.isSuccess && uploadProps.files.length > 0) {
+      const file = uploadProps.files[0]
+      const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/trade-images/${user?.id}/${generatedId}/${file.name}`
+      handleUpdateImage(imageUrl, isSecondImage)
+      setUploadDialogOpen(false)
+      toast.success(t('trade-table.imageUploadSuccess'))
+    // reset the upload props
+    uploadProps.setFiles([])
+    } else if (uploadProps.errors.length > 0) {
+      const error = uploadProps.errors[0].message
+      toast.error(t('trade-table.imageUploadError', { error }))
+    }
+  }, [uploadProps.isSuccess, uploadProps.files, uploadProps.errors, user?.id, t, generatedId, isSecondImage])
+
+  const imageArray = [trade.imageBase64, trade.imageBase64Second].filter(Boolean)
+
+  const handleUploadClick = () => {
+    // If first image is null, set it as first image, otherwise set as second image
+    setIsSecondImage(!!trade.imageBase64)
+    setUploadDialogOpen(true)
+  }
+
+  const handleThumbnailClick = (index: number) => {
+    setSelectedImageIndex(index)
+    setScale(1) // Reset zoom when changing images
+  }
 
   return (
     <>
-      <div className="relative group">
-        <button
-          onClick={() => setIsOpen(true)}
-          className="relative w-10 h-10 overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          aria-label={`View ${alt}`}
-        >
-          <Image
-            src={imageArray[0] || "/placeholder.svg"}
-            alt={alt}
-            className="object-cover w-full h-full"
-            width={40}
-            height={40}
-          />
-          {imageArray.length > 1 && (
-            <span className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1 rounded">
-              {imageArray.length}
-            </span>
-          )}
-        </button>
+      <div className="flex gap-2">
+        {imageArray.length > 0 ? (
+          <div className="relative group">
+            <button
+              onClick={() => setIsOpen(true)}
+              className="relative w-10 h-10 overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              aria-label="View image"
+            >
+              <Image
+                src={imageArray[0]}
+                alt="Trade image"
+                className="object-cover w-full h-full"
+                width={40}
+                height={40}
+              />
+              {imageArray.length > 1 && (
+                <span className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1 rounded">
+                  {imageArray.length}
+                </span>
+              )}
+            </button>
 
-        {onDelete && (
-          <HoverCard openDelay={200}>
+            <HoverCard openDelay={200}>
+              <HoverCardTrigger asChild>
+                <button
+                  className="absolute -top-2 -right-2 h-5 w-5 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-sm hover:bg-destructive/90 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setShowDeleteConfirm(true)
+                  }}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </HoverCardTrigger>
+              <HoverCardContent side="top" align="center" className="text-xs">
+                Delete image
+              </HoverCardContent>
+            </HoverCard>
+          </div>
+        ) : (
+          <button
+            onClick={handleUploadClick}
+            className="relative w-10 h-10 overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-muted hover:bg-muted/80 transition-colors"
+            aria-label="Upload image"
+          >
+            <Upload className="h-4 w-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
+          </button>
+        )}
+
+        {imageArray.length > 0 && imageArray.length < 2 && (
+          <HoverCard>
             <HoverCardTrigger asChild>
               <button
-                className="absolute -top-2 -right-2 h-5 w-5 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-sm hover:bg-destructive/90 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onDelete()
-                }}
+                onClick={handleUploadClick}
+                className="relative w-10 h-10 overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-muted hover:bg-muted/80 transition-colors"
+                aria-label="Upload second image"
               >
-                <X className="h-3 w-3" />
+                <Upload className="h-4 w-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
+                <span className="absolute bottom-1 right-1 bg-primary/10 text-primary text-xs px-1 rounded">
+                  +1
+                </span>
               </button>
             </HoverCardTrigger>
             <HoverCardContent side="top" align="center" className="text-xs">
-              Delete image
+              Upload second image
             </HoverCardContent>
           </HoverCard>
         )}
@@ -82,7 +209,6 @@ export function ImageGallery({ images, alt = "Gallery image", onDelete }: ImageG
           <div className="relative h-[70vh] sm:h-[70vh] bg-neutral-50 p-4 sm:p-8">
             <AnimatePresence mode="wait">
               <motion.div
-                key={currentIndex}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -111,34 +237,13 @@ export function ImageGallery({ images, alt = "Gallery image", onDelete }: ImageG
                       >
                         <div className="flex items-center justify-center w-full h-full">
                           <img
-                            src={imageArray[currentIndex]}
-                            alt={`${alt} ${currentIndex + 1}`}
+                            src={imageArray[selectedImageIndex]}
+                            alt="Trade image"
                             className="max-w-full max-h-full object-contain select-none"
                             style={{ margin: 'auto' }}
                           />
                         </div>
                       </TransformComponent>
-
-                      {imageArray.length > 1 && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 bg-gradient-to-r from-white/95 to-white/90 hover:from-white hover:to-white shadow-lg backdrop-blur-sm border border-gray-200 ring-1 ring-gray-100 z-50 h-8 w-8 sm:h-10 sm:w-10"
-                            onClick={handlePrev}
-                          >
-                            <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6 text-gray-700" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 bg-gradient-to-r from-white/95 to-white/90 hover:from-white hover:to-white shadow-lg backdrop-blur-sm border border-gray-200 ring-1 ring-gray-100 z-50 h-8 w-8 sm:h-10 sm:w-10"
-                            onClick={handleNext}
-                          >
-                            <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6 text-gray-700" />
-                          </Button>
-                        </>
-                      )}
 
                       <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-lg bg-white/50 backdrop-blur-sm z-50">
                         <Button
@@ -168,6 +273,132 @@ export function ImageGallery({ images, alt = "Gallery image", onDelete }: ImageG
                 </TransformWrapper>
               </motion.div>
             </AnimatePresence>
+          </div>
+
+          <div className="border-t p-4">
+            <Carousel className="w-full">
+              <CarouselContent className="w-full flex items-center justify-center gap-2">
+                {imageArray.map((image, index) => (
+                  <CarouselItem key={index} className="basis-auto">
+                    <div 
+                      className="relative aspect-square cursor-pointer"
+                      onClick={() => handleThumbnailClick(index)}
+                    >
+                      <Image
+                        src={image}
+                        alt={`Thumbnail ${index + 1}`}
+                        width={40}
+                        height={40}
+                        className={cn(
+                          "object-cover w-12 h-12 rounded-md transition-all",
+                          selectedImageIndex === index ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-primary/50"
+                        )}
+                      />
+                    </div>
+                  </CarouselItem>
+                ))}
+                {imageArray.length < 2 && (
+                  <CarouselItem className="basis-auto">
+                    <Button
+                      size={'icon'}
+                      variant={'secondary'}
+                      onClick={handleUploadClick}
+                      className={cn("w-full aspect-square rounded-md",
+                        "border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50",
+                        "transition-colors flex items-center justify-center",
+                        "h-12 w-12"
+                      )}
+                    >
+                      <Upload className="h-6 w-6 text-muted-foreground" />
+                    </Button>
+                  </CarouselItem>
+                )}
+              </CarouselContent>
+              {imageArray.length > 1 && (
+                <>
+                  <CarouselPrevious className="left-2" />
+                  <CarouselNext className="right-2" />
+                </>
+              )}
+            </Carousel>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Image</DialogTitle>
+            <DialogDescription>
+              Select which image you want to delete. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            {trade.imageBase64 && (
+              <button
+                onClick={() => {
+                  handleRemoveImage(false, trade.imageBase64)
+                  setShowDeleteConfirm(false)
+                }}
+                className="relative group aspect-square rounded-lg overflow-hidden border-2 border-destructive/50 hover:border-destructive transition-colors"
+              >
+                <Image
+                  src={trade.imageBase64}
+                  alt="First image"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">Delete First Image</span>
+                </div>
+              </button>
+            )}
+            {trade.imageBase64Second && (
+              <button
+                onClick={() => {
+                  handleRemoveImage(true, trade.imageBase64Second)
+                  setShowDeleteConfirm(false)
+                }}
+                className="relative group aspect-square rounded-lg overflow-hidden border-2 border-destructive/50 hover:border-destructive transition-colors"
+              >
+                <Image
+                  src={trade.imageBase64Second}
+                  alt="Second image"
+                  fill
+                  className="object-cover"
+                />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">Delete Second Image</span>
+                </div>
+              </button>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>
+              {isSecondImage ? t('trade-table.uploadSecondImage') : t('trade-table.uploadImage')}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <Dropzone {...uploadProps}>
+              {uploadProps.files.length > 0 ? (
+                <DropzoneContent />
+              ) : (
+                <DropzoneEmptyState />
+              )}
+            </Dropzone>
           </div>
         </DialogContent>
       </Dialog>

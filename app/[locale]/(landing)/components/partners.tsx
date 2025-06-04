@@ -1,5 +1,5 @@
 import Image from 'next/image'
-import { useTheme } from '@/components/context/theme-provider'
+import { useTheme } from '@/context/theme-provider'
 import { useI18n } from '@/locales/client'
 
 export default function Partners() {

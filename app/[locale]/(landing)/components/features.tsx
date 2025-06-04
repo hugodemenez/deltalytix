@@ -1,22 +1,20 @@
 import { BarChart3, Calendar, Database, Brain } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
-import { AnimatedBeamDemo } from "./ai-feature"
+import { ImportFeature } from "./import-feature"
 import { useI18n } from "@/locales/client"
+import TradingChatAssistant from "./chat-feature"
 
 export default function Features() {
   const t = useI18n()
   const features = [
     {
-      id: "data-import",
-      title: t("landing.features.data-import.title"),
-      icon: <Database className="h-5 w-5 text-muted-foreground" />,
-      description: t("landing.features.data-import.description"),
-      stat: t("landing.features.data-import.stat"),
-      image: {
-        light: "/field-mapping-light.jpeg",
-        dark: "/field-mapping-dark.png"
-      }
+      id: "ai-journaling",
+      title: t("landing.features.ai-journaling.title"),
+      icon: <Brain className="h-5 w-5 text-muted-foreground" />,
+      description: t("landing.features.ai-journaling.description"),
+      stat: t("landing.features.ai-journaling.stat"),
+      image: <TradingChatAssistant />
     },
     {
       id: "performance-visualization",
@@ -41,12 +39,12 @@ export default function Features() {
       }
     },
     {
-      id: "ai-journaling",
-      title: t("landing.features.ai-journaling.title"),
-      icon: <Brain className="h-5 w-5 text-muted-foreground" />,
-      description: t("landing.features.ai-journaling.description"),
-      stat: t("landing.features.ai-journaling.stat"),
-      image: <AnimatedBeamDemo />
+      id: "data-import",
+      title: t("landing.features.data-import.title"),
+      icon: <Database className="h-5 w-5 text-muted-foreground" />,
+      description: t("landing.features.data-import.description"),
+      stat: t("landing.features.data-import.stat"),
+      image: <ImportFeature />
     }
   ]
 

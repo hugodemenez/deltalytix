@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { Pencil, Trash2 } from "lucide-react"
 import { ShareButton } from "./share-button"
 import { AddWidgetSheet } from "./add-widget-sheet"
@@ -20,7 +20,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useState } from "react"
 import { FilterDropdown } from "./filters/filter-dropdown"
 
@@ -44,8 +43,7 @@ export function Toolbar({
   onRemoveAll
 }: ToolbarProps) {
   const t = useI18n()
-  const { isMobile } = useUserData()
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false)
+  const { isMobile } = useData()
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
       <div className="flex items-center justify-around gap-4 p-3 bg-background/80 backdrop-blur-md border rounded-full shadow-lg">

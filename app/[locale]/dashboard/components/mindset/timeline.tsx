@@ -25,7 +25,6 @@ import {
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { useState } from "react"
 import { toast } from "@/hooks/use-toast"
-import { useUserData } from "@/components/context/user-data"
 
 interface TimelineProps {
   onSelectDate: (date: Date) => void
@@ -38,7 +37,6 @@ interface TimelineProps {
 export function Timeline({ onSelectDate, selectedDate, moodHistory, className, onDeleteEntry }: TimelineProps) {
   const t = useI18n()
   const { locale } = useParams()
-  const { timezone } = useUserData()
   const dateLocale = locale === 'fr' ? fr : enUS
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [entryToDelete, setEntryToDelete] = useState<Date | null>(null)

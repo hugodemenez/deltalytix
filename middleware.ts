@@ -1,7 +1,9 @@
 // middleware.ts
 import { createI18nMiddleware } from 'next-international/middleware'
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { createClient } from './server/auth'
+
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
 
@@ -11,133 +13,97 @@ const I18nMiddleware = createI18nMiddleware({
   urlMappingStrategy: 'rewrite'
 })
 
-export async function middleware(request: NextRequest) {
-  const isAuthRoute = request.nextUrl.pathname.includes('/authentication')
-  const isDashboardRoute = request.nextUrl.pathname.includes('/dashboard')
-  const isAdminRoute = request.nextUrl.pathname.includes('/admin')
-  const isMaintenanceRoute = request.nextUrl.pathname.includes('/maintenance')
-
-  try {
-    // Handle i18n first to get the locale information
-    const i18nResponse = I18nMiddleware(request)
-    
-    // Create a new response that preserves the current path
-    const response = NextResponse.next({
-      request: {
-        headers: request.headers,
+async function updateSession(
+  request: NextRequest,
+  supabaseResponse: NextResponse,
+) {
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
       },
-    })
-
-    // Copy i18n cookies and headers to the new response
-    i18nResponse.headers.forEach((value, key) => {
-      response.headers.set(key, value)
-    })
-
-    const supabase = await createClient()
-
-    const { data: { session } } = await supabase.auth.getSession()
-
-    // If in maintenance mode and not accessing maintenance page or landing page, redirect to maintenance
-    if (MAINTENANCE_MODE && !isMaintenanceRoute && isDashboardRoute) {
-      const redirectResponse = NextResponse.redirect(new URL('/maintenance', request.url))
-      response.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie)
-      })
-      i18nResponse.headers.forEach((value, key) => {
-        redirectResponse.headers.set(key, value)
-      })
-      return redirectResponse
     }
+  )
+  // Do not run code between createServerClient and
+  // supabase.auth.getUser(). A simple mistake could make it very hard to debug
+  // issues with users being randomly logged out.
+  // IMPORTANT: DO NOT REMOVE auth.getUser()
+  await supabase.auth.getUser();
 
-    // For admin routes, check if user has admin access
-    if (isAdminRoute) {
-      if (!session) {
-        const redirectResponse = NextResponse.redirect(new URL('/authentication', request.url))
-        response.cookies.getAll().forEach(cookie => {
-          redirectResponse.cookies.set(cookie)
-        })
-        i18nResponse.headers.forEach((value, key) => {
-          redirectResponse.headers.set(key, value)
-        })
-        return redirectResponse
-      }
+  return supabaseResponse;
+}
 
-      
-      if (process.env.NODE_ENV !== 'development') {
-        const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url))
-        response.cookies.getAll().forEach(cookie => {
-          redirectResponse.cookies.set(cookie)
-        })
-        i18nResponse.headers.forEach((value, key) => {
-          redirectResponse.headers.set(key, value)
-        })
-        return redirectResponse
-      }
-    }
+export async function middleware(request: NextRequest) {
+  const response = await updateSession(request, I18nMiddleware(request))
+  const supabase = await createClient()
+  const url = new URL('/', request.url)
+  const nextUrl = request.nextUrl
 
-    // For auth routes, redirect to dashboard if session exists
-    if (session && isAuthRoute) {
-      const redirectResponse = NextResponse.redirect(new URL('/dashboard', request.url))
-      
-      // Copy all cookies from the response to the redirect
-      response.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie)
-      })
-      
-      // Copy i18n headers
-      i18nResponse.headers.forEach((value, key) => {
-        redirectResponse.headers.set(key, value)
-      })
-      
-      return redirectResponse
-    }
+  const pathnameLocale = nextUrl.pathname.split('/', 2)?.[1]
 
-    // For dashboard routes, redirect to auth if no session
-    if (!session && isDashboardRoute) {
-      const redirectResponse = NextResponse.redirect(new URL('/authentication', request.url))
-      
-      // Copy all cookies from the response to the redirect
-      response.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie)
-      })
-      
-      // Copy i18n headers
-      i18nResponse.headers.forEach((value, key) => {
-        redirectResponse.headers.set(key, value)
-      })
-      
-      return redirectResponse
-    }
+  // Remove the locale from the pathname
+  const pathnameWithoutLocale = pathnameLocale
+    ? nextUrl.pathname.slice(pathnameLocale.length + 1)
+    : nextUrl.pathname
 
-    // Copy i18n cookies to the response
-    i18nResponse.cookies.getAll().forEach(cookie => {
-      response.cookies.set(cookie)
-    })
+  // Create a new URL without the locale in the pathname
+  const newUrl = new URL(pathnameWithoutLocale || '/', request.url)
 
-    // For normal navigation, return the response that contains both i18n and Supabase cookies
-    return response
+  const { data: { user } } = await supabase.auth.getUser()
 
-  } catch (error) {
-    console.error('Middleware authentication error:', error)
-    
-    // On error, redirect to auth
-    if (!isAuthRoute) {
-      const redirectResponse = NextResponse.redirect(new URL('/authentication', request.url))
-      
-      // Copy i18n headers and cookies from the i18n response
-      const i18nResponse = I18nMiddleware(request)
-      i18nResponse.headers.forEach((value, key) => {
-        redirectResponse.headers.set(key, value)
-      })
-      i18nResponse.cookies.getAll().forEach(cookie => {
-        redirectResponse.cookies.set(cookie)
-      })
-      
-      return redirectResponse
-    }
-    
-    return I18nMiddleware(request)
+  // Maintenance mode check
+  if (MAINTENANCE_MODE && 
+      !newUrl.pathname.includes('/maintenance') && 
+      newUrl.pathname.includes('/dashboard')) {
+    return NextResponse.redirect(new URL('/maintenance', request.url))
   }
+
+  // Admin route check
+  if (newUrl.pathname.includes('/admin')) {
+    if (!user) {
+      return NextResponse.redirect(new URL('/authentication', request.url))
+    }
+    
+    if (process.env.NODE_ENV !== 'development') {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
+  // Authentication checks
+  if (!user) {
+    // Not authenticated - redirect to auth except for public routes
+    const isPublicRoute = !newUrl.pathname.includes('/dashboard')
+    if (!isPublicRoute) {
+      const encodedSearchParams = `${newUrl.pathname.substring(1)}${newUrl.search}`
+      const authUrl = new URL('/authentication', request.url)
+      
+      if (encodedSearchParams) {
+        authUrl.searchParams.append('next', encodedSearchParams)
+      }
+      
+      return NextResponse.redirect(authUrl)
+    }
+  } else {
+    // Authenticated - redirect from auth to dashboard
+    if (newUrl.pathname.includes('/authentication')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+  }
+
+  return response
 }
 
 export const config = {

@@ -1,8 +1,7 @@
-import { UserDataProvider } from "@/components/context/user-data";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./components/navbar";
 import Footer from "./components/footer";
-import { ThemeProvider } from "@/components/context/theme-provider";
+import { ThemeProvider } from "@/context/theme-provider";
 
 import { Metadata } from 'next';
 

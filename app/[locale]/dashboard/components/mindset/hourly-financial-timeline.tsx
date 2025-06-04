@@ -4,18 +4,17 @@ import { useMemo, useRef, useEffect, useState } from "react"
 import { format } from "date-fns"
 import { formatInTimeZone } from "date-fns-tz"
 import { fr, enUS } from "date-fns/locale"
-import { useUserData } from "@/components/context/user-data"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { Clock, ExternalLink, MoreHorizontal, DollarSign } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import type { FinancialEvent } from "@prisma/client"
 import type { Locale } from "date-fns"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useUserStore } from "@/store/user-store"
 
 interface Session {
   name: string
@@ -144,7 +143,7 @@ export function HourlyFinancialTimeline({
   showOnlyTradedHours = false,
   selectedEventIds = []
 }: HourlyFinancialTimelineProps) {
-  const { timezone } = useUserData()
+  const timezone = useUserStore(state => state.timezone)
   const locale = useCurrentLocale()
   const dateLocale = locale === "fr" ? fr : enUS
   const t = useI18n()

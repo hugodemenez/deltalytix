@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Loader2, Trash2, Plus, Edit2, RefreshCw, MoreVertical, History } from 'lucide-react'
 import { getAllRithmicData, clearRithmicData, RithmicCredentialSet, updateLastSyncTime } from '@/lib/rithmic-storage'
-import { useUserData } from '@/components/context/user-data'
 import {
   Dialog,
   DialogContent,
@@ -27,10 +26,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SyncCountdown } from './sync-countdown'
-import { useWebSocket } from '@/components/context/rithmic-sync-context'
+import { useWebSocket } from '@/context/rithmic-sync-context'
 import { useI18n } from '@/locales/client'
 import { toast } from "sonner"
-import { useRithmicSyncStore, SyncInterval } from '@/app/[locale]/dashboard/store/rithmic-sync-store'
+import { useRithmicSyncStore, SyncInterval } from '@/store/rithmic-sync-store'
 import {
   Select,
   SelectContent,
@@ -38,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useUserStore } from '@/store/user-store'
 
 interface RithmicCredentialsManagerProps {
   onSelectCredential: (credential: RithmicCredentialSet) => void
@@ -53,7 +53,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   const [cooldownId, setCooldownId] = useState<string | null>(null)
   const syncTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({})
   const t = useI18n()
-  const { user } = useUserData()
+  const user = useUserStore((state) => state.user)
   const { syncInterval, setSyncInterval } = useRithmicSyncStore()
 
   const handleSync = useCallback(async (credential: RithmicCredentialSet) => {

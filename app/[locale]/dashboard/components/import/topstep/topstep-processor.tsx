@@ -3,8 +3,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
 import { Button } from "@/components/ui/button"
-import { useUserData } from '@/components/context/user-data'
 import { formatInTimeZone } from 'date-fns-tz'
+import { useUserStore } from '../../../../../../store/user-store'
 
 interface TopstepProcessorProps {
     headers: string[];
@@ -28,7 +28,7 @@ const mappings: { [key: string]: string } = {
 
 export default function TopstepProcessor({ headers, csvData, setProcessedTrades, accountNumber }: TopstepProcessorProps) {
     const [trades, setTrades] = useState<Trade[]>([])
-    const { timezone } = useUserData()
+    const timezone = useUserStore(state => state.timezone)
 
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];

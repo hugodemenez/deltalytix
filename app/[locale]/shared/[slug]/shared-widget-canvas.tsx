@@ -2,21 +2,14 @@
 
 import { useMemo } from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout'
-import { useUserData } from '@/components/context/user-data'
 import { WIDGET_REGISTRY, getWidgetComponent } from '@/app/[locale]/dashboard/config/widget-registry'
-import { WidgetType, WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
-import type { LayoutItem as ServerLayoutItem } from '@/server/user-data'
-
-// Add type for our local LayoutItem that extends the server one
-type LayoutItem = Omit<ServerLayoutItem, 'type' | 'size'> & {
-  type: string
-  size: string
-}
+import { Widget, WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
+import { useData } from '@/context/data-provider'
 
 interface SharedWidgetCanvasProps {
   layout: {
-    desktop: ServerLayoutItem[]
-    mobile: ServerLayoutItem[]
+    desktop: Widget[]
+    mobile: Widget[]
   }
 }
 
@@ -60,29 +53,29 @@ const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: nu
 }
 
 // Create layouts for different breakpoints
-const generateResponsiveLayout = (widgets: LayoutItem[]) => {
+const generateResponsiveLayout = (widgets: Widget[]) => {
   const layouts = {
     lg: widgets.map(widget => ({
       ...widget,
-      ...sizeToGrid(widget.size as WidgetSize)
+      ...sizeToGrid(widget.size)
     })),
     md: widgets.map(widget => ({
       ...widget,
-      ...sizeToGrid(widget.size as WidgetSize)
+      ...sizeToGrid(widget.size)
     })),
     sm: widgets.map(widget => ({
       ...widget,
-      ...sizeToGrid(widget.size as WidgetSize, true),
+      ...sizeToGrid(widget.size, true),
       x: 0 // Align to left
     })),
     xs: widgets.map(widget => ({
       ...widget,
-      ...sizeToGrid(widget.size as WidgetSize, true),
+      ...sizeToGrid(widget.size, true),
       x: 0 // Align to left
     })),
     xxs: widgets.map(widget => ({
       ...widget,
-      ...sizeToGrid(widget.size as WidgetSize, true),
+      ...sizeToGrid(widget.size, true),
       x: 0 // Align to left
     }))
   }
@@ -90,11 +83,11 @@ const generateResponsiveLayout = (widgets: LayoutItem[]) => {
 }
 
 export function SharedWidgetCanvas({ layout }: SharedWidgetCanvasProps) {
-  const { isMobile } = useUserData()
+  const { isMobile } = useData()
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
   const activeLayout = isMobile ? 'mobile' : 'desktop'
 
-  const renderWidget = (widget: LayoutItem) => {
+  const renderWidget = (widget: Widget) => {
     // Ensure widget.type is a valid WidgetType
     if (!Object.keys(WIDGET_REGISTRY).includes(widget.type)) {
       return null // Skip invalid widgets in shared view
@@ -113,18 +106,30 @@ export function SharedWidgetCanvas({ layout }: SharedWidgetCanvasProps) {
       if (isMobile && widget.size !== 'tiny') {
         return 'small' as WidgetSize
       }
-      return widget.size as WidgetSize
+      return widget.size
     })()
 
-    return getWidgetComponent(widget.type as WidgetType, effectiveSize)
+    return getWidgetComponent(widget.type, effectiveSize)
   }
+
+  // Transform server layout items to include required grid properties
+  const transformedLayout = useMemo(() => {
+    return layout[activeLayout].map((item, index) => ({
+      ...item,
+      i: item.i || `widget-${index}`,
+      x: 0,
+      y: index,
+      w: sizeToGrid(item.size, isMobile).w,
+      h: sizeToGrid(item.size, isMobile).h
+    }))
+  }, [layout, activeLayout, isMobile])
 
   return (
     <div className="relative mt-6">
       <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-[9999]" />
       <ResponsiveGridLayout
         className="layout"
-        layouts={generateResponsiveLayout(layout[activeLayout] as unknown as LayoutItem[])}
+        layouts={generateResponsiveLayout(transformedLayout)}
         breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
         cols={{ lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
         rowHeight={isMobile ? 65 : 70}
@@ -140,17 +145,13 @@ export function SharedWidgetCanvas({ layout }: SharedWidgetCanvasProps) {
           touchAction: 'auto'
         }}
       >
-        {layout[activeLayout].map((widget) => {
-          // Cast the widget to our local LayoutItem type
-          const typedWidget = widget as unknown as LayoutItem
-          return (
-            <div key={typedWidget.i} className="h-full">
-              <div className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-md">
-                {renderWidget(typedWidget)}
-              </div>
+        {transformedLayout.map((widget) => (
+          <div key={widget.i} className="h-full">
+            <div className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-md">
+              {renderWidget(widget)}
             </div>
-          )
-        })}
+          </div>
+        ))}
       </ResponsiveGridLayout>
     </div>
   )

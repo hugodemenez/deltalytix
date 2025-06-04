@@ -13,15 +13,16 @@ import { FinancialEvent } from "@prisma/client"
 import { CalendarModal } from "./daily-modal"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { WeeklyModal } from "./weekly-modal"
-import { useUserData } from "@/components/context/user-data"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { ImportanceFilter } from "@/components/importance-filter"
 import { CountryFilter } from "@/components/country-filter"
-import { useNewsFilterStore } from "@/app/[locale]/dashboard/store/news-filter"
-import { useCalendarViewStore } from "@/app/[locale]/dashboard/store/calendar-view"
+import { useNewsFilterStore } from "@/store/filters/news-filter-store"
+import { useCalendarViewStore } from "@/store/calendar-view"
 import WeeklyCalendarPnl from "./weekly-calendar"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
+import { useFinancialEventsStore } from "@/store/financial-events-store"
+import { useUserStore } from "@/store/user-store"
 
 
 const WEEKDAYS = [
@@ -140,7 +141,8 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
 export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
-  const { timezone, financialEvents: userFinancialEvents = [] } = useUserData()
+  const timezone = useUserStore(state => state.timezone)
+  const userFinancialEvents = useFinancialEventsStore(state => state.events)
   const dateLocale = locale === 'fr' ? fr : enUS
   const [currentDate, setCurrentDate] = useState(new Date())
   const [isLoading, setIsLoading] = useState(false)

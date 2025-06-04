@@ -1,6 +1,6 @@
 import { X, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { format } from "date-fns"
 import { fr } from 'date-fns/locale'
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from 'framer-motion'
 
 export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: boolean }) {
-  const { accountNumbers, instruments, setAccountNumbers, setInstruments } = useUserData()
+  const { accountNumbers, instruments, setAccountNumbers, setInstruments } = useData()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string

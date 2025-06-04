@@ -257,6 +257,7 @@ model FinancialEvent {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([title, date, lang, timezone])
   @@index([date])
   @@schema("public")
 }

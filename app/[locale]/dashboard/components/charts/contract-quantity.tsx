@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { Trade } from "@prisma/client"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { useI18n } from "@/locales/client"
@@ -22,7 +22,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function ContractQuantityChart({ size = 'medium' }: ContractQuantityChartProps) {
-  const { formattedTrades:trades } = useUserData()
+  const { formattedTrades:trades } = useData()
   const t = useI18n()
 
   const chartData = React.useMemo(() => {
