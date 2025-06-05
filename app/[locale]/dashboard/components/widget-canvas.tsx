@@ -170,7 +170,8 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
       onTouchStart={handleTouchStart}
     >
       <div className={cn("h-full w-full", 
-        isCustomizing && "group-hover:blur-[2px]"
+        isCustomizing && "group-hover:blur-[2px]",
+        isCustomizing && isMobile && "blur-[2px]"
       )}>
         {children}
       </div>
