@@ -28,7 +28,7 @@ function getCachedTrades(userId: string, isSubscribed: boolean) {
     [`trades-${userId}-${isSubscribed}`],
     { 
       tags: [`trades-${userId}`], // User-specific tag for revalidation
-      revalidate: 300
+      revalidate: 3600 // Revalidate every hour (3600 seconds)
     }
   )()  // Note the () at the end - we call the cached function immediately
 }
