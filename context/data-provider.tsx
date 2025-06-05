@@ -465,11 +465,6 @@ export const DataProvider: React.FC<{
 
       setSupabaseUser(user);
 
-      // Use the user value directly instead of waiting for state update
-      if (!user.id) {
-        return;
-      }
-
       // CRITICAL: Get dashboard layout first
       const dashboardLayoutResponse = await getDashboardLayout(user.id)
       if (dashboardLayoutResponse) {
@@ -483,11 +478,17 @@ export const DataProvider: React.FC<{
         next: {
           tags: [user.id]
         }
+      }).then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to fetch trades');
+        }
+        return response.json()
       })
-      if (!tradesResponse.ok) {
-        throw new Error('Failed to fetch trades');
+      if (tradesResponse.error) {
+        console.log('tradesResponse.error', tradesResponse.error)
+        throw new Error(tradesResponse.error)
       }
-      const trades: PrismaTrade[] = await tradesResponse.json();
+      const trades: PrismaTrade[] = tradesResponse
       setTrades(Array.isArray(trades) ? trades : []);
 
       // Set the date range
@@ -568,8 +569,18 @@ export const DataProvider: React.FC<{
       next: {
         tags: [user?.id]
       }
+    }).then(response => {
+      if (!response.ok ) {
+        throw new Error('Failed to fetch trades');
+      }
+      return response.json()
     })
-    const trades: PrismaTrade[] = await response.json()
+    if (response.error) {
+      throw new Error(response.error)
+    }
+    
+    const trades: PrismaTrade[] = response
+    
     setTrades(trades)
   }, [user?.id])
 
@@ -597,8 +608,8 @@ export const DataProvider: React.FC<{
   }, [dateRange, timezone]);
 
   const formattedTrades = useMemo(() => {
-    // Early return if no trades
-    if (!trades || trades.length === 0) return [];
+    // Early return if no trades or if trades is not an array
+    if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
 
     // Get hidden accounts for filtering
     const hiddenGroup = groups.find(g => g.name === "Hidden Accounts");

@@ -130,7 +130,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
     // Get the earliest and latest trade dates
     const defaultDateRange = useMemo(() => {
-      if (!trades || trades.length === 0) {
+      if (!trades || trades.length === 0 || !Array.isArray(trades)) {
         return {
           from: new Date(),
           to: undefined
@@ -159,7 +159,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
     // Get unique account numbers from trades
     const accountNumbers = useMemo(() => {
-      if (!trades) return []
+      if (!trades || !Array.isArray(trades)) return []
       return Array.from(new Set(trades.map(trade => trade.accountNumber)))
     }, [trades])
 

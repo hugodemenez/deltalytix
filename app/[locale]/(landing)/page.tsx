@@ -26,7 +26,6 @@ export default function LandingPage() {
         if (videoRef.current) {
             videoRef.current.load();
         }
-        console.log(effectiveTheme);
     }, [theme, effectiveTheme]);
 
     const handleVideoLoad = () => {

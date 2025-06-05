@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+      return NextResponse.json([], { status: 401 })
     }
     revalidateTag(user.id)
 
@@ -21,12 +21,12 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId")
 
     if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 })
+      return NextResponse.json([], { status: 400 })
     }
 
     // Verify the requesting user has access to the requested user's data
     if (user.id !== userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
+      return NextResponse.json([], { status: 403 })
     }
 
     // Get subscription details

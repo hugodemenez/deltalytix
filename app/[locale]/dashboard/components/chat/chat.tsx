@@ -261,9 +261,6 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
 
     const { visibleMessages, hasMoreMessages, loadMoreMessages } = useMessageVirtualization(messages)
 
-    useEffect(() => {
-        console.log(messages)
-    }, [messages])
     const handleReset = useCallback(async () => {
         setMessages([])
         setStoredMessages([])

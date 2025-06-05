@@ -64,24 +64,35 @@ export async function getUserData(): Promise<{
   console.log('getUserData')
   const userId = await getUserId()
   const locale = await getCurrentLocale()
-  return await prisma.$transaction(async (tx) => {
-    const userData = await tx.user.findUnique({
+  
+  // Run all independent queries in parallel for better performance
+  const [
+    userData,
+    subscription,
+    tickDetails,
+    tags,
+    accounts,
+    groups,
+    financialEvents,
+    moodHistory
+  ] = await Promise.all([
+    prisma.user.findUnique({
       where: {
         id: userId
       }
-    })
-    const subscription = await tx.subscription.findUnique({
+    }),
+    prisma.subscription.findUnique({
       where: {
         userId: userId
       }
-    })
-    const tickDetails = await tx.tickDetails.findMany()
-    const tags = await tx.tag.findMany({
+    }),
+    prisma.tickDetails.findMany(),
+    prisma.tag.findMany({
       where: {
         userId: userId
       }
-    })
-    const accounts = await tx.account.findMany({
+    }),
+    prisma.account.findMany({
       where: {
         userId: userId
       },
@@ -89,27 +100,28 @@ export async function getUserData(): Promise<{
         payouts: true,
         group: true
       }
-    })
-    const groups = await tx.group.findMany({
+    }),
+    prisma.group.findMany({
       where: {
         userId: userId
       },
       include: {
         accounts: true
       }
-    })
-    const financialEvents = await tx.financialEvent.findMany({
+    }),
+    prisma.financialEvent.findMany({
       where: {
         lang: locale
       }
-    })
-    const moodHistory = await tx.mood.findMany({
+    }),
+    prisma.mood.findMany({
       where: {
         userId: userId
       }
     })
-    return { userData, subscription, tickDetails, tags, accounts, groups, financialEvents, moodHistory }
-  })
+  ])
+
+  return { userData, subscription, tickDetails, tags, accounts, groups, financialEvents, moodHistory }
 }
 
 export async function getDashboardLayout(userId: string): Promise<DashboardLayout | null> {

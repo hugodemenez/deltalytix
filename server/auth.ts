@@ -51,7 +51,6 @@ export async function signInWithDiscord(next: string | null = null) {
       redirectTo: `${websiteURL}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
     },
   })
-  console.log(error)
   if (data.url) {
     // Before redirecting, ensure user is created/updated in Prisma database
     redirect(data.url)
