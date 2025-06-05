@@ -514,6 +514,7 @@ export const DataProvider: React.FC<{
       }
 
       // Step 3: Fetch user data in parallel
+      // TODO: Check what we could cache
       const data = await getUserData()
 
 
