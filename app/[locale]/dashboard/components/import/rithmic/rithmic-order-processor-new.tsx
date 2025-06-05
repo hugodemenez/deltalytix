@@ -101,7 +101,6 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
   useEffect(() => {
     const fetchTickDetails = async () => {
       const details = await getTickDetails()
-      console.log(details)
       setTickDetails(details)
     }
     fetchTickDetails()

@@ -1,7 +1,8 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
+import { getUserId } from './auth'
 
 export async function addTagToTrade(tradeId: string, tag: string) {
     try {
@@ -64,10 +65,12 @@ export async function removeTagFromTrade(tradeId: string, tagToRemove: string) {
 }
 
 export async function deleteTagFromAllTrades(tag: string) {
+  const userId = await getUserId()
   try {
     // Get all trades that have this tag
     const trades = await prisma.trade.findMany({
       where: {
+        userId,
         tags: {
           has: tag
         }
@@ -88,7 +91,7 @@ export async function deleteTagFromAllTrades(tag: string) {
       )
     )
 
-    revalidatePath('/')
+    revalidateTag(userId)
     return { success: true }
   } catch (error) {
     console.error('Failed to delete tag:', error)

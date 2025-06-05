@@ -1,6 +1,6 @@
 'use server'
 import { Trade, Prisma, DashboardLayout } from '@prisma/client'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
@@ -104,6 +104,9 @@ export async function getTradesAction(): Promise<Trade[]> {
       orderBy: { entryDate: 'desc' }
     })
     
+    // Tell the server that the trades have changed
+    // Next page reload will fetch the new trades instead of using the cached data
+    revalidateTag(`trades-${userId}`)
     return trades.map(trade => ({
       ...trade,
       entryDate: new Date(trade.entryDate).toISOString(),

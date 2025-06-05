@@ -25,6 +25,7 @@ import {
   loadSharedData
 } from '@/server/user-data';
 import {
+  getTradesAction,
   groupTradesAction,
   saveDashboardLayoutAction,
   ungroupTradesAction,
@@ -387,6 +388,7 @@ export const DataProvider: React.FC<{
   const setEvents = useFinancialEventsStore(state => state.setEvents);
   const trades = useTradesStore(state => state.trades);
   const setTrades = useTradesStore(state => state.setTrades);
+  const dashboardLayout = useUserStore(state => state.dashboardLayout);
 
   // Local states
   const [isLoading, setIsLoading] = useState(() => false);
@@ -466,17 +468,22 @@ export const DataProvider: React.FC<{
       setSupabaseUser(user);
 
       // CRITICAL: Get dashboard layout first
-      const dashboardLayoutResponse = await getDashboardLayout(user.id)
-      if (dashboardLayoutResponse) {
-        setDashboardLayout(dashboardLayoutResponse)
+      // But check if the layout is already in the state
+      // TODO: Cache layout client side (lightweight)
+      if (!dashboardLayout) {
+        const dashboardLayoutResponse = await getDashboardLayout(user.id)
+        if (dashboardLayoutResponse) {
+          setDashboardLayout(dashboardLayoutResponse)
+        }
       }
 
       // Step 2: Fetch trades (with caching server side)
       // I think we could make basic computations server side to offload inital stats computations
+      // WE SHOULD NOT USE CLIENT SIDE CACHING FOR TRADES (TOO MUCH DATA)
       const tradesResponse = await fetch(`/api/data/trades?userId=${user.id}`, {
         cache: 'force-cache',
         next: {
-          tags: [user.id]
+          tags: [`trades-${user.id}`]
         }
       }).then(response => {
         if (!response.ok) {
@@ -506,7 +513,7 @@ export const DataProvider: React.FC<{
         }
       }
 
-      // Step 2 & 3: Fetch trades and user data in parallel
+      // Step 3: Fetch user data in parallel
       const data = await getUserData()
 
 
@@ -565,22 +572,8 @@ export const DataProvider: React.FC<{
 
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
-    const response = await fetch(`/api/data/trades?userId=${user?.id}`, {
-      next: {
-        tags: [user?.id]
-      }
-    }).then(response => {
-      if (!response.ok ) {
-        throw new Error('Failed to fetch trades');
-      }
-      return response.json()
-    })
-    if (response.error) {
-      throw new Error(response.error)
-    }
-    
-    const trades: PrismaTrade[] = response
-    
+    // Does not use cached data, so we need to revalidate the tag
+    const trades = await getTradesAction()
     setTrades(trades)
   }, [user?.id])
 

@@ -15,7 +15,6 @@ export async function GET(request: Request) {
     if (!user?.id) {
       return NextResponse.json([], { status: 401 })
     }
-    revalidateTag(user.id)
 
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
