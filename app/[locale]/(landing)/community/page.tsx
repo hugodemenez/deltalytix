@@ -21,7 +21,6 @@ export default async function CommunityPage() {
   const t = await getI18n()
 
   return (
-    <DataProvider>
       <div className="container mx-auto max-w-4xl py-6 space-y-8">
         <div className="flex items-center justify-between">
           <div>
@@ -39,6 +38,5 @@ export default async function CommunityPage() {
       </div>
       <PostList initialPosts={posts} />
     </div>
-    </DataProvider>
   )
 } 

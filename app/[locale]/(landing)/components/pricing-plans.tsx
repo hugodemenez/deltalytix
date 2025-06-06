@@ -310,7 +310,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                   >
                     {t('pricing.lifetimeAccess')}
                   </Button>
-                  <span className="absolute -top-3 -right-1 bg-green-500 text-white text-[10px] sm:text-xs font-medium px-1 py-0.5 sm:px-1.5 rounded-full">
+                  <span className="absolute -top-3 -right-2 bg-green-500 text-white text-[10px] sm:text-xs font-medium px-1 py-0.5 sm:px-1.5 rounded-full">
                     {t('pricing.new')}
                   </span>
                 </div>

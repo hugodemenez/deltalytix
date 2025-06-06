@@ -64,7 +64,25 @@ export async function middleware(request: NextRequest) {
   // let Next.js handle it naturally (will show 404)
   if (segments.length > 0) {
     const firstSegment = segments[0]
-    const knownRoutes = ['dashboard', 'authentication', 'admin', 'maintenance']
+    const knownRoutes = [
+      'dashboard',
+      'authentication',
+      'admin',
+      'maintenance',
+      'pricing',
+      'updates',
+      'privacy-policy',
+      'terms-of-service',
+      'contact',
+      'about',
+      'blog',
+      'support',
+      'documentation',
+      'api',
+      'integrations',
+      'features',
+      'community',
+    ]
     
     if (!locales.includes(firstSegment) && !knownRoutes.includes(firstSegment)) {
       // This might be a non-existent route, let Next.js handle it
@@ -165,6 +183,6 @@ export async function middleware(request: NextRequest) {
 export const config = {
   // Simplified matcher since we handle filtering in middleware logic
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|robots.txt).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt).*)',
   ],
 }
