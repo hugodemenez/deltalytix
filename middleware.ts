@@ -10,7 +10,7 @@ const MAINTENANCE_MODE = false
 const I18nMiddleware = createI18nMiddleware({
   locales: ['en', 'fr'],
   defaultLocale: 'fr',
-  // urlMappingStrategy: 'rewrite'
+  urlMappingStrategy: 'rewrite'
 })
 
 async function updateSession(
@@ -52,6 +52,26 @@ async function updateSession(
 }
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname
+  
+
+  // Check if this looks like a non-existent route before processing with i18n
+  // This helps prevent the i18n middleware from trying to localize invalid routes
+  const segments = pathname.split('/').filter(Boolean)
+  const locales = ['en', 'fr']
+  
+  // If the first segment is not a valid locale and doesn't match known routes,
+  // let Next.js handle it naturally (will show 404)
+  if (segments.length > 0) {
+    const firstSegment = segments[0]
+    const knownRoutes = ['dashboard', 'authentication', 'admin', 'maintenance']
+    
+    if (!locales.includes(firstSegment) && !knownRoutes.includes(firstSegment)) {
+      // This might be a non-existent route, let Next.js handle it
+      return NextResponse.next()
+    }
+  }
+
   const {response, user} = await updateSession(request, I18nMiddleware(request))
   const nextUrl = request.nextUrl
   const pathnameLocale = nextUrl.pathname.split('/', 2)?.[1]
@@ -143,5 +163,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|static|.*\\..*|_next|favicon.ico|robots.txt).*)']
+  // Simplified matcher since we handle filtering in middleware logic
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt).*)',
+  ],
 }

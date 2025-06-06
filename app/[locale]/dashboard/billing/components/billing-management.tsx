@@ -14,8 +14,8 @@ import { useI18n, useCurrentLocale } from "@/locales/client"
 import PricingPlans from "../../../(landing)/components/pricing-plans"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { createClient } from '@/server/auth'
 
-type BillingPeriod = "yearly" | "monthly"
 
 type SubscriptionStatus = 
   | "active"
@@ -46,7 +46,6 @@ type Plans = {
 }
 
 export default function BillingManagement() {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly")
   const [subscription, setSubscription] = useState<SubscriptionWithPrice | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
@@ -90,7 +89,6 @@ export default function BillingManagement() {
         // If cancelling, collect feedback
         if (action === 'cancel' && subscription?.plan?.name) {
           await collectSubscriptionFeedback(
-            subscription.plan.name,
             'cancellation',
             cancellationReason,
             feedback

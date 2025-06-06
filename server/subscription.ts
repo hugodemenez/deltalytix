@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { getUserEmail } from './auth';
+import { headers } from 'next/headers';
 
 interface SubscriptionInfo {
     isActive: boolean;
@@ -19,9 +19,11 @@ function isValidEmail(email: string): boolean {
 }
 
 export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null> {
-    const email = await getUserEmail()
+    // Get user email using headers from our middleware
+    const headersList = await headers()
+    const email = headersList.get("x-user-email")
     // Input validation
-    if (!isValidEmail(email)) {
+    if (!email || !isValidEmail(email)) {
         console.error('[getSubscriptionDetails] Invalid email format:', email)
         return null
     }
@@ -30,7 +32,7 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
     if (normalizedEmail.endsWith('@rithmic.com')) {
         return {
             isActive: true,
-            plan: 'ENTERPRISE',
+            plan: 'Plus',
             status: 'ACTIVE',
             endDate: null,
             trialEndsAt: null
@@ -38,7 +40,7 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
     }
 
     console.log("[getSubscriptionDetails] Fetching details for", normalizedEmail)
-    
+
     try {
         const subscription = await prisma.subscription.findUnique({
             where: { email: normalizedEmail },
@@ -54,14 +56,14 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
         if (!subscription) return null
 
         const now = new Date()
-        
+
         // Ensure isActive is always boolean
         const isActive = Boolean(
-            subscription.status === 'ACTIVE' || 
+            subscription.status === 'ACTIVE' ||
             (subscription.status === 'TRIAL' && subscription.trialEndsAt && subscription.trialEndsAt > now) ||
             (subscription.endDate && subscription.endDate > now)
         )
-        
+
         return {
             isActive,
             plan: subscription.plan,

@@ -159,12 +159,12 @@ export async function updateSubscription(action: 'pause' | 'resume' | 'cancel', 
 }
 
 export async function collectSubscriptionFeedback(
-  email: string,
   event: string,
   cancellationReason?: string,
   feedback?: string
 ) {
   try {
+    console.log('collectSubscriptionFeedback', event, cancellationReason, feedback)
     const supabase = await createClient()
     
     // Get the current user
@@ -174,11 +174,11 @@ export async function collectSubscriptionFeedback(
     // Create feedback record
     await prisma.subscriptionFeedback.create({
       data: {
-        email,
+        email: user.email,
         event,
         cancellationReason,
         feedback,
-      }
+      },
     })
 
     return { success: true }

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, X } from "lucide-react"
+import { Check, ChevronLeft, ChevronRight, X } from "lucide-react"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import NumberFlow from '@number-flow/react'
 import {
@@ -226,26 +226,26 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
     )
   }
 
-    const PlusPlan = ({ plan, billingPeriod, setBillingPeriod }: { plan: Plan, billingPeriod: BillingPeriod, setBillingPeriod: (period: BillingPeriod) => void }) => {
+  const PlusPlan = ({ plan, billingPeriod, setBillingPeriod }: { plan: Plan, billingPeriod: BillingPeriod, setBillingPeriod: (period: BillingPeriod) => void }) => {
     const [currentPricing, setCurrentPricing] = useState(0)
     const [previousPrice, setPreviousPrice] = useState(0)
     const { currency, symbol } = useCurrency()
-    
+
     useEffect(() => {
-      setCurrentPricing(billingPeriod === 'yearly' ? plan.price.yearly / 12 : 
-                       billingPeriod === 'quarterly' ? plan.price.quarterly / 3 : 
-                       billingPeriod === 'lifetime' ? plan.price.lifetime :
-                       plan.price.monthly)
-      
-      setPreviousPrice(billingPeriod === 'yearly' ? previousPricing.yearly / 12 : 
-                      billingPeriod === 'quarterly' ? previousPricing.quarterly / 3 : 
-                      billingPeriod === 'lifetime' ? previousPricing.lifetime :
-                      previousPricing.monthly)
+      setCurrentPricing(billingPeriod === 'yearly' ? plan.price.yearly / 12 :
+        billingPeriod === 'quarterly' ? plan.price.quarterly / 3 :
+          billingPeriod === 'lifetime' ? plan.price.lifetime :
+            plan.price.monthly)
+
+      setPreviousPrice(billingPeriod === 'yearly' ? previousPricing.yearly / 12 :
+        billingPeriod === 'quarterly' ? previousPricing.quarterly / 3 :
+          billingPeriod === 'lifetime' ? previousPricing.lifetime :
+            previousPricing.monthly)
     }, [billingPeriod, plan.price])
-    
+
     const t = useI18n()
 
-    const billingOptions = [
+    const recurringBillingOptions = [
       {
         key: 'monthly' as BillingPeriod,
         label: t('pricing.monthly'),
@@ -260,16 +260,11 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
         key: 'yearly' as BillingPeriod,
         label: t('pricing.yearly'),
         description: `${symbol}${plan.price.yearly} billed yearly (${symbol}${(plan.price.yearly / 12).toFixed(2)}/month)`
-      },
-      {
-        key: 'lifetime' as BillingPeriod,
-        label: t('pricing.lifetime'),
-        description: t('pricing.lifetimeAccess')
       }
     ]
 
     return (
-      <div className="relative z-10">
+      <div className="relative z-10 w-full">
         <span className="absolute inset-[-8px] bg-[rgba(50,169,151,0.15)] dark:bg-[hsl(var(--chart-1)/0.15)] rounded-[14.5867px] -z-10"></span>
         <span className="absolute inset-[-4px] bg-[rgba(50,169,151,0.25)] dark:bg-[hsl(var(--chart-1)/0.25)] rounded-[14.5867px] -z-20"></span>
         <span className="absolute inset-0 shadow-[0_18.2333px_27.35px_-5.47px_rgba(0,0,0,0.1),0_7.29333px_10.94px_-7.29333px_rgba(0,0,0,0.1)] dark:shadow-[0_18.2333px_27.35px_-5.47px_hsl(var(--chart-1)/0.1),0_7.29333px_10.94px_-7.29333px_hsl(var(--chart-1)/0.1)] rounded-[14.5867px] -z-30"></span>
@@ -284,41 +279,45 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
             <CardDescription>{plan.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="mb-6 p-4 bg-muted rounded-lg">
-              <div className="flex justify-between items-center mb-3 flex-col gap-3">
-                <span className="text-sm font-medium">{t('pricing.billingPeriod')}</span>
-                <div className="px-12">
-                  <Carousel className="w-full" opts={{ loop: true, startIndex: billingPeriod === 'lifetime'?3:1 }}>
-                    <CarouselContent>
-                      {billingOptions.map((option) => (
-                        <CarouselItem key={option.key} className="basis-1/3">
-                          <Button
-                            variant={billingPeriod === option.key ? 'default' : 'outline'}
-                            size="sm"
-                            className="w-full"
-                            onClick={() => setBillingPeriod(option.key)}
-                          >
-                            {option.label}
-                          </Button>
-                        </CarouselItem>
-                      ))}
-                    </CarouselContent>
-                    <CarouselPrevious className="-left-3" />
-                    <CarouselNext className="-right-3" />
-                  </Carousel>
+            <div className="bg-muted rounded-lg p-4 mb-4 space-y-3 ">
+              <span className="text-sm font-medium block text-center">
+                {t('pricing.billingPeriod')}
+              </span>
+              
+              {/* Toggle group for recurring billing options */}
+              <div className="grid grid-cols-3 gap-1 p-1 bg-background rounded-md">
+                {recurringBillingOptions.map((option) => (
+                  <Button
+                    key={option.key}
+                    variant={billingPeriod === option.key ? 'default' : 'ghost'}
+                    size="sm"
+                    className="text-xs capitalize"
+                    onClick={() => setBillingPeriod(option.key)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Separate lifetime button */}
+              <div className="pt-2 border-t border-border">
+                <div className="relative">
+                  <Button
+                    variant={billingPeriod === 'lifetime' ? 'default' : 'outline'}
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setBillingPeriod('lifetime')}
+                  >
+                    {t('pricing.lifetimeAccess')}
+                  </Button>
+                  <span className="absolute -top-3 -right-1 bg-green-500 text-white text-[10px] sm:text-xs font-medium px-1 py-0.5 sm:px-1.5 rounded-full">
+                    {t('pricing.new')}
+                  </span>
                 </div>
               </div>
-              <p className="text-xs text-center text-muted-foreground mt-2">
-                {billingPeriod === 'monthly'
-                  ? t('pricing.monthlyFlexibility')
-                  : billingPeriod === 'yearly'
-                    ? t('pricing.billedYearly', { total: plan.price.yearly })
-                    : billingPeriod === 'lifetime'
-                    ? t('pricing.lifetimeAccess')
-                    : t('pricing.billedQuarterly', { total: plan.price.quarterly })}
-              </p>
             </div>
-                        <div className="mb-4">
+            
+            <div className="mb-4">
               {billingPeriod === 'lifetime' ? (
                 /* Lifetime pricing - no previous price comparison */
                 <div className="text-center">
@@ -335,7 +334,6 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">{t('pricing.oneTimePayment')}</p>
                 </div>
               ) : (
                 /* Recurring billing - show price comparison */
@@ -344,46 +342,42 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                   <div className="flex items-center justify-center gap-4 mb-3">
                     {/* Previous price (crossed out) */}
                     <div className="text-lg text-muted-foreground relative">
-                      <span className="inline-block">
-                        {symbol}
                         <NumberFlow
+                          prefix={`${symbol}`}
                           value={previousPrice}
                           digits={{ 1: { max: 2 } }}
                           format={{ minimumIntegerDigits: 2 }}
                         />
-                      </span>
                       <div className="absolute inset-0 flex items-center">
                         <div className="w-full h-[1px] bg-current"></div>
                       </div>
                     </div>
-                    
+
                     <div className="text-muted-foreground">→</div>
-                    
+
                     {/* Current promotional pricing */}
-                    <div className="flex items-baseline">
-                      <span className="text-2xl font-bold text-green-600">{symbol}</span>
-                      <span className="text-2xl font-bold text-green-600">
+                    <div className="flex items-baseline text-lg sm:text-2xl font-bold text-green-600">
                         <NumberFlow
+                          prefix={`${symbol}`}
                           suffix={`/${t('pricing.month')}`}
                           value={currentPricing}
                           digits={{ 1: { max: 2 } }}
                           format={{ minimumIntegerDigits: 2 }}
                         />
-                      </span>
                     </div>
-                    
+
                     {/* Savings badge positioned to the right */}
                     <span className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
                       -{Math.round(((previousPrice - currentPricing) / previousPrice) * 100)}%
                     </span>
                   </div>
-                  
-                  {/* Offer validity */}
-                  <div className="text-center">
-                    <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                      🔥 {t('pricing.offerValidUntil')}
-                    </p>
-                  </div>
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    {billingPeriod === 'monthly'
+                      ? t('pricing.monthlyFlexibility')
+                      : billingPeriod === 'yearly'
+                        ? t('pricing.billedYearly', { total: plan.price.yearly })
+                        : t('pricing.billedQuarterly', { total: plan.price.quarterly })}
+                  </p>
                 </>
               )}
             </div>
@@ -397,12 +391,12 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
             </ul>
           </CardContent>
           <CardFooter>
-                          <form action={'/api/stripe/create-checkout-session'} method='POST' className='w-full'>
-                <input type="hidden" name="lookup_key" value={`plus_${billingPeriod}_${currency.toLowerCase()}`} />
-                <Button type="submit" className="w-full">
-                  {t('pricing.trialPeriod')}
-                </Button>
-              </form>
+            <form action={'/api/stripe/create-checkout-session'} method='POST' className='w-full'>
+              <input type="hidden" name="lookup_key" value={`plus_${billingPeriod}_${currency.toLowerCase()}`} />
+              <Button type="submit" className="w-full">
+                {t('pricing.trialPeriod')}
+              </Button>
+            </form>
           </CardFooter>
         </Card>
       </div>
@@ -410,8 +404,8 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
   }
 
   const PricingContent = () => (
-    <div>
-      <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+    <div className="sm:px-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
         <FreePlan plan={plans.basic} isModal={isModal} onClose={onClose} />
         <PlusPlan plan={plans.plus} billingPeriod={billingPeriod} setBillingPeriod={setBillingPeriod} />
       </div>

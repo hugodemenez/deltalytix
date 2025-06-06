@@ -49,6 +49,7 @@ export async function POST(req: Request) {
     try {
       switch (event.type) {
         case "checkout.session.completed":
+          console.log('checkout.session.completed')
           data = event.data.object as Stripe.Checkout.Session;
           
           // Retrieve the subscription details from the session
@@ -65,8 +66,11 @@ export async function POST(req: Request) {
           const price = await stripe.prices.retrieve(priceId, {
             expand: ['product'],
           });
+          console.log('PRICE', price)
           const productName = (price.product as Stripe.Product).name;
-          const subscriptionPlan = productName || 'free';
+          const subscriptionPlan = productName.toUpperCase() || 'FREE';
+          // If interval_count is 3 then it is quarterly
+          const interval = price.recurring?.interval_count === 3 ? 'quarter' : price.recurring?.interval || 'month';
           
           const user = await prisma.user.findUnique({
             where: { email: data.customer_details?.email as string },
@@ -79,16 +83,18 @@ export async function POST(req: Request) {
             update: {
               plan: subscriptionPlan,
               endDate: new Date(subscription.current_period_end * 1000),
-              status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
-              trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+              status: 'ACTIVE',
+              trialEndsAt: null,
+              interval: interval,
             },
             create: {
               email: data.customer_details?.email as string,
               plan: subscriptionPlan,
               user: { connect: { id: user?.id } },
               endDate: new Date(subscription.current_period_end * 1000),
-              status: subscription.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
-              trialEndsAt: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+              status: 'ACTIVE',
+              trialEndsAt: null,
+              interval: interval,
             }
           });
 
@@ -103,16 +109,13 @@ export async function POST(req: Request) {
             })
           }
           break;
-        case "payment_intent.payment_failed":
-          data = event.data.object as Stripe.PaymentIntent;
-          console.log(`❌ Payment failed: ${data.last_payment_error?.message}`);
-          // TODO: Send email to user to ask for payment details, giving a payment link
-          break;
         case "payment_intent.succeeded":
+          console.log('payment_intent.succeeded')
           data = event.data.object as Stripe.PaymentIntent;
           console.log(`💰 PaymentIntent status: ${data.status}`);
           break;
         case "customer.subscription.deleted":
+          console.log('customer.subscription.deleted')
           data = event.data.object as Stripe.Subscription;
           const customerData = await stripe.customers.retrieve(
             data.customer as string
@@ -122,6 +125,7 @@ export async function POST(req: Request) {
             await prisma.subscription.update({
               where: { email: customerData.email },
               data: { 
+                plan: 'FREE',
                 status: "CANCELLED",
                 endDate: new Date(data.ended_at! * 1000)
               }
@@ -131,6 +135,7 @@ export async function POST(req: Request) {
           // TODO: Schedule an email to ask feedback on the cancellation
           break;
         case "customer.subscription.updated":
+          console.log('customer.subscription.updated')
           data = event.data.object as Stripe.Subscription;
           const updatedCustomerData = await stripe.customers.retrieve(
             data.customer as string
@@ -217,6 +222,7 @@ export async function POST(req: Request) {
           }
           break;
         case "customer.subscription.created":
+          console.log('customer.subscription.created')
           data = event.data.object as Stripe.Subscription;
           const newCustomerData = await stripe.customers.retrieve(
             data.customer as string
@@ -251,6 +257,7 @@ export async function POST(req: Request) {
           }
           break;
         case "invoice.payment_failed":
+          console.log('invoice.payment_failed')
           data = event.data.object as Stripe.Invoice;
           const customerEmail = (await stripe.customers.retrieve(data.customer as string) as Stripe.Customer).email;
           
@@ -264,22 +271,12 @@ export async function POST(req: Request) {
           }
           console.log(`Payment failed for invoice: ${data.id}`);
           break;
-
-        case "customer.subscription.trial_will_end":
-          data = event.data.object as Stripe.Subscription;
-          const trialEndCustomer = await stripe.customers.retrieve(
-            data.customer as string
-          ) as Stripe.Customer;
-          
-          if (trialEndCustomer.email) {
-            await prisma.subscription.update({
-              where: { email: trialEndCustomer.email },
-              data: { 
-                status: "TRIAL_ENDING",
-              }
-            });
-          }
-          console.log(`Trial ending soon for subscription: ${data.id}`);
+        case "payment_intent.payment_failed":
+          console.log('payment_intent.payment_failed')
+          data = event.data.object as Stripe.PaymentIntent;
+          console.log(`❌ Payment failed: ${data.last_payment_error?.message}`);
+          // TODO: Deactivate the subscription and send email to user to ask for payment details, giving a payment link
+          // Since this event is triggered on first payment failure, we need to deactivate the subscription
           break;
         default:
           throw new Error(`Unhandled event: ${event.type}`);

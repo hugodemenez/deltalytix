@@ -11,6 +11,7 @@ export default {
         quarterlySavings: 'Économisez jusqu\'à 10% avec la facturation trimestrielle',
         monthlyFlexibility: 'Facturation mensuelle flexible',
         lifetimeAccess: 'Paiement unique pour un accès à vie',
+        new: 'NOUVEAU',
         previousPrice: 'Prix habituel',
         offerValidUntil: 'Offre limitée - valable jusqu\'au 30 juin',
         brandNew: 'Tout Nouveau',

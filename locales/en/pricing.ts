@@ -11,6 +11,7 @@ export default {
         quarterlySavings: 'Save up to 10% with quarterly billing',
         monthlyFlexibility: 'Flexible monthly billing',
         lifetimeAccess: 'One-time payment for lifetime access',
+        new: 'NEW',
         previousPrice: 'Regular price',
         offerValidUntil: 'Limited time offer - valid until June 30th',
         brandNew: 'Brand New',
