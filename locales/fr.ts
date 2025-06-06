@@ -90,6 +90,7 @@ export default {
     'dashboard.startTour': 'Démarrer la visite',
     'dashboard.startTourDescription': 'Faites une visite guidée du tableau de bord',
     'dashboard.theme': 'Thème',
+    'dashboard.theme.intensity': 'Intensité',
     'dashboard.language': 'Langue',
     'dashboard.logOut': 'Se déconnecter',
     'dashboard.requestNewLanguage': 'Demander une nouvelle langue',

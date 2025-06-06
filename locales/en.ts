@@ -89,6 +89,7 @@ export default {
     'dashboard.startTour': 'Start Tour',
     'dashboard.startTourDescription': 'Take a guided tour of the dashboard',
     'dashboard.theme': 'Theme',
+    'dashboard.theme.intensity': 'Intensity',
     'dashboard.language': 'Language',
     'dashboard.logOut': 'Log out',
     'dashboard.requestNewLanguage': 'Request new language',
