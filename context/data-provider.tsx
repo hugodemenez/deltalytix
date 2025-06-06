@@ -64,7 +64,6 @@ import {
 import { formatInTimeZone } from 'date-fns-tz';
 import { calculateStatistics, formatCalendarData } from '@/lib/utils';
 import { useParams } from 'next/navigation';
-import { JsonValue } from '@prisma/client/runtime/library';
 import { deleteTagAction } from '@/server/tags';
 
 // Types from trades-data.tsx
@@ -479,23 +478,8 @@ export const DataProvider: React.FC<{
 
       // Step 2: Fetch trades (with caching server side)
       // I think we could make basic computations server side to offload inital stats computations
-      // WE SHOULD NOT USE CLIENT SIDE CACHING FOR TRADES (TOO MUCH DATA)
-      const tradesResponse = await fetch(`/api/data/trades?userId=${user.id}`, {
-        cache: 'force-cache',
-        next: {
-          tags: [`trades-${user.id}`]
-        }
-      }).then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to fetch trades');
-        }
-        return response.json()
-      })
-      if (tradesResponse.error) {
-        console.log('tradesResponse.error', tradesResponse.error)
-        throw new Error(tradesResponse.error)
-      }
-      const trades: PrismaTrade[] = tradesResponse
+      // WE SHOULD NOT USE CLIENT SIDE CACHING FOR TRADES (PREVENTS DATA LEAKAGE / OVERLOAD IN CACHE)
+      const trades = await getTradesAction()
       setTrades(Array.isArray(trades) ? trades : []);
 
       // Set the date range
@@ -527,7 +511,6 @@ export const DataProvider: React.FC<{
         setUser(data.userData);
         setSubscription(data.subscription as PrismaSubscription | null);
         setTags(data.tags);
-        setAccounts(data.accounts);
         setGroups(data.groups);
         setMoods(data.moodHistory);
         setEvents(data.financialEvents);
@@ -573,8 +556,7 @@ export const DataProvider: React.FC<{
 
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
-    // Does not use cached data, so we need to revalidate the tag
-    const trades = await getTradesAction()
+    const trades = await getTradesAction({noCache: true})
     setTrades(trades)
   }, [user?.id])
 

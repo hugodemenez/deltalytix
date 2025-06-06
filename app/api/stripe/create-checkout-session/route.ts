@@ -6,7 +6,7 @@ import { stripe } from "@/app/[locale]/(landing)/actions/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
 
 async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null) {
-    const subscriptionDetails = await getSubscriptionDetails(user.email);
+    const subscriptionDetails = await getSubscriptionDetails();
 
     if (subscriptionDetails?.isActive) {
         return NextResponse.redirect(

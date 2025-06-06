@@ -62,8 +62,11 @@ export async function POST(req: Request) {
           });
           
           const priceId = subscriptionItems.data[0]?.price.id;
-          const price = await stripe.prices.retrieve(priceId);
-          const subscriptionPlan = price.nickname || data.metadata?.plan || 'free';
+          const price = await stripe.prices.retrieve(priceId, {
+            expand: ['product'],
+          });
+          const productName = (price.product as Stripe.Product).name;
+          const subscriptionPlan = productName || 'free';
           
           const user = await prisma.user.findUnique({
             where: { email: data.customer_details?.email as string },
@@ -103,6 +106,7 @@ export async function POST(req: Request) {
         case "payment_intent.payment_failed":
           data = event.data.object as Stripe.PaymentIntent;
           console.log(`❌ Payment failed: ${data.last_payment_error?.message}`);
+          // TODO: Send email to user to ask for payment details, giving a payment link
           break;
         case "payment_intent.succeeded":
           data = event.data.object as Stripe.PaymentIntent;
@@ -124,6 +128,7 @@ export async function POST(req: Request) {
             });
           }
           console.log(`Subscription deleted and updated in DB: ${data.id}`);
+          // TODO: Schedule an email to ask feedback on the cancellation
           break;
         case "customer.subscription.updated":
           data = event.data.object as Stripe.Subscription;

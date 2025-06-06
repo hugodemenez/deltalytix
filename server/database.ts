@@ -6,6 +6,7 @@ import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
 import { getSubscriptionDetails } from './subscription'
 import { prisma } from '@/lib/prisma'
+import { unstable_cache } from 'next/cache'
 
 type TradeError = 
   | 'DUPLICATE_TRADES'
@@ -72,50 +73,58 @@ export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
     }
 }
 
-export async function getTradesAction(): Promise<Trade[]> {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    const userId = user?.id
-    if (!userId) {
-      throw new Error('User not found')
-    }
-    const {isActive: isSubscribed} = await getSubscriptionDetails(user?.email || '') || {isSubscribed: false}
-    console.log('[getTrades] isSubscribed:', isSubscribed)
-    const where: Prisma.TradeWhereInput = { userId }
-    
-    // If not subscribed, limit to last week's trades
-    if (!isSubscribed) {
-      const oneWeekAgo = startOfDay(new Date())
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+// Create cache function dynamically for each user/subscription combination
+function getCachedTrades(userId: string, isSubscribed: boolean): Promise<Trade[]> {
+  return unstable_cache(
+    async () => {
+      console.log(`[Cache MISS] Fetching trades for user ${userId}, subscribed: ${isSubscribed}`)
       
-      where.entryDate = {
-        gte: oneWeekAgo.toISOString().split('T')[0]
+      const query: any = {
+        where: { userId },
+        orderBy: { entryDate: 'desc' }
       }
 
-      console.log('[getTrades] Limiting to last week for non-subscribed user:', { 
-        userId,
-        fromDate: oneWeekAgo.toISOString()
-      })
+      if (!isSubscribed) {
+        const oneWeekAgo = startOfDay(new Date())
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+        query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+      }
+
+      return await prisma.trade.findMany(query)
+    },
+    // Static string array - this is the cache key
+    [`trades-${userId}-${isSubscribed}`],
+    { 
+      tags: [`trades-${userId}`], // User-specific tag for revalidation
+      revalidate: 3600 // Revalidate every hour (3600 seconds)
     }
-    
-    const trades = await prisma.trade.findMany({ 
-      where,
-      orderBy: { entryDate: 'desc' }
-    })
-    
+  )()  // Note the () at the end - we call the cached function immediately
+}
+
+
+export async function getTradesAction({noCache = false}: {noCache?: boolean} = {}): Promise<Trade[]> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const subscriptionDetails = await getSubscriptionDetails()
+    const isSubscribed = subscriptionDetails?.isActive || false
+    if (noCache) {
+      revalidateTag(`trades-${user.id}`)
+    }
+
+    // Get cached trades
+    const trades = await getCachedTrades(user.id, isSubscribed)
+
     // Tell the server that the trades have changed
     // Next page reload will fetch the new trades instead of using the cached data
-    revalidateTag(`trades-${userId}`)
     return trades.map(trade => ({
       ...trade,
       entryDate: new Date(trade.entryDate).toISOString(),
       exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
     }))
-  } catch (error) {
-    console.error('[getTrades] Database error:', error)
-    return []
-  }
 }
 
 export async function updateTradesAction(tradesIds: string[], update: Partial<Trade>): Promise<number> {

@@ -1,6 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { getUserEmail } from './auth';
 
 interface SubscriptionInfo {
     isActive: boolean;
@@ -17,14 +18,13 @@ function isValidEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-export async function getSubscriptionDetails(email: string): Promise<SubscriptionInfo | null> {
+export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null> {
+    const email = await getUserEmail()
     // Input validation
     if (!isValidEmail(email)) {
         console.error('[getSubscriptionDetails] Invalid email format:', email)
         return null
     }
-
-    // Normalize email to lowercase to ensure consistent lookups
     const normalizedEmail = email.toLowerCase().trim()
 
     if (normalizedEmail.endsWith('@rithmic.com')) {

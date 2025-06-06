@@ -2,7 +2,7 @@
 import { createI18nMiddleware } from 'next-international/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { createClient } from './server/auth'
+import { geolocation } from '@vercel/functions'
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
@@ -10,12 +10,12 @@ const MAINTENANCE_MODE = false
 const I18nMiddleware = createI18nMiddleware({
   locales: ['en', 'fr'],
   defaultLocale: 'fr',
-  urlMappingStrategy: 'rewrite'
+  // urlMappingStrategy: 'rewrite'
 })
 
 async function updateSession(
   request: NextRequest,
-  supabaseResponse: NextResponse,
+  response: NextResponse,
 ) {
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -27,11 +27,11 @@ async function updateSession(
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
+          response = NextResponse.next({
             request,
           })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           )
         },
       },
@@ -41,17 +41,19 @@ async function updateSession(
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
   // IMPORTANT: DO NOT REMOVE auth.getUser()
-  await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  return supabaseResponse;
+  // Add user ID to headers for server actions to use
+  if (user) {
+    response.headers.set("x-user-id", user.id)
+    response.headers.set("x-user-email", user.email || "")
+  }
+  return {response, user};
 }
 
 export async function middleware(request: NextRequest) {
-  const response = await updateSession(request, I18nMiddleware(request))
-  const supabase = await createClient()
-  const url = new URL('/', request.url)
+  const {response, user} = await updateSession(request, I18nMiddleware(request))
   const nextUrl = request.nextUrl
-
   const pathnameLocale = nextUrl.pathname.split('/', 2)?.[1]
 
   // Remove the locale from the pathname
@@ -61,8 +63,6 @@ export async function middleware(request: NextRequest) {
 
   // Create a new URL without the locale in the pathname
   const newUrl = new URL(pathnameWithoutLocale || '/', request.url)
-
-  const { data: { user } } = await supabase.auth.getUser()
 
   // Maintenance mode check
   if (MAINTENANCE_MODE && 
@@ -101,6 +101,42 @@ export async function middleware(request: NextRequest) {
     if (newUrl.pathname.includes('/authentication')) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
+  }
+
+  try {
+    // Get geolocation data from Vercel
+    const geo = geolocation(request)
+    
+    // Add geolocation data to response headers for client-side access
+    response.headers.set('x-user-country', geo.country || 'US')
+    response.headers.set('x-user-city', geo.city || '')
+    response.headers.set('x-user-region', geo.countryRegion || '')
+    
+    // Also add to cookies for easier client-side access
+    if (geo.country) {
+      response.cookies.set('user-country', geo.country, {
+        path: '/',
+        maxAge: 60 * 60 * 24, // 24 hours
+        sameSite: 'lax'
+      })
+    }
+    
+  } catch (error) {
+    // Fallback to original Vercel headers if geolocation function fails
+    const country = request.headers.get('x-vercel-ip-country')
+    const city = request.headers.get('x-vercel-ip-city')
+    const region = request.headers.get('x-vercel-ip-country-region')
+    
+    if (country) {
+      response.headers.set('x-user-country', country)
+      response.cookies.set('user-country', country, {
+        path: '/',
+        maxAge: 60 * 60 * 24,
+        sameSite: 'lax'
+      })
+    }
+    if (city) response.headers.set('x-user-city', city)
+    if (region) response.headers.set('x-user-region', region)
   }
 
   return response
