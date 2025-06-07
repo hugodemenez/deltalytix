@@ -146,9 +146,10 @@ export async function middleware(request: NextRequest) {
     const geo = geolocation(request)
     
     // Add geolocation data to response headers for client-side access
+    // Encode values to handle non-ASCII characters (like accented letters)
     response.headers.set('x-user-country', geo.country || 'US')
-    response.headers.set('x-user-city', geo.city || '')
-    response.headers.set('x-user-region', geo.countryRegion || '')
+    response.headers.set('x-user-city', encodeURIComponent(geo.city || ''))
+    response.headers.set('x-user-region', encodeURIComponent(geo.countryRegion || ''))
     
     // Also add to cookies for easier client-side access
     if (geo.country) {
@@ -173,8 +174,8 @@ export async function middleware(request: NextRequest) {
         sameSite: 'lax'
       })
     }
-    if (city) response.headers.set('x-user-city', city)
-    if (region) response.headers.set('x-user-region', region)
+    if (city) response.headers.set('x-user-city', encodeURIComponent(city))
+    if (region) response.headers.set('x-user-region', encodeURIComponent(region))
   }
 
   return response
