@@ -165,16 +165,19 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const [showResumeButton, setShowResumeButton] = useState(false)
     const [isNearBottom, setIsNearBottom] = useState(true)
     const moods = useUserStore(state => state.moods)
+    const setMoods = useUserStore(state => state.setMoods)
 
     // Load stored messages when component mounts
     // Load from user mood store if no messages are stored
     useEffect(() => {
         const loadStoredMessages = async () => {
+            // If user is not logged in or there are stored messages, return
             if (!user?.id || storedMessages.length > 0) return
             setIsLoadingMessages(true)
             try {
                 if (moods.length > 0) {
                     // Find current day in moods
+                    console.log('MOODS', moods)
                     const currentDay = format(new Date(), 'yyyy-MM-dd')
                     const currentMood = moods.find(mood => format(mood.day, 'yyyy-MM-dd') === currentDay)
                     if (currentMood) {
@@ -202,7 +205,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
             }
         }
         loadStoredMessages()
-    }, [user?.id])
+    }, [user?.id, moods])
    
 
     const { messages, input, handleInputChange, handleSubmit, status, stop, setMessages, addToolResult, error, reload, append } =
@@ -217,7 +220,10 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
             onFinish: (message: Message) => {
                 const saveMessages = async () => {
                     if (!user?.id) return
-                    await saveChat(user.id, [...storedMessages, message])
+                    const mood = await saveChat(user.id, [...storedMessages, message])
+                    if (mood) {
+                        setMoods([...moods, mood])
+                    }
                     setStoredMessages([...storedMessages, message])
                 }
                 saveMessages()
@@ -312,6 +318,9 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                             return message.parts.map((part, index) => {
                                                 switch (part.type) {
                                                     case "step-start":
+                                                        if (message.parts && message.parts.length > index) {
+                                                        return null
+                                                        }
                                                             return <ThinkingMessage key={`${message.id}-step-${index}`} />
                                                     case "text":
                                                         return (

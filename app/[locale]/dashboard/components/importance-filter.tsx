@@ -106,7 +106,7 @@ export function ImportanceFilter({ value, onValueChange, className }: Importance
         role="group"
         aria-label="Impact level filter"
       >
-        {/* {IMPACT_LEVELS.map((level) => (
+        {IMPACT_LEVELS.map((level) => (
           <Tooltip key={level}>
             <TooltipTrigger asChild>
               <button
@@ -137,7 +137,7 @@ export function ImportanceFilter({ value, onValueChange, className }: Importance
               <p>{getTooltipLabel(level)}</p>
             </TooltipContent>
           </Tooltip>
-        ))} */}
+        ))}
         <span className="sr-only">
           {value.length === 0
             ? "No impact levels selected"

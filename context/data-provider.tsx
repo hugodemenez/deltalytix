@@ -482,20 +482,21 @@ export const DataProvider: React.FC<{
       const trades = await getTradesAction()
       setTrades(Array.isArray(trades) ? trades : []);
 
+      // TODO: This is not needed anymore
       // Set the date range
-      if (Array.isArray(trades) && trades.length > 0) {
-        const dates = trades.map(trade =>
-          new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX'))
-        );
-        if (dates.length > 0) {
-          const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
-          const maxDate = new Date(Math.max(
-            ...dates.map(date => date.getTime()),
-            new Date().getTime()
-          ));
-          setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
-        }
-      }
+      // if (Array.isArray(trades) && trades.length > 0) {
+      //   const dates = trades.map(trade =>
+      //     new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX'))
+      //   );
+      //   if (dates.length > 0) {
+      //     const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
+      //     const maxDate = new Date(Math.max(
+      //       ...dates.map(date => date.getTime()),
+      //       new Date().getTime()
+      //     ));
+      //     setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
+      //   }
+      // }
 
       // Step 3: Fetch user data in parallel
       // TODO: Check what we could cache
@@ -574,14 +575,6 @@ export const DataProvider: React.FC<{
       setDashboardLayout(defaultLayouts);
     }
   }, [isSharedView]);
-
-  const dateRangeBoundaries = useMemo(() => {
-    if (!dateRange?.from || !dateRange?.to) return null;
-    return {
-      from: startOfDay(new Date(formatInTimeZone(dateRange.from, timezone, 'yyyy-MM-dd HH:mm:ssXXX'))),
-      to: endOfDay(new Date(formatInTimeZone(dateRange.to, timezone, 'yyyy-MM-dd HH:mm:ssXXX')))
-    };
-  }, [dateRange, timezone]);
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array

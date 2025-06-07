@@ -90,9 +90,16 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+
   const {response, user} = await updateSession(request, I18nMiddleware(request))
   const nextUrl = request.nextUrl
   const pathnameLocale = nextUrl.pathname.split('/', 2)?.[1]
+
+  // If / then redirect as fast as possible
+  // Don't go through the whole middleware check
+  if (pathname === '/') {
+    return response
+  }
 
   // Remove the locale from the pathname
   const pathnameWithoutLocale = pathnameLocale

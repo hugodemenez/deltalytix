@@ -157,6 +157,7 @@ export default function Navbar() {
           </div>
           <div className="flex items-center space-x-4">
             <div className='hidden md:flex gap-x-4'>
+              <DateCalendarFilter />
               <DropdownMenu open={accountFilterOpen} onOpenChange={setAccountFilterOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button 
@@ -173,7 +174,6 @@ export default function Navbar() {
                   <AccountFilter showAccountNumbers={showAccountNumbers} />
                 </DropdownMenuContent>
               </DropdownMenu>
-              <DateCalendarFilter />
               <ImportButton />
             </div>
             <div className="flex items-center gap-2">

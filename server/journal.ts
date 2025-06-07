@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from './auth';
+import { Mood } from '@prisma/client';
 
 export type Conversation = {
   role: 'user' | 'assistant' | 'system';
@@ -193,7 +194,7 @@ export async function getMoodForDay(date: string) {
   }
 }
 
-export async function getMoodHistory(fromDate?: Date, toDate?: Date) {
+export async function getMoodHistory(fromDate?: Date, toDate?: Date): Promise<Mood[]> {
   const supabase = await createClient()
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) {

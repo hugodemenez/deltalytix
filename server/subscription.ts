@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { headers } from 'next/headers';
+import { createClient } from './auth';
 
 interface SubscriptionInfo {
     isActive: boolean;
@@ -21,7 +22,16 @@ function isValidEmail(email: string): boolean {
 export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null> {
     // Get user email using headers from our middleware
     const headersList = await headers()
-    const email = headersList.get("x-user-email")
+    let email = headersList.get("x-user-email")
+    if (!email) {
+        // USE supabase to get user email
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+            return null
+        }
+        email = user.email || null
+    }
     // Input validation
     if (!email || !isValidEmail(email)) {
         console.error('[getSubscriptionDetails] Invalid email format:', email)

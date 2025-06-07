@@ -279,11 +279,11 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
             <CardDescription>{plan.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-muted rounded-lg p-4 mb-4 space-y-3 ">
+            <div className="bg-muted rounded-lg p-4 mb-4 space-y-3 dark:bg-muted/50">
               <span className="text-sm font-medium block text-center">
                 {t('pricing.billingPeriod')}
               </span>
-              
+
               {/* Toggle group for recurring billing options */}
               <div className="grid grid-cols-3 gap-1 p-1 bg-background rounded-md">
                 {recurringBillingOptions.map((option) => (
@@ -298,7 +298,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                   </Button>
                 ))}
               </div>
-              
+
               {/* Separate lifetime button */}
               <div className="pt-2 border-t border-border">
                 <div className="relative">
@@ -316,7 +316,7 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                 </div>
               </div>
             </div>
-            
+
             <div className="mb-4">
               {billingPeriod === 'lifetime' ? (
                 /* Lifetime pricing - no previous price comparison */
@@ -342,12 +342,12 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                   <div className="flex items-center justify-center gap-4 mb-3">
                     {/* Previous price (crossed out) */}
                     <div className="text-lg text-muted-foreground relative">
-                        <NumberFlow
-                          prefix={`${symbol}`}
-                          value={previousPrice}
-                          digits={{ 1: { max: 2 } }}
-                          format={{ minimumIntegerDigits: 2 }}
-                        />
+                      <NumberFlow
+                        prefix={`${symbol}`}
+                        value={previousPrice}
+                        digits={{ 1: { max: 2 } }}
+                        format={{ minimumIntegerDigits: 2 }}
+                      />
                       <div className="absolute inset-0 flex items-center">
                         <div className="w-full h-[1px] bg-current"></div>
                       </div>
@@ -357,13 +357,13 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
 
                     {/* Current promotional pricing */}
                     <div className="flex items-baseline text-lg sm:text-2xl font-bold text-green-600">
-                        <NumberFlow
-                          prefix={`${symbol}`}
-                          suffix={`/${t('pricing.month')}`}
-                          value={currentPricing}
-                          digits={{ 1: { max: 2 } }}
-                          format={{ minimumIntegerDigits: 2 }}
-                        />
+                      <NumberFlow
+                        prefix={`${symbol}`}
+                        suffix={`/${t('pricing.month')}`}
+                        value={currentPricing}
+                        digits={{ 1: { max: 2 } }}
+                        format={{ minimumIntegerDigits: 2 }}
+                      />
                     </div>
 
                     {/* Savings badge positioned to the right */}

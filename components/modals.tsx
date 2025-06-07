@@ -8,7 +8,7 @@ import LoadingOverlay from '../app/[locale]/dashboard/components/loading-overlay
 import ImportButton from '../app/[locale]/dashboard/components/import/import-button'
 import { useI18n } from "@/locales/client"
 import { signOut } from '@/server/auth'
-import PricingPlans from '@/app/[locale]/(landing)/components/pricing-plans'
+import PricingPlans from '@/components/pricing-plans'
 import { redirect, useSearchParams } from 'next/navigation'
 import OnboardingModal from './onboarding-modal'
 import { AccountGroupBoard } from '@/app/[locale]/dashboard/components/filters/account-group-board'

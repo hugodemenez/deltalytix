@@ -2,8 +2,11 @@
 import { Message } from "@ai-sdk/react"
 import { prisma } from "@/lib/prisma"
 import { addDays, format } from "date-fns"
+import { Mood } from "@prisma/client"
+import { revalidateTag } from "next/cache"
 
-export async function saveChat(userId: string, messages: Message[]) {
+export async function saveChat(userId: string, messages: Message[]): Promise<Mood | null> {
+  console.log('Saving chat')
   const today = new Date()
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12))
 
@@ -36,9 +39,11 @@ export async function saveChat(userId: string, messages: Message[]) {
     },
   })
 
+  revalidateTag(`user-data-${userId}`)
+
   if (existingMood) {
     // Update existing mood entry
-    await prisma.mood.update({
+    const updatedMood = await prisma.mood.update({
       where: {
         id: existingMood.id,
       },
@@ -46,9 +51,10 @@ export async function saveChat(userId: string, messages: Message[]) {
         conversation: JSON.stringify(textOnlyMessages),
       },
     })
+    return updatedMood
   } else {
     // Create new mood entry
-    await prisma.mood.create({
+    const newMood = await prisma.mood.create({
       data: {
         userId,
         day: todayUTC,
@@ -56,10 +62,12 @@ export async function saveChat(userId: string, messages: Message[]) {
         conversation: JSON.stringify(textOnlyMessages),
       },
     })
+    return newMood
   }
 }
 
 export async function loadChat(userId: string): Promise<Message[]> {
+  console.log('Loading chat')
   const today = new Date()
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12))
 
@@ -74,6 +82,7 @@ export async function loadChat(userId: string): Promise<Message[]> {
     },
   })
 
+  revalidateTag(`user-data-${userId}`)
   console.log('Mood', mood)
 
   // Return conversation if it exists, otherwise empty array

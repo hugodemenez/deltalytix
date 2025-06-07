@@ -11,10 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { getSubscriptionData, updateSubscription, collectSubscriptionFeedback, type SubscriptionWithPrice } from "../../actions/billing"
 import { useToast } from "@/hooks/use-toast"
 import { useI18n, useCurrentLocale } from "@/locales/client"
-import PricingPlans from "../../../(landing)/components/pricing-plans"
-import { cn } from "@/lib/utils"
+import PricingPlans from "@/components/pricing-plans"
 import Link from "next/link"
-import { createClient } from '@/server/auth'
 
 
 type SubscriptionStatus = 
