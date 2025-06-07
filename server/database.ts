@@ -140,6 +140,9 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
     where: { id: { in: tradesIds }, userId },
     data: update
   })
+
+  revalidateTag(`trades-${userId}`)
+
   return result.count
   } catch (error) {
     console.error('[updateTrades] Database error:', error)

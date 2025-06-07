@@ -686,6 +686,8 @@ export default {
         },
         'groupTrades': 'Group trades',
         'ungroupTrades': 'Ungroup trades',
+        'deleteAllImages': 'Delete all images',
+        'allImagesDeleted': 'All images deleted successfully',
     },
     'share.button': 'Share trades',
     'share.success': 'Trades shared successfully',

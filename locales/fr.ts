@@ -884,6 +884,8 @@ export default {
         },
         'groupTrades': 'Grouper les trades',
         'ungroupTrades': 'Dégrouper les trades',
+        'deleteAllImages': 'Supprimer toutes les images',
+        'allImagesDeleted': 'Toutes les images ont été supprimées avec succès',
     },
     'tickDistribution.title': 'Distribution des ticks',
     'tickDistribution.description': 'Visualisez la distribution de vos trades par ticks',
