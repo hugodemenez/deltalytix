@@ -5,13 +5,8 @@ import { Responsive, WidthProvider } from 'react-grid-layout'
 import { WIDGET_REGISTRY, getWidgetComponent } from '@/app/[locale]/dashboard/config/widget-registry'
 import { Widget, WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { useData } from '@/context/data-provider'
+import { defaultLayouts } from '@/context/data-provider'
 
-interface SharedWidgetCanvasProps {
-  layout: {
-    desktop: Widget[]
-    mobile: Widget[]
-  }
-}
 
 // Update sizeToGrid to handle responsive sizes (copy from widget-canvas.tsx)
 const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
@@ -82,9 +77,11 @@ const generateResponsiveLayout = (widgets: Widget[]) => {
   return layouts
 }
 
-export function SharedWidgetCanvas({ layout }: SharedWidgetCanvasProps) {
+export function SharedWidgetCanvas() {
   const { isMobile } = useData()
   const ResponsiveGridLayout = useMemo(() => WidthProvider(Responsive), [])
+  
+  // Use default layouts instead of the passed layout prop
   const activeLayout = isMobile ? 'mobile' : 'desktop'
 
   const renderWidget = (widget: Widget) => {
@@ -114,15 +111,17 @@ export function SharedWidgetCanvas({ layout }: SharedWidgetCanvasProps) {
 
   // Transform server layout items to include required grid properties
   const transformedLayout = useMemo(() => {
-    return layout[activeLayout].map((item, index) => ({
+    const layoutItems = (activeLayout === 'desktop' ? defaultLayouts.desktop : defaultLayouts.mobile) as unknown as Widget[]
+    return layoutItems.map((item: Widget, index: number) => ({
       ...item,
       i: item.i || `widget-${index}`,
-      x: 0,
-      y: index,
+      // Preserve original x,y positions from default layouts
+      x: item.x,
+      y: item.y,
       w: sizeToGrid(item.size, isMobile).w,
       h: sizeToGrid(item.size, isMobile).h
     }))
-  }, [layout, activeLayout, isMobile])
+  }, [activeLayout, isMobile])
 
   return (
     <div className="relative mt-6">
@@ -145,7 +144,7 @@ export function SharedWidgetCanvas({ layout }: SharedWidgetCanvasProps) {
           touchAction: 'auto'
         }}
       >
-        {transformedLayout.map((widget) => (
+        {transformedLayout.map((widget: Widget) => (
           <div key={widget.i} className="h-full">
             <div className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] transition-shadow hover:shadow-md">
               {renderWidget(widget)}

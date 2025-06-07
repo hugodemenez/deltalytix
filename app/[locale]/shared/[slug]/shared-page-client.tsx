@@ -245,10 +245,7 @@ export function SharedPageClient({ params, initialData }: SharedPageClientProps)
             </CardContent>
           </Card>
 
-          <SharedWidgetCanvas layout={{
-            desktop: sharedParams.desktop || [],
-            mobile: sharedParams.mobile || []
-          }} />
+          <SharedWidgetCanvas />
         </main>
       </div>
     </div>

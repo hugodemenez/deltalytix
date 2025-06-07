@@ -146,7 +146,7 @@ export interface Account extends Omit<PrismaAccount, 'payouts'> {
 }
 
 // Add after the interfaces and before the UserDataContext
-const defaultLayouts: PrismaDashboardLayout = {
+export const defaultLayouts: PrismaDashboardLayout = {
   id: '',
   userId: '',
   createdAt: new Date(),
