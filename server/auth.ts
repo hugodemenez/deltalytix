@@ -1,14 +1,14 @@
 'use server'
-import { toast } from '@/hooks/use-toast'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { headers } from "next/headers"
 
-export async function getWebsiteURL(){
+export async function getWebsiteURL() {
   let url =
-    process?.env?.VERCEL_URL ?? // Automatically set by Vercel.
+    process?.env?.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production env.
+    process?.env?.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel.
     'http://localhost:3000/'
   // Make sure to include `https://` when not localhost.
   url = url.startsWith('http') ? url : `https://${url}`
@@ -137,11 +137,11 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
       if (existingUserByAuthId.email !== user.email) {
         try {
           return await prisma.user.update({
-            where: { 
+            where: {
               auth_user_id: user.id // Always use auth_user_id as the unique identifier
             },
-            data: { 
-              email: user.email || existingUserByAuthId.email 
+            data: {
+              email: user.email || existingUserByAuthId.email
             },
           });
         } catch (updateError) {
@@ -166,11 +166,11 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
       if (existingUserByEmail) {
         try {
           return await prisma.user.update({
-            where: { 
+            where: {
               email: user.email // Use email as the unique identifier since we found the user by email
             },
-            data: { 
-              auth_user_id: user.id 
+            data: {
+              auth_user_id: user.id
             },
           });
         } catch (updateError) {
@@ -191,8 +191,8 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
         },
       });
     } catch (createError) {
-      if (createError instanceof Error && 
-          createError.message.includes('Unique constraint failed')) {
+      if (createError instanceof Error &&
+        createError.message.includes('Unique constraint failed')) {
         await signOut();
         throw new Error('Database integrity error: Duplicate user records found');
       }
@@ -202,25 +202,25 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
     }
   } catch (error) {
     console.error('Error ensuring user in database:', error);
-    
+
     // Handle Prisma validation errors
     if (error instanceof Error) {
       if (error.message.includes('Argument `where` of type UserWhereUniqueInput needs')) {
         await signOut();
         throw new Error('Invalid user identification provided');
       }
-      
+
       if (error.message.includes('Unique constraint failed')) {
         await signOut();
         throw new Error('Database integrity error: Duplicate user records found');
       }
-      
+
       if (error.message.includes('Account conflict')) {
         // Error already handled above
         throw error;
       }
     }
-    
+
     // For any other unexpected errors, log out the user
     await signOut();
     throw new Error('Critical database error occurred. Please try logging in again.');
