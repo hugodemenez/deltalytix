@@ -4,7 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import { AuthProvider } from "@/components/providers/auth-provider";
+import { AuthProvider } from "@/context/auth-provider";
 import { ConsentBanner } from "@/components/consent-banner";
 import Script from "next/script"
 
@@ -105,7 +105,6 @@ export default async function RootLayout({
         <meta name="google" content="notranslate" />
         <meta name="googlebot" content="notranslate" />
         <meta name="googlebot-news" content="notranslate" />
-        <meta name="google-site-verification" content="your-verification-code" />
 
         {/* Prevent Google Translate DOM manipulation */}
         <Script id="prevent-google-translate" strategy="beforeInteractive">
@@ -156,70 +155,6 @@ export default async function RootLayout({
           `}
         </Script>
 
-        {/* Google Tag Manager - Initial consent mode setup */}
-        <Script id="google-consent-mode" strategy="beforeInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            
-            // Enable URL passthrough and ads data redaction
-            gtag('set', {
-              'url_passthrough': true,
-              'ads_data_redaction': true
-            });
-            
-            // Default consent settings
-            gtag("consent", "default", {
-              'ad_storage': 'denied',
-              'ad_user_data': 'denied',
-              'ad_personalization': 'denied',
-              'analytics_storage': 'denied',
-              'functionality_storage': 'granted',
-              'personalization_storage': 'denied',
-              'security_storage': 'granted',
-              'wait_for_update': 500
-            });
-          `}
-        </Script>
-
-        {/* Google Tag Manager */}
-        <Script id="google-tag-manager" strategy="beforeInteractive">
-          {`
-            (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-            new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-            j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-            'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-            })(window,document,'script','dataLayer','GTM-KNM25S27');
-          `}
-        </Script>
-
-        {/* Google tag (gtag.js) - Combined GA4 and Google Ads */}
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-PYK62LTZRQ"
-          strategy="afterInteractive"
-        />
-        
-        {/* Google Tag Configuration */}
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-
-            // Common config options
-            const commonConfig = {
-              page_path: window.location.pathname,
-              restricted_data_processing: true,
-              allow_google_signals: false
-            };
-
-            // GA4 Configuration
-            gtag('config', 'G-PYK62LTZRQ', commonConfig);
-
-            // Google Ads Configuration
-            gtag('config', 'AW-16864609071', commonConfig);
-          `}
-        </Script>
 
         {/* PostHog Analytics */}
         <Script id="posthog-analytics" strategy="afterInteractive">
@@ -242,7 +177,7 @@ export default async function RootLayout({
           sizes="180x180"
           href="/apple-touch-icon-precomposed.png"
         />
-        <style>
+          <style>
           {`
             /* Base layout */
             html {
@@ -290,18 +225,9 @@ export default async function RootLayout({
             }
           `}
         </style>
+
       </head>
       <body className={inter.className + " min-h-screen overflow-x-hidden w-screen"}>
-        {/* Google Tag Manager (noscript) */}
-        <noscript>
-          <iframe 
-            src="https://www.googletagmanager.com/ns.html?id=GTM-KNM25S27"
-            height="0" 
-            width="0" 
-            style={{display: 'none', visibility: 'hidden'}}
-          />
-        </noscript>
-        {/* End Google Tag Manager (noscript) */}
         <AuthProvider>
           <SpeedInsights />
           <Analytics />

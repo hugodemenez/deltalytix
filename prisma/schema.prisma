@@ -56,7 +56,7 @@ model Subscription {
   status    String    @default("ACTIVE")
   endDate   DateTime?
   trialEndsAt DateTime?
-  feedback  SubscriptionFeedback[]
+  interval  String?
 
   @@index([email])
   @@schema("public")
@@ -196,7 +196,6 @@ model SubscriptionFeedback {
   cancellationReason String?
   feedback          String?      // For both feedback and comment from Stripe
   createdAt         DateTime     @default(now())
-  subscription      Subscription @relation(fields: [email], references: [email])
 
   @@index([email])
   @@schema("public")
@@ -257,6 +256,7 @@ model FinancialEvent {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([title, date, lang, timezone])
   @@index([date])
   @@schema("public")
 }

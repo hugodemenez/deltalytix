@@ -1,13 +1,17 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { Group, Account } from '@prisma/client'
+import { Group, Account } from '@/context/data-provider'
+import { createClient } from './auth'
 
 export interface GroupWithAccounts extends Group {
   accounts: Account[]
 }
 
-export async function getGroups(userId: string): Promise<GroupWithAccounts[]> {
+export async function getGroupsAction(): Promise<GroupWithAccounts[]> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id || ''
   try {
     const groups = await prisma.group.findMany({
       where: { userId },
@@ -22,12 +26,45 @@ export async function getGroups(userId: string): Promise<GroupWithAccounts[]> {
   }
 }
 
-export async function createGroup(userId: string, name: string): Promise<Group> {
+export async function renameGroupAction(groupId: string, name: string): Promise<Group> {
   try {
+    const group = await prisma.group.update({
+      where: { id: groupId },
+      data: { name },
+      include: {
+        accounts: true,
+      },
+    })
+    return group
+  } catch (error) {
+    console.error('Error renaming group:', error)
+    throw error
+  }
+}
+
+export async function saveGroupAction(name: string): Promise<Group> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id || ''
+  try {
+    // Check if group already exists
+    const existingGroup = await prisma.group.findFirst({
+      where: { name, userId },
+      include: {
+        accounts: true,
+      },
+    })
+    if (existingGroup) {
+      return existingGroup
+    }
+    // Create new group
     const group = await prisma.group.create({
       data: {
         name,
         userId,
+      },
+      include: {
+        accounts: true,
       },
     })
     return group
@@ -37,11 +74,14 @@ export async function createGroup(userId: string, name: string): Promise<Group> 
   }
 }
 
-export async function updateGroup(groupId: string, name: string): Promise<Group> {
+export async function updateGroupAction(groupId: string, name: string): Promise<Group> {
   try {
     const group = await prisma.group.update({
       where: { id: groupId },
       data: { name },
+      include: {
+        accounts: true,
+      },
     })
     return group
   } catch (error) {
@@ -50,7 +90,7 @@ export async function updateGroup(groupId: string, name: string): Promise<Group>
   }
 }
 
-export async function deleteGroup(groupId: string): Promise<void> {
+export async function deleteGroupAction(groupId: string): Promise<void> {
   try {
     await prisma.group.delete({
       where: { id: groupId },
@@ -61,7 +101,7 @@ export async function deleteGroup(groupId: string): Promise<void> {
   }
 }
 
-export async function moveAccountToGroup(accountId: string, targetGroupId: string | null): Promise<void> {
+export async function moveAccountToGroupAction(accountId: string, targetGroupId: string | null): Promise<void> {
   try {
     await prisma.account.update({
       where: { id: accountId },
@@ -72,3 +112,4 @@ export async function moveAccountToGroup(accountId: string, targetGroupId: strin
     throw error
   }
 } 
+

@@ -1,6 +1,6 @@
 'use client'
 import React from 'react'
-import PricingPlans from '../components/pricing-plans'
+import PricingPlans from '@/components/pricing-plans'
 import { useI18n } from "@/locales/client"
 
 export default function PricingPage() {

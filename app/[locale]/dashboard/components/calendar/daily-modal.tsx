@@ -12,10 +12,9 @@ import { Trade } from "@prisma/client"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
 import { Charts } from "./charts"
 import { useI18n, useCurrentLocale } from "@/locales/client"
-import { useUserData } from "@/components/context/user-data"
-import { DailyMood } from "./daily-mood"
 import { DailyStats } from "./daily-stats"
 import { DailyComment } from "./daily-comment"
+import { useUserStore } from "../../../../../store/user-store"
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -49,7 +48,7 @@ export function CalendarModal({
 }: CalendarModalProps) {
   const t = useI18n()
   const locale = useCurrentLocale()
-  const { timezone } = useUserData()
+  const timezone = useUserStore(state => state.timezone)
   const dateLocale = locale === 'fr' ? fr : enUS
   const [activeTab, setActiveTab] = useState("analysis")
   const [formattedDate, setFormattedDate] = useState<string>("")

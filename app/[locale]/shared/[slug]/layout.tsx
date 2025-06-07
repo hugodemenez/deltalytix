@@ -1,9 +1,7 @@
-import { ThemeProvider } from "@/components/context/theme-provider";
-import { UserDataProvider } from "@/components/context/user-data";
+import { ThemeProvider } from "@/context/theme-provider";
+import { DataProvider } from "@/context/data-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { ReactElement } from "react";
-import { AI } from "@/components/ai";
-import { MoodProvider } from '@/components/context/mood-data';
 
 export default async function RootLayout(props: { params: Promise<{ locale: string }>, children: ReactElement }) {
   const params = await props.params;
@@ -17,19 +15,15 @@ export default async function RootLayout(props: { params: Promise<{ locale: stri
   } = props;
 
   return (
-    <AI>
       <ThemeProvider>
-        <MoodProvider>
-          <UserDataProvider isSharedView>
+          <DataProvider isSharedView>
             <div className="min-h-screen flex flex-col bg-background">
               <Toaster />
               <div className="flex-1">
                 {children}
               </div>
             </div>
-          </UserDataProvider>
-        </MoodProvider>
+          </DataProvider>
       </ThemeProvider>
-    </AI>
   );
 }

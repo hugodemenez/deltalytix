@@ -1,13 +1,12 @@
 'use server'
-import { PrismaClient, Trade, Prisma } from '@prisma/client'
-import { revalidatePath } from 'next/cache'
+import { Trade, Prisma, DashboardLayout } from '@prisma/client'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
-import { parseISO, startOfDay, endOfDay } from 'date-fns'
-import { CalendarEntry } from '@/app/[locale]/dashboard/types/calendar'
-import { generateAIComment } from './generate-ai-comment'
+import { startOfDay } from 'date-fns'
 import { getSubscriptionDetails } from './subscription'
 import { prisma } from '@/lib/prisma'
+import { unstable_cache } from 'next/cache'
 
 type TradeError = 
   | 'DUPLICATE_TRADES'
@@ -21,7 +20,7 @@ interface TradeResponse {
   details?: unknown
 }
 
-export async function saveTrades(data: Trade[]): Promise<TradeResponse> {
+export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
     if (!Array.isArray(data) || data.length === 0) {
       return {
         error: 'INVALID_DATA',
@@ -74,68 +73,84 @@ export async function saveTrades(data: Trade[]): Promise<TradeResponse> {
     }
 }
 
-export async function getTrades(): Promise<Trade[]> {
-  try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    const userId = user?.id
-    if (!userId) {
-      throw new Error('User not found')
-    }
-    const {isActive: isSubscribed} = await getSubscriptionDetails(user?.email || '') || {isSubscribed: false}
-    console.log('[getTrades] isSubscribed:', isSubscribed)
-    const where: Prisma.TradeWhereInput = { userId }
-    
-    // If not subscribed, limit to last week's trades
-    if (!isSubscribed) {
-      const oneWeekAgo = startOfDay(new Date())
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+// Create cache function dynamically for each user/subscription combination
+function getCachedTrades(userId: string, isSubscribed: boolean): Promise<Trade[]> {
+  return unstable_cache(
+    async () => {
+      console.log(`[Cache MISS] Fetching trades for user ${userId}, subscribed: ${isSubscribed}`)
       
-      where.entryDate = {
-        gte: oneWeekAgo.toISOString().split('T')[0]
+      const query: any = {
+        where: { userId },
+        orderBy: { entryDate: 'desc' }
       }
 
-      console.log('[getTrades] Limiting to last week for non-subscribed user:', { 
-        userId,
-        fromDate: oneWeekAgo.toISOString()
-      })
+      if (!isSubscribed) {
+        const oneWeekAgo = startOfDay(new Date())
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+        query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+      }
+
+      return await prisma.trade.findMany(query)
+    },
+    // Static string array - this is the cache key
+    [`trades-${userId}-${isSubscribed}`],
+    { 
+      tags: [`trades-${userId}`], // User-specific tag for revalidation
+      revalidate: 3600 // Revalidate every hour (3600 seconds)
     }
-    
-    const trades = await prisma.trade.findMany({ 
-      where,
-      orderBy: { entryDate: 'desc' }
-    })
-    
+  )()  // Note the () at the end - we call the cached function immediately
+}
+
+
+export async function getTradesAction({noCache = false}: {noCache?: boolean} = {}): Promise<Trade[]> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      throw new Error('User not found')
+    }
+
+    const subscriptionDetails = await getSubscriptionDetails()
+    const isSubscribed = subscriptionDetails?.isActive || false
+    if (noCache) {
+      revalidateTag(`trades-${user.id}`)
+    }
+
+    // Get cached trades
+    const trades = await getCachedTrades(user.id, isSubscribed)
+
+    // Tell the server that the trades have changed
+    // Next page reload will fetch the new trades instead of using the cached data
     return trades.map(trade => ({
       ...trade,
       entryDate: new Date(trade.entryDate).toISOString(),
       exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
     }))
-  } catch (error) {
-    console.error('[getTrades] Database error:', error)
-    return []
-  }
 }
 
-export async function updateTradesWithComment(dayData: CalendarEntry, dateString: string) {
+export async function updateTradesAction(tradesIds: string[], update: Partial<Trade>): Promise<number> {
   try {
-    const { comment, emotion } = await generateAIComment(dayData, dateString)
-    const tradeIds = dayData.trades.map(trade => trade.id)
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id
+  if (!userId) {
+    return 0
+  }
 
-    // Update all trades for the day with the generated comment
-    await prisma.trade.updateMany({
-      where: { id: { in: tradeIds } },
-      data: { comment: `${comment} (Emotion: ${emotion})` }
-    })
+  const result = await prisma.trade.updateMany({
+    where: { id: { in: tradesIds }, userId },
+    data: update
+  })
 
-    return { comment, emotion }
+  revalidateTag(`trades-${userId}`)
+
+  return result.count
   } catch (error) {
-    console.error("[updateTradesWithComment] Database error:", error)
-    throw error
+    console.error('[updateTrades] Database error:', error)
+    return 0
   }
 }
 
-export async function updateTradeComment(tradeId: string, comment: string | null) {
+export async function updateTradeCommentAction(tradeId: string, comment: string | null) {
   try {
     await prisma.trade.update({
       where: { id: tradeId },
@@ -155,7 +170,7 @@ export async function updateTradeComment(tradeId: string, comment: string | null
   }
 }
 
-export async function updateTradeVideoUrl(tradeId: string, videoUrl: string | null) {
+export async function updateTradeVideoUrlAction(tradeId: string, videoUrl: string | null) {
   try {
     await prisma.trade.update({
       where: { id: tradeId },
@@ -175,7 +190,13 @@ export async function updateTradeVideoUrl(tradeId: string, videoUrl: string | nu
   }
 }
 
-export async function loadDashboardLayout(userId: string): Promise<Layouts | null> {
+export async function loadDashboardLayoutAction(): Promise<Layouts | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id
+  if (!userId) {
+    throw new Error('User not found')
+  }
   try {
     const dashboard = await prisma.dashboardLayout.findUnique({
       where: { userId },
@@ -206,10 +227,13 @@ export async function loadDashboardLayout(userId: string): Promise<Layouts | nul
   }
 }
 
-export async function saveDashboardLayout(userId: string, layouts: Layouts): Promise<Layouts | null> {
+export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id
   if (!userId || !layouts) {
     console.error('[saveDashboardLayout] Invalid input:', { userId, hasLayouts: !!layouts })
-    return null
+    return
   }
 
   try {
@@ -231,17 +255,12 @@ export async function saveDashboardLayout(userId: string, layouts: Layouts): Pro
       },
     })
     
-    return {
-      desktop: JSON.parse(dashboard.desktop as string) as Widget[],
-      mobile: JSON.parse(dashboard.mobile as string) as Widget[]
-    }
   } catch (error) {
     console.error('[saveDashboardLayout] Database error:', error)
-    return null
   }
 }
 
-export async function groupTrades(tradeIds: string[]): Promise<boolean> {
+export async function groupTradesAction(tradeIds: string[]): Promise<boolean> {
   try {
     const userId = await getUserId()
     // Generate a new group ID
@@ -264,7 +283,7 @@ export async function groupTrades(tradeIds: string[]): Promise<boolean> {
   }
 }
 
-export async function ungroupTrades(tradeIds: string[]): Promise<boolean> {
+export async function ungroupTradesAction(tradeIds: string[]): Promise<boolean> {
   try {
     const userId = await getUserId()
     // Remove group ID from selected trades

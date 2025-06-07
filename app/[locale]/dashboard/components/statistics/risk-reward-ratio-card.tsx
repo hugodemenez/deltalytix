@@ -1,6 +1,6 @@
 'use client'
 
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -19,7 +19,7 @@ interface RiskRewardRatioCardProps {
 }
 
 export default function RiskRewardRatioCard({ size = 'tiny' }: RiskRewardRatioCardProps) {
-  const { formattedTrades } = useUserData()
+  const { formattedTrades } = useData()
   const t = useI18n()
   
   const { avgWin, avgLoss, riskRewardRatio, profitPercentage } = useMemo(() => {

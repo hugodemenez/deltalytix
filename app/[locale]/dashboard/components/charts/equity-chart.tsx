@@ -30,8 +30,9 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
+import { useUserStore } from "../../../../../store/user-store"
 
 interface EquityChartProps {
   size?: WidgetSize
@@ -88,7 +89,8 @@ function createAccountColorMap(accountNumbers: string[]): Map<string, string> {
 }
 
 export default function EquityChart({ size = 'medium' }: EquityChartProps) {
-  const { formattedTrades: trades } = useUserData()
+  const { formattedTrades: trades } = useData()
+  const timezone = useUserStore(state => state.timezone)
   const [showDailyPnL, setShowDailyPnL] = React.useState(true)
   const [showIndividual, setShowIndividual] = React.useState(true)
   const yAxisRef = React.useRef<any>(null)
@@ -98,14 +100,17 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   const { startDate, endDate, allDates } = React.useMemo(() => {
     if (!trades.length) return { startDate: null, endDate: null, allDates: [] }
 
-    // Use the pre-computed UTC dates
-    const dates = trades.map(t => t.utcDateStr)
+    // Parse the dates using the user's timezone
+    const dates = trades.map(t => {
+      const date = new Date(t.entryDate)
+      return formatInTimeZone(date, timezone, 'yyyy-MM-dd')
+    })
     const startDate = dates.reduce((min, date) => date < min ? date : min)
     const endDate = dates.reduce((max, date) => date > max ? date : max)
     
     // Create array of dates between start and end
-    const start = new Date(startDate)
-    const end = new Date(endDate)
+    const start = parseISO(startDate)
+    const end = parseISO(endDate)
     end.setDate(end.getDate() + 1) // Include the end date
     
     return {
@@ -113,7 +118,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       endDate,
       allDates: eachDayOfInterval({ start, end })
     }
-  }, [trades])
+  }, [trades, timezone])
 
   // Get unique account numbers
   const accountNumbers = React.useMemo(() => {
@@ -137,14 +142,14 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
     }, {} as Record<string, typeof trades>)
   }, [trades, accountNumbers])
 
-  // Pre-compute date strings for all dates - now just YYYY-MM-DD format
+  // Pre-compute date strings for all dates
   const dateStringsMap = React.useMemo(() => {
     const map = new Map<Date, string>()
     allDates.forEach(date => {
-      map.set(date, format(date, 'yyyy-MM-dd'))
+      map.set(date, formatInTimeZone(date, timezone, 'yyyy-MM-dd'))
     })
     return map
-  }, [allDates])
+  }, [allDates, timezone])
 
   // Memoize chart config
   const chartConfig = React.useMemo(() => {
@@ -203,10 +208,10 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       let totalEquity = 0
 
       // Get all trades for this date
-      const dateTrades = trades.filter(trade => 
-        trade.utcDateStr === dateStr && 
-        selectedAccounts.has(trade.accountNumber)
-      )
+      const dateTrades = trades.filter(trade => {
+        const tradeDate = formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
+        return tradeDate === dateStr && selectedAccounts.has(trade.accountNumber)
+      })
 
       // Process each account
       accountNumbers.forEach(accountNumber => {
@@ -240,7 +245,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
     })
 
     return sortedDates.map(date => dateMap.get(date)!)
-  }, [trades, initialDateMap, accountNumbers, selectedAccounts, showIndividual])
+  }, [trades, initialDateMap, accountNumbers, selectedAccounts, showIndividual, timezone])
 
   // Memoize tooltip data preparation with pre-computed values
   const tooltipDataCache = React.useRef(new Map<string, AccountEquityInfo[]>())

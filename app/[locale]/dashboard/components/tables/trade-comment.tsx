@@ -6,13 +6,13 @@ import { Label } from '@/components/ui/label'
 import { Trash2, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/locales/client'
-import { updateTradeComment } from '@/server/database'
+import { updateTradeCommentAction } from '@/server/database'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 
 interface TradeCommentProps {
   tradeIds: string[]
@@ -22,7 +22,7 @@ interface TradeCommentProps {
 
 export function TradeComment({ tradeIds, comment: initialComment, onCommentChange }: TradeCommentProps) {
   const t = useI18n()
-  const { updateTrade } = useUserData()
+  const { updateTrades } = useData()
   const [localComment, setLocalComment] = useState(initialComment || '')
   const [isUpdating, setIsUpdating] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -41,14 +41,8 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
       const newComment = localComment || null
       
       // Update all trades in the list
-      tradeIds.forEach(tradeId => {
-        updateTrade(tradeId, { comment: newComment })
-      })
+      await updateTrades(tradeIds, { comment: newComment })
 
-      // Update database
-      await Promise.all(tradeIds.map(tradeId => 
-        updateTradeComment(tradeId, newComment)
-      ))
       
       setShowSuccess(true)
       setTimeout(() => {
@@ -71,14 +65,7 @@ export function TradeComment({ tradeIds, comment: initialComment, onCommentChang
       setLocalComment('')
       
       // Update all trades in the list
-      tradeIds.forEach(tradeId => {
-        updateTrade(tradeId, { comment: null })
-      })
-      
-      // Update database
-      await Promise.all(tradeIds.map(tradeId => 
-        updateTradeComment(tradeId, null)
-      ))
+      await updateTrades(tradeIds, { comment: null })
       
       setShowSuccess(true)
       setTimeout(() => {

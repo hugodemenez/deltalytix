@@ -17,9 +17,8 @@ import {
     NavigationMenuTrigger,
     navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
-import { useTheme } from '@/components/context/theme-provider'
+import { useTheme } from '@/context/theme-provider'
 import { cn } from '@/lib/utils'
-import { useUserData } from '@/components/context/user-data'
 import { useChangeLocale, useI18n } from "@/locales/client"
 import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"

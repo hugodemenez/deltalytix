@@ -1,6 +1,6 @@
 'use client'
 
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { ArrowLeftRight, ArrowUpFromLine, ArrowDownFromLine, HelpCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -18,7 +18,7 @@ interface LongShortPerformanceCardProps {
 }
 
 export default function LongShortPerformanceCard({ size = 'medium' }: LongShortPerformanceCardProps) {
-  const { calendarData } = useUserData()
+  const { calendarData } = useData()
   const  t  = useI18n()
 
   // Calculate long/short data

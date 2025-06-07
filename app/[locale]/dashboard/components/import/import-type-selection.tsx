@@ -2,8 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 import { Link2, FileSpreadsheet, Database } from "lucide-react"
-import { useUserData } from '@/components/context/user-data'
-import { RithmicSyncCombined } from './rithmic/sync/rithmic-sync-new'
 import {
   Command,
   CommandDialog,
@@ -18,7 +16,6 @@ import { platforms, PlatformConfig, PlatformType } from './config/platforms'
 import { PlatformItem } from './components/platform-item'
 import { PlatformTutorial } from './components/platform-tutorial'
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
 
 export type ImportType = PlatformType
 
@@ -47,12 +44,10 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   const [hoveredCategory, setHoveredCategory] = useState<Category | null>(null)
   const t = useI18n()
   
-  // Set default selection to CSV with AI
+  // Set default selection to Rithmic sync
   useEffect(() => {
-    if (selectedType === '') {
-      setSelectedType('')  // Empty string represents CSV with AI type
-    }
-  }, [selectedType, setSelectedType])
+    setSelectedType('rithmic-sync')
+  }, [setSelectedType])
 
   const getTranslatedCategory = (category: Category) => {
     switch (category) {

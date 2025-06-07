@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
-import { useUserData } from "@/components/context/user-data"
 import { useToast } from "@/hooks/use-toast"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
 import { saveJournal, getMoodForDay } from '@/server/journal'
 import { NoteEditor } from "@/app/[locale]/dashboard/components/mindset/note-editor"
 import { format } from 'date-fns'
+import { useUserStore } from '../../../../../store/user-store'
 
 interface DailyCommentProps {
   dayData: CalendarEntry | undefined
@@ -33,7 +33,9 @@ interface Mood {
 
 export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   const t = useI18n()
-  const { user, moodHistory, setMoodHistory } = useUserData()
+  const user = useUserStore(state => state.user)
+  const moodHistory = useUserStore(state => state.moods)
+  const setMoodHistory = useUserStore(state => state.setMoods)
   const { toast } = useToast()
   const [comment, setComment] = React.useState<string>("")
   const [isSavingComment, setIsSavingComment] = React.useState(false)

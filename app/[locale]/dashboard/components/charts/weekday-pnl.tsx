@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
 import {
@@ -56,7 +56,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProps) {
-  const {calendarData, weekdayFilter, setWeekdayFilter} = useUserData()
+  const {calendarData, weekdayFilter, setWeekdayFilter} = useData()
   const [darkMode, setDarkMode] = React.useState(false)
   const [activeDay, setActiveDay] = React.useState<number | null>(null)
   const t = useI18n()

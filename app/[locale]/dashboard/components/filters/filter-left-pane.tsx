@@ -10,10 +10,11 @@ import { Filter } from "lucide-react"
 import { useMediaQuery } from '@/hooks/use-media-query'
 import { Switch } from "@/components/ui/switch"
 import DateCalendarFilter from './date-calendar-filter'
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import { FilterSection } from './filter-selection'
 import { FilterItem, PropfirmGroup } from '@/app/[locale]/dashboard/types/filter'
 import { useI18n } from "@/locales/client"
+import { useTradesStore } from '../../../../../store/trades-store'
 
 const propfirmGroups: PropfirmGroup[] = [
   { name: 'FastTrackTrading', prefix: 'FTT' },
@@ -23,7 +24,8 @@ const propfirmGroups: PropfirmGroup[] = [
 ]
 
 export default function FilterLeftPane() {
-  const { accountNumbers, setAccountNumbers, instruments, setInstruments, trades } = useUserData()
+  const { accountNumbers, setAccountNumbers, instruments, setInstruments } = useData()
+  const trades = useTradesStore(state => state.trades)
   const t = useI18n()
   
   const [allItems, setAllItems] = useState<FilterItem[]>([])
@@ -32,16 +34,6 @@ export default function FilterLeftPane() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const isMobile = useMediaQuery("(max-width: 768px)")
-
-  const filterRef = useRef<HTMLDivElement>(null)
-
-  const disableScroll = useCallback(() => {
-    document.body.style.overflow = 'hidden'
-  }, [])
-
-  const enableScroll = useCallback(() => {
-    document.body.style.overflow = ''
-  }, [])
 
   const [propfirms, setPropfirms] = useState<string[]>([])
 

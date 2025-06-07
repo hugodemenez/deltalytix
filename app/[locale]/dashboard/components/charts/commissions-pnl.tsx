@@ -4,7 +4,7 @@ import * as React from "react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
 import {
@@ -38,7 +38,7 @@ const formatPercentage = (value: number) =>
   `${(value * 100).toFixed(1)}%`
 
 export default function CommissionsPnLChart({ size = 'medium' }: CommissionsPnLChartProps) {
-  const { formattedTrades:trades } = useUserData()
+  const { formattedTrades:trades } = useData()
   const t = useI18n()
 
   const chartData = React.useMemo(() => {

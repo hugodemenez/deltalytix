@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer } from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig } from "@/components/ui/chart"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { Trade } from "@prisma/client"
 import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
@@ -18,6 +18,7 @@ import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { useI18n } from "@/locales/client"
 import { formatInTimeZone } from 'date-fns-tz'
 import { Button } from "@/components/ui/button"
+import { useUserStore } from "../../../../../store/user-store"
 
 interface TimeOfDayTradeChartProps {
   size?: WidgetSize
@@ -34,7 +35,8 @@ const formatCurrency = (value: number) =>
   value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
 export default function TimeOfDayTradeChart({ size = 'medium' }: TimeOfDayTradeChartProps) {
-  const { formattedTrades: trades, hourFilter, setHourFilter, timezone } = useUserData()
+  const { formattedTrades: trades, hourFilter, setHourFilter } = useData()
+  const timezone = useUserStore(state => state.timezone)
   const [activeHour, setActiveHour] = React.useState<number | null>(null)
   const t = useI18n()
 

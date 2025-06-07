@@ -3,21 +3,25 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { useUserData } from '@/components/context/user-data'
+import { useUserStore } from '@/store/user-store'
 import LoadingOverlay from '../app/[locale]/dashboard/components/loading-overlay'
 import ImportButton from '../app/[locale]/dashboard/components/import/import-button'
 import { useI18n } from "@/locales/client"
 import { signOut } from '@/server/auth'
-import PricingPlans from '@/app/[locale]/(landing)/components/pricing-plans'
+import PricingPlans from '@/components/pricing-plans'
 import { redirect, useSearchParams } from 'next/navigation'
 import OnboardingModal from './onboarding-modal'
 import { AccountGroupBoard } from '@/app/[locale]/dashboard/components/filters/account-group-board'
-import { useModalStateStore } from '@/app/[locale]/dashboard/store/modal-state-store'
+import { useModalStateStore } from '@/store/modal-state-store'
+import { useTradesStore } from '@/store/trades-store'
 
 const PAYWALL_COOLDOWN = 30 * 60 * 1000; // 30 minutes in milliseconds
 
 export default function Modals() {
-  const { user, subscription, isLoading: userLoading, trades, isLoading: tradesLoading, isFirstConnection } = useUserData()
+  const user = useUserStore((state) => state.user)
+  const subscription = useUserStore((state) => state.subscription)
+  const isLoading = useUserStore((state) => state.isLoading)
+  const trades = useTradesStore((state) => state.trades)
   const [isPaywallOpen, setIsPaywallOpen] = useState(false)
   const [isAlreadySubscribedOpen, setIsAlreadySubscribedOpen] = useState(false)
   const [isTradesDialogOpen, setIsTradesDialogOpen] = useState(false)
@@ -26,23 +30,17 @@ export default function Modals() {
   const { accountGroupBoardOpen, setAccountGroupBoardOpen } = useModalStateStore()
 
   const checkSubscription = useCallback(() => {
-    if (user?.email && !subscription?.isActive) {
+    if (user?.email && subscription?.status !== 'active') {
       // Check last shown timestamp from localStorage
       const lastShown = localStorage.getItem('paywall_last_shown');
       const currentTime = Date.now();
       
-      if (!isFirstConnection && (!lastShown || (currentTime - parseInt(lastShown)) > PAYWALL_COOLDOWN)) {
+      if (!user?.isFirstConnection && (!lastShown || (currentTime - parseInt(lastShown)) > PAYWALL_COOLDOWN)) {
         setIsPaywallOpen(true);
         localStorage.setItem('paywall_last_shown', currentTime.toString());
       }
     }
-  }, [user?.email, subscription, isFirstConnection]);
-
-  useEffect(() => {
-    if (!userLoading) {
-      checkSubscription();
-    }
-  }, [checkSubscription, userLoading]);
+  }, [user?.email, subscription, user?.isFirstConnection]);
 
   useEffect(() => {
     const error = searchParams.get('error')
@@ -52,14 +50,14 @@ export default function Modals() {
   }, [searchParams])
 
   useEffect(() => {
-    if (!userLoading && !tradesLoading && !isPaywallOpen) {
+    if (!isLoading && !isPaywallOpen) {
       if (!trades) {
         console.warn('No trades available. Please add some trades to see the dashboard content.');
         return
       }
       setIsTradesDialogOpen(trades?.length === 0)
     }
-  }, [userLoading, tradesLoading, trades, isPaywallOpen])
+  }, [trades, isPaywallOpen])
 
   const handlePaywallClose = useCallback(() => {
     setIsPaywallOpen(false);
@@ -67,9 +65,10 @@ export default function Modals() {
     localStorage.setItem('paywall_last_shown', Date.now().toString());
   }, []);
 
+  if (!user) return null
   return (
     <>
-      {(userLoading || tradesLoading) && <LoadingOverlay />}
+      {isLoading && <LoadingOverlay />}
       <OnboardingModal />
 
       {/* Account Group Board */}
@@ -106,7 +105,7 @@ export default function Modals() {
         </DialogContent>
       </Dialog>
 
-      {!isFirstConnection && (
+      {!user?.isFirstConnection && (
         <Dialog open={isTradesDialogOpen} onOpenChange={setIsTradesDialogOpen}>
           <DialogContent>
             <DialogHeader>

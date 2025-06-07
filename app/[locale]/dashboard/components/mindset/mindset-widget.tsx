@@ -20,9 +20,9 @@ import { Button } from "@/components/ui/button"
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 import type { EmblaCarouselType as CarouselApi } from "embla-carousel"
 import { toast } from "@/hooks/use-toast"
-import { getMoodForDay, saveMindset, deleteMindset } from "@/server/journal"
-import { useUserData } from "@/components/context/user-data"
+import { saveMindset, deleteMindset } from "@/server/journal"
 import { isToday, format } from "date-fns"
+import { useUserStore } from "../../../../../store/user-store"
 
 interface MindsetWidgetProps {
   size: WidgetSize
@@ -36,7 +36,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [journalContent, setJournalContent] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isEditing, setIsEditing] = useState(true)
-  const { moodHistory = [], setMoodHistory } = useUserData()
+  const moods = useUserStore(state => state.moods)
+  const setMoods = useUserStore(state => state.setMoods)
   const t = useI18n()
 
   // Consolidated effect for carousel and mood data handling
@@ -49,16 +50,16 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     })
 
     // Handle initial load and mood data
-    if (moodHistory) {
+    if (moods) {
       const today = new Date()
-      const hasTodayData = moodHistory.some(mood => {
+      const hasTodayData = moods.some(mood => {
         if (!mood?.day) return false
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
         return format(moodDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd')
       })
 
       // Handle selected date mood data
-      const mood = moodHistory.find(mood => {
+      const mood = moods.find(mood => {
         if (!mood?.day) return false
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
         return format(moodDate, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
@@ -87,7 +88,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         setJournalContent("")
       }
     }
-  }, [api, selectedDate, moodHistory])
+  }, [api, selectedDate, moods])
 
   const handleEmotionChange = (value: number) => {
     setEmotionValue(value)
@@ -113,14 +114,14 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       }, dateKey)
 
       // Update the moodHistory in context
-      const updatedMoodHistory = moodHistory?.filter(mood => {
+      const updatedMoodHistory = moods?.filter(mood => {
         if (!mood?.day) return true
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
         const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
         const moodDateKey = format(moodDate, 'yyyy-MM-dd')
         return moodDateKey !== selectedDateKey
       }) || []
-      setMoodHistory([...updatedMoodHistory, savedMood])
+      setMoods([...updatedMoodHistory, savedMood])
 
       toast({
         title: t('mindset.saveSuccess'),
@@ -142,12 +143,12 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       await deleteMindset(dateKey)
 
       // Update the moodHistory in context
-      const updatedMoodHistory = moodHistory?.filter(mood => {
+      const updatedMoodHistory = moods?.filter(mood => {
         if (!mood?.day) return true
         const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
         return format(moodDate, 'yyyy-MM-dd') !== dateKey
       }) || []
-      setMoodHistory(updatedMoodHistory)
+      setMoods(updatedMoodHistory)
 
       // If the deleted entry was the selected date, reset the form
       if (dateKey === format(selectedDate, 'yyyy-MM-dd')) {
@@ -166,7 +167,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     setSelectedDate(date)
     
     // Find if we have data for the selected date
-    const moodForDate = moodHistory?.find(mood => {
+    const moodForDate = moods?.find(mood => {
       if (!mood?.day) return false
       const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
       return format(moodDate, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
@@ -316,7 +317,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
           className="flex-shrink-0"
           selectedDate={selectedDate}
           onSelectDate={handleDateSelect}
-          moodHistory={moodHistory}
+          moodHistory={moods}
           onDeleteEntry={handleDeleteEntry}
         />
         <Carousel

@@ -1,16 +1,18 @@
 "use client"
 
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { useState, useEffect } from "react"
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useTradesStore } from "../../../../../store/trades-store"
 
 export function InstrumentFilter() {
   const t = useI18n()
-  const { instruments, setInstruments, trades } = useUserData()
+  const { instruments, setInstruments } = useData()
+  const trades = useTradesStore(state => state.trades)
   const [searchTerm, setSearchTerm] = useState("")
   const [availableInstruments, setAvailableInstruments] = useState<string[]>([])
 

@@ -8,14 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
-import { useUserData } from '@/components/context/user-data'
 import { toast } from '@/hooks/use-toast'
 import { RithmicSyncFeedback } from './rithmic-sync-feedback'
-import { useWebSocket } from '@/components/context/rithmic-sync-context'
+import { useWebSocket } from '@/context/rithmic-sync-context'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'
 import Image from 'next/image'
+import { useData } from '@/context/data-provider'
+import { useTradesStore } from '@/store/trades-store'
+import { useUserStore } from '@/store/user-store'
 
 interface RithmicCredentials {
   username: string
@@ -55,7 +57,7 @@ interface RithmicSyncCombinedProps {
 }
 
 export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedProps) {
-  const { user, trades } = useUserData()
+  const user = useUserStore(state => state.user)
   const { 
     connect, 
     disconnect, 

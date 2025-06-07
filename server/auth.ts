@@ -4,11 +4,11 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
+import { headers } from "next/headers"
 
 export async function getWebsiteURL(){
   let url =
-    process?.env?.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in production env.
-    process?.env?.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel.
+    process?.env?.VERCEL_URL ?? // Automatically set by Vercel.
     'http://localhost:3000/'
   // Make sure to include `https://` when not localhost.
   url = url.startsWith('http') ? url : `https://${url}`
@@ -52,7 +52,6 @@ export async function signInWithDiscord(next: string | null = null) {
       redirectTo: `${websiteURL}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
     },
   })
-  console.log(error)
   if (data.url) {
     // Before redirecting, ensure user is created/updated in Prisma database
     redirect(data.url)
@@ -73,27 +72,27 @@ export async function signInWithGoogle(next: string | null = null) {
   }
 }
 
-export async function getUserId() {
-  const supabase = await createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
-  if (!user) {
-    toast({
-      title: 'Error',
-      description: 'User not found',
-    })
-    return ''
-  }
-  if (error) {
-    toast({
-      title: 'Error',
-      description: error.message,
-    })
-    return ''
-  }
-  // Ensure user is in Prisma database
-  await ensureUserInDatabase(user)
-  return user.id
-}
+// export async function getUserId() {
+//   const supabase = await createClient()
+//   const { data: { user }, error } = await supabase.auth.getUser()
+//   if (!user) {
+//     toast({
+//       title: 'Error',
+//       description: 'User not found',
+//     })
+//     return ''
+//   }
+//   if (error) {
+//     toast({
+//       title: 'Error',
+//       description: error.message,
+//     })
+//     return ''
+//   }
+//   // Ensure user is in Prisma database
+//   await ensureUserInDatabase(user)
+//   return user.id
+// }
 
 export async function signOut() {
   const supabase = await createClient()
@@ -256,4 +255,40 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
   }
 
   return data
+}
+
+// Optimized function that uses middleware data when available
+export async function getUserId(): Promise<string> {
+  // First try to get user ID from middleware headers
+  const headersList = await headers()
+  const userIdFromMiddleware = headersList.get("x-user-id")
+
+  if (userIdFromMiddleware) {
+    console.log("[Auth] Using user ID from middleware")
+    return userIdFromMiddleware
+  }
+
+  // Fallback to Supabase call (for API routes or edge cases)
+  console.log("[Auth] Fallback to Supabase call")
+  const supabase = await createClient()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+
+  if (error || !user) {
+    throw new Error("User not authenticated")
+  }
+
+  await ensureUserInDatabase(user)
+
+  return user.id
+}
+
+export async function getUserEmail(): Promise<string> {
+  const headersList = await headers()
+  const userEmail = headersList.get("x-user-email")
+  console.log("[Auth] getUserEmail FROM HEADERS", userEmail)
+  return userEmail || ""
 }

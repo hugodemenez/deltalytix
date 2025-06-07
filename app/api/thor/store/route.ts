@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { saveTrades } from '@/server/database'
 import { Trade, PrismaClient } from '@prisma/client'
+import { saveTradesAction } from '@/server/database';
 
 // Create a new PrismaClient instance for this API route
 const prisma = new PrismaClient()
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       })
     )
 
-    const result = await saveTrades(trades as Trade[])
+    const result = await saveTradesAction(trades as Trade[])
 
     // Handle duplicate trades as success, but return errors for other cases
     if (result.error && result.error !== 'DUPLICATE_TRADES') {

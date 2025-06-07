@@ -4,10 +4,10 @@ import React from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import MobileCalendarPnl from "./mobile-calendar";
 import DesktopCalendarPnl from "./desktop-calendar";
-import { useUserData } from "@/components/context/user-data";
+import { useData } from "@/context/data-provider";
 
 export default function CalendarPnl() {
-  const { calendarData } = useUserData()
+  const { calendarData } = useData()
   const isMobile = useMediaQuery("(max-width: 640px)")
 
   return isMobile ? (

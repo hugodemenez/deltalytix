@@ -1,16 +1,14 @@
-import { ThemeProvider } from "@/components/context/theme-provider";
-import { UserDataProvider } from "@/components/context/user-data";
+import { ThemeProvider } from "@/context/theme-provider";
+import { DataProvider } from "@/context/data-provider";
 import Modals from "@/components/modals";
 import { Toaster } from "@/components/ui/toaster";
 import { ReactElement } from "react";
-import { AI } from "@/components/ai";
 import Navbar from "./components/navbar";
-import { WebSocketProvider } from "@/components/context/rithmic-sync-context";
+import { WebSocketProvider } from "@/context/rithmic-sync-context";
 import { OnbordaProvider, Onborda } from 'onborda'
 import { steps } from "./components/onboarding/onboarding-steps";
 import { TourCard } from "./components/onboarding/custom-card";
 import { WebSocketNotifications } from './components/import/rithmic/sync/rithmic-notifications'
-import { MoodProvider } from '@/components/context/mood-data';
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { PrismaClient } from "@prisma/client";
 import { createClient, ensureUserInDatabase } from "@/server/auth";
@@ -53,22 +51,11 @@ export default async function RootLayout(props: { params: Promise<{ locale: stri
   }
 
   return (
-    <AI>
       <ThemeProvider>
-        <UserDataProvider>
-          <MoodProvider>
+        <DataProvider>
             <WebSocketProvider>
               <WebSocketNotifications />
               <div className="min-h-screen flex flex-col">
-                <OnbordaProvider>
-                  <Onborda
-                    steps={steps}
-                    showOnborda={true}
-                    shadowRgb="0,0,0"
-                    shadowOpacity="0.8"
-                    cardComponent={TourCard}
-                    cardTransition={{ duration: 2, type: "tween" }}
-                  >
                     <SonnerToaster/>
                     <Toaster />
                     <Navbar />
@@ -76,13 +63,9 @@ export default async function RootLayout(props: { params: Promise<{ locale: stri
                       {children}
                     </div>
                     <Modals />
-                  </Onborda>
-                </OnbordaProvider>
               </div>
             </WebSocketProvider>
-          </MoodProvider>
-        </UserDataProvider>
+        </DataProvider>
       </ThemeProvider>
-    </AI>
   );
 }

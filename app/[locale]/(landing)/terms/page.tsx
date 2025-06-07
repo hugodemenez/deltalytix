@@ -23,7 +23,18 @@ export default function TermsOfService() {
 
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">4. Subscription and Payments</h2>
-        <p>We offer paid plans on a monthly or yearly basis. Payment is processed through Stripe. We offer a 7-day free trial. Refunds are generally not provided after the trial period, but may be considered on a case-by-case basis. Any refunds may be subject to processing fees charged by our payment service provider.</p>
+        <p>We offer paid plans on a monthly, quarterly, yearly, and lifetime basis. Payment is processed through Stripe. We offer a 7-day free trial. Refunds are generally not provided after the trial period, but may be considered on a case-by-case basis. Any refunds may be subject to processing fees charged by our payment service provider.</p>
+        
+        <h3 className="text-lg font-semibold mt-4 mb-2">Lifetime Plan Terms</h3>
+        <p>The "Lifetime" plan provides access to the Deltalytix service for the operational lifetime of the service, subject to the following conditions:</p>
+        <ul className="list-disc ml-6 mt-2 space-y-1">
+          <li>The lifetime plan guarantees access for a minimum period of one (1) year from the date of purchase.</li>
+          <li>"Lifetime" refers to the operational lifetime of the Deltalytix service, not the lifetime of the user.</li>
+          <li>We reserve the right to discontinue the service with 90 days written notice to lifetime plan holders.</li>
+          <li>In the event of service discontinuation before the one-year minimum period, lifetime plan holders will receive a pro-rated refund for the remaining guaranteed period.</li>
+          <li>The lifetime plan does not guarantee specific features, updates, or support levels beyond what is offered to active subscribers at the time of discontinuation.</li>
+          <li>Lifetime plan access may be terminated for violations of these Terms of Service, just like any other subscription.</li>
+        </ul>
       </section>
 
       <section className="mb-6">
@@ -47,12 +58,23 @@ export default function TermsOfService() {
       </section>
 
       <section className="mb-6">
-        <h2 className="text-2xl font-semibold mb-3">9. Governing Law</h2>
+        <h2 className="text-2xl font-semibold mb-3">9. Service Availability and Continuity</h2>
+        <p>While we strive to maintain continuous service operation, we cannot guarantee perpetual availability. We reserve the right to:</p>
+        <ul className="list-disc ml-6 mt-2 space-y-1">
+          <li>Modify, suspend, or discontinue any part of the service with appropriate notice.</li>
+          <li>Perform maintenance that may temporarily interrupt service availability.</li>
+          <li>Cease operations due to business, technical, or legal reasons beyond our reasonable control.</li>
+        </ul>
+        <p className="mt-2">Users will be notified of any planned service interruptions or discontinuation as far in advance as reasonably possible.</p>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="text-2xl font-semibold mb-3">10. Governing Law</h2>
         <p>These Terms of Service are governed by the laws of France. Any disputes shall be subject to the exclusive jurisdiction of the courts of France.</p>
       </section>
 
       <section className="mb-6">
-        <h2 className="text-2xl font-semibold mb-3">10. Changes to Terms</h2>
+        <h2 className="text-2xl font-semibold mb-3">11. Changes to Terms</h2>
         <p>We reserve the right to modify these Terms of Service at any time. We will notify users of any significant changes.</p>
       </section>
 

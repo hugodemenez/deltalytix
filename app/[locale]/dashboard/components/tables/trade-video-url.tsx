@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/locales/client'
-import { updateTradeVideoUrl } from '@/server/database'
+import { updateTradeVideoUrlAction } from '@/server/database'
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import { useData } from '@/context/data-provider'
 
 interface TradeVideoUrlProps {
   tradeIds: string[]
@@ -23,6 +24,7 @@ interface TradeVideoUrlProps {
 
 export function TradeVideoUrl({ tradeIds, videoUrl: initialVideoUrl, onVideoUrlChange }: TradeVideoUrlProps) {
   const t = useI18n()
+  const { updateTrades } = useData()
   const [isOpen, setIsOpen] = useState(false)
   const [localUrl, setLocalUrl] = useState(initialVideoUrl || '')
   const [draftUrl, setDraftUrl] = useState(initialVideoUrl || '')
@@ -80,9 +82,7 @@ export function TradeVideoUrl({ tradeIds, videoUrl: initialVideoUrl, onVideoUrlC
     
     setIsUpdating(true)
     try {
-      await Promise.all(tradeIds.map(tradeId => 
-        updateTradeVideoUrl(tradeId, draftUrl || null)
-      ))
+      await updateTrades(tradeIds, { videoUrl: draftUrl || null })
       setLocalUrl(draftUrl)
       onVideoUrlChange?.(draftUrl || null)
       setShowSuccess(true)
@@ -100,9 +100,7 @@ export function TradeVideoUrl({ tradeIds, videoUrl: initialVideoUrl, onVideoUrlC
   const handleClear = async () => {
     setIsUpdating(true)
     try {
-      await Promise.all(tradeIds.map(tradeId => 
-        updateTradeVideoUrl(tradeId, null)
-      ))
+      await updateTrades(tradeIds, { videoUrl: null })
       setLocalUrl('')
       setDraftUrl('')
       onVideoUrlChange?.(null)

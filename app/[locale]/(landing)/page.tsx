@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { useTheme } from '@/components/context/theme-provider'
+import { useTheme } from '@/context/theme-provider'
 import Features from './components/features'
 import GitHubRepoCard from './components/open-source'
 import PricingPage from './pricing/page'
@@ -26,7 +26,6 @@ export default function LandingPage() {
         if (videoRef.current) {
             videoRef.current.load();
         }
-        console.log(effectiveTheme);
     }, [theme, effectiveTheme]);
 
     const handleVideoLoad = () => {

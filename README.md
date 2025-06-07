@@ -64,6 +64,30 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 - Supabase
 - Prisma
 
+## Technical Architecture
+
+### Data Fetching and Caching
+- API routes with GET methods are used extensively to leverage Next.js/Vercel's built-in caching capabilities
+- Server Actions are employed for mutations and operations that don't require caching or public exposure
+- This hybrid approach optimizes performance while maintaining security
+
+### Database Layer
+- Prisma is used as the primary ORM for type-safe database operations
+- Schema definitions are centralized in Prisma, enabling:
+  - Type-safe database queries
+  - Easy schema migrations
+  - Cross-platform compatibility (e.g., potential Python integration)
+
+### State Management
+- Client-side state is managed through stores
+- Context is used for complex mutations that require both store updates and database operations
+- This architecture could potentially be simplified to use stores exclusively
+
+### Security and Performance
+- Sensitive operations are handled through Server Actions to prevent exposure
+- Public data is served through cached API routes for optimal performance
+- Database operations are type-safe and validated through Prisma
+
 ## Contributing
 
 We welcome contributions to Deltalytix. Please check out our [GitHub repository](https://github.com/hugodemenez/deltalytix) for more information on how to get involved.

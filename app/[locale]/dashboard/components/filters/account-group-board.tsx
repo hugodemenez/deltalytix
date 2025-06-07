@@ -1,18 +1,16 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, Settings, Check, X, Trash2, EyeOff } from "lucide-react"
 import { useI18n } from "@/locales/client"
-import { useUserData } from "@/components/context/user-data"
 import { toast } from "sonner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { ensureAccountAndAssignGroup } from "@/app/[locale]/dashboard/actions/accounts"
-import { getGroups } from "@/app/[locale]/dashboard/data/actions/actions"
 import { 
   AlertDialog, 
   AlertDialogAction, 
@@ -24,67 +22,55 @@ import {
   AlertDialogTitle, 
   AlertDialogTrigger 
 } from "@/components/ui/alert-dialog"
+import { useTradesStore } from "@/store/trades-store"
+import { useUserStore } from "@/store/user-store"
+import { useData } from "@/context/data-provider"
+import { Account, Group } from "@/context/data-provider"
 
 const HIDDEN_GROUP_NAME = "Hidden Accounts"
 
-interface Account {
-  id: string
+interface UngroupedAccount {
   number: string
-  groupId: string | null
-}
-
-interface Group {
   id: string
-  name: string
-  accounts: Account[]
 }
 
 export function AccountGroupBoard() {
   const t = useI18n()
-  const {
-    user,
-    groups = [],
-    trades = [],
-    setGroups,
-    createGroup,
-    updateGroup,
-    deleteGroup,
-    isLoading,
-    refreshGroups,
-  } = useUserData()
-  
+  const user = useUserStore(state => state.user)
+  const groups = useUserStore(state => state.groups)
+  const trades = useTradesStore(state => state.trades)
+  const { saveGroup, renameGroup, deleteGroup, moveAccountToGroup } = useData()
   const [newGroupName, setNewGroupName] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
   const [editingGroupName, setEditingGroupName] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
+  const existingAccounts = useUserStore(state => state.accounts)
 
-  // Extract all account numbers from trades
+  // Get account number which don't have an account created yet
   const tradeAccountNumbers = useMemo(() => {
-    return [...new Set(trades.map(t => t.accountNumber))]
+    const accountSet = new Set<string>()
+    trades.forEach(trade => {
+      if (trade.accountNumber) {
+        accountSet.add(trade.accountNumber)
+      }
+    })
+    return Array.from(accountSet)
   }, [trades])
 
-  // Calculate accounts that are in groups
-  const groupedAccountNumbers = useMemo(() => {
-    return new Set(groups.flatMap(g => g.accounts).map(a => a.number))
-  }, [groups])
+  // const tradeAccountNumbersWithoutAccount = useMemo(() => {
+  //   return tradeAccountNumbers.filter(number => !existingAccounts.some(acc => acc.number === number))
+  // }, [tradeAccountNumbers, existingAccounts])
 
-  // Calculate ungrouped accounts (accounts that exist in trades but not in any group)
   const ungroupedAccounts = useMemo(() => {
-    return tradeAccountNumbers
-      .filter(number => !groupedAccountNumbers.has(number))
-      .map(number => ({
-        id: number,
-        number,
-        groupId: null
-      }))
-  }, [tradeAccountNumbers, groupedAccountNumbers])
+    return existingAccounts.filter(account => !account.groupId && tradeAccountNumbers.includes(account.number))
+  }, [existingAccounts])
 
-  const handleCreateGroup = async () => {
+  const handleCreateGroup = useCallback(async () => {
     if (!newGroupName.trim() || !user?.id) return
     try {
       setIsCreating(true)
-      await createGroup(newGroupName.trim())
+      await saveGroup(newGroupName.trim())
       setNewGroupName("")
       toast.success(t("common.success"), {
         description: t("filters.groupCreated", { name: newGroupName })
@@ -97,11 +83,11 @@ export function AccountGroupBoard() {
     } finally {
       setIsCreating(false)
     }
-  }
+  }, [newGroupName, user?.id, saveGroup, t])
 
-  const handleUpdateGroup = async (groupId: string, newName: string) => {
+  const handleUpdateGroup = useCallback(async (groupId: string, newName: string) => {
     try {
-      await updateGroup(groupId, newName)
+      await renameGroup(groupId, newName)
       setEditingGroupId(null)
       setEditingGroupName("")
       toast.success(t("common.success"), {
@@ -113,20 +99,16 @@ export function AccountGroupBoard() {
         description: t("filters.errorUpdatingGroup", { name: newName })
       })
     }
-  }
+  }, [renameGroup, t])
 
-  const handleMoveAccount = async (accountNumber: string, groupId: string | null) => {
+  const handleMoveAccount = useCallback(async (account: Account | UngroupedAccount, groupId: string | null) => {
     try {
       // If moving to hidden group, ensure it exists
       if (groupId === "hidden" && user?.id) {
         const hiddenGroup = groups.find((g: Group) => g.name === HIDDEN_GROUP_NAME)
         if (!hiddenGroup) {
           // Create hidden group if it doesn't exist
-          await createGroup(HIDDEN_GROUP_NAME)
-          await refreshGroups()
-          // Get the new hidden group ID
-          const updatedGroups = await getGroups()
-          const newHiddenGroup = updatedGroups.find((g: Group) => g.name === HIDDEN_GROUP_NAME)
+          const newHiddenGroup = await saveGroup(HIDDEN_GROUP_NAME)
           if (newHiddenGroup) {
             groupId = newHiddenGroup.id
           }
@@ -134,26 +116,16 @@ export function AccountGroupBoard() {
           groupId = hiddenGroup.id
         }
       }
-
-      const result = await ensureAccountAndAssignGroup(accountNumber, groupId)
-      
-      if (result.success) {
-        toast.success(t("common.success"), {
-          description: t("filters.accountMoved", { account: accountNumber })
-        })
-        refreshGroups() // Refresh the groups to update the UI
-      } else {
-        throw new Error(result.error)
-      }
+      await moveAccountToGroup(account.id, groupId)
     } catch (error) {
       console.error("Error moving account:", error)
       toast.error(t("common.error"), {
-        description: t("filters.errorMovingAccount", { account: accountNumber })
+        description: t("filters.errorMovingAccount", { account: account.number })
       })
     }
-  }
+  }, [groups, user?.id, saveGroup, moveAccountToGroup, t])
 
-  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+  const handleDeleteGroup = useCallback(async (groupId: string, groupName: string) => {
     try {
       setIsDeleting(true)
       await deleteGroup(groupId)
@@ -168,17 +140,35 @@ export function AccountGroupBoard() {
     } finally {
       setIsDeleting(false)
     }
-  }
+  }, [deleteGroup, t])
 
-  const anonymizeAccount = (account: string) => {
+  const anonymizeAccount = useCallback((account: string) => {
     // This is a placeholder - use your actual anonymization function
     return account
-  }
+  }, [])
 
-  // Return early if loading
-  if (isLoading) {
-    return <div className="p-4">{t("filters.loading")}</div>
-  }
+  const handleGroupNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewGroupName(e.target.value)
+  }, [])
+
+  const handleEditingGroupNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEditingGroupName(e.target.value)
+  }, [])
+
+  const handleStartEditing = useCallback((groupId: string, groupName: string) => {
+    setEditingGroupId(groupId)
+    setEditingGroupName(groupName)
+  }, [])
+
+  const handleCancelEditing = useCallback(() => {
+    setEditingGroupId(null)
+    setEditingGroupName("")
+  }, [])
+
+  const handleSelectValueChange = useCallback(async (account: Account | UngroupedAccount, value: string) => {
+    const groupId = value === "none" ? null : value
+    await handleMoveAccount(account, groupId)
+  }, [handleMoveAccount])
 
   // Return early if no user
   if (!user) {
@@ -216,7 +206,7 @@ export function AccountGroupBoard() {
         <div className="flex items-center gap-2">
           <Input
             value={newGroupName}
-            onChange={(e) => setNewGroupName(e.target.value)}
+            onChange={handleGroupNameChange}
             placeholder={t("filters.newGroup")}
             className="w-[200px]"
             disabled={isCreating}
@@ -246,7 +236,7 @@ export function AccountGroupBoard() {
                     <span className="text-sm">{anonymizeAccount(account.number)}</span>
                     <Select
                       onValueChange={async (value) => {
-                        await handleMoveAccount(account.number, value || null)
+                        await handleMoveAccount(account, value || null)
                       }}
                     >
                       <SelectTrigger className="w-[140px] h-8">
@@ -277,7 +267,7 @@ export function AccountGroupBoard() {
                 <div className="flex items-center gap-2">
                   <Input
                     value={editingGroupName}
-                    onChange={(e) => setEditingGroupName(e.target.value)}
+                    onChange={handleEditingGroupNameChange}
                     className="h-8 w-[180px]"
                     autoFocus
                   />
@@ -294,10 +284,7 @@ export function AccountGroupBoard() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
-                    onClick={() => {
-                      setEditingGroupId(null)
-                      setEditingGroupName("")
-                    }}
+                    onClick={handleCancelEditing}
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -315,8 +302,7 @@ export function AccountGroupBoard() {
                         size="icon"
                         className="h-6 w-6"
                         onClick={() => {
-                          setEditingGroupId(group.id)
-                          setEditingGroupName(group.name)
+                          handleStartEditing(group.id, group.name)
                         }}
                       >
                         <Settings className="h-3 w-3" />
@@ -368,9 +354,7 @@ export function AccountGroupBoard() {
                       <Select
                         defaultValue={group.id}
                         onValueChange={async (value) => {
-                          // If value is "none", we want to remove the account from any group
-                          const groupId = value === "none" ? null : value
-                          await handleMoveAccount(account.number, groupId)
+                          await handleSelectValueChange(account, value)
                         }}
                       >
                         <SelectTrigger className="w-[140px] h-8">

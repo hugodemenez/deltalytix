@@ -1,7 +1,7 @@
 'use client'
 
 import { Card, CardContent } from "@/components/ui/card"
-import BillingManagement from '../components/billing-management'
+import BillingManagement from './components/billing-management'
 
 export default function BillingPage() {
   return (

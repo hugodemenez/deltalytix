@@ -7,13 +7,14 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { FilterItem } from "@/app/[locale]/dashboard/types/filter"
 import { useState, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { PnlRangeFilter } from "./pnl-range-filter"
 import { AccountFilter } from "./account-filter"
+import { useTradesStore } from "../../../../../store/trades-store"
 
 interface FilterDropdownProps {
   type: 'instrument'
@@ -112,9 +113,9 @@ interface FilterDropdownsProps {
 }
 
 export function FilterDropdowns({ showAccountNumbers }: FilterDropdownsProps) {
-  const { trades = [], instruments = [], setInstruments } = useUserData()
+  const { instruments = [], setInstruments } = useData()
+  const trades = useTradesStore(state => state.trades)
   const [allItems, setAllItems] = useState<FilterItem[]>([])
-  const t = useI18n()
 
   useEffect(() => {
     if (!trades?.length) return

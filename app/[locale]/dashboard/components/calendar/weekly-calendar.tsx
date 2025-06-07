@@ -3,21 +3,18 @@
 import React from "react"
 import { format, eachWeekOfInterval, getWeek, getMonth, getYear, addDays, startOfYear, endOfYear } from "date-fns"
 import { fr, enUS } from 'date-fns/locale'
-import { Newspaper } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { FinancialEvent, Trade } from "@prisma/client"
+import { Trade } from "@prisma/client"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useI18n, useCurrentLocale } from "@/locales/client"
-import { useUserData } from "@/components/context/user-data"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { useUserStore } from "../../../../../store/user-store"
 
 const formatCurrency = (value: number) => {
   const formatted = value.toLocaleString('en-US', { 
@@ -32,61 +29,6 @@ const formatCurrency = (value: number) => {
 interface WeeklyCalendarPnlProps {
   calendarData: CalendarData;
   year: number;
-}
-
-function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impactLevels: string[] }) {
-  const t = useI18n()
-  const { timezone } = useUserData()
-  const locale = useCurrentLocale()
-  const dateLocale = locale === 'fr' ? fr : enUS
-
-  if (events.length === 0) return null
-
-  const badgeStyles = {
-    high: "bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20",
-    medium: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20",
-    low: "bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/20"
-  }
-
-  const highestImportance = events.reduce((highest, event) => {
-    const level = event.importance.toLowerCase()
-    return level === 'high' ? 'high' : level === 'medium' ? 'medium' : 'low'
-  }, 'low')
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Badge 
-          variant="outline" 
-          className={cn(
-            "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
-            badgeStyles[highestImportance as keyof typeof badgeStyles],
-            "transition-all duration-200 ease-in-out",
-            "hover:scale-110 hover:shadow-md",
-            "active:scale-95"
-          )}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Newspaper className="h-2.5 w-2.5" />
-          {events.length}
-        </Badge>
-      </PopoverTrigger>
-      <PopoverContent 
-        className="w-[400px] p-0 z-50" 
-        align="start"
-        side="right"
-        sideOffset={5}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <HourlyFinancialTimeline
-          date={events[0].date}
-          events={events}
-          className="h-[400px]"
-          preventScrollPropagation={true}
-        />
-      </PopoverContent>
-    </Popover>
-  )
 }
 
 export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendarPnlProps) {

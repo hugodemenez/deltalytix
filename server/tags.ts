@@ -4,7 +4,7 @@ import { createClient } from './auth'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
-export async function getTags(userId: string) {
+export async function getTagsAction(userId: string) {
   console.log('getTags', userId)
 
 
@@ -25,7 +25,7 @@ export async function getTags(userId: string) {
   }
 }
 
-export async function createTag(formData: {
+export async function createTagAction(formData: {
   name: string
   description?: string
   color: string
@@ -54,7 +54,7 @@ export async function createTag(formData: {
   }
 }
 
-export async function updateTag(id: string, formData: {
+export async function updateTagAction(id: string, formData: {
   name: string
   description?: string
   color: string
@@ -128,7 +128,7 @@ export async function updateTag(id: string, formData: {
   }
 }
 
-export async function deleteTag(id: string) {
+export async function deleteTagAction(id: string) {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 
@@ -193,7 +193,7 @@ export async function deleteTag(id: string) {
   }
 }
 
-export async function syncTradeTagsToTagTable() {
+export async function syncTradeTagsToTagTableAction() {
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 

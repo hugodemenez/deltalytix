@@ -469,6 +469,7 @@ export async function GET(request: Request) {
     // Get the URL and search params
     const { searchParams } = new URL(request.url)
     const lang = (searchParams.get('lang') || 'fr') as 'fr' | 'en'
+    const shouldStoreInDb = searchParams.get('db') === 'true'
 
     // Fetch events directly from Investing.com
     const events = await fetchInvestingCalendarEvents(lang)
@@ -480,6 +481,52 @@ export async function GET(request: Request) {
       }, { status: 404 })
     }
 
+    // If db=true, store events in database
+    if (shouldStoreInDb) {
+      console.log('Storing events in database...')
+      const storedEvents = await Promise.all(
+        events.map(async (event) => {
+          try {
+            return prisma.financialEvent.upsert({
+              where: {
+                title_date_lang_timezone: {
+                  title: event.title,
+                  date: event.date,
+                  lang: event.lang,
+                  timezone: event.timezone
+                }
+              },
+              update: {
+                importance: event.importance,
+                updatedAt: new Date()
+              },
+              create: {
+                title: event.title,
+                date: event.date,
+                importance: event.importance,
+                type: event.type,
+                sourceUrl: event.sourceUrl,
+                country: event.country,
+                lang: event.lang,
+                timezone: event.timezone
+              }
+            })
+          } catch (error) {
+            console.error(`Error processing event ${event.title}:`, error)
+            return null
+          }
+        })
+      )
+
+      return NextResponse.json({
+        success: true,
+        events: events,
+        count: events.length,
+        storedCount: storedEvents.filter(Boolean).length
+      })
+    }
+
+    // If db=false or not specified, just return the events
     return NextResponse.json({
       success: true,
       events: events,

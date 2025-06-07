@@ -6,14 +6,14 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { TrashIcon, AlertCircle, ChevronDown, ChevronUp, MoreVertical, Edit2, Loader2 } from "lucide-react"
 import { 
-  removeAccountsFromTrades, 
-  deleteInstrumentGroup, 
-  updateCommissionForGroup, 
-  renameAccount,
-  renameInstrument 
-} from "@/app/[locale]/dashboard/data/actions/actions"
+  removeAccountsFromTradesAction, 
+  deleteInstrumentGroupAction, 
+  updateCommissionForGroupAction, 
+  renameAccountAction,
+  renameInstrumentAction 
+} from "@/server/accounts"
 import debounce from 'lodash/debounce'
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import { toast } from '@/hooks/use-toast'
 import { User } from '@supabase/supabase-js'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -24,6 +24,8 @@ import { Label } from "@/components/ui/label"
 import { Trade } from '@prisma/client'
 import ExportButton from '@/components/export-button'
 import { useI18n } from "@/locales/client"
+import { useUserStore } from '../../../../../../store/user-store'
+import { useTradesStore } from '../../../../../../store/trades-store'
 
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
@@ -31,7 +33,10 @@ type GroupedTrades = Record<string, Record<string, Trade[]>>
 
 export function DataManagementCard() {
   const t = useI18n()
-  const { trades, setTrades, refreshTrades, user } = useUserData()
+  const user = useUserStore((state) => state.user)
+  const trades = useTradesStore((state) => state.trades)
+
+  const { refreshTrades } = useData()
   const [loading, setLoading] = useState(true)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [renameLoading, setRenameLoading] = useState(false)
@@ -84,7 +89,7 @@ export function DataManagementCard() {
     try {
       setDeleteLoading(true)
       const accountsToDelete = deleteMode === 'all' ? Object.keys(groupedTrades) : selectedAccounts
-      await removeAccountsFromTrades(accountsToDelete)
+      await removeAccountsFromTradesAction(accountsToDelete)
       await refreshTrades()
       setGroupedTrades(getGroupedTrades)
       setSelectedAccounts([])
@@ -109,7 +114,7 @@ export function DataManagementCard() {
   const handleDeleteInstrument = async (accountNumber: string, instrumentGroup: string) => {
     try {
       setLoading(true)
-      await deleteInstrumentGroup(accountNumber, instrumentGroup, user!.id)
+      await deleteInstrumentGroupAction(accountNumber, instrumentGroup, user!.id)
       await refreshTrades()
       setGroupedTrades(getGroupedTrades)
       toast({
@@ -132,7 +137,7 @@ export function DataManagementCard() {
   const debouncedUpdateCommission = useMemo(
     () => debounce(async (accountNumber: string, instrumentGroup: string, newCommission: number) => {
       try {
-        await updateCommissionForGroup(accountNumber, instrumentGroup, newCommission)
+        await updateCommissionForGroupAction(accountNumber, instrumentGroup, newCommission)
         await refreshTrades()
         setGroupedTrades(getGroupedTrades)
         toast({
@@ -167,7 +172,7 @@ export function DataManagementCard() {
     if (!user || !instrumentToRename.currentName || !newInstrumentName) return
     try {
       setRenameLoading(true)
-      await renameInstrument(instrumentToRename.accountNumber, instrumentToRename.currentName, newInstrumentName)
+      await renameInstrumentAction(instrumentToRename.accountNumber, instrumentToRename.currentName, newInstrumentName)
       await refreshTrades()
       toast({
         title: t('dataManagement.toast.instrumentRenamed'),
@@ -201,7 +206,7 @@ export function DataManagementCard() {
     if (!user || !accountToRename || !newAccountNumber) return
     try {
       setRenameLoading(true)
-      await renameAccount(accountToRename, newAccountNumber)
+      await renameAccountAction(accountToRename, newAccountNumber)
       await refreshTrades()
       toast({
         title: t('dataManagement.toast.accountRenamed'),

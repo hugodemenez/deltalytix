@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
 import {
@@ -63,7 +63,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export default function TimeRangePerformanceChart({ size = 'medium' }: TimeRangePerformanceChartProps) {
-  const { formattedTrades: trades, timeRange, setTimeRange } = useUserData()
+  const { formattedTrades: trades, timeRange, setTimeRange } = useData()
   const t = useI18n()
   const [activeRange, setActiveRange] = React.useState<string | null>(null)
 

@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils"
 import { CalendarModal } from "./daily-modal"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { Card, CardTitle } from "@/components/ui/card"
-import { useUserData } from "@/components/context/user-data"
 import { useI18n, useCurrentLocale } from "@/locales/client"
+import { useUserStore } from "../../../../../store/user-store"
 
 function formatCurrency(value: number): string {
   const absValue = Math.abs(value);
@@ -59,7 +59,7 @@ function isDateStringToday(dateString: string, timezone: string): boolean {
 export default function MobileCalendarPnl({ calendarData }: { calendarData: CalendarData }) {
   const t = useI18n()
   const locale = useCurrentLocale()
-  const { timezone } = useUserData()
+  const timezone = useUserStore(state => state.timezone)
   const dateLocale = locale === 'fr' ? fr : enUS
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)

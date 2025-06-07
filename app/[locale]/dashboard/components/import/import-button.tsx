@@ -6,12 +6,12 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
 import { UploadIcon, type UploadIconHandle } from '@/components/animated-icons/upload'
 import { Trade } from '@prisma/client'
-import { saveTrades } from '@/server/database'
+import { saveTradesAction } from '@/server/database'
 import ImportTypeSelection, { ImportType } from './import-type-selection'
 import FileUpload from './file-upload'
 import HeaderSelection from './header-selection'
 import AccountSelection from './account-selection'
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import ColumnMapping from './column-mapping'
 import { useI18n } from "@/locales/client"
 import { ImportDialogHeader } from './components/import-dialog-header'
@@ -19,6 +19,8 @@ import { ImportDialogFooter } from './components/import-dialog-footer'
 import { platforms } from './config/platforms'
 import { FormatPreview } from './components/format-preview'
 import { cn } from '@/lib/utils'
+import { useUserStore } from '../../../../../store/user-store'
+import { useTradesStore } from '../../../../../store/trades-store'
 
 type ColumnConfig = {
   [key: string]: {
@@ -71,7 +73,9 @@ export default function ImportButton() {
   const uploadIconRef = useRef<UploadIconHandle>(null)
 
   const { toast } = useToast()
-  const { trades, refreshTrades, user } = useUserData()
+  const user = useUserStore(state => state.user)
+  const trades = useTradesStore(state => state.trades)
+  const { refreshTrades, updateTrades } = useData()
   const t = useI18n()
 
   const generateTradeHash = (trade: Partial<Trade>): string => {
@@ -121,7 +125,7 @@ export default function ImportButton() {
           });
 
       console.log('[ImportButton] Saving trades:', newTrades)
-      const result = await saveTrades(newTrades)
+      const result = await saveTradesAction(newTrades)
       if(result.error){
         if (result.error === "DUPLICATE_TRADES") {
           toast({

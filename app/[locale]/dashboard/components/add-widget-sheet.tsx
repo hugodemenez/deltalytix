@@ -10,7 +10,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from '@/lib/utils'
 import { WidgetType, WidgetSize } from '../types/dashboard'
 import { getWidgetsByCategory, WIDGET_REGISTRY, getWidgetPreview } from '../config/widget-registry'
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import { toast } from "sonner"
 
 interface AddWidgetSheetProps {
@@ -27,7 +27,7 @@ interface PreviewCardProps {
 const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
   ({ onClick, className, children }, ref) => {
     const t = useI18n()
-    const { isMobile } = useUserData()
+    const { isMobile } = useData()
     return (
       <div 
         ref={ref}
@@ -53,7 +53,7 @@ PreviewCard.displayName = "PreviewCard"
 export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>(
   ({ onAddWidget, isCustomizing }, ref) => {
     const t = useI18n()
-    const { isMobile } = useUserData()
+    const { isMobile } = useData()
     const [isOpen, setIsOpen] = React.useState(false)
 
     const handleAddWidget = (type: WidgetType) => {

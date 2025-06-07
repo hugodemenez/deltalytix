@@ -6,16 +6,16 @@ import { formatInTimeZone } from "date-fns-tz"
 import { fr, enUS } from "date-fns/locale"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, TrendingDown, DollarSign, BarChart2, Pencil } from "lucide-react"
+import { Pencil } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useUserData } from "@/components/context/user-data"
 import { HourlyFinancialTimeline } from "./hourly-financial-timeline"
-import { getFinancialEvents } from "@/server/financial-events"
 import { useState, useEffect } from "react"
 import type { FinancialEvent } from "@prisma/client"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { useUserStore } from "@/store/user-store"
+import { useTradesStore } from "@/store/trades-store"
+import { useFinancialEventsStore } from "@/store/financial-events-store"
 
 type ImpactLevel = "low" | "medium" | "high"
 
@@ -37,8 +37,9 @@ export function MindsetSummary({
   const t = useI18n()
   const { locale } = useParams()
   const dateLocale = locale === 'fr' ? fr : enUS
-  const { trades = [], financialEvents = [] } = useUserData()
-  const { timezone } = useUserData()
+  const trades = useTradesStore(state => state.trades)
+  const financialEvents = useFinancialEventsStore(state => state.events)
+  const timezone = useUserStore(state => state.timezone)
   const [events, setEvents] = useState<FinancialEvent[]>([])
   const [showOnlySelectedNews, setShowOnlySelectedNews] = useState(true)
 

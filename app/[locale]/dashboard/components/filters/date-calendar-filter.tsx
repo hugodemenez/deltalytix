@@ -2,7 +2,7 @@ import { CalendarIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { useState, useRef } from "react"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { cn } from "@/lib/utils"
@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarDaysIcon, type CalendarDaysIconHandle } from "@/components/animated-icons/calendar-days"
 
 export default function DateCalendarFilter() {
-  const { dateRange, setDateRange } = useUserData()
+  const { dateRange, setDateRange } = useData()
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [mode, setMode] = useState<'single' | 'range'>('range')
   const isMobile = useMediaQuery('(max-width: 768px)')

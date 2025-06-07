@@ -34,12 +34,11 @@ import { votePost, deletePost, getComments, addComment, editComment, deleteComme
 import { toast } from 'sonner'
 import { useState, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { useUserData } from '@/components/context/user-data'
 import { CommentSection } from './comment-section'
 import { Textarea } from '@/components/ui/textarea'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { AuthPrompt } from './auth-prompt'
 import { CopyNotification } from './copy-notification'
+import { useUserStore } from '@/store/user-store'
 
 interface Props {
   post: ExtendedPost
@@ -74,7 +73,7 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
   const [isCommentsOpen, setIsCommentsOpen] = useState(isExpanded)
   const [comments, setComments] = useState<any[]>([])
   const [commentCount, setCommentCount] = useState(post._count.comments)
-  const { user } = useUserData()
+  const user = useUserStore(state => state.user)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [authAction, setAuthAction] = useState('')
   const [hasCopied, setHasCopied] = useState(false)

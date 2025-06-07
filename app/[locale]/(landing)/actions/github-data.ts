@@ -1,5 +1,5 @@
 'use server'
-import { fetchGithubStars, getGithubStats } from '../actions/github';
+import { fetchGithubStars, getGithubStats } from './github';
 
 const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || 'default_owner';
 const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || 'default_repo';

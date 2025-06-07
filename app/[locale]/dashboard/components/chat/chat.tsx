@@ -3,7 +3,7 @@
 import type React from "react"
 import { useRef, useState, useEffect, useMemo, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { RotateCcw, ChevronDown, MessageSquare } from "lucide-react"
+import { RotateCcw, ChevronDown, MessageSquare, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
 import { Message, useChat } from "@ai-sdk/react"
@@ -12,10 +12,12 @@ import { BotMessage } from "./bot-message"
 import { UserMessage } from "./user-message"
 import { ChatInput } from "./input"
 import { ChatHeader } from "./header"
-import { useUserData } from "@/components/context/user-data"
 import { useCurrentLocale } from "@/locales/client"
 import { useI18n } from "@/locales/client"
-import { loadChat, saveChat } from "./actions/chat-store"
+import { loadChat, saveChat } from "./actions/chat"
+import { useUserStore } from "../../../../../store/user-store"
+import { useChatStore } from "../../../../../store/chat-store"
+import { format } from "date-fns"
 
 // Types
 interface ChatWidgetProps {
@@ -96,46 +98,106 @@ function useMessageVirtualization(messages: Message[]) {
 const ResumeScrollButton = ({ onClick, show }: { onClick: () => void; show: boolean }) => {
     const t = useI18n()
     return (
-    <AnimatePresence>
-        {show && (
-            <motion.div
-                className="absolute bottom-20 right-4 z-10"
-                initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-                <Button onClick={onClick} size="sm" className="shadow-lg hover:shadow-xl transition-shadow" variant="secondary">
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                    {t('chat.overlay.resumeScroll')}
-                </Button>
-            </motion.div>
+        <AnimatePresence>
+            {show && (
+                <motion.div
+                    className="absolute bottom-20 right-4 z-10"
+                    initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                >
+                    <Button onClick={onClick} size="sm" className="shadow-lg hover:shadow-xl transition-shadow" variant="secondary">
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        {t('chat.overlay.resumeScroll')}
+                    </Button>
+                </motion.div>
             )}
         </AnimatePresence>
     )
 }
 
+// Add new message type components
+const ThinkingMessage = () => (
+    <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Thinking...</span>
+    </div>
+)
+
+const ToolCallMessage = ({ toolName, args, state }: { toolName: string; args: any; state: string }) => {
+    const isLoading = state === "call" || state === "partial-call"
+    return (
+        <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+            <div className="flex flex-col">
+                <span>
+                    {state === "result"
+                        ? `Completed ${toolName}`
+                        : state === "partial-call"
+                            ? `Preparing ${toolName}...`
+                            : `Calling ${toolName}...`}
+                </span>
+                {args && (
+                    <span className="text-xs opacity-70">
+                        {Object.entries(args).map(([key, value]) => (
+                            <span key={key} className="mr-2">
+                                {key}: {JSON.stringify(value)}
+                            </span>
+                        ))}
+                    </span>
+                )}
+            </div>
+        </div>
+    )
+}
+
 // Main Component
 export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
-    const { user, timezone } = useUserData()
+    const timezone = useUserStore(state => state.timezone)
+    const { supabaseUser: user } = useUserStore.getState()
     const locale = useCurrentLocale();
     const t = useI18n()
     const [isStarted, setIsStarted] = useState(false)
-    const [storedMessages, setStoredMessages] = useState<Message[]>([])
+    const { messages: storedMessages, setMessages: setStoredMessages, addMessage: addStoredMessage, clearMessages: clearStoredMessages } = useChatStore()
     const [isLoadingMessages, setIsLoadingMessages] = useState(true)
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const [showResumeButton, setShowResumeButton] = useState(false)
     const [isNearBottom, setIsNearBottom] = useState(true)
+    const moods = useUserStore(state => state.moods)
+    const setMoods = useUserStore(state => state.setMoods)
 
     // Load stored messages when component mounts
+    // Load from user mood store if no messages are stored
     useEffect(() => {
         const loadStoredMessages = async () => {
-            if (!user?.id) return
+            // If user is not logged in or there are stored messages, return
+            if (!user?.id || storedMessages.length > 0) return
             setIsLoadingMessages(true)
             try {
-                const messages = await loadChat(user.id)
-                setStoredMessages(messages)
-                if (messages.length > 0) {
+                if (moods.length > 0) {
+                    // Find current day in moods
+                    console.log('MOODS', moods)
+                    const currentDay = format(new Date(), 'yyyy-MM-dd')
+                    const currentMood = moods.find(mood => format(mood.day, 'yyyy-MM-dd') === currentDay)
+                    if (currentMood) {
+                        try {
+                            const parsedConversation = JSON.parse(currentMood.conversation as string)
+                            // Ensure each message has the required properties for Message type
+                            const validMessages = parsedConversation.map((msg: any) => ({
+                                id: msg.id,
+                                content: msg.content,
+                                role: msg.role,
+                                // Preserve additional properties that might be needed
+                                createdAt: msg.createdAt,
+                                toolInvocations: msg.toolInvocations
+                            }))
+                            setStoredMessages(validMessages as Message[])
+                        } catch (e) {
+                            console.error('Failed to parse conversation:', e)
+                            setStoredMessages([])
+                        }
+                    }
                     setIsStarted(true)
                 }
             } finally {
@@ -143,9 +205,8 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
             }
         }
         loadStoredMessages()
-    }, [user?.id])
+    }, [user?.id, moods])
 
-   
 
     const { messages, input, handleInputChange, handleSubmit, status, stop, setMessages, addToolResult, error, reload, append } =
         useChat({
@@ -155,12 +216,14 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 locale: locale,
                 timezone,
             },
-            onFinish: () => {
-                const saveMessages = async () => {
-                    if (!user?.id || messages.length === 0) return
-                    await saveChat(user.id, messages)
+            initialMessages: storedMessages,
+            onFinish: async (message: Message) => {
+                if (!user?.id) return
+                const mood = await saveChat(user.id, [...storedMessages, message])
+                if (mood) {
+                    setMoods([...moods, mood])
                 }
-                saveMessages()
+                setStoredMessages([...storedMessages, message])
             },
         })
 
@@ -170,13 +233,13 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
         const container = scrollContainerRef.current
         if (!container) return
 
-        const handleScroll = () => {
+        const handleScroll = throttle(() => {
             const { scrollTop, scrollHeight, clientHeight } = container
             const threshold = 100 // pixels from bottom to consider "near bottom"
             const isNearBottom = scrollHeight - scrollTop - clientHeight < threshold
             setIsNearBottom(isNearBottom)
             setShowResumeButton(!isNearBottom)
-        }
+        }, 100) // Throttle to 100ms
 
         // Initial check
         handleScroll()
@@ -248,6 +311,90 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                     case "user":
                                         return <UserMessage key={message.id}>{message.content}</UserMessage>
                                     case "assistant":
+                                        if (message.parts) {
+                                            return message.parts.map((part, index) => {
+                                                switch (part.type) {
+                                                    case "step-start":
+                                                        if (message.parts && message.parts.length > index) {
+                                                            return null
+                                                        }
+                                                        return <ThinkingMessage key={`${message.id}-step-${index}`} />
+                                                    case "text":
+                                                        return (
+                                                            <BotMessage
+                                                                key={`${message.id}-${index}`}
+                                                                status={status}
+                                                            >
+                                                                {part.text}
+                                                            </BotMessage>
+                                                        )
+                                                    case "tool-invocation": {
+                                                        const callId = part.toolInvocation.toolCallId
+                                                        switch (part.toolInvocation.toolName) {
+                                                            case "askForConfirmation": {
+                                                                switch (part.toolInvocation.state) {
+                                                                    case "partial-call":
+                                                                        return (
+                                                                            <BotMessage key={`${callId}-partial-call`} status={status}>
+                                                                                {part.toolInvocation.args?.message}
+                                                                            </BotMessage>
+                                                                        )
+                                                                    case "call":
+                                                                        return (
+                                                                            <BotMessage key={`${callId}-call`} status={status}>
+                                                                                {part.toolInvocation.args?.message}
+                                                                                <div className="flex gap-2 mt-2">
+                                                                                    <Button
+                                                                                        variant="secondary"
+                                                                                        size="sm"
+                                                                                        onClick={() =>
+                                                                                            addToolResult({
+                                                                                                toolCallId: callId,
+                                                                                                result: "Yes, confirmed.",
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        Yes
+                                                                                    </Button>
+                                                                                    <Button
+                                                                                        variant="secondary"
+                                                                                        size="sm"
+                                                                                        onClick={() =>
+                                                                                            addToolResult({
+                                                                                                toolCallId: callId,
+                                                                                                result: "No, denied",
+                                                                                            })
+                                                                                        }
+                                                                                    >
+                                                                                        No
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </BotMessage>
+                                                                        )
+                                                                    case "result":
+                                                                        return (
+                                                                            <BotMessage key={`${callId}-result`} status={status}>
+                                                                                Response: {part.toolInvocation.result}
+                                                                            </BotMessage>
+                                                                        )
+                                                                }
+                                                            }
+                                                            default:
+                                                                return (
+                                                                    <ToolCallMessage
+                                                                        key={`${callId}-${part.toolInvocation.state}`}
+                                                                        toolName={part.toolInvocation.toolName}
+                                                                        args={part.toolInvocation.args}
+                                                                        state={part.toolInvocation.state}
+                                                                    />
+                                                                )
+                                                        }
+                                                    }
+                                                    default:
+                                                        return null
+                                                }
+                                            })
+                                        }
                                         return (
                                             <BotMessage
                                                 status={status}
@@ -257,77 +404,14 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                             </BotMessage>
                                         )
                                     case "system":
-                                        return
+                                        return null
+                                    case "data":
+                                        if (message.content === "thinking") {
+                                            return <ThinkingMessage key={message.id} />
+                                        }
+                                        return null
                                     default:
-                                        return message.parts?.map((part, index) => {
-                                            switch (part.type) {
-                                                case "text":
-                                                    return (
-                                                        <BotMessage
-                                                            key={`${message.id}-${index}`}
-                                                        >
-                                                            {part.text}
-                                                        </BotMessage>
-                                                    )
-                                                case "tool-invocation": {
-                                                    const callId = part.toolInvocation.toolCallId
-                                                    switch (part.toolInvocation.toolName) {
-                                                        case "askForConfirmation": {
-                                                            switch (part.toolInvocation.state) {
-                                                                case "partial-call":
-                                                                    return (
-                                                                        <BotMessage key={`${callId}-partial-call`}>
-                                                                            {part.toolInvocation.args?.message}
-                                                                        </BotMessage>
-                                                                    )
-                                                                case "call":
-                                                                    return (
-                                                                        <BotMessage key={`${callId}-call`}>
-                                                                            {part.toolInvocation.args?.message}
-                                                                            <div className="flex gap-2 mt-2">
-                                                                                <Button
-                                                                                    variant="secondary"
-                                                                                    size="sm"
-                                                                                    onClick={() =>
-                                                                                        addToolResult({
-                                                                                            toolCallId: callId,
-                                                                                            result: "Yes, confirmed.",
-                                                                                        })
-                                                                                    }
-                                                                                >
-                                                                                    Yes
-                                                                                </Button>
-                                                                                <Button
-                                                                                    variant="secondary"
-                                                                                    size="sm"
-                                                                                    onClick={() =>
-                                                                                        addToolResult({
-                                                                                            toolCallId: callId,
-                                                                                            result: "No, denied",
-                                                                                        })
-                                                                                    }
-                                                                                >
-                                                                                    No
-                                                                                </Button>
-                                                                            </div>
-                                                                        </BotMessage>
-                                                                    )
-                                                                case "result":
-                                                                    return (
-                                                                        <BotMessage key={`${callId}-result`}>
-                                                                            Response: {part.toolInvocation.result}
-                                                                        </BotMessage>
-                                                                    )
-                                                            }
-                                                        }
-                                                        default:
-                                                            return null
-                                                    }
-                                                }
-                                                default:
-                                                    return null
-                                            }
-                                        })
+                                        return null
                                 }
                             })}
                         </AnimatePresence>
@@ -359,19 +443,19 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 {t('chat.overlay.description')}
                             </p>
                         </div>
-                            <Button
-                                onClick={() => {
-                                    setIsStarted(true)
-                                    append({
-                                        role: 'system',
-                                        content: 'Say hello to the user when the chat starts remind the time of date and current trading data for week and day',
-                                    })
-                                }}
-                                size="lg"
-                                className="w-full text-sm sm:text-base animate-in fade-in zoom-in"
-                            >
-                                {t('chat.overlay.startButton')}
-                            </Button>
+                        <Button
+                            onClick={() => {
+                                setIsStarted(true)
+                                append({
+                                    role: 'system',
+                                    content: 'Say hello to the user when the chat starts remind the time of date and current trading data for week and day',
+                                })
+                            }}
+                            size="lg"
+                            className="w-full text-sm sm:text-base animate-in fade-in zoom-in"
+                        >
+                            {t('chat.overlay.startButton')}
+                        </Button>
                     </div>
                 </div>
             )}

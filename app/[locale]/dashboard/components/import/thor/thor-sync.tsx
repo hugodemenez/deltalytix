@@ -6,7 +6,6 @@ import { CopyIcon, RefreshCwIcon, EyeIcon } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { generateThorToken } from "@/server/thor"
 import { useToast } from "@/hooks/use-toast"
-import { useUserData } from "@/components/context/user-data"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import {
@@ -21,12 +20,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useI18n } from "@/locales/client"
+import { useUserStore } from "../../../../../../store/user-store"
 
 export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRevealed, setIsRevealed] = useState(false)
   const { toast } = useToast()
-  const { thorToken, refreshUser } = useUserData()
+  const { user, setUser } = useUserStore.getState()
   const t = useI18n()
   const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -67,7 +67,7 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
       setIsGenerating(true)
       setIsRevealed(false)
       const result = await generateThorToken()
-      if (result.error) {
+      if (result.error || !result.token) {
         toast({
           title: "Error",
           description: t('thor.error.generation'),
@@ -75,7 +75,8 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
         })
         return
       }
-      await refreshUser()
+      if (!user) return
+      setUser({ ...user, thorToken: result.token })
       toast({
         title: "Success",
         description: t('thor.generated'),
@@ -92,8 +93,8 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
   }
 
   const handleCopyToken = () => {
-    if (!thorToken) return
-    navigator.clipboard.writeText(thorToken)
+    if (!user?.thorToken) return
+    navigator.clipboard.writeText(user.thorToken)
     toast({
       title: "Success",
       description: t('thor.copied'),
@@ -101,8 +102,8 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
   }
 
   const getMaskedToken = () => {
-    if (!thorToken) return ''
-    return '•'.repeat(thorToken.length)
+    if (!user?.thorToken) return ''
+    return '•'.repeat(user.thorToken.length)
   }
 
   return (
@@ -119,7 +120,7 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
           <Skeleton className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background" />
         ) : (
           <Input
-            value={isRevealed ? (thorToken || '') : getMaskedToken()}
+            value={isRevealed ? (user?.thorToken || '') : getMaskedToken()}
             readOnly
             placeholder={t('thor.noToken')}
             className="font-mono"
@@ -130,7 +131,7 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
             <Button
               variant="outline"
               size="icon"
-              disabled={!thorToken || isGenerating}
+              disabled={!user?.thorToken || isGenerating}
             >
               <EyeIcon className="h-4 w-4" />
             </Button>
@@ -152,7 +153,7 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
           variant="outline"
           size="icon"
           onClick={handleCopyToken}
-          disabled={!thorToken || isGenerating}
+          disabled={!user?.thorToken || isGenerating}
         >
           <CopyIcon className="h-4 w-4" />
         </Button>

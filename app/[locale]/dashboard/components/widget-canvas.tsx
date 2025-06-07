@@ -13,20 +13,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Minus, Maximize2, GripVertical } from 'lucide-react'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
-import { useUserData } from '@/components/context/user-data'
+import { useData } from '@/context/data-provider'
 import { useI18n } from "@/locales/client"
 import { WIDGET_REGISTRY, getWidgetComponent } from '../config/widget-registry'
 import { useAutoScroll } from '../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
-import { Widget, WidgetType, WidgetSize } from '../types/dashboard'
-import type { LayoutItem as ServerLayoutItem, Layouts } from '@/server/user-data'
+import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
+import { useUserStore } from '../../../../store/user-store'
 
-// Add type for our local LayoutItem that extends the server one
-type LayoutItem = Omit<ServerLayoutItem, 'type' | 'size'> & {
-  type: string
-  size: string
-}
 
 // Update sizeToGrid to handle responsive sizes
 const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
@@ -81,27 +76,29 @@ const getWidgetGrid = (type: WidgetType, size: WidgetSize, isSmallScreen = false
 }
 
 // Create layouts for different breakpoints
-const generateResponsiveLayout = (widgets: LayoutItem[]) => {
+const generateResponsiveLayout = (widgets: Widget[]) => {
+  const widgetArray = Array.isArray(widgets) ? widgets : []
+  
   const layouts = {
-    lg: widgets.map(widget => ({
+    lg: widgetArray.map(widget => ({
       ...widget,
       ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize)
     })),
-    md: widgets.map(widget => ({
+    md: widgetArray.map(widget => ({
       ...widget,
       ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize),
     })),
-    sm: widgets.map(widget => ({
+    sm: widgetArray.map(widget => ({
       ...widget,
       ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, true),
       x: 0 // Align to left
     })),
-    xs: widgets.map(widget => ({
+    xs: widgetArray.map(widget => ({
       ...widget,
       ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, true),
       x: 0 // Align to left
     })),
-    xxs: widgets.map(widget => ({
+    xxs: widgetArray.map(widget => ({
       ...widget,
       ...getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, true),
       x: 0 // Align to left
@@ -138,7 +135,7 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
   currentType: WidgetType
 }) {
   const t = useI18n()
-  const { isMobile } = useUserData()
+  const { isMobile } = useData()
   const widgetRef = useRef<HTMLDivElement>(null)
   const [isSizePopoverOpen, setIsSizePopoverOpen] = useState(false)
 
@@ -173,7 +170,8 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
       onTouchStart={handleTouchStart}
     >
       <div className={cn("h-full w-full", 
-        isCustomizing && "group-hover:blur-[2px]"
+        isCustomizing && "group-hover:blur-[2px]",
+        isCustomizing && isMobile && "blur-[2px]"
       )}>
         {children}
       </div>
@@ -352,7 +350,7 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
 }
 
 // Add a function to pre-calculate widget dimensions
-function getWidgetDimensions(widget: LayoutItem, isMobile: boolean) {
+function getWidgetDimensions(widget: Widget, isMobile: boolean) {
   const grid = getWidgetGrid(widget.type as WidgetType, widget.size as WidgetSize, isMobile)
   return {
     w: grid.w,
@@ -362,8 +360,11 @@ function getWidgetDimensions(widget: LayoutItem, isMobile: boolean) {
   }
 }
 
+type WidgetDimensions = { w: number; h: number; width: string; height: string }
+
 export default function WidgetCanvas() {
-  const { user, isMobile, layouts, setLayouts, saveLayouts } = useUserData()
+  const { user, isMobile, dashboardLayout:layouts, setDashboardLayout:setLayouts } = useUserStore(state => state)
+  const { saveDashboardLayout } = useData()
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
 
@@ -375,25 +376,23 @@ export default function WidgetCanvas() {
 
   // Group all useMemo hooks together
   const widgetDimensions = useMemo(() => {
-    if (!layouts) return {}
-    const dimensions: Record<string, ReturnType<typeof getWidgetDimensions>> = {}
+    if (!layouts?.[activeLayout]) return {}
     
-    // Calculate dimensions once and store them
-    layouts[activeLayout].forEach(widget => {
-      dimensions[widget.i] = getWidgetDimensions(widget as LayoutItem, isMobile)
-    })
-    
-    return dimensions
+    const widgets = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+    return widgets.reduce((acc, widget) => {
+      acc[widget.i] = getWidgetDimensions(widget, isMobile)
+      return acc
+    }, {} as Record<string, WidgetDimensions>)
   }, [layouts, activeLayout, isMobile])
 
   const responsiveLayout = useMemo(() => {
     if (!layouts) return {}
-    return generateResponsiveLayout(layouts[activeLayout] as unknown as LayoutItem[])
+    return generateResponsiveLayout(layouts[activeLayout] as unknown as Widget[])
   }, [layouts, activeLayout])
 
   const currentLayout = useMemo(() => {
-    if (!layouts) return []
-    return layouts[activeLayout] as LayoutItem[]
+    if (!layouts?.[activeLayout]) return []
+    return Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
   }, [layouts, activeLayout])
 
   // Define handleOutsideClick before using it in useEffect
@@ -438,10 +437,15 @@ export default function WidgetCanvas() {
       };
 
       // Update the state first
-      setLayouts(updatedLayouts);
+      setLayouts({
+        ...layouts,
+        desktop: updatedLayouts.desktop,
+        mobile: updatedLayouts.mobile,
+        updatedAt: new Date()
+      });
       
       // Always save to database when layout changes
-      saveLayouts(updatedLayouts);
+      saveDashboardLayout(updatedLayouts);
       
       // Reset user action flag
       if (isUserAction) {
@@ -452,7 +456,7 @@ export default function WidgetCanvas() {
       // Revert to previous layout on error
       setLayouts(layouts);
     }
-  }, [user?.id, isCustomizing, setLayouts, layouts, activeLayout, isMobile, isUserAction, saveLayouts, setIsUserAction]);
+  }, [user?.id, isCustomizing, setLayouts, layouts, activeLayout, isMobile, isUserAction, saveDashboardLayout, setIsUserAction]);
 
   // Define addWidget with all dependencies
   const addWidget = useCallback(async (type: WidgetType, size: WidgetSize = 'medium') => {
@@ -481,7 +485,7 @@ export default function WidgetCanvas() {
       effectiveSize = 'medium'
     }
     
-    const currentLayout = layouts[activeLayout]
+    const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
     const grid = sizeToGrid(effectiveSize, activeLayout === 'mobile')
     
     // Initialize variables for finding the best position
@@ -553,11 +557,12 @@ export default function WidgetCanvas() {
             
             const newLayouts = {
               ...layouts,
-              [activeLayout]: updatedWidgets
+              [activeLayout]: updatedWidgets,
+              updatedAt: new Date()
             }
             
             setLayouts(newLayouts)
-            await saveLayouts(newLayouts)
+            await saveDashboardLayout(newLayouts)
             return
           }
         }
@@ -579,12 +584,13 @@ export default function WidgetCanvas() {
     
     const newLayouts = {
       ...layouts,
-      [activeLayout]: updatedWidgets
+      [activeLayout]: updatedWidgets,
+      updatedAt: new Date()
     }
     
     setLayouts(newLayouts)
-    await saveLayouts(newLayouts)
-  }, [user?.id, layouts, activeLayout, setLayouts, saveLayouts]);
+    await saveDashboardLayout(newLayouts)
+  }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define removeWidget with all dependencies
   const removeWidget = useCallback(async (i: string) => {
@@ -592,11 +598,12 @@ export default function WidgetCanvas() {
     const updatedWidgets = layouts[activeLayout].filter(widget => widget.i !== i)
     const newLayouts = {
       ...layouts,
-      [activeLayout]: updatedWidgets
+      [activeLayout]: updatedWidgets,
+      updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveLayouts(newLayouts)
-  }, [user?.id, layouts, activeLayout, setLayouts, saveLayouts]);
+    await saveDashboardLayout(newLayouts)
+  }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define changeWidgetType with all dependencies
   const changeWidgetType = useCallback(async (i: string, newType: WidgetType) => {
@@ -606,11 +613,12 @@ export default function WidgetCanvas() {
     )
     const newLayouts = {
       ...layouts,
-      [activeLayout]: updatedWidgets
+      [activeLayout]: updatedWidgets,
+      updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveLayouts(newLayouts)
-  }, [user?.id, layouts, activeLayout, setLayouts, saveLayouts]);
+    await saveDashboardLayout(newLayouts)
+  }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define changeWidgetSize with all dependencies
   const changeWidgetSize = useCallback(async (i: string, newSize: WidgetSize) => {
@@ -632,11 +640,12 @@ export default function WidgetCanvas() {
     )
     const newLayouts = {
       ...layouts,
-      [activeLayout]: updatedWidgets
+      [activeLayout]: updatedWidgets,
+      updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveLayouts(newLayouts)
-  }, [user?.id, layouts, activeLayout, setLayouts, saveLayouts]);
+    await saveDashboardLayout(newLayouts)
+  }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define removeAllWidgets with all dependencies
   const removeAllWidgets = useCallback(async () => {
@@ -645,15 +654,16 @@ export default function WidgetCanvas() {
     const newLayouts = {
       ...layouts,
       desktop: [],
-      mobile: []
+      mobile: [],
+      updatedAt: new Date()
     }
     
     setLayouts(newLayouts)
-    await saveLayouts(newLayouts)
-  }, [user?.id, layouts, setLayouts, saveLayouts]);
+    await saveDashboardLayout(newLayouts)
+  }, [user?.id, layouts, setLayouts, saveDashboardLayout]);
 
   // Define renderWidget with all dependencies
-  const renderWidget = useCallback((widget: LayoutItem) => {
+  const renderWidget = useCallback((widget: Widget) => {
     // Ensure widget.type is a valid WidgetType
     if (!Object.keys(WIDGET_REGISTRY).includes(widget.type)) {
       return (
@@ -692,7 +702,7 @@ export default function WidgetCanvas() {
 
   return (
     <div className={cn(
-      "relative mt-6 pb-16",
+      "relative mt-6 pb-16 w-full min-h-screen",
     )}>
       <Toolbar 
         onAddWidget={addWidget}
@@ -703,7 +713,6 @@ export default function WidgetCanvas() {
         currentLayout={layouts || { desktop: [], mobile: [] }}
         onRemoveAll={removeAllWidgets}
       />
-
       {layouts && (
         <div className="relative">
           <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-[9999]" />
@@ -722,7 +731,7 @@ export default function WidgetCanvas() {
             useCSSTransforms={true}
           >
             {currentLayout.map((widget) => {
-              const typedWidget = widget as unknown as LayoutItem
+              const typedWidget = widget as unknown as Widget
               const dimensions = widgetDimensions[typedWidget.i]
               
               return (

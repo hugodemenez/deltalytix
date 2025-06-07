@@ -14,9 +14,8 @@ import {
   ChartContainer,
 } from "@/components/ui/chart"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
-import { useTheme } from "@/components/context/theme-provider"
+import { useTheme } from "@/context/theme-provider"
 import { useI18n, useCurrentLocale } from '@/locales/client'
-import { DailyStats } from './daily-stats'
 
 interface ChartsProps {
   dayData: CalendarEntry | undefined;

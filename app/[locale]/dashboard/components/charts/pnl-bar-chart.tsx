@@ -4,7 +4,7 @@ import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartConfig, ChartContainer } from "@/components/ui/chart"
-import { useUserData } from "@/components/context/user-data"
+import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { Info } from 'lucide-react'
@@ -83,7 +83,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 };
 
 export default function PNLChart({ size = 'medium' }: PNLChartProps) {
-  const { calendarData } = useUserData()
+  const { calendarData } = useData()
   const t = useI18n()
 
   const chartData = React.useMemo(() => 
