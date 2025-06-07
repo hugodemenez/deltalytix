@@ -13,7 +13,6 @@ interface SharedPageProps {
 export default async function SharedPage({ params }: SharedPageProps) {
   // Await the params Promise
   const resolvedParams = await params
-  
   // Fetch shared data on the server
   const sharedData = await getShared(resolvedParams.slug)
   

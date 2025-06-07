@@ -82,6 +82,7 @@ export async function middleware(request: NextRequest) {
       'integrations',
       'features',
       'community',
+      'shared',
     ]
     
     if (!locales.includes(firstSegment) && !knownRoutes.includes(firstSegment)) {
