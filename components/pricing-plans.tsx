@@ -389,6 +389,20 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
                 </li>
               ))}
             </ul>
+            
+            {/* Lifetime disclaimers */}
+            {billingPeriod === 'lifetime' && (
+              <div className="mt-4 pt-3 border-t border-border">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">
+                    • {t('pricing.lifetime.disclaimer1')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    • {t('pricing.lifetime.disclaimer2')}
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
           <CardFooter>
             <form action={'/api/stripe/create-checkout-session'} method='POST' className='w-full'>

@@ -102,6 +102,10 @@ export default {
         keepBasic: 'Keep Basic Plan',
         currentlyYearly: 'Billed yearly',
         currentlyMonthly: 'Billed monthly',
+        lifetime: {
+            disclaimer1: 'AI interactions are subject to fair usage limits',
+            disclaimer2: 'Cloud storage guaranteed for 1 year, then subject to availability'
+        },
         cancelSubscription: {
             title: 'Cancel Subscription',
             description: 'Are you sure you want to cancel your subscription?',
