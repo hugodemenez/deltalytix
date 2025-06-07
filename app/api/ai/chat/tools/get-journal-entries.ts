@@ -4,7 +4,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 
 export const getJournalEntries = tool({
-  description: 'Get journal entries from a given date',
+  description: 'Get journal entries from a given date. This can be useful to understand the user\'s mood and trading patterns',
   parameters: z.object({
     fromDate: z.string().describe('Date in format 2025-01-14'),
     toDate: z.string().describe('Date in format 2025-01-14').optional(),

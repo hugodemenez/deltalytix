@@ -4,7 +4,8 @@ import { z } from "zod";
 
 export const getLastTradesData = tool({
     description: `
-        Get X last trades from user can be useful to understand which instrument he is currently trading or trading time,
+        Get X last trades from user.
+        This can be useful to understand which instrument he is currently trading or trading time,
         make sure to provide an accountNumber because trades are grouped by accountNumber
         `,
     parameters: z.object({

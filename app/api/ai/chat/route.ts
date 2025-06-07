@@ -28,9 +28,13 @@ export async function POST(req: NextRequest) {
       ${username ? `- Trader: ${username}` : ''} - Current date: ${new Date().toISOString()} - User timezone: ${timezone}
 
       Guidelines:
-      - Use trading jargon when appropriate.
-      - Always look at the user's journal entries to understand their mood and trading patterns
-      - Always use Markdown to format your response
+      - ALWAYS use Markdown and spacing to format your response, break lines when needed
+      - ONLY use emojis when appropriate
+      - ALWAYS conversation by looking at the user's journal entries for the last 7 days to understand their mood and trading patterns
+      - ALWAYS use English trading jargon, even when responding in other languages. Keep these terms in English: Short, Long, Call, Put, Bull, Bear, Stop Loss, Take Profit, Entry, Exit, Bullish, Bearish, Scalping, Swing Trading, Day Trading, Position, Leverage, Margin, Pip, Spread, Breakout, Support, Resistance, etc.
+      - ALWAYS use TradesSummary tool to get a summary of the user's trades at start of the conversation
+      - NEVER start a conversation by using the TradesDetails tool nor the LastTradesData tool
+      - Example: In French, say "J'ai pris une position Short" instead of "J'ai pris une position courte"
       - Vary your response types naturally:
         * Share observations about their trading patterns
         * Offer gentle insights when appropriate
@@ -44,7 +48,7 @@ export async function POST(req: NextRequest) {
     `,
       toolCallStreaming: true,
       messages: messages,
-      maxSteps: 5,
+      maxSteps: 10,
       tools: {
         // server-side tool with execute function
         getJournalEntries,
