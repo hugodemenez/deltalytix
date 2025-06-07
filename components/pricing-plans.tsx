@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react"
@@ -23,23 +23,22 @@ function useCurrency() {
   const [symbol, setSymbol] = useState('$')
   const locale = useCurrentLocale()
 
-  useEffect(() => {
+  const detectCurrency = useCallback(() => {
     // Eurozone countries as per official EU list
     const eurozoneCountries = [
       'AT', 'BE', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT',
       'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES'
     ]
 
+
     // Function to set currency based on country code
     const setCurrencyFromCountry = (countryCode: string) => {
       const upperCountryCode = countryCode.toUpperCase()
       if (eurozoneCountries.includes(upperCountryCode)) {
-        console.log('Setting EUR currency for country:', upperCountryCode)
         setCurrency('EUR')
         setSymbol('€')
         return true
       } else {
-        console.log('Setting USD currency for country:', upperCountryCode)
         setCurrency('USD')
         setSymbol('$')
         return true
@@ -56,17 +55,11 @@ function useCurrency() {
 
     const countryFromCookie = getCookie('user-country')
     if (countryFromCookie) {
-      console.log('Using country from cookie (set by middleware):', countryFromCookie)
       setCurrencyFromCountry(countryFromCookie)
       return
     }
 
-    // Fallback for local development (when middleware geolocation doesn't work)
-    console.log('No country cookie found, using timezone/locale fallback for local development')
-
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-
-    console.log('Timezone:', timezone, 'Locale:', locale)
 
     // Check if timezone indicates European location
     const isEuropeanTimezone = timezone.startsWith('Europe/') ||
@@ -76,15 +69,17 @@ function useCurrency() {
     const isEuropeanLocale = /^(fr|de|es|it|nl|pt|el|fi|et|lv|lt|sl|sk|mt|cy)-/.test(locale)
 
     if (isEuropeanTimezone || isEuropeanLocale) {
-      console.log('Fallback: Setting EUR based on timezone/locale')
       setCurrency('EUR')
       setSymbol('€')
     } else {
-      console.log('Fallback: Setting USD as default')
       setCurrency('USD')
       setSymbol('$')
     }
-  }, [])
+  }, [locale])
+
+  useEffect(() => {
+    detectCurrency()
+  }, [detectCurrency])
 
   return { currency, symbol }
 }
@@ -405,10 +400,9 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     )
   }
 
-  const PlusPlan = ({ plan, billingPeriod, setBillingPeriod }: { plan: Plan, billingPeriod: BillingPeriod, setBillingPeriod: (period: BillingPeriod) => void }) => {
+  const PlusPlan = ({ plan, billingPeriod, setBillingPeriod, currency, symbol }: { plan: Plan, billingPeriod: BillingPeriod, setBillingPeriod: (period: BillingPeriod) => void, currency: 'USD' | 'EUR', symbol: string }) => {
     const [currentPricing, setCurrentPricing] = useState(0)
     const [previousPrice, setPreviousPrice] = useState(0)
-    const { currency, symbol } = useCurrency()
 
     useEffect(() => {
       setCurrentPricing(billingPeriod === 'yearly' ? plan.price.yearly / 12 :
@@ -503,12 +497,12 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                   <div className="flex flex-col items-center mb-3">
                     {/* Lifetime Price */}
                     <div className="flex items-baseline justify-center">
-                      <span className="text-4xl font-bold">{symbol}</span>
                       <span className="text-4xl font-bold">
                         <NumberFlow
+                          prefix={currency === 'EUR' ? undefined : `${symbol}`}
+                          suffix={currency === 'EUR' ? `${symbol}` : undefined}
                           value={currentPricing}
-                          digits={{ 1: { max: 2 } }}
-                          format={{ minimumIntegerDigits: 2 }}
+                          format={{ minimumIntegerDigits: 3 }}
                         />
                       </span>
                     </div>
@@ -522,7 +516,8 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                     {/* Previous price (crossed out) */}
                     <div className="text-lg text-muted-foreground relative">
                       <NumberFlow
-                        prefix={`${symbol}`}
+                        prefix={currency === 'EUR' ? undefined : `${symbol}`}
+                        suffix={currency === 'EUR' ? `${symbol}` : undefined}
                         value={previousPrice}
                         digits={{ 1: { max: 2 } }}
                         format={{ minimumIntegerDigits: 2 }}
@@ -537,8 +532,8 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                     {/* Current promotional pricing */}
                     <div className="flex items-baseline text-lg sm:text-2xl font-bold text-green-600">
                       <NumberFlow
-                        prefix={`${symbol}`}
-                        suffix={`/${t('pricing.month')}`}
+                        prefix={currency === 'EUR' ? undefined : `${symbol}`}
+                        suffix={currency === 'EUR' ? `${symbol}/${t('pricing.month')}` : `/${t('pricing.month')}`}
                         value={currentPricing}
                         digits={{ 1: { max: 2 } }}
                         format={{ minimumIntegerDigits: 2 }}
@@ -621,7 +616,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     <div className="sm:px-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto w-full">
         <FreePlan plan={plans.basic} isModal={isModal} onClose={onClose} />
-        <PlusPlan plan={plans.plus} billingPeriod={billingPeriod} setBillingPeriod={setBillingPeriod} />
+        <PlusPlan plan={plans.plus} billingPeriod={billingPeriod} setBillingPeriod={setBillingPeriod} currency={currency} symbol={symbol} />
       </div>
       
       {/* Lifetime Confirmation Dialog */}
