@@ -26,7 +26,7 @@ export type SubscriptionWithPrice = {
     id: string
     name: string
     amount: number
-    interval: 'month' | 'year' | 'lifetime'
+    interval: 'month' | 'quarter' | 'year' | 'lifetime'
   }
   promotion?: {
     code: string
@@ -281,7 +281,7 @@ export async function getSubscriptionData() {
           id: price.id,
           name: subscriptionPlan,
           amount: price.unit_amount || 0,
-          interval: price.recurring?.interval || 'month',
+          interval: price.recurring?.interval_count === 3 ? 'quarter' : price.recurring?.interval || 'month',
         },
         promotion: subscription.discount ? {
           code: subscription.discount.coupon.id,
