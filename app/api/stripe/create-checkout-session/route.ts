@@ -54,10 +54,13 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         return NextResponse.json({ message: "Price not found" }, { status: 404 });
     }
 
-    // Calculate remaining trial days if there was a previous trial
+    const price = prices.data[0];
+    const isLifetimePlan = price.type === 'one_time' || lookup_key.includes('lifetime');
+
+    // Calculate remaining trial days if there was a previous trial (only for recurring plans)
     let trialDays = 0;
     
-    if (subscriptionDetails?.trialEndsAt) {
+    if (!isLifetimePlan && subscriptionDetails?.trialEndsAt) {
         const now = new Date();
         const trialEnd = new Date(subscriptionDetails.trialEndsAt);
         
@@ -71,29 +74,38 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         }
     }
 
-    const session = await stripe.checkout.sessions.create({
-        customer: customerId, // Use customer ID instead of email
+    // Create session with appropriate mode based on price type
+    const sessionConfig: any = {
+        customer: customerId,
         metadata: {
             plan: lookup_key,
         },
         line_items: [
             {
-                price: prices.data[0].id,
+                price: price.id,
                 quantity: 1,
             },
         ],
-        mode: 'subscription',
-        subscription_data: trialDays > 0 ? {
-            trial_period_days: trialDays,
-        } : undefined,
-        discounts: isFirstOrder ? [
-            {
-                coupon: 'GynFkk27'
-            }
-        ] : undefined,
         success_url: `${websiteURL}dashboard?success=true`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
-    });
+    };
+
+    if (isLifetimePlan) {
+        // One-time payment mode for lifetime plans
+        sessionConfig.mode = 'payment';
+    } else {
+        // Subscription mode for recurring plans
+        sessionConfig.mode = 'subscription';
+        
+        // Add subscription-specific configuration
+        if (trialDays > 0) {
+            sessionConfig.subscription_data = {
+                trial_period_days: trialDays,
+            };
+        }
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     return NextResponse.redirect(session.url as string, 303);
 }

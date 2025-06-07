@@ -68,10 +68,11 @@ export async function getSubscriptionDetails(): Promise<SubscriptionInfo | null>
         const now = new Date()
 
         // Ensure isActive is always boolean
+        // Only consider ACTIVE, TRIAL, and lifetime subscriptions as active
         const isActive = Boolean(
             subscription.status === 'ACTIVE' ||
-            (subscription.status === 'TRIAL' && subscription.trialEndsAt && subscription.trialEndsAt > now) ||
-            (subscription.endDate && subscription.endDate > now)
+            (subscription.status === 'TRIAL' && subscription.trialEndsAt && subscription.trialEndsAt > now)
+            // Removed the endDate check for non-lifetime subscriptions to allow resubscription after cancellation
         )
 
         return {

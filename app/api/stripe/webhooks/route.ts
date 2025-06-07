@@ -52,61 +52,113 @@ export async function POST(req: Request) {
           console.log('checkout.session.completed')
           data = event.data.object as Stripe.Checkout.Session;
           
-          // Retrieve the subscription details from the session
-          const subscription = await stripe.subscriptions.retrieve(
-            data.subscription as string
-          );
+          // Handle different modes: subscription vs payment (one-time)
+          if (data.mode === 'subscription' && data.subscription) {
+            // Handle recurring subscription
+            const subscription = await stripe.subscriptions.retrieve(
+              data.subscription as string
+            );
 
-          // Get the price information to determine the plan
-          const subscriptionItems = await stripe.subscriptionItems.list({
-            subscription: data.subscription as string,
-          });
-          
-          const priceId = subscriptionItems.data[0]?.price.id;
-          const price = await stripe.prices.retrieve(priceId, {
-            expand: ['product'],
-          });
-          console.log('PRICE', price)
-          const productName = (price.product as Stripe.Product).name;
-          const subscriptionPlan = productName.toUpperCase() || 'FREE';
-          // If interval_count is 3 then it is quarterly
-          const interval = price.recurring?.interval_count === 3 ? 'quarter' : price.recurring?.interval || 'month';
-          
-          const user = await prisma.user.findUnique({
-            where: { email: data.customer_details?.email as string },
-          });
+            // Get the price information to determine the plan
+            const subscriptionItems = await stripe.subscriptionItems.list({
+              subscription: data.subscription as string,
+            });
+            
+            const priceId = subscriptionItems.data[0]?.price.id;
+            const price = await stripe.prices.retrieve(priceId, {
+              expand: ['product'],
+            });
+            console.log('SUBSCRIPTION PRICE', price)
+            const productName = (price.product as Stripe.Product).name;
+            const subscriptionPlan = productName.toUpperCase() || 'FREE';
+            // If interval_count is 3 then it is quarterly
+            const interval = price.recurring?.interval_count === 3 ? 'quarter' : price.recurring?.interval || 'month';
+            
+            const user = await prisma.user.findUnique({
+              where: { email: data.customer_details?.email as string },
+            });
 
-          await prisma.subscription.upsert({
-            where: {
-              email: data.customer_details?.email as string,
-            },
-            update: {
-              plan: subscriptionPlan,
-              endDate: new Date(subscription.current_period_end * 1000),
-              status: 'ACTIVE',
-              trialEndsAt: null,
-              interval: interval,
-            },
-            create: {
-              email: data.customer_details?.email as string,
-              plan: subscriptionPlan,
-              user: { connect: { id: user?.id } },
-              endDate: new Date(subscription.current_period_end * 1000),
-              status: 'ACTIVE',
-              trialEndsAt: null,
-              interval: interval,
-            }
-          });
-
-          console.log('subscription', subscription)
-          // In case of error creating the subscription send email to support
-          if (!subscription) {
-            await sendSubscriptionErrorEmail({
-              contactInfo: {
+            await prisma.subscription.upsert({
+              where: {
                 email: data.customer_details?.email as string,
-                additionalInfo: `Error creating subscription`,
+              },
+              update: {
+                plan: subscriptionPlan,
+                endDate: new Date(subscription.current_period_end * 1000),
+                status: 'ACTIVE',
+                trialEndsAt: null,
+                interval: interval,
+              },
+              create: {
+                email: data.customer_details?.email as string,
+                plan: subscriptionPlan,
+                user: { connect: { id: user?.id } },
+                endDate: new Date(subscription.current_period_end * 1000),
+                status: 'ACTIVE',
+                trialEndsAt: null,
+                interval: interval,
               }
-            })
+            });
+
+            console.log('subscription created/updated', subscription)
+          } else if (data.mode === 'payment') {
+            // Handle one-time payment (lifetime plan)
+            console.log('One-time payment completed')
+            
+            // Get line items to find the price
+            const lineItems = data.line_items?.data || [];
+            if (lineItems.length === 0) {
+              // Retrieve line items if not expanded
+              const session = await stripe.checkout.sessions.retrieve(
+                data.id,
+                { expand: ['line_items'] }
+              );
+              lineItems.push(...(session.line_items?.data || []));
+            }
+            
+            if (lineItems.length > 0) {
+              const priceId = lineItems[0].price?.id;
+              if (priceId) {
+                const price = await stripe.prices.retrieve(priceId, {
+                  expand: ['product'],
+                });
+                console.log('LIFETIME PRICE', price)
+                const productName = (price.product as Stripe.Product).name;
+                const subscriptionPlan = productName.toUpperCase() || 'LIFETIME';
+                
+                const user = await prisma.user.findUnique({
+                  where: { email: data.customer_details?.email as string },
+                });
+
+                // For lifetime plans, set end date far in the future (100 years)
+                const lifetimeEndDate = new Date();
+                lifetimeEndDate.setFullYear(lifetimeEndDate.getFullYear() + 100);
+
+                await prisma.subscription.upsert({
+                  where: {
+                    email: data.customer_details?.email as string,
+                  },
+                  update: {
+                    plan: subscriptionPlan,
+                    endDate: lifetimeEndDate,
+                    status: 'ACTIVE',
+                    trialEndsAt: null,
+                    interval: 'lifetime',
+                  },
+                  create: {
+                    email: data.customer_details?.email as string,
+                    plan: subscriptionPlan,
+                    user: { connect: { id: user?.id } },
+                    endDate: lifetimeEndDate,
+                    status: 'ACTIVE',
+                    trialEndsAt: null,
+                    interval: 'lifetime',
+                  }
+                });
+
+                console.log('lifetime subscription created/updated')
+              }
+            }
           }
           break;
         case "payment_intent.succeeded":

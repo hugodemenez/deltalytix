@@ -3,21 +3,19 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, ChevronLeft, ChevronRight, X } from "lucide-react"
+import { Check, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import NumberFlow from '@number-flow/react'
 import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel"
+import { useToast } from "@/hooks/use-toast"
 
 // Currency detection hook
 function useCurrency() {
@@ -117,12 +115,193 @@ interface PricingPlansProps {
   isModal?: boolean;
   onClose?: () => void;
   trigger?: React.ReactNode;
+  currentSubscription?: {
+    id: string;
+    status: string;
+    plan: {
+      id: string;
+      name: string;
+      interval: string;
+    };
+  } | null;
 }
 
-export default function PricingPlans({ isModal, onClose, trigger }: PricingPlansProps) {
+export default function PricingPlans({ isModal, onClose, trigger, currentSubscription }: PricingPlansProps) {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly')
+  const [isLoading, setIsLoading] = useState(false)
+  const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false)
+  const [pendingLookupKey, setPendingLookupKey] = useState<string>('')
   const t = useI18n()
   const { currency, symbol } = useCurrency()
+  const { toast } = useToast()
+
+  // Function to check if current plan matches lookup key
+  const isCurrentPlan = (lookupKey: string) => {
+    if (!currentSubscription) return false
+    
+    // Extract plan details from lookup key (e.g., "plus_yearly_eur")
+    const parts = lookupKey.split('_')
+    const planType = parts[0] // "plus"
+    const interval = parts[1] // "yearly", "monthly", etc.
+    
+    // Lifetime plans are never "current" since they're one-time purchases
+    // and can't be compared to recurring subscriptions
+    if (interval === 'lifetime') return false
+    
+    // Map intervals to match subscription data
+    const intervalMap: Record<string, string> = {
+      'yearly': 'year',
+      'monthly': 'month', 
+      'quarterly': 'quarter'
+    }
+    
+    return (
+      planType.toLowerCase() === 'plus' && 
+      currentSubscription.plan.name.toLowerCase().includes('plus') &&
+      intervalMap[interval] === currentSubscription.plan.interval
+    )
+  }
+
+  // Function to check if user has lifetime subscription
+  const hasLifetimeSubscription = () => {
+    return currentSubscription?.plan?.interval === 'lifetime'
+  }
+
+  // Function to check if user should be blocked from subscribing to recurring plans
+  const isBlockedFromRecurring = (lookupKey: string) => {
+    if (!hasLifetimeSubscription()) return false
+    
+    const parts = lookupKey.split('_')
+    const interval = parts[1] // "yearly", "monthly", etc.
+    
+    // Block recurring plans if user has lifetime
+    return ['yearly', 'monthly', 'quarterly'].includes(interval)
+  }
+
+  // Function to check if user should be blocked from purchasing lifetime again
+  const isBlockedFromLifetime = (lookupKey: string) => {
+    if (!hasLifetimeSubscription()) return false
+    
+    const parts = lookupKey.split('_')
+    const interval = parts[1] // "yearly", "monthly", etc.
+    
+    // Block lifetime plans if user already has lifetime
+    return interval === 'lifetime'
+  }
+
+  // Function to handle plan switching
+  const handlePlanSwitch = async (lookupKey: string) => {
+    if (!currentSubscription) {
+      // No subscription exists, use checkout session
+      const form = document.createElement('form')
+      form.method = 'POST'
+      form.action = '/api/stripe/create-checkout-session'
+      
+      const input = document.createElement('input')
+      input.type = 'hidden'
+      input.name = 'lookup_key'
+      input.value = lookupKey
+      
+      form.appendChild(input)
+      document.body.appendChild(form)
+      form.submit()
+      return
+    }
+
+    // Check if trying to switch to the same plan
+    if (isCurrentPlan(lookupKey)) {
+      toast({
+        title: t('billing.error'),
+        description: t('billing.alreadyOnPlan'),
+        variant: "default"
+      })
+      return
+    }
+
+    // Check if user has lifetime and is trying to switch to recurring plan
+    if (isBlockedFromRecurring(lookupKey)) {
+      toast({
+        title: t('billing.error'),
+        description: t('billing.lifetimeNoDowngrade'),
+        variant: "default"
+      })
+      return
+    }
+
+    // Check if user already has lifetime and is trying to purchase lifetime again
+    if (isBlockedFromLifetime(lookupKey)) {
+      toast({
+        title: t('billing.error'),
+        description: t('billing.lifetimeAlreadyOwned'),
+        variant: "default"
+      })
+      return
+    }
+
+    // Check if this is a lifetime plan - show confirmation dialog
+    if (lookupKey.includes('lifetime')) {
+      setPendingLookupKey(lookupKey)
+      setShowLifetimeConfirm(true)
+      return
+    }
+
+    await executePlanSwitch(lookupKey)
+  }
+
+  // Function to execute the actual plan switch
+  const executePlanSwitch = async (lookupKey: string) => {
+    setIsLoading(true)
+    
+    try {
+      const { switchSubscriptionPlan } = await import('@/app/[locale]/dashboard/actions/billing')
+      const result = await switchSubscriptionPlan(lookupKey)
+      
+      if (result.success) {
+        toast({
+          title: t('billing.planSwitched'),
+          description: t('billing.planSwitchedDescription'),
+          variant: "default"
+        })
+        
+        // Refresh the page to update subscription data
+        window.location.reload()
+      } else if ('requiresCheckout' in result && result.requiresCheckout) {
+        // Lifetime plans need checkout session, redirect to checkout
+        const form = document.createElement('form')
+        form.method = 'POST'
+        form.action = '/api/stripe/create-checkout-session'
+        
+        const input = document.createElement('input')
+        input.type = 'hidden'
+        input.name = 'lookup_key'
+        input.value = result.lookupKey || lookupKey
+        
+        form.appendChild(input)
+        document.body.appendChild(form)
+        form.submit()
+      } else {
+        toast({
+          title: t('billing.error'),
+          description: result.error,
+          variant: "destructive"
+        })
+      }
+    } catch (error) {
+      toast({
+        title: t('billing.error'),
+        description: t('billing.planSwitchError'),
+        variant: "destructive"
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Function to handle lifetime confirmation
+  const handleLifetimeConfirm = async () => {
+    setShowLifetimeConfirm(false)
+    await executePlanSwitch(pendingLookupKey)
+  }
 
   // Promotional pricing structure
   const pricing = {
@@ -405,12 +584,33 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
             )}
           </CardContent>
           <CardFooter>
-            <form action={'/api/stripe/create-checkout-session'} method='POST' className='w-full'>
-              <input type="hidden" name="lookup_key" value={`plus_${billingPeriod}_${currency.toLowerCase()}`} />
-              <Button type="submit" className="w-full">
-                {t('pricing.trialPeriod')}
-              </Button>
-            </form>
+            {(() => {
+              const lookupKey = `plus_${billingPeriod}_${currency.toLowerCase()}`
+              const isCurrent = isCurrentPlan(lookupKey)
+              const isLifetimeUser = hasLifetimeSubscription()
+              const isBlockedRecurring = isBlockedFromRecurring(lookupKey)
+              const isBlockedLifetime = isBlockedFromLifetime(lookupKey)
+              const isBlocked = isBlockedRecurring || isBlockedLifetime
+              
+              return (
+                <Button 
+                  onClick={() => handlePlanSwitch(lookupKey)}
+                  disabled={isLoading || isCurrent || isBlocked}
+                  variant={isCurrent || isBlocked ? "outline" : "default"}
+                  className="w-full"
+                >
+                  {isLoading ? (
+                    billingPeriod === 'lifetime' ? t('billing.lifetimeUpgrade') : t('billing.switching')
+                  ) : 
+                   isCurrent ? t('billing.currentPlan') : 
+                   isBlockedLifetime ? t('billing.lifetimeOwned') :
+                   isBlockedRecurring ? t('billing.lifetimeActive') :
+                   currentSubscription ? (
+                     billingPeriod === 'lifetime' ? t('pricing.upgradeToLifetime') || 'Upgrade to Lifetime' : t('billing.changePlan')
+                   ) : t('pricing.trialPeriod')}
+                </Button>
+              )
+            })()}
           </CardFooter>
         </Card>
       </div>
@@ -423,6 +623,61 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
         <FreePlan plan={plans.basic} isModal={isModal} onClose={onClose} />
         <PlusPlan plan={plans.plus} billingPeriod={billingPeriod} setBillingPeriod={setBillingPeriod} />
       </div>
+      
+      {/* Lifetime Confirmation Dialog */}
+      <Dialog open={showLifetimeConfirm} onOpenChange={setShowLifetimeConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('pricing.lifetimeUpgrade.title')}</DialogTitle>
+            <DialogDescription>
+              {t('pricing.lifetimeUpgrade.description')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mr-3 mt-0.5 shrink-0" />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                    {t('pricing.lifetimeUpgrade.warning')}
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+                    <li>{t('pricing.lifetimeUpgrade.warningPoints.currentPlan')}</li>
+                    <li>{t('pricing.lifetimeUpgrade.warningPoints.immediateCancel')}</li>
+                    <li>{t('pricing.lifetimeUpgrade.warningPoints.oneTimePayment')}</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            {currentSubscription && (
+              <div className="bg-muted rounded-lg p-4">
+                <h4 className="font-medium mb-2">{t('pricing.lifetimeUpgrade.currentSubscription')}</h4>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p><strong>{t('billing.currentPlan')}:</strong> {currentSubscription.plan.name}</p>
+                  <p><strong>{t('billing.billingPeriod')}:</strong> {currentSubscription.plan.interval}</p>
+                  <p><strong>{t('billing.status.active')}:</strong> {t('billing.status.active')}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowLifetimeConfirm(false)}
+              disabled={isLoading}
+            >
+              {t('pricing.lifetimeUpgrade.cancel')}
+            </Button>
+            <Button
+              onClick={handleLifetimeConfirm}
+              disabled={isLoading}
+            >
+              {isLoading ? t('billing.lifetimeUpgrade') : t('pricing.lifetimeUpgrade.confirm')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 

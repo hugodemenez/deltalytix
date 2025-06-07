@@ -113,102 +113,6 @@ export default function BillingManagement() {
     }
   }
 
-  if (isLoading) {
-    return (
-      <div className="w-full space-y-6">
-        <Card className="border-none shadow-none bg-transparent">
-          <CardHeader className="px-0">
-            <CardTitle>{t('billing.currentPlan')}</CardTitle>
-            <div className="mt-1.5 text-sm text-muted-foreground flex items-center gap-2">
-              <Skeleton className="h-4 w-[120px]" /> {/* Plan name */}
-              <span className="text-muted-foreground">•</span>
-              <Skeleton className="h-4 w-[100px]" /> {/* Status */}
-            </div>
-          </CardHeader>
-          <CardContent className="px-0">
-            <div className="rounded-lg border bg-card p-6 space-y-6">
-              {/* Current Plan Details */}
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div className="space-y-2">
-                  <Skeleton className="h-8 w-[140px]" /> {/* Price */}
-                  <Skeleton className="h-4 w-[160px]" /> {/* Billing interval */}
-                </div>
-                <Skeleton className="h-8 w-[200px]" /> {/* Trial badge */}
-              </div>
-
-              {/* Subscription Timeline */}
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex items-start gap-2">
-                    <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div className="w-full">
-                      <div className="font-medium">Active Since</div>
-                      <Skeleton className="h-4 w-[180px] mt-1" />
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                    <div className="w-full">
-                      <div className="font-medium">Current Period</div>
-                      <Skeleton className="h-4 w-[240px] mt-1" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Subscription Management */}
-        <Card className="border-none shadow-none bg-transparent">
-          <CardContent className="px-0">
-            <div className="flex flex-wrap gap-4">
-              <Skeleton className="h-10 w-[180px]" /> {/* Cancel button */}
-              <Skeleton className="h-10 w-[200px]" /> {/* Manage payment button */}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Payment History */}
-        <Card className="border-none shadow-none bg-transparent">
-          <CardHeader className="px-0">
-            <CardTitle>{t('billing.paymentHistory')}</CardTitle>
-            <CardDescription>{t('billing.paymentHistoryDesc')}</CardDescription>
-          </CardHeader>
-          <CardContent className="px-0">
-            <div className="rounded-lg border bg-card">
-              <div className="p-4 space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <Skeleton className="h-4 w-[100px]" /> {/* Amount */}
-                      <Skeleton className="h-4 w-[140px]" /> {/* Date */}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-6 w-[100px]" /> {/* Status badge */}
-                      <Skeleton className="h-8 w-[120px]" /> {/* View invoice button */}
-                      <Skeleton className="h-8 w-[120px]" /> {/* Download PDF button */}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Available Plans */}
-        <Card className="border-none shadow-none bg-transparent">
-          <CardHeader className="px-0">
-            <CardTitle>{t('billing.availablePlans')}</CardTitle>
-            <CardDescription>{t('billing.choosePlan')}</CardDescription>
-          </CardHeader>
-          <CardContent className="px-0">
-            <PricingPlans />
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
 
   return (
     <div className="w-full space-y-6">
@@ -224,7 +128,12 @@ export default function BillingManagement() {
               </>
             ) : (
               <>
-                <span>{subscription?.plan?.name || t('pricing.basic.name')}</span>
+                <span>
+                  {subscription?.plan?.interval === 'lifetime' 
+                    ? t('pricing.plus.name') + ' ' + t('pricing.lifetime')
+                    : subscription?.plan?.name || t('pricing.basic.name')
+                  }
+                </span>
                 <span className="text-muted-foreground">•</span>
                 {subscription?.status === 'active' ? (
                   <span className="text-green-500 dark:text-green-400 inline-flex items-center gap-1">
@@ -260,7 +169,16 @@ export default function BillingManagement() {
               ) : (
                 <>
                   <div>
-                    {subscription?.promotion ? (
+                    {subscription?.plan?.interval === 'lifetime' ? (
+                      <div className="space-y-1">
+                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {t('pricing.lifetimeAccess')}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {t('pricing.oneTimePayment')}
+                        </p>
+                      </div>
+                    ) : subscription?.promotion ? (
                       <div className="space-y-1">
                         <div className="text-2xl font-bold flex items-center gap-2">
                           <span className="text-muted-foreground line-through">
@@ -299,18 +217,20 @@ export default function BillingManagement() {
                             <>
                               €{(subscription.plan.amount / 100).toFixed(2)}
                               <span className="text-lg font-normal text-gray-500">
-                                /{subscription.plan.interval}
+                                /{subscription.plan.interval === 'year' ? t('pricing.year') : subscription.plan.interval === 'month' ? t('pricing.month') : subscription.plan.interval === 'quarter' ? t('pricing.quarter') : t('pricing.lifetime')}
                               </span>
                             </>
                           )
                           : t('pricing.free.name')}
                       </div>
                     )}
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {subscription?.plan?.interval === 'year' 
-                        ? t('pricing.currentlyYearly') 
-                        : t('pricing.currentlyMonthly')}
-                    </p>
+                    {/* {subscription?.plan?.interval !== 'lifetime' && (
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {subscription?.plan?.interval === 'year' 
+                          ? t('pricing.currentlyYearly') 
+                          : t('pricing.currentlyMonthly')}
+                      </p>
+                    )} */}
                   </div>
                   {subscription?.trial_end && new Date(subscription.trial_end * 1000) > new Date() && (
                     <div className="bg-primary/10 text-primary px-4 py-2 rounded-md text-sm">
@@ -343,30 +263,41 @@ export default function BillingManagement() {
                       </div>
                     </div>
                   </>
-                ) : subscription && (
+                ) : (
                   <>
                     <div className="flex items-start gap-2">
                       <History className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                       <div>
                         <p className="font-medium">
                           {t('billing.dates.activeSince', { 
-                            date: formatStripeDate(subscription.created) 
+                            date: formatStripeDate(subscription?.created) 
                           })}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-2">
-                      <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium">
-                          {t('billing.dates.currentPeriod', {
-                            startDate: formatStripeDate(subscription.current_period_start),
-                            endDate: formatStripeDate(subscription.current_period_end)
-                          })}
-                        </p>
+                    {subscription?.plan?.interval === 'lifetime' ? (
+                      <div className="flex items-center gap-2">
+                        <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            {t('billing.lifetimeDescription')}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    {subscription.trial_start && subscription.trial_end && (
+                    ) : (
+                      <div className="flex items-start gap-2">
+                        <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium">
+                            {t('billing.dates.currentPeriod', {
+                              startDate: formatStripeDate(subscription?.current_period_start),
+                              endDate: formatStripeDate(subscription?.current_period_end)
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {subscription?.trial_start && subscription?.trial_end && (
                       <div className="flex items-start gap-2">
                         <CreditCard className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                         <div>
@@ -377,7 +308,7 @@ export default function BillingManagement() {
                         </div>
                       </div>
                     )}
-                    {subscription.cancel_at && (
+                    {subscription?.cancel_at && (
                       <div className="flex items-start gap-2">
                         <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                         <div>
@@ -397,7 +328,7 @@ export default function BillingManagement() {
       </Card>
 
       {/* Subscription Management */}
-      {!isLoading && (subscription?.status === 'active' || subscription?.status === 'trialing') && (
+      {!isLoading && (subscription?.status === 'active' || subscription?.status === 'trialing') && subscription?.plan?.interval !== 'lifetime' && (
         <Card className="border-none shadow-none bg-transparent">
           <CardContent className="px-0">
             <div className="flex flex-col gap-4">
@@ -610,7 +541,7 @@ export default function BillingManagement() {
           <CardDescription>{t('billing.choosePlan')}</CardDescription>
         </CardHeader>
         <CardContent className="px-0">
-          <PricingPlans />
+          <PricingPlans currentSubscription={subscription} />
         </CardContent>
       </Card>
     </div>
