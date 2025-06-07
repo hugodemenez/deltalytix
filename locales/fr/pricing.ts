@@ -102,10 +102,8 @@ export default {
         keepBasic: 'Garder le plan Basic',
         currentlyYearly: 'Facturé annuellement',
         currentlyMonthly: 'Facturé mensuellement',
-        lifetime: {
-            disclaimer1: 'Les interactions IA sont soumises à des limites d\'usage équitable',
-            disclaimer2: 'Stockage cloud garanti pour 1 an, puis soumis à disponibilité'
-        },
+        lifetimeDisclaimer1: 'Les interactions IA sont soumises à des limites d\'usage équitable',
+        lifetimeDisclaimer2: 'Stockage cloud garanti pour 1 an, puis soumis à disponibilité',
         cancelSubscription: {
             title: 'Annuler l\'abonnement',
             description: 'Êtes-vous sûr de vouloir annuler votre abonnement ?',

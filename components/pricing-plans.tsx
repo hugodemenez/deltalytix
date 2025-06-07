@@ -395,10 +395,10 @@ export default function PricingPlans({ isModal, onClose, trigger }: PricingPlans
               <div className="mt-4 pt-3 border-t border-border">
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">
-                    • {t('pricing.lifetime.disclaimer1')}
+                    • {t('pricing.lifetimeDisclaimer1')}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    • {t('pricing.lifetime.disclaimer2')}
+                    • {t('pricing.lifetimeDisclaimer2')}
                   </p>
                 </div>
               </div>
