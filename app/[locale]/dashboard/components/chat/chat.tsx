@@ -98,20 +98,20 @@ function useMessageVirtualization(messages: Message[]) {
 const ResumeScrollButton = ({ onClick, show }: { onClick: () => void; show: boolean }) => {
     const t = useI18n()
     return (
-    <AnimatePresence>
-        {show && (
-            <motion.div
-                className="absolute bottom-20 right-4 z-10"
-                initial={{ opacity: 0, y: 20, scale: 0.8 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 20, scale: 0.8 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-                <Button onClick={onClick} size="sm" className="shadow-lg hover:shadow-xl transition-shadow" variant="secondary">
-                    <ChevronDown className="h-4 w-4 mr-1" />
-                    {t('chat.overlay.resumeScroll')}
-                </Button>
-            </motion.div>
+        <AnimatePresence>
+            {show && (
+                <motion.div
+                    className="absolute bottom-20 right-4 z-10"
+                    initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 20, scale: 0.8 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                >
+                    <Button onClick={onClick} size="sm" className="shadow-lg hover:shadow-xl transition-shadow" variant="secondary">
+                        <ChevronDown className="h-4 w-4 mr-1" />
+                        {t('chat.overlay.resumeScroll')}
+                    </Button>
+                </motion.div>
             )}
         </AnimatePresence>
     )
@@ -132,11 +132,11 @@ const ToolCallMessage = ({ toolName, args, state }: { toolName: string; args: an
             {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
             <div className="flex flex-col">
                 <span>
-                    {state === "result" 
+                    {state === "result"
                         ? `Completed ${toolName}`
                         : state === "partial-call"
-                        ? `Preparing ${toolName}...`
-                        : `Calling ${toolName}...`}
+                            ? `Preparing ${toolName}...`
+                            : `Calling ${toolName}...`}
                 </span>
                 {args && (
                     <span className="text-xs opacity-70">
@@ -155,7 +155,7 @@ const ToolCallMessage = ({ toolName, args, state }: { toolName: string; args: an
 // Main Component
 export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const timezone = useUserStore(state => state.timezone)
-    const { supabaseUser:user } = useUserStore.getState()
+    const { supabaseUser: user } = useUserStore.getState()
     const locale = useCurrentLocale();
     const t = useI18n()
     const [isStarted, setIsStarted] = useState(false)
@@ -206,7 +206,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
         }
         loadStoredMessages()
     }, [user?.id, moods])
-   
+
 
     const { messages, input, handleInputChange, handleSubmit, status, stop, setMessages, addToolResult, error, reload, append } =
         useChat({
@@ -217,16 +217,13 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 timezone,
             },
             initialMessages: storedMessages,
-            onFinish: (message: Message) => {
-                const saveMessages = async () => {
-                    if (!user?.id) return
-                    const mood = await saveChat(user.id, [...storedMessages, message])
-                    if (mood) {
-                        setMoods([...moods, mood])
-                    }
-                    setStoredMessages([...storedMessages, message])
+            onFinish: async (message: Message) => {
+                if (!user?.id) return
+                const mood = await saveChat(user.id, [...storedMessages, message])
+                if (mood) {
+                    setMoods([...moods, mood])
                 }
-                saveMessages()
+                setStoredMessages([...storedMessages, message])
             },
         })
 
@@ -319,9 +316,9 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                                 switch (part.type) {
                                                     case "step-start":
                                                         if (message.parts && message.parts.length > index) {
-                                                        return null
+                                                            return null
                                                         }
-                                                            return <ThinkingMessage key={`${message.id}-step-${index}`} />
+                                                        return <ThinkingMessage key={`${message.id}-step-${index}`} />
                                                     case "text":
                                                         return (
                                                             <BotMessage
@@ -384,7 +381,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                                             }
                                                             default:
                                                                 return (
-                                                                    <ToolCallMessage 
+                                                                    <ToolCallMessage
                                                                         key={`${callId}-${part.toolInvocation.state}`}
                                                                         toolName={part.toolInvocation.toolName}
                                                                         args={part.toolInvocation.args}
@@ -446,19 +443,19 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 {t('chat.overlay.description')}
                             </p>
                         </div>
-                            <Button
-                                onClick={() => {
-                                    setIsStarted(true)
-                                    append({
-                                        role: 'system',
-                                        content: 'Say hello to the user when the chat starts remind the time of date and current trading data for week and day',
-                                    })
-                                }}
-                                size="lg"
-                                className="w-full text-sm sm:text-base animate-in fade-in zoom-in"
-                            >
-                                {t('chat.overlay.startButton')}
-                            </Button>
+                        <Button
+                            onClick={() => {
+                                setIsStarted(true)
+                                append({
+                                    role: 'system',
+                                    content: 'Say hello to the user when the chat starts remind the time of date and current trading data for week and day',
+                                })
+                            }}
+                            size="lg"
+                            className="w-full text-sm sm:text-base animate-in fade-in zoom-in"
+                        >
+                            {t('chat.overlay.startButton')}
+                        </Button>
                     </div>
                 </div>
             )}

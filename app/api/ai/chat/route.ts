@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
       ${username ? `- Trader: ${username}` : ''} - Current date: ${new Date().toISOString()} - User timezone: ${timezone}
 
       Guidelines:
+      - Use trading jargon when appropriate.
       - Always look at the user's journal entries to understand their mood and trading patterns
       - Always use Markdown to format your response
       - Vary your response types naturally:
