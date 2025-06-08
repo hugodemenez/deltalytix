@@ -384,7 +384,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
               ))}
             </ul>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col space-y-3">
             {isModal ? (
               <Button onClick={onClose} className="">
                 {t('pricing.keepBasic')}
@@ -394,6 +394,13 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                 <a href="/authentication">{t('pricing.startBasic')}</a>
               </Button>
             )}
+            
+            <p className="text-xs text-center text-muted-foreground">
+              {t('terms.pricing.disclaimer')}
+              <a href="/terms" className="text-primary hover:underline">
+                {t('terms.pricing.termsOfService')}
+              </a>
+            </p>
           </CardFooter>
         </Card>
       </div>
@@ -578,7 +585,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
               </div>
             )}
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col space-y-3">
             {(() => {
               const lookupKey = `plus_${billingPeriod}_${currency.toLowerCase()}`
               const isCurrent = isCurrentPlan(lookupKey)
@@ -606,6 +613,13 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                 </Button>
               )
             })()}
+            
+            <p className="text-xs text-center text-muted-foreground">
+              {t('terms.pricing.disclaimer')}
+              <a href="/terms" className="text-primary hover:underline">
+                {t('terms.pricing.termsOfService')}
+              </a>
+            </p>
           </CardFooter>
         </Card>
       </div>
