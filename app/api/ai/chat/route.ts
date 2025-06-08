@@ -10,6 +10,7 @@ import { getTradesDetails } from "./tools/get-trades-details";
 import { getTradesSummary } from "./tools/get-trades-summary";
 import { askForLocation } from "./tools/ask-for-location";
 import { askForConfirmation } from "./tools/ask-for-confirmation";
+import { getPreviousConversation } from "./tools/get-previous-conversation";
 
 export const maxDuration = 30;
 
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       tools: {
         // server-side tool with execute function
         getJournalEntries,
+        getPreviousConversation,
         getMostTradedInstruments,
         getLastTradesData,
         getTradesDetails,

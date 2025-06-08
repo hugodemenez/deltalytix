@@ -639,9 +639,11 @@ export const DataProvider: React.FC<{
 
         // Tick filter
         if (tickFilter?.value) {
-          const matchingTicker = Object.keys(tickDetails).find(ticker =>
-            trade.instrument.includes(ticker)
-          );
+          // Fix ticker matching logic - sort by length descending to match longer tickers first
+          // This prevents "ES" from matching "MES" trades
+          const matchingTicker = Object.keys(tickDetails)
+            .sort((a, b) => b.length - a.length) // Sort by length descending
+            .find(ticker => trade.instrument.includes(ticker));
           const tickValue = matchingTicker ? tickDetails[matchingTicker].tickValue : 1;
           const pnlPerContract = Number(trade.pnl) / Number(trade.quantity);
           const tradeTicks = Math.round(pnlPerContract / tickValue);

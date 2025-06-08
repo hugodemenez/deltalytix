@@ -93,10 +93,15 @@ export default function TickDistributionChart({ size = 'medium' }: TickDistribut
 
     // Count trades for each tick value
     trades.forEach(trade => {
-      const matchingTicker = Object.keys(tickDetails).find(ticker => 
-        trade.instrument.includes(ticker)
-      )
-      const tickValue = matchingTicker ? tickDetails[matchingTicker].tickSize : 1
+      // Fix ticker matching logic - sort by length descending to match longer tickers first
+      // This prevents "ES" from matching "MES" trades
+      const matchingTicker = Object.keys(tickDetails)
+        .sort((a, b) => b.length - a.length) // Sort by length descending
+        .find(ticker => trade.instrument.includes(ticker))
+      
+      // Use tickValue (monetary value per tick) instead of tickSize (minimum price increment)
+      const tickValue = matchingTicker ? tickDetails[matchingTicker].tickValue : 1
+      
       // Calculate PnL per contract first
       const pnlPerContract = Number(trade.pnl) / Number(trade.quantity)
       const ticks = Math.round(pnlPerContract / tickValue)
