@@ -21,6 +21,7 @@ import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { motion, AnimatePresence } from "framer-motion"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { useI18n } from "@/locales/client"
 
 interface ConsentSettings {
   analytics_storage: boolean;
@@ -32,125 +33,9 @@ interface ConsentSettings {
   security_storage: boolean;
 }
 
-function PreferencesContent({ 
-  settings, 
-  setSettings, 
-  onSave, 
-  onCancel,
-  isDrawer = false
-}: { 
-  settings: ConsentSettings;
-  setSettings: (settings: ConsentSettings) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  isDrawer?: boolean;
-}) {
-  return (
-    <>
-      <div className={isDrawer ? "px-4" : ""}>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="analytics">Analytics Cookies</Label>
-              <p className="text-sm text-muted-foreground">
-                Help us understand how visitors interact with our website
-              </p>
-            </div>
-            <Switch
-              id="analytics"
-              checked={settings.analytics_storage}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, analytics_storage: checked })
-              }
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="advertising">Advertising Cookies</Label>
-              <p className="text-sm text-muted-foreground">
-                Used to show you relevant personalized ads
-              </p>
-            </div>
-            <Switch
-              id="advertising"
-              checked={settings.ad_storage}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, ad_storage: checked })
-              }
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="ad_user_data">Ad User Data</Label>
-              <p className="text-sm text-muted-foreground">
-                Allow us to use your data to show relevant ads
-              </p>
-            </div>
-            <Switch
-              id="ad_user_data"
-              checked={settings.ad_user_data}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, ad_user_data: checked })
-              }
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="ad_personalization">Ad Personalization</Label>
-              <p className="text-sm text-muted-foreground">
-                Allow personalized advertising based on your preferences
-              </p>
-            </div>
-            <Switch
-              id="ad_personalization"
-              checked={settings.ad_personalization}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, ad_personalization: checked })
-              }
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="personalization">Personalization Cookies</Label>
-              <p className="text-sm text-muted-foreground">
-                Allow us to personalize content based on your preferences
-              </p>
-            </div>
-            <Switch
-              id="personalization"
-              checked={settings.personalization_storage}
-              onCheckedChange={(checked) =>
-                setSettings({ ...settings, personalization_storage: checked })
-              }
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="essential">Essential Cookies</Label>
-              <p className="text-sm text-muted-foreground">
-                Required for the website to function properly (always enabled)
-              </p>
-            </div>
-            <Switch id="essential" checked={true} disabled />
-          </div>
-        </div>
-      </div>
-
-      {!isDrawer && (
-        <div className="mt-6 flex justify-end gap-4">
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={onSave}>
-            Save Preferences
-          </Button>
-        </div>
-      )}
-    </>
-  )
-}
 
 export function ConsentBanner() {
+  const t = useI18n()
   const [isVisible, setIsVisible] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const [settings, setSettings] = useState<ConsentSettings>({
@@ -182,6 +67,20 @@ export function ConsentBanner() {
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
   }, [])
+
+  // Add/remove data attribute when banner visibility changes
+  useEffect(() => {
+    if (isVisible) {
+      document.body.setAttribute('data-consent-banner', 'visible')
+    } else {
+      document.body.removeAttribute('data-consent-banner')
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.removeAttribute('data-consent-banner')
+    }
+  }, [isVisible])
 
   const handleAcceptAll = () => {
     const allEnabled = {
@@ -221,45 +120,34 @@ export function ConsentBanner() {
   return (
     <AnimatePresence>
       <motion.div 
-        className="fixed bottom-0 sm:inset-x-0 z-[9999]"
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 10, opacity: 0 }}
+        className="fixed bottom-0 left-0 right-0 z-[9999] p-4 -m-4"
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        exit={{ y: 100 }}
         transition={{ 
-          duration: 0.2,
+          duration: 0.3,
           ease: [0.32, 0.72, 0, 1]
         }}
       >
-        <div className="max-w-xl mx-auto p-4 sm:p-6">
-          <motion.div 
-            className="bg-card rounded-lg shadow-lg border p-3 sm:p-4 flex flex-col gap-3 sm:gap-4"
-            whileHover={{ 
-              scale: 1.002,
-              transition: { duration: 0.2 }
-            }}
-            initial={{ y: 10, opacity: 0.8 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{
-              duration: 0.15,
-              ease: "easeOut"
-            }}
-          >
-            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
-              <p className="text-sm text-muted-foreground">
-                We use cookies to enhance your experience. 
-                <Button 
-                  variant="link" 
-                  className="px-1 h-auto" 
-                  onClick={() => setShowDetails(true)}
-                >
-                  Manage preferences
-                </Button>
-              </p>
-              <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+        <div className="bg-background/80 backdrop-blur-lg border-t border-border/50 p-4 shadow-lg">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">
+                  {t('landing.consent.banner.message')} {t('landing.consent.banner.updatePreferences')}{' '}
+                  <Button 
+                    variant="link" 
+                    className="p-0 h-auto text-sm text-foreground underline underline-offset-2" 
+                    onClick={() => setShowDetails(true)}
+                  >
+                    {t('landing.consent.banner.managePreferences')}
+                  </Button>.
+                </p>
+              </div>
+              <div className="flex gap-3 shrink-0">
                 <Button 
                   variant="outline" 
-                  size="sm" 
-                  className="flex-1 sm:flex-initial"
+                  size="sm"
                   onClick={() => saveConsent({
                     ...settings,
                     analytics_storage: false,
@@ -267,65 +155,177 @@ export function ConsentBanner() {
                     personalization_storage: false,
                   })}
                 >
-                  Essential Only
+                  {t('landing.consent.banner.rejectNonEssential')}
                 </Button>
                 <Button 
                   size="sm"
-                  className="flex-1 sm:flex-initial"
+                  className="bg-black text-white hover:bg-black/90"
                   onClick={handleAcceptAll}
                 >
-                  Accept All
+                  {t('landing.consent.banner.acceptAll')}
                 </Button>
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {isDesktop ? (
-          <Dialog open={showDetails} onOpenChange={setShowDetails}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Cookie Preferences</DialogTitle>
-                <DialogDescription>
-                  Customize your cookie preferences. Essential cookies are always enabled as they are required for the website to function properly.
-                </DialogDescription>
-              </DialogHeader>
-              <PreferencesContent
-                settings={settings}
-                setSettings={setSettings}
-                onSave={handleSavePreferences}
-                onCancel={() => setShowDetails(false)}
-              />
+          <>
+            {showDetails && <div className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-sm" />}
+            <Dialog open={showDetails} onOpenChange={setShowDetails}>
+                            <DialogContent className="fixed left-[50%] top-[50%] z-[9999] translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-xl max-w-[480px] w-[90vw] max-h-[80vh] overflow-hidden border-0">
+                <DialogHeader className="p-6 pb-4">
+                  <DialogTitle className="text-lg font-medium text-gray-900">
+                    {t('landing.consent.preferences.title')}
+                  </DialogTitle>
+                  <DialogDescription className="text-sm text-gray-600 mt-2 leading-relaxed">
+                    {t('landing.consent.preferences.description')}{' '}
+                    <a href="#" className="text-blue-600 underline">{t('landing.consent.preferences.learnMore')}</a>.
+                  </DialogDescription>
+                </DialogHeader>
+              
+              <div className="px-6 pb-6">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <input 
+                      type="checkbox" 
+                      checked={true} 
+                      disabled 
+                      className="mt-1 h-4 w-4 rounded border-gray-300 bg-gray-100"
+                    />
+                    <div>
+                      <label className="text-sm font-medium text-gray-900">
+                        {t('landing.consent.preferences.strictlyNecessary.title')}
+                      </label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {t('landing.consent.preferences.strictlyNecessary.description')}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <input 
+                      type="checkbox" 
+                      checked={settings.analytics_storage}
+                      onChange={(e) => setSettings({ ...settings, analytics_storage: e.target.checked })}
+                      className="mt-1 h-4 w-4 rounded border-gray-300"
+                    />
+                    <div>
+                      <label className="text-sm font-medium text-gray-900">
+                        {t('landing.consent.preferences.analytics.title')}
+                      </label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {t('landing.consent.preferences.analytics.description')}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-3">
+                    <input 
+                      type="checkbox" 
+                      checked={settings.ad_storage}
+                      onChange={(e) => setSettings({ ...settings, ad_storage: e.target.checked })}
+                      className="mt-1 h-4 w-4 rounded border-gray-300"
+                    />
+                    <div>
+                      <label className="text-sm font-medium text-gray-900">
+                        {t('landing.consent.preferences.marketing.title')}
+                      </label>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {t('landing.consent.preferences.marketing.description')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="mt-6">
+                  <Button 
+                    onClick={handleSavePreferences}
+                    className="w-full bg-black text-white hover:bg-black/90 rounded-lg h-11"
+                  >
+                    {t('landing.consent.preferences.done')}
+                  </Button>
+                </div>
+              </div>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          </>
         ) : (
           <Drawer open={showDetails} onOpenChange={setShowDetails}>
-            <DrawerContent className="z-[10000]">
-              <div className="h-[85vh] flex flex-col">
-                <DrawerHeader className="text-left">
-                  <DrawerTitle>Cookie Preferences</DrawerTitle>
-                  <DrawerDescription>
-                    Customize your cookie preferences. Essential cookies are always enabled as they are required for the website to function properly.
+            <DrawerContent className="z-[10000] bg-white rounded-t-lg">
+              <div className="h-[80vh] flex flex-col">
+                <DrawerHeader className="text-left px-6 py-6">
+                  <DrawerTitle className="text-lg font-medium text-gray-900">
+                    {t('landing.consent.preferences.title')}
+                  </DrawerTitle>
+                  <DrawerDescription className="text-sm text-gray-600 mt-2 leading-relaxed">
+                    {t('landing.consent.preferences.description')}{' '}
+                    <a href="#" className="text-blue-600 underline">{t('landing.consent.preferences.learnMore')}</a>.
                   </DrawerDescription>
                 </DrawerHeader>
-                <div className="flex-1 overflow-y-auto px-4 py-2">
-                  <PreferencesContent
-                    settings={settings}
-                    setSettings={setSettings}
-                    onSave={handleSavePreferences}
-                    onCancel={() => setShowDetails(false)}
-                    isDrawer
-                  />
+                
+                <div className="flex-1 overflow-y-auto px-6">
+                  <div className="space-y-4 pb-6">
+                    <div className="flex items-start gap-3">
+                      <input 
+                        type="checkbox" 
+                        checked={true} 
+                        disabled 
+                        className="mt-1 h-4 w-4 rounded border-gray-300 bg-gray-100"
+                      />
+                      <div>
+                        <label className="text-sm font-medium text-gray-900">
+                          {t('landing.consent.preferences.strictlyNecessary.title')}
+                        </label>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {t('landing.consent.preferences.strictlyNecessary.description')}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <input 
+                        type="checkbox" 
+                        checked={settings.analytics_storage}
+                        onChange={(e) => setSettings({ ...settings, analytics_storage: e.target.checked })}
+                        className="mt-1 h-4 w-4 rounded border-gray-300"
+                      />
+                      <div>
+                        <label className="text-sm font-medium text-gray-900">
+                          {t('landing.consent.preferences.analytics.title')}
+                        </label>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {t('landing.consent.preferences.analytics.description')}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start gap-3">
+                      <input 
+                        type="checkbox" 
+                        checked={settings.ad_storage}
+                        onChange={(e) => setSettings({ ...settings, ad_storage: e.target.checked })}
+                        className="mt-1 h-4 w-4 rounded border-gray-300"
+                      />
+                      <div>
+                        <label className="text-sm font-medium text-gray-900">
+                          {t('landing.consent.preferences.marketing.title')}
+                        </label>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {t('landing.consent.preferences.marketing.description')}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <DrawerFooter className="pt-2">
-                  <Button onClick={handleSavePreferences}>
-                    Save Preferences
+                
+                <DrawerFooter className="px-6 pb-6">
+                  <Button 
+                    onClick={handleSavePreferences}
+                    className="w-full bg-black text-white hover:bg-black/90 rounded-lg h-11"
+                  >
+                    {t('landing.consent.preferences.done')}
                   </Button>
-                  <DrawerClose asChild>
-                    <Button variant="outline">
-                      Cancel
-                    </Button>
-                  </DrawerClose>
                 </DrawerFooter>
               </div>
             </DrawerContent>

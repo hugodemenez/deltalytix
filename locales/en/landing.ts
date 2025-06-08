@@ -194,5 +194,32 @@ export default {
             changeLanguage: 'Change language',
             timezone: 'Timezone',
         },
+        consent: {
+            banner: {
+                message: 'We use cookies to enhance your experience.',
+                updatePreferences: 'You can update your preferences at any time by clicking',
+                managePreferences: 'Manage preferences',
+                rejectNonEssential: 'Reject non-essential',
+                acceptAll: 'Accept all'
+            },
+            preferences: {
+                title: 'Cookie Preferences Center',
+                description: 'Customize your consent for different types of cookies. Strictly Necessary cookies cannot be toggled off as they\'re essential for the site\'s functionality. Other cookies are optional and will only be used if you enable them. You can change your consent at any time.',
+                learnMore: 'Learn more',
+                done: 'Done',
+                strictlyNecessary: {
+                    title: 'Strictly Necessary Cookies (always active)',
+                    description: 'These cookies are essential for the site to function and cannot be toggled off. They assist with security, user authentication, customer support, etc.'
+                },
+                analytics: {
+                    title: 'Analytics Cookies',
+                    description: 'These cookies help us understand how visitors interact with our site. They allow us to measure traffic and improve site performance.'
+                },
+                marketing: {
+                    title: 'Marketing Performance Cookies',
+                    description: 'These cookies help us measure the effectiveness of our marketing campaigns.'
+                }
+            }
+        },
     },
 } as const;

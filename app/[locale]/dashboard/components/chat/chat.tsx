@@ -177,7 +177,6 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
             try {
                 if (moods.length > 0) {
                     // Find current day in moods
-                    console.log('MOODS', moods)
                     const currentDay = format(new Date(), 'yyyy-MM-dd')
                     const currentMood = moods.find(mood => format(mood.day, 'yyyy-MM-dd') === currentDay)
                     if (currentMood) {
@@ -193,12 +192,12 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 toolInvocations: msg.toolInvocations
                             }))
                             setStoredMessages(validMessages as Message[])
+                            setIsStarted(true)
                         } catch (e) {
                             console.error('Failed to parse conversation:', e)
                             setStoredMessages([])
                         }
                     }
-                    setIsStarted(true)
                 }
             } finally {
                 setIsLoadingMessages(false)

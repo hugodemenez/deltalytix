@@ -232,7 +232,6 @@ export default async function RootLayout({
           <SpeedInsights />
           <Analytics />
           <Toaster />
-          <ConsentBanner />
           {children}
         </AuthProvider>
       </body>

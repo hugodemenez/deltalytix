@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { FilterDropdown } from "./filters/filter-dropdown"
 
 
@@ -44,8 +44,32 @@ export function Toolbar({
 }: ToolbarProps) {
   const t = useI18n()
   const { isMobile } = useData()
+  
+  // Check if consent banner is visible
+  const [isConsentVisible, setIsConsentVisible] = useState(false)
+  
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const hasConsentBanner = document.body.hasAttribute('data-consent-banner')
+      setIsConsentVisible(hasConsentBanner)
+    })
+    
+    observer.observe(document.body, { 
+      attributes: true, 
+      attributeFilter: ['data-consent-banner'] 
+    })
+    
+    // Initial check
+    setIsConsentVisible(document.body.hasAttribute('data-consent-banner'))
+    
+    return () => observer.disconnect()
+  }, [])
+  
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+    <div className={cn(
+      "fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-300",
+      isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
+    )}>
       <div className="flex items-center justify-around gap-4 p-3 bg-background/80 backdrop-blur-md border rounded-full shadow-lg">
         <Button
           variant={isCustomizing ? "default" : "ghost"}
