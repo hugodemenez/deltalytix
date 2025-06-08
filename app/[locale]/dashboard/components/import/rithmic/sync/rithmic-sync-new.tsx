@@ -684,21 +684,21 @@ export function RithmicSyncWrapper({ setIsOpen }: RithmicSyncWrapperProps) {
       <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
         <div className="flex items-center gap-4 mb-2">
           <Image 
-            src="/RithmicArtwork/TradingPlatformByRithmic-Black.png"
+            src="/logos/TradingPlatformByRithmic-Black.png"
             alt="Trading Platform by Rithmic"
             width={120}
             height={40}
             className="dark:hidden"
           />
           <Image 
-            src="/RithmicArtwork/TradingPlatformByRithmic-Green.png"
+            src="/logos/TradingPlatformByRithmic-Green.png"
             alt="Trading Platform by Rithmic"
             width={120}
             height={40}
             className="hidden dark:block"
           />
           <Image 
-            src="/RithmicArtwork/Powered_by_Omne.png"
+            src="/logos/Powered_by_Omne.png"
             alt="Powered by OMNE"
             width={120}
             height={40}

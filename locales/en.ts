@@ -181,6 +181,14 @@ export default {
     'import.type.topstep.name': 'Topstep',
     'import.type.topstep.description': 'Import trades from Topstep funded trader account exports',
     'import.type.topstep.details': 'Make sure to export your trades in CSV format from your Topstep funded trader account dashboard.',
+    'notFound': {
+        title: "404 - Page Not Found",
+        heading: "Oops! Page not found",
+        description: "The page you're looking for doesn't exist or has been moved.",
+        goHome: "Go back home",
+        goBack: "Go back",
+        searchPlaceholder: "Search for a page..."
+    },
     'filters': {
         title: "Filters",
         search: "Search...",

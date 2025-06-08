@@ -20,7 +20,7 @@ export default function Partners() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-center justify-items-center w-full mt-8">
                     <a className="relative w-full h-[60px] flex items-center justify-center" href="https://account.ninjatrader.com/register?introducingPartner=deltalytix" target="_blank" rel="noopener noreferrer">
                         <Image
-                            src="/Ninjatrader/NinjaTrader_NTE_BO_RGB.svg"
+                            src="/logos/ninjatrader-ob.svg"
                             alt="NinjaTrader"
                             fill
                             className="object-contain filter dark:brightness-0 dark:invert"
@@ -29,7 +29,7 @@ export default function Partners() {
                     </a>
                     <a className="relative w-full h-[60px] flex items-center justify-center">
                         <Image
-                            src={effectiveTheme !== 'dark' ? '/ETP/Logos/Trade Copier by ETP Dark.png' : '/ETP/Logos/Trade Copier by ETP - Light.png'}
+                            src={effectiveTheme !== 'dark' ? '/logos/etp-b.png' : '/logos/etp-w.png'}
                             alt="Trade Copier by ETP"
                             fill
                             className="object-contain"
@@ -38,7 +38,7 @@ export default function Partners() {
                     </a>
                     <a className="relative w-full h-[60px] flex items-center justify-center">
                         <Image
-                            src={effectiveTheme === 'dark' ? '/RithmicArtwork/rithmic-logo-white.png' : '/RithmicArtwork/rithmic-logo-black.png'}
+                            src={effectiveTheme === 'dark' ? '/logos/rithmic-logo-white.png' : '/logos/rithmic-logo-black.png'}
                             alt="Rithmic"
                             fill
                             className="object-contain"

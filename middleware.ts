@@ -48,52 +48,15 @@ async function updateSession(
     response.headers.set("x-user-id", user.id)
     response.headers.set("x-user-email", user.email || "")
   }
-  return {response, user};
+  return { response, user };
 }
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
-  
 
-  // Check if this looks like a non-existent route before processing with i18n
-  // This helps prevent the i18n middleware from trying to localize invalid routes
-  const segments = pathname.split('/').filter(Boolean)
-  const locales = ['en', 'fr']
-  
-  // If the first segment is not a valid locale and doesn't match known routes,
-  // let Next.js handle it naturally (will show 404)
-  if (segments.length > 0) {
-    const firstSegment = segments[0]
-    const knownRoutes = [
-      'dashboard',
-      'authentication',
-      'admin',
-      'maintenance',
-      'pricing',
-      'updates',
-      'privacy-policy',
-      'terms-of-service',
-      'contact',
-      'about',
-      'blog',
-      'support',
-      'documentation',
-      'api',
-      'integrations',
-      'features',
-      'community',
-      'shared',
-      'terms'
-    ]
-    
-    if (!locales.includes(firstSegment) && !knownRoutes.includes(firstSegment)) {
-      // This might be a non-existent route, let Next.js handle it
-      return NextResponse.next()
-    }
-  }
-
-
-  const {response, user} = await updateSession(request, I18nMiddleware(request))
+  // Skip middleware for static assets
+  if (pathname.includes('.')) return NextResponse.next()
+  const { response, user } = await updateSession(request, I18nMiddleware(request))
   const nextUrl = request.nextUrl
   const pathnameLocale = nextUrl.pathname.split('/', 2)?.[1]
 
@@ -112,9 +75,9 @@ export async function middleware(request: NextRequest) {
   const newUrl = new URL(pathnameWithoutLocale || '/', request.url)
 
   // Maintenance mode check
-  if (MAINTENANCE_MODE && 
-      !newUrl.pathname.includes('/maintenance') && 
-      newUrl.pathname.includes('/dashboard')) {
+  if (MAINTENANCE_MODE &&
+    !newUrl.pathname.includes('/maintenance') &&
+    newUrl.pathname.includes('/dashboard')) {
     return NextResponse.redirect(new URL('/maintenance', request.url))
   }
 
@@ -123,7 +86,7 @@ export async function middleware(request: NextRequest) {
     if (!user) {
       return NextResponse.redirect(new URL('/authentication', request.url))
     }
-    
+
     if (process.env.NODE_ENV !== 'development') {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
@@ -136,11 +99,11 @@ export async function middleware(request: NextRequest) {
     if (!isPublicRoute) {
       const encodedSearchParams = `${newUrl.pathname.substring(1)}${newUrl.search}`
       const authUrl = new URL('/authentication', request.url)
-      
+
       if (encodedSearchParams) {
         authUrl.searchParams.append('next', encodedSearchParams)
       }
-      
+
       return NextResponse.redirect(authUrl)
     }
   } else {
@@ -153,13 +116,13 @@ export async function middleware(request: NextRequest) {
   try {
     // Get geolocation data from Vercel
     const geo = geolocation(request)
-    
+
     // Add geolocation data to response headers for client-side access
     // Encode values to handle non-ASCII characters (like accented letters)
     response.headers.set('x-user-country', geo.country || 'US')
     response.headers.set('x-user-city', encodeURIComponent(geo.city || ''))
     response.headers.set('x-user-region', encodeURIComponent(geo.countryRegion || ''))
-    
+
     // Also add to cookies for easier client-side access
     if (geo.country) {
       response.cookies.set('user-country', geo.country, {
@@ -168,13 +131,13 @@ export async function middleware(request: NextRequest) {
         sameSite: 'lax'
       })
     }
-    
+
   } catch (error) {
     // Fallback to original Vercel headers if geolocation function fails
     const country = request.headers.get('x-vercel-ip-country')
     const city = request.headers.get('x-vercel-ip-city')
     const region = request.headers.get('x-vercel-ip-country-region')
-    
+
     if (country) {
       response.headers.set('x-user-country', country)
       response.cookies.set('user-country', country, {
@@ -191,8 +154,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Simplified matcher since we handle filtering in middleware logic
+  // Exclude static assets and API routes from middleware processing
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',
   ],
 }
