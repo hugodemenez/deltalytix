@@ -16,7 +16,6 @@ export type WidgetType =
   | 'profitFactor'
   | 'statisticsWidget'
   | 'tradeTableReview'
-  | 'moodSelector'
   | 'chatWidget'
   | 'tradeDistribution'
   | 'propFirm'

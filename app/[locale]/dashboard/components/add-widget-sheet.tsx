@@ -1,10 +1,10 @@
 "use client"
 
-import React, { forwardRef, useState, useEffect } from 'react'
+import React, { forwardRef, useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus } from 'lucide-react'
+import { Plus, Loader2 } from 'lucide-react'
 import { useI18n } from "@/locales/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from '@/lib/utils'
@@ -22,6 +22,77 @@ interface PreviewCardProps {
   onClick: () => void
   children: React.ReactNode
   className?: string
+}
+
+interface LazyWidgetPreviewProps {
+  config: any
+  index: number
+  isLoaded: boolean
+  onAdd: () => void
+  onVisible: () => void
+  onWidgetLoaded: (index: number) => void
+}
+
+const LazyWidgetPreview: React.FC<LazyWidgetPreviewProps> = ({
+  config,
+  index,
+  isLoaded,
+  onAdd,
+  onVisible,
+  onWidgetLoaded
+}) => {
+  const [isVisible, setIsVisible] = useState(false)
+  const [hasLoaded, setHasLoaded] = useState(false)
+  const elementRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isVisible) {
+          setIsVisible(true)
+          onVisible()
+        }
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '50px'
+      }
+    )
+
+    if (elementRef.current) {
+      observer.observe(elementRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [isVisible, onVisible])
+
+  useEffect(() => {
+    if (isVisible && isLoaded && !hasLoaded) {
+      // Simulate progressive loading with a small delay
+      const timer = setTimeout(() => {
+        setHasLoaded(true)
+        onWidgetLoaded(index)
+      }, index * 100) // Stagger loading by 100ms per widget
+
+      return () => clearTimeout(timer)
+    }
+  }, [isVisible, isLoaded, hasLoaded, index, onWidgetLoaded])
+
+  return (
+    <div ref={elementRef} className="w-full h-full">
+      {!isVisible ? (
+        <div className="w-full h-full bg-muted/30 rounded-md flex items-center justify-center">
+          <div className="w-8 h-8 bg-muted rounded animate-pulse" />
+        </div>
+      ) : !hasLoaded ? (
+        <div className="w-full h-full bg-muted/30 rounded-md flex items-center justify-center">
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        getWidgetPreview(config.type)
+      )}
+    </div>
+  )
 }
 
 const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
@@ -55,6 +126,8 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
     const t = useI18n()
     const { isMobile } = useData()
     const [isOpen, setIsOpen] = React.useState(false)
+    const [loadedItems, setLoadedItems] = useState<Set<number>>(new Set())
+    const [loadingStarted, setLoadingStarted] = useState(false)
 
     const handleAddWidget = (type: WidgetType) => {
       const config = WIDGET_REGISTRY[type]
@@ -64,11 +137,43 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
       })
     }
 
+    const startLoading = useCallback(() => {
+      if (!loadingStarted) {
+        setLoadingStarted(true)
+        // Progressive loading - load first few items immediately
+        const initialItems = new Set([0, 1, 2])
+        setLoadedItems(initialItems)
+      }
+    }, [loadingStarted])
+
+    const onWidgetLoaded = useCallback((index: number) => {
+      setLoadedItems(prev => {
+        const newSet = new Set(prev)
+        newSet.add(index)
+        
+        // Load next batch when current batch is loaded
+        if (newSet.size > 0 && newSet.size % 3 === 0) {
+          const nextBatch = Array.from({ length: 3 }, (_, i) => newSet.size + i)
+          nextBatch.forEach(i => newSet.add(i))
+        }
+        
+        return newSet
+      })
+    }, [])
+
+    // Reset loading state when sheet opens/closes
+    useEffect(() => {
+      if (!isOpen) {
+        setLoadedItems(new Set())
+        setLoadingStarted(false)
+      }
+    }, [isOpen])
+
     const renderWidgetsByCategory = (category: 'charts' | 'statistics' | 'tables' | 'other') => {
       const widgets = getWidgetsByCategory(category)
       return (
         <div className="grid gap-4">
-          {widgets.map((config) => (
+          {widgets.map((config, index) => (
             <PreviewCard
               key={config.type}
               onClick={() => handleAddWidget(config.type)}
@@ -76,7 +181,25 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
                 `h-[${config.previewHeight}px]`,
               )}
             >
-              {getWidgetPreview(config.type)}
+              {
+                category === 'charts' ? (
+                  <LazyWidgetPreview
+                    key={config.type}
+                    config={config}
+                    index={index}
+                    isLoaded={loadedItems.has(index)}
+                    onAdd={() => handleAddWidget(config.type)}
+                    onVisible={() => {
+                      if (loadedItems.size === 0) {
+                        startLoading()
+                      }
+                    }}
+                    onWidgetLoaded={onWidgetLoaded}
+                  />
+                ) : (
+                  getWidgetPreview(config.type)
+                )
+              }
             </PreviewCard>
           ))}
         </div>
@@ -106,26 +229,26 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
           <SheetHeader>
             <SheetTitle>{t('widgets.addWidget')}</SheetTitle>
           </SheetHeader>
-          <Tabs defaultValue="charts" className="flex-1 flex flex-col mt-6 min-h-0">
+          <Tabs defaultValue="other" className="flex-1 flex flex-col mt-6 min-h-0">
             <TabsList className="w-full">
-              <TabsTrigger value="charts" className="flex-1">{t('widgets.categories.charts')}</TabsTrigger>
-              <TabsTrigger value="statistics" className="flex-1">{t('widgets.categories.statistics')}</TabsTrigger>
-              <TabsTrigger value="tables" className="flex-1">{t('widgets.categories.tables')}</TabsTrigger>
               <TabsTrigger value="other" className="flex-1">{t('widgets.categories.other')}</TabsTrigger>
+              <TabsTrigger value="charts" className="flex-1">{t('widgets.categories.charts')}</TabsTrigger>
+              <TabsTrigger value="tables" className="flex-1">{t('widgets.categories.tables')}</TabsTrigger>
+              <TabsTrigger value="statistics" className="flex-1">{t('widgets.categories.statistics')}</TabsTrigger>
             </TabsList>
             <ScrollArea className="flex-1 mt-2">
               <div className="pr-4 pb-8">
+                <TabsContent value="other" className="mt-0">
+                  {renderWidgetsByCategory('other')}
+                </TabsContent>
                 <TabsContent value="charts" className="mt-0">
                   {renderWidgetsByCategory('charts')}
-                </TabsContent>
-                <TabsContent value="statistics" className="mt-0">
-                  {renderWidgetsByCategory('statistics')}
                 </TabsContent>
                 <TabsContent value="tables" className="mt-0">
                   {renderWidgetsByCategory('tables')}
                 </TabsContent>
-                <TabsContent value="other" className="mt-0">
-                  {renderWidgetsByCategory('other')}
+                <TabsContent value="statistics" className="mt-0">
+                  {renderWidgetsByCategory('statistics')}
                 </TabsContent>
               </div>
             </ScrollArea>

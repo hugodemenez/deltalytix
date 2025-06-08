@@ -20,6 +20,8 @@ import { TradeTableReview } from '../components/tables/trade-table-review'
 import { MoodSelector } from '../components/calendar/mood-selector'
 import TradeDistributionChart from '../components/charts/trade-distribution'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { AccountsOverview } from '../components/accounts/accounts-overview'
 import { TagWidget } from '../components/filters/tag-widget'
@@ -27,6 +29,7 @@ import ProfitFactorCard from '../components/statistics/profit-factor-card'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import { MindsetWidget } from '../components/mindset/mindset-widget'
 import ChatWidget from '../components/chat/chat'
+import { useI18n } from '@/locales/client'
 // import MarketChart from '../components/market/market-chart'
 
 export interface WidgetConfig {
@@ -136,15 +139,214 @@ function createPropfirmPreview() {
   )
 }
 
+function createMindsetPreview() {
+  return (
+    <Card className="h-[300px] flex flex-col">
+      <CardHeader className="pb-3 border-b">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">Mindset</CardTitle>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+              <div className="h-1.5 w-1.5 rounded-full bg-muted" />
+              <div className="h-1.5 w-1.5 rounded-full bg-muted" />
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-0 flex flex-row">
+        {/* Timeline mock */}
+        <div className="w-16 border-r p-2 flex flex-col gap-1">
+          {[...Array(7)].map((_, index) => (
+            <div key={index} className="flex flex-col items-center gap-1">
+              <div className={cn(
+                "h-6 w-6 rounded-full border-2 flex items-center justify-center",
+                index === 2 ? "bg-primary border-primary" : "border-muted-foreground/20"
+              )}>
+                <div className="h-1 w-1 rounded-full bg-white" />
+              </div>
+              {index < 6 && <div className="h-4 w-px bg-muted-foreground/20" />}
+            </div>
+          ))}
+        </div>
+        
+        {/* Content area mock */}
+        <div className="flex-1 p-4 flex flex-col gap-3">
+          <div className="flex flex-col gap-2">
+            <div className="h-4 w-32 bg-muted-foreground/20 rounded" />
+            <div className="flex gap-2">
+              <div className="h-6 w-16 bg-muted rounded-full" />
+              <div className="h-6 w-20 bg-muted rounded-full" />
+              <div className="h-6 w-18 bg-muted rounded-full" />
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <div className="h-4 w-24 bg-muted-foreground/20 rounded" />
+            <div className="h-16 w-full bg-muted rounded border" />
+          </div>
+          
+          <div className="flex flex-col gap-2">
+            <div className="h-4 w-28 bg-muted-foreground/20 rounded" />
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 bg-muted rounded-full" />
+              <div className="h-2 flex-1 bg-muted-foreground/10 rounded-full">
+                <div className="h-2 w-1/2 bg-primary rounded-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function createCalendarPreview() {
+  const t = useI18n()
+  const weekdays = [
+    'calendar.weekdays.sun',
+    'calendar.weekdays.mon',
+    'calendar.weekdays.tue',
+    'calendar.weekdays.wed',
+    'calendar.weekdays.thu',
+    'calendar.weekdays.fri',
+    'calendar.weekdays.sat'
+  ] as const
+
+  return (
+    <Card className="h-[500px] flex flex-col">
+      <CardHeader className="pb-3 border-b">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CardTitle className="text-sm font-medium">Calendar</CardTitle>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="h-7 w-7 sm:h-8 sm:w-8"
+              aria-label="Next month"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 p-4">
+        {/* Weekday headers */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {weekdays.map((day) => (
+            <div key={day} className="text-center text-xs font-medium text-muted-foreground p-1">
+              {t(day)}
+            </div>
+          ))}
+        </div>
+        
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 gap-1 h-[calc(100%-40px)]">
+          {/* Calendar days - just empty boxes showing the structure */}
+          {Array.from({ length: 35 }, (_, i) => (
+            <div 
+              key={i} 
+              className="flex flex-col items-center justify-center p-1 rounded border border-border hover:bg-accent transition-colors cursor-pointer"
+            >
+              <div className="h-4 w-full bg-muted-foreground/10 rounded mb-0.5" />
+              <div className="h-2 w-3/4 bg-muted-foreground/5 rounded" />
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function createChatPreview() {
+  const t = useI18n()
+
+  return (
+    <Card className="h-[300px] flex flex-col bg-background relative">
+      {/* Header */}
+      <CardHeader className="pb-3 border-b">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium">AI Assistant</CardTitle>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
+            Reset
+          </Button>
+        </div>
+      </CardHeader>
+      
+      {/* Chat area */}
+      <CardContent className="flex-1 flex flex-col min-h-0 p-0 relative">
+        <div className="flex-1 min-h-0 w-full overflow-y-auto">
+          <div className="p-4 space-y-3">
+            {/* Bot message */}
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-3 h-3 rounded-full bg-primary" />
+              </div>
+              <div className="bg-muted rounded-lg p-2 max-w-[80%]">
+                <div className="h-3 w-32 bg-muted-foreground/20 rounded mb-1" />
+                <div className="h-3 w-24 bg-muted-foreground/20 rounded" />
+              </div>
+            </div>
+            
+            {/* User message */}
+            <div className="flex items-start gap-2 justify-end">
+              <div className="bg-primary rounded-lg p-2 max-w-[80%]">
+                <div className="h-3 w-20 bg-primary-foreground/40 rounded" />
+              </div>
+              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                <div className="w-3 h-3 rounded-full bg-muted-foreground" />
+              </div>
+            </div>
+            
+            {/* Bot message */}
+            <div className="flex items-start gap-2">
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-3 h-3 rounded-full bg-primary" />
+              </div>
+              <div className="bg-muted rounded-lg p-2 max-w-[80%]">
+                <div className="h-3 w-40 bg-muted-foreground/20 rounded mb-1" />
+                <div className="h-3 w-28 bg-muted-foreground/20 rounded mb-1" />
+                <div className="h-3 w-16 bg-muted-foreground/20 rounded" />
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Input area */}
+        <div className="border-t p-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-9 bg-muted rounded-md border flex items-center px-3">
+              <div className="h-3 w-24 bg-muted-foreground/20 rounded" />
+            </div>
+            <Button size="sm" className="h-9 px-3">
+              Send
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
-  equityChart: {
-    type: 'equityChart',
+  weekdayPnlChart: {
+    type: 'weekdayPnlChart',
     defaultSize: 'medium',
     allowedSizes: ['small', 'small-long', 'medium', 'large'],
     category: 'charts',
     previewHeight: 300,
-    getComponent: ({ size }) => <EquityChart size={size} />,
-    getPreview: () => <EquityChart size="small" />
+    getComponent: ({ size }) => <WeekdayPNLChart size={size} />,
+    getPreview: () => <WeekdayPNLChart size="small" />
   },
   pnlChart: {
     type: 'pnlChart',
@@ -173,14 +375,14 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     getComponent: ({ size }) => <TimeInPositionChart size={size} />,
     getPreview: () => <TimeInPositionChart size="small" />
   },
-  weekdayPnlChart: {
-    type: 'weekdayPnlChart',
+  equityChart: {
+    type: 'equityChart',
     defaultSize: 'medium',
     allowedSizes: ['small', 'small-long', 'medium', 'large'],
     category: 'charts',
     previewHeight: 300,
-    getComponent: ({ size }) => <WeekdayPNLChart size={size} />,
-    getPreview: () => <WeekdayPNLChart size="small" />
+    getComponent: ({ size }) => <EquityChart size={size} />,
+    getPreview: () => <EquityChart size="small" />
   },
   pnlBySideChart: {
     type: 'pnlBySideChart',
@@ -281,24 +483,6 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     getComponent: ({ size }) => <StatisticsWidget size={size} />,
     getPreview: () => <StatisticsWidget size="small" />
   },
-  calendarWidget: {
-    type: 'calendarWidget',
-    defaultSize: 'large',
-    allowedSizes: ['large', 'extra-large'],
-    category: 'other',
-    previewHeight: 500,
-    getComponent: () => <CalendarPnl />,
-    getPreview: () => <div className="h-[500px]"><CalendarPnl /></div>
-  },
-  moodSelector: {
-    type: 'moodSelector',
-    defaultSize: 'tiny',
-    allowedSizes: ['tiny'],
-    category: 'other',
-    previewHeight: 100,
-    getComponent: () => <MoodSelector onMoodSelect={() => {}} />,
-    getPreview: () => <div className="h-[100px]"><MoodSelector onMoodSelect={() => {}} /></div>
-  },
   chatWidget: {
     type: 'chatWidget',
     defaultSize: 'large',
@@ -306,7 +490,16 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     category: 'other',
     previewHeight: 300,
     getComponent: ({ size }) => <ChatWidget size={size} />,
-    getPreview: () => <div className="h-[300px]"><ChatWidget size="large" /></div>
+    getPreview: () => createChatPreview()
+  },
+  calendarWidget: {
+    type: 'calendarWidget',
+    defaultSize: 'large',
+    allowedSizes: ['large', 'extra-large'],
+    category: 'other',
+    previewHeight: 500,
+    getComponent: () => <CalendarPnl />,
+    getPreview: () => createCalendarPreview()
   },
   tradeTableReview: {
     type: 'tradeTableReview',
@@ -336,6 +529,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     getComponent: ({ size }) => <TimeRangePerformanceChart size={size} />,
     getPreview: () => <TimeRangePerformanceChart size="small" />
   },
+  mindsetWidget: {
+    type: 'mindsetWidget',
+    defaultSize: 'large',
+    allowedSizes: ['extra-large', 'large'],
+    category: 'other',
+    previewHeight: 300,
+    getComponent: ({ size }) => <MindsetWidget size={size} />,
+    getPreview: () => createMindsetPreview()
+  },
   tagWidget: {
     type: 'tagWidget',
     defaultSize: 'small',
@@ -353,15 +555,6 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 100,
     getComponent: ({ size }) => <RiskRewardRatioCard size={size} />,
     getPreview: () => <RiskRewardRatioCard size="tiny" />
-  },
-  mindsetWidget: {
-    type: 'mindsetWidget',
-    defaultSize: 'large',
-    allowedSizes: ['extra-large', 'large'],
-    category: 'other',
-    previewHeight: 300,
-    getComponent: ({ size }) => <MindsetWidget size={size} />,
-    getPreview: () => <MindsetWidget size="large" />
   },
   // marketChart: {
   //   type: 'marketChart',

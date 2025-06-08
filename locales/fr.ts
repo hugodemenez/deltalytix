@@ -488,6 +488,10 @@ export default {
             lowestDailyPnL: 'P&L Quotidien le Plus Bas',
             noActivity: 'Aucune Activité de Trading',
             showingTopAccounts: 'Affichage de {count} sur {total} comptes'
+        },
+        legend: {
+            title: 'Comptes',
+            accounts: 'comptes'
         }
     },
     'widgets.screenshot': 'Capture',

@@ -516,6 +516,10 @@ export default {
             lowestDailyPnL: 'Lowest Daily P&L',
             noActivity: 'No Trading Activity',
             showingTopAccounts: 'Showing {count} of {total} accounts'
+        },
+        legend: {
+            title: 'Accounts',
+            accounts: 'accounts'
         }
     },
     'pnl.title': 'Daily Profit/Loss',
