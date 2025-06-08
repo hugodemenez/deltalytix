@@ -7,7 +7,7 @@ import { getCurrentLocale } from '@/locales/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from './auth'
 import { Account, Group } from '@/context/data-provider'
-import { unstable_cache } from 'next/cache'
+import { revalidateTag, unstable_cache } from 'next/cache'
 
 export type SharedDataResponse = {
   trades: Trade[]
@@ -52,7 +52,8 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
   }
 } 
 
-export async function getUserData(): Promise<{
+
+export async function getUserData({noCache = false}: {noCache?: boolean} = {}): Promise<{
   userData: User | null;
   subscription: Subscription | null;
   tickDetails: TickDetails[];
@@ -62,9 +63,13 @@ export async function getUserData(): Promise<{
   financialEvents: FinancialEvent[];
   moodHistory: Mood[];
 }> {
-  console.log('getUserData')
   const userId = await getUserId()
   const locale = await getCurrentLocale()
+
+  if (noCache) {
+    console.log(`[Cache MISS] Revalidating user data for user ${userId}`)
+    revalidateTag(`user-data-${userId}-${locale}`)
+  }
 
   return unstable_cache(
     async () => {
@@ -130,7 +135,7 @@ export async function getUserData(): Promise<{
     },
     [`user-data-${userId}-${locale}`],
     {
-      tags: [`user-data-${userId}`],
+      tags: [`user-data-${userId}-${locale}`],
       revalidate: 86400 // 24 hours in seconds
     }
   )()

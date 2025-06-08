@@ -11,19 +11,15 @@ import {
 } from "@/components/ui/tooltip"
 import Link from "next/link"
 import { useI18n } from "@/locales/client"
+import { useUserStore } from "@/store/user-store"
 
-interface SubscriptionBadgeProps {
-  plan: string | null
-  endDate: Date | null
-  trialEndsAt: Date | null
-  status: string
-  className?: string
-}
 
-export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, className }: SubscriptionBadgeProps) {
-  const t = useI18n()
 
-  if (!plan) {
+  export function SubscriptionBadge({ className }: { className?: string }) {
+    const t = useI18n()
+  const  subscription = useUserStore(state => state.subscription)
+
+  if (!subscription || !subscription.plan.toUpperCase().includes('PLUS')) {
     return (
       <TooltipProvider>
         <Tooltip>
@@ -50,7 +46,7 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
   }
 
   // Clean up plan name by taking only what's before underscore and capitalizing first letter
-  const formattedPlan = plan.split('_')[0].charAt(0).toUpperCase() + plan.split('_')[0].slice(1).toLowerCase()
+  const formattedPlan = subscription.plan.toLowerCase().includes('plus') ? 'Plus' : 'Free'
   
   const getDaysRemaining = (date: Date | null) => {
     if (!date) return null
@@ -59,12 +55,12 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
     return differenceInDays(end, today)
   }
 
-  const trialDays = trialEndsAt ? getDaysRemaining(trialEndsAt) : null
-  const subscriptionDays = status !== 'ACTIVE' ? getDaysRemaining(endDate) : null
+  const trialDays = subscription.trialEndsAt ? getDaysRemaining(subscription.trialEndsAt) : null
+  const subscriptionDays = subscription.status !== 'ACTIVE' ? getDaysRemaining(subscription.endDate) : null
 
   // Get badge content based on status
   const getBadgeContent = () => {
-    switch (status) {
+    switch (subscription.status) {
       case 'TRIAL':
         if (!trialDays) return {
           text: `${formattedPlan} • ${t('billing.status.trialing')}`,
@@ -74,14 +70,14 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
         return {
           text: `${formattedPlan} • ${trialDays}d ${t('calendar.charts.remaining')}`,
           variant: 'trial',
-          tooltip: t('billing.trialEndsIn', { date: format(new Date(trialEndsAt!), 'MMM d') })
+          tooltip: t('billing.trialEndsIn', { date: format(new Date(subscription.trialEndsAt!), 'MMM d') })
         }
       
       case 'ACTIVE':
         return {
           text: `${formattedPlan}`,
           variant: 'active',
-          tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
+          tooltip: subscription.endDate ? t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate), 'MMM d') }) : undefined
         }
 
       case 'PAYMENT_FAILED':
@@ -137,7 +133,7 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
         return {
           text: `${formattedPlan} • ${t('billing.scheduledToCancel')}`,
           variant: 'expiring',
-          tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
+          tooltip: subscription.endDate ? t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate), 'MMM d') }) : undefined
         }
 
       default:
@@ -153,14 +149,14 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
           return {
             text: `${formattedPlan} • ${subscriptionDays}d ${t('calendar.charts.remaining')}`,
             variant: 'expiring',
-            tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
+            tooltip: subscription.endDate ? t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate), 'MMM d') }) : undefined
           }
         }
 
         return {
-          text: `${formattedPlan} • ${t('billing.dates.nextBilling', { date: format(new Date(endDate!), 'MMM d') })}`,
+          text: `${formattedPlan} • ${t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate!), 'MMM d') })}`,
           variant: 'normal',
-          tooltip: endDate ? t('billing.dates.nextBilling', { date: format(new Date(endDate), 'MMM d') }) : undefined
+          tooltip: subscription.endDate ? t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate), 'MMM d') }) : undefined
         }
     }
   }
@@ -175,12 +171,12 @@ export function SubscriptionBadge({ plan, endDate, trialEndsAt, status, classNam
             <Badge 
               variant="secondary" 
               className={cn(
-                "px-2 py-0.5 text-xs whitespace-nowrap cursor-help", 
-                badge.variant === 'active' && plan.includes('pro') && "bg-primary text-primary-foreground",
-                badge.variant === 'trial' && "bg-blue-500 text-white dark:bg-blue-400",
-                badge.variant === 'expiring' && "bg-destructive text-destructive-foreground",
-                badge.variant === 'expired' && "bg-destructive/80 text-destructive-foreground",
-                badge.variant === 'normal' && "bg-secondary text-secondary-foreground",
+                "px-2 py-0.5 text-xs whitespace-nowrap cursor-help transition-colors", 
+                badge.variant === 'active' && subscription.plan.toLowerCase().includes('plus') && "bg-primary text-primary-foreground hover:bg-primary/90",
+                badge.variant === 'trial' && "bg-blue-500 text-white dark:bg-blue-400 hover:bg-blue-600 dark:hover:bg-blue-500",
+                badge.variant === 'expiring' && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+                badge.variant === 'expired' && "bg-destructive/80 text-destructive-foreground hover:bg-destructive/70",
+                badge.variant === 'normal' && "bg-secondary text-secondary-foreground hover:bg-secondary/80",
                 className
               )}
             >

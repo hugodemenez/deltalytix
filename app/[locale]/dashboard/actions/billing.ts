@@ -61,7 +61,6 @@ export async function getSubscriptionData() {
     })
     
     if (localSubscription && localSubscription.status === 'ACTIVE' && localSubscription.interval === 'lifetime') {
-      console.log('Found active lifetime subscription')
       
       // Get customer and invoices for lifetime subscription
       const customers = await stripe.customers.list({
@@ -77,13 +76,6 @@ export async function getSubscriptionData() {
           limit: 10,
         })
         
-        console.log('All invoices for lifetime customer:', allInvoices.data.map(inv => ({
-          id: inv.id,
-          status: inv.status,
-          amount_paid: inv.amount_paid,
-          amount_due: inv.amount_due,
-          created: inv.created
-        })))
         
         // Get payment intents (for one-time payments like lifetime purchases)
         const paymentIntents = await stripe.paymentIntents.list({
@@ -91,13 +83,6 @@ export async function getSubscriptionData() {
           limit: 10,
         })
         
-        console.log('Payment intents for lifetime customer:', paymentIntents.data.map(pi => ({
-          id: pi.id,
-          status: pi.status,
-          amount: pi.amount,
-          created: pi.created,
-          description: pi.description
-        })))
         
         // Get charges (alternative method for one-time payments)
         const charges = await stripe.charges.list({
@@ -105,14 +90,6 @@ export async function getSubscriptionData() {
           limit: 10,
         })
         
-        console.log('Charges for lifetime customer:', charges.data.map(charge => ({
-          id: charge.id,
-          status: charge.status,
-          amount: charge.amount,
-          created: charge.created,
-          description: charge.description,
-          receipt_url: charge.receipt_url
-        })))
         
         // Combine invoices and one-time payments
         const validInvoices = allInvoices.data.filter(invoice => 
@@ -186,10 +163,8 @@ export async function getSubscriptionData() {
         
         invoices = { data: allPayments }
         
-        console.log('Combined payment records for lifetime customer:', allPayments.length)
       }
       
-      console.log('localSubscription', createLifetimeSubscriptionData(localSubscription, invoices.data))
       return createLifetimeSubscriptionData(localSubscription, invoices.data)
     }
 
@@ -237,13 +212,6 @@ export async function getSubscriptionData() {
       limit: 10, // Get last 10 invoices
     })
     
-    console.log('All invoices for recurring customer:', allInvoices.data.map(inv => ({
-      id: inv.id,
-      status: inv.status,
-      amount_paid: inv.amount_paid,
-      created: inv.created
-    })))
-    
     const invoices = {
       data: allInvoices.data.filter(invoice => 
         invoice.status === 'paid' || 
@@ -262,9 +230,6 @@ export async function getSubscriptionData() {
       
       const productName = (price.product as Stripe.Product).name
       const subscriptionPlan = productName || 'Unknown Plan'
-      
-      console.log('Found active Stripe subscription', subscription.status)
-      console.log('SUBSCRIPTION PRICE', price)
       
       return {
         id: subscription.id,
@@ -304,7 +269,6 @@ export async function getSubscriptionData() {
     }
 
     // No active subscription found (canceled/expired subscriptions are ignored)
-    console.log('No active subscription found - user can subscribe again')
     return null
   } catch (error) {
     console.error('Error fetching subscription:', error)
@@ -372,7 +336,6 @@ export async function collectSubscriptionFeedback(
   feedback?: string
 ) {
   try {
-    console.log('collectSubscriptionFeedback', event, cancellationReason, feedback)
     const supabase = await createClient()
     
     // Get the current user

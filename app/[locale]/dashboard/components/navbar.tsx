@@ -58,7 +58,6 @@ const timezones = [
 
 export default function Navbar() {
   const  user = useUserStore(state => state.supabaseUser)
-  const  subscription = useUserStore(state => state.subscription)
   const t = useI18n()
   const changeLocale = useChangeLocale()
   const currentLocale = useCurrentLocale()
@@ -146,12 +145,7 @@ export default function Navbar() {
                 </PopoverContent>
               </Popover>
               <div className="mt-[-8px]">
-                <SubscriptionBadge 
-                  plan={subscription?.plan?.split(' ')[0] || null} 
-                  endDate={subscription?.endDate || null}
-                  trialEndsAt={subscription?.trialEndsAt || null}
-                  status={subscription?.status || ''}
-                />
+                <SubscriptionBadge />
               </div>
             </div>
           </div>

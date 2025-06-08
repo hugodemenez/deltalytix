@@ -111,6 +111,7 @@ export async function getTradesAction({noCache = false}: {noCache?: boolean} = {
 
     const subscriptionDetails = await getSubscriptionDetails()
     const isSubscribed = subscriptionDetails?.isActive || false
+
     if (noCache) {
       revalidateTag(`trades-${user.id}`)
     }

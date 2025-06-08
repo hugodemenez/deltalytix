@@ -65,6 +65,7 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { calculateStatistics, formatCalendarData } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import { deleteTagAction } from '@/server/tags';
+import { useRouter } from 'next/navigation';
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -364,6 +365,7 @@ export const DataProvider: React.FC<{
   children: React.ReactNode;
   isSharedView?: boolean;
 }> = ({ children, isSharedView = false }) => {
+  const router = useRouter()
   const params = useParams();
   const isMobile = useIsMobileDetection();
 
@@ -557,8 +559,9 @@ export const DataProvider: React.FC<{
 
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
-    const trades = await getTradesAction({noCache: true})
-    setTrades(trades)
+    await getTradesAction({noCache: true})
+    await getUserData({noCache: true})
+    router.refresh()
   }, [user?.id])
 
   // Update saveLayouts to handle shared views
