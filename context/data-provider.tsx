@@ -67,7 +67,7 @@ import { calculateStatistics, formatCalendarData } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import { deleteTagAction } from '@/server/tags';
 import { useRouter } from 'next/navigation';
-import { getCurrentLocale } from '@/locales/server';
+import { useCurrentLocale } from '@/locales/client';
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -523,6 +523,7 @@ export const DataProvider: React.FC<{
         setMoods(data.moodHistory);
         setEvents(data.financialEvents);
         setTickDetails(data.tickDetails);
+        setIsFirstConnection(data.userData?.isFirstConnection || false)
 
 
         // Calculate balanceToDate for each account 
@@ -564,7 +565,7 @@ export const DataProvider: React.FC<{
 
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
-    const locale = await getCurrentLocale()
+    const locale = useCurrentLocale()
     revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
     await getTradesAction()
     await getUserData()
