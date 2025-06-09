@@ -559,10 +559,6 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         // Update the selected account
         setSelectedAccountForTable(accountUpdate)
         
-        // Update accounts list
-        const updatedAccounts = accounts.map(acc => 
-          acc.number === selectedAccountForTable.number ? accountUpdate : acc
-        )
         
         setPendingChanges(null)
         

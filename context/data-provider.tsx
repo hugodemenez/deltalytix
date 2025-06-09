@@ -762,15 +762,17 @@ export const DataProvider: React.FC<{
       }
 
       // Update the account in the database
-      await setupAccountAction(newAccount)
+      const updatedAccount = await setupAccountAction(newAccount)
       // Update the account in the local state
       const updatedAccounts = accounts.map((account: Account) => {
-        if (account.number === newAccount.number) {
-          return { ...account, ...newAccount };
+        if (account.number === updatedAccount.number) {
+          return { ...account, ...updatedAccount };
         }
         return account;
       });
       setAccounts(updatedAccounts);
+      revalidateCache([`user-data-${user.id}`])
+      loadData()
     } catch (error) {
       console.error('Error updating account:', error)
       throw error

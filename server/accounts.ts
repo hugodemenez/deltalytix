@@ -185,36 +185,59 @@ export async function setupAccountAction(account: Account) {
     }
   })
 
-  if (existingAccount) {
-    return await prisma.account.update({
-      where: { id: existingAccount.id },
-      data: {
-        number: account.number,
-        propfirm: account.propfirm,
-        drawdownThreshold: account.drawdownThreshold,
-        profitTarget: account.profitTarget,
-        isPerformance: account.isPerformance,
-        payoutCount: account.payoutCount,
-        resetDate: account.resetDate,
-        user: {
-          connect: {
-            id: userId
-          }
+  const baseAccountData = {
+    number: account.number,
+    propfirm: account.propfirm,
+    drawdownThreshold: account.drawdownThreshold,
+    trailingDrawdown: account.trailingDrawdown,
+    trailingStopProfit: account.trailingStopProfit,
+    profitTarget: account.profitTarget,
+    startingBalance: account.startingBalance,
+    isPerformance: account.isPerformance,
+    payoutCount: account.payoutCount,
+    resetDate: account.resetDate,
+    consistencyPercentage: account.consistencyPercentage,
+    // Prop firm configuration fields
+    accountSize: account.accountSize,
+    accountSizeName: account.accountSizeName,
+    price: account.price,
+    priceWithPromo: account.priceWithPromo,
+    evaluation: account.evaluation,
+    minDays: account.minDays,
+    dailyLoss: account.dailyLoss,
+    rulesDailyLoss: account.rulesDailyLoss,
+    trailing: account.trailing,
+    tradingNewsAllowed: account.tradingNewsAllowed,
+    activationFees: account.activationFees,
+    isRecursively: account.isRecursively,
+    payoutBonus: account.payoutBonus,
+    profitSharing: account.profitSharing,
+    payoutPolicy: account.payoutPolicy,
+    balanceRequired: account.balanceRequired,
+    minTradingDaysForPayout: account.minTradingDaysForPayout,
+    minPayout: account.minPayout,
+    maxPayout: account.maxPayout,
+    maxFundedAccounts: account.maxFundedAccounts,
+    // Handle group relation
+    ...(account.groupId && {
+      group: {
+        connect: {
+          id: account.groupId
         }
       }
     })
   }
 
-  console.log('CREATING ACCOUNT', account)
+  if (existingAccount) {
+    return await prisma.account.update({
+      where: { id: existingAccount.id },
+      data: baseAccountData
+    })
+  }
+
   return await prisma.account.create({
     data: {
-      number: account.number,
-      propfirm: account.propfirm,
-      drawdownThreshold: account.drawdownThreshold,
-      profitTarget: account.profitTarget,
-      isPerformance: account.isPerformance,
-      payoutCount: account.payoutCount,
-      resetDate: account.resetDate,
+      ...baseAccountData,
       user: {
         connect: {
           id: userId
