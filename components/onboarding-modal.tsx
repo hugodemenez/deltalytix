@@ -8,8 +8,7 @@ import { useI18n, useCurrentLocale } from '@/locales/client'
 import { useUserStore } from '@/store/user-store'
 
 export default function OnboardingModal() {
-  const { setIsFirstConnection } = useData()
-  const isFirstConnection = useUserStore(state => state.user?.isFirstConnection)
+  const { isFirstConnection, changeIsFirstConnection } = useData()
   const t = useI18n()
   const locale = useCurrentLocale()
 
@@ -20,7 +19,7 @@ export default function OnboardingModal() {
 
   const handleClose = async () => {
     try {
-      setIsFirstConnection(false)
+      changeIsFirstConnection(false)
     } catch (error) {
       console.error('Failed to update onboarding status:', error)
     }

@@ -264,6 +264,8 @@ interface DataContextType {
   isLoading: boolean
   isMobile: boolean
   isSharedView: boolean
+  changeIsFirstConnection: (isFirstConnection: boolean) => void
+  isFirstConnection: boolean
   setIsFirstConnection: (isFirstConnection: boolean) => void
   sharedParams: SharedParams | null
   setSharedParams: React.Dispatch<React.SetStateAction<SharedParams | null>>
@@ -406,6 +408,7 @@ export const DataProvider: React.FC<{
   const [weekdayFilter, setWeekdayFilter] = useState<WeekdayFilter>({ day: null });
   const [hourFilter, setHourFilter] = useState<HourFilter>({ hour: null });
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] });
+  const [isFirstConnection, setIsFirstConnection] = useState(false);
 
   // Load data from the server
   const loadData = useCallback(async () => {
@@ -913,7 +916,7 @@ export const DataProvider: React.FC<{
     }
   }, [user?.id, isSharedView, accounts, setAccounts]);
 
-  const setIsFirstConnection = useCallback(async (isFirstConnection: boolean) => {
+  const changeIsFirstConnection = useCallback(async (isFirstConnection: boolean) => {
     if (!user?.id) return
     // Update the user in the database
     await prisma.user.update({
@@ -923,7 +926,7 @@ export const DataProvider: React.FC<{
       data: { isFirstConnection }
     })
     setIsFirstConnection(isFirstConnection)
-  }, [])
+  }, [user?.id, setIsFirstConnection, isFirstConnection])
 
   const updateTrades = useCallback(async (tradeIds: string[], update: Partial<PrismaTrade>) => {
     if (!user?.id) return 
@@ -980,6 +983,8 @@ export const DataProvider: React.FC<{
     sharedParams,
     setSharedParams,
     refreshTrades,
+    changeIsFirstConnection,
+    isFirstConnection,
     setIsFirstConnection,
 
     // Formatted trades and filters
