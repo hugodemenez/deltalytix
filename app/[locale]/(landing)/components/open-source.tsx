@@ -84,8 +84,6 @@ export default function GitHubRepoCard() {
 
   useEffect(() => {
     fetchGithubData();
-    const intervalId = setInterval(fetchGithubData, 30000); // Refresh every 30 seconds
-    return () => clearInterval(intervalId);
   }, [fetchGithubData]);
 
   const CardSkeleton = () => (
@@ -110,11 +108,26 @@ export default function GitHubRepoCard() {
     </Card>
   );
 
-  // Add this function to ensure we always have valid data for the chart
+    // Add this function to ensure we always have valid data for the chart
   const getValidChartData = (stats: GithubStats['stats'] | undefined) => {
     if (!stats || stats.length === 0) {
-      // Return a default dataset if stats are undefined or empty
-      return [{ value: 0, date: new Date() }];
+      // Return a default 12-week dataset (like the original)
+      const now = new Date();
+      const fallbackStats = [];
+      
+      for (let i = 11; i >= 0; i--) {
+        const weekDate = new Date(now);
+        weekDate.setDate(now.getDate() - (i * 7));
+        weekDate.setDate(weekDate.getDate() - weekDate.getDay()); // Start of week
+        weekDate.setHours(0, 0, 0, 0);
+        
+        fallbackStats.push({ 
+          value: i === 6 ? 1 : 0, // Small spike in the middle
+          date: new Date(weekDate.getTime()) 
+        });
+      }
+      
+      return fallbackStats;
     }
     return stats;
   };

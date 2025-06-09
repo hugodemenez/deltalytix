@@ -7,30 +7,51 @@ export function ChartSSR({
   dots?: boolean;
   data: { value: number; date: Date }[];
 }) {
+  // Ensure we have valid data
+  if (!data || data.length < 2) {
+    return null;
+  }
+
+  // Ensure all dates are Date objects and sort by date
+  const sortedData = [...data]
+    .map(d => ({
+      ...d,
+      date: d.date instanceof Date ? d.date : new Date(d.date)
+    }))
+    .filter(d => !isNaN(d.date.getTime())) // Remove invalid dates
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  // Check if we still have valid data after filtering
+  if (sortedData.length < 2) {
+    return null;
+  }
+  
   const xScale = d3
     .scaleTime()
-    .domain([data[0]!.date, data[data.length - 1]!.date])
+    .domain(d3.extent(sortedData, d => d.date) as [Date, Date])
     .range([0, 100]);
+    
+  const maxValue = d3.max(sortedData, d => d.value) ?? 0;
   const yScale = d3
     .scaleLinear()
-    .domain([0, d3.max(data.map((d) => d.value)) ?? 0])
+    .domain([0, Math.max(maxValue, 1)]) // Ensure minimum domain of 1 for better visualization
     .range([100, 0]);
 
   const line = d3
-    .line<(typeof data)[number]>()
-    .curve(d3.curveMonotoneX)
+    .line<(typeof sortedData)[number]>()
+    .curve(d3.curveCatmullRom.alpha(0.5)) // Smoother curve for daily data
     .x((d) => xScale(d.date))
     .y((d) => yScale(d.value));
 
   const area = d3
-    .area<(typeof data)[number]>()
-    .curve(d3.curveMonotoneX)
+    .area<(typeof sortedData)[number]>()
+    .curve(d3.curveCatmullRom.alpha(0.5)) // Match the line curve
     .x((d) => xScale(d.date))
     .y0(yScale(0))
     .y1((d) => yScale(d.value));
 
-  const pathLine = line(data);
-  const pathArea = area(data);
+  const pathLine = line(sortedData);
+  const pathArea = area(sortedData);
 
   if (!pathLine) {
     return null;
@@ -76,21 +97,6 @@ export function ChartSSR({
             strokeWidth="4"
             vectorEffect="non-scaling-stroke"
           />
-
-          {/* Circles */}
-          {dots &&
-            data.map((d) => (
-              <path
-                key={d.date.toString()}
-                d={`M ${xScale(d.date)} ${yScale(d.value)} l 0.0001 0`}
-                vectorEffect="non-scaling-stroke"
-                strokeWidth="8"
-                strokeLinecap="round"
-                fill="none"
-                stroke="currentColor"
-                className="text-gray-400"
-              />
-            ))}
         </svg>
       </svg>
     </div>
