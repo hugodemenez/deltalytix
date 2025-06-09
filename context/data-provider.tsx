@@ -22,7 +22,8 @@ import { SharedParams } from '@/server/shared';
 import {
   getDashboardLayout,
   getUserData,
-  loadSharedData
+  loadSharedData,
+  updateIsFirstConnectionAction
 } from '@/server/user-data';
 import {
   getTradesAction,
@@ -394,6 +395,7 @@ export const DataProvider: React.FC<{
   const trades = useTradesStore(state => state.trades);
   const setTrades = useTradesStore(state => state.setTrades);
   const dashboardLayout = useUserStore(state => state.dashboardLayout);
+    const locale = useCurrentLocale()
 
   // Local states
   const [isLoading, setIsLoading] = useState(() => false);
@@ -565,10 +567,7 @@ export const DataProvider: React.FC<{
 
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
-    const locale = useCurrentLocale()
     revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
-    await getTradesAction()
-    await getUserData()
     router.refresh()
   }, [user?.id])
 
@@ -924,14 +923,9 @@ export const DataProvider: React.FC<{
   const changeIsFirstConnection = useCallback(async (isFirstConnection: boolean) => {
     if (!user?.id) return
     // Update the user in the database
-    await prisma.user.update({
-      where: {
-        id: user.id
-      },
-      data: { isFirstConnection }
-    })
     setIsFirstConnection(isFirstConnection)
-  }, [user?.id, setIsFirstConnection, isFirstConnection])
+    await updateIsFirstConnectionAction(isFirstConnection)
+  }, [user?.id, setIsFirstConnection])
 
   const updateTrades = useCallback(async (tradeIds: string[], update: Partial<PrismaTrade>) => {
     if (!user?.id) return 

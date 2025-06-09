@@ -5,7 +5,7 @@ import { TickDetails, User, Tag, DashboardLayout, FinancialEvent, Mood, Trade, S
 import { GroupWithAccounts } from './groups'
 import { getCurrentLocale } from '@/locales/server'
 import { prisma } from '@/lib/prisma'
-import { getUserId } from './auth'
+import { createClient, getUserId } from './auth'
 import { Account, Group } from '@/context/data-provider'
 import { revalidateTag, unstable_cache } from 'next/cache'
 
@@ -131,7 +131,7 @@ export async function getUserData(): Promise<{
     },
     [`user-data-${userId}-${locale}`],
     {
-      tags: [`user-data-${userId}-${locale}`],
+      tags: [`user-data-${userId}-${locale}`, `user-data-${userId}`],
       revalidate: 86400 // 24 hours in seconds
     }
   )()
@@ -144,4 +144,18 @@ export async function getDashboardLayout(userId: string): Promise<DashboardLayou
       userId: userId
     }
   })
+}
+
+export async function updateIsFirstConnectionAction(isFirstConnection: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const userId = user?.id
+  if (!userId) {
+    return 0
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { isFirstConnection }
+  })
+  revalidateTag(`user-data-${userId}`)
 }

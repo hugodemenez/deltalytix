@@ -81,14 +81,16 @@ export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
 }
 
 // Create cache function dynamically for each user/subscription combination
-function getCachedTrades(userId: string, isSubscribed: boolean): Promise<Trade[]> {
+function getCachedTrades(userId: string, isSubscribed: boolean, page: number, chunkSize: number): Promise<Trade[]> {
   return unstable_cache(
     async () => {
       console.log(`[Cache MISS] Fetching trades for user ${userId}, subscribed: ${isSubscribed}`)
       
       const query: any = {
         where: { userId },
-        orderBy: { entryDate: 'desc' }
+        orderBy: { entryDate: 'desc' },
+        skip: (page - 1) * chunkSize,
+        take: chunkSize
       }
 
       if (!isSubscribed) {
@@ -100,7 +102,7 @@ function getCachedTrades(userId: string, isSubscribed: boolean): Promise<Trade[]
       return await prisma.trade.findMany(query)
     },
     // Static string array - this is the cache key
-    [`trades-${userId}-${isSubscribed}`],
+    [`trades-${userId}-${isSubscribed}-${page}`],
     { 
       tags: [`trades-${userId}`], // User-specific tag for revalidation
       revalidate: 3600 // Revalidate every hour (3600 seconds)
@@ -121,7 +123,27 @@ export async function getTradesAction(): Promise<Trade[]> {
 
 
     // Get cached trades
-    const trades = await getCachedTrades(user.id, isSubscribed)
+    // Per page
+    const query: any = {
+      where: { 
+        userId: user.id,
+       }
+    }
+    if (!isSubscribed) {
+      const oneWeekAgo = startOfDay(new Date())
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+      query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+    }
+    const count = await prisma.trade.count(query)
+    // Split pages by chunks of 1000
+    const chunkSize = 1000
+    const totalPages = Math.ceil(count / chunkSize)
+    const trades: Trade[] = []
+    for (let page = 1; page <= totalPages; page++) {
+      const pageTrades = await getCachedTrades(user.id, isSubscribed, page, chunkSize)
+      trades.push(...pageTrades)
+    }
+    console.log(`[getTrades] Found ${count} trades fetched ${trades.length}`)
 
     // Tell the server that the trades have changed
     // Next page reload will fetch the new trades instead of using the cached data
