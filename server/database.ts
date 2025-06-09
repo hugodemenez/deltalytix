@@ -20,6 +20,13 @@ interface TradeResponse {
   details?: unknown
 }
 
+export async function revalidateCache(tags: string[]) {
+  tags.forEach(tag => {
+    console.log(`Revalidating tag ${tag}`)
+    revalidateTag(tag)
+  })
+}
+
 export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
     if (!Array.isArray(data) || data.length === 0) {
       return {
@@ -102,7 +109,7 @@ function getCachedTrades(userId: string, isSubscribed: boolean): Promise<Trade[]
 }
 
 
-export async function getTradesAction({noCache = false}: {noCache?: boolean} = {}): Promise<Trade[]> {
+export async function getTradesAction(): Promise<Trade[]> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
@@ -112,9 +119,6 @@ export async function getTradesAction({noCache = false}: {noCache?: boolean} = {
     const subscriptionDetails = await getSubscriptionDetails()
     const isSubscribed = subscriptionDetails?.isActive || false
 
-    if (noCache) {
-      revalidateTag(`trades-${user.id}`)
-    }
 
     // Get cached trades
     const trades = await getCachedTrades(user.id, isSubscribed)

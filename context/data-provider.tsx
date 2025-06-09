@@ -27,6 +27,7 @@ import {
 import {
   getTradesAction,
   groupTradesAction,
+  revalidateCache,
   saveDashboardLayoutAction,
   ungroupTradesAction,
   updateTradesAction
@@ -66,6 +67,7 @@ import { calculateStatistics, formatCalendarData } from '@/lib/utils';
 import { useParams } from 'next/navigation';
 import { deleteTagAction } from '@/server/tags';
 import { useRouter } from 'next/navigation';
+import { getCurrentLocale } from '@/locales/server';
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -562,8 +564,10 @@ export const DataProvider: React.FC<{
 
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
-    await getTradesAction({noCache: true})
-    await getUserData({noCache: true})
+    const locale = await getCurrentLocale()
+    revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
+    await getTradesAction()
+    await getUserData()
     router.refresh()
   }, [user?.id])
 

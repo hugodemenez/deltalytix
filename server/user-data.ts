@@ -53,7 +53,7 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
 } 
 
 
-export async function getUserData({noCache = false}: {noCache?: boolean} = {}): Promise<{
+export async function getUserData(): Promise<{
   userData: User | null;
   subscription: Subscription | null;
   tickDetails: TickDetails[];
@@ -66,10 +66,6 @@ export async function getUserData({noCache = false}: {noCache?: boolean} = {}): 
   const userId = await getUserId()
   const locale = await getCurrentLocale()
 
-  if (noCache) {
-    console.log(`[Cache MISS] Revalidating user data for user ${userId}`)
-    revalidateTag(`user-data-${userId}-${locale}`)
-  }
 
   return unstable_cache(
     async () => {
