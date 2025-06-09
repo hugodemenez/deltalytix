@@ -14,7 +14,9 @@ export default {
             daysBeforeReset: ' days before reset',
             consistency: 'Consistency',
             highestDailyProfit: 'Highest Daily Profit',
-            maxAllowedDailyProfit: 'Max Allowed Daily Profit'
+            maxAllowedDailyProfit: 'Max Allowed Daily Profit',
+            totalPnL: 'Total P&L',
+            totalTrades: 'Total Trades'
         },
         ungrouped: 'Ungrouped',
         tabs: {
@@ -164,7 +166,8 @@ export default {
             unprofitable: 'Unprofitable - No consistency check',
             insufficient: 'Insufficient data',
             consistent: 'Consistent trading',
-            inconsistent: 'Inconsistent trading'
+            inconsistent: 'Inconsistent trading',
+            needsConfiguration: 'Needs Configuration'
         },
         toast: {
             setupSuccess: 'Account setup successful',
@@ -242,6 +245,9 @@ export default {
             configurator: 'Configurator'
         },
         common: {
+            configure: 'Configure',
+            save: 'Save',
+            saving: 'Saving...',
             cancel: 'Cancel',
             delete: 'Delete',
             deleting: 'Deleting...'

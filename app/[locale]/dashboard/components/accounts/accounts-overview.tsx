@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save } from "lucide-react"
+import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -30,8 +30,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Account } from '@/context/data-provider'
-import { useUserStore } from '../../../../../store/user-store'
-import { useTradesStore } from '../../../../../store/trades-store'
+import { useUserStore } from '@/store/user-store'
+import { useTradesStore } from '@/store/trades-store'
 
 interface ConsistencyMetrics {
   accountNumber: string
@@ -77,6 +77,13 @@ interface PayoutDialogProps {
   }
   onSubmit: (payout: Payout) => Promise<void>
   onDelete?: () => Promise<void>
+}
+
+interface UnconfiguredAccountCardProps {
+  accountNumber: string
+  trades: any[]
+  onClick: () => void
+  size: WidgetSize
 }
 
 const localeMap: { [key: string]: Locale } = {
@@ -263,36 +270,46 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [isSaving, setIsSaving] = useState(false)
   const [pendingChanges, setPendingChanges] = useState<Partial<Account> | null>(null)
 
-  const filteredAccounts = useMemo(() => {
+  const { filteredAccounts, unconfiguredAccounts } = useMemo(() => {
     const uniqueAccounts = new Set(trades.map(trade => trade.accountNumber))
     // Find the hidden group
     const hiddenGroup = groups.find(g => g.name === "Hidden Accounts")
     const hiddenAccountNumbers = hiddenGroup ? new Set(hiddenGroup.accounts.map(a => a.number)) : new Set()
 
-    return Array.from(uniqueAccounts)
+    const configuredAccounts: Account[] = []
+    const unconfiguredAccounts: string[] = []
+
+    Array.from(uniqueAccounts)
       .filter(accountNumber =>
         (accountNumbers.length === 0 || accountNumbers.includes(accountNumber)) &&
         !hiddenAccountNumbers.has(accountNumber)
       )
-      .map(accountNumber => {
+      .forEach(accountNumber => {
         const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
         const dbAccount = accounts.find(acc => acc.number === accountNumber)
 
-        // Filter trades based on reset date if it exists
-        const relevantTrades = dbAccount?.resetDate
-          ? accountTrades.filter(t => new Date(t.entryDate) >= new Date(dbAccount.resetDate!))
-          : accountTrades
+        if (dbAccount) {
+          // Filter trades based on reset date if it exists
+          const relevantTrades = dbAccount.resetDate
+            ? accountTrades.filter(t => new Date(t.entryDate) >= new Date(dbAccount.resetDate!))
+            : accountTrades
 
-        const balance = relevantTrades.reduce((total, trade) => total + trade.pnl - (trade.commission || 0), 0)
-        const totalPayouts = dbAccount?.payouts?.reduce((sum: number, payout: { status: string, amount: number }) =>
-          sum + (payout.status === 'PAID' ? payout.amount : 0), 0) || 0
+          const balance = relevantTrades.reduce((total, trade) => total + trade.pnl - (trade.commission || 0), 0)
+          const totalPayouts = dbAccount.payouts?.reduce((sum: number, payout: { status: string, amount: number }) =>
+            sum + (payout.status === 'PAID' ? payout.amount : 0), 0) || 0
 
-        return {
-          ...dbAccount,
-          balanceToDate: balance - totalPayouts,
-          payouts: dbAccount?.payouts ?? []
+          configuredAccounts.push({
+            ...dbAccount,
+            balanceToDate: balance - totalPayouts,
+            payouts: dbAccount.payouts ?? []
+          })
+        } else {
+          // Account exists in trades but not configured in database
+          unconfiguredAccounts.push(accountNumber)
         }
       })
+
+    return { filteredAccounts: configuredAccounts, unconfiguredAccounts }
   }, [trades, accounts, accountNumbers, groups])
 
   const consistencyMetrics = useMemo(() => {
@@ -609,6 +626,60 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
             </div>
           </div>
         </CardHeader>
+        
+        {/* Unconfigured accounts banner */}
+        {unconfiguredAccounts.length > 0 && (
+          <div className="border-b border-orange-200/30 bg-orange-50/40 dark:border-orange-700/30 dark:bg-orange-950/30">
+            <div className="px-4 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+                  <span className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                    {t('propFirm.status.needsConfiguration')}:
+                  </span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto">
+                  {unconfiguredAccounts.map((accountNumber, index) => (
+                    <div 
+                      key={accountNumber}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-orange-100 dark:bg-orange-900/50"
+                    >
+                      <span className="text-xs font-medium text-orange-800 dark:text-orange-200">
+                        {accountNumber}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 hover:bg-orange-200 dark:hover:bg-orange-800/50"
+                        onClick={() => {
+                          // Create a minimal account object for configuration
+                          const tempAccount = {
+                            id: '',
+                            userId: user?.id || '',
+                            number: accountNumber,
+                            propfirm: '',
+                            startingBalance: 0,
+                            profitTarget: 0,
+                            drawdownThreshold: 0,
+                            consistencyPercentage: 30,
+                            resetDate: null,
+                            payouts: [],
+                            balanceToDate: 0
+                          }
+                          // Use type assertion to work around the type issues
+                          setSelectedAccountForTable(tempAccount as any)
+                        }}
+                      >
+                        <Settings className="h-3 w-3 text-orange-600 dark:text-orange-400" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <CardContent className="flex-1 overflow-hidden">
           <div
             className="flex-1 overflow-y-auto h-full"
@@ -686,6 +757,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
 
                 {/* Show ungrouped accounts */}
                 {(() => {
+
                   const groupedAccountNumbers = new Set(
                     groups.flatMap(group => group.accounts.map(a => a.number))
                   );

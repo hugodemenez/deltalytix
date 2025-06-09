@@ -205,6 +205,7 @@ export async function setupAccountAction(account: Account) {
     })
   }
 
+  console.log('CREATING ACCOUNT', account)
   return await prisma.account.create({
     data: {
       number: account.number,

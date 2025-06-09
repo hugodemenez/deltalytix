@@ -6,17 +6,19 @@ export default {
             unnamedAccount: 'Compte sans nom',
             balance: 'Solde',
             target: 'Objectif',
-            drawdown: 'Drawdown',
+            drawdown: 'Perte maximale',
             remainingLoss: '${amount} restant',
-            drawdownBreached: 'Drawdown dépassé',
+            drawdownBreached: 'Perte maximale dépassée',
             maxLoss: 'Perte max : ${amount}',
             needsConfiguration: 'Le compte doit être configuré',
-            daysBeforeReset: ' jours avant réinitialisation',
+            daysBeforeReset: ' jours avant remise à zéro',
             consistency: 'Cohérence',
-            highestDailyProfit: 'Plus Haut Profit Journalier',
-            maxAllowedDailyProfit: 'Profit Journalier Maximum Autorisé'
+            highestDailyProfit: 'Plus haut profit journalier',
+            maxAllowedDailyProfit: 'Profit journalier maximum autorisé',
+            totalPnL: 'P&L Total',
+            totalTrades: 'Total Trades'
         },
-        ungrouped: 'Non regroupé',
+        ungrouped: 'Non groupé',
         tabs: {
             overview: 'Aperçu',
             consistency: 'Cohérence'
@@ -164,7 +166,8 @@ export default {
             unprofitable: 'Non rentable - Pas de vérification de cohérence',
             insufficient: 'Données insuffisantes',
             consistent: 'Trading cohérent',
-            inconsistent: 'Trading incohérent'
+            inconsistent: 'Trading incohérent',
+            needsConfiguration: 'Nécessite une configuration'
         },
         toast: {
             setupSuccess: 'Configuration du compte réussie',
@@ -242,6 +245,9 @@ export default {
             configurator: 'Configuration'
         },
         common: {
+            configure: 'Configurer',
+            save: 'Sauvegarder',
+            saving: 'Sauvegarde...',
             cancel: 'Annuler',
             delete: 'Supprimer',
             deleting: 'Suppression...'

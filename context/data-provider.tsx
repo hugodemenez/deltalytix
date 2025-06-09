@@ -462,6 +462,7 @@ export const DataProvider: React.FC<{
 
           updates();
         }
+        setIsLoading(false)
         return;
       }
 
@@ -470,6 +471,7 @@ export const DataProvider: React.FC<{
 
       if (!user?.id) {
         await signOut();
+        setIsLoading(false)
         return;
       }
 
@@ -547,7 +549,7 @@ export const DataProvider: React.FC<{
     } finally {
       setIsLoading(false);
     }
-  }, [isSharedView, params?.slug, timezone, supabaseUser]);
+  }, [isSharedView, params?.slug, timezone, supabaseUser, isLoading]);
 
   // Load data on mount and when isSharedView changes
   useEffect(() => {
@@ -568,7 +570,7 @@ export const DataProvider: React.FC<{
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
     revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
-    router.refresh()
+    loadData()
   }, [user?.id])
 
   // Update saveLayouts to handle shared views
@@ -750,7 +752,14 @@ export const DataProvider: React.FC<{
       // Get the current account to preserve other properties
       const { accounts } = useUserStore.getState()
       const currentAccount = accounts.find(acc => acc.number === newAccount.number) as Account
-      if (!currentAccount) return
+      // If the account is not found, create it
+      if (!currentAccount) {
+        const createdAccount = await setupAccountAction(newAccount)
+        setAccounts([...accounts, createdAccount])
+        revalidateCache([`user-data-${user.id}`])
+        loadData()
+        return
+      }
 
       // Update the account in the database
       await setupAccountAction(newAccount)
