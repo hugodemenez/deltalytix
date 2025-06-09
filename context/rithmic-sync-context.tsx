@@ -574,6 +574,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
   }, [resetProcessingState])
 
   const connect = useCallback((url: string, token: string, accounts: string[], startDate: string) => {
+    console.log('WebSocket connect called with:', {
+      url,
+      token: token ? '***' : 'null',
+      accounts,
+      startDate
+    })
+
     if (ws) {
       console.log('Closing existing connection before creating new one')
       ws.close()
@@ -609,6 +616,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       isComplete: false
     })
 
+    console.log('Creating WebSocket connection to:', url)
     const newWs = new WebSocket(url)
 
     // Add connection timeout
@@ -1112,15 +1120,22 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
   // Add calculateStartDate function
   const calculateStartDate = useCallback((selectedAccounts: string[]): string => {
-    const trades = useTradesStore((state) => state.trades)
     // Filter trades for selected accounts
     const accountTrades = trades.filter(trade => selectedAccounts.includes(trade.accountNumber))
+
+    console.log('calculateStartDate called:', {
+      selectedAccounts,
+      totalTrades: trades.length,
+      accountTrades: accountTrades.length
+    })
 
     if (accountTrades.length === 0) {
       // If no trades found, return date 90 days ago
       const date = new Date()
       date.setDate(date.getDate() - 91)
-      return date.toISOString().slice(0, 10).replace(/-/g, '')
+      const startDate = date.toISOString().slice(0, 10).replace(/-/g, '')
+      console.log('No trades found, using default start date:', startDate)
+      return startDate
     }
 
     // Find the most recent trade date for each account
@@ -1137,7 +1152,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     oldestRecentDate.setDate(oldestRecentDate.getDate() + 1)
 
     // Format as YYYYMMDD
-    return oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+    const startDate = oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
+    console.log('Calculated start date from trades:', startDate)
+    return startDate
   }, [])
 
   // Cleanup on unmount
