@@ -464,27 +464,7 @@ export default function WidgetCanvas() {
     
     // Determine default size based on widget type
     let effectiveSize = size
-    // Calendar widget is always large, trade table is always extra large
-    if (type === 'calendarWidget') {
-      effectiveSize = 'large'
-    } else if (type === 'tradeTableReview') {
-      effectiveSize = 'extra-large'
-    }
-    // Statistics widgets are always tiny
-    else if (['averagePositionTime', 'cumulativePnl', 
-         'longShortPerformance', 'tradePerformance', 'winningStreak'].includes(type)) {
-      effectiveSize = 'tiny'
-    }
-    // Chat and news widgets are always medium
-    else if (['chatWidget', 'newsWidget'].includes(type)) {
-      effectiveSize = 'medium'
-    }
-    // Charts default to medium
-    else if (type.includes('Chart') || type === 'tickDistribution' || 
-             type === 'commissionsPnl') {
-      effectiveSize = 'medium'
-    }
-    
+
     const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
     const grid = sizeToGrid(effectiveSize, activeLayout === 'mobile')
     

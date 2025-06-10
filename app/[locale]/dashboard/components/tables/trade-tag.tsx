@@ -22,7 +22,6 @@ import {
 import { Tag, Trade } from '@prisma/client'
 import { useUserStore } from '@/store/user-store'
 import { createTagAction } from '@/server/tags'
-import { useTradesStore } from '@/store/trades-store'
 
 interface TradeTagProps {
   trade: Trade
@@ -32,7 +31,6 @@ interface TradeTagProps {
 export function TradeTag({ trade, tradeIds }: TradeTagProps) {
   const t = useI18n()
   const { tagFilter, setTagFilter, updateTrades } = useData()
-  const trades = useTradesStore(state => state.trades)
   const tags = useUserStore(state => state.tags)
   const setTags = useUserStore(state => state.setTags)
   const [isOpen, setIsOpen] = useState(false)

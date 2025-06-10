@@ -576,21 +576,6 @@ export const DataProvider: React.FC<{
     loadData()
   }, [user?.id])
 
-  // Update saveLayouts to handle shared views
-  const saveLayouts = useCallback(async (newLayouts: PrismaDashboardLayout) => {
-    if (!useUserStore.getState().user?.id || isSharedView) return; // Don't save layouts in shared view
-    try {
-      // Ensure the new layouts have both desktop and mobile arrays
-      // Ensure we have a user id
-      setDashboardLayout(newLayouts);
-      await saveDashboardLayoutAction(newLayouts);
-
-    } catch (error) {
-      console.error('Error saving layouts:', error);
-      setDashboardLayout(defaultLayouts);
-    }
-  }, [isSharedView]);
-
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
     if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
@@ -977,18 +962,7 @@ export const DataProvider: React.FC<{
     setDashboardLayout(layout)
     await saveDashboardLayoutAction(layout)
     revalidateCache([`user-data-${user.id}`])
-    loadData()
   }, [user?.id, setDashboardLayout])
-
-  const saveTag = useCallback(async (tag: Tag) => {
-    if (!user?.id) return
-    
-  }, [user?.id])
-
-  const deleteTag = useCallback(async (tagId: string) => {
-    if (!user?.id) return
-    await deleteTagAction(tagId)
-  }, [user?.id])
 
   const contextValue: DataContextType = {
     isPlusUser,
