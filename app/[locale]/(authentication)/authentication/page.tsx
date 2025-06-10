@@ -17,7 +17,7 @@ export default function AuthenticationPage() {
       <div className="flex relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
         <div className="relative hidden h-full flex-col bg-gray-900 p-10 text-white dark:border-r lg:flex">
           <div className="absolute inset-0 overflow-hidden">
-          <Image src={"/auth-background.jpeg"} width={928} height={1232} className="opacity-35" alt="Auth abstract image background"></Image>
+          <Image src={"/auth-background.jpeg"} width={928} height={1232} className="opacity-35 w-full" alt="Auth abstract image background"></Image>
           </div>
           <div className="relative z-20 flex items-center text-lg font-medium">
             <Link href="/" className="flex items-center gap-2">

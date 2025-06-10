@@ -159,7 +159,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const locale = useCurrentLocale();
     const t = useI18n()
     const [isStarted, setIsStarted] = useState(false)
-    const { messages: storedMessages, setMessages: setStoredMessages, addMessage: addStoredMessage, clearMessages: clearStoredMessages } = useChatStore()
+    const { messages: storedMessages, setMessages: setStoredMessages } = useChatStore()
     const [isLoadingMessages, setIsLoadingMessages] = useState(true)
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const [showResumeButton, setShowResumeButton] = useState(false)
@@ -179,7 +179,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                     // Find current day in moods
                     const currentDay = format(new Date(), 'yyyy-MM-dd')
                     const currentMood = moods.find(mood => format(mood.day, 'yyyy-MM-dd') === currentDay)
-                    if (currentMood) {
+                    if (currentMood && currentMood.conversation) {
                         try {
                             const parsedConversation = JSON.parse(currentMood.conversation as string)
                             // Ensure each message has the required properties for Message type
@@ -218,9 +218,21 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
             initialMessages: storedMessages,
             onFinish: async (message: Message) => {
                 if (!user?.id) return
-                const mood = await saveChat(user.id, [...storedMessages, message])
-                if (mood) {
-                    setMoods([...moods, mood])
+                const updatedMood = await saveChat(user.id, [...storedMessages, message])
+                if (updatedMood) {
+                    // Find current day in moods
+                    const currentDay = format(new Date(), 'yyyy-MM-dd')
+                    const currentMoodIndex = moods.findIndex(mood => format(mood.day, 'yyyy-MM-dd') === currentDay)
+                    
+                    if (currentMoodIndex !== -1) {
+                        // Replace existing mood with updated one
+                        const newMoods = [...moods]
+                        newMoods[currentMoodIndex] = updatedMood
+                        setMoods(newMoods)
+                    } else {
+                        // Add new mood if none exists for today
+                        setMoods([...moods, updatedMood])
+                    }
                 }
                 setStoredMessages([...storedMessages, message])
             },
