@@ -485,6 +485,9 @@ export const DataProvider: React.FC<{
         if (dashboardLayoutResponse) {
           setDashboardLayout(dashboardLayoutResponse)
         }
+        else{
+          setDashboardLayout(defaultLayouts)
+        }
       }
 
       // Step 2: Fetch trades (with caching server side)
@@ -973,6 +976,8 @@ export const DataProvider: React.FC<{
     if (!user?.id) return
     setDashboardLayout(layout)
     await saveDashboardLayoutAction(layout)
+    revalidateCache([`user-data-${user.id}`])
+    loadData()
   }, [user?.id, setDashboardLayout])
 
   const saveTag = useCallback(async (tag: Tag) => {
