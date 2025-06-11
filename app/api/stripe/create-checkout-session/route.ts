@@ -88,6 +88,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         ],
         success_url: `${websiteURL}dashboard?success=true`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
+        allow_promotion_codes: true,
     };
 
     if (isLifetimePlan) {
