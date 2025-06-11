@@ -302,12 +302,12 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     await executePlanSwitch(pendingLookupKey)
   }
 
-  // Promotional pricing structure
+  // New pricing structure
   const pricing = {
     yearly: 120,
     quarterly: 45,
     monthly: 19.99,
-    lifetime: 200
+    lifetime: 250
   }
 
   // Previous pricing (for line-through display)
