@@ -458,6 +458,7 @@ export async function switchSubscriptionPlan(newLookupKey: string) {
         id: currentSubscriptionItem.id,
         price: newPrice.id,
       }],
+      discounts: [], // Remove any existing coupon/discount when switching plans
       proration_behavior: 'create_prorations', // This handles prorating charges
     })
 
