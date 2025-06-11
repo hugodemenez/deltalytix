@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import type React from "react"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { useRef } from "react"
@@ -26,11 +27,44 @@ export function BotMessage({ children, status }: { children: React.ReactNode, st
     typeof children === "string" ? (
       <div className="prose prose-sm dark:prose-invert max-w-none">
         <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
           components={{
             p: ({ children }) => (
               <p className="inline">
                 {children}
               </p>
+            ),
+            table: ({ children }) => (
+              <div className="overflow-x-auto my-4">
+                <table className="min-w-full border border-border rounded-lg">
+                  {children}
+                </table>
+              </div>
+            ),
+            thead: ({ children }) => (
+              <thead className="bg-muted/50">
+                {children}
+              </thead>
+            ),
+            tbody: ({ children }) => (
+              <tbody className="divide-y divide-border">
+                {children}
+              </tbody>
+            ),
+            tr: ({ children }) => (
+              <tr className="hover:bg-muted/25 transition-colors">
+                {children}
+              </tr>
+            ),
+            th: ({ children }) => (
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground border-b border-border">
+                {children}
+              </th>
+            ),
+            td: ({ children }) => (
+              <td className="px-4 py-3 text-sm text-muted-foreground">
+                {children}
+              </td>
             ),
           }}
         >

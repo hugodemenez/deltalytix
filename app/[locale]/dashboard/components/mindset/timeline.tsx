@@ -93,6 +93,17 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
     return compareDesc(dateA, dateB)
   })
 
+  // Check if there's an entry for today
+  const todayEntry = sortedMoodHistory.find(mood => {
+    if (!mood?.day) return false
+    const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
+    return isToday(moodDate)
+  })
+
+  const handleTodayClick = () => {
+    onSelectDate(new Date())
+  }
+
   return (
     <>
       <div className={cn(
@@ -100,17 +111,42 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
         "w-[180px] sm:w-[200px] md:w-[220px]",
         className
       )}>
-        {!sortedMoodHistory?.length ? (
-          <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-            <Calendar className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">
-              {t('mindset.noEntries')}
-            </p>
-          </div>
-        ) : (
-          <div className="flex-1 overflow-y-auto">
-            <div className="space-y-1 p-2">
-              {sortedMoodHistory.map((mood) => {
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-1 p-2">
+            {/* Always show Today entry if no entry exists for today */}
+            {!todayEntry && (
+              <div className="group relative">
+                <Button
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start gap-2 h-auto p-2",
+                    "hover:bg-accent/50 transition-colors border-l-2 border-dashed border-muted-foreground/30",
+                    isToday(selectedDate) && "bg-accent"
+                  )}
+                  onClick={handleTodayClick}
+                >
+                  <div className="flex flex-col items-center justify-center gap-1 min-w-[40px]">
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                  </div>
+                  <div className="flex-1 text-left min-w-0 flex items-center">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {t('mindset.today')}
+                    </p>
+                  </div>
+                </Button>
+              </div>
+            )}
+
+            {/* Show existing entries or empty state */}
+            {!sortedMoodHistory?.length && todayEntry === undefined ? (
+              <div className="flex flex-col items-center justify-center p-4 text-center">
+                <Calendar className="h-6 w-6 text-muted-foreground mb-2" />
+                <p className="text-xs text-muted-foreground">
+                  {t('mindset.noEntries')}
+                </p>
+              </div>
+            ) : (
+              sortedMoodHistory.map((mood) => {
                 if (!mood?.day) return null
                 const moodDate = mood.day instanceof Date ? mood.day : new Date(mood.day)
                 const isSelected = moodDate.toDateString() === selectedDate.toDateString()
@@ -139,7 +175,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                       </div>
                       <div className="flex-1 text-left min-w-0 flex items-center">
                         <p className="text-sm font-medium truncate">
-                          {format(moodDate, 'EEE', { locale: dateLocale }).slice(0, 3)} {format(moodDate, 'd', { locale: dateLocale })} {format(moodDate, 'MMM', { locale: dateLocale }).slice(0, 3)}
+                          {isCurrentDay ? t('mindset.today') : `${format(moodDate, 'EEE', { locale: dateLocale }).slice(0, 3)} ${format(moodDate, 'd', { locale: dateLocale })} ${format(moodDate, 'MMM', { locale: dateLocale }).slice(0, 3)}`}
                         </p>
                       </div>
                     </Button>
@@ -157,10 +193,10 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                     </Button>
                   </div>
                 )
-              })}
-            </div>
+              })
+            )}
           </div>
-        )}
+        </div>
         
         <div className="p-2 border-t">
           <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>

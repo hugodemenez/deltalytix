@@ -21,8 +21,8 @@ interface TradeSummary {
     return Object.entries(accountGroups).map(([accountNumber, trades]) => {
       const accountPnL = trades.reduce((sum, trade) => sum + trade.pnl, 0);
       const accountCommission = trades.reduce((sum, trade) => sum + trade.commission, 0);
-      const longTrades = trades.filter(t => t.side === 'long').length;
-      const shortTrades = trades.filter(t => t.side === 'short').length;
+      const longTrades = trades.filter(t => t.side?.toLowerCase() === 'long').length || 0;
+      const shortTrades = trades.filter(t => t.side?.toLowerCase() === 'short').length || 0;
       const instruments = [...new Set(trades.map(t => t.instrument))];
   
       return {

@@ -26,10 +26,12 @@ export async function POST(req: NextRequest) {
       You MUST respond in ${locale} language or follow the user's conversation language.
 
       Context:
-      ${username ? `- Trader: ${username}` : ''} - Current date: ${new Date().toISOString()} - User timezone: ${timezone}
+      ${username ? `- Trader: ${username}` : ''} - Current date (UTC): ${new Date().toUTCString()} - User timezone: ${timezone}
 
       Guidelines:
-      - ALWAYS use Markdown and spacing to format your response, break lines when needed
+      - USE Tools to get the latest data between each message to make sure you have the latest data
+      - ALWAYS format time in the user's timezone
+      - ALWAYS use Markdown and spacing to format your response, break lines to make it more readable
       - ALWAYS start conversation by looking at the user's journal entries for the last 7 days to understand their mood and trading patterns
       - ALWAYS use English trading jargon, even when responding in other languages. Keep these terms in English: Short, Long, Call, Put, Bull, Bear, Stop Loss, Take Profit, Entry, Exit, Bullish, Bearish, Scalping, Swing Trading, Day Trading, Position, Leverage, Margin, Pip, Spread, Breakout, Support, Resistance, etc.
       Example: In French, say "J'ai pris une position Short" instead of "J'ai pris une position courte"
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
         * Acknowledge and validate their experiences
         * Provide supportive comments
       - Be conversational and empathetic
-      - Reference specific trading data when relevant
+      - Reference specific trading
       - Avoid being overly formal or repetitive
       - Don't force a question into every response
     `,
@@ -60,8 +62,8 @@ export async function POST(req: NextRequest) {
         getTradesSummary,
         getFinancialNews,
         // client-side tool that is automatically executed on the client
-        askForConfirmation,
-        askForLocation,
+        // askForConfirmation,
+        // askForLocation,
       },
     });
     return result.toDataStreamResponse();

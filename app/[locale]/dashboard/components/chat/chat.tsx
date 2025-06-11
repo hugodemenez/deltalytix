@@ -18,6 +18,8 @@ import { loadChat, saveChat } from "./actions/chat"
 import { useUserStore } from "../../../../../store/user-store"
 import { useChatStore } from "../../../../../store/chat-store"
 import { format } from "date-fns"
+import { DotStream } from 'ldrs/react'
+import 'ldrs/react/DotStream.css'
 
 // Types
 interface ChatWidgetProps {
@@ -124,6 +126,22 @@ const ThinkingMessage = () => (
         <span>Thinking...</span>
     </div>
 )
+
+const FirstMessageLoading = () => {
+    const t = useI18n()
+    return (
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <DotStream
+                size="60"
+                speed="2.5"
+                color="hsl(var(--primary))"
+            />
+            <p className="text-muted-foreground text-sm">
+                {t('chat.loading.firstMessage')}
+            </p>
+        </div>
+    )
+}
 
 const ToolCallMessage = ({ toolName, args, state }: { toolName: string; args: any; state: string }) => {
     const isLoading = state === "call" || state === "partial-call"
@@ -314,6 +332,16 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                             Retry
                                         </Button>
                                     </div>
+                                </motion.div>
+                            )}
+
+                            {isStarted && messages.length === 1 && (status === "streaming" || status === "submitted") && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                >
+                                    <FirstMessageLoading />
                                 </motion.div>
                             )}
 

@@ -27,7 +27,7 @@ function useCurrency() {
     // Eurozone countries as per official EU list
     const eurozoneCountries = [
       'AT', 'BE', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT',
-      'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES'
+      'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES', 'CH'
     ]
 
 

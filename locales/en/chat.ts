@@ -16,6 +16,9 @@ export default {
             startButton: "Start Conversation",
             resumeScroll: "Resume Scroll"
         },
+        loading: {
+            firstMessage: "Setting up your AI agent..."
+        },
         copy: "Copy"
     },
 } as const;

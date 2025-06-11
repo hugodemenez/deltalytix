@@ -16,6 +16,9 @@ export default {
             startButton: "Démarrer la Conversation",
             resumeScroll: "Reprendre le défilement"
         },
+        loading: {
+            firstMessage: "Configuration de votre agent IA..."
+        },
         copy: "Copier"
     },
 } as const;
