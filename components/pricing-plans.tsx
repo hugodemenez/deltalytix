@@ -18,6 +18,8 @@ import {
 import { useToast } from "@/hooks/use-toast"
 
 // Currency detection hook
+// Handles special case for French overseas territories (DOM/TOM) that use EUR currency
+// but must be billed in USD due to Stripe pricing configuration limitations
 function useCurrency() {
   const [currency, setCurrency] = useState<'USD' | 'EUR'>('USD')
   const [symbol, setSymbol] = useState('$')
@@ -27,7 +29,9 @@ function useCurrency() {
     // Eurozone countries as per official EU list
     const eurozoneCountries = [
       'AT', 'BE', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT',
-      'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES', 'CH'
+      'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES', 'CH',
+      // French overseas territories
+      'GP', 'MQ', 'GF', 'RE', 'YT', 'PM', 'BL', 'MF', 'NC', 'PF', 'WF', 'TF'
     ]
 
 
