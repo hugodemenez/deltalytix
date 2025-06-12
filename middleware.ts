@@ -57,32 +57,16 @@ export async function middleware(request: NextRequest) {
   // Skip middleware for static assets
   if (pathname.includes('.')) return NextResponse.next()
   const { response, user } = await updateSession(request, I18nMiddleware(request))
-  const nextUrl = request.nextUrl
-  const pathnameLocale = nextUrl.pathname.split('/', 2)?.[1]
-
-  // If / then redirect as fast as possible
-  // Don't go through the whole middleware check
-  if (pathname === '/') {
-    return response
-  }
-
-  // Remove the locale from the pathname
-  const pathnameWithoutLocale = pathnameLocale
-    ? nextUrl.pathname.slice(pathnameLocale.length + 1)
-    : nextUrl.pathname
-
-  // Create a new URL without the locale in the pathname
-  const newUrl = new URL(pathnameWithoutLocale || '/', request.url)
 
   // Maintenance mode check
   if (MAINTENANCE_MODE &&
-    !newUrl.pathname.includes('/maintenance') &&
-    newUrl.pathname.includes('/dashboard')) {
+    !pathname.includes('/maintenance') &&
+    pathname.includes('/dashboard')) {
     return NextResponse.redirect(new URL('/maintenance', request.url))
   }
 
   // Admin route check
-  if (newUrl.pathname.includes('/admin')) {
+  if (pathname.includes('/admin')) {
     if (!user) {
       return NextResponse.redirect(new URL('/authentication', request.url))
     }
@@ -95,9 +79,9 @@ export async function middleware(request: NextRequest) {
   // Authentication checks
   if (!user) {
     // Not authenticated - redirect to auth except for public routes
-    const isPublicRoute = !newUrl.pathname.includes('/dashboard')
+    const isPublicRoute = !pathname.includes('/dashboard')
     if (!isPublicRoute) {
-      const encodedSearchParams = `${newUrl.pathname.substring(1)}${newUrl.search}`
+      const encodedSearchParams = `${pathname.substring(1)}${request.nextUrl.search}`
       const authUrl = new URL('/authentication', request.url)
 
       if (encodedSearchParams) {
@@ -108,7 +92,7 @@ export async function middleware(request: NextRequest) {
     }
   } else {
     // Authenticated - redirect from auth to dashboard
-    if (newUrl.pathname.includes('/authentication')) {
+    if (pathname.includes('/authentication')) {
       return NextResponse.redirect(new URL('/dashboard', request.url))
     }
   }

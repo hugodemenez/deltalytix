@@ -41,8 +41,6 @@ interface GithubData {
 // Cached function to fetch all GitHub data in a single operation
 const getCachedGithubData = unstable_cache(
   async (): Promise<GithubData> => {
-    console.log(`[Cache MISS] Fetching GitHub data for ${REPO_OWNER}/${REPO_NAME}`)
-
         try {
       // Fetch repository data and recent commits to get the date range
       const [repoResponse, latestCommitsResponse] = await Promise.all([
@@ -169,8 +167,6 @@ const getCachedGithubData = unstable_cache(
           },
         },
       }
-      console.log(githubData)
-
       return githubData
     } catch (error) {
       console.error('Error fetching GitHub data:', error)
