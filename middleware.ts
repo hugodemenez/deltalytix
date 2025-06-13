@@ -9,8 +9,8 @@ const MAINTENANCE_MODE = false
 
 const I18nMiddleware = createI18nMiddleware({
   locales: ['en', 'fr'],
-  defaultLocale: 'fr',
-  urlMappingStrategy: 'rewrite'
+  defaultLocale: 'en',
+  urlMappingStrategy: 'rewriteDefault'
 })
 
 async function updateSession(
