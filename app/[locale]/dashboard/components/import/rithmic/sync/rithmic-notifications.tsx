@@ -388,7 +388,6 @@ export function WebSocketNotifications({ isMockMode = false }: WebSocketNotifica
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{t('notification.days')}: {progress.current} / {progress.total}</span>
-                        <span>{t('notification.orders')}: {progress.ordersProcessed}</span>
                       </div>
                     </div>
                   )}
