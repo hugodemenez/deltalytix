@@ -33,18 +33,6 @@ import { Account } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
 
-interface ConsistencyMetrics {
-  accountNumber: string
-  totalProfit: number
-  maxAllowedDailyProfit: number | null
-  highestProfitDay: number
-  isConsistent: boolean
-  hasProfitableData: boolean
-  isConfigured: boolean
-  dailyPnL: { [key: string]: number }
-  totalProfitableDays: number
-}
-
 interface DailyMetric {
   date: Date
   pnl: number
@@ -79,12 +67,7 @@ interface PayoutDialogProps {
   onDelete?: () => Promise<void>
 }
 
-interface UnconfiguredAccountCardProps {
-  accountNumber: string
-  trades: any[]
-  onClick: () => void
-  size: WidgetSize
-}
+
 
 const localeMap: { [key: string]: Locale } = {
   en: enUS,
@@ -269,6 +252,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [canDeleteAccount, setCanDeleteAccount] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [pendingChanges, setPendingChanges] = useState<Partial<Account> | null>(null)
+
+  // Enable delete button when an account is selected
+  useEffect(() => {
+    setCanDeleteAccount(!!selectedAccountForTable)
+  }, [selectedAccountForTable])
 
   const { filteredAccounts, unconfiguredAccounts } = useMemo(() => {
     const uniqueAccounts = new Set(trades.map(trade => trade.accountNumber))
@@ -559,7 +547,6 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         // Update the selected account
         setSelectedAccountForTable(accountUpdate)
         
-        
         setPendingChanges(null)
         
         toast({
@@ -579,14 +566,6 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       }
     }
 
-    const isSaveDisabled = !pendingChanges || 
-      Object.keys(pendingChanges).length === 0 || 
-      (pendingChanges?.startingBalance !== undefined && pendingChanges?.startingBalance <= 0) ||
-      (pendingChanges?.profitTarget !== undefined && pendingChanges?.profitTarget <= 0) ||
-      (pendingChanges?.drawdownThreshold !== undefined && pendingChanges?.drawdownThreshold <= 0) ||
-      (typeof pendingChanges?.consistencyPercentage === 'number' && pendingChanges.consistencyPercentage < 0) ||
-      (pendingChanges?.trailingDrawdown && typeof pendingChanges?.trailingStopProfit === 'number' && pendingChanges.trailingStopProfit <= 0) ||
-      isSaving
 
     return (
       <Card className="w-full h-full flex flex-col">
@@ -933,15 +912,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                     <TabsContent value="configurator" className="mt-4">
                       <AccountConfigurator
                         account={selectedAccountForTable}
-                        onUpdate={(updatedAccount) => {
-                          setSelectedAccountForTable(updatedAccount)
-                        }}
-                        onDelete={() => {
-                          setSelectedAccountForTable(null)
-                        }}
-                        onAccountsUpdate={() => {}}
-                        handleSave={handleSave}
-                        pendingChanges={pendingChanges}
+                        pendingChanges={pendingChanges as Partial<Account> | null}
                         setPendingChanges={setPendingChanges}
                         isSaving={isSaving}
                       />

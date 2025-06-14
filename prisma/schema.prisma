@@ -155,10 +155,21 @@ model Account {
   minPayout         Float?    // Minimum payout amount
   maxPayout         String?   // Maximum payout policy
   maxFundedAccounts Int?      // Maximum number of funded accounts
+  
+  // Promotional pricing fields
+  promoType         PromoType? // Type of promotional pricing
+  promoPercentage   Float?     // Discount percentage for percentage-based promos
+  
+  // Payment & Renewal fields
+  nextPaymentDate   DateTime?           // Next payment due date
+  paymentFrequency  PaymentFrequency?   // How often payments are due
+  autoRenewal       Boolean   @default(false) // Whether to automatically renew
+  renewalNotice     Int?      // Days before payment to send renewal notice
 
   @@unique([number, userId])
   @@index([number])
   @@index([groupId])
+  @@index([nextPaymentDate]) // Index for efficient cron job queries
   @@schema("public")
 }
 
@@ -167,7 +178,7 @@ model Payout {
   amount        Float
   date          DateTime
   accountNumber String    
-  account       Account   @relation(fields: [accountId], references: [id])
+  account       Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   accountId     String
   createdAt     DateTime  @default(now())
   status        String    @default("PENDING")
@@ -364,6 +375,23 @@ enum VoteType {
   @@schema("public")
 }
 
+enum PaymentFrequency {
+  MONTHLY
+  QUARTERLY
+  BIANNUAL
+  ANNUAL
+  CUSTOM
+
+  @@schema("public")
+}
+
+enum PromoType {
+  DIRECT
+  PERCENTAGE
+
+  @@schema("public")
+}
+
 model Order {
   id                String   @id @default(uuid())
   accountId         String
@@ -381,5 +409,43 @@ model Order {
 
   @@index([accountId])
   @@index([userId])
+  @@schema("public")
+}
+
+model TradeAnalytics {
+  id                String   @id @default(uuid())
+  tradeId           String   @unique
+  mae               Float    @default(0) // Maximum Adverse Excursion
+  mfe               Float    @default(0) // Maximum Favorable Excursion
+  entryPriceFromData Float?  // Actual entry price from market data
+  priceDifference   Float?   // Difference between reported and actual entry price
+  riskRewardRatio   Float?   // Risk/Reward ratio
+  efficiency        Float?   // How much of the favorable move was captured
+  dataSource        String   @default("DATABENTO") // Source of the data
+  computedAt        DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tradeId])
+  @@index([computedAt])
+  @@schema("public")
+}
+
+model HistoricalData {
+  id            String   @id @default(uuid())
+  symbol        String   // Original symbol (e.g., "ES", "NQ")
+  databentSymbol String  // Databento symbol (e.g., "ES.FUT.CME")
+  timestamp     DateTime
+  open          Float
+  high          Float
+  low           Float
+  close         Float
+  volume        Int
+  dataSource    String   @default("DATABENTO")
+  createdAt     DateTime @default(now())
+
+  @@unique([symbol, databentSymbol, timestamp])
+  @@index([symbol])
+  @@index([databentSymbol])
+  @@index([timestamp])
   @@schema("public")
 }

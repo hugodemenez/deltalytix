@@ -13,33 +13,20 @@ import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useParams } from 'next/navigation'
 import { enUS, fr } from 'date-fns/locale'
-import { toast } from "@/hooks/use-toast"
-import { setupAccountAction } from '@/server/accounts'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
 import { propFirms } from './config'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Account as PrismaAccount } from '@prisma/client' 
-import { useUserStore } from '../../../../../store/user-store'
-import { useData } from '@/context/data-provider'
+import { Account } from '@/context/data-provider'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 
-interface Account extends PrismaAccount {
-  promoType?: 'direct' | 'percentage'
-  promoPercentage?: number
-}
-
 interface AccountConfiguratorProps {
   account: Account
-  onUpdate: (updatedAccount: Account) => void
-  onDelete: () => void
-  onAccountsUpdate: (accounts: Account[]) => void
-  handleSave: () => Promise<void>
   pendingChanges: Partial<Account> | null
   setPendingChanges: (changes: Partial<Account> | null) => void
-  isSaving: boolean
+  isSaving: boolean,
+
 }
 
 const localeMap: { [key: string]: Locale } = {
@@ -49,10 +36,6 @@ const localeMap: { [key: string]: Locale } = {
 
 export function AccountConfigurator({ 
   account, 
-  onUpdate, 
-  onDelete, 
-  onAccountsUpdate, 
-  handleSave,
   pendingChanges,
   setPendingChanges,
   isSaving
@@ -60,6 +43,7 @@ export function AccountConfigurator({
   const t = useI18n()
   const params = useParams()
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [paymentCalendarOpen, setPaymentCalendarOpen] = useState(false)
   const [selectedAccountSize, setSelectedAccountSize] = useState<string>("")
 
   const handleTemplateChange = (firmKey: string, sizeKey: string) => {
@@ -239,11 +223,11 @@ export function AccountConfigurator({
                 <Label>{t('propFirm.accountSize')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Input
-                      type="number"
-                      value={pendingChanges?.startingBalance ?? account.startingBalance ?? 0}
-                      onChange={(e) => handleInputChange('startingBalance', parseFloat(e.target.value))}
-                    />
+                                    <Input
+                  type="number"
+                  value={pendingChanges?.startingBalance ?? account.startingBalance ?? ''}
+                  onChange={(e) => handleInputChange('startingBalance', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                />
                   </PopoverTrigger>
                   <PopoverContent className="w-80">
                     <div className="grid grid-cols-2 gap-2">
@@ -266,16 +250,16 @@ export function AccountConfigurator({
                 <Label>{t('propFirm.target')}</Label>
                 <Input
                   type="number"
-                  value={pendingChanges?.profitTarget ?? account.profitTarget ?? 0}
-                  onChange={(e) => handleInputChange('profitTarget', parseFloat(e.target.value))}
+                  value={pendingChanges?.profitTarget ?? account.profitTarget ?? ''}
+                  onChange={(e) => handleInputChange('profitTarget', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>{t('propFirm.coherence')}</Label>
                 <Input
                   type="number"
-                  value={pendingChanges?.consistencyPercentage ?? account.consistencyPercentage ?? 30}
-                  onChange={(e) => handleInputChange('consistencyPercentage', parseFloat(e.target.value))}
+                  value={pendingChanges?.consistencyPercentage ?? account.consistencyPercentage ?? ''}
+                  onChange={(e) => handleInputChange('consistencyPercentage', e.target.value === '' ? 30 : parseFloat(e.target.value) || 30)}
                 />
               </div>
               <div className="flex flex-col gap-2">
@@ -306,8 +290,8 @@ export function AccountConfigurator({
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.drawdown')}</Label>
                   <Input
                     type="number"
-                    value={pendingChanges?.drawdownThreshold ?? account.drawdownThreshold ?? 0}
-                    onChange={(e) => handleInputChange('drawdownThreshold', parseFloat(e.target.value))}
+                    value={pendingChanges?.drawdownThreshold ?? account.drawdownThreshold ?? ''}
+                    onChange={(e) => handleInputChange('drawdownThreshold', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   />
                 </div>
 
@@ -328,8 +312,8 @@ export function AccountConfigurator({
                     <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.trailingStopProfit')}</Label>
                     <Input
                       type="number"
-                      value={pendingChanges?.trailingStopProfit ?? account.trailingStopProfit ?? 0}
-                      onChange={(e) => handleInputChange('trailingStopProfit', parseFloat(e.target.value))}
+                      value={pendingChanges?.trailingStopProfit ?? account.trailingStopProfit ?? ''}
+                      onChange={(e) => handleInputChange('trailingStopProfit', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                       placeholder="Enter amount to lock drawdown"
                     />
                   </div>
@@ -359,8 +343,8 @@ export function AccountConfigurator({
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.dailyLoss')}</Label>
                   <Input
                     type="number"
-                    value={pendingChanges?.dailyLoss ?? account.dailyLoss ?? 0}
-                    onChange={(e) => handleInputChange('dailyLoss', parseFloat(e.target.value))}
+                    value={pendingChanges?.dailyLoss ?? account.dailyLoss ?? ''}
+                    onChange={(e) => handleInputChange('dailyLoss', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                   />
                 </div>
 
@@ -384,122 +368,153 @@ export function AccountConfigurator({
         <AccordionItem value="pricing-payout">
           <AccordionTrigger>{t('propFirm.configurator.sections.pricingPayout')}</AccordionTrigger>
           <AccordionContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
               {/* Price Section */}
               <div className="flex flex-col gap-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Pricing</h4>
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.basePrice')}</Label>
                   <Input
                     type="number"
-                    value={pendingChanges?.price ?? account.price ?? 0}
-                    onChange={(e) => {
-                      const newPrice = parseFloat(e.target.value);
-                      handleInputChange('price', newPrice);
-                      handleInputChange('priceWithPromo', newPrice);
-                    }}
-                    placeholder="Enter base price"
+                    value={pendingChanges?.price ?? account.price ?? ''}
+                    onChange={(e) => handleInputChange('price', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                    placeholder="Enter price"
                   />
                 </div>
+              </div>
 
+              {/* Payment & Renewal Section */}
+              <div className="flex flex-col gap-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Payment & Renewal</h4>
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.promo')}</Label>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="hasPromo"
-                        checked={pendingChanges?.promoType !== undefined || account.promoType !== undefined}
-                        onCheckedChange={(checked) => {
-                          if (!checked) {
-                            handleInputChange('priceWithPromo', 0);
-                            handleInputChange('promoType', undefined);
-                            handleInputChange('promoPercentage', 0);
-                          } else {
-                            const basePrice = pendingChanges?.price ?? account.price ?? 0;
-                            handleInputChange('priceWithPromo', basePrice);
-                            handleInputChange('promoType', 'direct' as const);
-                            handleInputChange('promoPercentage', 0);
-                          }
-                        }}
-                      />
-                      <Label htmlFor="hasPromo" className="cursor-pointer">{t('propFirm.configurator.fields.hasPromo')}</Label>
-                    </div>
-                  </div>
-
-                  {(pendingChanges?.promoType !== undefined || account.promoType !== undefined) && (
-                    <div className="flex flex-col gap-2 mt-2">
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={pendingChanges?.promoType ?? account.promoType ?? 'direct'}
-                          onValueChange={(value: 'direct' | 'percentage') => {
-                            const basePrice = pendingChanges?.price ?? account.price ?? 0;
-                            if (!basePrice) return;
-                            
-                            if (value === 'percentage') {
-                              const currentPromoPrice = pendingChanges?.priceWithPromo ?? account.priceWithPromo ?? 0;
-                              const percentage = ((basePrice - currentPromoPrice) / basePrice) * 100;
-                              handleInputChange('promoType', value);
-                              handleInputChange('promoPercentage', percentage);
-                            } else {
-                              const currentPercentage = pendingChanges?.promoPercentage ?? account.promoPercentage ?? 0;
-                              const directPrice = basePrice * (1 - currentPercentage / 100);
-                              handleInputChange('promoType', value);
-                              handleInputChange('priceWithPromo', directPrice);
-                            }
-                          }}
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.nextPaymentDate')}</Label>
+                  <Dialog open={paymentCalendarOpen} onOpenChange={setPaymentCalendarOpen}>
+                    <DialogTrigger asChild>
+                      <div className="relative w-full">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal pr-10",
+                            !pendingChanges?.nextPaymentDate && !account.nextPaymentDate && "text-muted-foreground"
+                          )}
                         >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder={t('propFirm.configurator.fields.promoType')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="direct">{t('propFirm.configurator.fields.directPrice')}</SelectItem>
-                            <SelectItem value="percentage">{t('propFirm.configurator.fields.percentage')}</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {pendingChanges?.nextPaymentDate || account.nextPaymentDate ? (
+                            format(pendingChanges?.nextPaymentDate || account.nextPaymentDate!, 'PPP', { locale: localeMap[params.locale as string] })
+                          ) : (
+                            <span>No payment date set</span>
+                          )}
+                        </Button>
+                        {(pendingChanges?.nextPaymentDate || account.nextPaymentDate) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-full hover:bg-transparent"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleInputChange('nextPaymentDate', undefined);
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
-
-                      {(pendingChanges?.promoType ?? account.promoType ?? 'direct') === 'direct' ? (
-                        <Input
-                          type="number"
-                          value={pendingChanges?.priceWithPromo ?? account.priceWithPromo ?? 0}
-                          onChange={(e) => handleInputChange('priceWithPromo', parseFloat(e.target.value))}
-                          placeholder="Enter promo price"
-                        />
-                      ) : (
-                        <Input
-                          type="number"
-                          value={pendingChanges?.promoPercentage ?? account.promoPercentage ?? 0}
-                          onChange={(e) => {
-                            const percentage = parseFloat(e.target.value);
-                            const basePrice = pendingChanges?.price ?? account.price ?? 0;
-                            const promoPrice = basePrice * (1 - percentage / 100);
-                            handleInputChange('promoPercentage', percentage);
-                            handleInputChange('priceWithPromo', promoPrice);
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                      <DialogHeader>
+                        <DialogTitle>{t('propFirm.configurator.fields.nextPaymentDate')}</DialogTitle>
+                        <DialogDescription>
+                          Select the next payment date for this account. This will automatically update based on your payment frequency after each renewal notice.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-6">
+                        <Calendar
+                          mode="single"
+                          numberOfMonths={2}
+                          showOutsideDays={true}
+                          fixedWeeks={true}
+                          selected={pendingChanges?.nextPaymentDate || account.nextPaymentDate || undefined}
+                          onSelect={(date) => {
+                            handleInputChange('nextPaymentDate', date || undefined);
+                            setPaymentCalendarOpen(false);
                           }}
-                          placeholder="Enter discount percentage"
+                          initialFocus
+                          locale={localeMap[params.locale as string]}
+                          className="mx-auto"
                         />
-                      )}
-                    </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                  {(pendingChanges?.paymentFrequency || account.paymentFrequency) && 
+                   (pendingChanges?.paymentFrequency || account.paymentFrequency) !== 'CUSTOM' && (
+                    <p className="text-xs text-muted-foreground">
+                      💡 This date will automatically advance based on your {(pendingChanges?.paymentFrequency || account.paymentFrequency)?.toLowerCase()} frequency after each renewal notice.
+                    </p>
+                  )}
+                  {(pendingChanges?.paymentFrequency || account.paymentFrequency) === 'CUSTOM' && (
+                    <p className="text-xs text-orange-600">
+                      ⚠️ Custom frequency requires manual date updates
+                    </p>
                   )}
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.activationFees')}</Label>
-                  <Input
-                    type="number"
-                    value={pendingChanges?.activationFees ?? account.activationFees ?? 0}
-                    onChange={(e) => handleInputChange('activationFees', parseFloat(e.target.value))}
-                  />
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.paymentFrequency')}</Label>
+                  <Select
+                    value={pendingChanges?.paymentFrequency ?? account.paymentFrequency ?? 'MONTHLY'}
+                    onValueChange={(value) => handleInputChange('paymentFrequency', value as 'MONTHLY' | 'QUARTERLY' | 'BIANNUAL' | 'ANNUAL' | 'CUSTOM')}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment frequency" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MONTHLY">{t('propFirm.configurator.paymentFrequencies.monthly')}</SelectItem>
+                      <SelectItem value="QUARTERLY">{t('propFirm.configurator.paymentFrequencies.quarterly')}</SelectItem>
+                      <SelectItem value="BIANNUAL">{t('propFirm.configurator.paymentFrequencies.biannual')}</SelectItem>
+                      <SelectItem value="ANNUAL">{t('propFirm.configurator.paymentFrequencies.annual')}</SelectItem>
+                      <SelectItem value="CUSTOM">{t('propFirm.configurator.paymentFrequencies.custom')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.renewalNotification')}</Label>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="renewalNotification"
+                      checked={pendingChanges?.autoRenewal ?? account.autoRenewal ?? false}
+                      onCheckedChange={(checked) => {
+                        // Combine both updates into a single state change
+                        const newChanges: Partial<Account> = {
+                          ...pendingChanges,
+                          autoRenewal: checked,
+                          ...(checked && { renewalNotice: 3 })
+                        }
+                        setPendingChanges(newChanges)
+                      }}
+                    />
+                    <Label htmlFor="renewalNotification" className="cursor-pointer">{t('propFirm.configurator.fields.enableRenewalNotification')}</Label>
+                  </div>
+                  {(pendingChanges?.autoRenewal ?? account.autoRenewal) && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {t('propFirm.configurator.fields.renewalNoticeInfo')}
+                    </p>
+                  )}
                 </div>
               </div>
 
               {/* Payout Section */}
               <div className="flex flex-col gap-4">
+                <h4 className="font-medium text-sm text-muted-foreground">Payout</h4>
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.minTradingDays')}</Label>
                   <Input
                     type="number"
-                    value={pendingChanges?.minTradingDaysForPayout ?? account.minTradingDaysForPayout ?? 0}
-                    onChange={(e) => handleInputChange('minTradingDaysForPayout', parseInt(e.target.value))}
+                    value={pendingChanges?.minTradingDaysForPayout ?? account.minTradingDaysForPayout ?? ''}
+                    onChange={(e) => handleInputChange('minTradingDaysForPayout', e.target.value === '' ? 0 : parseInt(e.target.value) || 0)}
                   />
                 </div>
               </div>

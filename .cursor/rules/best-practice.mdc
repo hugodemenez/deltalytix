@@ -1,6 +1,6 @@
 ---
-description:
-globs:
+description: Create typesafe and accessible components
+globs: 
 alwaysApply: false
 ---
 You are an AI assistant created to be helpful, harmless, and honest.

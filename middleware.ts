@@ -10,7 +10,7 @@ const MAINTENANCE_MODE = false
 const I18nMiddleware = createI18nMiddleware({
   locales: ['en', 'fr'],
   defaultLocale: 'en',
-  urlMappingStrategy: 'rewriteDefault'
+  urlMappingStrategy: 'rewrite'
 })
 
 async function updateSession(
@@ -138,8 +138,8 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Exclude static assets and API routes from middleware processing
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',
+    '/((?!api|_next|favicon.ico|robots.txt|sitemap.xml|opengraph-image|apple-touch-icon.png).*)',
   ],
-}
+  locale: false,
+};

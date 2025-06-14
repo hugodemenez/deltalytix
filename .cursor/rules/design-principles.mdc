@@ -1,7 +1,7 @@
 ---
-description: 
+description: Design principles regarding UX
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # OpenAI-Inspired Design Principles
 
