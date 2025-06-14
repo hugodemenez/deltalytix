@@ -192,6 +192,7 @@ export async function setupAccountAction(account: Account) {
     payouts, 
     groupId,
     balanceToDate,
+    group,
     ...baseAccountData 
   } = account
 

@@ -144,9 +144,10 @@ export interface Group extends PrismaGroup {
 
 
 // Update Account type to include payouts and balanceToDate
-export interface Account extends Omit<PrismaAccount, 'payouts'> {
+export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
   payouts?: PrismaPayout[]
   balanceToDate?: number
+  group?: PrismaGroup
 }
 
 // Add after the interfaces and before the UserDataContext
