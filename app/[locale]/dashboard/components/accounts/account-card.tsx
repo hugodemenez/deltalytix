@@ -136,7 +136,7 @@ export function AccountCard({ account, trades, metrics, onClick, size = 'large' 
                         Math.floor((new Date(account.nextPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 5 ? 'text-red-500 blink' : 'text-muted-foreground'
                       )}>
                         {Math.floor((new Date(account.nextPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}
-                        {t('propFirm.card.daysBeforeReset')}
+                        {t('propFirm.card.daysBeforeNextPayment')}
                       </div>
                     )
                   }
