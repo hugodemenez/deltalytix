@@ -106,7 +106,6 @@ export async function GET(req: Request) {
           select: {
             id: true,
             email: true,
-            firstName: true,
             language: true
           }
         }
@@ -161,7 +160,7 @@ export async function GET(req: Request) {
           try {
             const daysUntilRenewal = account.renewalNotice!
             const nextPaymentDate = format(account.nextPaymentDate!, 'PPP', { locale })
-            const accountName = account.accountName || `Account ${account.accountNumber || account.id}`
+            const accountName = account.number || `Account ${account.id}`
             const propFirmName = account.propfirm || 'Unknown Prop Firm'
             const frequency = account.paymentFrequency || 'monthly'
             
@@ -174,7 +173,7 @@ export async function GET(req: Request) {
                 ? `Renouvellement prochain - ${accountName}`
                 : `Upcoming Renewal - ${accountName}`,
               react: RenewalNoticeEmail({
-                userFirstName: user.firstName || user.email.split('@')[0],
+                userFirstName: user.email.split('@')[0],
                 userEmail: userEmail,
                 accountName: accountName,
                 propFirmName: propFirmName,
@@ -200,7 +199,7 @@ export async function GET(req: Request) {
               
               // Update the nextPaymentDate to the next cycle (except for custom frequency)
               try {
-                if (account.paymentFrequency !== 'CUSTOM' && account.paymentFrequency !== 'custom' && account.nextPaymentDate) {
+                if (account.paymentFrequency !== 'CUSTOM' && account.nextPaymentDate) {
                   const newNextPaymentDate = calculateNextPaymentDate(account.nextPaymentDate, account.paymentFrequency || 'MONTHLY')
                   
                   await prisma.account.update({
@@ -212,28 +211,6 @@ export async function GET(req: Request) {
                 }
               } catch (updateError) {
                 console.warn(`Failed to update nextPaymentDate for account ${account.id}:`, updateError)
-              }
-              
-              // Log the notification in the database (optional)
-              try {
-                await prisma.notificationLog.create({
-                  data: {
-                    userId: user.id,
-                    accountId: account.id,
-                    type: 'RENEWAL_NOTICE',
-                    status: 'SENT',
-                    details: {
-                      daysUntilRenewal,
-                      nextPaymentDate: account.nextPaymentDate,
-                      emailId: data?.id
-                    }
-                  }
-                }).catch(() => {
-                  // If notification log table doesn't exist, just continue
-                  console.log('Could not log notification (table may not exist)')
-                })
-              } catch (logError) {
-                console.warn('Failed to log notification:', logError)
               }
             }
           } catch (accountError) {
