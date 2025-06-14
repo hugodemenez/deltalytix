@@ -24,11 +24,7 @@ interface TradesState {
   trades: PrismaTrade[]
   setTrades: (trades: PrismaTrade[]) => void
 }
-export const useTradesStore = createSelectors(create<TradesState>()(
-  persist((set) => ({
-    trades: [],
-    setTrades: (trades: PrismaTrade[]) => set({ trades }),
-  }), {
-    name: 'trades-storage',
-  })
-)) as UseBoundStore<StoreApi<TradesState>>
+export const useTradesStore = createSelectors(create<TradesState>()((set) => ({
+  trades: [],
+  setTrades: (trades: PrismaTrade[]) => set({ trades }),
+}))) as UseBoundStore<StoreApi<TradesState>>
