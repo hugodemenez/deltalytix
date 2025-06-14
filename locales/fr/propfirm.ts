@@ -11,7 +11,7 @@ export default {
             drawdownBreached: 'Perte maximale dépassée',
             maxLoss: 'Perte max : ${amount}',
             needsConfiguration: 'Le compte doit être configuré',
-            daysBeforeReset: ' jours avant remise à zéro',
+            daysBeforeNextPayment: ' jours avant le prochain paiement',
             consistency: 'Cohérence',
             highestDailyProfit: 'Plus haut profit journalier',
             maxAllowedDailyProfit: 'Profit journalier maximum autorisé',

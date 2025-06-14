@@ -11,7 +11,7 @@ export default {
             drawdownBreached: 'Drawdown breached',
             maxLoss: 'Max Loss: ${amount}',
             needsConfiguration: 'Account needs to be configured',
-            daysBeforeReset: ' days before reset',
+            daysBeforeNextPayment: ' days before next payment',
             consistency: 'Consistency',
             highestDailyProfit: 'Highest Daily Profit',
             maxAllowedDailyProfit: 'Max Allowed Daily Profit',
