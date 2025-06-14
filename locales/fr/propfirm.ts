@@ -39,7 +39,9 @@ export default {
                 basicInfo: 'Informations de Base du Compte',
                 drawdownRules: 'Drawdown & Règles de Trading',
                 pricingPayout: 'Prix & Paiements',
-                resetDate: 'Date de Réinitialisation'
+                resetDate: 'Date de Réinitialisation',
+                paymentRenewal: 'Paiement et Renouvellement',
+                accountReset: 'Configuration de Réinitialisation du Compte'
             },
             fields: {
                 accountType: 'Type de Compte',
@@ -63,7 +65,14 @@ export default {
                 activationFees: 'Frais d\'Activation',
                 balanceRequired: 'Solde Requis',
                 minTradingDays: 'Jours de Trading Minimum pour Paiement',
-                propfirmName: 'Nom de la Prop Firm'
+                propfirmName: 'Nom de la Prop Firm',
+                nextPaymentDate: 'Prochaine Date de Paiement',
+                paymentFrequency: 'Fréquence de Paiement',
+                autoRenewal: 'Renouvellement Automatique',
+                renewalNotification: 'Notification de Renouvellement',
+                enableRenewalNotification: 'Activer les notifications de renouvellement',
+                renewalNoticeInfo: 'Vous recevrez des notifications 3 jours avant le renouvellement',
+                renewalNotice: 'Jours de Préavis de Renouvellement'
             },
             trailingTypes: {
                 static: 'Statique',
@@ -74,7 +83,15 @@ export default {
                 no: 'Non',
                 lock: 'Verrouillage',
                 violation: 'Violation'
-            }
+            },
+            paymentFrequencies: {
+                monthly: 'Mensuel',
+                quarterly: 'Trimestriel',
+                biannual: 'Semestriel',
+                annual: 'Annuel',
+                custom: 'Personnalisé'
+            },
+
         },
         balance: 'Solde',
         target: 'Objectif',
@@ -200,7 +217,8 @@ export default {
             startingBalance: "Solde initial",
             noTrades: "Aucun trade disponible",
             payout: "Paiement",
-            payoutAmount: "Paiement : ${amount}"
+            payoutAmount: "Paiement : ${amount}",
+            accountReset: "Réinitialisation du Compte"
         },
         trailingDrawdown: {
             explanation: 'Le drawdown suivra les profits jusqu\'à ce que ce niveau soit atteint'
@@ -214,6 +232,11 @@ export default {
             errorDescription: 'Une erreur est survenue lors de la suppression du compte prop firm',
             confirm: 'Oui, supprimer le compte',
             cancel: 'Annuler'
+        },
+        renewal: {
+            title: 'Renouvellements de Compte',
+            frequency: 'renouvellement',
+            notification: 'Notifications activées'
         },
         consistency: {
             title: 'Cohérence du Trading',

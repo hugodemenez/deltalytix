@@ -23,6 +23,7 @@ import WeeklyCalendarPnl from "./weekly-calendar"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useFinancialEventsStore } from "@/store/financial-events-store"
 import { useUserStore } from "@/store/user-store"
+import { Account } from "@/context/data-provider"
 
 
 const WEEKDAYS = [
@@ -138,7 +139,70 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
   )
 }
 
+function RenewalBadge({ renewals }: { renewals: Account[] }) {
+  const t = useI18n()
+  
+  if (renewals.length === 0) return null
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Badge 
+          variant="outline" 
+          className={cn(
+            "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
+            "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/30",
+            "transition-all duration-200 ease-in-out",
+            "hover:scale-110 hover:shadow-md",
+            "active:scale-95"
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Calendar className="h-2.5 w-2.5" />
+          {renewals.length}
+        </Badge>
+      </PopoverTrigger>
+      <PopoverContent 
+        className="w-[350px] p-4 z-50" 
+        align="start"
+        side="right"
+        sideOffset={5}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-4">
+          <div className="font-semibold text-sm">{t('propFirm.renewal.title')}</div>
+          {renewals.map((account, index) => (
+            <div key={account.id} className="border-b last:border-b-0 pb-3 last:pb-0">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                                     <div className="font-medium text-sm">
+                     {account.propfirm || account.number}
+                   </div>
+                  <div className="text-xs text-muted-foreground">
+                    {account.paymentFrequency?.toLowerCase()} {t('propFirm.renewal.frequency')}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-semibold text-sm text-blue-600 dark:text-blue-400">
+                    {formatCurrency(account.price || 0)}
+                  </div>
+                  {account.autoRenewal && (
+                    <div className="text-xs text-muted-foreground">
+                      {t('propFirm.renewal.notification')}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
+  const accounts = useUserStore(state => state.accounts)
   const t = useI18n()
   const locale = useCurrentLocale()
   const timezone = useUserStore(state => state.timezone)
@@ -244,6 +308,30 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
       }
     })
   }, [monthEvents, timezone])
+
+  const getRenewalsForDate = React.useCallback((date: Date) => {
+    return accounts.filter(account => {
+      if (!account.nextPaymentDate) return false;
+      try {
+        // Create new Date objects to avoid modifying the originals
+        const renewalDateObj = new Date(account.nextPaymentDate)
+        const compareDateObj = new Date(date)
+        
+        // Set hours to start of day
+        renewalDateObj.setHours(0, 0, 0, 0)
+        compareDateObj.setHours(0, 0, 0, 0)
+        
+        // Format dates in the user's timezone
+        const renewalDate = formatInTimeZone(renewalDateObj, timezone, 'yyyy-MM-dd')
+        const compareDate = formatInTimeZone(compareDateObj, timezone, 'yyyy-MM-dd')
+        
+        return renewalDate === compareDate
+      } catch (error) {
+        console.error('Error parsing renewal date:', error)
+        return false
+      }
+    })
+  }, [accounts, timezone])
 
   const calculateWeeklyTotal = React.useCallback((index: number, calendarDays: Date[], calendarData: CalendarData) => {
     const startOfWeekIndex = index - 6
@@ -356,6 +444,7 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
                 const isLastDayOfWeek = getDay(date) === 6
                 const isCurrentMonth = isSameMonth(date, currentDate)
                 const dateEvents = filterByImpactLevel(getEventsForDate(date))
+                const dateRenewals = getRenewalsForDate(date)
 
                 return (
                   <React.Fragment key={dateString}>
@@ -385,7 +474,10 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
                         )}>
                           {format(date, 'd')}
                         </span>
-                        {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
+                        <div className="flex flex-col gap-0.5">
+                          {dateEvents.length > 0 && <EventBadge events={dateEvents} impactLevels={impactLevels} />}
+                          {dateRenewals.length > 0 && <RenewalBadge renewals={dateRenewals} />}
+                        </div>
                       </div>
                       <div className="flex-1 flex flex-col justify-end gap-0.5">
                         {dayData ? (

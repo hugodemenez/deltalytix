@@ -144,9 +144,10 @@ export interface Group extends PrismaGroup {
 
 
 // Update Account type to include payouts and balanceToDate
-export interface Account extends Omit<PrismaAccount, 'payouts'> {
+export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
   payouts?: PrismaPayout[]
   balanceToDate?: number
+  group?: PrismaGroup | null
 }
 
 // Add after the interfaces and before the UserDataContext
@@ -518,7 +519,9 @@ export const DataProvider: React.FC<{
 
 
       if (!data) {
-        throw new Error('Failed to fetch user data');
+        await signOut();
+        setIsLoading(false)
+        return;
       }
 
       // Step 4: Batch all state updates together
@@ -884,17 +887,15 @@ export const DataProvider: React.FC<{
     if (!user?.id || isSharedView) return;
 
     try {
+      // Update local state
+      setAccounts(accounts.filter(acc => acc.id !== account.id));
       // Delete from database
       await deleteAccountAction(account);
-
-      // Update local state
-      const accounts = useUserStore(state => state.accounts)
-      setAccounts(accounts.filter(acc => acc.number !== account.number));
     } catch (error) {
       console.error('Error deleting account:', error);
       throw error;
     }
-  }, [user?.id, isSharedView]);
+  }, [user?.id, isSharedView, accounts, setAccounts]);
 
   // Add deletePayout function
   const deletePayout = useCallback(async (payoutId: string) => {

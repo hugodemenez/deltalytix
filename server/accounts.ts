@@ -185,44 +185,24 @@ export async function setupAccountAction(account: Account) {
     }
   })
 
-  const baseAccountData = {
-    number: account.number,
-    propfirm: account.propfirm,
-    drawdownThreshold: account.drawdownThreshold,
-    trailingDrawdown: account.trailingDrawdown,
-    trailingStopProfit: account.trailingStopProfit,
-    profitTarget: account.profitTarget,
-    startingBalance: account.startingBalance,
-    isPerformance: account.isPerformance,
-    payoutCount: account.payoutCount,
-    resetDate: account.resetDate,
-    consistencyPercentage: account.consistencyPercentage,
-    // Prop firm configuration fields
-    accountSize: account.accountSize,
-    accountSizeName: account.accountSizeName,
-    price: account.price,
-    priceWithPromo: account.priceWithPromo,
-    evaluation: account.evaluation,
-    minDays: account.minDays,
-    dailyLoss: account.dailyLoss,
-    rulesDailyLoss: account.rulesDailyLoss,
-    trailing: account.trailing,
-    tradingNewsAllowed: account.tradingNewsAllowed,
-    activationFees: account.activationFees,
-    isRecursively: account.isRecursively,
-    payoutBonus: account.payoutBonus,
-    profitSharing: account.profitSharing,
-    payoutPolicy: account.payoutPolicy,
-    balanceRequired: account.balanceRequired,
-    minTradingDaysForPayout: account.minTradingDaysForPayout,
-    minPayout: account.minPayout,
-    maxPayout: account.maxPayout,
-    maxFundedAccounts: account.maxFundedAccounts,
-    // Handle group relation
-    ...(account.groupId && {
+  // Extract fields that should not be included in the database operation
+  const { 
+    id, 
+    userId: _, 
+    payouts, 
+    groupId,
+    balanceToDate,
+    group,
+    ...baseAccountData 
+  } = account
+
+  // Handle group relation separately if groupId exists
+  const accountDataWithGroup = {
+    ...baseAccountData,
+    ...(groupId && {
       group: {
         connect: {
-          id: account.groupId
+          id: groupId
         }
       }
     })
@@ -231,13 +211,13 @@ export async function setupAccountAction(account: Account) {
   if (existingAccount) {
     return await prisma.account.update({
       where: { id: existingAccount.id },
-      data: baseAccountData
+      data: accountDataWithGroup
     })
   }
 
   return await prisma.account.create({
     data: {
-      ...baseAccountData,
+      ...accountDataWithGroup,
       user: {
         connect: {
           id: userId
@@ -251,10 +231,8 @@ export async function deleteAccountAction(account: Account) {
   const userId = await getUserId()
   await prisma.account.delete({
     where: {
-      number_userId: {
-        number: account.number,
-        userId: userId
-      }
+      id: account.id,
+      userId: userId
     }
   })
 }

@@ -129,13 +129,13 @@ export function AccountCard({ account, trades, metrics, onClick, size = 'large' 
                 <div className="flex w-full justify-between min-w-0">
                   <span className="truncate">{account.propfirm || t('propFirm.card.unnamedAccount')}</span>
                   {
-                    account.resetDate && (
+                    account.nextPaymentDate && (
                       <div className={cn(
                         "self-center ml-2 flex-shrink-0",
                         size === 'small' || size === 'small-long' ? "text-xs" : "text-xs",
-                        Math.floor((new Date(account.resetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 5 ? 'text-red-500 blink' : 'text-muted-foreground'
+                        Math.floor((new Date(account.nextPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 5 ? 'text-red-500 blink' : 'text-muted-foreground'
                       )}>
-                        {Math.floor((new Date(account.resetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}
+                        {Math.floor((new Date(account.nextPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))}
                         {t('propFirm.card.daysBeforeReset')}
                       </div>
                     )
@@ -180,6 +180,7 @@ export function AccountCard({ account, trades, metrics, onClick, size = 'large' 
                 trailingDrawdown={account.trailingDrawdown}
                 trailingStopProfit={account.trailingStopProfit ?? undefined}
                 payouts={account.payouts}
+                resetDate={account.resetDate}
               />
             )}
 

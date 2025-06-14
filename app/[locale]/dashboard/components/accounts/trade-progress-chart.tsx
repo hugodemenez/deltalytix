@@ -25,6 +25,7 @@ interface ChartEvent {
   date: Date
   amount: number
   isPayout: boolean
+  isReset?: boolean
   payoutStatus?: string
 }
 
@@ -37,6 +38,7 @@ interface ChartDataPoint {
   target: number
   pnl: number
   isPayout?: boolean
+  isReset?: boolean
   payoutStatus?: string
   payoutAmount: number
 }
@@ -49,6 +51,7 @@ interface TradeProgressChartProps {
   trailingDrawdown?: boolean
   trailingStopProfit?: number
   payouts?: Payout[]
+  resetDate?: Date | string | null
   className?: string
 }
 
@@ -60,6 +63,7 @@ export function TradeProgressChart({
   trailingDrawdown = false,
   trailingStopProfit = 0,
   payouts = [],
+  resetDate,
   className
 }: TradeProgressChartProps) {
   const t = useI18n()
@@ -83,29 +87,46 @@ export function TradeProgressChart({
     }
   }
 
-  // Create combined events array with both trades and payouts
+  // Create combined events array with trades, payouts, and resets
   const allEvents: ChartEvent[] = [
     ...trades.map(trade => ({
       date: new Date(trade.entryDate),
       amount: trade.pnl - (trade.commission || 0),
-      isPayout: false
+      isPayout: false,
+      isReset: false
     })),
     ...payouts.map(payout => ({
       date: new Date(payout.date),
       amount: ['PENDING', 'VALIDATED', 'PAID'].includes(payout.status) ? -payout.amount : 0,
       isPayout: true,
+      isReset: false,
       payoutStatus: payout.status
-    }))
+    })),
+    ...(resetDate ? [{
+      date: new Date(resetDate),
+      amount: 0, // Reset doesn't change balance directly, it sets it to starting balance
+      isPayout: false,
+      isReset: true
+    }] : [])
   ].sort((a, b) => a.date.getTime() - b.date.getTime())
 
   // Process events to create chart data
   const chartData = allEvents.reduce((acc, event, index) => {
-    const prevBalance = index > 0 ? acc[index - 1].balance : startingBalance
-    const balance = prevBalance + event.amount
+    let balance: number
+    let highestBalance: number
     
-    // Calculate highest balance up to this point
-    const previousHighest = index > 0 ? acc[index - 1].highestBalance : startingBalance
-    const highestBalance = event.isPayout ? previousHighest : Math.max(previousHighest, balance)
+    if (event.isReset) {
+      // Reset the balance to starting balance
+      balance = startingBalance
+      highestBalance = startingBalance
+    } else {
+      const prevBalance = index > 0 ? acc[index - 1].balance : startingBalance
+      balance = prevBalance + event.amount
+      
+      // Calculate highest balance up to this point
+      const previousHighest = index > 0 ? acc[index - 1].highestBalance : startingBalance
+      highestBalance = event.isPayout ? previousHighest : Math.max(previousHighest, balance)
+    }
     
     // Calculate drawdown level based on trailing or fixed drawdown
     let drawdownLevel
@@ -131,8 +152,9 @@ export function TradeProgressChart({
       drawdownLevel,
       highestBalance,
       target: startingBalance + profitTarget,
-      pnl: event.isPayout ? 0 : event.amount,
+      pnl: event.isReset ? 0 : (event.isPayout ? 0 : event.amount),
       isPayout: event.isPayout,
+      isReset: event.isReset,
       payoutStatus: event.payoutStatus,
       payoutAmount: event.isPayout ? -event.amount : 0
     }]
@@ -150,20 +172,39 @@ export function TradeProgressChart({
 
   const renderDot = (props: any) => {
     const { cx, cy, payload, index } = props
-    if (!payload?.isPayout || typeof cx !== 'number' || typeof cy !== 'number') {
+    if (typeof cx !== 'number' || typeof cy !== 'number') {
       return <circle key={`dot-${index}-empty`} cx={cx} cy={cy} r={0} fill="none" />
     }
-    return (
-      <circle
-        key={`dot-${index}-payout`}
-        cx={cx}
-        cy={cy}
-        r={4}
-        fill={getPayoutColor(payload.payoutStatus || '')}
-        stroke="white"
-        strokeWidth={1}
-      />
-    )
+    
+    if (payload?.isReset) {
+      return (
+        <circle
+          key={`dot-${index}-reset`}
+          cx={cx}
+          cy={cy}
+          r={5}
+          fill="#ff6b6b"
+          stroke="white"
+          strokeWidth={2}
+        />
+      )
+    }
+    
+    if (payload?.isPayout) {
+      return (
+        <circle
+          key={`dot-${index}-payout`}
+          cx={cx}
+          cy={cy}
+          r={4}
+          fill={getPayoutColor(payload.payoutStatus || '')}
+          stroke="white"
+          strokeWidth={1}
+        />
+      )
+    }
+    
+    return <circle key={`dot-${index}-empty`} cx={cx} cy={cy} r={0} fill="none" />
   }
 
   return (
@@ -212,7 +253,7 @@ export function TradeProgressChart({
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="text-blue-600">${data.balance.toLocaleString()}</span>
-                          {!data.isPayout && (
+                          {!data.isPayout && !data.isReset && (
                             <span className={cn(
                               "text-sm",
                               data.pnl >= 0 ? "text-green-600" : "text-red-600"
@@ -225,6 +266,11 @@ export function TradeProgressChart({
                           <span className="text-red-600">DD: ${data.drawdownLevel.toLocaleString()}</span>
                           <span className="text-blue-600">High: ${data.highestBalance.toLocaleString()}</span>
                         </div>
+                        {data.isReset && (
+                          <div className="flex items-center gap-2 text-red-500">
+                            <span className="font-medium">{t('propFirm.chart.accountReset')}</span>
+                          </div>
+                        )}
                         {data.isPayout && data.payoutStatus && (
                           <div className={cn(
                             "flex items-center gap-2",

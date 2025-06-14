@@ -39,7 +39,9 @@ export default {
                 basicInfo: 'Basic Account Info',
                 drawdownRules: 'Drawdown & Trading Rules',
                 pricingPayout: 'Pricing & Payout',
-                resetDate: 'Reset Date'
+                resetDate: 'Reset Date',
+                paymentRenewal: 'Payment & Renewal',
+                accountReset: 'Account Reset Configuration'
             },
             fields: {
                 accountType: 'Account Type',
@@ -63,7 +65,14 @@ export default {
                 activationFees: 'Activation Fees',
                 balanceRequired: 'Balance Required',
                 minTradingDays: 'Min Trading Days for Payout',
-                propfirmName: 'Prop Firm Name'
+                propfirmName: 'Prop Firm Name',
+                nextPaymentDate: 'Next Payment Date',
+                paymentFrequency: 'Payment Frequency',
+                autoRenewal: 'Auto Renewal',
+                renewalNotification: 'Renewal Notification',
+                enableRenewalNotification: 'Enable renewal notifications',
+                renewalNoticeInfo: 'You will receive notifications 3 days before renewal',
+                renewalNotice: 'Renewal Notice Days'
             },
             trailingTypes: {
                 static: 'Static',
@@ -74,7 +83,15 @@ export default {
                 no: 'No',
                 lock: 'Lock',
                 violation: 'Violation'
-            }
+            },
+            paymentFrequencies: {
+                monthly: 'Monthly',
+                quarterly: 'Quarterly',
+                biannual: 'Bi-annual',
+                annual: 'Annual',
+                custom: 'Custom'
+            },
+
         },
         balance: 'Balance',
         target: 'Target',
@@ -200,7 +217,8 @@ export default {
             startingBalance: "Starting Balance",
             noTrades: "No trades available",
             payout: "Payout",
-            payoutAmount: "Payout: ${amount}"
+            payoutAmount: "Payout: ${amount}",
+            accountReset: "Account Reset"
         },
         trailingDrawdown: {
             explanation: 'Drawdown will trail profits until this level is reached'
@@ -214,6 +232,11 @@ export default {
             errorDescription: 'An error occurred while deleting the prop firm account',
             confirm: 'Yes, delete account',
             cancel: 'Cancel'
+        },
+        renewal: {
+            title: 'Account Renewals',
+            frequency: 'renewal',
+            notification: 'Notifications enabled'
         },
         consistency: {
             title: 'Trading Consistency',

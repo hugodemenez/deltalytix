@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-When you generate content always use translations.
+When you generate content always use translations from [client.ts](mdc:locales/client.ts).
 
 I have translations files [fr.ts](mdc:locales/fr.ts) and [en.ts](mdc:locales/en.ts).
 
