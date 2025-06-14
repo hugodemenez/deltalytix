@@ -147,7 +147,7 @@ export interface Group extends PrismaGroup {
 export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
   payouts?: PrismaPayout[]
   balanceToDate?: number
-  group?: PrismaGroup
+  group?: PrismaGroup | null
 }
 
 // Add after the interfaces and before the UserDataContext
