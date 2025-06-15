@@ -234,7 +234,7 @@ export default {
             cancel: 'Annuler'
         },
         renewal: {
-            title: 'Renouvellements de Compte',
+            title: 'Renouvellements de compte',
             frequency: 'renouvellement',
             notification: 'Notifications activées'
         },
