@@ -178,8 +178,8 @@ model Payout {
   amount        Float
   date          DateTime
   accountNumber String    
-  account       Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   accountId     String
+  account       Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
   createdAt     DateTime  @default(now())
   status        String    @default("PENDING")
   

@@ -27,6 +27,7 @@ import { useUserStore } from "@/store/user-store"
 import { useData } from "@/context/data-provider"
 import { Account, Group } from "@/context/data-provider"
 
+
 const HIDDEN_GROUP_NAME = "Hidden Accounts"
 
 interface UngroupedAccount {
@@ -39,7 +40,7 @@ export function AccountGroupBoard() {
   const user = useUserStore(state => state.user)
   const groups = useUserStore(state => state.groups)
   const trades = useTradesStore(state => state.trades)
-  const { saveGroup, renameGroup, deleteGroup, moveAccountToGroup } = useData()
+  const { saveGroup, renameGroup, deleteGroup, moveAccountToGroup, saveAccount } = useData()
   const [newGroupName, setNewGroupName] = useState("")
   const [isCreating, setIsCreating] = useState(false)
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
@@ -47,7 +48,6 @@ export function AccountGroupBoard() {
   const [isDeleting, setIsDeleting] = useState(false)
   const existingAccounts = useUserStore(state => state.accounts)
 
-  // Get account number which don't have an account created yet
   const tradeAccountNumbers = useMemo(() => {
     const accountSet = new Set<string>()
     trades.forEach(trade => {
@@ -58,13 +58,26 @@ export function AccountGroupBoard() {
     return Array.from(accountSet)
   }, [trades])
 
-  // const tradeAccountNumbersWithoutAccount = useMemo(() => {
-  //   return tradeAccountNumbers.filter(number => !existingAccounts.some(acc => acc.number === number))
-  // }, [tradeAccountNumbers, existingAccounts])
-
   const ungroupedAccounts = useMemo(() => {
-    return existingAccounts.filter(account => !account.groupId && tradeAccountNumbers.includes(account.number))
-  }, [existingAccounts])
+    // Get existing accounts that are not in any group
+    const existingUngroupedAccounts = existingAccounts.filter(account => 
+      !account.groupId && tradeAccountNumbers.includes(account.number)
+    )
+
+    // Get account numbers from trades that don't have account records yet
+    const accountNumbersWithoutRecords = tradeAccountNumbers.filter(number => 
+      !existingAccounts.some(acc => acc.number === number)
+    )
+
+    // Create placeholder UngroupedAccount objects for accounts without records
+    const placeholderAccounts: UngroupedAccount[] = accountNumbersWithoutRecords.map(number => ({
+      number,
+      id: `placeholder-${number}` // Use a placeholder ID
+    }))
+
+    // Combine existing accounts with placeholder accounts
+    return [...existingUngroupedAccounts, ...placeholderAccounts]
+  }, [existingAccounts, tradeAccountNumbers])
 
   const handleCreateGroup = useCallback(async () => {
     if (!newGroupName.trim() || !user?.id) return
@@ -116,6 +129,24 @@ export function AccountGroupBoard() {
           groupId = hiddenGroup.id
         }
       }
+      // If this is a placeholder account (doesn't exist in database yet), create it first
+      if (account.id.startsWith('placeholder-')) {
+        if (!user?.id) return
+        
+        // Create a minimal account object with default values and groupId if specified
+        const accountData = {
+          number: account.number,
+          propfirm: '',
+          startingBalance: 0,
+          profitTarget: 0,
+          drawdownThreshold: 0,
+          consistencyPercentage: 30,
+          groupId: groupId || null,
+        } as Account
+        
+        await saveAccount(accountData)
+        return
+      }
       await moveAccountToGroup(account.id, groupId)
     } catch (error) {
       console.error("Error moving account:", error)
@@ -123,7 +154,7 @@ export function AccountGroupBoard() {
         description: t("filters.errorMovingAccount", { account: account.number })
       })
     }
-  }, [groups, user?.id, saveGroup, moveAccountToGroup, t])
+  }, [groups, user?.id, saveGroup, moveAccountToGroup, t, existingAccounts])
 
   const handleDeleteGroup = useCallback(async (groupId: string, groupName: string) => {
     try {
@@ -233,7 +264,14 @@ export function AccountGroupBoard() {
               ) : (
                 ungroupedAccounts.map(account => (
                   <div key={account.id} className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded-md">
-                    <span className="text-sm">{anonymizeAccount(account.number)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{anonymizeAccount(account.number)}</span>
+                      {account.id.startsWith('placeholder-') && (
+                        <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded">
+                          {t("filters.newAccount")}
+                        </span>
+                      )}
+                    </div>
                     <Select
                       onValueChange={async (value) => {
                         await handleMoveAccount(account, value || null)
