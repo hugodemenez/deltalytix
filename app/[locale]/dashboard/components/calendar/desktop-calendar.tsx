@@ -41,21 +41,21 @@ function getCalendarDays(monthStart: Date, monthEnd: Date) {
   const startDate = startOfWeek(monthStart)
   const endDate = endOfWeek(monthEnd)
   const days = eachDayOfInterval({ start: startDate, end: endDate })
-  
+
   if (days.length === 42) return days
-  
+
   const lastDay = days[days.length - 1]
   const additionalDays = eachDayOfInterval({
     start: addDays(lastDay, 1),
     end: addDays(startDate, 41)
   })
-  
+
   return [...days, ...additionalDays].slice(0, 42)
 }
 
 const formatCurrency = (value: number) => {
-  const formatted = value.toLocaleString('en-US', { 
-    style: 'currency', 
+  const formatted = value.toLocaleString('en-US', {
+    style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
@@ -106,8 +106,8 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Badge 
-          variant="outline" 
+        <Badge
+          variant="outline"
           className={cn(
             "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
             badgeStyles[highestImportance as keyof typeof badgeStyles],
@@ -121,8 +121,8 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
           {filteredEvents.length}
         </Badge>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-[400px] p-0 z-50" 
+      <PopoverContent
+        className="w-[400px] p-0 z-50"
         align="start"
         side="right"
         sideOffset={5}
@@ -141,14 +141,14 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
 
 function RenewalBadge({ renewals }: { renewals: Account[] }) {
   const t = useI18n()
-  
+
   if (renewals.length === 0) return null
 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Badge 
-          variant="outline" 
+        <Badge
+          variant="outline"
           className={cn(
             "h-4 px-1.5 text-[8px] sm:text-[9px] font-medium cursor-pointer relative z-0 w-auto justify-center items-center gap-1",
             "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800 dark:hover:bg-blue-900/30",
@@ -162,8 +162,8 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
           {renewals.length}
         </Badge>
       </PopoverTrigger>
-      <PopoverContent 
-        className="w-[350px] p-4 z-50" 
+      <PopoverContent
+        className="w-[350px] p-4 z-50"
         align="start"
         side="right"
         sideOffset={5}
@@ -175,16 +175,21 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
             <div key={account.id} className="border-b last:border-b-0 pb-3 last:pb-0">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
-                                     <div className="font-medium text-sm">
-                     {account.propfirm || account.number}
-                   </div>
+                  <div className="font-medium text-sm">
+                    {account.propfirm || account.number}
+                  </div>
                   <div className="text-xs text-muted-foreground">
                     {account.paymentFrequency?.toLowerCase()} {t('propFirm.renewal.frequency')}
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-sm text-blue-600 dark:text-blue-400">
-                    {formatCurrency(account.price || 0)}
+                    {account.price?.toLocaleString('en-US', {
+                      style: 'currency',
+                      currency: 'USD',
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 2
+                    })}
                   </div>
                   {account.autoRenewal && (
                     <div className="text-xs text-muted-foreground">
@@ -201,7 +206,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
   )
 }
 
-export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
+export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
   const accounts = useUserStore(state => state.accounts)
   const t = useI18n()
   const locale = useCurrentLocale()
@@ -225,13 +230,13 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
   }, [currentDate, monthStart, monthEnd])
 
   // Use the calendar view store
-  const { 
-    viewMode, 
-    setViewMode, 
-    selectedDate, 
-    setSelectedDate, 
-    selectedWeekDate, 
-    setSelectedWeekDate 
+  const {
+    viewMode,
+    setViewMode,
+    selectedDate,
+    setSelectedDate,
+    selectedWeekDate,
+    setSelectedWeekDate
   } = useCalendarViewStore()
 
   // Use the global news filter store
@@ -244,12 +249,12 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
   useEffect(() => {
     const monthStart = startOfMonth(currentDate)
     const monthEnd = endOfMonth(currentDate)
-    
+
     const filteredEvents = userFinancialEvents.filter(event => {
       const eventDate = new Date(event.date)
       return eventDate >= monthStart && eventDate <= monthEnd && event.lang === locale
     })
-    
+
     setMonthEvents(filteredEvents)
   }, [currentDate, userFinancialEvents, locale])
 
@@ -292,15 +297,15 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
         // Create new Date objects to avoid modifying the originals
         const eventDateObj = new Date(event.date)
         const compareDateObj = new Date(date)
-        
+
         // Set hours to start of day
         eventDateObj.setHours(0, 0, 0, 0)
         compareDateObj.setHours(0, 0, 0, 0)
-        
+
         // Format dates in the user's timezone
         const eventDate = formatInTimeZone(eventDateObj, timezone, 'yyyy-MM-dd')
         const compareDate = formatInTimeZone(compareDateObj, timezone, 'yyyy-MM-dd')
-        
+
         return eventDate === compareDate
       } catch (error) {
         console.error('Error parsing event date:', error)
@@ -316,15 +321,15 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
         // Create new Date objects to avoid modifying the originals
         const renewalDateObj = new Date(account.nextPaymentDate)
         const compareDateObj = new Date(date)
-        
+
         // Set hours to start of day
         renewalDateObj.setHours(0, 0, 0, 0)
         compareDateObj.setHours(0, 0, 0, 0)
-        
+
         // Format dates in the user's timezone
         const renewalDate = formatInTimeZone(renewalDateObj, timezone, 'yyyy-MM-dd')
         const compareDate = formatInTimeZone(compareDateObj, timezone, 'yyyy-MM-dd')
-        
+
         return renewalDate === compareDate
       } catch (error) {
         console.error('Error parsing renewal date:', error)
@@ -355,26 +360,26 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
   // Filter events by impact level and country
   function filterByImpactLevel(events: FinancialEvent[]) {
     const { impactLevels, selectedCountries } = useNewsFilterStore.getState()
-    
+
     return events.filter(e => {
-      const matchesImpact = impactLevels.length === 0 || 
+      const matchesImpact = impactLevels.length === 0 ||
         impactLevels.includes(getEventImportanceStars(e.importance))
-      
-      const matchesCountry = selectedCountries.length === 0 || 
+
+      const matchesCountry = selectedCountries.length === 0 ||
         (e.country && selectedCountries.includes(e.country))
-      
+
       return matchesImpact && matchesCountry
     })
   }
 
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader 
+      <CardHeader
         className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]"
       >
         <div className="flex items-center gap-3">
           <CardTitle className="text-base sm:text-lg font-semibold truncate capitalize">
-            {viewMode === 'daily' 
+            {viewMode === 'daily'
               ? formatInTimeZone(currentDate, timezone, 'MMMM yyyy', { locale: dateLocale })
               : formatInTimeZone(currentDate, timezone, 'yyyy', { locale: dateLocale })}
           </CardTitle>
@@ -399,26 +404,26 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
               className="h-8"
             />
           </div>
-          <CountryFilter 
-            countries={countries} 
+          <CountryFilter
+            countries={countries}
             value={selectedCountries}
             onValueChange={setSelectedCountries}
-            className="h-8" 
+            className="h-8"
           />
           <div className="flex items-center gap-1.5">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))} 
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => viewMode === 'daily' ? handlePrevMonth() : setCurrentDate(new Date(getYear(currentDate) - 1, 0, 1))}
               className="h-7 w-7 sm:h-8 sm:w-8"
               aria-label={viewMode === 'daily' ? "Previous month" : "Previous year"}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))} 
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => viewMode === 'daily' ? handleNextMonth() : setCurrentDate(new Date(getYear(currentDate) + 1, 0, 1))}
               className="h-7 w-7 sm:h-8 sm:w-8"
               aria-label={viewMode === 'daily' ? "Next month" : "Next year"}
             >
@@ -455,8 +460,8 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
                         dayData && dayData.pnl >= 0
                           ? "bg-green-50 dark:bg-green-900/20"
                           : dayData && dayData.pnl < 0
-                          ? "bg-red-50 dark:bg-red-900/20"
-                          : "bg-card",
+                            ? "bg-red-50 dark:bg-red-900/20"
+                            : "bg-card",
                         !isCurrentMonth && "",
                         isToday(date) && "ring-blue-500 bg-blue-500/5 z-10",
                         index === 0 && "rounded-tl-lg",
@@ -500,14 +505,14 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
                           "text-[7px] sm:text-[9px] text-muted-foreground truncate text-center",
                           !isCurrentMonth && "opacity-50"
                         )}>
-                          {dayData 
-                            ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}` 
+                          {dayData
+                            ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`
                             : t('calendar.noTrades')}
                         </div>
                       </div>
                     </div>
                     {isLastDayOfWeek && (
-                      <div 
+                      <div
                         className={cn(
                           "h-full flex items-center justify-center rounded-none cursor-pointer",
                           "ring-1 ring-border hover:ring-primary hover:z-10",
@@ -517,10 +522,10 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
                         onClick={() => setSelectedWeekDate(date)}
                       >
                         <div className={cn(
-                           "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
-                           calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
-                             ? "text-green-600 dark:text-green-400"
-                             : "text-red-600 dark:text-red-400"
+                          "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
+                          calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-600 dark:text-red-400"
                         )}>
                           {formatCurrency(calculateWeeklyTotal(index, calendarDays, calendarData))}
                         </div>
@@ -532,7 +537,7 @@ export default function CalendarPnl({ calendarData}: CalendarPnlProps) {
             </div>
           </>
         ) : (
-          <WeeklyCalendarPnl 
+          <WeeklyCalendarPnl
             calendarData={calendarData}
             year={getYear(currentDate)}
           />

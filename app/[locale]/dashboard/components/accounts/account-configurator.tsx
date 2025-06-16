@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, X, Trash2, Check, ChevronsUpDown } from "lucide-react"
+import { CalendarIcon, X, Trash2, Check, ChevronsUpDown, Info } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { format, Locale } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
@@ -45,6 +46,7 @@ export function AccountConfigurator({
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [paymentCalendarOpen, setPaymentCalendarOpen] = useState(false)
   const [selectedAccountSize, setSelectedAccountSize] = useState<string>("")
+  const [accountSizeOpen, setAccountSizeOpen] = useState(false)
 
   const handleTemplateChange = (firmKey: string, sizeKey: string) => {
     const firm = propFirms[firmKey]
@@ -221,7 +223,7 @@ export function AccountConfigurator({
               </div>
               <div className="flex flex-col gap-2">
                 <Label>{t('propFirm.accountSize')}</Label>
-                <Popover>
+                <Popover modal open={accountSizeOpen} onOpenChange={setAccountSizeOpen}>
                   <PopoverTrigger asChild>
                                     <Input
                   type="number"
@@ -237,7 +239,10 @@ export function AccountConfigurator({
                           variant="outline"
                           size="sm"
                           className="w-full"
-                          onClick={() => handleInputChange('startingBalance', size)}
+                          onClick={() => {
+                            handleInputChange('startingBalance', size)
+                            setAccountSizeOpen(false)
+                          }}
                         >
                           {size.toLocaleString()}
                         </Button>
@@ -304,6 +309,16 @@ export function AccountConfigurator({
                       onCheckedChange={(checked) => handleInputChange('trailingDrawdown', checked)}
                     />
                     <Label htmlFor="trailingDrawdown" className="cursor-pointer">{t('propFirm.configurator.fields.trailingDrawdown')}</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{t('propFirm.configurator.tooltips.trailingDrawdown')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
 
@@ -314,7 +329,7 @@ export function AccountConfigurator({
                       type="number"
                       value={pendingChanges?.trailingStopProfit ?? account.trailingStopProfit ?? ''}
                       onChange={(e) => handleInputChange('trailingStopProfit', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                      placeholder="Enter amount to lock drawdown"
+                      placeholder={t('propFirm.configurator.placeholders.enterAmountToLockDrawdown')}
                     />
                   </div>
                 )}
@@ -326,7 +341,7 @@ export function AccountConfigurator({
                     onValueChange={(value) => handleInputChange('trailing', value as 'Static' | 'EOD' | 'Intraday')}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select trailing type" />
+                      <SelectValue placeholder={t('propFirm.configurator.placeholders.selectTrailingType')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Static">{t('propFirm.configurator.trailingTypes.static')}</SelectItem>
@@ -371,21 +386,19 @@ export function AccountConfigurator({
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
               {/* Price Section */}
               <div className="flex flex-col gap-4">
-                <h4 className="font-medium text-sm text-muted-foreground">Pricing</h4>
                 <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.basePrice')}</Label>
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.price')}</Label>
                   <Input
                     type="number"
                     value={pendingChanges?.price ?? account.price ?? ''}
                     onChange={(e) => handleInputChange('price', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                    placeholder="Enter price"
+                    placeholder={t('propFirm.configurator.placeholders.enterPrice')}
                   />
                 </div>
               </div>
 
               {/* Payment & Renewal Section */}
               <div className="flex flex-col gap-4">
-                <h4 className="font-medium text-sm text-muted-foreground">Payment & Renewal</h4>
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.nextPaymentDate')}</Label>
                   <Dialog open={paymentCalendarOpen} onOpenChange={setPaymentCalendarOpen}>
@@ -399,14 +412,22 @@ export function AccountConfigurator({
                             !pendingChanges?.nextPaymentDate && !account.nextPaymentDate && "text-muted-foreground"
                           )}
                         >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {pendingChanges?.nextPaymentDate || account.nextPaymentDate ? (
-                            format(pendingChanges?.nextPaymentDate || account.nextPaymentDate!, 'PPP', { locale: localeMap[params.locale as string] })
+                                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                        {(pendingChanges && 'nextPaymentDate' in pendingChanges) ? (
+                          pendingChanges.nextPaymentDate ? (
+                            format(pendingChanges.nextPaymentDate, 'PPP', { locale: localeMap[params.locale as string] })
                           ) : (
-                            <span>No payment date set</span>
-                          )}
+                            <span>{t('propFirm.configurator.placeholders.noPaymentDateSet')}</span>
+                          )
+                        ) : (
+                          account.nextPaymentDate ? (
+                            format(account.nextPaymentDate, 'PPP', { locale: localeMap[params.locale as string] })
+                          ) : (
+                            <span>{t('propFirm.configurator.placeholders.noPaymentDateSet')}</span>
+                          )
+                        )}
                         </Button>
-                        {(pendingChanges?.nextPaymentDate || account.nextPaymentDate) && (
+                        {((pendingChanges && 'nextPaymentDate' in pendingChanges) ? pendingChanges.nextPaymentDate : account.nextPaymentDate) && (
                           <Button
                             type="button"
                             variant="ghost"
@@ -451,12 +472,14 @@ export function AccountConfigurator({
                   {(pendingChanges?.paymentFrequency || account.paymentFrequency) && 
                    (pendingChanges?.paymentFrequency || account.paymentFrequency) !== 'CUSTOM' && (
                     <p className="text-xs text-muted-foreground">
-                      💡 This date will automatically advance based on your {(pendingChanges?.paymentFrequency || account.paymentFrequency)?.toLowerCase()} frequency after each renewal notice.
+                      {t('propFirm.configurator.fields.autoAdvanceInfo', { 
+                        frequency: (pendingChanges?.paymentFrequency || account.paymentFrequency)?.toLowerCase() || 'monthly'
+                      })}
                     </p>
                   )}
                   {(pendingChanges?.paymentFrequency || account.paymentFrequency) === 'CUSTOM' && (
                     <p className="text-xs text-orange-600">
-                      ⚠️ Custom frequency requires manual date updates
+                      {t('propFirm.configurator.fields.customFrequencyWarning')}
                     </p>
                   )}
                 </div>
@@ -468,7 +491,7 @@ export function AccountConfigurator({
                     onValueChange={(value) => handleInputChange('paymentFrequency', value as 'MONTHLY' | 'QUARTERLY' | 'BIANNUAL' | 'ANNUAL' | 'CUSTOM')}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select payment frequency" />
+                      <SelectValue placeholder={t('propFirm.configurator.placeholders.selectPaymentFrequency')} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="MONTHLY">{t('propFirm.configurator.paymentFrequencies.monthly')}</SelectItem>
@@ -508,7 +531,6 @@ export function AccountConfigurator({
 
               {/* Payout Section */}
               <div className="flex flex-col gap-4">
-                <h4 className="font-medium text-sm text-muted-foreground">Payout</h4>
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.minTradingDays')}</Label>
                   <Input
@@ -539,13 +561,21 @@ export function AccountConfigurator({
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {pendingChanges?.resetDate || account.resetDate ? (
-                        format(pendingChanges?.resetDate || account.resetDate!, 'PPP', { locale: localeMap[params.locale as string] })
+                      {(pendingChanges && 'resetDate' in pendingChanges) ? (
+                        pendingChanges.resetDate ? (
+                          format(pendingChanges.resetDate, 'PPP', { locale: localeMap[params.locale as string] })
+                        ) : (
+                          <span>{t('propFirm.resetDate.noDate')}</span>
+                        )
                       ) : (
-                        <span>{t('propFirm.resetDate.noDate')}</span>
+                        account.resetDate ? (
+                          format(account.resetDate, 'PPP', { locale: localeMap[params.locale as string] })
+                        ) : (
+                          <span>{t('propFirm.resetDate.noDate')}</span>
+                        )
                       )}
                     </Button>
-                    {(pendingChanges?.resetDate || account.resetDate) && (
+                                          {((pendingChanges && 'resetDate' in pendingChanges) ? pendingChanges.resetDate : account.resetDate) && (
                       <Button
                         type="button"
                         variant="ghost"
