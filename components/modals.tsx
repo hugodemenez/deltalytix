@@ -57,7 +57,7 @@ export default function Modals() {
       }
       setIsTradesDialogOpen(trades?.length === 0)
     }
-  }, [trades, isPaywallOpen])
+  }, [trades, isPaywallOpen, isLoading])
 
   const handlePaywallClose = useCallback(() => {
     setIsPaywallOpen(false);
