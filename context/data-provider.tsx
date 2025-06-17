@@ -396,10 +396,11 @@ export const DataProvider: React.FC<{
   const trades = useTradesStore(state => state.trades);
   const setTrades = useTradesStore(state => state.setTrades);
   const dashboardLayout = useUserStore(state => state.dashboardLayout);
-    const locale = useCurrentLocale()
+  const locale = useCurrentLocale()
+  const isLoading = useUserStore(state => state.isLoading)
+  const setIsLoading = useUserStore(state => state.setIsLoading)
 
   // Local states
-  const [isLoading, setIsLoading] = useState(() => false);
   const [sharedParams, setSharedParams] = useState<SharedParams | null>(null);
 
   // Filter states
@@ -486,7 +487,7 @@ export const DataProvider: React.FC<{
         if (dashboardLayoutResponse) {
           setDashboardLayout(dashboardLayoutResponse)
         }
-        else{
+        else {
           setDashboardLayout(defaultLayouts)
         }
       }
@@ -636,7 +637,7 @@ export const DataProvider: React.FC<{
 
         // PnL range filter
         if ((pnlRange.min !== undefined && trade.pnl < pnlRange.min) ||
-            (pnlRange.max !== undefined && trade.pnl > pnlRange.max)) {
+          (pnlRange.max !== undefined && trade.pnl > pnlRange.max)) {
           return false;
         }
 
@@ -747,8 +748,8 @@ export const DataProvider: React.FC<{
       if (!currentAccount) {
         const createdAccount = await setupAccountAction(newAccount)
         setAccounts([...accounts, createdAccount])
+        // Revalidate cache for next reload
         revalidateCache([`user-data-${user.id}`])
-        loadData()
         return
       }
 
@@ -763,7 +764,6 @@ export const DataProvider: React.FC<{
       });
       setAccounts(updatedAccounts);
       revalidateCache([`user-data-${user.id}`])
-      loadData()
     } catch (error) {
       console.error('Error updating account:', error)
       throw error
@@ -928,10 +928,10 @@ export const DataProvider: React.FC<{
   }, [user?.id, setIsFirstConnection])
 
   const updateTrades = useCallback(async (tradeIds: string[], update: Partial<PrismaTrade>) => {
-    if (!user?.id) return 
+    if (!user?.id) return
     const updatedTrades = trades.map(
-      trade => 
-         tradeIds.includes(trade.id) ? {
+      trade =>
+        tradeIds.includes(trade.id) ? {
           ...trade,
           ...update
         } : trade

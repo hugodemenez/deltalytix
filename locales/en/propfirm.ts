@@ -56,6 +56,7 @@ export default {
                 rulesDailyLoss: 'Rules Daily Loss',
                 tradingNewsAllowed: 'Trading News Allowed',
                 allowNewsTrading: 'Allow News Trading',
+                price: 'Price',
                 basePrice: 'Base Price',
                 promo: 'Promo',
                 hasPromo: 'Has Promo',
@@ -72,7 +73,9 @@ export default {
                 renewalNotification: 'Renewal Notification',
                 enableRenewalNotification: 'Enable renewal notifications',
                 renewalNoticeInfo: 'You will receive notifications 3 days before renewal',
-                renewalNotice: 'Renewal Notice Days'
+                renewalNotice: 'Renewal Notice Days',
+                autoAdvanceInfo: '💡 This date will automatically advance based on your {frequency} frequency after each renewal notice.',
+                customFrequencyWarning: '⚠️ Custom frequency requires manual date updates'
             },
             trailingTypes: {
                 static: 'Static',
@@ -91,6 +94,16 @@ export default {
                 annual: 'Annual',
                 custom: 'Custom'
             },
+            tooltips: {
+                trailingDrawdown: 'Trailing drawdown follows your profits upward but never moves down when you lose money. When enabled with a trailing stop, it stops following profits once you reach the specified profit amount. The calculation can be done intraday (real-time) or end-of-day (computed once daily based on total daily profit/loss).'
+            },
+            placeholders: {
+                enterPrice: 'Enter price',
+                enterAmountToLockDrawdown: 'Enter amount to lock drawdown',
+                selectPaymentFrequency: 'Select payment frequency',
+                selectTrailingType: 'Select trailing type',
+                noPaymentDateSet: 'No payment date set'
+            }
 
         },
         balance: 'Balance',

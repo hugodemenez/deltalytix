@@ -56,6 +56,7 @@ export default {
                 rulesDailyLoss: 'Règles de Perte Journalière',
                 tradingNewsAllowed: 'Trading sur News Autorisé',
                 allowNewsTrading: 'Autoriser le Trading sur News',
+                price: 'Prix',
                 basePrice: 'Prix de Base',
                 promo: 'Promotion',
                 hasPromo: 'A une Promotion',
@@ -72,7 +73,9 @@ export default {
                 renewalNotification: 'Notification de Renouvellement',
                 enableRenewalNotification: 'Activer les notifications de renouvellement',
                 renewalNoticeInfo: 'Vous recevrez des notifications 3 jours avant le renouvellement',
-                renewalNotice: 'Jours de Préavis de Renouvellement'
+                renewalNotice: 'Jours de Préavis de Renouvellement',
+                autoAdvanceInfo: '💡 Cette date avancera automatiquement en fonction de votre fréquence {frequency} après chaque avis de renouvellement.',
+                customFrequencyWarning: '⚠️ La fréquence personnalisée nécessite des mises à jour manuelles de la date'
             },
             trailingTypes: {
                 static: 'Statique',
@@ -91,6 +94,16 @@ export default {
                 annual: 'Annuel',
                 custom: 'Personnalisé'
             },
+            tooltips: {
+                trailingDrawdown: 'Le drawdown trailing suit vos profits à la hausse mais ne descend jamais quand vous perdez de l\'argent. Lorsqu\'il est activé avec un stop trailing, il arrête de suivre les profits une fois que vous atteignez le montant de profit spécifié. Le calcul peut être fait en intraday (temps réel) ou en fin de journée (calculé une fois par jour basé sur le profit/perte total quotidien).'
+            },
+            placeholders: {
+                enterPrice: 'Entrez le prix',
+                enterAmountToLockDrawdown: 'Entrez le montant pour verrouiller le drawdown',
+                selectPaymentFrequency: 'Sélectionnez la fréquence de paiement',
+                selectTrailingType: 'Sélectionnez le type de trailing',
+                noPaymentDateSet: 'Aucune date de paiement définie'
+            }
 
         },
         balance: 'Solde',
