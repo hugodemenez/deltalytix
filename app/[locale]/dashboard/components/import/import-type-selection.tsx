@@ -25,11 +25,11 @@ interface ImportTypeSelectionProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
-type Category = 'Direct Account Sync' | 'Custom CSV Import' | 'Platform CSV Import'
 
-const categoryIcons: Record<Category, React.ReactNode> = {
+
+const categoryIcons: Record<PlatformConfig['category'], React.ReactNode> = {
   'Direct Account Sync': <Link2 className="h-4 w-4" />,
-  'Custom CSV Import': <FileSpreadsheet className="h-4 w-4" />,
+  'Intelligent Import': <FileSpreadsheet className="h-4 w-4" />,
   'Platform CSV Import': <Database className="h-4 w-4" />
 }
 
@@ -41,7 +41,7 @@ function isWeekend() {
 
 export default function ImportTypeSelection({ selectedType, setSelectedType, setIsOpen }: ImportTypeSelectionProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [hoveredCategory, setHoveredCategory] = useState<Category | null>(null)
+  const [hoveredCategory, setHoveredCategory] = useState<PlatformConfig['category'] | null>(null)
   const t = useI18n()
   
   // Set default selection to Rithmic sync
@@ -49,11 +49,11 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
     setSelectedType('rithmic-sync')
   }, [setSelectedType])
 
-  const getTranslatedCategory = (category: Category) => {
+  const getTranslatedCategory = (category: PlatformConfig['category']) => {
     switch (category) {
       case 'Direct Account Sync':
         return t('import.type.category.directSync')
-      case 'Custom CSV Import':
+      case 'Intelligent Import':
         return t('import.type.category.customCsv')
       case 'Platform CSV Import':
         return t('import.type.category.platformCsv')
@@ -106,7 +106,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                             platform={platform}
                             isSelected={selectedType === platform.type}
                             onSelect={(type) => setSelectedType(type as ImportType)}
-                            onHover={(category) => setHoveredCategory(category as Category)}
+                            onHover={(category) => setHoveredCategory(category as PlatformConfig['category'])}
                             onLeave={() => setHoveredCategory(null)}
                             isWeekend={isWeekend()}
                           />

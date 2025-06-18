@@ -1,5 +1,6 @@
 'use server'
-import { createClient, handleAuthCallback } from '@/server/auth'
+import { getCurrentLocale } from '@/locales/server'
+import { createClient, ensureUserInDatabase } from '@/server/auth'
 import { NextResponse } from 'next/server'
 // The client you created from the Server-Side Auth instructions
 
@@ -17,15 +18,10 @@ export async function GET(request: Request) {
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      // Call handleAuthCallback to ensure user is in the database
-      await handleAuthCallback()
 
+    if (!error) {
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
       const isLocalEnv = process.env.NODE_ENV === 'development'
-      console.log('forwardedHost', forwardedHost)
-      console.log('isLocalEnv', isLocalEnv)
-
       if (isLocalEnv) {
         // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
         if (decodedNext) {

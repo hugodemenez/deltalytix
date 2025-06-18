@@ -3,6 +3,7 @@ import { createI18nMiddleware } from 'next-international/middleware'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { geolocation } from '@vercel/functions'
+import { cookies } from 'next/headers'
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
@@ -17,19 +18,21 @@ async function updateSession(
   request: NextRequest,
   response: NextResponse,
 ) {
+  const cookieStore = await cookies()
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll()
+          return cookieStore.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          response = NextResponse.next({
-            request,
-          })
+          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
+          // DO NOT USE THIS, IT WILL CAUSE ROUTING ERRORS
+          // response = NextResponse.next({
+          //   request,
+          // })
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options)
           )
@@ -54,8 +57,11 @@ async function updateSession(
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Skip middleware for static assets
-  if (pathname.includes('.')) return NextResponse.next()
+  // Skip middleware for static assets and _next paths
+  if (pathname.includes('.') || pathname.startsWith('/_next/')) {
+    return NextResponse.next()
+  }
+  
   const { response, user } = await updateSession(request, I18nMiddleware(request))
 
   // Maintenance mode check

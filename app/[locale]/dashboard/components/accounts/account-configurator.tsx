@@ -309,7 +309,6 @@ export function AccountConfigurator({
                       onCheckedChange={(checked) => handleInputChange('trailingDrawdown', checked)}
                     />
                     <Label htmlFor="trailingDrawdown" className="cursor-pointer">{t('propFirm.configurator.fields.trailingDrawdown')}</Label>
-                    <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="h-4 w-4 text-muted-foreground cursor-help" />
@@ -318,7 +317,6 @@ export function AccountConfigurator({
                           <p>{t('propFirm.configurator.tooltips.trailingDrawdown')}</p>
                         </TooltipContent>
                       </Tooltip>
-                    </TooltipProvider>
                   </div>
                 </div>
 

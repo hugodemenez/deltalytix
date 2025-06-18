@@ -16,6 +16,7 @@ export async function getWebsiteURL() {
   url = url.endsWith('/') ? url : `${url}/`
   return url
 }
+
 export async function createClient() {
   const cookieStore = await cookies()
 
@@ -115,7 +116,7 @@ interface SupabaseUser {
   email?: string | null;
 }
 
-export async function ensureUserInDatabase(user: SupabaseUser) {
+export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) {
   if (!user) {
     await signOut();
     throw new Error('User data is required');
@@ -134,6 +135,7 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
 
     // If user exists by auth_user_id, update email if needed
     if (existingUserByAuthId) {
+      // If email is different, update it
       if (existingUserByAuthId.email !== user.email) {
         try {
           return await prisma.user.update({
@@ -141,7 +143,8 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
               auth_user_id: user.id // Always use auth_user_id as the unique identifier
             },
             data: {
-              email: user.email || existingUserByAuthId.email
+              email: user.email || existingUserByAuthId.email,
+              language: locale || existingUserByAuthId.language
             },
           });
         } catch (updateError) {
@@ -162,23 +165,6 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
         await signOut();
         throw new Error('Account conflict: Email already associated with different authentication method');
       }
-
-      if (existingUserByEmail) {
-        try {
-          return await prisma.user.update({
-            where: {
-              email: user.email // Use email as the unique identifier since we found the user by email
-            },
-            data: {
-              auth_user_id: user.id
-            },
-          });
-        } catch (updateError) {
-          console.error('Error updating auth_user_id:', updateError);
-          await signOut();
-          throw new Error('Failed to update user authentication');
-        }
-      }
     }
 
     // Create new user if no existing user found
@@ -188,6 +174,7 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
           auth_user_id: user.id,
           email: user.email || '', // Provide a default empty string if email is null
           id: user.id,
+          language: locale || 'en'
         },
       });
     } catch (createError) {
@@ -227,16 +214,6 @@ export async function ensureUserInDatabase(user: SupabaseUser) {
   }
 }
 
-// You might want to add this function to your callback route
-export async function handleAuthCallback() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (user) {
-    await ensureUserInDatabase(user)
-  }
-  // No need to handle redirect here, as it's already managed in the route
-}
-
 export async function verifyOtp(email: string, token: string, type: 'email' | 'signup' = 'email') {
   const supabase = await createClient()
   const { data, error } = await supabase.auth.verifyOtp({
@@ -247,11 +224,6 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
 
   if (error) {
     throw new Error(error.message)
-  }
-
-  // Ensure user is in database after verification
-  if (data.user) {
-    await ensureUserInDatabase(data.user)
   }
 
   return data
@@ -276,12 +248,9 @@ export async function getUserId(): Promise<string> {
     error,
   } = await supabase.auth.getUser()
 
-
   if (error || !user) {
     throw new Error("User not authenticated")
   }
-
-  await ensureUserInDatabase(user)
 
   return user.id
 }
