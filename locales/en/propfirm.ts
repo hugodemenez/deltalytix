@@ -6,6 +6,7 @@ export default {
             unnamedAccount: 'Unnamed Account',
             balance: 'Balance',
             target: 'Target',
+            remainingToTarget: 'Remaining to Target',
             drawdown: 'Drawdown',
             remainingLoss: '${amount} remaining',
             drawdownBreached: 'Drawdown breached',

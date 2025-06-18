@@ -847,7 +847,6 @@ export const DataProvider: React.FC<{
   // Add savePayout function
   const savePayout = useCallback(async (payout: PrismaPayout) => {
     if (!user?.id || isSharedView) return;
-    const accounts = useUserStore(state => state.accounts)
 
     try {
       // Add to database

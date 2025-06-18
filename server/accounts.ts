@@ -275,6 +275,7 @@ export async function getAccountsAction() {
 }
 
 export async function savePayoutAction(payout: Payout) {
+  
   try {
     // First find the account to get its ID
     const userId = await getUserId()
@@ -294,7 +295,7 @@ export async function savePayoutAction(payout: Payout) {
         id: payout.id
       },
       create: {
-        id: payout.id,
+        id: crypto.randomUUID(),
         accountNumber: payout.accountNumber,
         date: payout.date,
         amount: payout.amount,
