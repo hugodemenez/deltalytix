@@ -79,7 +79,7 @@ function matchOrdersWithFIFO(orders: Order[], instruments: FinancialInstrument[]
         const totalCommission = (entryOrder.commission || 0) + (exitOrder.commission || 0);
         // Create trade
         const trade: Trade = {
-          instrument: symbol,
+          instrument: symbol.slice(0, -2),
           side: isLongTrade ? 'long' : 'short',
           quantity: matchQuantity,
           entryPrice: entryOrder.price.toString(),

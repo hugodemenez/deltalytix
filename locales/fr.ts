@@ -306,6 +306,7 @@ export default {
     'common.add': 'Ajouter',
     'common.cancel': 'Annuler',
     'import.error.accountExists': 'Ce compte existe déjà',
+    'errors.noFilesSelected': 'Aucun fichier sélectionné',
     'import.upload.dragAndDrop': 'Glissez et déposez vos fichiers ici',
     'import.upload.clickToBrowse': 'ou cliquez pour parcourir vos fichiers',
     'import.upload.dropHere': 'Déposez vos fichiers ici',
