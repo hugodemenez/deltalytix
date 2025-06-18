@@ -24,8 +24,8 @@ import { Label } from "@/components/ui/label"
 import { Trade } from '@prisma/client'
 import ExportButton from '@/components/export-button'
 import { useI18n } from "@/locales/client"
-import { useUserStore } from '../../../../../../store/user-store'
-import { useTradesStore } from '../../../../../../store/trades-store'
+import { useUserStore } from '@/store/user-store'
+import { useTradesStore } from '@/store/trades-store'
 
 type GroupedTrades = Record<string, Record<string, Trade[]>>
 
