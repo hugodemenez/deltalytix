@@ -55,6 +55,12 @@ export async function removeAccountsFromTradesAction(accountNumbers: string[]): 
       userId: userId
     }
   })
+  await prisma.account.deleteMany({
+    where: {
+      number: { in: accountNumbers },
+      userId: userId
+    }
+  })
 }
 
 export async function removeAccountFromTradesAction(accountNumber: string): Promise<void> {
