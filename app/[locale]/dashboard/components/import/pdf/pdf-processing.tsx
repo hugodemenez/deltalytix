@@ -149,7 +149,7 @@ export default function PdfProcessing({
         timeInPosition: trade.timeInPosition,
         userId: '', // Will be set when saving
         side: trade.side || '',
-        commission: Math.abs(trade.commission),
+        commission: Math.abs(trade.commission || 0),
         createdAt: new Date(),
         comment: null,
         videoUrl: null,
