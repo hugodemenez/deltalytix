@@ -11,10 +11,12 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface PdfUploadProps {
   setText: React.Dispatch<React.SetStateAction<string>>
+  setFiles: React.Dispatch<React.SetStateAction<File[]>>
 }
 
 export default function PdfUpload({
   setText,
+  setFiles,
 }: PdfUploadProps) {
   const t = useI18n()
   const [files, setLocalFiles] = useState<File[]>([])
@@ -31,7 +33,7 @@ export default function PdfUpload({
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const pdfFiles = acceptedFiles.filter(file => file.type === 'application/pdf')
     setLocalFiles(prev => [...prev, ...pdfFiles])
-    
+    setFiles(prev => [...prev, ...pdfFiles])
     // Process each PDF file to extract text
     for (const file of pdfFiles) {
       try {
@@ -48,7 +50,9 @@ export default function PdfUpload({
 
         // Convert file to base64
         const arrayBuffer = await file.arrayBuffer()
-        const base64Content = Buffer.from(arrayBuffer).toString('base64')
+        const base64Content = btoa(
+          String.fromCharCode(...new Uint8Array(arrayBuffer))
+        )
 
         const response = await fetch('/api/ai/ocr', {
           method: 'POST',

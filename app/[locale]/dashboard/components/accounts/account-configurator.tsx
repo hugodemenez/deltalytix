@@ -335,14 +335,13 @@ export function AccountConfigurator({
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.trailingType')}</Label>
                   <Select
-                    value={pendingChanges?.trailing ?? account.trailing ?? 'Static'}
-                    onValueChange={(value) => handleInputChange('trailing', value as 'Static' | 'EOD' | 'Intraday')}
+                    value={pendingChanges?.trailing ?? account.trailing ?? 'EOD'}
+                    onValueChange={(value) => handleInputChange('trailing', value as 'EOD' | 'Intraday')}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={t('propFirm.configurator.placeholders.selectTrailingType')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Static">{t('propFirm.configurator.trailingTypes.static')}</SelectItem>
                       <SelectItem value="EOD">{t('propFirm.configurator.trailingTypes.eod')}</SelectItem>
                       <SelectItem value="Intraday">{t('propFirm.configurator.trailingTypes.intraday')}</SelectItem>
                     </SelectContent>

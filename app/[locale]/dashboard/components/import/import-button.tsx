@@ -253,6 +253,7 @@ export default function ImportButton() {
       return (
         <Component
           setText={setText}
+          setFiles={setFiles}
         />
       )
     }

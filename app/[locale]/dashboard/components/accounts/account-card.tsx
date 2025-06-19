@@ -108,7 +108,7 @@ export function AccountCard({ account, trades, allTrades, metrics, onClick, size
       currentBalance: runningBalance,
       remainingToTarget
     }
-  }, [account, trades])
+  }, [account, trades, allTrades])
 
   return (
     <Card

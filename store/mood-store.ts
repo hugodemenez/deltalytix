@@ -43,7 +43,7 @@ export const useMoodStore = create<MoodStore>()(
       resetMoods: () => set({ moods: [] }),
     }),
     {
-      name: 'delatlytix-mood-store',
+      name: 'deltalytix-mood-store',
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         if (state) {

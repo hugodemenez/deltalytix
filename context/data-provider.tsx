@@ -535,7 +535,7 @@ export const DataProvider: React.FC<{
       };
 
       // Execute all updates at once
-      updates();
+      await updates();
     } catch (error) {
       console.error('Error loading data:', error);
       // Optionally handle specific error cases here
