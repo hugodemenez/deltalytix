@@ -105,7 +105,8 @@ export default function PdfUpload({
 
   const removeFile = useCallback((index: number) => {
     setLocalFiles(prev => prev.filter((_, i) => i !== index))
-  }, [setLocalFiles])
+    setFiles(prev => prev.filter((_, i) => i !== index))
+  }, [setLocalFiles, setFiles])
 
 
   return (
