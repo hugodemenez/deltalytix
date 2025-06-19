@@ -24,6 +24,8 @@ export async function POST(req: Request) {
     const { record } = payload
     console.log(record)
 
+    // Identify user based on email
+
     // Get the user's first name or use default
     const fullName = record.raw_user_meta_data?.name || record.raw_user_meta_data?.full_name || ''
     const firstName = fullName.split(' ')[0] || 'trader'
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
     const user = await prisma.user.findUnique({
       where: { email: record.email }
     })
-    const userLanguage = user?.language || 'fr'
+    const userLanguage = user?.language || 'en'
     const youtubeId = await getLatestVideoFromPlaylist()
 
     // Use react prop instead of rendering to HTML

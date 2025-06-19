@@ -22,7 +22,7 @@ import type { EmblaCarouselType as CarouselApi } from "embla-carousel"
 import { toast } from "@/hooks/use-toast"
 import { saveMindset, deleteMindset } from "@/server/journal"
 import { isToday, format } from "date-fns"
-import { useUserStore } from "../../../../../store/user-store"
+import { useMoodStore } from "@/store/mood-store"
 
 interface MindsetWidgetProps {
   size: WidgetSize
@@ -36,8 +36,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [journalContent, setJournalContent] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isEditing, setIsEditing] = useState(true)
-  const moods = useUserStore(state => state.moods)
-  const setMoods = useUserStore(state => state.setMoods)
+  const moods = useMoodStore(state => state.moods)
+  const setMoods = useMoodStore(state => state.setMoods)
   const t = useI18n()
 
   // Consolidated effect for carousel and mood data handling

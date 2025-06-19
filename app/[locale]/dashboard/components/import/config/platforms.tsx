@@ -17,7 +17,10 @@ import TopstepProcessor from '../topstep/topstep-processor'
 import NinjaTraderPerformanceProcessor from '../ninjatrader/ninjatrader-performance-processor'
 import RithmicPerformanceProcessor from '../rithmic/rithmic-performance-processor'
 import RithmicOrderProcessor from '../rithmic/rithmic-order-processor-new'
+import PdfUpload from '../pdf/pdf-upload'
+import PdfProcessing from '../pdf/pdf-processing'
 import { Step } from '../import-button'
+import { FileText, GitPullRequestDraft, Sparkles } from 'lucide-react'
 
 type TranslationKey = 
   | 'import.steps.selectPlatform'
@@ -36,6 +39,8 @@ type TranslationKey =
   | 'import.steps.processTradesDescription'
   | 'import.steps.connectAccount'
   | 'import.steps.connectAccountDescription'
+  | 'import.steps.processFile'
+  | 'import.steps.processFileDescription'
 
 export interface ProcessedData {
   headers: string[]
@@ -59,18 +64,21 @@ type StepComponent =
   | typeof RithmicSyncWrapper
   | typeof EtpSync
   | typeof ThorSync
+  | typeof PdfUpload
+  | typeof PdfProcessing
 
 export interface PlatformConfig {
   platformName: string
   type: string
   name: string
   description: string
-  category: 'Direct Account Sync' | 'Custom CSV Import' | 'Platform CSV Import'
+  category: 'Direct Account Sync' | 'Intelligent Import' | 'Platform CSV Import'
   videoUrl?: string
   details: string
   logo: {
-    path: string
-    alt: string
+    path?: string
+    alt?: string
+    component?: ComponentType<{}>
   }
   isDisabled?: boolean
   isComingSoon?: boolean
@@ -189,12 +197,11 @@ export const platforms: PlatformConfig[] = [
     type: '',
     name: 'import.type.csvAi.name',
     description: 'import.type.csvAi.description',
-    category: 'Custom CSV Import',
+    category: 'Intelligent Import',
     videoUrl: '',
     details: '',
     logo: {
-      path: '',
-      alt: ''
+      component: () => <Sparkles className="w-4 h-4" />,
     },
     requiresAccountSelection: true,
     processFile: processStandardCsv,
@@ -581,6 +588,45 @@ export const platforms: PlatformConfig[] = [
         component: ThorSync,
         isLastStep: true
       }
+    ]
+  },
+  {
+    platformName: 'pdf-import',
+    type: 'pdf-import',
+    name: 'import.type.pdfImport.name',
+    description: 'import.type.pdfImport.description',
+    category: 'Intelligent Import',
+    videoUrl: process.env.NEXT_PUBLIC_PDF_IMPORT_TUTORIAL_VIDEO || '',
+    details: 'import.type.pdfImport.details',
+    logo: {
+      component: () => <FileText className="w-4 h-4" />,
+    },
+    requiresAccountSelection: true,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: PdfUpload
+      },
+      {
+        id: 'process-file',
+        title: 'import.steps.processFile',
+        description: 'import.steps.processFileDescription',
+        component: PdfProcessing
+      },
+      {
+        id: 'select-account',
+        title: 'import.steps.selectAccount',
+        description: 'import.steps.selectAccountDescription',
+        component: AccountSelection
+      },
     ]
   }
 ] as const

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { useToast } from "@/hooks/use-toast"
@@ -19,8 +19,11 @@ import { ImportDialogFooter } from './components/import-dialog-footer'
 import { platforms } from './config/platforms'
 import { FormatPreview } from './components/format-preview'
 import { cn } from '@/lib/utils'
-import { useUserStore } from '../../../../../store/user-store'
-import { useTradesStore } from '../../../../../store/trades-store'
+import { useUserStore } from '@/store/user-store'
+import { useTradesStore } from '@/store/trades-store'
+import { usePdfProcessingStore } from '@/store/pdf-processing-store'
+import PdfUpload from './pdf/pdf-upload'
+import PdfProcessing from './pdf/pdf-processing'
 
 type ColumnConfig = {
   [key: string]: {
@@ -45,21 +48,21 @@ const columnConfig: ColumnConfig = {
   "commission": { defaultMapping: ["commission", "fee"], required: false },
 }
 
-type Step = 
+export type Step = 
   | 'select-import-type'
   | 'upload-file'
   | 'select-headers'
   | 'map-columns'
   | 'select-account'
   | 'preview-trades'
-  | 'complete';
-
-export type { Step };
+  | 'complete'
+  | 'process-file'
 
 export default function ImportButton() {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [step, setStep] = useState<Step>('select-import-type')
   const [importType, setImportType] = useState<ImportType>('')
+  const [files, setFiles] = useState<File[]>([])
   const [rawCsvData, setRawCsvData] = useState<string[][]>([])
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
@@ -71,12 +74,14 @@ export default function ImportButton() {
   const [processedTrades, setProcessedTrades] = useState<Trade[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const uploadIconRef = useRef<UploadIconHandle>(null)
+  const [text, setText] = useState<string>('')
 
   const { toast } = useToast()
   const user = useUserStore(state => state.user)
   const trades = useTradesStore(state => state.trades)
   const { refreshTrades, updateTrades } = useData()
   const t = useI18n()
+
 
   const generateTradeHash = (trade: Partial<Trade>): string => {
     if (!user) {
@@ -183,26 +188,22 @@ export default function ImportButton() {
     setError(null)
   }
 
-  const isRequiredFieldsMapped = (): boolean => {
-    const requiredFields = Object.entries(columnConfig)
-      .filter(([_, config]) => config.required)
-      .map(([field, _]) => field);
-    return requiredFields.every(field => Object.values(mappings).includes(field));
-  }
-
-  const getMissingRequiredFields = (): string[] => {
-    const requiredFields = Object.entries(columnConfig)
-      .filter(([_, config]) => config.required)
-      .map(([field, _]) => field);
-    return requiredFields.filter(field => !Object.values(mappings).includes(field));
-  }
-
   const handleNextStep = () => {
     const platform = platforms.find(p => p.type === importType) || platforms.find(p => p.platformName === 'csv-ai')
     if (!platform) return
 
     const currentStepIndex = platform.steps.findIndex(s => s.id === step)
     if (currentStepIndex === -1) return
+
+    // Handle PDF upload step
+    if (step === 'upload-file' && importType === 'pdf') {
+      if (files.length === 0) {
+        setError(t('import.errors.noFilesSelected'))
+        return
+      }
+      setStep('process-file')
+      return
+    }
 
     // Handle standard flow
     const nextStep = platform.steps[currentStepIndex + 1]
@@ -246,6 +247,14 @@ export default function ImportButton() {
             setIsOpen={setIsOpen}
           />
         </div>
+      )
+    }
+    if (Component === PdfUpload) {
+      return (
+        <Component
+          setText={setText}
+          setFiles={setFiles}
+        />
       )
     }
 
@@ -312,6 +321,18 @@ export default function ImportButton() {
       )
     }
     
+    if (Component === PdfProcessing) {
+      return (
+        <Component
+          setError={setError}
+          setStep={setStep}
+          processedTrades={processedTrades}
+          setProcessedTrades={setProcessedTrades}
+          extractedText={text}
+        />
+      )
+    }
+    
     // Handle processor components
     if (platform.processorComponent) {
       return (
@@ -343,6 +364,9 @@ export default function ImportButton() {
 
     // File upload step
     if (currentStep.component === FileUpload && csvData.length === 0) return true
+    
+    // PDF upload step
+    if (currentStep.component === PdfUpload && text.length === 0) return true
     
     // Account selection for Tradovate
     if (currentStep.component === AccountSelection && importType === 'tradovate' && !accountNumber && !newAccountNumber) return true

@@ -20,6 +20,7 @@ import { useChatStore } from "../../../../../store/chat-store"
 import { format } from "date-fns"
 import { DotStream } from 'ldrs/react'
 import 'ldrs/react/DotStream.css'
+import { useMoodStore } from "@/store/mood-store"
 
 // Types
 interface ChatWidgetProps {
@@ -182,8 +183,8 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const [showResumeButton, setShowResumeButton] = useState(false)
     const [isNearBottom, setIsNearBottom] = useState(true)
-    const moods = useUserStore(state => state.moods)
-    const setMoods = useUserStore(state => state.setMoods)
+    const moods = useMoodStore(state => state.moods)
+    const setMoods = useMoodStore(state => state.setMoods)
 
     // Load stored messages when component mounts
     // Load from user mood store if no messages are stored

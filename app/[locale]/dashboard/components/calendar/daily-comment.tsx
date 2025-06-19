@@ -12,6 +12,7 @@ import { saveJournal, getMoodForDay } from '@/server/journal'
 import { NoteEditor } from "@/app/[locale]/dashboard/components/mindset/note-editor"
 import { format } from 'date-fns'
 import { useUserStore } from '../../../../../store/user-store'
+import { useMoodStore } from '@/store/mood-store'
 
 interface DailyCommentProps {
   dayData: CalendarEntry | undefined
@@ -34,8 +35,8 @@ interface Mood {
 export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   const t = useI18n()
   const user = useUserStore(state => state.user)
-  const moodHistory = useUserStore(state => state.moods)
-  const setMoodHistory = useUserStore(state => state.setMoods)
+  const moodHistory = useMoodStore(state => state.moods)
+  const setMoodHistory = useMoodStore(state => state.setMoods)
   const { toast } = useToast()
   const [comment, setComment] = React.useState<string>("")
   const [isSavingComment, setIsSavingComment] = React.useState(false)

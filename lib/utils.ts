@@ -124,3 +124,8 @@ export function groupBy<T>(array: T[], key: keyof T): { [key: string]: T[] } {
     return result;
   }, {} as { [key: string]: T[] });
 }
+
+export function generateTradeHash(trade: Partial<Trade>): string {
+  const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
+  return hashString
+}

@@ -26,13 +26,13 @@ async function updateSession(
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
-          response = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
+          // DO NOT USE THIS, IT WILL CAUSE ROUTING ERRORS
+          // response = NextResponse.next({
+          //   request,
+          // })
+          cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options)
-          )
+          })
         },
       },
     }
@@ -54,8 +54,11 @@ async function updateSession(
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  // Skip middleware for static assets
-  if (pathname.includes('.')) return NextResponse.next()
+  // Skip middleware for static assets and _next paths
+  if (pathname.includes('.') || pathname.startsWith('/_next/')) {
+    return NextResponse.next()
+  }
+  
   const { response, user } = await updateSession(request, I18nMiddleware(request))
 
   // Maintenance mode check

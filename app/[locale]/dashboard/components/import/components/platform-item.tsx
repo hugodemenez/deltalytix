@@ -48,11 +48,14 @@ export function PlatformItem({
           {platform.logo.path && (
             <Image
               src={platform.logo.path}
-              alt={platform.logo.alt}
+              alt={platform.logo.alt || ''}
               width={32}
               height={32}
               className="object-contain rounded-lg border border-border/50"
             />
+          )}
+          {platform.logo.component && (
+            <platform.logo.component />
           )}
         </div>
         <div className="flex-1">

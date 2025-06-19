@@ -309,7 +309,6 @@ export function AccountConfigurator({
                       onCheckedChange={(checked) => handleInputChange('trailingDrawdown', checked)}
                     />
                     <Label htmlFor="trailingDrawdown" className="cursor-pointer">{t('propFirm.configurator.fields.trailingDrawdown')}</Label>
-                    <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info className="h-4 w-4 text-muted-foreground cursor-help" />
@@ -318,7 +317,6 @@ export function AccountConfigurator({
                           <p>{t('propFirm.configurator.tooltips.trailingDrawdown')}</p>
                         </TooltipContent>
                       </Tooltip>
-                    </TooltipProvider>
                   </div>
                 </div>
 
@@ -337,14 +335,13 @@ export function AccountConfigurator({
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.trailingType')}</Label>
                   <Select
-                    value={pendingChanges?.trailing ?? account.trailing ?? 'Static'}
-                    onValueChange={(value) => handleInputChange('trailing', value as 'Static' | 'EOD' | 'Intraday')}
+                    value={pendingChanges?.trailing ?? account.trailing ?? 'EOD'}
+                    onValueChange={(value) => handleInputChange('trailing', value as 'EOD' | 'Intraday')}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={t('propFirm.configurator.placeholders.selectTrailingType')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Static">{t('propFirm.configurator.trailingTypes.static')}</SelectItem>
                       <SelectItem value="EOD">{t('propFirm.configurator.trailingTypes.eod')}</SelectItem>
                       <SelectItem value="Intraday">{t('propFirm.configurator.trailingTypes.intraday')}</SelectItem>
                     </SelectContent>

@@ -53,12 +53,12 @@ function getCalendarDays(monthStart: Date, monthEnd: Date) {
   return [...days, ...additionalDays].slice(0, 42)
 }
 
-const formatCurrency = (value: number) => {
+const formatCurrency = (value: number, options?: { minimumFractionDigits?: number; maximumFractionDigits?: number }) => {
   const formatted = value.toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    minimumFractionDigits: options?.minimumFractionDigits ?? 0,
+    maximumFractionDigits: options?.maximumFractionDigits ?? 0
   })
   return formatted
 }
@@ -184,12 +184,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
                 </div>
                 <div className="text-right">
                   <div className="font-semibold text-sm text-blue-600 dark:text-blue-400">
-                    {account.price?.toLocaleString('en-US', {
-                      style: 'currency',
-                      currency: 'USD',
-                      minimumFractionDigits: 0,
-                      maximumFractionDigits: 2
-                    })}
+                    {account.price != null && formatCurrency(account.price, { maximumFractionDigits: 2 })}
                   </div>
                   {account.autoRenewal && (
                     <div className="text-xs text-muted-foreground">
@@ -511,26 +506,29 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
                         </div>
                       </div>
                     </div>
-                    {isLastDayOfWeek && (
-                      <div
-                        className={cn(
-                          "h-full flex items-center justify-center rounded-none cursor-pointer",
-                          "ring-1 ring-border hover:ring-primary hover:z-10",
-                          index === 6 && "rounded-tr-lg",
-                          index === 41 && "rounded-br-lg"
-                        )}
-                        onClick={() => setSelectedWeekDate(date)}
-                      >
-                        <div className={cn(
-                          "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
-                          calculateWeeklyTotal(index, calendarDays, calendarData) >= 0
-                            ? "text-green-600 dark:text-green-400"
-                            : "text-red-600 dark:text-red-400"
-                        )}>
-                          {formatCurrency(calculateWeeklyTotal(index, calendarDays, calendarData))}
+                    {isLastDayOfWeek && (() => {
+                      const weeklyTotal = calculateWeeklyTotal(index, calendarDays, calendarData)
+                      return (
+                        <div
+                          className={cn(
+                            "h-full flex items-center justify-center rounded-none cursor-pointer",
+                            "ring-1 ring-border hover:ring-primary hover:z-10",
+                            index === 6 && "rounded-tr-lg",
+                            index === 41 && "rounded-br-lg"
+                          )}
+                          onClick={() => setSelectedWeekDate(date)}
+                        >
+                          <div className={cn(
+                            "text-[9px] sm:text-[11px] font-semibold truncate px-0.5",
+                            weeklyTotal >= 0
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-red-600 dark:text-red-400"
+                          )}>
+                            {formatCurrency(weeklyTotal)}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )
+                    })()}
                   </React.Fragment>
                 )
               })}

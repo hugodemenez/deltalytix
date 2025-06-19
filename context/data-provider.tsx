@@ -51,7 +51,7 @@ import {
 } from '@/server/groups';
 import { createClient } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
-import { signOut } from '@/server/auth';
+import { ensureUserInDatabase, signOut } from '@/server/auth';
 import { useUserStore } from '@/store/user-store';
 import { useTickDetailsStore } from '@/store/tick-details-store';
 import { useFinancialEventsStore } from '@/store/financial-events-store';
@@ -69,6 +69,7 @@ import { useParams } from 'next/navigation';
 import { deleteTagAction } from '@/server/tags';
 import { useRouter } from 'next/navigation';
 import { useCurrentLocale } from '@/locales/client';
+import { useMoodStore } from '@/store/mood-store';
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -383,7 +384,7 @@ export const DataProvider: React.FC<{
   const setAccounts = useUserStore(state => state.setAccounts);
   const setGroups = useUserStore(state => state.setGroups);
   const setDashboardLayout = useUserStore(state => state.setDashboardLayout);
-  const setMoods = useUserStore(state => state.setMoods);
+  const setMoods = useMoodStore(state => state.setMoods);
   const supabaseUser = useUserStore(state => state.supabaseUser);
   const timezone = useUserStore(state => state.timezone);
   const groups = useUserStore(state => state.groups);
@@ -498,24 +499,8 @@ export const DataProvider: React.FC<{
       const trades = await getTradesAction()
       setTrades(Array.isArray(trades) ? trades : []);
 
-      // TODO: This is not needed anymore
-      // Set the date range
-      // if (Array.isArray(trades) && trades.length > 0) {
-      //   const dates = trades.map(trade =>
-      //     new Date(formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ssXXX'))
-      //   );
-      //   if (dates.length > 0) {
-      //     const minDate = new Date(Math.min(...dates.map(date => date.getTime())));
-      //     const maxDate = new Date(Math.max(
-      //       ...dates.map(date => date.getTime()),
-      //       new Date().getTime()
-      //     ));
-      //     setDateRange({ from: startOfDay(minDate), to: endOfDay(maxDate) });
-      //   }
-      // }
-
-      // Step 3: Fetch user data in parallel
-      // TODO: Check what we could cache
+      // Step 3: Fetch user data
+      // TODO: Check what we could cache client side
       const data = await getUserData()
 
 
@@ -526,8 +511,12 @@ export const DataProvider: React.FC<{
       }
 
       // Step 4: Batch all state updates together
-      const updates = () => {
+      const updates = async () => {
         setUser(data.userData);
+        // If user first connection, set locale
+        if (data.userData?.isFirstConnection) {
+          await ensureUserInDatabase(user, locale)
+        }
         setSubscription(data.subscription as PrismaSubscription | null);
         setTags(data.tags);
         setGroups(data.groups);
@@ -546,7 +535,7 @@ export const DataProvider: React.FC<{
       };
 
       // Execute all updates at once
-      updates();
+      await updates();
     } catch (error) {
       console.error('Error loading data:', error);
       // Optionally handle specific error cases here
@@ -556,7 +545,7 @@ export const DataProvider: React.FC<{
     } finally {
       setIsLoading(false);
     }
-  }, [isSharedView, params?.slug, timezone, supabaseUser, isLoading]);
+  }, [isSharedView, params?.slug, timezone, supabaseUser, isLoading, setIsLoading]);
 
   // Load data on mount and when isSharedView changes
   useEffect(() => {
@@ -858,7 +847,6 @@ export const DataProvider: React.FC<{
   // Add savePayout function
   const savePayout = useCallback(async (payout: PrismaPayout) => {
     if (!user?.id || isSharedView) return;
-    const accounts = useUserStore(state => state.accounts)
 
     try {
       // Add to database

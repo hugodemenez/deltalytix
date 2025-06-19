@@ -6,6 +6,7 @@ export default {
             unnamedAccount: 'Compte sans nom',
             balance: 'Solde',
             target: 'Objectif',
+            remainingToTarget: 'Reste à atteindre',
             drawdown: 'Perte maximale',
             remainingLoss: '${amount} restant',
             drawdownBreached: 'Perte maximale dépassée',

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { User, Subscription, Tag, Mood, DashboardLayout } from '@prisma/client'
+import { User, Subscription, Tag, DashboardLayout } from '@prisma/client'
 import { User as SupabaseUser } from '@supabase/supabase-js'
 import { Group, Account } from '@/context/data-provider'
 import { deleteGroupAction, saveGroupAction, updateGroupAction } from '@/server/groups'
@@ -20,7 +20,6 @@ type UserStore = {
   tags: Tag[]
   accounts: Account[]
   groups: Group[]
-  moods: Mood[]
   dashboardLayout: {
     id: string
     userId: string
@@ -48,11 +47,6 @@ type UserStore = {
   addGroup: (group: Group) => void
   updateGroup: (groupId: string, data: Partial<Group>) => void
   removeGroup: (groupId: string) => void
-  setMoods: (moods: Mood[]) => void
-  addMood: (mood: Mood) => void
-  updateMood: (moodId: string, data: Partial<Mood>) => void
-  removeMood: (moodId: string) => void
-  getMoodByDate: (date: Date) => Mood | undefined
   setDashboardLayout: (layout: DashboardLayout) => void
   updateDashboardLayout: (type: 'desktop' | 'mobile', layout: any[]) => void
   setIsLoading: (value: boolean) => void
@@ -69,7 +63,6 @@ export const useUserStore = create<UserStore>()((
       tags: [],
       accounts: [],
       groups: [],
-      moods: [],
       dashboardLayout: null,
       isLoading: false,
       isMobile: false,
@@ -149,24 +142,6 @@ export const useUserStore = create<UserStore>()((
           throw error
         }
       },
-      setMoods: (moods) => set({ moods }),
-      addMood: (mood) => set((state) => ({ 
-        moods: [...state.moods, mood] 
-      })),
-      updateMood: (moodId, data) => set((state) => ({
-        moods: state.moods.map(mood => 
-          mood.id === moodId ? { ...mood, ...data } : mood
-        )
-      })),
-      removeMood: (moodId) => set((state) => ({ 
-        moods: state.moods.filter(mood => mood.id !== moodId) 
-      })),
-      getMoodByDate: (date) => {
-        const dateStr = date.toISOString().split('T')[0]
-        return get().moods.find(mood => 
-          mood.day.toISOString().split('T')[0] === dateStr
-        )
-      },
       setDashboardLayout: (layout) => set({
         dashboardLayout: {
           id: layout.id,
@@ -199,7 +174,6 @@ export const useUserStore = create<UserStore>()((
         tags: [], 
         accounts: [], 
         groups: [],
-        moods: [],
         dashboardLayout: null
       }),
     })

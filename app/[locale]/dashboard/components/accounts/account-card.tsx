@@ -19,6 +19,7 @@ interface Trade {
 interface AccountCardProps {
   account: Account
   trades: Trade[]
+  allTrades?: Trade[] // All trades for the chart
   metrics?: {
     hasProfitableData: boolean
     isConsistent: boolean
@@ -29,13 +30,21 @@ interface AccountCardProps {
   size?: WidgetSize
 }
 
-export function AccountCard({ account, trades, metrics, onClick, size = 'large' }: AccountCardProps) {
+export function AccountCard({ account, trades, allTrades, metrics, onClick, size = 'large' }: AccountCardProps) {
   const t = useI18n()
 
-  const { drawdownProgress, remainingLoss, progress, isConfigured, currentBalance } = useMemo(() => {
+  // Use allTrades for the chart if provided, otherwise fall back to filtered trades
+  const chartTrades = allTrades || trades
+
+  const { drawdownProgress, remainingLoss, progress, isConfigured, currentBalance, remainingToTarget } = useMemo(() => {
     const isConfigured = account.profitTarget > 0 && account.drawdownThreshold > 0
     const progress = account.profitTarget > 0
       ? ((account.balanceToDate ?? account.startingBalance) / account.profitTarget) * 100
+      : 0
+
+    // Calculate remaining amount to target
+    const remainingToTarget = account.profitTarget > 0
+      ? Math.max(0, account.profitTarget - (account.balanceToDate ?? account.startingBalance))
       : 0
 
     // Sort trades by date
@@ -96,9 +105,10 @@ export function AccountCard({ account, trades, metrics, onClick, size = 'large' 
       remainingLoss,
       progress,
       isConfigured,
-      currentBalance: runningBalance
+      currentBalance: runningBalance,
+      remainingToTarget
     }
-  }, [account, trades])
+  }, [account, trades, allTrades])
 
   return (
     <Card
@@ -173,7 +183,7 @@ export function AccountCard({ account, trades, metrics, onClick, size = 'large' 
             {/* Trade Progress Chart - only show for larger sizes */}
             {(size === 'large' || size === 'extra-large') && (
               <TradeProgressChart
-                trades={trades}
+                trades={chartTrades}
                 startingBalance={account.startingBalance}
                 drawdownThreshold={account.drawdownThreshold}
                 profitTarget={account.profitTarget}
@@ -187,8 +197,8 @@ export function AccountCard({ account, trades, metrics, onClick, size = 'large' 
             {/* Profit Target Section */}
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground">{t('propFirm.card.target')}</span>
-                <span>${account.profitTarget.toFixed(2)}</span>
+                <span className="text-muted-foreground">{t('propFirm.card.remainingToTarget')}</span>
+                <span>${remainingToTarget.toFixed(2)}</span>
               </div>
               <Progress
                 value={progress}
@@ -236,11 +246,6 @@ export function AccountCard({ account, trades, metrics, onClick, size = 'large' 
                           "opacity-100"
                 )}
               />
-              {(size === 'large' || size === 'extra-large') && (
-                <p className="text-xs text-muted-foreground">
-                  {t('propFirm.card.maxLoss', { amount: account.drawdownThreshold.toFixed(2) })}
-                </p>
-              )}
             </div>
 
             {/* Consistency Section - only show for larger sizes */}
