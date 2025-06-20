@@ -141,7 +141,7 @@ export default {
     'import.type.search': 'Search import types...',
     'import.type.noResults': 'No import types found.',
     'import.type.category.directSync': 'Direct Account Sync',
-    'import.type.category.customCsv': 'Custom CSV Import',
+    'import.type.category.intelligentImport': 'Intelligent Import',
     'import.type.category.platformCsv': 'Platform CSV Import',
     'import.type.rithmicSync.name': 'Rithmic',
     'import.type.rithmicSync.description': 'Direct account syncing',

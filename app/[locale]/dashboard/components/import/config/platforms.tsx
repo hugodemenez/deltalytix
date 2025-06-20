@@ -17,10 +17,10 @@ import TopstepProcessor from '../topstep/topstep-processor'
 import NinjaTraderPerformanceProcessor from '../ninjatrader/ninjatrader-performance-processor'
 import RithmicPerformanceProcessor from '../rithmic/rithmic-performance-processor'
 import RithmicOrderProcessor from '../rithmic/rithmic-order-processor-new'
-import PdfUpload from '../pdf/pdf-upload'
-import PdfProcessing from '../pdf/pdf-processing'
+import PdfUpload from '../ibkr-pdf/pdf-upload'
+import PdfProcessing from '../ibkr-pdf/pdf-processing'
 import { Step } from '../import-button'
-import { FileText, GitPullRequestDraft, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 
 type TranslationKey = 
   | 'import.steps.selectPlatform'
@@ -423,7 +423,6 @@ export const platforms: PlatformConfig[] = [
       path: '/logos/ninjatrader.png',
       alt: 'NinjaTrader Logo'
     },
-    isDisabled: true,
     processFile: processStandardCsv,
     processorComponent: NinjaTraderPerformanceProcessor,
     steps: [
@@ -591,15 +590,16 @@ export const platforms: PlatformConfig[] = [
     ]
   },
   {
-    platformName: 'pdf-import',
-    type: 'pdf-import',
+    platformName: 'ibkr-pdf-import',
+    type: 'ibkr-pdf-import',
     name: 'import.type.pdfImport.name',
     description: 'import.type.pdfImport.description',
     category: 'Intelligent Import',
     videoUrl: process.env.NEXT_PUBLIC_PDF_IMPORT_TUTORIAL_VIDEO || '',
     details: 'import.type.pdfImport.details',
     logo: {
-      component: () => <FileText className="w-4 h-4" />,
+      path: '/logos/ibkr.png',
+      alt: 'IBKR Logo'
     },
     requiresAccountSelection: true,
     steps: [

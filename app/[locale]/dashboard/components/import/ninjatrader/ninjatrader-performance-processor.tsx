@@ -184,7 +184,8 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
       }
 
       if (item.instrument) {
-        item.instrument = item.instrument.slice(0, 2)
+        // Remove expiration dates (e.g., "MES 03-25" becomes "MES")
+        item.instrument = item.instrument.replace(/\s+\d{2}-\d{2}$/, '')
       }
 
       if (item.pnl !== undefined && item.commission !== undefined) {

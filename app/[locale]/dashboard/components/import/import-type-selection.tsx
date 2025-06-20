@@ -54,7 +54,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
       case 'Direct Account Sync':
         return t('import.type.category.directSync')
       case 'Intelligent Import':
-        return t('import.type.category.customCsv')
+        return t('import.type.category.intelligentImport')
       case 'Platform CSV Import':
         return t('import.type.category.platformCsv')
       default:
