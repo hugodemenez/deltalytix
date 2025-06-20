@@ -509,32 +509,27 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      // Step 4: Batch all state updates together
-      const updates = async () => {
-        setUser(data.userData);
-        // If user first connection, set locale
-        if (data.userData?.isFirstConnection) {
-          await ensureUserInDatabase(user, locale)
-        }
-        setSubscription(data.subscription as PrismaSubscription | null);
-        setTags(data.tags);
-        setGroups(data.groups);
-        setMoods(data.moodHistory);
-        setEvents(data.financialEvents);
-        setTickDetails(data.tickDetails);
-        setIsFirstConnection(data.userData?.isFirstConnection || false)
+      setUser(data.userData);
+      // If user first connection, set locale
+      if (data.userData?.isFirstConnection) {
+        await ensureUserInDatabase(user, locale)
+      }
+      setSubscription(data.subscription as PrismaSubscription | null);
+      setTags(data.tags);
+      setGroups(data.groups);
+      setMoods(data.moodHistory);
+      setEvents(data.financialEvents);
+      setTickDetails(data.tickDetails);
+      setIsFirstConnection(data.userData?.isFirstConnection || false)
 
 
-        // Calculate balanceToDate for each account 
-        const accountsWithBalance = (data.accounts || []).map(account => ({
-          ...account,
-          balanceToDate: calculateAccountBalance(account, Array.isArray(trades) ? trades : [])
-        }));
-        setAccounts(accountsWithBalance);
-      };
+      // Calculate balanceToDate for each account 
+      const accountsWithBalance = (data.accounts || []).map(account => ({
+        ...account,
+        balanceToDate: calculateAccountBalance(account, Array.isArray(trades) ? trades : [])
+      }));
+      setAccounts(accountsWithBalance);
 
-      // Execute all updates at once
-      await updates();
     } catch (error) {
       console.error('Error loading data:', error);
       // Optionally handle specific error cases here
