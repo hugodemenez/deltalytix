@@ -420,7 +420,6 @@ export const DataProvider: React.FC<{
   // Load data from the server
   const loadData = useCallback(async () => {
     // Prevent multiple simultaneous loads
-    if (isLoading) return;
 
     try {
       setIsLoading(true);
@@ -510,32 +509,27 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      // Step 4: Batch all state updates together
-      const updates = async () => {
-        setUser(data.userData);
-        // If user first connection, set locale
-        if (data.userData?.isFirstConnection) {
-          await ensureUserInDatabase(user, locale)
-        }
-        setSubscription(data.subscription as PrismaSubscription | null);
-        setTags(data.tags);
-        setGroups(data.groups);
-        setMoods(data.moodHistory);
-        setEvents(data.financialEvents);
-        setTickDetails(data.tickDetails);
-        setIsFirstConnection(data.userData?.isFirstConnection || false)
+      setUser(data.userData);
+      // If user first connection, set locale
+      if (data.userData?.isFirstConnection) {
+        await ensureUserInDatabase(user, locale)
+      }
+      setSubscription(data.subscription as PrismaSubscription | null);
+      setTags(data.tags);
+      setGroups(data.groups);
+      setMoods(data.moodHistory);
+      setEvents(data.financialEvents);
+      setTickDetails(data.tickDetails);
+      setIsFirstConnection(data.userData?.isFirstConnection || false)
 
 
-        // Calculate balanceToDate for each account 
-        const accountsWithBalance = (data.accounts || []).map(account => ({
-          ...account,
-          balanceToDate: calculateAccountBalance(account, Array.isArray(trades) ? trades : [])
-        }));
-        setAccounts(accountsWithBalance);
-      };
+      // Calculate balanceToDate for each account 
+      const accountsWithBalance = (data.accounts || []).map(account => ({
+        ...account,
+        balanceToDate: calculateAccountBalance(account, Array.isArray(trades) ? trades : [])
+      }));
+      setAccounts(accountsWithBalance);
 
-      // Execute all updates at once
-      await updates();
     } catch (error) {
       console.error('Error loading data:', error);
       // Optionally handle specific error cases here
@@ -566,7 +560,7 @@ export const DataProvider: React.FC<{
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
     revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
-    loadData()
+    await loadData()
   }, [user?.id])
 
   const formattedTrades = useMemo(() => {
