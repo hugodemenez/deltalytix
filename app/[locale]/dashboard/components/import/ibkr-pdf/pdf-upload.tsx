@@ -54,7 +54,7 @@ export default function PdfUpload({
           String.fromCharCode(...new Uint8Array(arrayBuffer))
         )
 
-        const response = await fetch('/api/ai/ocr', {
+        const response = await fetch('/api/imports/ibkr/ocr', {
           method: 'POST',
           body: JSON.stringify({
             attachments: [{

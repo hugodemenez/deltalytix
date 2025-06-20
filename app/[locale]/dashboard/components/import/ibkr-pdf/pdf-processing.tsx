@@ -32,8 +32,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { orderSchema, tradeSchema } from '@/app/api/ai/fifo-computation/schema'
-import { financialInstrumentSchema, type FinancialInstrument } from '@/app/api/ai/extract-orders/schema'
+import { orderSchema, tradeSchema } from '@/app/api/imports/ibkr/fifo-computation/schema'
+import { financialInstrumentSchema, type FinancialInstrument } from '@/app/api/imports/ibkr/extract-orders/schema'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { z } from 'zod'
 import { ChevronDown, ChevronRight } from "lucide-react"
@@ -71,7 +71,7 @@ export default function PdfProcessing({
 
   // Stream orders from text
   const { object: orderObject, submit: submitOrders } = useObject({
-    api: '/api/ai/extract-orders',
+    api: '/api/imports/ibkr/extract-orders',
     schema: z.object({
       orders: z.array(orderSchema),
       instruments: z.array(financialInstrumentSchema)
@@ -84,7 +84,7 @@ export default function PdfProcessing({
 
   // Stream trades from orders
   const { object: tradeObject, submit: submitTrades } = useObject({
-    api: '/api/ai/fifo-computation',
+    api: '/api/imports/ibkr/fifo-computation',
     schema: z.array(tradeSchema),
     onError(error) {
       console.error('Error processing trades:', error);

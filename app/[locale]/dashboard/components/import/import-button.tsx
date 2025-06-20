@@ -22,8 +22,8 @@ import { cn } from '@/lib/utils'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
 import { usePdfProcessingStore } from '@/store/pdf-processing-store'
-import PdfUpload from './pdf/pdf-upload'
-import PdfProcessing from './pdf/pdf-processing'
+import PdfUpload from './ibkr-pdf/pdf-upload'
+import PdfProcessing from './ibkr-pdf/pdf-processing'
 
 type ColumnConfig = {
   [key: string]: {
@@ -333,8 +333,8 @@ export default function ImportButton() {
       )
     }
     
-    // Handle processor components
-    if (platform.processorComponent) {
+    // Handle processor components - only if the current step component is the processor
+    if (platform.processorComponent && Component === platform.processorComponent) {
       return (
         <platform.processorComponent
           csvData={csvData}
