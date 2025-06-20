@@ -420,7 +420,7 @@ export const DataProvider: React.FC<{
   // Load data from the server
   const loadData = useCallback(async () => {
     // Prevent multiple simultaneous loads
-    if (isLoading) return;
+    console.error('loadData')
 
     try {
       setIsLoading(true);
@@ -477,6 +477,7 @@ export const DataProvider: React.FC<{
         setIsLoading(false)
         return;
       }
+      console.error('loadData', user.id)
 
       setSupabaseUser(user);
 
@@ -566,7 +567,7 @@ export const DataProvider: React.FC<{
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
     revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
-    loadData()
+    await loadData()
   }, [user?.id])
 
   const formattedTrades = useMemo(() => {

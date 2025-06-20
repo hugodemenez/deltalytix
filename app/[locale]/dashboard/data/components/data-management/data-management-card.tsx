@@ -37,7 +37,6 @@ export function DataManagementCard() {
   const trades = useTradesStore((state) => state.trades)
 
   const { refreshTrades } = useData()
-  const [loading, setLoading] = useState(true)
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [renameLoading, setRenameLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -72,26 +71,22 @@ export function DataManagementCard() {
     if (!user) return
     const fetchTradesData = async () => {
       try {
-        setLoading(true)
         setGroupedTrades(getGroupedTrades)
       } catch (error) {
         console.error("Failed to fetch trades:", error)
         setError(error instanceof Error ? error : new Error('Failed to fetch trades'))
-      } finally {
-        setLoading(false)
       }
     }
     fetchTradesData()
   }, [user, trades, getGroupedTrades])
 
-  const handleDeleteAccounts = async () => {
+  const handleDeleteAccounts = useCallback(async () => {
     if (!user) return
     try {
       setDeleteLoading(true)
       const accountsToDelete = deleteMode === 'all' ? Object.keys(groupedTrades) : selectedAccounts
       await removeAccountsFromTradesAction(accountsToDelete)
       await refreshTrades()
-      setGroupedTrades(getGroupedTrades)
       setSelectedAccounts([])
       toast({
         title: accountsToDelete.length > 1 ? t('dataManagement.toast.accountsDeleted') : t('dataManagement.toast.accountDeleted'),
@@ -109,14 +104,12 @@ export function DataManagementCard() {
       setDeleteLoading(false)
       setDeleteDialogOpen(false)
     }
-  }
+  }, [user, deleteMode, groupedTrades, selectedAccounts, refreshTrades, t])
 
-  const handleDeleteInstrument = async (accountNumber: string, instrumentGroup: string) => {
+  const handleDeleteInstrument = useCallback(async (accountNumber: string, instrumentGroup: string) => {
     try {
-      setLoading(true)
       await deleteInstrumentGroupAction(accountNumber, instrumentGroup, user!.id)
       await refreshTrades()
-      setGroupedTrades(getGroupedTrades)
       toast({
         title: t('dataManagement.toast.instrumentDeleted'),
         variant: 'default',
@@ -129,17 +122,14 @@ export function DataManagementCard() {
         description: t('dataManagement.toast.deleteErrorDesc'),
         variant: 'destructive',
       })
-    } finally {
-      setLoading(false)
     }
-  }
+  }, [user, refreshTrades, t])
 
   const debouncedUpdateCommission = useMemo(
     () => debounce(async (accountNumber: string, instrumentGroup: string, newCommission: number) => {
       try {
         await updateCommissionForGroupAction(accountNumber, instrumentGroup, newCommission)
         await refreshTrades()
-        setGroupedTrades(getGroupedTrades)
         toast({
           title: t('dataManagement.toast.commissionUpdated'),
           variant: 'default',
@@ -154,21 +144,21 @@ export function DataManagementCard() {
         })
       }
     }, 1000),
-    [refreshTrades, getGroupedTrades, t]
+    [refreshTrades, t]
   )
 
   const handleUpdateCommission = useCallback((accountNumber: string, instrumentGroup: string, newCommission: number) => {
     debouncedUpdateCommission(accountNumber, instrumentGroup, newCommission)
   }, [debouncedUpdateCommission])
 
-  const toggleAccountExpansion = (accountNumber: string) => {
+  const toggleAccountExpansion = useCallback((accountNumber: string) => {
     setExpandedAccounts(prev => ({
       ...prev,
       [accountNumber]: !prev[accountNumber]
     }))
-  }
+  }, [])
 
-  const handleRenameInstrument = async () => {
+  const handleRenameInstrument = useCallback(async () => {
     if (!user || !instrumentToRename.currentName || !newInstrumentName) return
     try {
       setRenameLoading(true)
@@ -192,17 +182,17 @@ export function DataManagementCard() {
     } finally {
       setRenameLoading(false)
     }
-  }
+  }, [user, instrumentToRename, newInstrumentName, refreshTrades, t])
 
-  const handleSelectAccount = (accountNumber: string) => {
+  const handleSelectAccount = useCallback((accountNumber: string) => {
     setSelectedAccounts(prev =>
       prev.includes(accountNumber)
         ? prev.filter(acc => acc !== accountNumber)
         : [...prev, accountNumber]
     )
-  }
+  }, [])
 
-  const handleRenameAccount = async () => {
+  const handleRenameAccount = useCallback(async () => {
     if (!user || !accountToRename || !newAccountNumber) return
     try {
       setRenameLoading(true)
@@ -226,7 +216,7 @@ export function DataManagementCard() {
     } finally {
       setRenameLoading(false)
     }
-  }
+  }, [user, accountToRename, newAccountNumber, refreshTrades, t])
 
   if (error) return (
     <Alert variant="destructive">
@@ -279,7 +269,7 @@ export function DataManagementCard() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-            <AlertDialog>
+            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="destructive"
