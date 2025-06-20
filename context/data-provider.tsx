@@ -420,7 +420,6 @@ export const DataProvider: React.FC<{
   // Load data from the server
   const loadData = useCallback(async () => {
     // Prevent multiple simultaneous loads
-    console.error('loadData')
 
     try {
       setIsLoading(true);
@@ -477,7 +476,6 @@ export const DataProvider: React.FC<{
         setIsLoading(false)
         return;
       }
-      console.error('loadData', user.id)
 
       setSupabaseUser(user);
 
