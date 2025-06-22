@@ -81,8 +81,6 @@ export function TradeTableReview() {
   const {
     formattedTrades: contextTrades,
     updateTrades,
-    groupTrades,
-    ungroupTrades,
   } = useData()
   const tags = useUserStore(state => state.tags)
   const timezone = useUserStore(state => state.timezone)
@@ -99,35 +97,6 @@ export function TradeTableReview() {
 
   const trades = contextTrades
 
-  const handleRemoveImage = async (tradeIds: string[], isSecondImage: boolean, imageUrl?: string | null) => {
-    try {
-      const update = {
-        [isSecondImage ? 'imageBase64Second' : 'imageBase64']: null
-      }
-      // Update trades
-      await updateTrades(tradeIds, update)
-
-
-      // Remove the image from Supabase storage
-      if (imageUrl) {
-        // Extract the path from the full URL
-        const path = imageUrl.split('/storage/v1/object/public/trade-images/')[1]
-        if (path) {
-          await supabase.storage.from('trade-images').remove([path])
-        }
-      }
-    } catch (error) {
-      console.error('Error removing image:', error)
-    }
-  }
-
-  const handleUpdateImage = async (tradeIds: string[], imageBase64: string, isSecondImage: boolean) => {
-    const update = {
-      [isSecondImage ? 'imageBase64Second' : 'imageBase64']: imageBase64
-    }
-    await updateTrades(tradeIds, update)
-  }
-
   const handleGroupTrades = async () => {
     if (selectedTrades.length < 2) return
 
@@ -140,9 +109,6 @@ export function TradeTableReview() {
     // Reset table selection
     table.resetRowSelection()
     setSelectedTrades([])
-
-    // Then update the database
-    await groupTrades(selectedTrades)
   }
 
   const handleUngroupTrades = async () => {
@@ -154,9 +120,6 @@ export function TradeTableReview() {
     // Reset table selection
     table.resetRowSelection()
     setSelectedTrades([])
-
-    // Then update the database
-    await ungroupTrades(selectedTrades)
   }
 
   // Group trades by instrument, entry date, and close date with granularity
