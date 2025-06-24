@@ -286,7 +286,22 @@ export async function POST(req: Request) {
             });
 
             if (user) {
-              const subscriptionPlan = data.metadata?.plan || 'free'; // Provide a default value
+              // Get the price information to determine the plan (same logic as checkout.session.completed)
+              const subscriptionItems = await stripe.subscriptionItems.list({
+                subscription: data.id,
+              });
+              
+              const priceId = subscriptionItems.data[0]?.price.id;
+              let subscriptionPlan = 'FREE'; // Default fallback
+              
+              if (priceId) {
+                const price = await stripe.prices.retrieve(priceId, {
+                  expand: ['product'],
+                });
+                console.log('SUBSCRIPTION CREATED PRICE', price)
+                const productName = (price.product as Stripe.Product).name;
+                subscriptionPlan = productName.toUpperCase() || 'FREE';
+              }
               await prisma.subscription.upsert({
                 where: { email: newCustomerData.email },
                 update: {
