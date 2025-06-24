@@ -29,19 +29,6 @@ export default function Modals() {
   const searchParams = useSearchParams()
   const { accountGroupBoardOpen, setAccountGroupBoardOpen } = useModalStateStore()
 
-  const checkSubscription = useCallback(() => {
-    if (user?.email && subscription?.status !== 'active') {
-      // Check last shown timestamp from localStorage
-      const lastShown = localStorage.getItem('paywall_last_shown');
-      const currentTime = Date.now();
-      
-      if (!user?.isFirstConnection && (!lastShown || (currentTime - parseInt(lastShown)) > PAYWALL_COOLDOWN)) {
-        setIsPaywallOpen(true);
-        localStorage.setItem('paywall_last_shown', currentTime.toString());
-      }
-    }
-  }, [user?.email, subscription, user?.isFirstConnection]);
-
   useEffect(() => {
     const error = searchParams.get('error')
     if (error === 'already_subscribed') {
@@ -53,9 +40,8 @@ export default function Modals() {
     if (!isLoading && !isPaywallOpen) {
       if (!trades) {
         console.warn('No trades available. Please add some trades to see the dashboard content.');
-        return
+        setIsTradesDialogOpen(true)
       }
-      setIsTradesDialogOpen(trades?.length === 0)
     }
   }, [trades, isPaywallOpen, isLoading])
 
