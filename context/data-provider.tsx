@@ -510,10 +510,8 @@ export const DataProvider: React.FC<{
       }
 
       setUser(data.userData);
-      // If user first connection, set locale
-      if (data.userData?.isFirstConnection) {
-        await ensureUserInDatabase(user, locale)
-      }
+      await ensureUserInDatabase(user, locale)
+        
       setSubscription(data.subscription as PrismaSubscription | null);
       setTags(data.tags);
       setGroups(data.groups);
