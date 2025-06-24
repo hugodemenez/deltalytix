@@ -254,7 +254,7 @@ export default function Navbar() {
                         <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                       </DropdownMenuItem>
                     </Link>
-                    <DropdownMenuItem onClick={refreshTrades}>
+                    <DropdownMenuItem onClick={async ()=>await refreshTrades()}>
                       <RefreshCw className="mr-2 h-4 w-4" />
                       <span>{t('dashboard.refreshData')}</span>
                       <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
