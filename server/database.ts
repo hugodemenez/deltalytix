@@ -21,10 +21,19 @@ interface TradeResponse {
 }
 
 export async function revalidateCache(tags: string[]) {
+  console.log(`[revalidateCache] Starting cache invalidation for tags:`, tags)
+  
   tags.forEach(tag => {
-    console.log(`Revalidating tag ${tag}`)
-    revalidateTag(tag)
+    try {
+      console.log(`[revalidateCache] Revalidating tag: ${tag}`)
+      revalidateTag(tag)
+      console.log(`[revalidateCache] Successfully revalidated tag: ${tag}`)
+    } catch (error) {
+      console.error(`[revalidateCache] Error revalidating tag ${tag}:`, error)
+    }
   })
+  
+  console.log(`[revalidateCache] Completed cache invalidation for ${tags.length} tags`)
 }
 
 export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {

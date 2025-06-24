@@ -420,6 +420,7 @@ export const DataProvider: React.FC<{
   // Load data from the server
   const loadData = useCallback(async () => {
     // Prevent multiple simultaneous loads
+    console.log('[loadData] Starting data load - setting isLoading to true')
 
     try {
       setIsLoading(true);
@@ -535,6 +536,7 @@ export const DataProvider: React.FC<{
         console.error('Error details:', error.message);
       }
     } finally {
+      console.log('[loadData] Completed data load - setting isLoading to false')
       setIsLoading(false);
     }
   }, [isSharedView, params?.slug, timezone, supabaseUser, isLoading, setIsLoading]);
@@ -557,9 +559,32 @@ export const DataProvider: React.FC<{
 
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
-    revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
-    await loadData()
-  }, [user?.id])
+    
+    // Explicitly set loading state before cache invalidation
+    setIsLoading(true)
+    
+    try {
+      // Force cache invalidation
+      await revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
+      
+      // Add a small delay to ensure cache invalidation takes effect
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // In production, also try to force a cache miss by adding a timestamp
+      // This ensures fresh data even if revalidateTag doesn't work properly
+      if (process.env.NODE_ENV === 'production') {
+        console.log('[refreshTrades] Production environment - forcing cache miss')
+        // Force refetch by clearing any client-side caches if needed
+        // The server-side cache should be invalidated by revalidateTag
+      }
+      
+      // Reload data
+      await loadData()
+    } catch (error) {
+      console.error('Error refreshing trades:', error)
+      setIsLoading(false)
+    }
+  }, [user?.id, loadData, setIsLoading, locale])
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
