@@ -119,26 +119,26 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
               item[key] = quantity;
               break;
             case 'entryPrice':
-            case 'closePrice':
-              const { price, error: priceError } = formatPriceValue(cellValue);
-              if (priceError) {
-                return;
+              const { price: entryPrice, error: entryPriceError } = formatPriceValue(cellValue);
+              if (entryPriceError) {
+                return; // Entry price is required
               }
-              item[key] = price.toString();
+              item[key] = entryPrice.toString();
+              break;
+            case 'closePrice':
+              const { price: closePrice, error: closePriceError } = formatPriceValue(cellValue);
+              // Close price can be missing for open trades
+              item[key] = closePriceError ? undefined : closePrice.toString();
               break;
             case 'pnl':
               const { pnl, error } = formatCurrencyValue(cellValue)
-              if (error) {
-                return
-              }
-              item[key] = pnl
+              // Don't skip the trade if PnL is missing, just default to 0
+              item[key] = error ? 0 : pnl
               break;
             case 'commission':
               const { pnl: commission, error: commissionError } = formatCurrencyValue(cellValue) || 0;
-              if (commissionError) {
-                return
-              }
-              item[key] = commission
+              // Don't skip the trade if commission is missing, just default to 0
+              item[key] = commissionError ? 0 : commission
               break;
             case 'side':
               item[key] = cellValue.toLowerCase()
