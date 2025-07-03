@@ -138,7 +138,27 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     ? ['#8b5cf6', '#6366f1', '#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6']  // Dark mode colors
     : ['#a78bfa', '#818cf8', '#60a5fa', '#38bdf8', '#22d3ee', '#2dd4bf']  // Light mode colors
 
-  const CustomTooltip = ({ active, payload }: any) => {
+  const EquityTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      return (
+        <div className="bg-background p-2 border rounded shadow-sm text-xs md:text-sm">
+          <p className="font-semibold">{isWeekly ? data.date : data.time}</p>
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className={`font-bold ${entry.dataKey === 'pnl' ? (entry.value >= 0 ? 'text-green-600' : 'text-red-600') : 'text-blue-600'}`}>
+              {entry.name}: {formatCurrency(entry.value)}
+            </p>
+          ))}
+          <p className="text-muted-foreground text-xs">
+            {t('calendar.charts.tradeNumber')}: {data.tradeNumber}
+          </p>
+        </div>
+      )
+    }
+    return null
+  }
+
+  const DistributionTooltip = ({ active, payload }: any) => {
     if (active && payload?.[0]) {
       const data = payload[0].payload
       const percentage = data.account !== 'total' 
@@ -206,7 +226,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                   width={50}
                 />
                 <Tooltip 
-                  content={<CustomTooltip />}
+                  content={<EquityTooltip />}
                   wrapperStyle={{ zIndex: 1000 }}
                   cursor={{ strokeWidth: 2 }}
                 />
@@ -294,7 +314,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
                 />
                 <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" />
                 <Tooltip 
-                  content={<CustomTooltip />}
+                  content={<DistributionTooltip />}
                   wrapperStyle={{ zIndex: 1000 }}
                   cursor={{ fillOpacity: 0.3 }}
                 />
