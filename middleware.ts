@@ -83,14 +83,17 @@ async function updateSession(request: NextRequest) {
 export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
-  // More specific static asset exclusions
+  // More specific static asset exclusions - must be first!
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
     pathname.includes(".") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
-    pathname === "/sitemap.xml"
+    pathname === "/sitemap.xml" ||
+    pathname.includes("/opengraph-image") ||
+    pathname.includes("/twitter-image") ||
+    pathname.includes("/icon")
   ) {
     return NextResponse.next()
   }

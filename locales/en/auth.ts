@@ -10,6 +10,8 @@ export default {
         signInWithGoogle: 'Google',
         openMailbox: 'Open Mailbox',
         resendIn: 'Resend in',
-        resendEmail: 'Resend Email'
+        resendEmail: 'Resend Email',
+        verificationCode: 'Verification Code',
+        verifyCode: 'Verify Code'
     },
 } as const;

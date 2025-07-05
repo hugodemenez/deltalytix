@@ -80,7 +80,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             {
               url: ogImage,
               width: 1200,
-              height: 600,
+              height: 630,
               alt: meta.title,
             },
           ],
