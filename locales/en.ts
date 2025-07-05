@@ -793,9 +793,9 @@ export default {
         win: "Winning trades",
         loss: "Losing trades",
         breakeven: "Breakeven trades",
-        winWithCount: "Winning trades ({count})",
-        lossWithCount: "Losing trades ({count})",
-        breakevenWithCount: "Breakeven trades ({count})",
+        winWithCount: "Winning trades ({count}/{total})",
+        lossWithCount: "Losing trades ({count}/{total})",
+        breakevenWithCount: "Breakeven trades ({count}/{total})",
         tooltip: {
             type: "Type",
             percentage: "Percentage"
