@@ -9,6 +9,10 @@ export const size = {
 }
 export const contentType = "image/png"
 
+// Route segment configuration - these are specialized Route Handlers
+export const runtime = 'nodejs'
+export const revalidate = 3600 // 1 hour
+
 export default async function Image({ 
     params 
 }: { 
@@ -72,7 +76,9 @@ export default async function Image({
         return new ImageResponse(element, {
             ...size,
             headers: {
-                "Cache-Control": "public, max-age=31536000, immutable",
+                "Cache-Control": "public, max-age=3600, s-maxage=3600, stale-while-revalidate=3600",
+                "CDN-Cache-Control": "public, max-age=3600",
+                "Vercel-CDN-Cache-Control": "public, max-age=3600",
             },
         })
     } catch (e: unknown) {

@@ -787,8 +787,9 @@ export function TradeTableReview() {
             variant="outline"
             size="sm"
             onClick={() => {
-              setPageSize(pageSize + 10)
-              table.setPageSize(pageSize)
+              const newPageSize = pageSize + 10
+              setPageSize(newPageSize)
+              table.setPageSize(newPageSize)
             }}
           >
             {t('trade-table.pageSize')}
