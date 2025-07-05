@@ -89,7 +89,6 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         success_url: `${websiteURL}dashboard?success=true`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
         allow_promotion_codes: true,
-        payment_method_collection: 'if_required'
     };
 
     if (isLifetimePlan) {
@@ -98,6 +97,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     } else {
         // Subscription mode for recurring plans
         sessionConfig.mode = 'subscription';
+        sessionConfig.payment_method_collection = 'if_required';
         
         // Add subscription-specific configuration
         if (trialDays > 0) {
