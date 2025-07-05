@@ -25,6 +25,7 @@ interface ChartDataPoint {
   name: string;
   value: number;
   color: string;
+  count: number;
 }
 
 interface TooltipProps {
@@ -74,9 +75,9 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
     const beRate = Number((nbBe / nbTrades * 100).toFixed(2))
 
     return [
-      { name: t('tradeDistribution.loss'), value: lossRate, color: 'hsl(var(--destructive))' },
-      { name: t('tradeDistribution.breakeven'), value: beRate, color: 'hsl(var(--muted-foreground))' },
-      { name: t('tradeDistribution.win'), value: winRate, color: 'hsl(var(--success))' }
+      { name: t('tradeDistribution.lossWithCount', { count: nbLoss }), value: lossRate, color: 'hsl(var(--destructive))', count: nbLoss },
+      { name: t('tradeDistribution.breakevenWithCount', { count: nbBe }), value: beRate, color: 'hsl(var(--muted-foreground))', count: nbBe },
+      { name: t('tradeDistribution.winWithCount', { count: nbWin }), value: winRate, color: 'hsl(var(--success))', count: nbWin }
     ]
   }, [nbWin, nbLoss, nbBe, nbTrades, t])
 
