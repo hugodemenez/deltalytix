@@ -523,6 +523,9 @@ export default {
         win: "Trades gagnants",
         loss: "Trades perdants",
         breakeven: "Trades à l'équilibre",
+        winWithCount: "Trades gagnants ({count})",
+        lossWithCount: "Trades perdants ({count})",
+        breakevenWithCount: "Trades à l'équilibre ({count})",
         tooltip: {
             type: "Type",
             percentage: "Pourcentage"
