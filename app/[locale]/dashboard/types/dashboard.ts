@@ -6,6 +6,7 @@ export type WidgetType =
   | 'weekdayPnlChart'
   | 'pnlBySideChart'
   | 'tickDistribution'
+  | 'dailyTickTarget'
   | 'commissionsPnl'
   | 'calendarWidget'
   | 'averagePositionTime'

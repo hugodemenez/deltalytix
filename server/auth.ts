@@ -117,12 +117,16 @@ interface SupabaseUser {
 }
 
 export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) {
+  console.log('[ensureUserInDatabase] Starting with user:', { id: user?.id, email: user?.email });
+  
   if (!user) {
+    console.log('[ensureUserInDatabase] ERROR: No user provided');
     await signOut();
     throw new Error('User data is required');
   }
 
   if (!user.id) {
+    console.log('[ensureUserInDatabase] ERROR: No user ID provided');
     await signOut();
     throw new Error('User ID is required');
   }
@@ -137,8 +141,9 @@ export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) 
     if (existingUserByAuthId) {
       // If email is different, update it
       if (existingUserByAuthId.email !== user.email) {
+        console.log('[ensureUserInDatabase] Updating existing user email');
         try {
-          return await prisma.user.update({
+          const updatedUser = await prisma.user.update({
             where: {
               auth_user_id: user.id // Always use auth_user_id as the unique identifier
             },
@@ -147,11 +152,14 @@ export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) 
               language: locale || existingUserByAuthId.language
             },
           });
+          console.log('[ensureUserInDatabase] SUCCESS: User updated successfully');
+          return updatedUser;
         } catch (updateError) {
-          console.error('Error updating user email:', updateError);
+          console.error('[ensureUserInDatabase] ERROR: Failed to update user email:', updateError);
           throw new Error('Failed to update user email');
         }
       }
+      console.log('[ensureUserInDatabase] SUCCESS: Existing user found, no update needed');
       return existingUserByAuthId;
     }
 
@@ -162,14 +170,20 @@ export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) 
       });
 
       if (existingUserByEmail && existingUserByEmail.auth_user_id !== user.id) {
+        console.log('[ensureUserInDatabase] ERROR: Account conflict - email already associated with different auth method', {
+          userEmail: user.email,
+          existingAuthId: existingUserByEmail.auth_user_id,
+          currentAuthId: user.id
+        });
         await signOut();
         throw new Error('Account conflict: Email already associated with different authentication method');
       }
     }
 
     // Create new user if no existing user found
+    console.log('[ensureUserInDatabase] Creating new user');
     try {
-      return await prisma.user.create({
+      const newUser = await prisma.user.create({
         data: {
           auth_user_id: user.id,
           email: user.email || '', // Provide a default empty string if email is null
@@ -177,38 +191,53 @@ export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) 
           language: locale || 'en'
         },
       });
+      console.log('[ensureUserInDatabase] SUCCESS: New user created successfully');
+      return newUser;
     } catch (createError) {
       if (createError instanceof Error &&
         createError.message.includes('Unique constraint failed')) {
+        console.log('[ensureUserInDatabase] ERROR: Unique constraint failed when creating user', createError);
         await signOut();
         throw new Error('Database integrity error: Duplicate user records found');
       }
-      console.error('Error creating user:', createError);
+      console.error('[ensureUserInDatabase] ERROR: Failed to create user:', createError);
       await signOut();
       throw new Error('Failed to create user account');
     }
   } catch (error) {
-    console.error('Error ensuring user in database:', error);
+    // Re-throw NEXT_REDIRECT errors immediately (these are normal Next.js redirects)
+    if (error instanceof Error && (
+      error.message === 'NEXT_REDIRECT' || 
+      ('digest' in error && typeof error.digest === 'string' && error.digest.startsWith('NEXT_REDIRECT'))
+    )) {
+      throw error;
+    }
+
+    console.error('[ensureUserInDatabase] ERROR: Unexpected error in main catch block:', error);
 
     // Handle Prisma validation errors
     if (error instanceof Error) {
       if (error.message.includes('Argument `where` of type UserWhereUniqueInput needs')) {
+        console.log('[ensureUserInDatabase] ERROR: Invalid user identification provided');
         await signOut();
         throw new Error('Invalid user identification provided');
       }
 
       if (error.message.includes('Unique constraint failed')) {
+        console.log('[ensureUserInDatabase] ERROR: Database integrity error - duplicate user records');
         await signOut();
         throw new Error('Database integrity error: Duplicate user records found');
       }
 
       if (error.message.includes('Account conflict')) {
+        console.log('[ensureUserInDatabase] ERROR: Re-throwing account conflict error');
         // Error already handled above
         throw error;
       }
     }
 
     // For any other unexpected errors, log out the user
+    console.log('[ensureUserInDatabase] ERROR: Critical database error - signing out user');
     await signOut();
     throw new Error('Critical database error occurred. Please try logging in again.');
   }

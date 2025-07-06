@@ -1,0 +1,291 @@
+'use client'
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Button } from "@/components/ui/button"
+import { useI18n, useCurrentLocale } from "@/locales/client"
+import { useAnalysis } from "@/hooks/use-analysis"
+import { useAnalysisStore } from "@/store/analysis-store"
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  Clock, 
+  Target, 
+  BarChart3, 
+  Activity,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Play,
+  Trash2
+} from "lucide-react"
+import { useEffect } from "react"
+
+interface AnalysisSection {
+  title: string
+  description: string
+  insights: AnalysisInsight[]
+  score: number
+  trend: 'up' | 'down' | 'neutral'
+  recommendations: string[]
+}
+
+interface AnalysisInsight {
+  type: 'positive' | 'negative' | 'neutral'
+  message: string
+  metric?: string
+}
+
+export function AnalysisOverview() {
+  const t = useI18n()
+  const currentLocale = useCurrentLocale()
+  const { analyzeSection, analyzeAllSections, isLoading, error, completionError } = useAnalysis()
+  const { getSectionData, getLastUpdated, clearCache } = useAnalysisStore()
+
+  const sectionConfigs = [
+    {
+      key: 'global' as const,
+      title: t('analysis.global.title'),
+      description: t('analysis.global.description'),
+      icon: BarChart3
+    },
+    {
+      key: 'instrument' as const,
+      title: t('analysis.instrument.title'),
+      description: t('analysis.instrument.description'),
+      icon: Target
+    },
+    {
+      key: 'accounts' as const,
+      title: t('analysis.accounts.title'),
+      description: t('analysis.accounts.description'),
+      icon: Activity
+    },
+    {
+      key: 'timeOfDay' as const,
+      title: t('analysis.timeOfDay.title'),
+      description: t('analysis.timeOfDay.description'),
+      icon: Clock
+    }
+  ]
+
+  const getTrendIcon = (trend: 'up' | 'down' | 'neutral') => {
+    switch (trend) {
+      case 'up':
+        return <TrendingUp className="h-4 w-4 text-green-500" />
+      case 'down':
+        return <TrendingDown className="h-4 w-4 text-red-500" />
+      default:
+        return <Activity className="h-4 w-4 text-gray-500" />
+    }
+  }
+
+  const getInsightIcon = (type: 'positive' | 'negative' | 'neutral') => {
+    switch (type) {
+      case 'positive':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'negative':
+        return <XCircle className="h-4 w-4 text-red-500" />
+      default:
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+    }
+  }
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return 'text-green-600'
+    if (score >= 60) return 'text-yellow-600'
+    return 'text-red-600'
+  }
+
+  const handleAnalyzeAll = () => {
+    analyzeAllSections(currentLocale)
+  }
+
+  const handleAnalyzeSection = (section: 'global' | 'instrument' | 'accounts' | 'timeOfDay') => {
+    analyzeSection(section, currentLocale)
+  }
+
+  const handleClearCache = () => {
+    clearCache()
+  }
+
+  // Show error if there's a completion error
+  if (completionError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">{t('analysis.title')}</h2>
+            <p className="text-muted-foreground">{t('analysis.description')}</p>
+          </div>
+        </div>
+        
+        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/20">
+          <CardHeader>
+            <CardTitle className="text-red-600 dark:text-red-400">
+              {t('analysis.error')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-red-600 dark:text-red-400">
+              {completionError.message || t('analysis.errorGeneric')}
+            </p>
+            <Button 
+              onClick={handleAnalyzeAll}
+              className="mt-4"
+              variant="outline"
+            >
+              {t('analysis.retry')}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">{t('analysis.title')}</h2>
+          <p className="text-muted-foreground">{t('analysis.description')}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            onClick={handleClearCache}
+            variant="ghost"
+            size="sm"
+            title={t('analysis.clearCache')}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <Button 
+            onClick={handleAnalyzeAll}
+            disabled={Object.values(isLoading).some(Boolean)}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {t('analysis.generateAll')}
+          </Button>
+          <Badge variant="secondary" className="flex items-center gap-2">
+            <Clock className="h-3 w-3" />
+            {getLastUpdated() ? t('analysis.lastUpdated', { date: new Date(getLastUpdated()!).toLocaleDateString() }) : t('analysis.notAnalyzed')}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {sectionConfigs.map((config) => {
+          const sectionData = getSectionData(config.key)
+          const Icon = config.icon
+          
+          return (
+            <Card key={config.key} className="relative">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Icon className="h-5 w-5" />
+                      {config.title}
+                    </CardTitle>
+                    <CardDescription>{config.description}</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {sectionData ? (
+                      <>
+                        {getTrendIcon(sectionData.trend)}
+                        <span className={`text-lg font-semibold ${getScoreColor(sectionData.score)}`}>
+                          {sectionData.score}/100
+                        </span>
+                      </>
+                    ) : (
+                      <Button
+                        onClick={() => handleAnalyzeSection(config.key)}
+                        disabled={isLoading[config.key]}
+                        size="sm"
+                        variant="outline"
+                      >
+                        {isLoading[config.key] ? (
+                          <RefreshCw className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {sectionData && <Progress value={sectionData.score} className="w-full" />}
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                {sectionData ? (
+                  <>
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm text-muted-foreground">{t('analysis.keyInsights')}</h4>
+                      {sectionData.insights.map((insight, insightIndex) => (
+                        <div key={insightIndex} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                          {getInsightIcon(insight.type)}
+                          <div className="flex-1">
+                            <p className="text-sm">{insight.message}</p>
+                            {insight.metric && (
+                              <Badge variant="outline" className="mt-1">
+                                {insight.metric}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-medium text-sm text-muted-foreground">{t('analysis.recommendations')}</h4>
+                      <div className="space-y-2">
+                        {sectionData.recommendations.map((rec, recIndex) => (
+                          <div key={recIndex} className="flex items-start gap-2">
+                            <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                            <p className="text-sm text-muted-foreground">{rec}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">
+                      {error[config.key] || t('analysis.noData')}
+                    </p>
+                    <Button
+                      onClick={() => handleAnalyzeSection(config.key)}
+                      disabled={isLoading[config.key]}
+                    >
+                      {isLoading[config.key] ? t('analysis.loading') : t('analysis.generate')}
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-blue-600" />
+            {t('analysis.aiSummary')}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Based on your trading data, you're showing strong overall performance with room for improvement in risk management. 
+            Your morning trading sessions are particularly effective, and you should focus on ES futures while reducing exposure to CL futures. 
+            Consider implementing stricter position sizing rules to improve your risk-adjusted returns.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  )
+} 
