@@ -126,6 +126,8 @@ export default {
     'analysis.aiSummary': 'Résumé IA',
     'analysis.clearCache': 'Vider le cache d\'analyse',
     'analysis.errorGeneric': 'Une erreur s\'est produite lors de la génération de l\'analyse',
+    'analysis.regenerate': 'Régénérer l\'analyse',
+    'analysis.rateLimit': 'Limité - veuillez patienter',
     'filters.showAccountNumbers': 'Afficher les numéros de compte',
     'filters.search': 'Rechercher...',
     'filters.noResults': 'Aucun résultat trouvé.',

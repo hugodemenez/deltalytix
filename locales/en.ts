@@ -125,6 +125,8 @@ export default {
     'analysis.aiSummary': 'AI Summary',
     'analysis.clearCache': 'Clear cached analysis data',
     'analysis.errorGeneric': 'An error occurred while generating analysis',
+    'analysis.regenerate': 'Regenerate analysis',
+    'analysis.rateLimit': 'Rate limited - please wait',
     'import.button': 'Import Trades',
     'import.title.selectType': 'Select Import Type',
     'import.title.upload': 'Upload CSV',

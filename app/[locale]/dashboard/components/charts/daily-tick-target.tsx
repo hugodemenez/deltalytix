@@ -56,10 +56,10 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
 
     const today = new Date().toISOString().split('T')[0]
     const todayTrades = trades.filter(trade => {
-      // Validate that entryTime exists and is valid
-      if (!trade.entryTime) return false
+      // Validate that entryDate exists and is valid
+      if (!trade.entryDate) return false
       
-      const entryDate = new Date(trade.entryTime)
+      const entryDate = new Date(trade.entryDate)
       if (isNaN(entryDate.getTime())) return false
       
       const tradeDate = entryDate.toISOString().split('T')[0]

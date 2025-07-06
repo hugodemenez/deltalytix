@@ -206,6 +206,8 @@ export const useAnalysisStore = create<AnalysisStore>()(
     {
       name: 'analysis-store',
       storage: createJSONStorage(() => localStorage),
+      // Only persist the data, not loading states or errors
+      partialize: (state) => ({ data: state.data }),
     }
   )
 ) 
