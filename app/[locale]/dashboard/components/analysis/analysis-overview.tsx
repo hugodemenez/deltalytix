@@ -316,22 +316,6 @@ export function AnalysisOverview() {
           )
         })}
       </div>
-
-      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-blue-600" />
-            {t('analysis.aiSummary')}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Based on your trading data, you're showing strong overall performance with room for improvement in risk management. 
-            Your morning trading sessions are particularly effective, and you should focus on ES futures while reducing exposure to CL futures. 
-            Consider implementing stricter position sizing rules to improve your risk-adjusted returns.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   )
 } 
