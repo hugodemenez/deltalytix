@@ -117,10 +117,10 @@ function calculateInstrumentMetrics(instrument: string, trades: Trade[]): Instru
   const stdDev = Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length);
   const sharpeRatio = stdDev > 0 ? avgReturn / stdDev : 0;
   
-  // Calculate average holding time (assuming entryDate and exitDate are available)
+  // Calculate average holding time (using entryDate and closeDate)
   const avgHoldingTime = instrumentTrades.reduce((sum, t) => {
-    if (t.exitDate) {
-      const holdingTime = (new Date(t.exitDate).getTime() - new Date(t.entryDate).getTime()) / (1000 * 60);
+    if (t.closeDate) {
+      const holdingTime = (new Date(t.closeDate).getTime() - new Date(t.entryDate).getTime()) / (1000 * 60);
       return sum + holdingTime;
     }
     return sum;
