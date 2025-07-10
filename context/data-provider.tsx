@@ -159,67 +159,139 @@ export const defaultLayouts: PrismaDashboardLayout = {
   updatedAt: new Date(),
   desktop: [
     {
-      i: "calendarWidget",
-      type: "calendarWidget" as WidgetType,
-      size: "large" as WidgetSize,
-      x: 0,
-      y: 1,
-      w: 6,
-      h: 8
+      "i": "widget1751403095730",
+      "type": "calendarWidget",
+      "size": "large",
+      "x": 0,
+      "y": 8,
+      "w": 6,
+      "h": 8
     },
     {
-      i: "equityChart",
-      type: "equityChart" as WidgetType,
-      size: "medium" as WidgetSize,
-      x: 6,
-      y: 1,
-      w: 6,
-      h: 4
+      "i": "widget1751715494609",
+      "type": "tradeDistribution",
+      "size": "small",
+      "x": 6,
+      "y": 0,
+      "w": 3,
+      "h": 4
     },
     {
-      i: "pnlChart",
-      type: "pnlChart" as WidgetType,
-      size: "medium" as WidgetSize,
-      x: 6,
-      y: 5,
-      w: 6,
-      h: 4
+      "i": "widget1751741589330",
+      "type": "pnlChart",
+      "size": "medium",
+      "x": 0,
+      "y": 16,
+      "w": 6,
+      "h": 4
     },
     {
-      i: "cumulativePnl",
-      type: "cumulativePnl" as WidgetType,
-      size: "tiny" as WidgetSize,
-      x: 0,
-      y: 0,
-      w: 3,
-      h: 1
+      "i": "widget1752135357688",
+      "type": "weekdayPnlChart",
+      "size": "medium",
+      "x": 0,
+      "y": 4,
+      "w": 6,
+      "h": 4
     },
     {
-      i: "longShortPerformance",
-      type: "longShortPerformance" as WidgetType,
-      size: "tiny" as WidgetSize,
-      x: 3,
-      y: 0,
-      w: 3,
-      h: 1
+      "i": "widget1752135359621",
+      "type": "timeOfDayChart",
+      "size": "medium",
+      "x": 0,
+      "y": 20,
+      "w": 6,
+      "h": 4
     },
     {
-      i: "tradePerformance",
-      type: "tradePerformance" as WidgetType,
-      size: "tiny" as WidgetSize,
-      x: 6,
-      y: 0,
-      w: 3,
-      h: 1
+      "i": "widget1752135361015",
+      "type": "timeInPositionChart",
+      "size": "medium",
+      "x": 6,
+      "y": 4,
+      "w": 6,
+      "h": 4
     },
     {
-      i: "averagePositionTime",
-      type: "averagePositionTime" as WidgetType,
-      size: "tiny" as WidgetSize,
-      x: 9,
-      y: 0,
-      w: 3,
-      h: 1
+      "i": "widget1752135363430",
+      "type": "equityChart",
+      "size": "large",
+      "x": 6,
+      "y": 8,
+      "w": 6,
+      "h": 8
+    },
+    {
+      "i": "widget1752135365730",
+      "type": "pnlBySideChart",
+      "size": "medium",
+      "x": 6,
+      "y": 16,
+      "w": 6,
+      "h": 4
+    },
+    {
+      "i": "widget1752135368429",
+      "type": "tickDistribution",
+      "size": "medium",
+      "x": 6,
+      "y": 20,
+      "w": 6,
+      "h": 4
+    },
+    {
+      "i": "widget1752135370579",
+      "type": "commissionsPnl",
+      "size": "medium",
+      "x": 6,
+      "y": 24,
+      "w": 6,
+      "h": 4
+    },
+    {
+      "i": "widget1752135378584",
+      "type": "timeRangePerformance",
+      "size": "medium",
+      "x": 0,
+      "y": 24,
+      "w": 6,
+      "h": 4
+    },
+    {
+      "i": "widget1752135395916",
+      "type": "riskRewardRatio",
+      "size": "tiny",
+      "x": 9,
+      "y": 0,
+      "w": 3,
+      "h": 1
+    },
+    {
+      "i": "widget1752135396857",
+      "type": "statisticsWidget",
+      "size": "medium",
+      "x": 0,
+      "y": 0,
+      "w": 6,
+      "h": 4
+    },
+    {
+      "i": "widget1752135397611",
+      "type": "profitFactor",
+      "size": "tiny",
+      "x": 9,
+      "y": 1,
+      "w": 3,
+      "h": 1
+    },
+    {
+      "i": "widget1752135401717",
+      "type": "cumulativePnl",
+      "size": "tiny",
+      "x": 9,
+      "y": 2,
+      "w": 3,
+      "h": 1
     }
   ],
   mobile: [
@@ -371,7 +443,10 @@ const supabase = createClient()
 export const DataProvider: React.FC<{
   children: React.ReactNode;
   isSharedView?: boolean;
-}> = ({ children, isSharedView = false }) => {
+  adminView?: {
+    userId: string;
+  };
+}> = ({ children, isSharedView = false, adminView = null }) => {
   const router = useRouter()
   const params = useParams();
   const isMobile = useIsMobileDetection();
@@ -469,6 +544,35 @@ export const DataProvider: React.FC<{
         return;
       }
 
+      if (adminView) {
+        const trades = await getTradesAction(adminView.userId as string);
+        setTrades(trades as PrismaTrade[]);
+        // RESET ALL OTHER STATES
+        setUser(null);
+        setSubscription(null);
+        setTags([]);
+        setGroups([]);
+        setMoods([]);
+        setEvents([]);
+        setTickDetails([]);
+        setAccounts([]);
+        setGroups([]);
+        setDashboardLayout(defaultLayouts);
+        
+        setDashboardLayout({
+          id: 'shared-layout',
+          userId: 'shared',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          desktop: defaultLayouts.desktop,
+          mobile: defaultLayouts.mobile
+        });
+        return;
+      }
+      if(adminView) {
+        console.error('Admin view but reaching this code', adminView)
+      }
+
       // Step 1: Get Supabase user
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -492,6 +596,7 @@ export const DataProvider: React.FC<{
           setDashboardLayout(defaultLayouts)
         }
       }
+          console.log(JSON.stringify(dashboardLayout, null, 2))
 
       // Step 2: Fetch trades (with caching server side)
       // I think we could make basic computations server side to offload inital stats computations
