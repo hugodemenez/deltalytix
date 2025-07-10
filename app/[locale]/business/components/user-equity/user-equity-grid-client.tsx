@@ -7,6 +7,12 @@ import { Card } from '@/components/ui/card'
 import { UserEquityChart } from './user-equity-chart'
 import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Filter, X } from 'lucide-react'
 
 interface UserEquityData {
   userId: string
@@ -38,15 +44,51 @@ interface UserEquityGridClientProps {
   hasMore: boolean
 }
 
+interface Filters {
+  minTrades: number
+  minTradedDays: number
+  equityFilter: 'all' | 'positive' | 'negative'
+}
+
 export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: initialHasMore }: UserEquityGridClientProps) {
   const [userCards, setUserCards] = useState<React.ReactNode[]>(initialUserCards)
   const [additionalUsers, setAdditionalUsers] = useState<UserEquityData[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [showDailyView, setShowDailyView] = useState(true)
+  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState<Filters>({
+    minTrades: 0,
+    minTradedDays: 0,
+    equityFilter: 'all'
+  })
   
   const observerRef = useRef<IntersectionObserver>(null)
   const loadingRef = useRef<HTMLDivElement>(null)
+
+  // Helper function to count unique traded days
+  const getTradedDays = (equityCurve: UserEquityData['equityCurve']) => {
+    const uniqueDates = new Set(equityCurve.map(trade => trade.date))
+    return uniqueDates.size
+  }
+
+  // Filter users based on criteria
+  const filteredUsers = additionalUsers.filter(user => {
+    const tradedDays = getTradedDays(user.equityCurve)
+    
+    // Check minimum trades
+    if (user.statistics.totalTrades < filters.minTrades) return false
+    
+    // Check minimum traded days
+    if (tradedDays < filters.minTradedDays) return false
+    
+    // Check equity filter
+    if (filters.equityFilter === 'positive' && user.statistics.totalPnL <= 0) return false
+    if (filters.equityFilter === 'negative' && user.statistics.totalPnL >= 0) return false
+    
+    return true
+  })
 
   const loadMoreUsers = useCallback(async () => {
     if (isLoadingMore || !hasMore) return
@@ -90,17 +132,137 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
     }
   }, [hasMore, isLoadingMore, loadMoreUsers])
 
+  const clearFilters = () => {
+    setFilters({
+      minTrades: 0,
+      minTradedDays: 0,
+      equityFilter: 'all'
+    })
+  }
+
+  const hasActiveFilters = filters.minTrades > 0 || filters.minTradedDays > 0 || filters.equityFilter !== 'all'
+
   return (
     <>
+      {/* View Toggle and Filters */}
+      <div className="space-y-4 mb-6">
+        {/* View Toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="view-mode"
+              checked={showDailyView}
+              onCheckedChange={setShowDailyView}
+            />
+            <Label htmlFor="view-mode" className="text-sm font-medium">
+              {showDailyView ? 'Daily View' : 'Trade View'}
+            </Label>
+            <span className="text-xs text-muted-foreground ml-2">
+              {showDailyView ? 'Grouped by day' : 'Individual trades'}
+            </span>
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="flex items-center gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Filters
+            {hasActiveFilters && (
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+            )}
+          </Button>
+        </div>
+
+        {/* Filters Panel */}
+        {showFilters && (
+          <Card className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">Filters</h3>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 text-xs"
+                >
+                  <X className="h-3 w-3" />
+                  Clear
+                </Button>
+              )}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Minimum Trades */}
+              <div className="space-y-2">
+                <Label htmlFor="min-trades" className="text-xs">Minimum Trades</Label>
+                <Input
+                  id="min-trades"
+                  type="number"
+                  min="0"
+                  value={filters.minTrades}
+                  onChange={(e) => setFilters(prev => ({ ...prev, minTrades: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  className="h-8"
+                />
+              </div>
+
+              {/* Minimum Traded Days */}
+              <div className="space-y-2">
+                <Label htmlFor="min-days" className="text-xs">Minimum Traded Days</Label>
+                <Input
+                  id="min-days"
+                  type="number"
+                  min="0"
+                  value={filters.minTradedDays}
+                  onChange={(e) => setFilters(prev => ({ ...prev, minTradedDays: parseInt(e.target.value) || 0 }))}
+                  placeholder="0"
+                  className="h-8"
+                />
+              </div>
+
+              {/* Equity Filter */}
+              <div className="space-y-2">
+                <Label htmlFor="equity-filter" className="text-xs">Equity</Label>
+                <Select
+                  value={filters.equityFilter}
+                  onValueChange={(value: 'all' | 'positive' | 'negative') => 
+                    setFilters(prev => ({ ...prev, equityFilter: value }))
+                  }
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="positive">Positive</SelectItem>
+                    <SelectItem value="negative">Negative</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Results Summary */}
+            <div className="text-xs text-muted-foreground">
+              Showing {filteredUsers.length} of {additionalUsers.length} users
+              {hasActiveFilters && ` (filtered from ${additionalUsers.length} total)`}
+            </div>
+          </Card>
+        )}
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {userCards}
         
         {/* Render additional users with proper charts */}
-        {additionalUsers
+        {filteredUsers
           .filter(user => user.statistics.totalTrades > 0) // Only show users with trades
           .map((user, index) => {
             // Calculate trader number based on initial cards + current index
             const traderNumber = (initialUserCards?.length || 0) + index + 1
+            const tradedDays = getTradedDays(user.equityCurve)
             
             return (
               <Card key={user.userId} className="p-4 space-y-4">
@@ -112,6 +274,9 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                     </h3>
                     <p className="text-xs text-muted-foreground">
                       {new Date(user.createdAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {tradedDays} days, {user.statistics.totalTrades} trades
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -137,6 +302,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                   equityCurve={user.equityCurve}
                   userId={user.userId}
                   totalPnL={user.statistics.totalPnL}
+                  showDailyView={showDailyView}
                 />
 
                 {/* Statistics Grid */}
@@ -211,7 +377,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
       )}
 
       {/* End of results */}
-      {!hasMore && (userCards.length > 0 || additionalUsers.length > 0) && (
+      {!hasMore && (userCards.length > 0 || filteredUsers.length > 0) && (
         <div className="text-center py-4 text-sm text-muted-foreground">
           No more users to load
         </div>

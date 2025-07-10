@@ -557,11 +557,9 @@ export const DataProvider: React.FC<{
         setTickDetails([]);
         setAccounts([]);
         setGroups([]);
-        setDashboardLayout(defaultLayouts);
-        
         setDashboardLayout({
-          id: 'shared-layout',
-          userId: 'shared',
+          id: 'admin-layout',
+          userId: 'admin',
           createdAt: new Date(),
           updatedAt: new Date(),
           desktop: defaultLayouts.desktop,
