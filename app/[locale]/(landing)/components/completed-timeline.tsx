@@ -3,11 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Badge } from "@/components/ui/badge"
 import { motion } from "framer-motion"
-import { useI18n } from '@/locales/client'
+import { useI18n, useCurrentLocale } from '@/locales/client'
 import { TranslationKeys } from "@/app/[locale]/(landing)/types/translations"
 import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'
+import { fr, enUS } from 'date-fns/locale'
 
 interface TimelineItem {
   id: string
@@ -22,6 +23,8 @@ export default function CompletedTimeline({ milestones }: { milestones: Timeline
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const observerRefs = useRef<(HTMLDivElement | null)[]>([])
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const dateLocale = locale === 'fr' ? fr : enUS
 
   useEffect(() => {
     const observers = observerRefs.current.map((ref, index) => {
@@ -65,7 +68,7 @@ export default function CompletedTimeline({ milestones }: { milestones: Timeline
             
             <Link href={`/updates/${milestone.id}`} className="block hover:opacity-90 transition-opacity">
               <time className="mb-2 block text-sm text-neutral-600 dark:text-neutral-400">
-                {format(new Date(milestone.completedDate), 'MMMM d, yyyy')}
+                {format(new Date(milestone.completedDate), 'MMMM d, yyyy', { locale: dateLocale })}
               </time>
               <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
                 {milestone.title}

@@ -7,6 +7,7 @@ import mindset from './en/mindset'
 import propfirm from './en/propfirm'
 import chat from './en/chat'
 import terms from './en/terms'
+import business from './en/business'
 export default {
     ...shared,
     ...landing,
@@ -17,6 +18,7 @@ export default {
     ...propfirm,
     ...chat,
     ...terms,
+    ...business,
     'footer.heading': 'Footer',
     'footer.description': 'Advanced analytics for modern traders.',
     'footer.product.title': 'Product',

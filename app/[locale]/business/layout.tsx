@@ -1,52 +1,44 @@
-'use client'
-
-import { useEffect, use } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "@/hooks/use-toast";
-import { I18nProviderClient } from "@/locales/client";
+import { Toaster } from "@/components/ui/toaster";
+import BusinessNavbar from "./components/business-navbar";
 import { ThemeProvider } from "@/context/theme-provider";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { SidebarNav } from "./components/sidebar-nav";
+import { Metadata } from 'next';
 
-export default function RootLayout(
-    props: Readonly<{
-        children: React.ReactNode;
-    }>
+type Locale = 'en' | 'fr';
+
+export async function generateMetadata(props: { params: Promise<{ locale: Locale }> }): Promise<Metadata> {
+  const params = await props.params;
+  const descriptions: Record<Locale, string> = {
+    en: 'Enterprise trading analytics platform for fund managers and proprietary trading firms. Monitor multiple traders, track performance, and make data-driven decisions.',
+    fr: 'Plateforme d\'analyses de trading entreprise pour les gestionnaires de fonds et les firmes de trading propriétaire. Surveillez plusieurs traders, suivez les performances et prenez des décisions basées sur les données.',
+  };
+
+  const description = descriptions[params.locale] || descriptions.en;
+
+  return {
+    title: 'Deltalytix Enterprise',
+    description,
+  };
+}
+
+export default async function BusinessLayout(
+  props: Readonly<{
+    children: React.ReactNode;
+    params: { locale: string };
+  }>
 ) {
+  const {
+    children
+  } = props;
 
-    const {
-        children
-    } = props;
-
-    const router = useRouter();
-    useEffect(() => {
-        const hash = window.location.hash;
-        const params = new URLSearchParams(hash.slice(1)); // Remove the # and parse
-
-        if (params.get('error')) {
-            const errorDescription = params.get('error_description');
-            toast({
-                title: "Authentication Error",
-                description: errorDescription?.replace(/\+/g, ' ') || "An error occurred during authentication",
-                variant: "destructive",
-            });
-
-            // Clear the hash after showing the toast
-            router.replace('/authentication');
-        }
-    }, [router]);
-
-    return (
-        <ThemeProvider>
-            <SidebarProvider defaultOpen>
-                <div className="flex min-h-screen w-screen">
-                    <SidebarNav />
-                    <main className="flex-1 overflow-y-auto p-6">
-                        <SidebarTrigger />
-                        {children}
-                    </main>
-                </div>
-            </SidebarProvider>
-        </ThemeProvider>
-    );
+  return (
+    <ThemeProvider>
+        <div className="px-2 sm:px-6 lg:px-32">
+          <Toaster />
+          <BusinessNavbar />
+          <div className="mt-8 sm:mt-20 max-w-screen-xl mx-auto">
+            {children}
+          </div>
+        </div>
+    </ThemeProvider>
+  );
 }
