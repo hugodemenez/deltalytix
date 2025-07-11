@@ -638,8 +638,106 @@ export async function getBusinessInvitations(businessId: string) {
     }
   } catch (error) {
     console.error('Error getting business invitations:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to get invitations' }
+        return { success: false, error: error instanceof Error ? error.message : 'Failed to get invitations' }
   }
 }
 
- 
+export async function removeTraderFromBusiness(businessId: string, traderId: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) {
+      throw new Error('Unauthorized')
+    }
+
+    // Check if user is the owner or admin of this business
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+    })
+
+    if (!business) {
+      throw new Error('Business not found')
+    }
+
+    // Check if current user is owner or admin manager
+    const isOwner = business.userId === user.id
+    const isAdminManager = await prisma.businessManager.findUnique({
+      where: {
+        businessId_managerId: {
+          businessId,
+          managerId: user.id,
+        }
+      }
+    })
+
+    if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
+      throw new Error('Unauthorized: Only business owners and admin managers can remove traders')
+    }
+
+    // Remove trader from the business
+    await prisma.business.update({
+      where: { id: businessId },
+      data: {
+        traderIds: business.traderIds.filter(id => id !== traderId),
+      },
+    })
+
+    revalidatePath('/dashboard/settings')
+    revalidatePath('/business/manage')
+    return { success: true }
+  } catch (error) {
+    console.error('Error removing trader from business:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to remove trader' }
+  }
+}
+
+export async function cancelBusinessInvitation(businessId: string, invitationId: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) {
+      throw new Error('Unauthorized')
+    }
+
+    // Check if user is the owner or admin of this business
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+    })
+
+    if (!business) {
+      throw new Error('Business not found')
+    }
+
+    // Check if current user is owner or admin manager
+    const isOwner = business.userId === user.id
+    const isAdminManager = await prisma.businessManager.findUnique({
+      where: {
+        businessId_managerId: {
+          businessId,
+          managerId: user.id,
+        }
+      }
+    })
+
+    if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
+      throw new Error('Unauthorized: Only business owners and admin managers can cancel invitations')
+    }
+
+    // Delete the invitation
+    await prisma.businessInvitation.delete({
+      where: {
+        id: invitationId,
+        businessId: businessId, // Extra security check
+      },
+    })
+
+    revalidatePath('/dashboard/settings')
+    revalidatePath('/business/manage')
+    return { success: true }
+  } catch (error) {
+    console.error('Error canceling business invitation:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to cancel invitation' }
+  }
+}
+
+   

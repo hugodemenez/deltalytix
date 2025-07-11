@@ -55,7 +55,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { joinBusiness, leaveBusiness, getUserBusinesses, addManagerToBusiness, removeManagerFromBusiness, updateManagerAccess, getUserBusinessAccess, deleteBusiness, renameBusiness, sendBusinessInvitation, getBusinessInvitations } from '../../dashboard/settings/actions'
+import { joinBusiness, leaveBusiness, getUserBusinesses, addManagerToBusiness, removeManagerFromBusiness, updateManagerAccess, getUserBusinessAccess, deleteBusiness, renameBusiness, sendBusinessInvitation, getBusinessInvitations, removeTraderFromBusiness, cancelBusinessInvitation } from '../../dashboard/settings/actions'
 
 interface Business {
   id: string
@@ -288,9 +288,38 @@ export default function BusinessManagePage() {
       const result = await renameBusiness(selectedBusiness.id, renameBusinessName.trim())
       if (result.success) {
         toast.success(t('business.rename.success'))
-        setManageDialogOpen(false) // Close manage dialog after renaming
+        
+        // Update the selected business name locally
+        const updatedSelectedBusiness = {
+          ...selectedBusiness,
+          name: renameBusinessName.trim()
+        }
+        setSelectedBusiness(updatedSelectedBusiness)
+
+        // Update the businesses in the main state to keep everything in sync
+        setUserBusinesses(prev => ({
+          ownedBusinesses: prev.ownedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness
+              : business
+          ),
+          joinedBusinesses: prev.joinedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness  
+              : business
+          )
+        }))
+
+        setManagedBusinesses(prev => 
+          prev.map(business => 
+            business.id === selectedBusiness.id 
+              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
+              : business
+          )
+        )
+        
+        // Keep the modal open and reset the rename input
         setRenameBusinessName('')
-        await loadBusinessData()
       } else {
         toast.error(result.error || t('business.rename.error'))
       }
@@ -314,7 +343,7 @@ export default function BusinessManagePage() {
       if (result.success) {
         toast.success(t('business.invitations.sent'))
         setNewTraderEmail('')
-        await loadBusinessData()
+        // Only reload pending invitations, no need to reload all business data
         await loadPendingInvitations()
       } else {
         toast.error(result.error || t('business.traders.add.error'))
@@ -337,6 +366,69 @@ export default function BusinessManagePage() {
       }
     } catch (error) {
       console.error('Error loading pending invitations:', error)
+    }
+  }
+
+  const handleRemoveTrader = async (traderId: string) => {
+    if (!selectedBusiness) return
+
+    try {
+      const result = await removeTraderFromBusiness(selectedBusiness.id, traderId)
+      if (result.success) {
+        toast.success('Trader removed successfully')
+        
+        // Update the selected business locally
+        const updatedSelectedBusiness = {
+          ...selectedBusiness,
+          traderIds: selectedBusiness.traderIds.filter(id => id !== traderId),
+          traders: selectedBusiness.traders.filter(trader => trader.id !== traderId)
+        }
+        setSelectedBusiness(updatedSelectedBusiness)
+
+        // Update the businesses in the main state to keep everything in sync
+        setUserBusinesses(prev => ({
+          ownedBusinesses: prev.ownedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness
+              : business
+          ),
+          joinedBusinesses: prev.joinedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness  
+              : business
+          )
+        }))
+
+        setManagedBusinesses(prev => 
+          prev.map(business => 
+            business.id === selectedBusiness.id 
+              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
+              : business
+          )
+        )
+      } else {
+        toast.error(result.error || t('dashboard.business.error'))
+      }
+    } catch (error) {
+      console.error('Error removing trader:', error)
+      toast.error(t('dashboard.business.error'))
+    }
+  }
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    if (!selectedBusiness) return
+
+    try {
+      const result = await cancelBusinessInvitation(selectedBusiness.id, invitationId)
+      if (result.success) {
+        toast.success('Invitation canceled successfully')
+        await loadPendingInvitations()
+      } else {
+        toast.error(result.error || t('dashboard.business.error'))
+      }
+    } catch (error) {
+      console.error('Error canceling invitation:', error)
+      toast.error(t('dashboard.business.error'))
     }
   }
 
@@ -442,7 +534,7 @@ export default function BusinessManagePage() {
                 Create Business
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
               <DialogHeader>
                 <DialogTitle>Create Business</DialogTitle>
                 <DialogDescription>
@@ -505,7 +597,7 @@ export default function BusinessManagePage() {
                 Join Business
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
               <DialogHeader>
                 <DialogTitle>Join Business</DialogTitle>
                 <DialogDescription>
@@ -617,11 +709,11 @@ export default function BusinessManagePage() {
                           Delete
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
+                      <AlertDialogContent className="w-[95vw] sm:w-full">
                         <AlertDialogHeader>
                           <AlertDialogTitle>Delete Business</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete "{business.name}"? This action cannot be undone and will permanently delete the business and all associated data.
+                            Are you sure you want to delete &quot;{business.name}&quot;? This action cannot be undone and will permanently delete the business and all associated data.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -645,7 +737,7 @@ export default function BusinessManagePage() {
                           {t('dashboard.business.leave')}
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent>
+                      <AlertDialogContent className="w-[95vw] sm:w-full">
                         <AlertDialogHeader>
                           <AlertDialogTitle>{t('dashboard.business.leave')}</AlertDialogTitle>
                           <AlertDialogDescription>
@@ -686,15 +778,15 @@ export default function BusinessManagePage() {
 
       {/* Manage Business Dialog */}
       <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col w-[95vw] sm:w-full">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Manage - {selectedBusiness?.name}</DialogTitle>
             <DialogDescription>
               Manage your business settings, rename, traders, and managers
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-y-auto flex-1 pr-2 -mr-2 px-1">
             {/* Rename Business Section */}
             <div>
               <h4 className="font-medium mb-3">{t('business.rename.title')}</h4>
@@ -732,7 +824,33 @@ export default function BusinessManagePage() {
                       {selectedBusiness?.traders.map((trader: { id: string; email: string }) => (
                         <div key={trader.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
                           <span>{trader.email}</span>
-                          <Badge variant="outline">Member</Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">Member</Badge>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground">
+                                  <UserMinus className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="w-[95vw] sm:w-full">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remove Trader</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to remove "{trader.email}" from this business? They will lose access to the business data.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleRemoveTrader(trader.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Remove Trader
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -773,7 +891,33 @@ export default function BusinessManagePage() {
                     {pendingInvitations.map((invitation) => (
                       <div key={invitation.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
                         <span>{invitation.email}</span>
-                        <Badge variant="outline">Pending</Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">Pending</Badge>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground">
+                                <XCircle className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="w-[95vw] sm:w-full">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Cancel Invitation</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to cancel the invitation for "{invitation.email}"? They will no longer be able to join this business using this invitation.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => handleCancelInvitation(invitation.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Cancel Invitation
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -824,7 +968,7 @@ export default function BusinessManagePage() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 mt-4">
             <Button variant="outline" onClick={() => setManageDialogOpen(false)}>
               {t('common.close')}
             </Button>
