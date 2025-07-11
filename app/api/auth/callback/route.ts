@@ -11,7 +11,7 @@ export async function GET(request: Request) {
   const next = searchParams.get('next')
 
    // Redirect to the decoded 'next' URL if it exists, otherwise to the homepage
-   let decodedNext = null;
+   let decodedNext: string | null = null;
    if (next) {
     decodedNext = decodeURIComponent(next)
   }
