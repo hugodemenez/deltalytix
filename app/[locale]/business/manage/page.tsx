@@ -836,7 +836,7 @@ export default function BusinessManagePage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Remove Trader</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Are you sure you want to remove "{trader.email}" from this business? They will lose access to the business data.
+                                    Are you sure you want to remove &quot;{trader.email}&quot; from this business? They will lose access to the business data.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -903,7 +903,7 @@ export default function BusinessManagePage() {
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Cancel Invitation</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to cancel the invitation for "{invitation.email}"? They will no longer be able to join this business using this invitation.
+                                  Are you sure you want to cancel the invitation for &quot;{invitation.email}&quot;? They will no longer be able to join this business using this invitation.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
