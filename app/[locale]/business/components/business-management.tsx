@@ -586,7 +586,7 @@ export function BusinessManagement({
                 </div>
                 
                 <div className="flex justify-between items-baseline text-sm">
-                  <span className="text-muted-foreground">Created</span>
+                  <span className="text-muted-foreground">{t('business.management.created')}</span>
                   <span className="text-xs">{formatDate(business.createdAt)}</span>
                 </div>
 
@@ -609,9 +609,9 @@ export function BusinessManagement({
                           }, 100)
                         }}
                       >
-                        <Settings className="h-3 w-3 mr-1" />
-                        Manage
-                      </Button>
+                                              <Settings className="h-3 w-3 mr-1" />
+                      {t('business.management.manage')}
+                    </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -635,14 +635,14 @@ export function BusinessManagement({
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="sm" className="flex-1 text-xs">
                           <Trash2 className="h-3 w-3 mr-1" />
-                          Delete
+                          {t('business.management.delete')}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="w-[95vw] sm:w-full">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Business</AlertDialogTitle>
+                          <AlertDialogTitle>{t('business.management.deleteBusiness')}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete &quot;{business.name}&quot;? This action cannot be undone and will permanently delete the business and all associated data.
+                            {t('business.management.deleteConfirm').replace('{name}', business.name)}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -651,7 +651,7 @@ export function BusinessManagement({
                             onClick={() => handleDeleteBusiness(business.id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            Delete Business
+                            {t('business.management.deleteBusiness')}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -663,14 +663,14 @@ export function BusinessManagement({
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1 text-xs">
                           <UserMinus className="h-3 w-3 mr-1" />
-                          {t('dashboard.business.leave')}
+                          {t('business.management.leave')}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="w-[95vw] sm:w-full">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>{t('dashboard.business.leave')}</AlertDialogTitle>
+                          <AlertDialogTitle>{t('business.management.leave')}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            {t('dashboard.business.leaveConfirm')}
+                            {t('business.management.leaveConfirm')}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -679,7 +679,7 @@ export function BusinessManagement({
                             onClick={() => handleLeaveBusiness(business.id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            {t('dashboard.business.leave')}
+                            {t('business.management.leave')}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -699,45 +699,50 @@ export function BusinessManagement({
                 <CardContent className="flex flex-col items-center justify-center h-48 p-6">
                   <Plus className="h-12 w-12 text-muted-foreground mb-4" />
                   <CardTitle className="text-lg text-center mb-2">
-                    {createButtonText || 'Create a New Business'}
+                    {createButtonText || t('business.management.createBusiness')}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground text-center">
-                    Add another business to your portfolio
+                    {t('business.management.createBusinessDescription')}
                   </p>
                 </CardContent>
               </Card>
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
               <DialogHeader>
-                <DialogTitle>Create Business</DialogTitle>
+                <DialogTitle>{t('business.management.createBusinessTitle')}</DialogTitle>
                 <DialogDescription>
-                  Create a new business to manage your trading team. Each business requires a subscription.
+                  {t('business.management.createBusinessDialogDescription')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="business-name">Business Name</Label>
+                  <Label htmlFor="business-name">{t('business.management.businessName')}</Label>
                   <Input
                     id="business-name"
                     value={newBusinessName}
                     onChange={(e) => setNewBusinessName(e.target.value)}
-                    placeholder="Enter business name"
+                    placeholder={t('business.management.enterBusinessName')}
                   />
                 </div>
                 
                 {/* Payment Information */}
                 <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">Subscription Required</span>
+                    <span className="font-medium">{t('business.management.subscriptionRequired')}</span>
                     <Badge variant="secondary">{subscriptionPrice}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Each business requires a subscription to access team features and analytics.
+                    {t('business.management.subscriptionDescription')}
                   </p>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Includes:</p>
+                    <p className="text-sm font-medium">{t('business.management.includes')}</p>
                     <ul className="text-sm text-muted-foreground space-y-1">
-                      {subscriptionFeatures.map((feature: string, index: number) => (
+                      {[
+                        t('business.management.teamCollaboration'),
+                        t('business.management.sharedAnalytics'), 
+                        t('business.management.managerAccessControls'),
+                        t('business.management.businessReporting')
+                      ].map((feature: string, index: number) => (
                         <li key={index} className="flex items-center gap-2">
                           <CheckCircle className="h-3 w-3 text-green-500" />
                           {feature}
@@ -749,10 +754,10 @@ export function BusinessManagement({
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                  Cancel
+                  {t('business.management.cancel')}
                 </Button>
                 <Button onClick={handleCreateBusiness} disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Start Subscription'}
+                  {isSubmitting ? t('business.management.saving') : t('business.management.startSubscription')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -765,50 +770,55 @@ export function BusinessManagement({
         <div className="text-center py-12">
           <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">
-            {emptyStateMessage || t('dashboard.business.noBusiness')}
+            {emptyStateMessage || t('business.dashboard.noBusiness.title')}
           </h3>
           <p className="text-muted-foreground mb-4">
-            Get started by creating your first business or joining an existing one
+            {t('business.management.getStarted')}
           </p>
           {showCreateButton && (
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  {createButtonText || 'Create Your First Business'}
+                  {createButtonText || t('business.management.createFirstBusiness')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
                 <DialogHeader>
-                  <DialogTitle>Create Business</DialogTitle>
+                  <DialogTitle>{t('business.management.createBusinessTitle')}</DialogTitle>
                   <DialogDescription>
-                    Create a new business to manage your trading team. Each business requires a subscription.
+                    {t('business.management.createBusinessDialogDescription')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="business-name">Business Name</Label>
+                    <Label htmlFor="business-name">{t('business.management.businessName')}</Label>
                     <Input
                       id="business-name"
                       value={newBusinessName}
                       onChange={(e) => setNewBusinessName(e.target.value)}
-                      placeholder="Enter business name"
+                      placeholder={t('business.management.enterBusinessName')}
                     />
                   </div>
                   
                   {/* Payment Information */}
                   <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">Subscription Required</span>
+                      <span className="font-medium">{t('business.management.subscriptionRequired')}</span>
                       <Badge variant="secondary">{subscriptionPrice}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Each business requires a subscription to access team features and analytics.
+                      {t('business.management.subscriptionDescription')}
                     </p>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Includes:</p>
+                      <p className="text-sm font-medium">{t('business.management.includes')}</p>
                       <ul className="text-sm text-muted-foreground space-y-1">
-                        {subscriptionFeatures.map((feature: string, index: number) => (
+                        {[
+                          t('business.management.teamCollaboration'),
+                          t('business.management.sharedAnalytics'), 
+                          t('business.management.managerAccessControls'),
+                          t('business.management.businessReporting')
+                        ].map((feature: string, index: number) => (
                           <li key={index} className="flex items-center gap-2">
                             <CheckCircle className="h-3 w-3 text-green-500" />
                             {feature}
@@ -820,10 +830,10 @@ export function BusinessManagement({
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                    Cancel
+                    {t('business.management.cancel')}
                   </Button>
                   <Button onClick={handleCreateBusiness} disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : 'Start Subscription'}
+                    {isSubmitting ? t('business.management.saving') : t('business.management.startSubscription')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -836,9 +846,9 @@ export function BusinessManagement({
       <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col w-[95vw] sm:w-full">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Manage - {selectedBusiness?.name}</DialogTitle>
+            <DialogTitle>{t('business.management.manageTitle').replace('{name}', selectedBusiness?.name || '')}</DialogTitle>
             <DialogDescription>
-              Manage your business settings, rename, traders, and managers
+              {t('business.management.manageDescription')}
             </DialogDescription>
           </DialogHeader>
           
@@ -858,7 +868,7 @@ export function BusinessManagement({
                   disabled={isSubmitting || !renameBusinessName.trim()}
                   size="sm"
                 >
-                  {isSubmitting ? t('common.saving') : 'Rename'}
+                  {isSubmitting ? t('business.management.saving') : t('business.management.rename')}
                 </Button>
               </div>
             </div>
@@ -881,7 +891,7 @@ export function BusinessManagement({
                         <div key={trader.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
                           <span>{trader.email}</span>
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">Member</Badge>
+                            <Badge variant="outline">{t('business.management.member')}</Badge>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground">
@@ -889,19 +899,19 @@ export function BusinessManagement({
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent className="w-[95vw] sm:w-full">
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Remove Trader</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to remove &quot;{trader.email}&quot; from this business? They will lose access to the business data.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
+                                                              <AlertDialogHeader>
+                                <AlertDialogTitle>{t('business.management.removeTrader')}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  {t('business.management.removeTraderConfirm').replace('{email}', trader.email)}
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => handleRemoveTrader(trader.id)}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    Remove Trader
+                                    {t('business.management.removeTraderAction')}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -932,7 +942,7 @@ export function BusinessManagement({
                     disabled={isSubmitting || !newTraderEmail.trim()}
                     size="sm"
                   >
-                    {isSubmitting ? t('common.saving') : <UserPlus className="h-4 w-4" />}
+                    {isSubmitting ? t('business.management.saving') : <UserPlus className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -941,14 +951,14 @@ export function BusinessManagement({
               <div className="mt-4">
                 <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.invitations.pending')}</h5>
                 {pendingInvitations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No pending invitations.</p>
+                  <p className="text-sm text-muted-foreground">{t('business.management.noPendingInvitations')}</p>
                 ) : (
                   <div className="space-y-1">
                     {pendingInvitations.map((invitation) => (
                       <div key={invitation.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
                         <span>{invitation.email}</span>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline">Pending</Badge>
+                          <Badge variant="outline">{t('business.management.pending')}</Badge>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground">
@@ -957,19 +967,19 @@ export function BusinessManagement({
                             </AlertDialogTrigger>
                             <AlertDialogContent className="w-[95vw] sm:w-full">
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Cancel Invitation</AlertDialogTitle>
+                                <AlertDialogTitle>{t('business.management.cancelInvitation')}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Are you sure you want to cancel the invitation for &quot;{invitation.email}&quot;? They will no longer be able to join this business using this invitation.
+                                  {t('business.management.cancelInvitationConfirm').replace('{email}', invitation.email)}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleCancelInvitation(invitation.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Cancel Invitation
-                                </AlertDialogAction>
+                                                                  <AlertDialogAction
+                                    onClick={() => handleCancelInvitation(invitation.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    {t('business.management.cancelInvitationAction')}
+                                  </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -1017,7 +1027,7 @@ export function BusinessManagement({
                     </SelectContent>
                   </Select>
                   <Button onClick={handleAddManager} disabled={isSubmitting}>
-                    {isSubmitting ? t('common.saving') : <UserPlus className="h-4 w-4" />}
+                    {isSubmitting ? t('business.management.saving') : <UserPlus className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -1026,7 +1036,7 @@ export function BusinessManagement({
 
           <DialogFooter className="flex-shrink-0 mt-4">
             <Button variant="outline" onClick={() => setManageDialogOpen(false)}>
-              {t('common.close')}
+              {t('business.management.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

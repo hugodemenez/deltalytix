@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { getUserBusinesses, getUserBusinessAccess } from '../../dashboard/settings/actions'
-import { NoBusinessFound } from '../components/no-business-found'
 import { BusinessManagement } from '../components/business-management'
 
 export default async function UserEquityPage() {

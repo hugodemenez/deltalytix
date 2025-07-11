@@ -80,17 +80,17 @@ export default function BusinessJoinPage() {
     try {
       const result = await joinBusinessByInvitation(invitationToken)
       if (result.success) {
-        toast.success('Successfully joined business')
+        toast.success(t('business.join.success'))
         // Redirect to business dashboard after successful join
         setTimeout(() => {
           window.location.href = `/business/dashboard/${invitation.businessId}`
         }, 1500)
       } else {
-        toast.error(result.error || 'Failed to join business')
+        toast.error(result.error || t('business.join.error'))
       }
     } catch (error) {
       console.error('Error joining business:', error)
-              toast.error('Failed to join business')
+      toast.error(t('business.join.error'))
     } finally {
       setIsJoining(false)
     }
@@ -109,11 +109,11 @@ export default function BusinessJoinPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <Badge variant="secondary">Pending</Badge>
+        return <Badge variant="secondary">{t('business.management.pending')}</Badge>
       case 'accepted':
-        return <Badge variant="default" className="bg-green-500">Accepted</Badge>
+        return <Badge variant="default" className="bg-green-500">{t('business.invitations.accepted')}</Badge>
       case 'expired':
-        return <Badge variant="destructive">Expired</Badge>
+        return <Badge variant="destructive">{t('business.invitations.expired')}</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -138,7 +138,7 @@ export default function BusinessJoinPage() {
         <div className="flex items-center justify-center h-64">
           <div className="flex items-center gap-3">
             <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-muted-foreground">Loading invitation details...</span>
+            <span className="text-muted-foreground">{t('business.join.loading')}</span>
           </div>
         </div>
       </div>
@@ -152,7 +152,7 @@ export default function BusinessJoinPage() {
           <Card>
             <CardHeader className="text-center">
               <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <CardTitle className="text-xl">Invalid Invitation</CardTitle>
+              <CardTitle className="text-xl">{t('business.join.invalid.title')}</CardTitle>
               <CardDescription>
                 {error}
               </CardDescription>
@@ -163,7 +163,7 @@ export default function BusinessJoinPage() {
                 onClick={() => window.location.href = '/business/manage'}
                 className="w-full"
               >
-                Go to Business Management
+                {t('business.join.goToManage')}
               </Button>
             </CardContent>
           </Card>
@@ -179,9 +179,9 @@ export default function BusinessJoinPage() {
           <Card>
             <CardHeader className="text-center">
               <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <CardTitle className="text-xl">Invitation Not Found</CardTitle>
+              <CardTitle className="text-xl">{t('business.join.notFound.title')}</CardTitle>
               <CardDescription>
-                The invitation you're looking for doesn't exist or has been removed.
+                {t('business.join.notFound.description')}
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
@@ -190,7 +190,7 @@ export default function BusinessJoinPage() {
                 onClick={() => window.location.href = '/business/manage'}
                 className="w-full"
               >
-                Go to Business Management
+                {t('business.join.goToManage')}
               </Button>
             </CardContent>
           </Card>
@@ -206,9 +206,9 @@ export default function BusinessJoinPage() {
     <div className="container mx-auto py-8 px-4">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Business Invitation</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">{t('business.join.title')}</h1>
           <p className="text-muted-foreground">
-            You've been invited to join a business team
+            {t('business.join.subtitle')}
           </p>
         </div>
 
@@ -219,7 +219,7 @@ export default function BusinessJoinPage() {
               <div>
                 <CardTitle className="text-xl">{invitation.businessName}</CardTitle>
                 <CardDescription>
-                  Business invitation details
+                  {t('business.join.details.title')}
                 </CardDescription>
               </div>
             </div>
@@ -231,15 +231,15 @@ export default function BusinessJoinPage() {
               <div className="flex items-center gap-3">
                 {getStatusIcon(invitation.status)}
                 <div>
-                  <p className="font-medium">Invitation Status</p>
+                  <p className="font-medium">{t('business.join.status.title')}</p>
                   <p className="text-sm text-muted-foreground">
                     {invitation.status === 'pending' && !isExpired 
-                      ? 'Ready to join' 
+                      ? t('business.join.status.ready')
                       : invitation.status === 'pending' && isExpired
-                      ? 'Invitation has expired'
+                      ? t('business.join.status.expired')
                       : invitation.status === 'accepted'
-                      ? 'Already accepted'
-                      : 'Unknown status'
+                      ? t('business.join.status.accepted')
+                      : t('business.join.status.unknown')
                     }
                   </p>
                 </div>
@@ -251,21 +251,21 @@ export default function BusinessJoinPage() {
 
             {/* Invitation Details */}
             <div className="space-y-4">
-              <h3 className="font-medium">Invitation Details</h3>
+              <h3 className="font-medium">{t('business.join.details.title')}</h3>
               
               <div className="grid gap-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Invited Email</span>
+                  <span className="text-muted-foreground">{t('business.join.details.invitedEmail')}</span>
                   <span className="font-medium">{invitation.email}</span>
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Invited On</span>
+                  <span className="text-muted-foreground">{t('business.join.details.invitedOn')}</span>
                   <span className="text-sm">{formatDate(invitation.createdAt)}</span>
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Expires On</span>
+                  <span className="text-muted-foreground">{t('business.join.details.expiresOn')}</span>
                   <span className={cn(
                     "text-sm",
                     isExpired ? "text-red-500" : "text-green-500"
@@ -283,7 +283,7 @@ export default function BusinessJoinPage() {
               {canJoin ? (
                 <div className="space-y-4">
                   <p className="text-muted-foreground">
-                    Click the button below to join this business team. You'll have access to shared analytics and team features.
+                    {t('business.join.action.description')}
                   </p>
                   <Button 
                     onClick={handleJoinBusiness} 
@@ -294,11 +294,11 @@ export default function BusinessJoinPage() {
                     {isJoining ? (
                       <>
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Joining Business...
+                        {t('business.join.action.joining')}
                       </>
                     ) : (
                       <>
-                        Join Business
+                        {t('business.join.action.button')}
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </>
                     )}
@@ -310,10 +310,10 @@ export default function BusinessJoinPage() {
                     <XCircle className="h-5 w-5" />
                     <span>
                       {invitation.status === 'accepted' 
-                        ? 'You have already accepted this invitation'
+                        ? t('business.join.action.alreadyAccepted')
                         : isExpired
-                        ? 'This invitation has expired'
-                        : 'This invitation is no longer valid'
+                        ? t('business.join.action.expired')
+                        : t('business.join.action.invalid')
                       }
                     </span>
                   </div>
@@ -322,7 +322,7 @@ export default function BusinessJoinPage() {
                     onClick={() => window.location.href = '/business/manage'}
                     className="w-full"
                   >
-                    Go to Business Management
+                    {t('business.join.goToManage')}
                   </Button>
                 </div>
               )}

@@ -3,7 +3,7 @@ export default {
   'business.description': 'Enfin, voyez exactement quels traders gagnent de l\'argent et pourquoi. Analytics temps réel que les firmes utilisent pour booster leurs profits de 34%.',
   'business.cta': 'Commencer',
   'business.cta.secondary': 'Voir Démo Live',
-  'business.badge': 'ENTREPRISE',
+  'business.badge': 'BUSINESS',
   'business.badge.description': 'Approuvé par 500+ firmes & gestionnaires',
   
   // Hero section
@@ -47,10 +47,10 @@ export default {
   'business.benefits.security.description': 'Même chiffrement que Goldman Sachs. Audits complets et certifié SOC 2.',
   
   'business.benefits.support.title': 'Support Haut de Gamme Inclus',
-  'business.benefits.support.description': 'Manager dédié, support 24/7 et onboarding gratuit pour tous les clients entreprise.',
+  'business.benefits.support.description': 'Manager dédié, support 24/7 et onboarding gratuit pour tous les clients business.',
   
   // Pricing section
-  'business.pricing.title': 'Tarification Entreprise Simple',
+  'business.pricing.title': 'Tarification business Simple',
   'business.pricing.description': 'Un prix. Toutes les fonctionnalités. Aucune surprise.',
   
   'business.pricing.contact': 'Devis Personnalisé',
@@ -103,7 +103,7 @@ export default {
   'business.usecases.family.description': 'Analytics sophistiqués pour stratégies complexes. La transparence et contrôle que mérite la richesse familiale.',
   
   'business.usecases.institutional.title': 'Desks Trading Institutionnels',
-  'business.usecases.institutional.description': 'Plateforme entreprise qui gère votre volume et complexité. Conçue pour les plus gros acteurs.',
+  'business.usecases.institutional.description': 'Plateforme business qui gère votre volume et complexité. Conçue pour les plus gros acteurs.',
   
   // Roadmap section
   'business.roadmap.title': 'Ce Qui Arrive Ensuite',
@@ -130,20 +130,20 @@ export default {
   ],
   
   'business.roadmap.q3.title': 'Q3 2024',
-  'business.roadmap.q3.description': 'Fonctionnalités entreprise pour vraie échelle',
+  'business.roadmap.q3.description': 'Fonctionnalités business pour vraie échelle',
   'business.roadmap.q3.features': [
-    'API Entreprise',
+    'API business',
     'Intégrations sur mesure',
     'Sécurité avancée'
   ],
   
   'business.roadmap.q4.title': 'Q4 2024',
-  'business.roadmap.q4.description': 'Plateforme entreprise complète',
+  'business.roadmap.q4.description': 'Plateforme business complète',
   'business.roadmap.q4.features': [
-    'Suite entreprise complète',
+    'Suite business complète',
     'Support dédié',
     'Onboarding sur mesure',
-    'Tarification entreprise'
+    'Tarification business'
   ],
   
   'business.roadmap.coming': 'Bientôt',
@@ -157,20 +157,20 @@ export default {
   'business.cta.createAccount.subtext': 'Onboarding sur mesure • Installation en 5 minutes • Pas de contrat long terme',
   
   // Business management
-  'business.rename': 'Renommer l\'Entreprise',
-  'business.rename.title': 'Renommer l\'Entreprise',
-  'business.rename.description': 'Entrez un nouveau nom pour votre entreprise',
-  'business.rename.placeholder': 'Entrez le nouveau nom de l\'entreprise',
-  'business.rename.success': 'Entreprise renommée avec succès',
-  'business.rename.error': 'Échec du renommage de l\'entreprise',
-  'business.rename.nameExists': 'Une entreprise avec ce nom existe déjà',
-  'business.rename.nameRequired': 'Le nom de l\'entreprise est requis',
-  'business.rename.onlyOwner': 'Seuls les propriétaires peuvent renommer les entreprises',
+  'business.rename': 'Renommer l\'business',
+  'business.rename.title': 'Renommer l\'business',
+  'business.rename.description': 'Entrez un nouveau nom pour votre business',
+  'business.rename.placeholder': 'Entrez le nouveau nom de l\'business',
+  'business.rename.success': 'business renommée avec succès',
+  'business.rename.error': 'Échec du renommage de l\'business',
+  'business.rename.nameExists': 'Une business avec ce nom existe déjà',
+  'business.rename.nameRequired': 'Le nom de l\'business est requis',
+  'business.rename.onlyOwner': 'Seuls les propriétaires peuvent renommer les businesss',
   
   // Business dashboard
   'business.dashboard.view': 'Voir',
-  'business.dashboard.title': 'Tableau de Bord Entreprise',
-  'business.dashboard.description': 'Voir les données d\'équité pour tous les traders de cette entreprise',
+  'business.dashboard.title': 'Tableau de Bord business',
+  'business.dashboard.description': 'Voir les données d\'équité pour tous les traders de cette business',
   
   // Trader management
   'business.traders': 'Traders',
@@ -184,7 +184,7 @@ export default {
   'business.traders.add.success': 'Trader ajouté avec succès',
   'business.traders.add.error': 'Échec de l\'ajout du trader',
   'business.traders.add.userNotFound': 'Utilisateur avec cet email non trouvé',
-  'business.traders.add.alreadyMember': 'Le trader est déjà membre de cette entreprise',
+  'business.traders.add.alreadyMember': 'Le trader est déjà membre de cette business',
   'business.traders.add.unauthorized': 'Seuls les propriétaires et managers admin peuvent ajouter des traders',
   'business.traders.add.emailRequired': 'L\'email du trader est requis',
   
@@ -199,10 +199,10 @@ export default {
   'business.invitations.pending': 'Invitations en attente',
   
   // Dashboard no business found
-  'business.dashboard.noBusiness.title': 'Aucune Entreprise Trouvée',
-  'business.dashboard.noBusiness.description': 'Vous n&apos;avez pas encore accès à des entreprises. Veuillez créer une entreprise ou rejoindre une existante pour voir le tableau de bord.',
-  'business.dashboard.noBusiness.manageButton': 'Gérer les Entreprises',
-  'business.dashboard.noBusiness.createButton': 'Créer une Entreprise',
+  'business.dashboard.noBusiness.title': 'Aucune business trouvé',
+  'business.dashboard.noBusiness.description': 'Vous n&apos;avez pas encore accès à des businesss. Veuillez créer une business ou rejoindre une existante pour voir le tableau de bord.',
+  'business.dashboard.noBusiness.manageButton': 'Gérer les business',
+  'business.dashboard.noBusiness.createButton': 'Créer une business',
   'business.invitations.sent': 'Invitation envoyée avec succès',
   'business.invitations.alreadySent': 'Une invitation a déjà été envoyée à cet email',
   'business.invitations.expired': 'L\'invitation a expiré',
@@ -210,6 +210,31 @@ export default {
   'business.invitations.declined': 'Invitation refusée',
   'business.invitations.notFound': 'Invitation non trouvée',
   'business.invitations.wrongEmail': 'Cette invitation a été envoyée à une adresse email différente',
+  
+  // Business join page
+  'business.join.title': 'Invitation Business',
+  'business.join.subtitle': 'Vous avez été invité à rejoindre une équipe business',
+  'business.join.loading': 'Chargement des détails de l\'invitation...',
+  'business.join.invalid.title': 'Invitation Invalide',
+  'business.join.invalid.description': 'L\'invitation que vous recherchez n\'existe pas ou a été supprimée.',
+  'business.join.notFound.title': 'Invitation Non Trouvée',
+  'business.join.notFound.description': 'L\'invitation que vous recherchez n\'existe pas ou a été supprimée.',
+  'business.join.goToManage': 'Aller à la Gestion Business',
+  'business.join.details.title': 'Détails de l\'invitation business',
+  'business.join.status.title': 'Statut de l\'Invitation',
+  'business.join.status.ready': 'Prêt à rejoindre',
+  'business.join.status.expired': 'L\'invitation a expiré',
+  'business.join.status.accepted': 'Déjà acceptée',
+  'business.join.status.unknown': 'Statut inconnu',
+  'business.join.details.invitedEmail': 'Email Invité',
+  'business.join.details.invitedOn': 'Invité Le',
+  'business.join.details.expiresOn': 'Expire Le',
+  'business.join.action.description': 'Cliquez sur le bouton ci-dessous pour rejoindre cette équipe business. Vous aurez accès aux analyses partagées et aux fonctionnalités d\'équipe.',
+  'business.join.action.button': 'Rejoindre le Business',
+  'business.join.action.joining': 'Rejoindre le Business...',
+  'business.join.action.alreadyAccepted': 'Vous avez déjà accepté cette invitation',
+  'business.join.action.expired': 'Cette invitation a expiré',
+  'business.join.action.invalid': 'Cette invitation n\'est plus valide',
   
   // Equity dashboard
   'business.equity.dailyView': 'Vue Quotidienne',
@@ -241,4 +266,45 @@ export default {
   'business.equity.scrollToLoadMore': 'Faites défiler pour charger plus...',
   'business.equity.noMoreUsers': 'Aucun utilisateur supplémentaire à charger',
   'business.equity.noUsersFound': 'Aucun utilisateur trouvé',
+  
+  // Business Management Component
+  'business.management.createBusiness': 'Créer un Nouveau Business',
+  'business.management.createBusinessDescription': 'Ajouter un autre business à votre portefeuille',
+  'business.management.createFirstBusiness': 'Créer votre premier business',
+  'business.management.createBusinessTitle': 'Créer un Business',
+  'business.management.createBusinessDialogDescription': 'Créez une nouvelle business pour gérer votre équipe de trading. Chaque business nécessite un abonnement.',
+  'business.management.businessName': 'Nom du business',
+  'business.management.enterBusinessName': 'Entrez le nom du business',
+  'business.management.subscriptionRequired': 'Abonnement Requis',
+  'business.management.subscriptionDescription': 'Chaque business nécessite un abonnement pour accéder aux fonctionnalités d\'équipe et aux analyses.',
+  'business.management.includes': 'Inclut :',
+  'business.management.startSubscription': 'Commencer l\'abonnement',
+  'business.management.saving': 'Enregistrement...',
+  'business.management.cancel': 'Annuler',
+  'business.management.manage': 'Gérer',
+  'business.management.delete': 'Supprimer',
+  'business.management.deleteBusiness': 'Supprimer le business',
+  'business.management.deleteConfirm': 'Êtes-vous sûr de vouloir supprimer "{name}" ? Cette action ne peut pas être annulée et supprimera définitivement le business et toutes les données associées.',
+  'business.management.leave': 'Quitter',
+  'business.management.leaveConfirm': 'Êtes-vous sûr de vouloir quitter cette business ? Vous perdrez l\'accès à toutes les données du business.',
+  'business.management.manageTitle': 'Gérer - {name}',
+  'business.management.manageDescription': 'Gérez les paramètres de votre business, renommez, traders et managers',
+  'business.management.rename': 'Renommer',
+  'business.management.close': 'Fermer',
+  'business.management.created': 'Créé',
+  'business.management.member': 'Membre',
+  'business.management.pending': 'En attente',
+  'business.management.removeTrader': 'Retirer le Trader',
+  'business.management.removeTraderConfirm': 'Êtes-vous sûr de vouloir retirer "{email}" de cette business ? Ils perdront l\'accès aux données du business.',
+  'business.management.removeTraderAction': 'Retirer le Trader',
+  'business.management.cancelInvitation': 'Annuler l\'Invitation',
+  'business.management.cancelInvitationConfirm': 'Êtes-vous sûr de vouloir annuler l\'invitation pour "{email}" ? Ils ne pourront plus rejoindre ce business avec cette invitation.',
+  'business.management.cancelInvitationAction': 'Annuler l\'Invitation',
+  'business.management.noPendingInvitations': 'Aucune invitation en attente.',
+  'business.management.addNewBusiness': 'Ajouter un autre business à votre portefeuille',
+  'business.management.getStarted': 'Commencez par créer votre premier business ou rejoindre un business existant en tant que manager',
+  'business.management.teamCollaboration': 'Collaboration d\'équipe',
+  'business.management.sharedAnalytics': 'Analyses partagées', 
+  'business.management.managerAccessControls': 'Contrôles d\'accès des managers',
+  'business.management.businessReporting': 'Rapports',
 } 
