@@ -147,7 +147,10 @@ export default function BillingManagement() {
                   </span>
                 ) : (
                   <span className="text-gray-500 dark:text-gray-400">
-                    {subscription?.status ? t(`billing.status.${subscription.status as SubscriptionStatus}`) : t('billing.notApplicable')}
+                    {subscription?.status ? (() => {
+                      const status = subscription.status as SubscriptionStatus
+                      return t(`billing.status.${status}`)
+                    })() : t('billing.notApplicable')}
                   </span>
                 )}
               </>
