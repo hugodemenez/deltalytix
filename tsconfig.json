@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "noImplicitAny": false,
     "lib": [
       "dom",
       "dom.iterable",
