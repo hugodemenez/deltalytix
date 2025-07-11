@@ -406,7 +406,7 @@ export default function BusinessPage() {
                       ))}
                     </div>
                     <blockquote className="text-lg mb-4">
-                      "{testimonial.quote}"
+                      &ldquo;{testimonial.quote}&rdquo;
                     </blockquote>
                     <div>
                       <div className="font-semibold">{testimonial.author}</div>
