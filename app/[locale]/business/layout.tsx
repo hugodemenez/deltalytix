@@ -23,12 +23,15 @@ export async function generateMetadata(props: { params: Promise<{ locale: Locale
 export default async function BusinessLayout(
   props: Readonly<{
     children: React.ReactNode;
-    params: { locale: string };
+    params: Promise<{ locale: string }>;
   }>
 ) {
   const {
-    children
+    children,
+    params
   } = props;
+  
+  const { locale } = await params;
 
   return (
     <ThemeProvider>
