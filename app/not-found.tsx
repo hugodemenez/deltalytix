@@ -21,8 +21,8 @@ const translations = {
   fr: {
     title: '404 - Page introuvable',
     heading: 'Oups ! Page introuvable',
-    description: 'La page que vous recherchez n\'existe pas ou a été déplacée.',
-    goHome: 'Retour à l\'accueil',
+    description: 'La page que vous recherchez n&apos;existe pas ou a été déplacée.',
+    goHome: 'Retour à l&apos;accueil',
     goBack: 'Retourner',
     searchPlaceholder: 'Rechercher une page...',
     searchComingSoon: 'Fonctionnalité de recherche bientôt disponible'
