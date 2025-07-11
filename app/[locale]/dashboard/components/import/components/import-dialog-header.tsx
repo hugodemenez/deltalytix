@@ -23,9 +23,9 @@ export function ImportDialogHeader({ step, importType }: ImportDialogHeaderProps
 
   return (
     <DialogHeader className="flex-none p-6 border-b space-y-4">
-      <DialogTitle>{t(currentStep?.title || 'import.title')}</DialogTitle>
+      <DialogTitle>{t((currentStep?.title || 'import.title') as any, { count: 1 })}</DialogTitle>
       <DialogDescription className="text-sm text-muted-foreground">
-        {t(currentStep?.description || 'import.description')}
+        {t((currentStep?.description || 'import.description') as any, { count: 1 })}
       </DialogDescription>
       <div className="space-y-2">
         <div className="w-full bg-secondary h-2 rounded-full">
@@ -45,7 +45,7 @@ export function ImportDialogHeader({ step, importType }: ImportDialogHeaderProps
                 currentStepIndex >= index && "text-primary font-medium"
               )}
             >
-              {t(s.title)}
+              {t(s.title as any, { count: 1 })}
             </div>
           ))}
         </div>
