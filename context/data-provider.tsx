@@ -495,8 +495,6 @@ export const DataProvider: React.FC<{
   // Load data from the server
   const loadData = useCallback(async () => {
     // Prevent multiple simultaneous loads
-    console.log('[loadData] Starting data load - setting isLoading to true')
-
     try {
       setIsLoading(true);
 
@@ -594,7 +592,6 @@ export const DataProvider: React.FC<{
           setDashboardLayout(defaultLayouts)
         }
       }
-          console.log(JSON.stringify(dashboardLayout, null, 2))
 
       // Step 2: Fetch trades (with caching server side)
       // I think we could make basic computations server side to offload inital stats computations
@@ -639,7 +636,6 @@ export const DataProvider: React.FC<{
         console.error('Error details:', error.message);
       }
     } finally {
-      console.log('[loadData] Completed data load - setting isLoading to false')
       setIsLoading(false);
     }
   }, [isSharedView, params?.slug, timezone, supabaseUser, isLoading, setIsLoading]);

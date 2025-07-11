@@ -162,7 +162,6 @@ export default async function middleware(req: NextRequest) {
     if (pathname.includes("/authentication")) {
       const nextParam = req.nextUrl.searchParams.get("next")
       const redirectUrl = nextParam ? `/${nextParam}` : "/dashboard"
-      console.log('redirectUrl', redirectUrl)
       return NextResponse.redirect(new URL(redirectUrl, req.url))
     }
   }

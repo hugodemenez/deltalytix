@@ -15,7 +15,6 @@ export async function GET(request: Request) {
    if (next) {
     decodedNext = decodeURIComponent(next)
   }
-  console.log('decodedNext', decodedNext)
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
