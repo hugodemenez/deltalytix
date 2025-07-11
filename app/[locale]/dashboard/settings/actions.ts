@@ -740,4 +740,131 @@ export async function cancelBusinessInvitation(businessId: string, invitationId:
   }
 }
 
-   
+export async function getBusinessInvitationDetails(invitationToken: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) {
+      throw new Error('Unauthorized')
+    }
+
+    // Find the invitation by token
+    const invitation = await prisma.businessInvitation.findUnique({
+      where: { id: invitationToken },
+      include: {
+        business: {
+          select: {
+            id: true,
+            name: true,
+          }
+        }
+      }
+    })
+
+    if (!invitation) {
+      throw new Error('Invitation not found')
+    }
+
+    // Check if invitation is expired
+    if (invitation.expiresAt < new Date()) {
+      throw new Error('Invitation has expired')
+    }
+
+    // Check if invitation is already accepted
+    if (invitation.status === 'ACCEPTED') {
+      throw new Error('Invitation already accepted')
+    }
+
+    // Check if the invitation is for the current user's email
+    if (invitation.email !== user.email) {
+      throw new Error('This invitation was sent to a different email address')
+    }
+
+    return {
+      success: true,
+      invitation: {
+        id: invitation.id,
+        businessId: invitation.businessId,
+        businessName: invitation.business.name,
+        email: invitation.email,
+        status: invitation.status.toLowerCase(),
+        createdAt: invitation.createdAt.toISOString(),
+        expiresAt: invitation.expiresAt.toISOString(),
+      }
+    }
+  } catch (error) {
+    console.error('Error getting business invitation details:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to get invitation details' }
+  }
+}
+
+export async function joinBusinessByInvitation(invitationToken: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user?.id) {
+      throw new Error('Unauthorized')
+    }
+
+    // Find the invitation by token
+    const invitation = await prisma.businessInvitation.findUnique({
+      where: { id: invitationToken },
+      include: {
+        business: {
+          select: {
+            id: true,
+            name: true,
+            traderIds: true,
+          }
+        }
+      }
+    })
+
+    if (!invitation) {
+      throw new Error('Invitation not found')
+    }
+
+    // Check if invitation is expired
+    if (invitation.expiresAt < new Date()) {
+      throw new Error('Invitation has expired')
+    }
+
+    // Check if invitation is already accepted
+    if (invitation.status === 'ACCEPTED') {
+      throw new Error('Invitation already accepted')
+    }
+
+    // Check if the invitation is for the current user's email
+    if (invitation.email !== user.email) {
+      throw new Error('This invitation was sent to a different email address')
+    }
+
+    // Check if user is already a member of this business
+    if (invitation.business.traderIds.includes(user.id)) {
+      throw new Error('You are already a member of this business')
+    }
+
+    // Accept the invitation by updating its status and adding user to business
+    await prisma.$transaction([
+      // Update invitation status
+      prisma.businessInvitation.update({
+        where: { id: invitationToken },
+        data: { status: 'ACCEPTED' }
+      }),
+      // Add user to business
+      prisma.business.update({
+        where: { id: invitation.businessId },
+        data: {
+          traderIds: [...invitation.business.traderIds, user.id]
+        }
+      })
+    ])
+
+    revalidatePath('/dashboard/settings')
+    revalidatePath('/business/manage')
+    return { success: true }
+  } catch (error) {
+    console.error('Error joining business by invitation:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to join business' }
+  }
+}

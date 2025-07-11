@@ -1,10 +1,10 @@
 export default {
-  'business.title': 'Transformez vos données en profits',
-  'business.description': 'Enfin, voyez exactement quels traders gagnent de l\'argent et pourquoi. Analytics temps réel qui augmentent les profits de 34%.',
+  'business.title': 'Transformez Vos Données en Profits',
+  'business.description': 'Enfin, voyez exactement quels traders gagnent de l\'argent et pourquoi. Analytics temps réel que les firmes utilisent pour booster leurs profits de 34%.',
   'business.cta': 'Commencer',
-  'business.cta.secondary': 'Voir la Démo',
+  'business.cta.secondary': 'Voir Démo Live',
   'business.badge': 'ENTREPRISE',
-  'business.badge.description': 'Approuvé par 500+ firmes prop & gestionnaires',
+  'business.badge.description': 'Approuvé par 500+ firmes & gestionnaires',
   
   // Hero section
   'business.hero.title': 'Identifiez vos traders rentables en temps réel',
@@ -197,6 +197,12 @@ export default {
   // Invitation system
   'business.invitations': 'Invitations',
   'business.invitations.pending': 'Invitations en attente',
+  
+  // Dashboard no business found
+  'business.dashboard.noBusiness.title': 'Aucune Entreprise Trouvée',
+  'business.dashboard.noBusiness.description': 'Vous n&apos;avez pas encore accès à des entreprises. Veuillez créer une entreprise ou rejoindre une existante pour voir le tableau de bord.',
+  'business.dashboard.noBusiness.manageButton': 'Gérer les Entreprises',
+  'business.dashboard.noBusiness.createButton': 'Créer une Entreprise',
   'business.invitations.sent': 'Invitation envoyée avec succès',
   'business.invitations.alreadySent': 'Une invitation a déjà été envoyée à cet email',
   'business.invitations.expired': 'L\'invitation a expiré',
@@ -204,4 +210,35 @@ export default {
   'business.invitations.declined': 'Invitation refusée',
   'business.invitations.notFound': 'Invitation non trouvée',
   'business.invitations.wrongEmail': 'Cette invitation a été envoyée à une adresse email différente',
+  
+  // Equity dashboard
+  'business.equity.dailyView': 'Vue Quotidienne',
+  'business.equity.tradeView': 'Vue des Trades',
+  'business.equity.groupedByDay': 'Groupé par jour',
+  'business.equity.individualTrades': 'Trades individuels',
+  'business.equity.filters': 'Filtres',
+  'business.equity.clear': 'Effacer',
+  'business.equity.minimumTrades': 'Trades Minimum',
+  'business.equity.minimumTradedDays': 'Jours de Trading Minimum',
+  'business.equity.equity': 'Équité',
+  'business.equity.all': 'Tous',
+  'business.equity.positive': 'Positif',
+  'business.equity.negative': 'Négatif',
+  'business.equity.showingResults': 'Affichage de {filtered} sur {total} utilisateurs',
+  'business.equity.filteredFrom': 'filtré depuis',
+  'business.equity.total': 'total',
+  'business.equity.traderNumber': 'Trader #{number}',
+  'business.equity.tradeStats': '{days} jours, {trades} trades',
+  'business.equity.viewTraderDetails': 'Voir les détails du trader',
+  'business.equity.trades': 'Trades',
+  'business.equity.winRate': 'Taux de Gain',
+  'business.equity.avgWin': 'Gain Moyen',
+  'business.equity.wins': 'Gains',
+  'business.equity.losses': 'Pertes',
+  'business.equity.avgLoss': 'Perte Moyenne',
+  'business.equity.maxDD': 'DD Max',
+  'business.equity.profitFactor': 'Facteur de Profit',
+  'business.equity.scrollToLoadMore': 'Faites défiler pour charger plus...',
+  'business.equity.noMoreUsers': 'Aucun utilisateur supplémentaire à charger',
+  'business.equity.noUsersFound': 'Aucun utilisateur trouvé',
 } 

@@ -388,7 +388,7 @@ export async function getIndividualUserEquityData(userId: string) {
   }
 }
 
-export async function getBusinessEquityData(businessId: string, page: number = 1, limit: number = 10) {
+export async function getBusinessEquityData(businessId: string, page: number = 1, limit: number = 100) {
   console.log(`Starting getBusinessEquityData for business ${businessId}`)
 
   // First, get the business to find trader IDs
@@ -478,9 +478,9 @@ export async function getBusinessEquityData(businessId: string, page: number = 1
   const userEquityData = users.map((user) => {
     const userTrades = userTradesMap[user.id] || []
     
-    // Sort trades by creation date
+    // Sort trades by entry date
     const sortedTrades = userTrades.sort((a, b) => 
-      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
     )
 
     // Calculate cumulative PnL and equity curve
@@ -489,7 +489,7 @@ export async function getBusinessEquityData(businessId: string, page: number = 1
       const netPnl = trade.pnl - (trade.commission || 0)
       cumulativePnL += netPnl
       return {
-        date: trade.createdAt.toISOString().slice(0, 10),
+        date: trade.entryDate.slice(0, 10),
         pnl: netPnl,
         cumulativePnL,
         tradeNumber: index + 1

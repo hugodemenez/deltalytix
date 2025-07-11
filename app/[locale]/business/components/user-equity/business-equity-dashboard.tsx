@@ -1,56 +1,13 @@
-import { getBusinessEquityData } from '../../actions/stats'
-import { UserEquityGrid } from './user-equity-grid'
-
-interface UserEquityData {
-  userId: string
-  email: string
-  createdAt: string
-  trades: any[]
-  equityCurve: {
-    date: string
-    pnl: number
-    cumulativePnL: number
-    tradeNumber: number
-  }[]
-  statistics: {
-    totalTrades: number
-    totalPnL: number
-    winRate: number
-    averageWin: number
-    averageLoss: number
-    maxDrawdown: number
-    profitFactor: number
-    winningTrades: number
-    losingTrades: number
-  }
-}
-
-interface PaginatedData {
-  users: UserEquityData[]
-  totalUsers: number
-  hasMore: boolean
-}
+import { BusinessEquityGridClient } from './business-equity-grid-client'
 
 interface BusinessEquityDashboardProps {
   businessId: string
 }
 
-function valueFormatter(number: number) {
-  return `${Intl.NumberFormat('us').format(number).toString()}`
-}
-
 export async function BusinessEquityDashboard({ businessId }: BusinessEquityDashboardProps) {
-  // Fetch initial data for the business
-  const data: PaginatedData = await getBusinessEquityData(businessId, 1, 5)
-
   return (
     <div className="p-6 space-y-6">
-      <UserEquityGrid 
-        initialUsers={data.users} 
-        totalUsers={data.totalUsers} 
-        hasMore={data.hasMore}
-        businessId={businessId}
-      />
+      <BusinessEquityGridClient businessId={businessId} />
     </div>
   )
 } 

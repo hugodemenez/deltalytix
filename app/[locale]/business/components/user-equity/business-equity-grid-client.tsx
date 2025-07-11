@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { getUserEquityData, getBusinessEquityData } from '../../actions/stats'
+import { getBusinessEquityData } from '../../actions/stats'
 import { Suspense } from 'react'
 import { Card } from '@/components/ui/card'
-import { UserEquityChart } from './user-equity-chart'
+import { UserEquityChart } from '../../../admin/components/user-equity/user-equity-chart'
 import { ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { Switch } from '@/components/ui/switch'
@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Filter, X } from 'lucide-react'
+import { useI18n } from '@/locales/client'
 
 interface UserEquityData {
   userId: string
@@ -38,11 +39,8 @@ interface UserEquityData {
   }
 }
 
-interface UserEquityGridClientProps {
-  initialUserCards: React.ReactNode[]
-  totalUsers: number
-  hasMore: boolean
-  businessId?: string
+interface BusinessEquityGridClientProps {
+  businessId: string
 }
 
 interface Filters {
@@ -51,12 +49,13 @@ interface Filters {
   equityFilter: 'all' | 'positive' | 'negative'
 }
 
-export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: initialHasMore, businessId }: UserEquityGridClientProps) {
-  const [userCards, setUserCards] = useState<React.ReactNode[]>(initialUserCards)
-  const [additionalUsers, setAdditionalUsers] = useState<UserEquityData[]>([])
+export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClientProps) {
+  const t = useI18n()
+  const [users, setUsers] = useState<UserEquityData[]>([])
   const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(initialHasMore)
+  const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
   const [showDailyView, setShowDailyView] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState<Filters>({
@@ -75,7 +74,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
   }
 
   // Filter users based on criteria
-  const filteredUsers = additionalUsers.filter(user => {
+  const filteredUsers = users.filter(user => {
     const tradedDays = getTradedDays(user.equityCurve)
     
     // Check minimum trades
@@ -96,13 +95,10 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
 
     setIsLoadingMore(true)
     try {
-      // Use the appropriate data fetching function based on whether we're in a business context
-      const data = businessId 
-        ? await getBusinessEquityData(businessId, currentPage + 1, 10)
-        : await getUserEquityData(currentPage + 1, 10)
+      const data = await getBusinessEquityData(businessId, currentPage, 10)
       
       // Store the user data for rendering
-      setAdditionalUsers(prev => [...prev, ...data.users])
+      setUsers(prev => [...prev, ...data.users])
       setHasMore(data.hasMore)
       setCurrentPage(currentPage + 1)
     } catch (error) {
@@ -110,7 +106,26 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
     } finally {
       setIsLoadingMore(false)
     }
-  }, [currentPage, hasMore, isLoadingMore, businessId])
+  }, [businessId, currentPage, hasMore, isLoadingMore])
+
+  // Load initial data
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsInitialLoading(true)
+      try {
+        const data = await getBusinessEquityData(businessId, 1, 10)
+        setUsers(data.users)
+        setHasMore(data.hasMore)
+        setCurrentPage(2)
+      } catch (error) {
+        console.error('Error loading initial data:', error)
+      } finally {
+        setIsInitialLoading(false)
+      }
+    }
+
+    loadInitialData()
+  }, [businessId])
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -146,6 +161,14 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
 
   const hasActiveFilters = filters.minTrades > 0 || filters.minTradedDays > 0 || filters.equityFilter !== 'all'
 
+  if (isInitialLoading) {
+    return (
+      <div className="flex justify-center items-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    )
+  }
+
   return (
     <>
       {/* View Toggle and Filters */}
@@ -159,10 +182,10 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
               onCheckedChange={setShowDailyView}
             />
             <Label htmlFor="view-mode" className="text-sm font-medium">
-              {showDailyView ? 'Daily View' : 'Trade View'}
+              {showDailyView ? t('business.equity.dailyView') : t('business.equity.tradeView')}
             </Label>
             <span className="text-xs text-muted-foreground ml-2">
-              {showDailyView ? 'Grouped by day' : 'Individual trades'}
+              {showDailyView ? t('business.equity.groupedByDay') : t('business.equity.individualTrades')}
             </span>
           </div>
           
@@ -173,7 +196,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
             className="flex items-center gap-2"
           >
             <Filter className="h-4 w-4" />
-            Filters
+            {t('business.equity.filters')}
             {hasActiveFilters && (
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
             )}
@@ -184,7 +207,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
         {showFilters && (
           <Card className="p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium">Filters</h3>
+              <h3 className="text-sm font-medium">{t('business.equity.filters')}</h3>
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
@@ -193,7 +216,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                   className="flex items-center gap-1 text-xs"
                 >
                   <X className="h-3 w-3" />
-                  Clear
+                  {t('business.equity.clear')}
                 </Button>
               )}
             </div>
@@ -201,7 +224,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Minimum Trades */}
               <div className="space-y-2">
-                <Label htmlFor="min-trades" className="text-xs">Minimum Trades</Label>
+                <Label htmlFor="min-trades" className="text-xs">{t('business.equity.minimumTrades')}</Label>
                 <Input
                   id="min-trades"
                   type="number"
@@ -215,7 +238,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
 
               {/* Minimum Traded Days */}
               <div className="space-y-2">
-                <Label htmlFor="min-days" className="text-xs">Minimum Traded Days</Label>
+                <Label htmlFor="min-days" className="text-xs">{t('business.equity.minimumTradedDays')}</Label>
                 <Input
                   id="min-days"
                   type="number"
@@ -229,7 +252,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
 
               {/* Equity Filter */}
               <div className="space-y-2">
-                <Label htmlFor="equity-filter" className="text-xs">Equity</Label>
+                <Label htmlFor="equity-filter" className="text-xs">{t('business.equity.equity')}</Label>
                 <Select
                   value={filters.equityFilter}
                   onValueChange={(value: 'all' | 'positive' | 'negative') => 
@@ -240,9 +263,9 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="positive">Positive</SelectItem>
-                    <SelectItem value="negative">Negative</SelectItem>
+                    <SelectItem value="all">{t('business.equity.all')}</SelectItem>
+                    <SelectItem value="positive">{t('business.equity.positive')}</SelectItem>
+                    <SelectItem value="negative">{t('business.equity.negative')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -250,22 +273,17 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
 
             {/* Results Summary */}
             <div className="text-xs text-muted-foreground">
-              Showing {filteredUsers.length} of {additionalUsers.length} users
-              {hasActiveFilters && ` (filtered from ${additionalUsers.length} total)`}
+              {hasActiveFilters && ` (${t('business.equity.filteredFrom')} ${users.length} ${t('business.equity.total')})`}
             </div>
           </Card>
         )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {userCards}
-        
-        {/* Render additional users with proper charts */}
+        {/* Render users with proper charts */}
         {filteredUsers
           .filter(user => user.statistics.totalTrades > 0) // Only show users with trades
           .map((user, index) => {
-            // Calculate trader number based on initial cards + current index
-            const traderNumber = (initialUserCards?.length || 0) + index + 1
             const tradedDays = getTradedDays(user.equityCurve)
             
             return (
@@ -274,13 +292,16 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold text-sm">
-                      Trader #{traderNumber}
+                      {user.email}
                     </h3>
                     <p className="text-xs text-muted-foreground">
                       {new Date(user.createdAt).toLocaleDateString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {tradedDays} days, {user.statistics.totalTrades} trades
+                      {(t as any)('business.equity.tradeStats', { 
+                        days: tradedDays, 
+                        trades: user.statistics.totalTrades 
+                      })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -292,9 +313,9 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                       {user.statistics.totalPnL >= 0 ? '+' : ''}{user.statistics.totalPnL.toFixed(2)}
                     </div>
                     <Link 
-                      href={`/admin/dashboard/${user.userId}`}
+                      href={`/business/dashboard/${user.userId}`}
                       className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      title="View trader details"
+                      title={t('business.equity.viewTraderDetails')}
                     >
                       <ExternalLink className="h-4 w-4 text-gray-500 hover:text-gray-700" />
                     </Link>
@@ -313,15 +334,15 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="space-y-1">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Trades:</span>
+                      <span className="text-muted-foreground">{t('business.equity.trades')}:</span>
                       <span className="font-medium">{user.statistics.totalTrades}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Win Rate:</span>
+                      <span className="text-muted-foreground">{t('business.equity.winRate')}:</span>
                       <span className="font-medium">{user.statistics.winRate.toFixed(1)}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Avg Win:</span>
+                      <span className="text-muted-foreground">{t('business.equity.avgWin')}:</span>
                       <span className="font-medium text-green-600">
                         {user.statistics.averageWin.toFixed(2)}
                       </span>
@@ -329,15 +350,15 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Wins:</span>
+                      <span className="text-muted-foreground">{t('business.equity.wins')}:</span>
                       <span className="font-medium text-green-600">{user.statistics.winningTrades}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Losses:</span>
+                      <span className="text-muted-foreground">{t('business.equity.losses')}:</span>
                       <span className="font-medium text-red-600">{user.statistics.losingTrades}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Avg Loss:</span>
+                      <span className="text-muted-foreground">{t('business.equity.avgLoss')}:</span>
                       <span className="font-medium text-red-600">
                         {user.statistics.averageLoss.toFixed(2)}
                       </span>
@@ -349,13 +370,13 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                 <div className="pt-2 border-t">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Max DD:</span>
+                      <span className="text-muted-foreground">{t('business.equity.maxDD')}:</span>
                       <span className="font-medium text-red-600">
                         {user.statistics.maxDrawdown.toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">P.Factor:</span>
+                      <span className="text-muted-foreground">{t('business.equity.profitFactor')}:</span>
                       <span className="font-medium">
                         {user.statistics.profitFactor.toFixed(2)}
                       </span>
@@ -375,15 +396,22 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
               <div className="h-8 bg-gray-200 rounded w-32"></div>
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">Scroll to load more...</div>
+            <div className="text-sm text-muted-foreground">{t('business.equity.scrollToLoadMore')}</div>
           )}
         </div>
       )}
 
       {/* End of results */}
-      {!hasMore && (userCards.length > 0 || filteredUsers.length > 0) && (
+      {!hasMore && filteredUsers.length > 0 && (
         <div className="text-center py-4 text-sm text-muted-foreground">
-          No more users to load
+          {t('business.equity.noMoreUsers')}
+        </div>
+      )}
+
+      {/* No results */}
+      {!isInitialLoading && filteredUsers.length === 0 && (
+        <div className="text-center py-8 text-sm text-muted-foreground">
+          {t('business.equity.noUsersFound')}
         </div>
       )}
     </>
