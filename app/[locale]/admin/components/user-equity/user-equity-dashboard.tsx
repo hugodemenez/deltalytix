@@ -31,9 +31,6 @@ interface PaginatedData {
   hasMore: boolean
 }
 
-function valueFormatter(number: number) {
-  return `${Intl.NumberFormat('us').format(number).toString()}`
-}
 
 export async function UserEquityDashboard() {
   // Fetch initial data

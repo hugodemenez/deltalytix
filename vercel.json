@@ -12,5 +12,18 @@
       "path": "/api/cron/renewal-notice",
       "schedule": "0 9 * * *"
     }
-  ]
+  ],
+    "redirects": [
+      {
+        "source": "/:path*",
+        "destination": "https://deltalytix.app/business/:path*",
+        "permanent": true,
+        "has": [
+          {
+            "type": "host",
+            "value": "business.deltalytix.app"
+          }
+        ]
+      }
+    ]
 }
