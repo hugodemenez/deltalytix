@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { getUserEquityData } from '../../actions/stats'
+import { getUserEquityData, getBusinessEquityData } from '../../actions/stats'
 import { Suspense } from 'react'
 import { Card } from '@/components/ui/card'
 import { UserEquityChart } from './user-equity-chart'
@@ -42,6 +42,7 @@ interface UserEquityGridClientProps {
   initialUserCards: React.ReactNode[]
   totalUsers: number
   hasMore: boolean
+  businessId?: string
 }
 
 interface Filters {
@@ -50,7 +51,7 @@ interface Filters {
   equityFilter: 'all' | 'positive' | 'negative'
 }
 
-export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: initialHasMore }: UserEquityGridClientProps) {
+export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: initialHasMore, businessId }: UserEquityGridClientProps) {
   const [userCards, setUserCards] = useState<React.ReactNode[]>(initialUserCards)
   const [additionalUsers, setAdditionalUsers] = useState<UserEquityData[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -95,7 +96,10 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
 
     setIsLoadingMore(true)
     try {
-      const data = await getUserEquityData(currentPage + 1, 10)
+      // Use the appropriate data fetching function based on whether we're in a business context
+      const data = businessId 
+        ? await getBusinessEquityData(businessId, currentPage + 1, 10)
+        : await getUserEquityData(currentPage + 1, 10)
       
       // Store the user data for rendering
       setAdditionalUsers(prev => [...prev, ...data.users])
@@ -106,7 +110,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
     } finally {
       setIsLoadingMore(false)
     }
-  }, [currentPage, hasMore, isLoadingMore])
+  }, [currentPage, hasMore, isLoadingMore, businessId])
 
   // Intersection Observer for infinite scroll
   useEffect(() => {

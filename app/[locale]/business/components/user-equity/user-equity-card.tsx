@@ -45,7 +45,7 @@ export async function UserEquityCard({ userId, traderNumber }: UserEquityCardPro
             {statistics.totalPnL >= 0 ? '+' : ''}{statistics.totalPnL.toFixed(2)}
           </Badge>
           <Link 
-            href={`/admin/dashboard/${userId}`}
+            href={`/business/dashboard/trader/${userId}`}
             className="p-1 hover:bg-gray-100 rounded transition-colors"
             title="View trader details"
           >

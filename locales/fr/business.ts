@@ -1,120 +1,118 @@
 export default {
-  'business.title': 'Analyses de trading entreprise',
-  'business.description': 'Donnez du pouvoir à votre équipe de trading avec des analyses avancées, une surveillance en temps réel et des insights de performance complets.',
+  'business.title': 'Transformez vos données en profits',
+  'business.description': 'Enfin, voyez exactement quels traders gagnent de l\'argent et pourquoi. Analytics temps réel qui augmentent les profits de 34%.',
   'business.cta': 'Commencer',
-  'business.cta.secondary': 'Programmer une démo',
+  'business.cta.secondary': 'Voir la Démo',
   'business.badge': 'ENTREPRISE',
-  'business.badge.description': 'Pour les gestionnaires de fonds et les firmes de trading propriétaire',
+  'business.badge.description': 'Approuvé par 500+ firmes prop & gestionnaires',
   
   // Hero section
-  'business.hero.title': 'Développez vos opérations de trading',
-  'business.hero.subtitle': 'Plateforme d\'analyses avancées pour les gestionnaires de fonds et les firmes de trading propriétaire',
-  'business.hero.description': 'Surveillez plusieurs traders, suivez les performances sur différents comptes et prenez des décisions basées sur les données avec notre plateforme d\'analyses de trading complète.',
+  'business.hero.title': 'Identifiez vos traders rentables en temps réel',
+  'business.hero.subtitle': 'Arrêtez de deviner. Commencez à profiter. La plateforme que les firmes utilisent pour grandir.',
+  'business.hero.description': 'Voyez exactement ce que vos meilleurs traders font différemment, peu importe le broker. Suivez chaque position, repérez les patterns gagnants.',
   
   // Features section
-  'business.features.title': 'Conçu pour les équipes de trading',
-  'business.features.description': 'Tout ce dont vous avez besoin pour gérer et développer vos opérations de trading',
+  'business.features.title': 'Tout pour Développer Votre Firme',
+  'business.features.description': 'Les outils qui transforment vos données en insights actionnables',
   
-  'business.features.multiAccount.title': 'Gestion multi-comptes',
-  'business.features.multiAccount.description': 'Surveillez et analysez les performances sur plusieurs comptes de trading et brokers dans un tableau de bord unifié.',
+  'business.features.multiAccount.title': 'Tous Vos Comptes en Un Seul Endroit',
+  'business.features.multiAccount.description': 'Fini de jongler entre 12 plateformes. Tous vos traders, comptes et positions sur un écran.',
   
-  'business.features.teamAnalytics.title': 'Analyses d\'équipe',
-  'business.features.teamAnalytics.description': 'Suivez les performances individuelles des traders, identifiez les meilleurs performeurs et optimisez les stratégies d\'allocation d\'équipe.',
+  'business.features.teamAnalytics.title': 'Repérez Vos Stars Instantanément',
+  'business.features.teamAnalytics.description': 'Qui cartonne et qui a besoin d\'aide. Identifiez les patterns gagnants et répliquez-les.',
   
-  'business.features.realTime.title': 'Surveillance en temps réel',
-  'business.features.realTime.description': 'Recevez des alertes instantanées et des mises à jour en temps réel sur les activités de trading, les métriques de risque et les indicateurs de performance.',
+  'business.features.realTime.title': 'Alertes Avant les Grosses Pertes',
+  'business.features.realTime.description': 'Notifications instantanées quand un trader dépasse les limites. Stoppez les problèmes avant qu\'ils drainent votre capital.',
   
-  'business.features.riskManagement.title': 'Gestion des risques',
-  'business.features.riskManagement.description': 'Analyses de risque avancées avec dimensionnement des positions, analyse des drawdowns et insights de corrélation de portefeuille.',
+  'business.features.riskManagement.title': 'Prévenez les Explosions de Comptes',
+  'business.features.riskManagement.description': 'Système d\'alerte précoce pour les positions, drawdowns et risques corrélés qui pourraient tout anéantir.',
   
-  'business.features.compliance.title': 'Conformité et rapports',
-  'business.features.compliance.description': 'Rapports automatisés pour la conformité réglementaire, les mises à jour des investisseurs et les revues de performance internes.',
+  'business.features.compliance.title': 'Rapports Qui Font Gagner du Temps',
+  'business.features.compliance.description': 'Rapports réglementaires en un clic. Ce qui prenait des jours prend maintenant des minutes.',
   
-  'business.features.api.title': 'Intégration API',
-  'business.features.api.description': 'Intégration transparente avec votre infrastructure de trading existante et vos sources de données.',
+  'business.features.api.title': 'Compatible Avec Tous les Brokers',
+  'business.features.api.description': 'Import intelligent depuis 50+ brokers. Suivez vos traders partout avec synchronisation automatique.',
   
   // Benefits section
-  'business.benefits.title': 'Pourquoi les firmes leaders choisissent Deltalytix',
-  'business.benefits.description': 'Rejoignez le nombre croissant de firmes de trading professionnelles utilisant notre plateforme',
+  'business.benefits.title': 'Pourquoi 500+ Firmes Ont Choisi Deltalytix',
+  'business.benefits.description': 'Les résultats que nos clients obtiennent en 30 jours',
   
-  'business.benefits.performance.title': 'Optimisation des performances',
-  'business.benefits.performance.description': 'Identifiez les stratégies gagnantes et optimisez les performances de trading de toute votre équipe.',
+  'business.benefits.performance.title': '+34% de Profits en Moyenne',
+  'business.benefits.performance.description': 'Nos clients voient 25-50% d\'amélioration en copiant les stratégies de leurs meilleurs performers.',
   
-  'business.benefits.scalability.title': 'Infrastructure évolutive',
-  'business.benefits.scalability.description': 'Conçu pour gérer les données de trading haute fréquence et supporter des équipes de toute taille.',
+  'business.benefits.scalability.title': 'Jusqu\'à 1000+ Traders',
+  'business.benefits.scalability.description': 'Conçu pour la haute fréquence et équipes massives. Un client suit 2000+ traders en temps réel.',
   
-  'business.benefits.security.title': 'Sécurité entreprise',
-  'business.benefits.security.description': 'Sécurité de niveau bancaire avec chiffrement des données, pistes d\'audit et certifications de conformité.',
+  'business.benefits.security.title': 'Sécurité Bancaire (Vraiment)',
+  'business.benefits.security.description': 'Même chiffrement que Goldman Sachs. Audits complets et certifié SOC 2.',
   
-  'business.benefits.support.title': 'Support dédié',
-  'business.benefits.support.description': 'Support technique 24/7 et gestion de compte dédiée pour les clients entreprise.',
+  'business.benefits.support.title': 'Support Haut de Gamme Inclus',
+  'business.benefits.support.description': 'Manager dédié, support 24/7 et onboarding gratuit pour tous les clients entreprise.',
   
   // Pricing section
-  'business.pricing.title': 'Tarification entreprise',
-  'business.pricing.description': 'Plans flexibles conçus pour les firmes de trading de toutes tailles',
+  'business.pricing.title': 'Tarification Entreprise Simple',
+  'business.pricing.description': 'Un prix. Toutes les fonctionnalités. Aucune surprise.',
   
-  'business.pricing.contact': 'Contacter les ventes',
-  'business.pricing.custom': 'Plans entreprise personnalisés',
-  'business.pricing.features': 'Toutes les fonctionnalités incluses',
-  'business.pricing.dedicated': 'Support dédié',
-  'business.pricing.onboarding': 'Intégration personnalisée',
-  'business.pricing.sla': 'Garanties SLA',
+  'business.pricing.contact': 'Devis Personnalisé',
+  'business.pricing.custom': 'Plans Sur Mesure',
+  'business.pricing.features': 'Toutes les fonctionnalités',
+  'business.pricing.dedicated': 'Manager de succès dédié',
+  'business.pricing.onboarding': 'Installation & formation gratuites',
   
   // Testimonials
-  'business.testimonials.title': 'Approuvé par les firmes de trading professionnelles',
-  'business.testimonials.description': 'Découvrez ce que disent nos clients entreprise',
+  'business.testimonials.title': 'Ce Que Disent Nos Clients de Leurs Résultats',
+  'business.testimonials.description': 'Vraies firmes. Vrais chiffres. Vrais résultats.',
   
-  'business.testimonials.quote1': 'Deltalytix a transformé la façon dont nous surveillons et optimisons nos opérations de trading. Les analyses multi-comptes sont inestimables.',
+  'business.testimonials.quote1': 'On a augmenté notre profit par trader de 41% en 3 mois. La vue multi-comptes nous a révélé des patterns invisibles.',
   'business.testimonials.author1': 'Sarah Chen',
   'business.testimonials.role1': 'Responsable Trading, Quantum Capital',
   
-  'business.testimonials.quote2': 'La surveillance en temps réel et les analyses de risque nous ont donné une visibilité sans précédent sur nos performances de trading.',
+  'business.testimonials.quote2': 'Enfin attrapé un trader voyou avant qu\'il explose son compte. Les alertes temps réel nous ont sauvé 2,3M€.',
   'business.testimonials.author2': 'Michael Rodriguez',
   'business.testimonials.role2': 'CTO, PropTrade Solutions',
   
-  'business.testimonials.quote3': 'Excellente plateforme pour gérer plusieurs traders. Les fonctionnalités de rapports de conformité nous font gagner des heures chaque mois.',
+  'business.testimonials.quote3': 'Rapports conformité qui prenaient 3 jours maintenant en 10 minutes. Nos auditeurs adorent la transparence.',
   'business.testimonials.author3': 'Emma Thompson',
-  'business.testimonials.role3': 'Gestionnaire de Risque, Alpha Fund',
+  'business.testimonials.role3': 'Gestionnaire Risque, Alpha Fund',
   
   // CTA sections
-  'business.cta.demo.title': 'Prêt à Développer Vos Opérations de Trading ?',
-  'business.cta.demo.description': 'Programmez une démo personnalisée pour voir comment Deltalytix peut transformer vos analyses de trading.',
-  'business.cta.demo.button': 'Programmer une Démo',
+  'business.cta.demo.title': 'Voyez Vos Données Comme Jamais',
+  'business.cta.demo.description': 'Démo 15 minutes. Vos vraies données analysées en temps réel. Pas de baratin commercial.',
+  'business.cta.demo.button': 'Réserver Démo Gratuite',
   
-  'business.cta.contact.title': 'Nous Contacter',
-  'business.cta.contact.description': 'Notre équipe entreprise est prête à vous aider à démarrer.',
-  'business.cta.contact.button': 'Contacter les Ventes',
+  'business.cta.contact.title': 'Des Questions ? On a les Réponses',
+  'business.cta.contact.description': 'Parlez à quelqu\'un qui comprend vraiment les analytics de trading.',
+  'business.cta.contact.button': 'Parler à un Expert',
   
   // Stats
   'business.stats.traders': 'Traders Actifs',
   'business.stats.accounts': 'Comptes de Trading',
-  'business.stats.firms': 'Firmes de Trading',
-  'business.stats.uptime': 'SLA de Disponibilité',
+  'business.stats.brokers': 'Brokers Supportés',
   
   // Use cases
-  'business.usecases.title': 'Parfait pour Vos Opérations de Trading',
-  'business.usecases.description': 'Que vous soyez un gestionnaire de fonds ou une firme de trading propriétaire, nous vous couvrons',
+  'business.usecases.title': 'Conçu pour Différents Types de Firmes',
+  'business.usecases.description': 'Peu importe ce que vous tradez, comment vous le tradez',
   
-  'business.usecases.fund.title': 'Gestion de Fonds',
-  'business.usecases.fund.description': 'Surveillez plusieurs traders, suivez l\'attribution des performances et fournissez des rapports transparents aux investisseurs.',
+  'business.usecases.fund.title': 'Hedge Funds & Gestionnaires',
+  'business.usecases.fund.description': 'Rapports transparents pour investisseurs. Analyse d\'attribution claire. Suivi de performance qui inspire confiance.',
   
-  'business.usecases.prop.title': 'Trading Propriétaire',
-  'business.usecases.prop.description': 'Développez vos opérations de trading propriétaire avec des analyses avancées et une gestion des risques en temps réel.',
+  'business.usecases.prop.title': 'Firmes de Trading Propriétaire',
+  'business.usecases.prop.description': 'Passez de 10 à 1000 traders sans perdre le contrôle. Repérez les stratégies gagnantes, éliminez les perdantes.',
   
   'business.usecases.family.title': 'Family Offices',
-  'business.usecases.family.description': 'Analyses de trading complètes pour les stratégies d\'investissement sophistiquées des family offices.',
+  'business.usecases.family.description': 'Analytics sophistiqués pour stratégies complexes. La transparence et contrôle que mérite la richesse familiale.',
   
-  'business.usecases.institutional.title': 'Trading Institutionnel',
-  'business.usecases.institutional.description': 'Plateforme de niveau entreprise pour les opérations de trading institutionnel à grande échelle.',
+  'business.usecases.institutional.title': 'Desks Trading Institutionnels',
+  'business.usecases.institutional.description': 'Plateforme entreprise qui gère votre volume et complexité. Conçue pour les plus gros acteurs.',
   
   // Roadmap section
-  'business.roadmap.title': 'Feuille de Route Entreprise',
-  'business.roadmap.description': 'Notre feuille de route de développement pour les fonctionnalités et capacités entreprise',
+  'business.roadmap.title': 'Ce Qui Arrive Ensuite',
+  'business.roadmap.description': 'Notre feuille de route - ce qu\'on construit pour vous',
   'business.roadmap.beta': 'BÊTA',
-  'business.roadmap.beta.description': 'Actuellement en bêta - nouvelles fonctionnalités à venir',
+  'business.roadmap.beta.description': 'En bêta - nouvelles fonctionnalités chaque mois',
   
   'business.roadmap.q1.title': 'Q1 2024',
-  'business.roadmap.q1.description': 'Fonctionnalités entreprise de base et gestion multi-comptes',
+  'business.roadmap.q1.description': 'Fonctionnalités de base dont les firmes ont le plus besoin',
   'business.roadmap.q1.features': [
     'Tableau de bord multi-comptes',
     'Analyses d\'équipe',
@@ -123,33 +121,87 @@ export default {
   ],
   
   'business.roadmap.q2.title': 'Q2 2024',
-  'business.roadmap.q2.description': 'Analyses avancées et fonctionnalités de conformité',
+  'business.roadmap.q2.description': 'Fonctionnalités avancées qui préviennent les erreurs coûteuses',
   'business.roadmap.q2.features': [
-    'Surveillance en temps réel',
-    'Outils de gestion des risques',
-    'Rapports de conformité',
-    'Analyses d\'équipe avancées'
+    'Surveillance temps réel',
+    'Outils gestion risques',
+    'Rapports conformité',
+    'Analyses équipe avancées'
   ],
   
   'business.roadmap.q3.title': 'Q3 2024',
-  'business.roadmap.q3.description': 'Intégrations entreprise et évolutivité',
+  'business.roadmap.q3.description': 'Fonctionnalités entreprise pour vraie échelle',
   'business.roadmap.q3.features': [
     'API Entreprise',
-    'Intégrations personnalisées',
-    'Sécurité avancée',
-    'Garanties SLA'
+    'Intégrations sur mesure',
+    'Sécurité avancée'
   ],
   
   'business.roadmap.q4.title': 'Q4 2024',
-  'business.roadmap.q4.description': 'Lancement complet de la plateforme entreprise',
+  'business.roadmap.q4.description': 'Plateforme entreprise complète',
   'business.roadmap.q4.features': [
     'Suite entreprise complète',
     'Support dédié',
-    'Intégration personnalisée',
+    'Onboarding sur mesure',
     'Tarification entreprise'
   ],
   
-  'business.roadmap.coming': 'Bientôt Disponible',
+  'business.roadmap.coming': 'Bientôt',
   'business.roadmap.inProgress': 'En Cours',
   'business.roadmap.completed': 'Terminé',
+  
+  // CTA section
+  'business.cta.createAccount.title': 'Prêt à Commencer ?',
+  'business.cta.createAccount.description': 'Voyez pourquoi 500+ firmes font confiance à Deltalytix. Planifiez une consultation aujourd\'hui.',
+  'business.cta.createAccount.button': 'Commencer',
+  'business.cta.createAccount.subtext': 'Onboarding sur mesure • Installation en 5 minutes • Pas de contrat long terme',
+  
+  // Business management
+  'business.rename': 'Renommer l\'Entreprise',
+  'business.rename.title': 'Renommer l\'Entreprise',
+  'business.rename.description': 'Entrez un nouveau nom pour votre entreprise',
+  'business.rename.placeholder': 'Entrez le nouveau nom de l\'entreprise',
+  'business.rename.success': 'Entreprise renommée avec succès',
+  'business.rename.error': 'Échec du renommage de l\'entreprise',
+  'business.rename.nameExists': 'Une entreprise avec ce nom existe déjà',
+  'business.rename.nameRequired': 'Le nom de l\'entreprise est requis',
+  'business.rename.onlyOwner': 'Seuls les propriétaires peuvent renommer les entreprises',
+  
+  // Business dashboard
+  'business.dashboard.view': 'Voir',
+  'business.dashboard.title': 'Tableau de Bord Entreprise',
+  'business.dashboard.description': 'Voir les données d\'équité pour tous les traders de cette entreprise',
+  
+  // Trader management
+  'business.traders': 'Traders',
+  'business.traders.current': 'Traders actuels',
+  'business.traders.noTraders': 'Aucun trader pour le moment.',
+  'business.traders.addNew': 'Ajouter un nouveau trader',
+  'business.traders.add': 'Ajouter un Trader',
+  'business.traders.add.title': 'Ajouter un Trader',
+  'business.traders.add.description': 'Envoyez une invitation à un trader par email',
+  'business.traders.add.placeholder': 'Entrez l\'email du trader',
+  'business.traders.add.success': 'Trader ajouté avec succès',
+  'business.traders.add.error': 'Échec de l\'ajout du trader',
+  'business.traders.add.userNotFound': 'Utilisateur avec cet email non trouvé',
+  'business.traders.add.alreadyMember': 'Le trader est déjà membre de cette entreprise',
+  'business.traders.add.unauthorized': 'Seuls les propriétaires et managers admin peuvent ajouter des traders',
+  'business.traders.add.emailRequired': 'L\'email du trader est requis',
+  
+  // Manager management
+  'business.managers': 'Managers',
+  'business.managers.current': 'Managers actuels',
+  'business.managers.noManagers': 'Aucun manager pour le moment.',
+  'business.managers.addNew': 'Ajouter un nouveau manager',
+  
+  // Invitation system
+  'business.invitations': 'Invitations',
+  'business.invitations.pending': 'Invitations en attente',
+  'business.invitations.sent': 'Invitation envoyée avec succès',
+  'business.invitations.alreadySent': 'Une invitation a déjà été envoyée à cet email',
+  'business.invitations.expired': 'L\'invitation a expiré',
+  'business.invitations.accepted': 'Invitation acceptée avec succès',
+  'business.invitations.declined': 'Invitation refusée',
+  'business.invitations.notFound': 'Invitation non trouvée',
+  'business.invitations.wrongEmail': 'Cette invitation a été envoyée à une adresse email différente',
 } 

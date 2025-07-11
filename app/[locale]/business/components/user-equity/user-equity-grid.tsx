@@ -32,9 +32,10 @@ interface UserEquityGridProps {
   initialUsers: UserEquityData[]
   totalUsers: number
   hasMore: boolean
+  businessId?: string
 }
 
-export async function UserEquityGrid({ initialUsers, totalUsers, hasMore: initialHasMore }: UserEquityGridProps) {
+export async function UserEquityGrid({ initialUsers, totalUsers, hasMore: initialHasMore, businessId }: UserEquityGridProps) {
   // Create server components for each user with trader numbers
   const userCards = initialUsers.map((user, index) => (
     <Suspense key={user.userId} fallback={
@@ -60,6 +61,7 @@ export async function UserEquityGrid({ initialUsers, totalUsers, hasMore: initia
       initialUserCards={userCards}
       totalUsers={totalUsers}
       hasMore={initialHasMore}
+      businessId={businessId}
     />
   )
 } 

@@ -388,6 +388,152 @@ export async function getIndividualUserEquityData(userId: string) {
   }
 }
 
+export async function getBusinessEquityData(businessId: string, page: number = 1, limit: number = 10) {
+  console.log(`Starting getBusinessEquityData for business ${businessId}`)
+
+  // First, get the business to find trader IDs
+  const business = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: { traderIds: true }
+  })
+
+  if (!business) {
+    console.error(`Business ${businessId} not found`)
+    return {
+      users: [],
+      totalUsers: 0,
+      hasMore: false
+    }
+  }
+
+  console.log(`Found business with ${business.traderIds.length} traders`)
+
+  if (business.traderIds.length === 0) {
+    return {
+      users: [],
+      totalUsers: 0,
+      hasMore: false
+    }
+  }
+
+  // Apply pagination to trader IDs
+  const startIndex = (page - 1) * limit
+  const endIndex = startIndex + limit
+  const paginatedTraderIds = business.traderIds.slice(startIndex, endIndex)
+
+  console.log(`Processing ${paginatedTraderIds.length} traders for page ${page}`)
+
+  // Get user data from Supabase for these specific traders
+  console.log('Fetching user data from Supabase...')
+  const userPromises = paginatedTraderIds.map(userId => 
+    supabase.auth.admin.getUserById(userId)
+  )
+  
+  const userResults = await Promise.all(userPromises)
+  const users = userResults
+    .map(result => result.data?.user)
+    .filter(user => user !== null) as User[]
+
+  console.log(`Retrieved ${users.length} users from Supabase`)
+
+  // Get all trades for these users
+  console.log('Fetching trades for users...')
+  const trades = await prisma.trade.findMany({
+    where: {
+      userId: {
+        in: paginatedTraderIds
+      }
+    },
+    select: {
+      id: true,
+      userId: true,
+      pnl: true,
+      createdAt: true,
+      entryDate: true,
+      closeDate: true,
+      instrument: true,
+      side: true,
+      entryPrice: true,
+      closePrice: true,
+      quantity: true,
+      commission: true
+    },
+    orderBy: {
+      createdAt: 'asc'
+    }
+  })
+
+  console.log(`Found ${trades.length} trades for users`)
+
+  // Group trades by user ID
+  const userTradesMap = trades.reduce((acc, trade) => {
+    if (!acc[trade.userId]) {
+      acc[trade.userId] = []
+    }
+    acc[trade.userId].push(trade)
+    return acc
+  }, {} as Record<string, typeof trades>)
+
+  // Calculate equity curve for each user
+  const userEquityData = users.map((user) => {
+    const userTrades = userTradesMap[user.id] || []
+    
+    // Sort trades by creation date
+    const sortedTrades = userTrades.sort((a, b) => 
+      new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    )
+
+    // Calculate cumulative PnL and equity curve
+    let cumulativePnL = 0
+    const equityCurve = sortedTrades.map((trade, index) => {
+      const netPnl = trade.pnl - (trade.commission || 0)
+      cumulativePnL += netPnl
+      return {
+        date: trade.createdAt.toISOString().slice(0, 10),
+        pnl: netPnl,
+        cumulativePnL,
+        tradeNumber: index + 1
+      }
+    })
+
+    // Calculate statistics with commissions included
+    const totalPnL = userTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0)
+    const winningTrades = userTrades.filter(trade => (trade.pnl - (trade.commission || 0)) > 0)
+    const losingTrades = userTrades.filter(trade => (trade.pnl - (trade.commission || 0)) < 0)
+    const winRate = userTrades.length > 0 ? (winningTrades.length / userTrades.length) * 100 : 0
+    const averageWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0) / winningTrades.length : 0
+    const averageLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0) / losingTrades.length : 0
+    const maxDrawdown = calculateMaxDrawdown(equityCurve)
+    const profitFactor = Math.abs(averageLoss) > 0 ? Math.abs(averageWin) / Math.abs(averageLoss) : 0
+
+    return {
+      userId: user.id,
+      email: user.email || 'Unknown',
+      createdAt: user.created_at || '',
+      trades: userTrades,
+      equityCurve,
+      statistics: {
+        totalTrades: userTrades.length,
+        totalPnL,
+        winRate,
+        averageWin,
+        averageLoss,
+        maxDrawdown,
+        profitFactor,
+        winningTrades: winningTrades.length,
+        losingTrades: losingTrades.length
+      }
+    }
+  }).filter(user => user.email !== 'Unknown' && user.email !== '')
+
+  console.log(`Returning ${userEquityData.length} users with equity data for business ${businessId}, page ${page}`)
+  return {
+    users: userEquityData,
+    totalUsers: business.traderIds.length,
+    hasMore: (page * limit) < business.traderIds.length
+  }
+}
+
 function calculateMaxDrawdown(equityCurve: { cumulativePnL: number }[]): number {
   let maxDrawdown = 0
   let peak = 0

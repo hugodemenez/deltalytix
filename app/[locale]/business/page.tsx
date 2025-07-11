@@ -1,11 +1,12 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect } from 'react'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useI18n } from '@/locales/client'
+import { getCalApi } from "@calcom/embed-react"
 import { 
   Users, 
   BarChart3, 
@@ -25,11 +26,22 @@ import {
   Calendar,
   CheckCircle2,
   Clock3,
-  Play
+  Play,
+  ChevronRight
 } from 'lucide-react'
+import { useTheme } from '@/context/theme-provider'
+import Footer from '../(landing)/components/footer'
 
 export default function BusinessPage() {
   const t = useI18n()
+
+  useEffect(() => {
+    // Cal.com initialization
+    (async function () {
+      const cal = await getCalApi({"namespace":"deltalytix-business"});
+      cal("ui", {"hideEventTypeDetails":false,"layout":"month_view"});
+    })();
+  }, [])
 
   const features = [
     {
@@ -131,8 +143,7 @@ export default function BusinessPage() {
   const stats = [
     { value: '500+', label: t('business.stats.traders') },
     { value: '2,000+', label: t('business.stats.accounts') },
-    { value: '50+', label: t('business.stats.firms') },
-    { value: '99.9%', label: t('business.stats.uptime') },
+    { value: '50+', label: t('business.stats.brokers') },
   ]
 
   const roadmap = [
@@ -166,8 +177,7 @@ export default function BusinessPage() {
       features: [
         'Enterprise API',
         'Custom integrations',
-        'Advanced security',
-        'SLA guarantees'
+        'Advanced security'
       ],
       status: 'coming',
       icon: Play,
@@ -190,41 +200,66 @@ export default function BusinessPage() {
     <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="w-full py-14 md:py-12 lg:py-16 xl:py-24">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="flex flex-col w-full gap-y-24">
-              <div className="flex flex-col justify-center space-y-4 text-center">
-                <div className="space-y-2">
-                  <Badge variant="secondary" className="mx-auto mb-4">
+        <section className="relative isolate overflow-hidden">
+          <svg
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 size-full mask-[radial-gradient(100%_100%_at_top_right,white,transparent)] dark:mask-[radial-gradient(100%_100%_at_top_right,black,transparent)] stroke-gray-200 dark:stroke-gray-800"
+          >
+            <defs>
+              <pattern
+                x="50%"
+                y={-1}
+                id="0787a7c5-978c-4f66-83c7-11c213f99cb7"
+                width={200}
+                height={200}
+                patternUnits="userSpaceOnUse"
+              >
+                <path d="M.5 200V.5H200" fill="none" />
+              </pattern>
+            </defs>
+            <rect fill="url(#0787a7c5-978c-4f66-83c7-11c213f99cb7)" width="100%" height="100%" strokeWidth={0} />
+          </svg>
+          <div className="mx-auto max-w-7xl px-6 pt-6 pb-16 sm:pb-20 lg:flex lg:px-8 lg:py-20">
+            <div className="mx-auto max-w-2xl lg:mx-0 lg:shrink-0 lg:pt-4">
+              <div className="mt-8 sm:mt-12 lg:mt-8">
+                <a href="#" className="inline-flex space-x-6">
+                  <span className="rounded-full bg-[#2E9987]/10 dark:bg-[hsl(var(--chart-1))]/10 px-3 py-1 text-sm/6 font-semibold text-[#2E9987] dark:text-[hsl(var(--chart-1))] ring-1 ring-[#2E9987]/10 dark:ring-[hsl(var(--chart-1))]/10 ring-inset">
                     {t('business.badge')}
-                  </Badge>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    {t('business.badge.description')}
-                  </p>
-                  <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                    {t('business.hero.title')}
-                  </h1>
-                  <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl">
-                    {t('business.hero.description')}
-                  </p>
-                </div>
-                <div className="flex w-full justify-center gap-4 flex-wrap">
-                  <Link href="/dashboard">
-                    <Button className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
-                      <span className="font-medium text-sm text-white">{t('business.cta')}</span>
-                    </Button>
-                  </Link>
-                  <Button variant="outline" className="flex justify-center items-center px-8 py-2.5 h-10">
-                    <span className="font-medium text-sm">{t('business.cta.secondary')}</span>
-                  </Button>
-                </div>
+                  </span>
+                  <span className="inline-flex items-center space-x-2 text-sm/6 font-medium text-gray-600 dark:text-gray-400">
+                    <span>{t('business.badge.description')}</span>
+                    <ChevronRight aria-hidden="true" className="size-5 text-gray-400" />
+                  </span>
+                </a>
               </div>
-
-              {/* Stats Section */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+              <h1 className="mt-6 text-5xl font-semibold tracking-tight text-pretty text-gray-900 dark:text-white sm:text-7xl">
+                {t('business.hero.title')}
+              </h1>
+              <p className="mt-6 text-lg font-medium text-pretty text-gray-500 dark:text-gray-400 sm:text-xl/8">
+                {t('business.hero.description')}
+              </p>
+              <div className="mt-8 flex items-center gap-x-6">
+                <Link href="/authentication?next=business/dashboard">
+                  <Button className="rounded-md bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2E9987] dark:focus-visible:outline-[hsl(var(--chart-1))]">
+                    {t('business.cta')}
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="text-sm/6 font-semibold text-gray-900 dark:text-white hover:bg-transparent"
+                  data-cal-namespace="deltalytix-business"
+                  data-cal-link="hugo-demenez/deltalytix-business"
+                  data-cal-config='{"layout":"month_view"}'
+                >
+                  {t('business.cta.secondary')} <span aria-hidden="true">→</span>
+                </Button>
+              </div>
+              
+              {/* Stats Section moved inside hero */}
+              <div className="mt-12 grid grid-cols-3 gap-8">
                 {stats.map((stat, index) => (
-                  <div key={index} className="text-center">
-                    <div className="text-3xl font-bold text-[#2E9987] dark:text-[hsl(var(--chart-1))]">
+                  <div key={index} className="text-left">
+                    <div className="text-2xl font-bold text-[#2E9987] dark:text-[hsl(var(--chart-1))]">
                       {stat.value}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -232,6 +267,26 @@ export default function BusinessPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+            <div className="mx-auto mt-12 flex max-w-2xl sm:mt-16 lg:mt-0 lg:mr-0 lg:ml-10 lg:max-w-none lg:flex-none xl:ml-32">
+              <div className="max-w-3xl flex-none sm:max-w-5xl lg:max-w-none">
+                <div className="-m-2 rounded-xl bg-gray-900/5 dark:bg-gray-100/5 p-2 ring-1 ring-gray-900/10 dark:ring-gray-100/10 ring-inset lg:-m-4 lg:rounded-2xl lg:p-4">
+                  <img
+                    alt="Dashboard screenshot"
+                    src="/business-dark.png"
+                    width={2432}
+                    height={1442}
+                    className="w-304 rounded-md shadow-2xl ring-1 ring-gray-900/10 dark:ring-gray-100/10 hidden dark:block"
+                  />
+                  <img
+                    alt="Dashboard screenshot"
+                    src="/business-light.png"
+                    width={2432}
+                    height={1442}
+                    className="w-304 rounded-md shadow-2xl ring-1 ring-gray-900/10 dark:hidden"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -299,198 +354,36 @@ export default function BusinessPage() {
           </div>
         </section>
 
-        {/* Benefits Section */}
-        <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                {t('business.benefits.title')}
-              </h2>
-              <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mt-4">
-                {t('business.benefits.description')}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {benefits.map((benefit, index) => (
-                <div key={index} className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-[#2E9987] dark:bg-[hsl(var(--chart-1))] rounded-lg flex items-center justify-center flex-shrink-0">
-                    <benefit.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">{benefit.title}</h3>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {benefit.description}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Roadmap Section */}
-        <section id="roadmap" className="w-full py-6 md:py-12 lg:py-16 xl:py-24 bg-gray-50 dark:bg-gray-900">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="text-center mb-16">
-              <div className="flex items-center justify-center mb-4">
-                <Badge variant="secondary" className="mr-2">
-                  {t('business.roadmap.beta')}
-                </Badge>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('business.roadmap.beta.description')}
-                </span>
-              </div>
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                {t('business.roadmap.title')}
-              </h2>
-              <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mt-4">
-                {t('business.roadmap.description')}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {roadmap.map((item, index) => (
-                <Card key={index} className="border-2 hover:border-[#2E9987] dark:hover:border-[hsl(var(--chart-1))] transition-colors duration-200">
-                  <CardHeader>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 bg-[#2E9987] dark:bg-[hsl(var(--chart-1))] rounded-lg flex items-center justify-center">
-                        <item.icon className="w-6 h-6 text-white" />
-                      </div>
-                      <Badge 
-                        variant={item.status === 'completed' ? 'default' : item.status === 'inProgress' ? 'secondary' : 'outline'}
-                        className={item.status === 'completed' ? 'bg-green-500' : item.status === 'inProgress' ? 'bg-blue-500' : 'bg-gray-500'}
-                      >
-                        {item.status === 'completed' ? t('business.roadmap.completed') : 
-                         item.status === 'inProgress' ? t('business.roadmap.inProgress') : 
-                         t('business.roadmap.coming')}
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-xl">{item.quarter}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-base mb-4">
-                      {item.description}
-                    </CardDescription>
-                    <ul className="space-y-2">
-                      {item.features.map((feature, featureIndex) => (
-                        <li key={featureIndex} className="flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-[#2E9987] dark:text-[hsl(var(--chart-1))]" />
-                          <span className="text-sm">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials Section */}
-        <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24 bg-gray-50 dark:bg-gray-900">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                {t('business.testimonials.title')}
-              </h2>
-              <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mt-4">
-                {t('business.testimonials.description')}
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {testimonials.map((testimonial, index) => (
-                <Card key={index} className="border-2 hover:border-[#2E9987] dark:hover:border-[hsl(var(--chart-1))] transition-colors duration-200">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center mb-4">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                      ))}
-                    </div>
-                    <blockquote className="text-lg mb-4">
-                      &ldquo;{testimonial.quote}&rdquo;
-                    </blockquote>
-                    <div>
-                      <div className="font-semibold">{testimonial.author}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {testimonial.role}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing Section */}
-        <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
-          <div className="container px-4 md:px-6 mx-auto">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                {t('business.pricing.title')}
-              </h2>
-              <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mt-4">
-                {t('business.pricing.description')}
-              </p>
-            </div>
-            <div className="max-w-4xl mx-auto">
-              <Card className="border-2 border-[#2E9987] dark:border-[hsl(var(--chart-1))]">
-                <CardHeader className="text-center">
-                  <CardTitle className="text-3xl">{t('business.pricing.custom')}</CardTitle>
-                  <CardDescription className="text-lg">
-                    {t('business.pricing.description')}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-5 h-5 text-[#2E9987] dark:text-[hsl(var(--chart-1))]" />
-                      <span>{t('business.pricing.features')}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-5 h-5 text-[#2E9987] dark:text-[hsl(var(--chart-1))]" />
-                      <span>{t('business.pricing.dedicated')}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-5 h-5 text-[#2E9987] dark:text-[hsl(var(--chart-1))]" />
-                      <span>{t('business.pricing.onboarding')}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="w-5 h-5 text-[#2E9987] dark:text-[hsl(var(--chart-1))]" />
-                      <span>{t('business.pricing.sla')}</span>
-                    </div>
-                  </div>
-                  <div className="text-center pt-6">
-                    <Button className="bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)]">
-                      {t('business.pricing.contact')}
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </section>
-
         {/* CTA Section */}
-        <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24 bg-gray-50 dark:bg-gray-900">
-          <div className="container px-4 md:px-6 mx-auto text-center">
-            <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-4">
-              {t('business.cta.demo.title')}
-            </h2>
-            <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mb-8">
-              {t('business.cta.demo.description')}
-            </p>
-            <div className="flex justify-center gap-4 flex-wrap">
-              <Button className="bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)]">
-                {t('business.cta.demo.button')}
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-              <Button variant="outline">
-                {t('business.cta.contact.button')}
-              </Button>
+        <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
+          <div className="container px-4 md:px-6 mx-auto">
+            <div className="text-center">
+              <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-4">
+                {t('business.cta.createAccount.title')}
+              </h2>
+              <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mb-8">
+                {t('business.cta.createAccount.description')}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <Link href="/authentication">
+                  <Button className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                    <span className="font-medium text-sm text-white">{t('business.cta.createAccount.button')}</span>
+                  </Button>
+                </Link>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('business.cta.createAccount.subtext')}
+                </p>
+              </div>
             </div>
           </div>
         </section>
+
+        {/* Footer */}
+        <footer className="w-full py-6 md:py-12 lg:py-16 xl:py-24">
+          <div className="container px-4 md:px-6 mx-auto">
+            <Footer />
+          </div>
+        </footer>
       </main>
     </div>
   )
