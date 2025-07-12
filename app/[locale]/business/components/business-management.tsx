@@ -362,7 +362,42 @@ export function BusinessManagement({
       const result = await updateManagerAccess(selectedBusiness.id, managerId, access)
       if (result.success) {
         toast.success(t('dashboard.business.accessUpdated'))
-        await loadBusinessData()
+        
+        // Update the selected business locally
+        const updatedSelectedBusiness = {
+          ...selectedBusiness,
+          managers: selectedBusiness.managers.map(manager => 
+            manager.managerId === managerId 
+              ? { ...manager, access }
+              : manager
+          )
+        }
+        setSelectedBusiness(updatedSelectedBusiness)
+
+        // Update the businesses in the main state to keep everything in sync
+        setUserBusinesses(prev => ({
+          ownedBusinesses: prev.ownedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness
+              : business
+          ),
+          joinedBusinesses: prev.joinedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness  
+              : business
+          )
+        }))
+
+        setManagedBusinesses(prev => 
+          prev.map(business => 
+            business.id === selectedBusiness.id 
+              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
+              : business
+          )
+        )
+        
+        // Note: We don't reload data immediately to keep the dialog open
+        // Data will be refreshed when the dialog is closed or when needed
       } else {
         toast.error(result.error || t('dashboard.business.error'))
       }
