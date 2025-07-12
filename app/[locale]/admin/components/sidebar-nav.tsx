@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Mail, BarChart, UserPlus, Calendar } from "lucide-react"
+import { Mail, BarChart, UserPlus, Calendar, TrendingUp } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +13,7 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
 } from "@/components/ui/sidebar"
+import { ThemeSwitcher } from "./theme-switcher"
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -40,6 +41,11 @@ export function SidebarNav({ className, ...props }: SidebarNavProps) {
       label: "Investing Calendar",
       icon: Calendar,
     },
+    {
+      href: "/admin/user-equity",
+      label: "User Equity",
+      icon: TrendingUp,
+    },
   ]
 
   return (
@@ -64,6 +70,13 @@ export function SidebarNav({ className, ...props }: SidebarNavProps) {
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <div className="flex justify-center p-2">
+              <ThemeSwitcher />
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

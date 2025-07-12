@@ -34,7 +34,7 @@ export function WeeklyModal({
   const weeklyData = React.useMemo(() => {
     if (!selectedDate) return { trades: [], tradeNumber: 0, pnl: 0, longNumber: 0, shortNumber: 0 }
 
-    const trades = []
+    const trades: any[] = []
     let weekStart = startOfWeek(selectedDate)
     let weekEnd = endOfWeek(selectedDate)
 
@@ -42,7 +42,7 @@ export function WeeklyModal({
     for (const [dateString, dayData] of Object.entries(calendarData)) {
       const date = new Date(dateString)
       if (date >= weekStart && date <= weekEnd && dayData.trades) {
-        trades.push(...dayData.trades)
+        trades.push(...(dayData.trades as any[]))
       }
     }
 

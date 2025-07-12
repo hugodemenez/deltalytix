@@ -6,6 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { I18nProviderClient } from "@/locales/client";
 import { SidebarNav } from "./components/sidebar-nav";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { ThemeProvider } from "@/context/theme-provider";
 
 export default function RootLayout(
   props: Readonly<{
@@ -36,6 +37,7 @@ export default function RootLayout(
   }, [router]);
 
   return (
+    <ThemeProvider>
       <SidebarProvider defaultOpen>
         <div className="flex min-h-screen w-screen">
           <SidebarNav />
@@ -45,5 +47,6 @@ export default function RootLayout(
           </main>
         </div>
       </SidebarProvider>
+    </ThemeProvider>
   );
 }

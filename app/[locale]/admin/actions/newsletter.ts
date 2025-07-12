@@ -122,7 +122,7 @@ export async function sendNewsletter({
 
     // Send emails in batches of 100 (Resend's batch limit)
     const batchSize = 100
-    const batches = []
+    const batches: typeof subscribers[] = []
     
     for (let i = 0; i < subscribers.length; i += batchSize) {
       const batch = subscribers.slice(i, i + batchSize)

@@ -147,7 +147,29 @@ export default function BillingManagement() {
                   </span>
                 ) : (
                   <span className="text-gray-500 dark:text-gray-400">
-                    {subscription?.status ? t(`billing.status.${subscription.status as SubscriptionStatus}`) : t('billing.notApplicable')}
+                    {subscription?.status ? (() => {
+                      const status = subscription.status as SubscriptionStatus
+                      switch (status) {
+                        case 'active':
+                          return t('billing.status.active')
+                        case 'canceled':
+                          return t('billing.status.canceled')
+                        case 'incomplete':
+                          return t('billing.status.incomplete')
+                        case 'incomplete_expired':
+                          return t('billing.status.incomplete_expired')
+                        case 'past_due':
+                          return t('billing.status.past_due')
+                        case 'paused':
+                          return t('billing.status.paused')
+                        case 'trialing':
+                          return t('billing.status.trialing')
+                        case 'unpaid':
+                          return t('billing.status.unpaid')
+                        default:
+                          return t('billing.notApplicable')
+                      }
+                    })() : t('billing.notApplicable')}
                   </span>
                 )}
               </>

@@ -203,7 +203,7 @@ function analyzeTimeOfDay(trades: Trade[]): TimeAnalysis {
     .map(h => h.period);
   
   // Generate recommendations
-  const recommendations = [];
+  const recommendations: string[] = [];
   
   if (bestTradingHour) {
     recommendations.push(`Focus trading during ${bestTradingHour.period} (${bestTradingHour.netPnL.toFixed(2)} net PnL, ${bestTradingHour.winRate.toFixed(1)}% win rate)`);

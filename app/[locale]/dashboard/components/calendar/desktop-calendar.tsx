@@ -431,11 +431,14 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
         {viewMode === 'daily' ? (
           <>
             <div className="grid grid-cols-8 gap-x-[1px] mb-1">
-              {[...WEEKDAYS, 'calendar.weekdays.weekly' as const].map((day) => (
+              {WEEKDAYS.map((day) => (
                 <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
                   {t(day)}
                 </div>
               ))}
+              <div className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
+                {t('calendar.weekdays.weekly')}
+              </div>
             </div>
             <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
               {calendarDays.map((date, index) => {

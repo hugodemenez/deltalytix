@@ -69,7 +69,7 @@ export async function GET(req: Request) {
 
     // Process subscribers in batches of 100 (Resend's batch limit)
     const batchSize = 100
-    const batches = []
+    const batches: typeof users[] = []
     for (let i = 0; i < users.length; i += batchSize) {
       const batch = users.slice(i, i + batchSize)
       batches.push(batch)

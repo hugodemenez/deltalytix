@@ -1,0 +1,467 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public"]
+}
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+model Trade {
+  id             String   @id @unique @default(uuid())
+  accountNumber  String
+  quantity       Int
+  entryId        String? @default("")
+  closeId        String? @default("")
+  instrument     String
+  entryPrice     String
+  closePrice     String
+  entryDate      String
+  closeDate      String
+  pnl            Float
+  timeInPosition Float    @default(0)
+  userId         String
+  side           String?  @default("")
+  commission     Float    @default(0)
+  createdAt      DateTime @default(now())
+  comment        String?
+  videoUrl       String?  @db.Text
+  tags           String[] @default([])
+  imageBase64    String?  @db.Text
+  imageBase64Second String? @db.Text
+  groupId        String?  @default("")
+
+  @@index([accountNumber])
+  @@index([groupId])
+  @@schema("public")
+}
+
+model TickDetails{
+  id String @id @unique @default(uuid())
+  ticker String
+  tickValue Float
+  tickSize Float
+  @@schema("public")
+}
+
+model Subscription {
+  id        String    @id @unique @default(uuid())
+  email     String    @unique
+  plan      String
+  createdAt DateTime  @default(now())
+  userId    String    @unique
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String    @default("ACTIVE")
+  endDate   DateTime?
+  trialEndsAt DateTime?
+  interval  String?
+
+  @@index([email])
+  @@schema("public")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model User {
+  id              String           @id @default(cuid())
+  email           String           @unique
+  auth_user_id    String           @unique
+  notifications   Notification[]
+  subscriptions   Subscription?
+  accounts        Account[]
+  groups          Group[]
+  dashboardLayout DashboardLayout?
+  moods           Mood[]
+  tags            Tag[]
+  isBeta          Boolean          @default(false)
+  isFirstConnection Boolean        @default(true)
+  etpToken        String?
+  thorToken       String?
+  posts           Post[]
+  votes           Vote[]
+  comments        Comment[]
+  language        String           @default("en")
+  orders          Order[]
+  businesses      Business[]
+
+  @@index([email])
+  @@schema("public")
+}
+
+model Business {
+  id          String   @id @default(uuid())
+  name        String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  traderIds   String[] @default([]) // List of trader IDs
+  managerIds  Json     @default("[]") // JSON array of objects: [{id: string, access: "admin" | "viewer"}]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, userId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model Group {
+  id          String    @id @default(uuid())
+  name        String
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accounts    Account[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([name, userId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model Account {
+  id                String    @id @unique @default(uuid())
+  number            String
+  propfirm          String    @default("")
+  groupId           String?
+  group             Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  drawdownThreshold Float     @default(0)
+  trailingDrawdown  Boolean   @default(false)
+  trailingStopProfit Float?   
+  profitTarget      Float     @default(0)
+  startingBalance   Float     @default(0)
+  isPerformance     Boolean   @default(false)
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime  @default(now())
+  payoutCount       Int       @default(0)
+  resetDate         DateTime?
+  payouts           Payout[]
+  consistencyPercentage Float? @default(30)
+
+  // New fields for prop firm configuration
+  accountSize       String?   // The account size key (e.g., '50K', '100K')
+  accountSizeName   String?   // The display name of the account size
+  price             Float?    // Regular price
+  priceWithPromo    Float?    // Promotional price
+  evaluation        Boolean   @default(true) // Whether it's an evaluation account
+  minDays           Int?      // Minimum trading days required
+  dailyLoss         Float?    // Daily loss limit
+  rulesDailyLoss    String?   // Rules for daily loss (Violation, No, Lock, DIRECTLY FUNDED)
+  trailing          String?   // Trailing type (EOD, Intraday, Static, DIRECTLY FUNDED)
+  tradingNewsAllowed Boolean  @default(true)
+  activationFees    Float?    // Activation fees
+  isRecursively     String?   // Recursivity type (Unique, Monthly, No)
+  payoutBonus       Float?    // Bonus for payouts
+  profitSharing     Float?    // Profit sharing percentage
+  payoutPolicy      String?   // Payout policy description
+  balanceRequired   Float?    // Required balance
+  minTradingDaysForPayout Int? // Minimum trading days for payout
+  minPayout         Float?    // Minimum payout amount
+  maxPayout         String?   // Maximum payout policy
+  maxFundedAccounts Int?      // Maximum number of funded accounts
+  
+  // Promotional pricing fields
+  promoType         PromoType? // Type of promotional pricing
+  promoPercentage   Float?     // Discount percentage for percentage-based promos
+  
+  // Payment & Renewal fields
+  nextPaymentDate   DateTime?           // Next payment due date
+  paymentFrequency  PaymentFrequency?   // How often payments are due
+  autoRenewal       Boolean   @default(false) // Whether to automatically renew
+  renewalNotice     Int?      // Days before payment to send renewal notice
+
+  @@unique([number, userId])
+  @@index([number])
+  @@index([groupId])
+  @@index([nextPaymentDate]) // Index for efficient cron job queries
+  @@schema("public")
+}
+
+model Payout {
+  id            String    @id @default(uuid())
+  amount        Float
+  date          DateTime
+  accountNumber String    
+  accountId     String
+  account       Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  status        String    @default("PENDING")
+  
+  @@index([accountNumber])
+  @@schema("public")
+}
+
+model DashboardLayout {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [auth_user_id], onDelete: Cascade)
+  desktop   Json     @default("[]")
+  mobile    Json     @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@schema("public")
+}
+
+model SubscriptionFeedback {
+  id                 String       @id @default(uuid())
+  email             String
+  event             String
+  cancellationReason String?
+  feedback          String?      // For both feedback and comment from Stripe
+  createdAt         DateTime     @default(now())
+
+  @@index([email])
+  @@schema("public")
+}
+
+model Mood {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day           DateTime
+  mood          String
+  emotionValue  Int      @default(50)  // Stores the emotion slider value (0-100)
+  hasTradingExperience Boolean?  // Stores whether user has trading experience
+  selectedNews  String[] @default([])  // Stores IDs of selected news events
+  journalContent String? @db.Text  // Stores the journal entry content
+  conversation  Json?    // Stores the conversation history as JSON
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, day])
+  @@index([userId])
+  @@index([day])
+  @@schema("public")
+}
+
+model Shared{
+  id            String   @id @default(uuid())
+  userId        String   // The user who shared the trades
+  slug          String   @unique // Unique identifier for the share URL
+  title         String?  // Optional title for the shared trades
+  description   String?  // Optional description
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime? // Optional expiration date
+  isPublic      Boolean  @default(true)
+  viewCount     Int      @default(0)
+  accountNumbers String[] // List of account numbers included
+  dateRange     Json     // { from: string, to: string }
+  desktop       Json     @default("[]") // Desktop layout configuration
+  mobile        Json     @default("[]") // Mobile layout configuration
+
+  @@index([userId])
+  @@index([slug])
+  @@schema("public")
+}
+
+
+model FinancialEvent {
+  id          String   @id @default(uuid())
+  title       String
+  date        DateTime
+  importance  String   // HIGH, MEDIUM, LOW
+  type        String   // FOMC, NFP, GDP, etc.
+  description String?
+  sourceUrl   String?  // URL to the event details
+  country     String?  // Country of the event (e.g., "United States", "Australia")
+  lang        String   @default("fr") // Language of the event (e.g., "fr", "en")
+  timezone    String   @default("UTC") // Timezone of the event (e.g., "UTC", "America/New_York")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([title, date, lang, timezone])
+  @@index([date])
+  @@schema("public")
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  color       String?  @default("#CBD5E1") // Default to a neutral color
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, userId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model Newsletter {
+  email     String   @unique @id
+  firstName String?
+  lastName  String?
+  isActive  Boolean  @default(true)
+
+  @@index([email])
+  @@schema("public")
+}
+
+model Post {
+  id          String    @id @default(uuid())
+  title       String
+  content     String    @db.Text
+  type        PostType  @default(FEATURE_REQUEST)
+  status      PostStatus @default(OPEN)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes       Vote[]
+  comments    Comment[]
+  screenshots String[]  @default([]) @db.Text
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@schema("public")
+}
+
+model Comment {
+  id        String    @id @default(uuid())
+  content   String    @db.Text
+  postId    String
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([postId])
+  @@index([userId])
+  @@index([parentId])
+  @@schema("public")
+}
+
+enum PostType {
+  FEATURE_REQUEST
+  BUG_REPORT
+  DISCUSSION
+
+  @@schema("public")
+}
+
+enum PostStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CLOSED
+
+  @@schema("public")
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  type      VoteType
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@schema("public")
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+
+  @@schema("public")
+}
+
+enum PaymentFrequency {
+  MONTHLY
+  QUARTERLY
+  BIANNUAL
+  ANNUAL
+  CUSTOM
+
+  @@schema("public")
+}
+
+enum PromoType {
+  DIRECT
+  PERCENTAGE
+
+  @@schema("public")
+}
+
+model Order {
+  id                String   @id @default(uuid())
+  accountId         String
+  orderId           String   @unique
+  orderAction       String
+  quantity          Int
+  averageFilledPrice Float
+  isOpeningOrder    Boolean
+  time              DateTime
+  symbol            String
+  instrumentType    String
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+
+  @@index([accountId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model TradeAnalytics {
+  id                String   @id @default(uuid())
+  tradeId           String   @unique
+  mae               Float    @default(0) // Maximum Adverse Excursion
+  mfe               Float    @default(0) // Maximum Favorable Excursion
+  entryPriceFromData Float?  // Actual entry price from market data
+  priceDifference   Float?   // Difference between reported and actual entry price
+  riskRewardRatio   Float?   // Risk/Reward ratio
+  efficiency        Float?   // How much of the favorable move was captured
+  dataSource        String   @default("DATABENTO") // Source of the data
+  computedAt        DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([tradeId])
+  @@index([computedAt])
+  @@schema("public")
+}
+
+model HistoricalData {
+  id            String   @id @default(uuid())
+  symbol        String   // Original symbol (e.g., "ES", "NQ")
+  databentSymbol String  // Databento symbol (e.g., "ES.FUT.CME")
+  timestamp     DateTime
+  open          Float
+  high          Float
+  low           Float
+  close         Float
+  volume        Int
+  dataSource    String   @default("DATABENTO")
+  createdAt     DateTime @default(now())
+
+  @@unique([symbol, databentSymbol, timestamp])
+  @@index([symbol])
+  @@index([databentSymbol])
+  @@index([timestamp])
+  @@schema("public")
+}

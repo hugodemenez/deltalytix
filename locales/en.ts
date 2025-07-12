@@ -7,6 +7,7 @@ import mindset from './en/mindset'
 import propfirm from './en/propfirm'
 import chat from './en/chat'
 import terms from './en/terms'
+import business from './en/business'
 export default {
     ...shared,
     ...landing,
@@ -17,11 +18,13 @@ export default {
     ...propfirm,
     ...chat,
     ...terms,
+    ...business,
     'footer.heading': 'Footer',
     'footer.description': 'Advanced analytics for modern traders.',
     'footer.product.title': 'Product',
     'footer.product.features': 'Features',
     'footer.product.pricing': 'Pricing',
+    'footer.product.business': 'Business',
     'footer.product.support': 'Support',
     'footer.company.title': 'Company',
     'footer.company.about': 'About',
@@ -98,6 +101,32 @@ export default {
     'dashboard.searchLanguage': 'Search language...',
     'dashboard.noLanguageFound': 'No language found.',
     'dashboard.timezone': 'Timezone',
+    'dashboard.settings': 'Settings',
+    'dashboard.settings.description': 'Manage your account settings and preferences',
+    'dashboard.business': 'Business',
+    'dashboard.business.description': 'Manage your business connections',
+    'dashboard.business.current': 'Current Businesses',
+    'dashboard.business.owner': 'Business Owner',
+    'dashboard.business.traders': 'Traders',
+    'dashboard.business.noBusiness': 'No business linked',
+    'dashboard.business.leaveSuccess': 'Left business successfully',
+    'dashboard.business.error': 'An error occurred',
+    'dashboard.business.leave': 'Leave Business',
+    'dashboard.business.leaveConfirm': 'Are you sure you want to leave this business?',
+    'dashboard.business.contactAdmin': 'Contact your business administrator to get an invitation to join a business.',
+    'dashboard.business.manager': 'Manager',
+    'dashboard.business.admin': 'Admin',
+    'dashboard.business.viewer': 'Viewer',
+    'dashboard.business.addManager': 'Add Manager',
+    'dashboard.business.removeManager': 'Remove Manager',
+    'dashboard.business.updateAccess': 'Update Access',
+    'dashboard.business.managerEmail': 'Manager Email',
+    'dashboard.business.accessLevel': 'Access Level',
+    'dashboard.business.managerAdded': 'Manager added successfully',
+    'dashboard.business.managerRemoved': 'Manager removed successfully',
+    'dashboard.business.accessUpdated': 'Access updated successfully',
+    'dashboard.business.onlyAdminCanManage': 'Only admins can manage users',
+    'dashboard.business.managerExists': 'Manager already exists',
     'dashboard.tabs.table': 'Table',
     'dashboard.tabs.accounts': 'Accounts',
     'dashboard.tabs.widgets': 'Widgets',
@@ -1282,4 +1311,16 @@ export default {
     'import.upload.description': 'Upload your PDF files to import your trades',
     'import.upload.dragInactive': 'Drag and drop your PDF files here, or click to select files',
     'import.upload.supportedFormats': 'Supported format: PDF',
+    'admin': {
+        'error': {
+            'invalidUserId': 'Invalid user ID format',
+            'userNotFound': 'User not found',
+            'databaseError': 'Database error occurred',
+            'accessDenied': 'Access denied'
+        },
+        'validation': {
+            'invalidSlug': 'Invalid user identifier',
+            'userDoesNotExist': 'The specified user does not exist'
+        }
+    },
 } as const

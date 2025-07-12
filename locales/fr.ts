@@ -7,6 +7,7 @@ import mindset from './fr/mindset'
 import propfirm from './fr/propfirm'
 import chat from './fr/chat'
 import terms from './fr/terms'
+import business from './fr/business'
 
 export default {
     ...shared,
@@ -18,11 +19,13 @@ export default {
     ...propfirm,
     ...chat,
     ...terms,
+    ...business,
     'footer.heading': 'Pied de page',
     'footer.description': 'Analyses avancées pour les traders modernes.',
     'footer.product.title': 'Produit',
     'footer.product.features': 'Fonctionnalités',
     'footer.product.pricing': 'Tarification',
+    'footer.product.business': 'Business',
     'footer.product.support': 'Support',
     'footer.company.title': 'Entreprise',
     'footer.company.about': 'À propos',
@@ -99,6 +102,32 @@ export default {
     'dashboard.searchLanguage': 'Rechercher une langue...',
     'dashboard.noLanguageFound': 'Aucune langue trouvée.',
     'dashboard.timezone': 'Fuseau horaire',
+    'dashboard.settings': 'Paramètres',
+    'dashboard.settings.description': 'Gérez vos paramètres de compte et préférences',
+    'dashboard.business': 'Entreprise',
+    'dashboard.business.description': 'Gérez vos connexions d\'entreprise',
+    'dashboard.business.current': 'Entreprises actuelles',
+    'dashboard.business.owner': 'Propriétaire de l\'entreprise',
+    'dashboard.business.traders': 'Traders',
+    'dashboard.business.noBusiness': 'Aucune entreprise liée',
+    'dashboard.business.leaveSuccess': 'Quitté l\'entreprise avec succès',
+    'dashboard.business.error': 'Une erreur s\'est produite',
+    'dashboard.business.leave': 'Quitter l\'entreprise',
+    'dashboard.business.leaveConfirm': 'Êtes-vous sûr de vouloir quitter cette entreprise ?',
+    'dashboard.business.contactAdmin': 'Contactez votre administrateur d\'entreprise pour obtenir une invitation à rejoindre une entreprise.',
+    'dashboard.business.manager': 'Gestionnaire',
+    'dashboard.business.admin': 'Administrateur',
+    'dashboard.business.viewer': 'Visualiseur',
+    'dashboard.business.addManager': 'Ajouter un gestionnaire',
+    'dashboard.business.removeManager': 'Supprimer le gestionnaire',
+    'dashboard.business.updateAccess': 'Mettre à jour l\'accès',
+    'dashboard.business.managerEmail': 'Email du gestionnaire',
+    'dashboard.business.accessLevel': 'Niveau d\'accès',
+    'dashboard.business.managerAdded': 'Gestionnaire ajouté avec succès',
+    'dashboard.business.managerRemoved': 'Gestionnaire supprimé avec succès',
+    'dashboard.business.accessUpdated': 'Accès mis à jour avec succès',
+    'dashboard.business.onlyAdminCanManage': 'Seuls les administrateurs peuvent gérer les utilisateurs',
+    'dashboard.business.managerExists': 'Le gestionnaire existe déjà',
     'dashboard.tabs.table': 'Tableau',
     'dashboard.tabs.accounts': 'Comptes',
     'dashboard.tabs.widgets': 'Widgets',
@@ -1376,4 +1405,16 @@ export default {
     'import.upload.dragActive': 'Déposez vos fichiers PDF ici',
     'import.upload.selectedFiles': 'Fichiers sélectionnés',
     'import.upload.rawOcrData': 'Données OCR brutes',
+    'admin': {
+        'error': {
+            'invalidUserId': 'Format d\'identifiant utilisateur invalide',
+            'userNotFound': 'Utilisateur introuvable',
+            'databaseError': 'Erreur de base de données',
+            'accessDenied': 'Accès refusé'
+        },
+        'validation': {
+            'invalidSlug': 'Identifiant utilisateur invalide',
+            'userDoesNotExist': 'L\'utilisateur spécifié n\'existe pas'
+        }
+    },
 } as const

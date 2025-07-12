@@ -47,7 +47,7 @@ function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
 }
 
 async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
-  let browser = null;
+  let browser: any = null;
   try {
     // Map language to Investing.com language code
     const langMap = {

@@ -273,7 +273,7 @@ function analyzeAccounts(trades: Trade[]): AccountAnalysis {
   }
   
   // Generate recommendations
-  const recommendations = [];
+  const recommendations: string[] = [];
   
   if (bestPerformingAccount) {
     recommendations.push(`Account ${bestPerformingAccount.accountNumber} is your best performer (${bestPerformingAccount.netPnL.toFixed(2)} net PnL) - consider increasing allocation`);

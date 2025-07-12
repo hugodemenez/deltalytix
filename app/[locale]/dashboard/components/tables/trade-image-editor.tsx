@@ -115,7 +115,7 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
       await updateTrades(tradeIds, update)
       
       // Remove both images from Supabase storage
-      const imagesToRemove = []
+      const imagesToRemove: string[] = []
       if (trade.imageBase64) {
         const path = trade.imageBase64.split('/storage/v1/object/public/trade-images/')[1]
         if (path) imagesToRemove.push(path)

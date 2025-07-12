@@ -226,7 +226,7 @@ function analyzeInstruments(trades: Trade[]): InstrumentAnalysis {
   ) : null;
   
   // Generate recommendations
-  const recommendations = [];
+  const recommendations: string[] = [];
   
   if (bestPerformer) {
     recommendations.push(`Consider increasing position size or frequency for ${bestPerformer.instrument} (${bestPerformer.netPnL.toFixed(2)} net PnL)`);

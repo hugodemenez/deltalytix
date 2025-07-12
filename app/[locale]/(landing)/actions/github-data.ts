@@ -190,7 +190,7 @@ const getCachedGithubData = unstable_cache(
            },
                                    stats: (() => {
              const now = new Date()
-             const stats = []
+             const stats: { value: number; date: Date }[] = []
              
              // Create 12 weeks of fallback data (like the original)
              for (let i = 11; i >= 0; i--) {

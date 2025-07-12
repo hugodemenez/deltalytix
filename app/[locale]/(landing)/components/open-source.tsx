@@ -113,7 +113,7 @@ export default function GitHubRepoCard() {
     if (!stats || stats.length === 0) {
       // Return a default 12-week dataset (like the original)
       const now = new Date();
-      const fallbackStats = [];
+      const fallbackStats: { value: number; date: Date }[] = [];
       
       for (let i = 11; i >= 0; i--) {
         const weekDate = new Date(now);
