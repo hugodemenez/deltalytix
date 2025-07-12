@@ -230,7 +230,7 @@ export default {
   'business.equity.clear': 'Effacer',
   'business.equity.minimumTrades': 'Trades minimum',
   'business.equity.minimumTradedDays': 'Jours de trading minimum',
-  'business.equity.equity': 'Équité',
+  'business.equity.equity': 'Résultats',
   'business.equity.all': 'Tous',
   'business.equity.positive': 'Positif',
   'business.equity.negative': 'Négatif',
