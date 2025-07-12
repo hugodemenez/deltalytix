@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { getUserEquityData } from '../../actions/stats'
 import { Suspense } from 'react'
 import { Card } from '@/components/ui/card'
@@ -56,6 +56,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(initialHasMore)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [showDailyView, setShowDailyView] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState<Filters>({
@@ -74,7 +75,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
   }
 
   // Filter users based on criteria
-  const filteredUsers = additionalUsers.filter(user => {
+  const filteredUsers = useMemo(() => additionalUsers.filter(user => {
     const tradedDays = getTradedDays(user.equityCurve)
     
     // Check minimum trades
@@ -88,12 +89,13 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
     if (filters.equityFilter === 'negative' && user.statistics.totalPnL >= 0) return false
     
     return true
-  })
+  }), [additionalUsers, filters])
 
   const loadMoreUsers = useCallback(async () => {
     if (isLoadingMore || !hasMore) return
 
     setIsLoadingMore(true)
+    setLoadError(null)
     try {
       const data = await getUserEquityData(currentPage, 10)
       
@@ -103,6 +105,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
       setCurrentPage(currentPage + 1)
     } catch (error) {
       console.error('Error loading more users:', error)
+      setLoadError('Failed to load more users. Please try again.')
     } finally {
       setIsLoadingMore(false)
     }
@@ -373,6 +376,16 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
           ) : (
             <div className="text-sm text-muted-foreground">Scroll to load more...</div>
           )}
+        </div>
+      )}
+
+      {/* Error display */}
+      {loadError && (
+        <div className="text-center py-4">
+          <p className="text-sm text-red-500 mb-2">{loadError}</p>
+          <Button onClick={loadMoreUsers} variant="outline" size="sm">
+            Retry
+          </Button>
         </div>
       )}
 

@@ -1405,4 +1405,16 @@ export default {
     'import.upload.dragActive': 'Déposez vos fichiers PDF ici',
     'import.upload.selectedFiles': 'Fichiers sélectionnés',
     'import.upload.rawOcrData': 'Données OCR brutes',
+    'admin': {
+        'error': {
+            'invalidUserId': 'Format d\'identifiant utilisateur invalide',
+            'userNotFound': 'Utilisateur introuvable',
+            'databaseError': 'Erreur de base de données',
+            'accessDenied': 'Accès refusé'
+        },
+        'validation': {
+            'invalidSlug': 'Identifiant utilisateur invalide',
+            'userDoesNotExist': 'L\'utilisateur spécifié n\'existe pas'
+        }
+    },
 } as const

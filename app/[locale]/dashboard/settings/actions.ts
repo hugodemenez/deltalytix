@@ -117,6 +117,15 @@ export async function getUserBusinesses() {
     // Get businesses where the user is the owner
     const ownedBusinesses = await prisma.business.findMany({
       where: { userId: user.id },
+      include: {
+        managers: {
+          select: {
+            id: true,
+            managerId: true,
+            access: true,
+          },
+        },
+      },
     })
 
     // Get businesses where the user is a trader
@@ -129,17 +138,28 @@ export async function getUserBusinesses() {
           not: user.id, // Exclude businesses where user is the owner
         },
       },
+      include: {
+        managers: {
+          select: {
+            id: true,
+            managerId: true,
+            access: true,
+          },
+        },
+      },
     })
 
-    // Get all unique trader IDs from all businesses
+    // Get all unique trader IDs and manager IDs from all businesses
     const allBusinesses = [...ownedBusinesses, ...joinedBusinesses]
     const allTraderIds = Array.from(new Set(allBusinesses.flatMap(b => b.traderIds)))
+    const allManagerIds = Array.from(new Set(allBusinesses.flatMap(b => b.managers.map(m => m.managerId))))
+    const allUserIds = Array.from(new Set([...allTraderIds, ...allManagerIds]))
     
-    // Fetch all trader details in one query
-    const traders = await prisma.user.findMany({
+    // Fetch all user details in one query
+    const users = await prisma.user.findMany({
       where: {
         id: {
-          in: allTraderIds,
+          in: allUserIds,
         },
       },
       select: {
@@ -149,17 +169,25 @@ export async function getUserBusinesses() {
     })
 
     // Create a map for quick lookup
-    const tradersMap = new Map(traders.map(t => [t.id, t]))
+    const usersMap = new Map(users.map(u => [u.id, u]))
 
-    // Enhance businesses with trader details
+    // Enhance businesses with trader and manager details
     const enhancedOwnedBusinesses = ownedBusinesses.map(business => ({
       ...business,
-      traders: business.traderIds.map(id => tradersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      traders: business.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      managers: business.managers.map(manager => ({
+        ...manager,
+        email: usersMap.get(manager.managerId)?.email || 'Unknown',
+      })),
     }))
 
     const enhancedJoinedBusinesses = joinedBusinesses.map(business => ({
       ...business,
-      traders: business.traderIds.map(id => tradersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      traders: business.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      managers: business.managers.map(manager => ({
+        ...manager,
+        email: usersMap.get(manager.managerId)?.email || 'Unknown',
+      })),
     }))
 
     return {
@@ -173,7 +201,7 @@ export async function getUserBusinesses() {
   }
 }
 
-export async function addManagerToBusiness(businessId: string, managerId: string, access: 'admin' | 'viewer' = 'viewer') {
+export async function addManagerToBusiness(businessId: string, managerEmail: string, access: 'admin' | 'viewer' = 'viewer') {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -181,8 +209,18 @@ export async function addManagerToBusiness(businessId: string, managerId: string
       throw new Error('Unauthorized')
     }
 
-    // Check if current user is admin of this business
-    const currentUserManager = await prisma.businessManager.findUnique({
+    // Check if current user is owner or admin of this business
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+    })
+
+    if (!business) {
+      throw new Error('Business not found')
+    }
+
+    // Check if current user is owner or admin manager
+    const isOwner = business.userId === user.id
+    const isAdminManager = await prisma.businessManager.findUnique({
       where: {
         businessId_managerId: {
           businessId,
@@ -191,8 +229,17 @@ export async function addManagerToBusiness(businessId: string, managerId: string
       }
     })
 
-    if (!currentUserManager || currentUserManager.access !== 'admin') {
-      throw new Error('Unauthorized: Only admins can add managers')
+    if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
+      throw new Error('Unauthorized: Only business owners and admin managers can add managers')
+    }
+
+    // Find the user by email
+    const managerUser = await prisma.user.findUnique({
+      where: { email: managerEmail },
+    })
+
+    if (!managerUser) {
+      throw new Error('User with this email not found')
     }
 
     // Check if manager already exists
@@ -200,7 +247,7 @@ export async function addManagerToBusiness(businessId: string, managerId: string
       where: {
         businessId_managerId: {
           businessId,
-          managerId,
+          managerId: managerUser.id,
         }
       }
     })
@@ -213,7 +260,7 @@ export async function addManagerToBusiness(businessId: string, managerId: string
     await prisma.businessManager.create({
       data: {
         businessId,
-        managerId,
+        managerId: managerUser.id,
         access,
       },
     })
@@ -222,7 +269,7 @@ export async function addManagerToBusiness(businessId: string, managerId: string
     return { success: true }
   } catch (error) {
     console.error('Error adding manager to business:', error)
-    return { success: false, error: 'Failed to add manager' }
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to add manager' }
   }
 }
 
@@ -320,17 +367,31 @@ export async function getUserBusinessAccess() {
     // Get businesses where user is a manager - much more efficient query!
     const managedBusinesses = await prisma.businessManager.findMany({
       where: { managerId: user.id },
-      include: { business: true }
+      include: { 
+        business: {
+          include: {
+            managers: {
+              select: {
+                id: true,
+                managerId: true,
+                access: true,
+              },
+            },
+          },
+        },
+      }
     })
 
-    // Get all unique trader IDs from managed businesses
+    // Get all unique trader IDs and manager IDs from managed businesses
     const allTraderIds = Array.from(new Set(managedBusinesses.flatMap(bm => bm.business.traderIds)))
+    const allManagerIds = Array.from(new Set(managedBusinesses.flatMap(bm => bm.business.managers.map(m => m.managerId))))
+    const allUserIds = Array.from(new Set([...allTraderIds, ...allManagerIds]))
     
-    // Fetch all trader details in one query
-    const traders = await prisma.user.findMany({
+    // Fetch all user details in one query
+    const users = await prisma.user.findMany({
       where: {
         id: {
-          in: allTraderIds,
+          in: allUserIds,
         },
       },
       select: {
@@ -340,13 +401,17 @@ export async function getUserBusinessAccess() {
     })
 
     // Create a map for quick lookup
-    const tradersMap = new Map(traders.map(t => [t.id, t]))
+    const usersMap = new Map(users.map(u => [u.id, u]))
 
-    // Transform to include access level and trader details
+    // Transform to include access level, trader details, and manager details
     const businessesWithAccess = managedBusinesses.map(bm => ({
       ...bm.business,
       userAccess: bm.access,
-      traders: bm.business.traderIds.map(id => tradersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      traders: bm.business.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      managers: bm.business.managers.map(manager => ({
+        ...manager,
+        email: usersMap.get(manager.managerId)?.email || 'Unknown',
+      })),
     }))
 
     return {

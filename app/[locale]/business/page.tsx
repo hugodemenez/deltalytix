@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { useTheme } from '@/context/theme-provider'
 import Footer from '../(landing)/components/footer'
+import Image from 'next/image'
 
 export default function BusinessPage() {
   const t = useI18n()
@@ -73,29 +74,6 @@ export default function BusinessPage() {
       icon: Code,
       title: t('business.features.api.title'),
       description: t('business.features.api.description'),
-    },
-  ]
-
-  const benefits = [
-    {
-      icon: TrendingUp,
-      title: t('business.benefits.performance.title'),
-      description: t('business.benefits.performance.description'),
-    },
-    {
-      icon: Zap,
-      title: t('business.benefits.scalability.title'),
-      description: t('business.benefits.scalability.description'),
-    },
-    {
-      icon: Shield,
-      title: t('business.benefits.security.title'),
-      description: t('business.benefits.security.description'),
-    },
-    {
-      icon: Headphones,
-      title: t('business.benefits.support.title'),
-      description: t('business.benefits.support.description'),
     },
   ]
 
@@ -201,24 +179,6 @@ export default function BusinessPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative isolate overflow-hidden">
-          <svg
-            aria-hidden="true"
-            className="absolute inset-0 -z-10 size-full mask-[radial-gradient(100%_100%_at_top_right,white,transparent)] dark:mask-[radial-gradient(100%_100%_at_top_right,black,transparent)] stroke-gray-200 dark:stroke-gray-800"
-          >
-            <defs>
-              <pattern
-                x="50%"
-                y={-1}
-                id="0787a7c5-978c-4f66-83c7-11c213f99cb7"
-                width={200}
-                height={200}
-                patternUnits="userSpaceOnUse"
-              >
-                <path d="M.5 200V.5H200" fill="none" />
-              </pattern>
-            </defs>
-            <rect fill="url(#0787a7c5-978c-4f66-83c7-11c213f99cb7)" width="100%" height="100%" strokeWidth={0} />
-          </svg>
           <div className="mx-auto max-w-7xl px-6 pt-6 pb-16 sm:pb-20 lg:flex lg:px-8 lg:py-20">
             <div className="mx-auto max-w-2xl lg:mx-0 lg:shrink-0 lg:pt-4">
               <div className="mt-8 sm:mt-12 lg:mt-8">
@@ -239,20 +199,17 @@ export default function BusinessPage() {
                 {t('business.hero.description')}
               </p>
               <div className="mt-8 flex items-center gap-x-6">
-                <Link href="/authentication?next=business/dashboard">
-                  <Button className="rounded-md bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] px-3.5 py-2.5 text-sm font-semibold text-white shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2E9987] dark:focus-visible:outline-[hsl(var(--chart-1))]">
-                    {t('business.cta')}
-                  </Button>
+                <Link href="/authentication?next=business/dashboard" className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                  <span className="font-medium text-sm text-white">{t('business.cta')}</span>
                 </Link>
-                <Button 
-                  variant="ghost" 
-                  className="text-sm/6 font-semibold text-gray-900 dark:text-white hover:bg-transparent"
+                <button 
+                  className="flex justify-center items-center px-8 py-2.5 h-10 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-[0_0_0_6px_rgba(107,114,128,0.1),0_0_0_2px_rgba(107,114,128,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(107,114,128,0.2),0_0_0_2px_rgba(107,114,128,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_rgba(156,163,175,0.1),0_0_0_2px_rgba(156,163,175,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_rgba(156,163,175,0.2),0_0_0_2px_rgba(156,163,175,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200"
                   data-cal-namespace="deltalytix-business"
                   data-cal-link="hugo-demenez/deltalytix-business"
                   data-cal-config='{"layout":"month_view"}'
                 >
-                  {t('business.cta.secondary')} <span aria-hidden="true">→</span>
-                </Button>
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">{t('business.cta.secondary')} <span aria-hidden="true">→</span></span>
+                </button>
               </div>
               
               {/* Stats Section moved inside hero */}
@@ -272,14 +229,14 @@ export default function BusinessPage() {
             <div className="mx-auto mt-12 flex max-w-2xl sm:mt-16 lg:mt-0 lg:mr-0 lg:ml-10 lg:max-w-none lg:flex-none xl:ml-32">
               <div className="max-w-3xl flex-none sm:max-w-5xl lg:max-w-none">
                 <div className="-m-2 rounded-xl bg-gray-900/5 dark:bg-gray-100/5 p-2 ring-1 ring-gray-900/10 dark:ring-gray-100/10 ring-inset lg:-m-4 lg:rounded-2xl lg:p-4">
-                  <img
+                  <Image
                     alt="Dashboard screenshot"
                     src="/business-dark.png"
                     width={2432}
                     height={1442}
                     className="w-304 rounded-md shadow-2xl ring-1 ring-gray-900/10 dark:ring-gray-100/10 hidden dark:block"
                   />
-                  <img
+                  <Image
                     alt="Dashboard screenshot"
                     src="/business-light.png"
                     width={2432}
@@ -324,13 +281,13 @@ export default function BusinessPage() {
         </section>
 
         {/* Use Cases Section */}
-        <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24 bg-gray-50 dark:bg-gray-900">
+        <section className="w-full py-6 md:py-12 lg:py-16 xl:py-24 bg-muted">
           <div className="container px-4 md:px-6 mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
                 {t('business.usecases.title')}
               </h2>
-              <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mt-4">
+              <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl mt-4">
                 {t('business.usecases.description')}
               </p>
             </div>
@@ -365,15 +322,21 @@ export default function BusinessPage() {
                 {t('business.cta.createAccount.description')}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/authentication">
-                  <Button className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
-                    <span className="font-medium text-sm text-white">{t('business.cta.createAccount.button')}</span>
-                  </Button>
+                <Link href="/authentication" className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                  <span className="font-medium text-sm text-white">{t('business.cta.createAccount.button')}</span>
                 </Link>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('business.cta.createAccount.subtext')}
-                </p>
+                <button 
+                  className="flex justify-center items-center px-8 py-2.5 h-10 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-[0_0_0_6px_rgba(107,114,128,0.1),0_0_0_2px_rgba(107,114,128,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(107,114,128,0.2),0_0_0_2px_rgba(107,114,128,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_rgba(156,163,175,0.1),0_0_0_2px_rgba(156,163,175,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_rgba(156,163,175,0.2),0_0_0_2px_rgba(156,163,175,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200"
+                  data-cal-namespace="deltalytix-business"
+                  data-cal-link="hugo-demenez/deltalytix-business"
+                  data-cal-config='{"layout":"month_view"}'
+                >
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">{t('business.cta.demo.button')}</span>
+                </button>
               </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+                {t('business.cta.createAccount.subtext')}
+              </p>
             </div>
           </div>
         </section>

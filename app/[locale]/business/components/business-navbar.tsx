@@ -133,31 +133,31 @@ export default function BusinessNavbar() {
         <nav className="flex flex-col space-y-4">
             <Accordion type="single" collapsible className="w-full">
                 <AccordionItem value="features">
-                    <AccordionTrigger>Features</AccordionTrigger>
+                    <AccordionTrigger>{t('business.navbar.features')}</AccordionTrigger>
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
-                            <MobileNavItem href="/business#features" onClick={onLinkClick}>Multi-Account Management</MobileNavItem>
-                            <MobileNavItem href="/business#features" onClick={onLinkClick}>Team Analytics</MobileNavItem>
-                            <MobileNavItem href="/business#features" onClick={onLinkClick}>Real-Time Monitoring</MobileNavItem>
-                            <MobileNavItem href="/business#features" onClick={onLinkClick}>Risk Management</MobileNavItem>
+                            <MobileNavItem href="/business#features" onClick={onLinkClick}>{t('business.navbar.features.multiAccount')}</MobileNavItem>
+                            <MobileNavItem href="/business#features" onClick={onLinkClick}>{t('business.navbar.features.teamAnalytics')}</MobileNavItem>
+                            <MobileNavItem href="/business#features" onClick={onLinkClick}>{t('business.navbar.features.realTime')}</MobileNavItem>
+                            <MobileNavItem href="/business#features" onClick={onLinkClick}>{t('business.navbar.features.riskManagement')}</MobileNavItem>
                         </ul>
                     </AccordionContent>
                 </AccordionItem>
                 <AccordionItem value="roadmap">
-                    <AccordionTrigger>Roadmap</AccordionTrigger>
+                    <AccordionTrigger>{t('business.navbar.roadmap')}</AccordionTrigger>
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
-                            <MobileNavItem href="/business#roadmap" onClick={onLinkClick}>Q1 2024 - Core Features</MobileNavItem>
-                            <MobileNavItem href="/business#roadmap" onClick={onLinkClick}>Q2 2024 - Advanced Analytics</MobileNavItem>
-                            <MobileNavItem href="/business#roadmap" onClick={onLinkClick}>Q3 2024 - Enterprise API</MobileNavItem>
-                            <MobileNavItem href="/business#roadmap" onClick={onLinkClick}>Q4 2024 - Full Launch</MobileNavItem>
+                            <MobileNavItem href="/business#roadmap" onClick={onLinkClick}>{t('business.navbar.roadmap.q1')}</MobileNavItem>
+                            <MobileNavItem href="/business#roadmap" onClick={onLinkClick}>{t('business.navbar.roadmap.q2')}</MobileNavItem>
+                            <MobileNavItem href="/business#roadmap" onClick={onLinkClick}>{t('business.navbar.roadmap.q3')}</MobileNavItem>
+                            <MobileNavItem href="/business#roadmap" onClick={onLinkClick}>{t('business.navbar.roadmap.q4')}</MobileNavItem>
                         </ul>
                     </AccordionContent>
                 </AccordionItem>
                 <ul className='list-none'>
                     <MobileNavItem href="/business#pricing" onClick={onLinkClick} className={cn(
                         "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180 border-b",
-                    )}>Pricing</MobileNavItem>
+                    )}>{t('business.navbar.pricing')}</MobileNavItem>
                 </ul>
             </Accordion>
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
@@ -168,7 +168,7 @@ export default function BusinessNavbar() {
                     <PopoverTrigger asChild>
                         <Button variant="ghost" className="w-full justify-start">
                             {getThemeIcon()}
-                            <span className="ml-2">Change theme</span>
+                            <span className="ml-2">{t('business.navbar.theme.change')}</span>
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[200px] p-0" align="start">
@@ -177,15 +177,15 @@ export default function BusinessNavbar() {
                                 <CommandGroup>
                                     <CommandItem onSelect={() => handleThemeChange("light")}>
                                         <Sun className="mr-2 h-4 w-4" />
-                                        <span>Light</span>
+                                        <span>{t('business.navbar.theme.light')}</span>
                                     </CommandItem>
                                     <CommandItem onSelect={() => handleThemeChange("dark")}>
                                         <Moon className="mr-2 h-4 w-4" />
-                                        <span>Dark</span>
+                                        <span>{t('business.navbar.theme.dark')}</span>
                                     </CommandItem>
                                     <CommandItem onSelect={() => handleThemeChange("system")}>
                                         <Laptop className="mr-2 h-4 w-4" />
-                                        <span>System</span>
+                                        <span>{t('business.navbar.theme.system')}</span>
                                     </CommandItem>
                                 </CommandGroup>
                             </CommandList>
@@ -213,7 +213,7 @@ export default function BusinessNavbar() {
                     <NavigationMenu>
                         <NavigationMenuList className="list-none">
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('features')} onMouseLeave={() => setHoveredItem(null)}>
-                                <NavigationMenuTrigger className='bg-transparent'>Features</NavigationMenuTrigger>
+                                <NavigationMenuTrigger className='bg-transparent'>{t('business.navbar.features')}</NavigationMenuTrigger>
                                 <NavigationMenuContent>
                                     <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr] list-none">
                                         <li className="row-span-3">
@@ -229,17 +229,17 @@ export default function BusinessNavbar() {
                                                 </Link>
                                             </NavigationMenuLink>
                                         </li>
-                                        <ListItem href="/business#features" title="Multi-Account Management">
+                                        <ListItem href="/business#features" title={t('business.navbar.features.multiAccount')}>
                                             Monitor and analyze performance across multiple trading accounts
                                         </ListItem>
-                                        <ListItem href="/business#features" title="Team Analytics">
+                                        <ListItem href="/business#features" title={t('business.navbar.features.teamAnalytics')}>
                                             Track individual trader performance and optimize team allocation
                                         </ListItem>
-                                        <ListItem href="/business#features" title="Real-Time Monitoring">
+                                        <ListItem href="/business#features" title={t('business.navbar.features.realTime')}>
                                             Get instant alerts and real-time updates on trading activities
                                         </ListItem>
                                         <div className='col-span-2'>
-                                            <ListItem href="/business#features" title="Risk Management">
+                                            <ListItem href="/business#features" title={t('business.navbar.features.riskManagement')}>
                                                 Advanced risk analytics with position sizing and drawdown analysis
                                             </ListItem>
                                         </div>
@@ -247,19 +247,19 @@ export default function BusinessNavbar() {
                                 </NavigationMenuContent>
                             </NavigationMenuItem>
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('roadmap')} onMouseLeave={() => setHoveredItem(null)}>
-                                <NavigationMenuTrigger className='bg-transparent'>Roadmap</NavigationMenuTrigger>
+                                <NavigationMenuTrigger className='bg-transparent'>{t('business.navbar.roadmap')}</NavigationMenuTrigger>
                                 <NavigationMenuContent>
                                     <ul className="grid gap-3 p-4 w-[400px] list-none">
-                                        <ListItem href="/business#roadmap" title="Q1 2024 - Core Features">
+                                        <ListItem href="/business#roadmap" title={t('business.navbar.roadmap.q1')}>
                                             Multi-account dashboard, team analytics, basic reporting
                                         </ListItem>
-                                        <ListItem href="/business#roadmap" title="Q2 2024 - Advanced Analytics">
+                                        <ListItem href="/business#roadmap" title={t('business.navbar.roadmap.q2')}>
                                             Real-time monitoring, risk management tools, compliance reporting
                                         </ListItem>
-                                        <ListItem href="/business#roadmap" title="Q3 2024 - Enterprise API">
+                                        <ListItem href="/business#roadmap" title={t('business.navbar.roadmap.q3')}>
                                             Enterprise API, custom integrations, advanced security
                                         </ListItem>
-                                        <ListItem href="/business#roadmap" title="Q4 2024 - Full Launch">
+                                        <ListItem href="/business#roadmap" title={t('business.navbar.roadmap.q4')}>
                                             Complete enterprise suite, dedicated support, custom onboarding
                                         </ListItem>
                                     </ul>
@@ -268,7 +268,7 @@ export default function BusinessNavbar() {
                             <NavigationMenuItem>
                                 <Link href="/business#pricing" legacyBehavior passHref>
                                     <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
-                                        Pricing
+                                        {t('business.navbar.pricing')}
                                     </NavigationMenuLink>
                                 </Link>
                             </NavigationMenuItem>
@@ -295,15 +295,15 @@ export default function BusinessNavbar() {
                                     <CommandGroup>
                                         <CommandItem onSelect={() => handleThemeChange("light")}>
                                             <Sun className="mr-2 h-4 w-4" />
-                                            <span>Light</span>
+                                            <span>{t('business.navbar.theme.light')}</span>
                                         </CommandItem>
                                         <CommandItem onSelect={() => handleThemeChange("dark")}>
                                             <Moon className="mr-2 h-4 w-4" />
-                                            <span>Dark</span>
+                                            <span>{t('business.navbar.theme.dark')}</span>
                                         </CommandItem>
                                         <CommandItem onSelect={() => handleThemeChange("system")}>
                                             <Laptop className="mr-2 h-4 w-4" />
-                                            <span>System</span>
+                                            <span>{t('business.navbar.theme.system')}</span>
                                         </CommandItem>
                                     </CommandGroup>
                                 </CommandList>

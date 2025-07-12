@@ -10,10 +10,6 @@ interface UserEquityCardProps {
   traderNumber?: number
 }
 
-function valueFormatter(number: number) {
-  return `${Intl.NumberFormat('us').format(number).toString()}`
-}
-
 export async function UserEquityCard({ userId, traderNumber }: UserEquityCardProps) {
   const userData = await getIndividualUserEquityData(userId)
   
@@ -46,10 +42,10 @@ export async function UserEquityCard({ userId, traderNumber }: UserEquityCardPro
           </Badge>
           <Link 
             href={`/admin/dashboard/${userId}`}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
+            className="p-1 hover:bg-muted rounded transition-colors"
             title="View trader details"
           >
-            <ExternalLink className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+            <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />
           </Link>
         </div>
       </div>

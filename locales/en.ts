@@ -1311,4 +1311,16 @@ export default {
     'import.upload.description': 'Upload your PDF files to import your trades',
     'import.upload.dragInactive': 'Drag and drop your PDF files here, or click to select files',
     'import.upload.supportedFormats': 'Supported format: PDF',
+    'admin': {
+        'error': {
+            'invalidUserId': 'Invalid user ID format',
+            'userNotFound': 'User not found',
+            'databaseError': 'Database error occurred',
+            'accessDenied': 'Access denied'
+        },
+        'validation': {
+            'invalidSlug': 'Invalid user identifier',
+            'userDoesNotExist': 'The specified user does not exist'
+        }
+    },
 } as const

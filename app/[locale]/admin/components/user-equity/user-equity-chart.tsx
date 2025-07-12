@@ -214,7 +214,7 @@ export function UserEquityChart({ equityCurve, userId, totalPnL, showDailyView =
           margin={{ left: 10, right: 8, top: 8, bottom: 24 }}
         >
           <defs>
-            <linearGradient id={`color-${userId}`} x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={`color-${userId.replace(/[^a-zA-Z0-9-_]/g, '')}`} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={totalPnL >= 0 ? "#10b981" : "#ef4444"} stopOpacity={0.3}/>
               <stop offset="95%" stopColor={totalPnL >= 0 ? "#10b981" : "#ef4444"} stopOpacity={0}/>
             </linearGradient>

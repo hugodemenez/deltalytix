@@ -70,6 +70,7 @@ interface Business {
   userId: string
   traderIds: string[]
   traders: { id: string; email: string }[]
+  managers: { id: string; managerId: string; access: string; email: string }[]
   createdAt: any
   updatedAt: any
   userAccess?: string
@@ -253,10 +254,48 @@ export function BusinessManagement({
       const result = await addManagerToBusiness(selectedBusiness.id, newManagerEmail.trim(), newManagerAccess)
       if (result.success) {
         toast.success(t('dashboard.business.managerAdded'))
-        setManageDialogOpen(false)
+        
+        // Update the selected business locally
+        const newManager = {
+          id: `temp-${Date.now()}`, // Temporary ID
+          managerId: 'temp-manager-id', // This will be updated when we reload the data
+          access: newManagerAccess,
+          email: newManagerEmail.trim(),
+        }
+        
+        const updatedSelectedBusiness = {
+          ...selectedBusiness,
+          managers: [...selectedBusiness.managers, newManager]
+        }
+        setSelectedBusiness(updatedSelectedBusiness)
+
+        // Update the businesses in the main state to keep everything in sync
+        setUserBusinesses(prev => ({
+          ownedBusinesses: prev.ownedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness
+              : business
+          ),
+          joinedBusinesses: prev.joinedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness  
+              : business
+          )
+        }))
+
+        setManagedBusinesses(prev => 
+          prev.map(business => 
+            business.id === selectedBusiness.id 
+              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
+              : business
+          )
+        )
+        
         setNewManagerEmail('')
         setNewManagerAccess('viewer')
-        await loadBusinessData()
+        
+        // Note: We don't reload data immediately to keep the dialog open
+        // Data will be refreshed when the dialog is closed or when needed
       } else {
         toast.error(result.error || t('dashboard.business.error'))
       }
@@ -275,7 +314,38 @@ export function BusinessManagement({
       const result = await removeManagerFromBusiness(selectedBusiness.id, managerId)
       if (result.success) {
         toast.success(t('dashboard.business.managerRemoved'))
-        await loadBusinessData()
+        
+        // Update the selected business locally
+        const updatedSelectedBusiness = {
+          ...selectedBusiness,
+          managers: selectedBusiness.managers.filter(manager => manager.managerId !== managerId)
+        }
+        setSelectedBusiness(updatedSelectedBusiness)
+
+        // Update the businesses in the main state to keep everything in sync
+        setUserBusinesses(prev => ({
+          ownedBusinesses: prev.ownedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness
+              : business
+          ),
+          joinedBusinesses: prev.joinedBusinesses.map(business => 
+            business.id === selectedBusiness.id 
+              ? updatedSelectedBusiness  
+              : business
+          )
+        }))
+
+        setManagedBusinesses(prev => 
+          prev.map(business => 
+            business.id === selectedBusiness.id 
+              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
+              : business
+          )
+        )
+        
+        // Note: We don't reload data immediately to keep the dialog open
+        // Data will be refreshed when the dialog is closed
       } else {
         toast.error(result.error || t('dashboard.business.error'))
       }
@@ -843,7 +913,13 @@ export function BusinessManagement({
       )}
 
       {/* Manage Business Dialog */}
-      <Dialog open={manageDialogOpen} onOpenChange={setManageDialogOpen}>
+      <Dialog open={manageDialogOpen} onOpenChange={(open) => {
+        setManageDialogOpen(open)
+        // Refresh data when dialog is closed to get updated manager IDs
+        if (!open) {
+          loadBusinessData()
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col w-[95vw] sm:w-full">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>{t('business.management.manageTitle').replace('{name}', selectedBusiness?.name || '')}</DialogTitle>
@@ -1001,9 +1077,58 @@ export function BusinessManagement({
               <div className="mb-4">
                 <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.managers.current')}</h5>
                 <div className="space-y-2">
-                  <div className="text-sm text-muted-foreground">
-                    {t('business.managers.noManagers')}
-                  </div>
+                  {(selectedBusiness?.managers.length || 0) === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t('business.managers.noManagers')}</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {selectedBusiness?.managers.map((manager) => (
+                        <div key={manager.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
+                          <span>{manager.email}</span>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">
+                              {manager.access === 'admin' ? t('dashboard.business.admin') : t('dashboard.business.viewer')}
+                            </Badge>
+                            <Select 
+                              value={manager.access} 
+                              onValueChange={(value: 'admin' | 'viewer') => handleUpdateManagerAccess(manager.managerId, value)}
+                            >
+                              <SelectTrigger className="w-20 h-6 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="viewer">{t('dashboard.business.viewer')}</SelectItem>
+                                <SelectItem value="admin">{t('dashboard.business.admin')}</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground">
+                                  <UserMinus className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent className="w-[95vw] sm:w-full">
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{t('business.management.removeManager')}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {t('business.management.removeManagerConfirm').replace('{email}', manager.email)}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleRemoveManager(manager.managerId)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    {t('business.management.removeManagerAction')}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 

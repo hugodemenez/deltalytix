@@ -4,7 +4,24 @@ export default {
   'business.cta': 'Get Started',
   'business.cta.secondary': 'See Live Demo',
   'business.badge': 'ENTERPRISE',
-  'business.badge.description': 'Trusted by 500+ prop firms & fund managers',
+  'business.badge.description': 'Trusted by prop firms & fund managers',
+  
+  // Navbar translations
+  'business.navbar.features': 'Features',
+  'business.navbar.features.multiAccount': 'Multi-Account Management',
+  'business.navbar.features.teamAnalytics': 'Team Analytics',
+  'business.navbar.features.realTime': 'Real-Time Monitoring',
+  'business.navbar.features.riskManagement': 'Risk Management',
+  'business.navbar.roadmap': 'Roadmap',
+  'business.navbar.roadmap.q1': 'Q3 2025 - Core Features',
+  'business.navbar.roadmap.q2': 'Q4 2025 - Advanced Analytics',
+  'business.navbar.roadmap.q3': 'Q1 2026 - Enterprise API',
+  'business.navbar.roadmap.q4': 'Q2 2026 - Full Launch',
+  'business.navbar.pricing': 'Pricing',
+  'business.navbar.theme.change': 'Change theme',
+  'business.navbar.theme.light': 'Light',
+  'business.navbar.theme.dark': 'Dark',
+  'business.navbar.theme.system': 'System',
   
   // Hero section
   'business.hero.title': 'Know which traders make money in real-time',
@@ -32,22 +49,6 @@ export default {
   
   'business.features.api.title': 'Works With Any Broker',
   'business.features.api.description': 'Intelligent data imports from 50+ brokers. Track traders across multiple platforms with automatic synchronization - no matter where they trade.',
-  
-  // Benefits section
-  'business.benefits.title': 'Why 500+ Firms Switched to Deltalytix',
-  'business.benefits.description': 'See the results our clients get within 30 days',
-  
-  'business.benefits.performance.title': '34% Average Profit Increase',
-  'business.benefits.performance.description': 'Clients typically see 25-50% profit improvements by copying strategies from their best performers.',
-  
-  'business.benefits.scalability.title': 'Scale to 1000+ Traders',
-  'business.benefits.scalability.description': 'Built for high-frequency data and massive teams. One client monitors 2,000+ traders in real-time.',
-  
-  'business.benefits.security.title': 'Bank-Level Security (Actually)',
-  'business.benefits.security.description': 'Same encryption standards as Goldman Sachs. Full audit trails and SOC 2 certified.',
-  
-  'business.benefits.support.title': 'White-Glove Support Included',
-  'business.benefits.support.description': 'Dedicated success manager, 24/7 tech support, and free custom onboarding for all enterprise clients.',
   
   // Pricing section
   'business.pricing.title': 'Simple Enterprise Pricing',
@@ -308,6 +309,9 @@ export default {
   'business.management.removeTrader': 'Remove Trader',
   'business.management.removeTraderConfirm': 'Are you sure you want to remove "{email}" from this business? They will lose access to the business data.',
   'business.management.removeTraderAction': 'Remove Trader',
+  'business.management.removeManager': 'Remove Manager',
+  'business.management.removeManagerConfirm': 'Are you sure you want to remove "{email}" from this business? They will lose management access to the business.',
+  'business.management.removeManagerAction': 'Remove Manager',
   'business.management.cancelInvitation': 'Cancel Invitation',
   'business.management.cancelInvitationConfirm': 'Are you sure you want to cancel the invitation for "{email}"? They will no longer be able to join this business using this invitation.',
   'business.management.cancelInvitationAction': 'Cancel Invitation',
