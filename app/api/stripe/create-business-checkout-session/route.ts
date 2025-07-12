@@ -1,5 +1,3 @@
-'use server'
-
 import { NextResponse } from "next/server";
 import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/app/[locale]/(landing)/actions/stripe";
