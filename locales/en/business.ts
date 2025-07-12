@@ -29,39 +29,39 @@ export default {
   'business.hero.description': 'See exactly what your best traders do differently across any broker. Track every position, spot patterns that work, and turn insights into bigger profits - all in real-time.',
   
   // Features section
-  'business.features.title': 'Everything You Need to Scale Your Trading Firm',
+  'business.features.title': 'Everything you need to scale your trading firm',
   'business.features.description': 'The complete toolkit that turns trading data into actionable insights',
   
-  'business.features.multiAccount.title': 'Monitor All Accounts in One Place',
+  'business.features.multiAccount.title': 'Monitor all accounts in one place',
   'business.features.multiAccount.description': 'No more switching between 12 different platforms. See every trader, every account, every position on one screen.',
   
-  'business.features.teamAnalytics.title': 'Spot Your Star Performers Instantly',
+  'business.features.teamAnalytics.title': 'Spot your star performers instantly',
   'business.features.teamAnalytics.description': 'Know who\'s crushing it and who needs help. Identify winning patterns and replicate them across your team.',
   
-  'business.features.realTime.title': 'Get Alerts Before Losses Pile Up',
+  'business.features.realTime.title': 'Get alerts before losses pile up',
   'business.features.realTime.description': 'Instant notifications when traders hit risk limits or unusual patterns emerge. Stop problems before they drain your capital.',
   
-  'business.features.riskManagement.title': 'Prevent Blowups Before They Happen',
+  'business.features.riskManagement.title': 'Prevent blowups before they happen',
   'business.features.riskManagement.description': 'Advanced early warning system for position sizes, drawdowns, and correlated risks that could wipe out accounts.',
   
-  'business.features.compliance.title': 'Reports That Actually Save You Time',
+  'business.features.compliance.title': 'Reports that actually save you time',
   'business.features.compliance.description': 'One-click regulatory reports and investor updates. What used to take days now takes minutes.',
   
-  'business.features.api.title': 'Works With Any Broker',
+  'business.features.api.title': 'Works with any broker',
   'business.features.api.description': 'Intelligent data imports from 50+ brokers. Track traders across multiple platforms with automatic synchronization - no matter where they trade.',
   
   // Pricing section
-  'business.pricing.title': 'Simple Enterprise Pricing',
+  'business.pricing.title': 'Simple enterprise pricing',
   'business.pricing.description': 'One price. All features. No surprises.',
   
-  'business.pricing.contact': 'Get Custom Quote',
+  'business.pricing.contact': 'Get custom quote',
   'business.pricing.custom': 'Custom Plans Available',
   'business.pricing.features': 'Every feature included',
   'business.pricing.dedicated': 'Dedicated success manager',
   'business.pricing.onboarding': 'Free setup & training',
   
   // Testimonials
-  'business.testimonials.title': 'What Clients Say About Their Results',
+  'business.testimonials.title': 'What clients say about their results',
   'business.testimonials.description': 'Real firms. Real numbers. Real results.',
   
   'business.testimonials.quote1': 'We increased our profit per trader by 41% in 3 months. The multi-account view showed us patterns we never saw before.',
@@ -77,7 +77,7 @@ export default {
   'business.testimonials.role3': 'Risk Manager, Alpha Fund',
   
   // CTA sections
-  'business.cta.demo.title': 'See Your Trading Data Like Never Before',
+  'business.cta.demo.title': 'See your trading data like never before',
   'business.cta.demo.description': 'Book a 15-minute demo. See your actual data analyzed in real-time. No sales pitch.',
   'business.cta.demo.button': 'Book Free Demo',
   
@@ -86,12 +86,12 @@ export default {
   'business.cta.contact.button': 'Talk to an Expert',
   
   // Stats
-  'business.stats.traders': 'Active Traders',
-  'business.stats.accounts': 'Trading Accounts',
-  'business.stats.brokers': 'Supported Brokers',
+  'business.stats.traders': 'Active traders',
+  'business.stats.accounts': 'Trading accounts',
+  'business.stats.brokers': 'Supported brokers',
   
   // Use cases
-  'business.usecases.title': 'Built for Different Types of Trading Firms',
+  'business.usecases.title': 'Built for different types of trading firms',
   'business.usecases.description': 'Whatever you trade, however you trade it',
   
   'business.usecases.fund.title': 'Hedge Funds & Asset Managers',
@@ -107,12 +107,12 @@ export default {
   'business.usecases.institutional.description': 'Enterprise-grade platform that handles your volume and complexity. Built for the biggest players.',
   
   // Roadmap section
-  'business.roadmap.title': 'What\'s Coming Next',
+  'business.roadmap.title': 'What\'s coming next',
   'business.roadmap.description': 'Our development roadmap - what we\'re building for you',
   'business.roadmap.beta': 'BETA',
   'business.roadmap.beta.description': 'Currently in beta - new features launching monthly',
   
-  'business.roadmap.q1.title': 'Q1 2024',
+  'business.roadmap.q1.title': 'Q3 2025',
   'business.roadmap.q1.description': 'Foundation features that trading firms need most',
   'business.roadmap.q1.features': [
     'Multi-account dashboard',
@@ -121,7 +121,7 @@ export default {
     'API foundation'
   ],
   
-  'business.roadmap.q2.title': 'Q2 2024',
+  'business.roadmap.q2.title': 'Q4 2025',
   'business.roadmap.q2.description': 'Advanced features that prevent costly mistakes',
   'business.roadmap.q2.features': [
     'Real-time monitoring',
@@ -130,7 +130,7 @@ export default {
     'Advanced team analytics'
   ],
   
-  'business.roadmap.q3.title': 'Q3 2024',
+  'business.roadmap.q3.title': 'Q1 2026',
   'business.roadmap.q3.description': 'Enterprise features for serious scale',
   'business.roadmap.q3.features': [
     'Enterprise API',
@@ -139,7 +139,7 @@ export default {
     'SLA guarantees'
   ],
   
-  'business.roadmap.q4.title': 'Q4 2024',
+  'business.roadmap.q4.title': 'Q2 2026',
   'business.roadmap.q4.description': 'Complete enterprise platform',
   'business.roadmap.q4.features': [
     'Complete enterprise suite',
@@ -153,14 +153,14 @@ export default {
   'business.roadmap.completed': 'Completed',
   
   // CTA section
-  'business.cta.createAccount.title': 'Ready to Get Started?',
+  'business.cta.createAccount.title': 'Ready to get started?',
   'business.cta.createAccount.description': 'See why 500+ trading firms trust Deltalytix. Schedule a consultation today.',
   'business.cta.createAccount.button': 'Get Started',
   'business.cta.createAccount.subtext': 'Custom onboarding • Setup in 5 minutes • No long-term contracts',
   
   // Business management
-  'business.rename': 'Rename Business',
-  'business.rename.title': 'Rename Business',
+  'business.rename': 'Rename business',
+  'business.rename.title': 'Rename business',
   'business.rename.description': 'Enter a new name for your business',
   'business.rename.placeholder': 'Enter new business name',
   'business.rename.success': 'Business renamed successfully',
@@ -171,16 +171,16 @@ export default {
   
   // Business dashboard
   'business.dashboard.view': 'View',
-  'business.dashboard.title': 'Business Dashboard',
+  'business.dashboard.title': 'Business dashboard',
   'business.dashboard.description': 'View equity data for all traders in this business',
   
   // Trader management
   'business.traders': 'Traders',
-  'business.traders.current': 'Current Traders',
+  'business.traders.current': 'Current traders',
   'business.traders.noTraders': 'No traders yet.',
-  'business.traders.addNew': 'Add New Trader',
-  'business.traders.add': 'Add Trader',
-  'business.traders.add.title': 'Add Trader',
+  'business.traders.addNew': 'Add new trader',
+  'business.traders.add': 'Add trader',
+  'business.traders.add.title': 'Add trader',
   'business.traders.add.description': 'Send an invitation to a trader by email address',
   'business.traders.add.placeholder': 'Enter trader email address',
   'business.traders.add.success': 'Trader added successfully',
@@ -192,19 +192,19 @@ export default {
   
   // Manager management
   'business.managers': 'Managers',
-  'business.managers.current': 'Current Managers',
+  'business.managers.current': 'Current managers',
   'business.managers.noManagers': 'No managers yet.',
-  'business.managers.addNew': 'Add New Manager',
+  'business.managers.addNew': 'Add new manager',
   
   // Invitation system
   'business.invitations': 'Invitations',
-  'business.invitations.pending': 'Pending Invitations',
+  'business.invitations.pending': 'Pending invitations',
   
   // Dashboard no business found
-  'business.dashboard.noBusiness.title': 'No Businesses Found',
+  'business.dashboard.noBusiness.title': 'No businesses found',
   'business.dashboard.noBusiness.description': 'You don&apos;t have access to any businesses yet. Please create a business or join an existing one to view the dashboard.',
-  'business.dashboard.noBusiness.manageButton': 'Manage Businesses',
-  'business.dashboard.noBusiness.createButton': 'Create Business',
+  'business.dashboard.noBusiness.manageButton': 'Manage businesses',
+  'business.dashboard.noBusiness.createButton': 'Create business',
   'business.invitations.sent': 'Invitation sent successfully',
   'business.invitations.error': 'Failed to send invitation',
   'business.invitations.notFound': 'Invitation not found',
@@ -224,26 +224,26 @@ export default {
   'business.invitations.wrongEmail': 'This invitation was sent to a different email address',
   
   // Business join page
-  'business.join.title': 'Business Invitation',
+  'business.join.title': 'Business invitation',
   'business.join.subtitle': 'You&apos;ve been invited to join a business team',
   'business.join.loading': 'Loading invitation details...',
-  'business.join.invalid.title': 'Invalid Invitation',
+  'business.join.invalid.title': 'Invalid invitation',
   'business.join.invalid.description': 'The invitation you&apos;re looking for doesn&apos;t exist or has been removed.',
-  'business.join.notFound.title': 'Invitation Not Found',
+  'business.join.notFound.title': 'Invitation not found',
   'business.join.notFound.description': 'The invitation you&apos;re looking for doesn&apos;t exist or has been removed.',
-  'business.join.goToManage': 'Go to Business Management',
+  'business.join.goToManage': 'Go to business management',
   'business.join.details.title': 'Business invitation details',
-  'business.join.status.title': 'Invitation Status',
+  'business.join.status.title': 'Invitation status',
   'business.join.status.ready': 'Ready to join',
   'business.join.status.expired': 'Invitation has expired',
   'business.join.status.accepted': 'Already accepted',
   'business.join.status.unknown': 'Unknown status',
-  'business.join.details.invitedEmail': 'Invited Email',
-  'business.join.details.invitedOn': 'Invited On',
-  'business.join.details.expiresOn': 'Expires On',
+  'business.join.details.invitedEmail': 'Invited email',
+  'business.join.details.invitedOn': 'Invited on',
+  'business.join.details.expiresOn': 'Expires on',
   'business.join.action.description': 'Click the button below to join this business team. You&apos;ll have access to shared analytics and team features.',
-  'business.join.action.button': 'Join Business',
-  'business.join.action.joining': 'Joining Business...',
+  'business.join.action.button': 'Join business',
+  'business.join.action.joining': 'Joining business...',
   'business.join.action.alreadyAccepted': 'You have already accepted this invitation',
   'business.join.action.expired': 'This invitation has expired',
   'business.join.action.invalid': 'This invitation is no longer valid',
@@ -255,8 +255,8 @@ export default {
   'business.equity.individualTrades': 'Individual trades',
   'business.equity.filters': 'Filters',
   'business.equity.clear': 'Clear',
-  'business.equity.minimumTrades': 'Minimum Trades',
-  'business.equity.minimumTradedDays': 'Minimum Traded Days',
+  'business.equity.minimumTrades': 'Minimum trades',
+  'business.equity.minimumTradedDays': 'Minimum traded days',
   'business.equity.equity': 'Equity',
   'business.equity.all': 'All',
   'business.equity.positive': 'Positive',
@@ -280,22 +280,22 @@ export default {
   'business.equity.noUsersFound': 'No users found',
   
   // Business Management Component
-  'business.management.createBusiness': 'Create a New Business',
+  'business.management.createBusiness': 'Create a new business',
   'business.management.createBusinessDescription': 'Add another business to your portfolio',
-  'business.management.createFirstBusiness': 'Create Your First Business',
-  'business.management.createBusinessTitle': 'Create Business',
+  'business.management.createFirstBusiness': 'Create your first business',
+  'business.management.createBusinessTitle': 'Create business',
   'business.management.createBusinessDialogDescription': 'Create a new business to manage your trading team. Each business requires a subscription.',
-  'business.management.businessName': 'Business Name',
+  'business.management.businessName': 'Business name',
   'business.management.enterBusinessName': 'Enter business name',
-  'business.management.subscriptionRequired': 'Subscription Required',
+  'business.management.subscriptionRequired': 'Subscription required',
   'business.management.subscriptionDescription': 'Each business requires a subscription to access team features and analytics.',
   'business.management.includes': 'Includes:',
-  'business.management.startSubscription': 'Start Subscription',
+  'business.management.startSubscription': 'Start subscription',
   'business.management.saving': 'Saving...',
   'business.management.cancel': 'Cancel',
   'business.management.manage': 'Manage',
   'business.management.delete': 'Delete',
-  'business.management.deleteBusiness': 'Delete Business',
+  'business.management.deleteBusiness': 'Delete business',
   'business.management.deleteConfirm': 'Are you sure you want to delete "{name}"? This action cannot be undone and will permanently delete the business and all associated data.',
   'business.management.leave': 'Leave',
   'business.management.leaveConfirm': 'Are you sure you want to leave this business? You will lose access to all business data.',
@@ -306,15 +306,15 @@ export default {
   'business.management.created': 'Created',
   'business.management.member': 'Member',
   'business.management.pending': 'Pending',
-  'business.management.removeTrader': 'Remove Trader',
+  'business.management.removeTrader': 'Remove trader',
   'business.management.removeTraderConfirm': 'Are you sure you want to remove "{email}" from this business? They will lose access to the business data.',
-  'business.management.removeTraderAction': 'Remove Trader',
-  'business.management.removeManager': 'Remove Manager',
+  'business.management.removeTraderAction': 'Remove trader',
+  'business.management.removeManager': 'Remove manager',
   'business.management.removeManagerConfirm': 'Are you sure you want to remove "{email}" from this business? They will lose management access to the business.',
-  'business.management.removeManagerAction': 'Remove Manager',
-  'business.management.cancelInvitation': 'Cancel Invitation',
+  'business.management.removeManagerAction': 'Remove manager',
+  'business.management.cancelInvitation': 'Cancel invitation',
   'business.management.cancelInvitationConfirm': 'Are you sure you want to cancel the invitation for "{email}"? They will no longer be able to join this business using this invitation.',
-  'business.management.cancelInvitationAction': 'Cancel Invitation',
+  'business.management.cancelInvitationAction': 'Cancel invitation',
   'business.management.noPendingInvitations': 'No pending invitations.',
   'business.management.addNewBusiness': 'Add another business to your portfolio',
   'business.management.getStarted': 'Get started by creating your first business or joining an existing one',
