@@ -154,11 +154,7 @@ export default function BusinessNavbar() {
                         </ul>
                     </AccordionContent>
                 </AccordionItem>
-                <ul className='list-none'>
-                    <MobileNavItem href="/business#pricing" onClick={onLinkClick} className={cn(
-                        "flex flex-1 items-center justify-between py-4 font-medium transition-all hover:underline [&[data-state=open]>svg]:rotate-180 border-b",
-                    )}>{t('business.navbar.pricing')}</MobileNavItem>
-                </ul>
+
             </Accordion>
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
                 <Link href={"/dashboard"}>{t('business.cta')}</Link>
@@ -265,13 +261,7 @@ export default function BusinessNavbar() {
                                     </ul>
                                 </NavigationMenuContent>
                             </NavigationMenuItem>
-                            <NavigationMenuItem>
-                                <Link href="/business#pricing" legacyBehavior passHref>
-                                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
-                                        {t('business.navbar.pricing')}
-                                    </NavigationMenuLink>
-                                </Link>
-                            </NavigationMenuItem>
+
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
                         <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
