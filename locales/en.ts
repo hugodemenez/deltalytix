@@ -443,21 +443,21 @@ export default {
         'tooltip': 'Average time you hold your positions. This metric helps you understand your typical holding period and can be useful for identifying if you tend to hold positions too long or exit too quickly.'
     },
     'widgets.dailyTickTarget': {
-        'title': 'Daily Tick Target',
-        'tooltip': 'Track your daily tick targets and progress. Set targets for the number of ticks you want to achieve each day and monitor your progress in real-time.',
+        'title': 'Tick Target',
+        'tooltip': 'Track your tick targets and progress. Set targets for the number of ticks you want to achieve and monitor your progress in real-time. Works with single days or date ranges.',
         'current': 'Current',
         'target': 'Target',
         'progress': 'Progress',
+        'setTarget': 'Set Target',
+        'setTargetDescription': 'Set your tick target. Use the +/- buttons for quick adjustments or enter a specific value below.',
+        'noTargetSet': 'No target set. Click the target icon to set one.',
         'positive': 'Positive',
         'negative': 'Negative',
         'total': 'Total',
-        'setTarget': 'Set Target',
-        'setTargetDescription': 'Set your daily tick target. Use the +/- buttons for quick adjustments or enter a specific value below.',
-        'noTargetSet': 'No target set. Click the target icon to set one.',
         'displayMode': {
             'ticks': 'Ticks',
             'points': 'Points',
-            'tooltip': 'Toggle between ticks and points display (1 point = 4 ticks)'
+            'tooltip': 'Toggle between displaying values in ticks or points (1 point = 4 ticks)'
         }
     },
     'widgets.types.cumulativePnl': 'Cumulative PnL',

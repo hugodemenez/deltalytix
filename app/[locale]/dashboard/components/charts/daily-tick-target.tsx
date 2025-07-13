@@ -35,7 +35,7 @@ interface DailyTickTargetProps {
 }
 
 export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTargetProps) {
-  const { formattedTrades: trades } = useData()
+  const { formattedTrades: trades, dateRange } = useData()
   const t = useI18n()
   const tickDetails = useTickDetailsStore(state => state.tickDetails)
   const [targetValue, setTargetValue] = useState('')
@@ -63,24 +63,26 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
 
   // Calculate current day's ticks from trades
   useEffect(() => {
-    if (!trades.length) return
-
-    // Get unique dates from trades
-    const uniqueDates = [...new Set(trades
-      .filter(trade => trade.entryDate && !isNaN(new Date(trade.entryDate).getTime()))
-      .map(trade => new Date(trade.entryDate).toISOString().split('T')[0])
-    )]
-
-    // Determine display date
-    let displayDate: string
-    if (uniqueDates.length === 1) {
-      displayDate = uniqueDates[0]
+    // Determine display date/range based on date filter or today
+    let fromDate: string
+    let toDate: string
+    
+    if (dateRange && dateRange.from) {
+      // If there's a date filter, use the date range
+      fromDate = dateRange.from.toISOString().split('T')[0]
+      toDate = dateRange.to ? dateRange.to.toISOString().split('T')[0] : fromDate
     } else {
-      displayDate = new Date().toISOString().split('T')[0]
+      // No date filter, use today's date
+      const today = new Date().toISOString().split('T')[0]
+      fromDate = today
+      toDate = today
     }
-    setSelectedDate(displayDate)
-    console.error(displayDate)
+    
+    // Use the from date as the selected date for storage
+    setSelectedDate(fromDate)
+    console.error('Date range:', fromDate, 'to', toDate)
 
+    // Filter trades for the selected period (even if trades array is empty)
     const displayTrades = trades.filter(trade => {
       // Validate that entryDate exists and is valid
       if (!trade.entryDate) return false
@@ -89,50 +91,51 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
       if (isNaN(entryDate.getTime())) return false
       
       const tradeDate = entryDate.toISOString().split('T')[0]
-      return tradeDate === displayDate
+      // Check if trade date is within the range
+      return tradeDate >= fromDate && tradeDate <= toDate
     })
-    console.error(displayTrades)
+    console.error('Filtered trades for range:', displayTrades)
 
-    if (displayTrades.length === 0) return
-
-    // Calculate ticks breakdown for today
+    // Calculate ticks breakdown for the period (even if no trades)
     let totalTicks = 0
     let positiveTicks = 0
     let negativeTicks = 0
     let totalAbsoluteTicks = 0
     
-    displayTrades.forEach(trade => {
-      // Validate required fields
-      if (!trade.pnl || !trade.quantity || !trade.instrument) return
-      
-      // Fix ticker matching logic - sort by length descending to match longer tickers first
-      const matchingTicker = Object.keys(tickDetails)
-        .sort((a, b) => b.length - a.length)
-        .find(ticker => trade.instrument.includes(ticker))
-      
-      // Use tickValue (monetary value per tick) instead of tickSize (minimum price increment)
-      const tickValue = matchingTicker ? tickDetails[matchingTicker].tickValue : 1
-      
-      // Calculate PnL per contract first
-      const pnlPerContract = Number(trade.pnl) / Number(trade.quantity)
-      if (isNaN(pnlPerContract)) return
-      
-      const ticks = Math.round(pnlPerContract / tickValue)
-      if (!isNaN(ticks)) {
-        totalTicks += ticks
-        totalAbsoluteTicks += Math.abs(ticks)
+    if (displayTrades.length > 0) {
+      displayTrades.forEach(trade => {
+        // Validate required fields
+        if (!trade.pnl || !trade.quantity || !trade.instrument) return
         
-        if (ticks > 0) {
-          positiveTicks += ticks
-        } else {
-          negativeTicks += ticks
+        // Fix ticker matching logic - sort by length descending to match longer tickers first
+        const matchingTicker = Object.keys(tickDetails)
+          .sort((a, b) => b.length - a.length)
+          .find(ticker => trade.instrument.includes(ticker))
+        
+        // Use tickValue (monetary value per tick) instead of tickSize (minimum price increment)
+        const tickValue = matchingTicker ? tickDetails[matchingTicker].tickValue : 1
+        
+        // Calculate PnL per contract first
+        const pnlPerContract = Number(trade.pnl) / Number(trade.quantity)
+        if (isNaN(pnlPerContract)) return
+        
+        const ticks = Math.round(pnlPerContract / tickValue)
+        if (!isNaN(ticks)) {
+          totalTicks += ticks
+          totalAbsoluteTicks += Math.abs(ticks)
+          
+          if (ticks > 0) {
+            positiveTicks += ticks
+          } else {
+            negativeTicks += ticks
+          }
         }
-      }
-    })
+      })
+    }
 
-    // Update current ticks for today with breakdown
-    updateCurrent(displayDate, totalTicks, positiveTicks, negativeTicks, totalAbsoluteTicks)
-  }, [trades, tickDetails, updateCurrent])
+    // Always update current ticks for the period with breakdown (even if zero)
+    updateCurrent(fromDate, totalTicks, positiveTicks, negativeTicks, totalAbsoluteTicks)
+  }, [trades, tickDetails, updateCurrent, dateRange])
 
   const handleSaveTarget = () => {
     const targetDate = selectedDate

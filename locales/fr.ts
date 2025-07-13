@@ -436,28 +436,28 @@ export default {
     'widgets.types.weekdayPnl': 'P&L par jour',
     'widgets.types.pnlBySide': 'P&L par direction',
     'widgets.types.tickDistribution': 'Distribution des ticks',
-    'widgets.types.dailyTickTarget': 'Objectif Ticks Quotidien',
+    'widgets.types.dailyTickTarget': 'Objectif Ticks',
     'widgets.types.commissionsPnl': 'P&L et commissions',
     'widgets.types.averagePositionTime': 'Temps moyen en position',
     'widgets.averagePositionTime': {
         'tooltip': 'Affiche la durée moyenne pendant laquelle les traders conservent leurs positions pour chaque heure de la journée. Les barres plus longues indiquent des durées moyennes de détention plus longues.'
     },
     'widgets.dailyTickTarget': {
-        'title': 'Objectif Ticks Quotidien',
-        'tooltip': 'Suivez vos objectifs de ticks quotidiens et votre progression. Définissez des objectifs pour le nombre de ticks que vous souhaitez atteindre chaque jour et surveillez votre progression en temps réel.',
+        'title': 'Objectif Ticks',
+        'tooltip': 'Suivez vos objectifs de ticks et votre progression. Définissez des objectifs pour le nombre de ticks que vous souhaitez atteindre et surveillez votre progression en temps réel. Fonctionne avec des jours uniques ou des plages de dates.',
         'current': 'Actuel',
         'target': 'Objectif',
         'progress': 'Progression',
+        'setTarget': 'Définir l\'objectif',
+        'setTargetDescription': 'Définissez votre objectif de ticks. Utilisez les boutons +/- pour des ajustements rapides ou entrez une valeur spécifique ci-dessous.',
+        'noTargetSet': 'Aucun objectif défini. Cliquez sur l\'icône cible pour en définir un.',
         'positive': 'Positif',
         'negative': 'Négatif',
         'total': 'Total',
-        'setTarget': 'Définir l\'objectif',
-        'setTargetDescription': 'Définissez votre objectif de ticks quotidien. Utilisez les boutons +/- pour des ajustements rapides ou entrez une valeur spécifique ci-dessous.',
-        'noTargetSet': 'Aucun objectif défini. Cliquez sur l\'icône cible pour en définir un.',
         'displayMode': {
             'ticks': 'Ticks',
             'points': 'Points',
-            'tooltip': 'Basculer entre l\'affichage en ticks et en points (1 point = 4 ticks)'
+            'tooltip': 'Basculer entre l\'affichage en ticks ou en points (1 point = 4 ticks)'
         }
     },
     'widgets.types.cumulativePnl': 'P&L cumulé',
