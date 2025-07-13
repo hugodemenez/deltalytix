@@ -448,9 +448,17 @@ export default {
         'current': 'Current',
         'target': 'Target',
         'progress': 'Progress',
+        'positive': 'Positive',
+        'negative': 'Negative',
+        'total': 'Total',
         'setTarget': 'Set Target',
         'setTargetDescription': 'Set your daily tick target. Use the +/- buttons for quick adjustments or enter a specific value below.',
-        'noTargetSet': 'No target set. Click the target icon to set one.'
+        'noTargetSet': 'No target set. Click the target icon to set one.',
+        'displayMode': {
+            'ticks': 'Ticks',
+            'points': 'Points',
+            'tooltip': 'Toggle between ticks and points display (1 point = 4 ticks)'
+        }
     },
     'widgets.types.cumulativePnl': 'Cumulative PnL',
     'widgets.types.longShortPerformance': 'Long/Short Ratio',

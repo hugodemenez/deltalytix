@@ -448,9 +448,17 @@ export default {
         'current': 'Actuel',
         'target': 'Objectif',
         'progress': 'Progression',
+        'positive': 'Positif',
+        'negative': 'Négatif',
+        'total': 'Total',
         'setTarget': 'Définir l\'objectif',
         'setTargetDescription': 'Définissez votre objectif de ticks quotidien. Utilisez les boutons +/- pour des ajustements rapides ou entrez une valeur spécifique ci-dessous.',
-        'noTargetSet': 'Aucun objectif défini. Cliquez sur l\'icône cible pour en définir un.'
+        'noTargetSet': 'Aucun objectif défini. Cliquez sur l\'icône cible pour en définir un.',
+        'displayMode': {
+            'ticks': 'Ticks',
+            'points': 'Points',
+            'tooltip': 'Basculer entre l\'affichage en ticks et en points (1 point = 4 ticks)'
+        }
     },
     'widgets.types.cumulativePnl': 'P&L cumulé',
     'widgets.types.longShortPerformance': 'Performance Long/Short',

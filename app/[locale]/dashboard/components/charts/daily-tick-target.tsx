@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Target, HelpCircle, Plus, Minus } from "lucide-react"
+import { Target, HelpCircle, Plus, Minus, ArrowUp, ArrowDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { Info } from 'lucide-react'
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/tooltip"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -39,23 +40,48 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
   const tickDetails = useTickDetailsStore(state => state.tickDetails)
   const [targetValue, setTargetValue] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  // Add selectedDate state
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0])
   
   const { 
     getTodayTarget, 
     getTodayProgress, 
     setTarget, 
-    updateCurrent 
+    updateCurrent,
+    displayMode,
+    setDisplayMode,
+    convertToDisplayValue,
+    convertFromDisplayValue,
+    getDisplayUnit,
+    getTarget, // Added getTarget
+    getProgress // Added getProgress
   } = useDailyTickTargetStore()
 
-  const todayTarget = getTodayTarget()
-  const progress = getTodayProgress()
+  // Use selectedDate for fetching progress
+  const todayTarget = getTarget(selectedDate)
+  const progress = getProgress(selectedDate) || { current: 0, target: 0, percentage: 0, positive: 0, negative: 0, total: 0 }
 
   // Calculate current day's ticks from trades
   useEffect(() => {
     if (!trades.length) return
 
-    const today = new Date().toISOString().split('T')[0]
-    const todayTrades = trades.filter(trade => {
+    // Get unique dates from trades
+    const uniqueDates = [...new Set(trades
+      .filter(trade => trade.entryDate && !isNaN(new Date(trade.entryDate).getTime()))
+      .map(trade => new Date(trade.entryDate).toISOString().split('T')[0])
+    )]
+
+    // Determine display date
+    let displayDate: string
+    if (uniqueDates.length === 1) {
+      displayDate = uniqueDates[0]
+    } else {
+      displayDate = new Date().toISOString().split('T')[0]
+    }
+    setSelectedDate(displayDate)
+    console.error(displayDate)
+
+    const displayTrades = trades.filter(trade => {
       // Validate that entryDate exists and is valid
       if (!trade.entryDate) return false
       
@@ -63,14 +89,19 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
       if (isNaN(entryDate.getTime())) return false
       
       const tradeDate = entryDate.toISOString().split('T')[0]
-      return tradeDate === today
+      return tradeDate === displayDate
     })
+    console.error(displayTrades)
 
-    if (todayTrades.length === 0) return
+    if (displayTrades.length === 0) return
 
-    // Calculate total ticks for today
+    // Calculate ticks breakdown for today
     let totalTicks = 0
-    todayTrades.forEach(trade => {
+    let positiveTicks = 0
+    let negativeTicks = 0
+    let totalAbsoluteTicks = 0
+    
+    displayTrades.forEach(trade => {
       // Validate required fields
       if (!trade.pnl || !trade.quantity || !trade.instrument) return
       
@@ -89,26 +120,35 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
       const ticks = Math.round(pnlPerContract / tickValue)
       if (!isNaN(ticks)) {
         totalTicks += ticks
+        totalAbsoluteTicks += Math.abs(ticks)
+        
+        if (ticks > 0) {
+          positiveTicks += ticks
+        } else {
+          negativeTicks += ticks
+        }
       }
     })
 
-    // Update current ticks for today
-    updateCurrent(today, totalTicks)
+    // Update current ticks for today with breakdown
+    updateCurrent(displayDate, totalTicks, positiveTicks, negativeTicks, totalAbsoluteTicks)
   }, [trades, tickDetails, updateCurrent])
 
   const handleSaveTarget = () => {
-    const today = new Date().toISOString().split('T')[0]
-    const newTarget = parseInt(targetValue) || 0
-    setTarget(today, newTarget)
+    const targetDate = selectedDate
+    const displayValue = parseInt(targetValue) || 0
+    const tickValue = convertFromDisplayValue(displayValue)
+    setTarget(targetDate, tickValue)
     setTargetValue('')
     setIsDialogOpen(false)
   }
 
   const handleQuickIncrement = (increment: number) => {
-    const today = new Date().toISOString().split('T')[0]
+    const targetDate = selectedDate
     const currentTarget = todayTarget?.target || 0
-    const newTarget = Math.max(0, currentTarget + increment)
-    setTarget(today, newTarget)
+    const displayIncrement = convertFromDisplayValue(increment)
+    const newTarget = Math.max(0, currentTarget + displayIncrement)
+    setTarget(targetDate, newTarget)
   }
 
   const isTargetSet = todayTarget && todayTarget.target > 0
@@ -145,6 +185,38 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
                 </TooltipContent>
               </UITooltip>
             </TooltipProvider>
+            
+            {/* Points/Ticks Toggle */}
+            <div className="flex items-center gap-2 ml-2">
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1.5">
+                      <span className={cn(
+                        "text-xs",
+                        displayMode === 'ticks' ? "font-medium" : "text-muted-foreground"
+                      )}>
+                        {t('widgets.dailyTickTarget.displayMode.ticks')}
+                      </span>
+                      <Switch
+                        checked={displayMode === 'points'}
+                        onCheckedChange={(checked) => setDisplayMode(checked ? 'points' : 'ticks')}
+                        className="h-4 w-8"
+                      />
+                      <span className={cn(
+                        "text-xs",
+                        displayMode === 'points' ? "font-medium" : "text-muted-foreground"
+                      )}>
+                        {t('widgets.dailyTickTarget.displayMode.points')}
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    <p>{t('widgets.dailyTickTarget.displayMode.tooltip')}</p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            </div>
           </div>
           
           {/* Target controls */}
@@ -187,13 +259,13 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <label className="text-sm font-medium">
-                      {t('widgets.dailyTickTarget.target')}
+                      {t('widgets.dailyTickTarget.target')} ({displayMode === 'points' ? t('widgets.dailyTickTarget.displayMode.points') : t('widgets.dailyTickTarget.displayMode.ticks')})
                     </label>
                     <Input
                       type="number"
                       value={targetValue}
                       onChange={(e) => setTargetValue(e.target.value)}
-                      placeholder={progress.target.toString()}
+                      placeholder={Math.round(convertToDisplayValue(progress.target)).toString()}
                       className="w-full"
                     />
                   </div>
@@ -222,10 +294,10 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
       >
         <div className="w-full h-full flex flex-col justify-center gap-4">
           {/* Current vs Target Display */}
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4 border-b pb-2">
             <div className="flex flex-col items-center gap-1">
               <span className={cn(
-                "text-muted-foreground",
+                "text-muted-foreground uppercase tracking-wide",
                 size === 'small-long' ? "text-xs" : "text-sm"
               )}>
                 {t('widgets.dailyTickTarget.current')}
@@ -233,46 +305,91 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
               <span className={cn(
                 "font-bold",
                 isOverTarget ? "text-green-500" : "text-foreground",
-                size === 'small-long' ? "text-lg" : "text-2xl"
+                size === 'small-long' ? "text-xl" : "text-3xl"
               )}>
-                {progress.current}
+                {Math.round(convertToDisplayValue(progress.current))}
+                <span className="text-sm font-normal ml-1 text-muted-foreground">
+                  {getDisplayUnit()}{progress.current !== 1 ? 's' : ''}
+                </span>
               </span>
             </div>
             
             <div className="flex flex-col items-center">
-              <span className="text-muted-foreground text-xs">/</span>
+              <span className="text-muted-foreground text-lg">/</span>
             </div>
             
             <div className="flex flex-col items-center gap-1">
               <span className={cn(
-                "text-muted-foreground",
+                "text-muted-foreground uppercase tracking-wide",
                 size === 'small-long' ? "text-xs" : "text-sm"
               )}>
                 {t('widgets.dailyTickTarget.target')}
               </span>
               <span className={cn(
                 "font-bold",
-                size === 'small-long' ? "text-lg" : "text-2xl"
+                size === 'small-long' ? "text-xl" : "text-3xl"
               )}>
-                {progress.target}
+                {Math.round(convertToDisplayValue(progress.target))}
+                <span className="text-sm font-normal ml-1 text-muted-foreground">
+                  {getDisplayUnit()}{progress.target !== 1 ? 's' : ''}
+                </span>
               </span>
+            </div>
+          </div>
+          
+          {/* Breakdown Display */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 p-2 rounded-md">
+              <ArrowUp className="h-4 w-4 text-green-500" />
+              <div className="flex flex-col gap-0.5">
+                <span className={cn(
+                  "text-xs text-muted-foreground",
+                  size === 'small-long' ? "text-2xs" : "text-xs"
+                )}>
+                  {t('widgets.dailyTickTarget.positive')}
+                </span>
+                <span className={cn(
+                  "font-semibold text-green-500",
+                  size === 'small-long' ? "text-sm" : "text-base"
+                )}>
+                  {Math.round(convertToDisplayValue(progress.positive))}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 bg-red-50 dark:bg-red-900/20 p-2 rounded-md">
+              <ArrowDown className="h-4 w-4 text-red-500" />
+              <div className="flex flex-col gap-0.5">
+                <span className={cn(
+                  "text-xs text-muted-foreground",
+                  size === 'small-long' ? "text-2xs" : "text-xs"
+                )}>
+                  {t('widgets.dailyTickTarget.negative')}
+                </span>
+                <span className={cn(
+                  "font-semibold text-red-500",
+                  size === 'small-long' ? "text-sm" : "text-base"
+                )}>
+                  {Math.round(convertToDisplayValue(progress.negative))}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Progress Bar */}
           {isTargetSet && (
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="flex justify-between items-center">
                 <span className={cn(
                   "text-muted-foreground",
-                  size === 'small-long' ? "text-xs" : "text-sm"
+                  size === 'small-long' ? "text-2xs" : "text-xs"
                 )}>
                   {t('widgets.dailyTickTarget.progress')}
                 </span>
                 <span className={cn(
                   "font-medium",
                   isOverTarget ? "text-green-500" : "text-foreground",
-                  size === 'small-long' ? "text-xs" : "text-sm"
+                  size === 'small-long' ? "text-2xs" : "text-xs"
                 )}>
                   {Math.round(progress.percentage)}%
                 </span>
@@ -280,7 +397,7 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
               <Progress 
                 value={progress.percentage} 
                 className={cn(
-                  "h-3",
+                  "h-2",
                   isOverTarget ? "bg-green-100 dark:bg-green-900/20" : ""
                 )}
               />
@@ -289,8 +406,8 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
 
           {/* No target set message */}
           {!isTargetSet && (
-            <div className="flex flex-col items-center gap-2 text-center">
-              <Target className="h-8 w-8 text-muted-foreground/50" />
+            <div className="flex flex-col items-center gap-2 text-center py-2">
+              <Target className="h-6 w-6 text-muted-foreground/50" />
               <span className={cn(
                 "text-muted-foreground",
                 size === 'small-long' ? "text-xs" : "text-sm"
