@@ -21,8 +21,8 @@ const translations = {
   fr: {
     title: '404 - Page introuvable',
     heading: 'Oups ! Page introuvable',
-    description: 'La page que vous recherchez n\'existe pas ou a été déplacée.',
-    goHome: 'Retour à l\'accueil',
+    description: 'La page que vous recherchez n&apos;existe pas ou a été déplacée.',
+    goHome: 'Retour à l&apos;accueil',
     goBack: 'Retourner',
     searchPlaceholder: 'Rechercher une page...',
     searchComingSoon: 'Fonctionnalité de recherche bientôt disponible'
@@ -170,13 +170,13 @@ function NotFoundContent() {
           Page introuvable
         </h2>
         <p className="text-muted-foreground mb-8 text-center max-w-md leading-relaxed">
-          La page que vous recherchez n'existe pas ou a été déplacée.
+          La page que vous recherchez n&apos;existe pas ou a été déplacée.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
           <Button asChild variant="default" className="flex-1">
             <Link href="/">
               <Home className="w-4 h-4 mr-2" />
-              Retour à l'accueil
+              Retour à l&apos;accueil
             </Link>
           </Button>
         </div>

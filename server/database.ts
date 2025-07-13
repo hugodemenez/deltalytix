@@ -120,10 +120,10 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
 }
 
 
-export async function getTradesAction(): Promise<Trade[]> {
+export async function getTradesAction(userId: string | null = null): Promise<Trade[]> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    if (!user && !userId) {
       throw new Error('User not found')
     }
 
@@ -135,7 +135,7 @@ export async function getTradesAction(): Promise<Trade[]> {
     // Per page
     const query: any = {
       where: { 
-        userId: user.id,
+        userId: userId || user?.id,
        }
     }
     if (!isSubscribed) {
@@ -149,7 +149,7 @@ export async function getTradesAction(): Promise<Trade[]> {
     const totalPages = Math.ceil(count / chunkSize)
     const trades: Trade[] = []
     for (let page = 1; page <= totalPages; page++) {
-      const pageTrades = await getCachedTrades(user.id, isSubscribed, page, chunkSize)
+      const pageTrades = await getCachedTrades(userId || user?.id || '', isSubscribed, page, chunkSize)
       trades.push(...pageTrades)
     }
     console.log(`[getTrades] Found ${count} trades fetched ${trades.length}`)

@@ -21,7 +21,7 @@ export const dynamicParams = false // Don't generate pages for non-existent slug
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
   const locales = ['en', 'fr']
-  const paths = []
+  const paths: Array<{ locale: string; slug: string }> = []
 
   for (const locale of locales) {
     const posts = await getAllPosts(locale)

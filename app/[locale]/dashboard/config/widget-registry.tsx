@@ -202,7 +202,7 @@ function createMindsetPreview() {
   )
 }
 
-function createCalendarPreview() {
+function CreateCalendarPreview() {
   const t = useI18n()
   const weekdays = [
     'calendar.weekdays.sun',
@@ -269,7 +269,7 @@ function createCalendarPreview() {
   )
 }
 
-function createChatPreview() {
+function CreateChatPreview() {
   const t = useI18n()
 
   return (
@@ -500,7 +500,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     category: 'other',
     previewHeight: 300,
     getComponent: ({ size }) => <ChatWidget size={size} />,
-    getPreview: () => createChatPreview()
+    getPreview: () => <CreateChatPreview />
   },
   calendarWidget: {
     type: 'calendarWidget',
@@ -509,7 +509,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     category: 'other',
     previewHeight: 500,
     getComponent: () => <CalendarPnl />,
-    getPreview: () => createCalendarPreview()
+    getPreview: () => <CreateCalendarPreview />
   },
   tradeTableReview: {
     type: 'tradeTableReview',

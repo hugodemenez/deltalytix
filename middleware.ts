@@ -47,8 +47,8 @@ async function updateSession(request: NextRequest) {
     },
   )
 
-  let user = null
-  let error = null
+  let user: any = null
+  let error: unknown = null
 
   try {
     // Add timeout to prevent hanging requests
@@ -73,7 +73,7 @@ async function updateSession(request: NextRequest) {
   } else {
     response.headers.set("x-auth-status", "unauthenticated")
     if (error) {
-      response.headers.set("x-auth-error", error.message || "Unknown error")
+      response.headers.set("x-auth-error", (error as any).message || "Unknown error")
     }
   }
 
@@ -217,6 +217,7 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - api routes
+     * - opengraph-image (Open Graph image generation)
      * - public files with extensions
      */
     "/((?!_next/static|_next/image|favicon.ico|api|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",

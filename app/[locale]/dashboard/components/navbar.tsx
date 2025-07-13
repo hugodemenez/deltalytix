@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useData } from "@/context/data-provider"
-import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home, Moon, Sun, Laptop } from "lucide-react"
+import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home, Moon, Sun, Laptop, Settings } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -235,6 +235,15 @@ export default function Navbar() {
                           <LayoutDashboard className="mr-2 h-4 w-4" />
                           <span>{t('landing.navbar.dashboard')}</span>
                           <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard/settings">
+                        <div className="flex w-full">
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>{t('dashboard.settings')}</span>
+                          <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
                         </div>
                       </Link>
                     </DropdownMenuItem>
