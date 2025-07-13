@@ -69,18 +69,29 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
     
     if (dateRange && dateRange.from) {
       // If there's a date filter, use the date range
-      fromDate = dateRange.from.toISOString().split('T')[0]
-      toDate = dateRange.to ? dateRange.to.toISOString().split('T')[0] : fromDate
+      // Use local date formatting to avoid timezone issues
+      const formatLocalDate = (date: Date) => {
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      
+      fromDate = formatLocalDate(dateRange.from)
+      toDate = dateRange.to ? formatLocalDate(dateRange.to) : fromDate
     } else {
       // No date filter, use today's date
-      const today = new Date().toISOString().split('T')[0]
-      fromDate = today
-      toDate = today
+      const today = new Date()
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      const todayStr = `${year}-${month}-${day}`
+      fromDate = todayStr
+      toDate = todayStr
     }
     
     // Use the from date as the selected date for storage
     setSelectedDate(fromDate)
-    console.error('Date range:', fromDate, 'to', toDate)
 
     // Filter trades for the selected period (even if trades array is empty)
     const displayTrades = trades.filter(trade => {
@@ -94,7 +105,6 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
       // Check if trade date is within the range
       return tradeDate >= fromDate && tradeDate <= toDate
     })
-    console.error('Filtered trades for range:', displayTrades)
 
     // Calculate ticks breakdown for the period (even if no trades)
     let totalTicks = 0

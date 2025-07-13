@@ -173,6 +173,7 @@ export default {
     'filters.selectAllAccounts': 'Sélectionner tous les comptes',
     'filters.selectAllPropfirms': 'Sélectionner toutes les propfirms',
     'filters.selectAllInstruments': 'Sélectionner tous les instruments',
+    'filters.clearDate': 'Effacer la date',
     'filters.thisWeek': 'Cette semaine',
     'filters.thisMonth': 'Ce mois',
     'filters.lastThreeMonths': 'Derniers 3 mois',

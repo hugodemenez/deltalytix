@@ -252,6 +252,7 @@ export default {
         search: "Search...",
         noResults: "No results found",
         pickDate: "Pick a date range",
+        clearDate: "Clear date",
         singleDay: "Single Day",
         dateRange: "Date Range",
         thisWeek: "This Week",
