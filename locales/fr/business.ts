@@ -295,4 +295,17 @@ export default {
   'business.management.sharedAnalytics': 'Analyses partagées', 
   'business.management.managerAccessControls': 'Contrôles d\'accès des managers',
   'business.management.businessReporting': 'Rapports',
+  
+  // Business Management Component Customization
+  'business.management.component.title': 'Gestion des Business',
+  'business.management.component.description': 'Gérez vos business, équipes et contrôles d\'accès',
+  'business.management.component.createButtonText': 'Créer un Business',
+  'business.management.component.joinButtonText': 'Rejoindre un Business',
+  'business.management.component.emptyStateMessage': 'Aucun business trouvé',
+  'business.management.component.subscriptionFeatures': [
+    'Collaboration d\'équipe',
+    'Analyses partagées', 
+    'Contrôles d\'accès des managers',
+    'Rapports business'
+  ],
 } 

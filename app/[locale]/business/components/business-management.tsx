@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useI18n } from "@/locales/client"
+import { useState, useEffect, useCallback } from 'react'
+import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,74 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+
+// Currency detection hook (same as in pricing-plans.tsx)
+function useCurrency() {
+  const [currency, setCurrency] = useState<'USD' | 'EUR'>('USD')
+  const [symbol, setSymbol] = useState('$')
+  const locale = useCurrentLocale()
+
+  const detectCurrency = useCallback(() => {
+    // Eurozone countries as per official EU list
+    const eurozoneCountries = [
+      'AT', 'BE', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT',
+      'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES', 'CH',
+      // French overseas territories
+      'GP', 'MQ', 'GF', 'RE', 'YT', 'PM', 'BL', 'MF', 'NC', 'PF', 'WF', 'TF'
+    ]
+
+    // Function to set currency based on country code
+    const setCurrencyFromCountry = (countryCode: string) => {
+      const upperCountryCode = countryCode.toUpperCase()
+      if (eurozoneCountries.includes(upperCountryCode)) {
+        setCurrency('EUR')
+        setSymbol('€')
+        return true
+      } else {
+        setCurrency('USD')
+        setSymbol('$')
+        return true
+      }
+    }
+
+    // First, try to get country from cookie (set by middleware)
+    const getCookie = (name: string) => {
+      const value = `; ${document.cookie}`
+      const parts = value.split(`; ${name}=`)
+      if (parts.length === 2) return parts.pop()?.split(';').shift()
+      return null
+    }
+
+    const countryFromCookie = getCookie('user-country')
+    if (countryFromCookie) {
+      setCurrencyFromCountry(countryFromCookie)
+      return
+    }
+
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+
+    // Check if timezone indicates European location
+    const isEuropeanTimezone = timezone.startsWith('Europe/') ||
+      ['Paris', 'Berlin', 'Madrid', 'Rome', 'Amsterdam', 'Brussels', 'Vienna'].some(city => timezone.includes(city))
+
+    // Check if locale indicates European country
+    const isEuropeanLocale = /^(fr|de|es|it|nl|pt|el|fi|et|lv|lt|sl|sk|mt|cy)-/.test(locale)
+
+    if (isEuropeanTimezone || isEuropeanLocale) {
+      setCurrency('EUR')
+      setSymbol('€')
+    } else {
+      setCurrency('USD')
+      setSymbol('$')
+    }
+  }, [locale])
+
+  useEffect(() => {
+    detectCurrency()
+  }, [detectCurrency])
+
+  return { currency, symbol }
+}
 import {
   Dialog,
   DialogContent,
@@ -81,41 +149,30 @@ interface ManagedBusiness extends Business {
 }
 
 interface BusinessManagementProps {
-  // Customization
-  title?: string
-  description?: string
-  showCreateButton?: boolean
-  showJoinButton?: boolean
+  // Event handlers
   onBusinessClick?: (business: Business) => void
   onManageClick?: (business: Business) => void
   onViewClick?: (business: Business) => void
-  createButtonText?: string
-  joinButtonText?: string
-  emptyStateMessage?: string
-  subscriptionPrice?: string
-  subscriptionFeatures?: string[]
 }
 
 export function BusinessManagement({
-  title,
-  description,
-  showCreateButton = true,
-  showJoinButton = false,
   onBusinessClick,
   onManageClick,
   onViewClick,
-  createButtonText,
-  joinButtonText,
-  emptyStateMessage,
-  subscriptionPrice = "$500/month per business",
-  subscriptionFeatures = [
-    'Team collaboration',
-    'Shared analytics', 
-    'Manager access controls',
-    'Business reporting'
-  ]
 }: BusinessManagementProps) {
   const t = useI18n()
+  const { currency, symbol } = useCurrency()
+  
+  // Get subscription price based on detected currency
+  const subscriptionPrice = currency === 'EUR' ? '€500/month per business' : '$500/month per business'
+  
+  // Get subscription features from translations
+  const subscriptionFeatures = [
+    t('business.management.teamCollaboration'),
+    t('business.management.sharedAnalytics'), 
+    t('business.management.managerAccessControls'),
+    t('business.management.businessReporting')
+  ]
   
   // State
   const [userBusinesses, setUserBusinesses] = useState<{
@@ -185,12 +242,18 @@ export function BusinessManagement({
       form.method = 'POST'
       form.action = '/api/stripe/create-business-checkout-session'
       
-      const input = document.createElement('input')
-      input.type = 'hidden'
-      input.name = 'businessName'
-      input.value = newBusinessName.trim()
+      const businessNameInput = document.createElement('input')
+      businessNameInput.type = 'hidden'
+      businessNameInput.name = 'businessName'
+      businessNameInput.value = newBusinessName.trim()
       
-      form.appendChild(input)
+      const currencyInput = document.createElement('input')
+      currencyInput.type = 'hidden'
+      currencyInput.name = 'currency'
+      currencyInput.value = currency
+      
+      form.appendChild(businessNameInput)
+      form.appendChild(currencyInput)
       document.body.appendChild(form)
       form.submit()
     } catch (error) {
@@ -651,12 +714,11 @@ export function BusinessManagement({
 
   return (
     <div className="container mx-auto py-8 px-4">
-      {(title || description) && (
-        <div className="mb-8">
-          {title && <h1 className="text-3xl font-bold tracking-tight">{title}</h1>}
-          {description && <p className="text-muted-foreground mt-2">{description}</p>}
-        </div>
-      )}
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">{t('business.management.component.title')}</h1>
+        <p className="text-muted-foreground mt-2">{t('business.management.component.description')}</p>
+      </div>
 
       {/* Businesses Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -796,15 +858,15 @@ export function BusinessManagement({
           )
         })}
 
-        {/* Create New Business Card - only show if there's at least one business and showCreateButton is true */}
-        {filteredBusinesses.length > 0 && showCreateButton && (
+        {/* Create New Business Card - only show if there's at least one business */}
+        {filteredBusinesses.length > 0 && (
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
               <Card className="cursor-pointer transition-colors shadow-sm hover:shadow-md border-dashed border-2 border-muted-foreground/25 hover:border-primary/50">
                 <CardContent className="flex flex-col items-center justify-center h-48 p-6">
                   <Plus className="h-12 w-12 text-muted-foreground mb-4" />
                   <CardTitle className="text-lg text-center mb-2">
-                    {createButtonText || t('business.management.createBusiness')}
+                    {t('business.management.component.createButtonText')}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground text-center">
                     {t('business.management.createBusinessDescription')}
@@ -834,7 +896,7 @@ export function BusinessManagement({
                 <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{t('business.management.subscriptionRequired')}</span>
-                    <Badge variant="secondary">{subscriptionPrice}</Badge>
+                    <Badge variant="secondary">{currency === 'EUR' ? '€500/month per business' : '$500/month per business'}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {t('business.management.subscriptionDescription')}
@@ -875,17 +937,17 @@ export function BusinessManagement({
         <div className="text-center py-12">
           <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">
-            {emptyStateMessage || t('business.dashboard.noBusiness.title')}
+            {t('business.management.component.emptyStateMessage')}
           </h3>
           <p className="text-muted-foreground mb-4">
             {t('business.management.getStarted')}
           </p>
-          {showCreateButton && (
+          {(
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  {createButtonText || t('business.management.createFirstBusiness')}
+                  {t('business.management.component.createButtonText')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
@@ -910,7 +972,7 @@ export function BusinessManagement({
                   <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{t('business.management.subscriptionRequired')}</span>
-                      <Badge variant="secondary">{subscriptionPrice}</Badge>
+                      <Badge variant="secondary">{currency === 'EUR' ? '€500/month per business' : '$500/month per business'}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       {t('business.management.subscriptionDescription')}

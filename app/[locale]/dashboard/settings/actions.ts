@@ -5,7 +5,7 @@ import auth from '@/locales/en/auth'
 import { createClient } from '@/server/auth'
 import { revalidatePath } from 'next/cache'
 
-export async function createBusiness(name: string) {
+export async function createBusiness(name: string, currency: 'USD' | 'EUR' = 'USD') {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -16,6 +16,7 @@ export async function createBusiness(name: string) {
     // Redirect to Stripe checkout for business subscription
     const formData = new FormData()
     formData.append('businessName', name)
+    formData.append('currency', currency)
     
     const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/create-business-checkout-session`, {
       method: 'POST',

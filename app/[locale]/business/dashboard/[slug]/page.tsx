@@ -1,4 +1,6 @@
-import { Suspense } from 'react'
+'use client'
+
+import { Suspense, useState, useEffect } from 'react'
 import { BusinessEquityDashboard } from '../../components/user-equity/business-equity-dashboard'
 import { BusinessManagement } from '../../components/business-management'
 
@@ -8,27 +10,23 @@ interface BusinessDashboardPageProps {
   }>
 }
 
-export default async function BusinessDashboardPage({ params }: BusinessDashboardPageProps) {
-  const { slug } = await params
+export default function BusinessDashboardPage({ params }: BusinessDashboardPageProps) {
+  const [slug, setSlug] = useState<string>('')
+
+  // Handle async params
+  useEffect(() => {
+    params.then(({ slug }) => setSlug(slug))
+  }, [params])
+  
+  if (!slug) {
+    return <div>Loading...</div>
+  }
   
   return (
     <div className="space-y-6">
       {/* Business Management Section */}
       <Suspense fallback={<div>Loading business management...</div>}>
         <BusinessManagement
-          title="Business Management"
-          description="Manage your business settings and team members"
-          showCreateButton={true}
-          showJoinButton={false}
-          createButtonText="Create New Business"
-          emptyStateMessage="No businesses found"
-          subscriptionPrice="$500/month per business"
-          subscriptionFeatures={[
-            'Team collaboration',
-            'Shared analytics', 
-            'Manager access controls',
-            'Business reporting'
-          ]}
         />
       </Suspense>
 
