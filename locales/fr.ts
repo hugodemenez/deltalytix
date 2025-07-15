@@ -1426,4 +1426,6 @@ export default {
             'userDoesNotExist': 'L\'utilisateur spécifié n\'existe pas'
         }
     },
+    'calendar.maxProfit': 'Max P',
+    'calendar.maxDD': 'Max DD',
 } as const
