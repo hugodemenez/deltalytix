@@ -124,7 +124,6 @@ const atasMappings: { [key: string]: string } = {
     "Open volume": "quantity",
     "Close time": "closeDate",
     "Close price": "closePrice",
-    "Close volume": "closeQuantity",
     "PnL": "pnl",
     "Comment": "comment"
 }
@@ -164,7 +163,6 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
         csvData.forEach(row => {
             const item: Partial<Trade> = {};
             let quantity = 0;
-            let closeQuantity = 0;
 
             headers.forEach((header, index) => {
                 if (atasMappings[header]) {
@@ -175,10 +173,6 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
                         case 'quantity':
                             quantity = Math.abs(parseFloat(String(cellValue)) || 0);
                             item[key] = quantity;
-                            break;
-                        case 'closeQuantity':
-                            closeQuantity = Math.abs(parseFloat(String(cellValue)) || 0);
-                            // We don't store closeQuantity in Trade model, but we use it for validation
                             break;
                         case 'pnl':
                             const { pnl, error } = formatPnl(cellValue)
@@ -208,9 +202,9 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
                         default:
                             // Convert to string for text fields, or keep as is for other types
                             if (typeof cellValue === 'string' || typeof cellValue === 'number') {
-                                item[key] = String(cellValue);
+                                (item as any)[key] = String(cellValue);
                             } else {
-                                item[key] = cellValue as any;
+                                (item as any)[key] = cellValue;
                             }
                     }
                 }
@@ -229,6 +223,9 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
             item.instrument = String(item.instrument).trim();
 
             // Validate that open and close quantities match (for complete trades)
+            const closeQuantityIndex = headers.findIndex(h => h === 'Close volume');
+            const closeQuantity = closeQuantityIndex >= 0 ? Math.abs(parseFloat(String(row[closeQuantityIndex])) || 0) : 0;
+            
             if (quantity !== closeQuantity) {
                 console.warn(`Quantity mismatch for ${item.instrument}: open=${quantity}, close=${closeQuantity}`);
                 // Still process the trade but use the open quantity
