@@ -1368,8 +1368,8 @@ export default {
         // ... existing upload translations ...
         pdfDescription: 'Téléchargez votre relevé PDF pour extraire les trades avec OCR',
         processing: 'Traitement du PDF en cours...',
-        dragAndDrop: 'Glissez et déposez votre PDF ici',
-        selectFile: 'Sélectionner un fichier PDF',
+        dragAndDrop: 'Glissez et déposez votre fichier ici',
+        selectFile: 'Sélectionner un fichier',
         viewRawData: 'Voir les données OCR brutes',
         rawOcrData: 'Données OCR brutes'
       },
