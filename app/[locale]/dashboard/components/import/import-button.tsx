@@ -24,6 +24,7 @@ import { useTradesStore } from '@/store/trades-store'
 import { usePdfProcessingStore } from '@/store/pdf-processing-store'
 import PdfUpload from './ibkr-pdf/pdf-upload'
 import PdfProcessing from './ibkr-pdf/pdf-processing'
+import AtasFileUpload from './atas/atas-file-upload'
 
 type ColumnConfig = {
   [key: string]: {
@@ -259,6 +260,19 @@ export default function ImportButton() {
     }
 
     if (Component === FileUpload) {
+      return (
+        <Component
+          importType={importType}
+          setRawCsvData={setRawCsvData}
+          setCsvData={setCsvData}
+          setHeaders={setHeaders}
+          setStep={setStep}
+          setError={setError}
+        />
+      )
+    }
+
+    if (Component === AtasFileUpload) {
       return (
         <Component
           importType={importType}
