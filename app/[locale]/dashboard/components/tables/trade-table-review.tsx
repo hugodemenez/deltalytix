@@ -14,9 +14,11 @@ import {
   VisibilityState,
   getExpandedRowModel,
   ExpandedState,
+  OnChangeFn,
 } from "@tanstack/react-table"
 import { Button } from '@/components/ui/button'
 import { ChevronRight, ChevronDown, ChevronLeft, Info } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { Trade } from '@prisma/client'
 import {
   Popover,
@@ -62,7 +64,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useUserStore } from '@/store/user-store'
+import { useTableConfigStore } from '@/store/table-config-store'
+import { useTickDetailsStore } from '@/store/tick-details-store'
 import { TradeImageEditor } from './trade-image-editor'
+import { ColumnConfigDialog } from '@/components/ui/column-config-dialog'
+import { calculateTicksAndPointsForTrades, calculateTicksAndPointsForGroupedTrade } from '@/lib/tick-calculations'
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -84,16 +90,70 @@ export function TradeTableReview() {
   } = useData()
   const tags = useUserStore(state => state.tags)
   const timezone = useUserStore(state => state.timezone)
+  const tickDetails = useTickDetailsStore(state => state.tickDetails)
 
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "entryDate", desc: true }
-  ])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  // Debug: Log tick details
+  console.log('Available tick details:', tickDetails)
+
+  // Get table configuration from store
+  const {
+    tables,
+    updateSorting,
+    updateColumnFilters,
+    updateColumnVisibilityState,
+    updatePageSize,
+    updateGroupingGranularity,
+  } = useTableConfigStore()
+
+  const tableConfig = tables['trade-table']
+  const [sorting, setSorting] = useState<SortingState>(tableConfig?.sorting || [{ id: "entryDate", desc: true }])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(tableConfig?.columnFilters || [])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(tableConfig?.columnVisibility || {})
   const [expanded, setExpanded] = useState<ExpandedState>({})
-  const [pageSize, setPageSize] = useState(10)
-  const [groupingGranularity, setGroupingGranularity] = useState<number>(0)
+  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 10)
+  const [groupingGranularity, setGroupingGranularity] = useState<number>(tableConfig?.groupingGranularity || 0)
   const [selectedTrades, setSelectedTrades] = useState<string[]>([])
+  const [showPoints, setShowPoints] = useState(false)
+
+  // Sync local state with store
+  React.useEffect(() => {
+    if (tableConfig) {
+      setSorting(tableConfig.sorting)
+      setColumnFilters(tableConfig.columnFilters)
+      setColumnVisibility(tableConfig.columnVisibility)
+      setPageSize(tableConfig.pageSize)
+      setGroupingGranularity(tableConfig.groupingGranularity)
+    }
+  }, [tableConfig])
+
+  // Update store when local state changes
+  const handleSortingChange: OnChangeFn<SortingState> = (updaterOrValue) => {
+    const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(sorting) : updaterOrValue
+    setSorting(newSorting)
+    updateSorting('trade-table', newSorting)
+  }
+
+  const handleColumnFiltersChange: OnChangeFn<ColumnFiltersState> = (updaterOrValue) => {
+    const newFilters = typeof updaterOrValue === 'function' ? updaterOrValue(columnFilters) : updaterOrValue
+    setColumnFilters(newFilters)
+    updateColumnFilters('trade-table', newFilters)
+  }
+
+  const handleColumnVisibilityChange: OnChangeFn<VisibilityState> = (updaterOrValue) => {
+    const newVisibility = typeof updaterOrValue === 'function' ? updaterOrValue(columnVisibility) : updaterOrValue
+    setColumnVisibility(newVisibility)
+    updateColumnVisibilityState('trade-table', newVisibility)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    updatePageSize('trade-table', newPageSize)
+  }
+
+  const handleGroupingGranularityChange = (newGranularity: number) => {
+    setGroupingGranularity(newGranularity)
+    updateGroupingGranularity('trade-table', newGranularity)
+  }
 
   const trades = contextTrades
 
@@ -322,7 +382,7 @@ export function TradeTableReview() {
     {
       accessorKey: "entryDate",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.entryDate')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.entryDate')} tableId="trade-table" />
       ),
       cell: ({ row }) => formatInTimeZone(new Date(row.original.entryDate), timezone, 'yyyy-MM-dd'),
       sortingFn: (rowA, rowB, columnId) => {
@@ -335,7 +395,7 @@ export function TradeTableReview() {
     {
       accessorKey: "instrument",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.instrument')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.instrument')} tableId="trade-table" />
       ),
       size: 120,
       cell: ({ row }) => {
@@ -350,7 +410,7 @@ export function TradeTableReview() {
     {
       accessorKey: "direction",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.direction')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.direction')} tableId="trade-table" />
       ),
       size: 100,
       cell: ({ row }) => {
@@ -375,7 +435,7 @@ export function TradeTableReview() {
     {
       accessorKey: "entryPrice",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.entryPrice')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.entryPrice')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const entryPrice = parseFloat(row.original.entryPrice)
@@ -390,7 +450,7 @@ export function TradeTableReview() {
     {
       accessorKey: "closePrice",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.exitPrice')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.exitPrice')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const exitPrice = parseFloat(row.original.closePrice)
@@ -405,7 +465,7 @@ export function TradeTableReview() {
     {
       accessorKey: "timeInPosition",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.positionTime')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.positionTime')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const timeInPosition = row.original.timeInPosition || 0
@@ -422,7 +482,7 @@ export function TradeTableReview() {
       accessorKey: "entryTime",
       accessorFn: (row) => row.entryDate,
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.entryTime')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.entryTime')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const dateStr = row.original.entryDate
@@ -433,7 +493,7 @@ export function TradeTableReview() {
     {
       accessorKey: "closeDate",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.exitTime')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.exitTime')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const dateStr = row.original.closeDate
@@ -444,7 +504,7 @@ export function TradeTableReview() {
     {
       accessorKey: "pnl",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.pnl')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.pnl')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const pnl = row.original.pnl
@@ -464,7 +524,7 @@ export function TradeTableReview() {
     {
       accessorKey: "commission",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Commission" />
+        <DataTableColumnHeader column={column} title="Commission" tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const commission = row.original.commission
@@ -479,7 +539,7 @@ export function TradeTableReview() {
     {
       accessorKey: "quantity",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.quantity')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.quantity')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const quantity = row.original.quantity
@@ -491,6 +551,48 @@ export function TradeTableReview() {
       },
       sortingFn: "basic",
       size: 100,
+    },
+    {
+      id: "ticksAndPoints",
+      header: ({ column }) => (
+        <DataTableColumnHeader 
+          column={column} 
+          title={showPoints ? t('trade-table.points') : t('trade-table.ticks')} 
+          tableId="trade-table" 
+          showFilter={true}
+          showToggle={true}
+          toggleLabel="Show Points"
+          toggleValue={showPoints}
+          onToggleChange={setShowPoints}
+        />
+      ),
+      accessorFn: (row) => {
+        const calculation = calculateTicksAndPointsForGroupedTrade(row, tickDetails)
+        return showPoints ? calculation.points : calculation.ticks
+      },
+      cell: ({ row }) => {
+        const calculation = calculateTicksAndPointsForGroupedTrade(row.original, tickDetails)
+        const value = showPoints ? calculation.points : calculation.ticks
+        return (
+          <div className="text-right font-medium">
+            <span className={cn(
+              value >= 0 ? 'text-green-600' : 'text-red-600'
+            )}>
+              {showPoints ? value.toFixed(2) : value}
+            </span>
+          </div>
+        )
+      },
+      sortingFn: "basic",
+      size: 100,
+      filterFn: (row, columnId, filterValue) => {
+        const value = row.getValue(columnId) as number
+        const { min, max } = filterValue as { min?: number; max?: number }
+        
+        if (min !== undefined && value < min) return false
+        if (max !== undefined && value > max) return false
+        return true
+      },
     },
     {
       id: "image",
@@ -550,7 +652,7 @@ export function TradeTableReview() {
     {
       accessorKey: "comment",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.comment')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.comment')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const trade = row.original
@@ -571,7 +673,7 @@ export function TradeTableReview() {
     {
       accessorKey: "videoUrl",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.videoUrl')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.videoUrl')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const trade = row.original
@@ -592,7 +694,7 @@ export function TradeTableReview() {
       },
       size: 200,
     }
-  ], [t, timezone, tags, expanded])
+  ], [t, timezone, tags, expanded, tickDetails, showPoints])
 
   const table = useReactTable({
     data: groupedTrades,
@@ -602,6 +704,10 @@ export function TradeTableReview() {
       columnFilters,
       columnVisibility,
       expanded,
+      pagination: {
+        pageIndex: 0,
+        pageSize,
+      },
     },
     paginateExpandedRows: false,
     onExpandedChange: setExpanded,
@@ -612,9 +718,9 @@ export function TradeTableReview() {
     getFilteredRowModel: getFilteredRowModel(),
     getRowCanExpand: (row) => row.original.trades.length > 0,
     getExpandedRowModel: getExpandedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
+    onSortingChange: handleSortingChange,
+    onColumnFiltersChange: handleColumnFiltersChange,
+    onColumnVisibilityChange: handleColumnVisibilityChange,
     defaultColumn: {
       size: 400,
       minSize: 100,
@@ -663,10 +769,25 @@ export function TradeTableReview() {
             )}
             <Select
               value={groupingGranularity.toString()}
-              onValueChange={(value) => setGroupingGranularity(parseInt(value))}
+              onValueChange={(value) => handleGroupingGranularityChange(parseInt(value))}
             >
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder={t('trade-table.granularity.label')} />
+                <div className="flex items-center w-full">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info 
+                          className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help mr-2" 
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="z-50">
+                        <p>{t('trade-table.granularity.tooltip')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <SelectValue placeholder={t('trade-table.granularity.label')} />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="0">{t('trade-table.granularity.exact')}</SelectItem>
@@ -676,16 +797,7 @@ export function TradeTableReview() {
                 <SelectItem value="60">{t('trade-table.granularity.oneMinute')}</SelectItem>
               </SelectContent>
             </Select>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t('trade-table.granularity.tooltip')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <ColumnConfigDialog tableId="trade-table" />
           </div>
         </div>
       </CardHeader>
@@ -788,7 +900,7 @@ export function TradeTableReview() {
             size="sm"
             onClick={() => {
               const newPageSize = pageSize + 10
-              setPageSize(newPageSize)
+              handlePageSizeChange(newPageSize)
               table.setPageSize(newPageSize)
             }}
           >
@@ -796,9 +908,9 @@ export function TradeTableReview() {
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            className="w-[180px] h-10"
             onClick={() => {
-              setPageSize(10)
+              handlePageSizeChange(10)
               table.resetPageSize()
             }}
           >

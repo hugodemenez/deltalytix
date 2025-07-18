@@ -42,7 +42,7 @@ interface AnalysisInsight {
 export function AnalysisOverview() {
   const t = useI18n()
   const currentLocale = useCurrentLocale()
-  const { analyzeSection, analyzeSectionDirect, isLoading, error, completionError } = useAnalysis()
+  const { analyzeSection, analyzeSectionDirect, analyzeAllSections, isLoading, error, completionError } = useAnalysis()
   const { getSectionData, getLastUpdated, clearCache } = useAnalysisStore()
   
   // Rate limiting state
@@ -151,14 +151,12 @@ export function AnalysisOverview() {
       return
     }
     
-    console.log('Starting analysis for all sections in parallel')
+    console.log('Starting analysis for all sections')
     setLastRequestTime(Date.now())
     
-    // Start all sections in parallel using direct API calls
-    sectionConfigs.forEach((config) => {
-      analyzeSectionDirect(config.key, currentLocale)
-    })
-  }, [checkRateLimit, currentLocale, analyzeSectionDirect, sectionConfigs])
+    // Use the analyzeAllSections function from the hook
+    analyzeAllSections(currentLocale)
+  }, [checkRateLimit, currentLocale, analyzeAllSections])
   
 
 
@@ -200,27 +198,37 @@ export function AnalysisOverview() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">{t('analysis.title')}</h2>
-          <p className="text-muted-foreground">{t('analysis.description')}</p>
+          <h2 className="text-3xl font-extrabold tracking-tight text-primary">{t('analysis.title')}</h2>
+          <p className="text-base text-muted-foreground">{t('analysis.description')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <Button 
+            onClick={handleAnalyzeAllSections}
+            variant="default"
+            size="default"
+            disabled={hasAnyLoading || isRateLimited}
+            className="flex items-center gap-2"
+          >
+            <Play className="h-5 w-5" />
+            {t('analysis.analyzeAll')}
+          </Button>
           <Button 
             onClick={handleClearCache}
             variant="ghost"
-            size="sm"
+            size="default"
             title={t('analysis.clearCache')}
             disabled={hasAnyLoading}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-5 w-5" />
           </Button>
           <Badge variant="secondary" className="flex items-center gap-2">
-            <Clock className="h-3 w-3" />
+            <Clock className="h-4 w-4" />
             {getLastUpdated() ? t('analysis.lastUpdated', { date: new Date(getLastUpdated()!).toLocaleDateString() }) : t('analysis.notAnalyzed')}
           </Badge>
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-8 md:grid-cols-2">
         {sectionConfigs.map((config) => {
           const sectionData = getSectionData(config.key)
           const Icon = config.icon
@@ -247,7 +255,7 @@ export function AnalysisOverview() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-6 w-6 text-primary" />
                       {config.title}
                     </CardTitle>
                     <CardDescription>{config.description}</CardDescription>
@@ -263,16 +271,15 @@ export function AnalysisOverview() {
                     )}
                   </div>
                 </div>
-                {sectionData && <Progress value={sectionData.score} className="w-full" />}
               </CardHeader>
               
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 {sectionData ? (
                   <>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <h4 className="font-medium text-sm text-muted-foreground">{t('analysis.keyInsights')}</h4>
                       {sectionData.insights.map((insight, insightIndex) => (
-                        <div key={insightIndex} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                        <div key={insightIndex} className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
                           {getInsightIcon(insight.type)}
                           <div className="flex-1">
                             <p className="text-sm">{insight.message}</p>
@@ -286,9 +293,9 @@ export function AnalysisOverview() {
                       ))}
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       <h4 className="font-medium text-sm text-muted-foreground">{t('analysis.recommendations')}</h4>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {sectionData.recommendations.map((rec, recIndex) => (
                           <div key={recIndex} className="flex items-start gap-2">
                             <div className="w-2 h-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
