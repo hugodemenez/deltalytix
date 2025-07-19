@@ -124,14 +124,14 @@ function PayoutDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl h-[75vh]">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] sm:max-w-3xl sm:max-h-[75vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{existingPayout ? t('propFirm.payout.edit') : t('propFirm.payout.add')}</DialogTitle>
           <DialogDescription>
             {existingPayout ? t('propFirm.payout.editDescription') : t('propFirm.payout.addDescription')} {accountNumber}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 sm:space-y-6 py-4">
           {/* Amount Input with Currency Symbol */}
           <div className="space-y-2">
             <Label htmlFor="amount">{t('propFirm.payout.amount')}</Label>
@@ -150,16 +150,16 @@ function PayoutDialog({
 
           {/* Date Selection */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <Label>{t('propFirm.payout.date')}</Label>
               <p className="text-sm text-muted-foreground">
                 {format(date, 'PPP', { locale: localeMap[params.locale as string] })}
               </p>
             </div>
-            <div className="flex justify-center rounded-md border">
+            <div className="flex justify-center rounded-md border overflow-hidden">
               <Calendar
                 mode="single"
-                numberOfMonths={2}
+                numberOfMonths={1}
                 selected={date}
                 onSelect={(newDate) => {
                   if (newDate) {
@@ -173,7 +173,7 @@ function PayoutDialog({
                 locale={localeMap[params.locale as string]}
                 showOutsideDays
                 fixedWeeks
-                className="rounded-md"
+                className="rounded-md w-full"
               />
             </div>
           </div>
@@ -181,17 +181,17 @@ function PayoutDialog({
           {/* Status Selection */}
           <div className="space-y-2">
             <Label htmlFor="status">{t('propFirm.payout.status')}</Label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {statusOptions.map((option) => (
                 <Button
                   key={option.value}
                   type="button"
                   variant={status === option.value ? "default" : "outline"}
-                  className="justify-start"
+                  className="justify-start text-xs sm:text-sm"
                   onClick={() => setStatus(option.value)}
                 >
                   {option.icon}
-                  <span className="ml-2">{option.label}</span>
+                  <span className="ml-1 sm:ml-2 truncate">{option.label}</span>
                 </Button>
               ))}
             </div>
