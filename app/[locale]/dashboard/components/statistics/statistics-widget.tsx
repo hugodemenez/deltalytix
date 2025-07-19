@@ -182,19 +182,7 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
               
               {/* Net Result */}
               <div className="flex justify-between items-center">
-                <div className="flex items-center gap-1">
-                  <span className="text-muted-foreground text-xs font-medium">{t('statistics.profitLoss.net')}</span>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent side="top">
-                        <p>{t('statistics.profitLoss.hoverInfo')}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
+                <span className="text-muted-foreground text-xs font-medium">{t('statistics.profitLoss.net')}</span>
                 <span className={cn(
                   "text-sm font-bold",
                   netPnlWithPayouts > 0 ? "text-green-500" : "text-red-500"
