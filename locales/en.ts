@@ -627,11 +627,16 @@ export default {
             highestDailyPnL: 'Highest Daily P&L',
             lowestDailyPnL: 'Lowest Daily P&L',
             noActivity: 'No Trading Activity',
-            showingTopAccounts: 'Showing {count} of {total} accounts'
+            showingTopAccounts: 'Showing {count} of {total} accounts',
+            resets: 'Account Resets',
+            payouts: 'Payouts',
+            accountReset: 'Account {account} reset'
         },
         legend: {
             title: 'Accounts',
-            accounts: 'accounts'
+            accounts: 'accounts',
+            payout: 'Payout',
+            reset: 'Reset'
         }
     },
     'pnl.title': 'Daily Profit/Loss',
@@ -897,6 +902,8 @@ export default {
     'toolbar.settings': 'Toolbar Settings',
     'toolbar.autoHide': 'Auto-hide',
     'toolbar.autoHideDescription': 'Automatically hide toolbar when not in use (like macOS dock)',
+    'toolbar.autoHideEnabled': 'Auto-hide enabled',
+    'toolbar.autoHideDisabled': 'Auto-hide disabled',
     'toolbar.position': 'Position',
     'toolbar.position.bottom': 'Bottom',
     'toolbar.position.top': 'Top',

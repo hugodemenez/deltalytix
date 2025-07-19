@@ -592,11 +592,16 @@ export default {
             highestDailyPnL: 'P&L Quotidien le Plus Haut',
             lowestDailyPnL: 'P&L Quotidien le Plus Bas',
             noActivity: 'Aucune Activité de Trading',
-            showingTopAccounts: 'Affichage de {count} sur {total} comptes'
+            showingTopAccounts: 'Affichage de {count} sur {total} comptes',
+            resets: 'Reset de Comptes',
+            payouts: 'Payouts',
+            accountReset: 'Compte {account} reset'
         },
         legend: {
             title: 'Comptes',
-            accounts: 'comptes'
+            accounts: 'comptes',
+            payout: 'Payout',
+            reset: 'Reset'
         }
     },
     'widgets.screenshot': 'Capture',
@@ -617,6 +622,8 @@ export default {
     'toolbar.settings': 'Paramètres de la barre d\'outils',
     'toolbar.autoHide': 'Masquage automatique',
     'toolbar.autoHideDescription': 'Masquer automatiquement la barre d\'outils quand elle n\'est pas utilisée (comme le dock macOS)',
+    'toolbar.autoHideEnabled': 'Masquage automatique activé',
+    'toolbar.autoHideDisabled': 'Masquage automatique désactivé',
     'toolbar.position': 'Position',
     'toolbar.position.bottom': 'Bas',
     'toolbar.position.top': 'Haut',

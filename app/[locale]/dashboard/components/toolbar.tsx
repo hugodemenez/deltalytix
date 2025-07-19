@@ -30,6 +30,7 @@ import { useState, useEffect, useRef } from "react"
 import { FilterDropdown } from "./filters/filter-dropdown"
 import { useToolbarSettingsStore } from "@/store/toolbar-settings-store"
 import { motion, AnimatePresence } from "framer-motion"
+import { toast } from "sonner"
 
 interface ToolbarProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
@@ -52,6 +53,21 @@ export function Toolbar({
   const t = useI18n()
   const { isMobile } = useData()
   const { settings, setAutoHide } = useToolbarSettingsStore()
+  
+  // Handle auto-hide toggle with proper state management
+  const handleAutoHideToggle = () => {
+    const newValue = !settings.autoHide
+    console.log('Toggling auto-hide from', settings.autoHide, 'to', newValue)
+    setAutoHide(newValue)
+    
+    // Show toast notification
+    toast.success(
+      newValue ? t('toolbar.autoHideEnabled') : t('toolbar.autoHideDisabled'),
+      {
+        duration: 2000,
+      }
+    )
+  }
   
   // Check if consent banner is visible
   const [isConsentVisible, setIsConsentVisible] = useState(false)
@@ -160,7 +176,7 @@ export function Toolbar({
   // Animation variants
   const toolbarVariants = {
     visible: {
-      opacity: settings.opacity,
+      opacity: 1, // Always use full opacity
       y: 0,
       scale: 1,
       transition: {
@@ -170,7 +186,7 @@ export function Toolbar({
       }
     },
     hidden: {
-      opacity: 1,
+      opacity: 1, // Always use full opacity
       y: Math.max(toolbarHeight - 4, 0), // Show just 4px at the bottom
       scale: 0.9,
       transition: {
@@ -273,18 +289,18 @@ export function Toolbar({
       
       <ContextMenuContent className="w-48">
         <ContextMenuItem 
-          onClick={() => setAutoHide(!settings.autoHide)}
+          onClick={handleAutoHideToggle}
         >
           <div className="flex items-center gap-2">
             <div className={cn(
-              "w-4 h-4 rounded border-2",
+              "w-4 h-4 rounded border-2 flex items-center justify-center",
               settings.autoHide ? "bg-primary border-primary" : "border-muted-foreground"
             )}>
               {settings.autoHide && (
-                <div className="w-full h-full bg-primary rounded-sm" />
+                <div className="w-2 h-2 bg-background rounded-sm" />
               )}
             </div>
-            {t('toolbar.autoHide')}
+            <span className="text-sm">{t('toolbar.autoHide')}</span>
           </div>
         </ContextMenuItem>
       </ContextMenuContent>
