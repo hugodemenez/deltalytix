@@ -39,7 +39,7 @@ export default function Home() {
   }, [])
 
   return (
-    <main ref={mainRef} className="flex w-full min-h-screen overflow-x-hidden" style={{ paddingTop: `calc(var(--navbar-height, 72px) + 60px)` }}>
+    <main ref={mainRef} className="flex w-full min-h-screen overflow-x-hidden" style={{ paddingTop: `calc(var(--navbar-height, 72px) + var(--tabs-height, 48px))` }}>
       <div className="flex flex-1 flex-col w-full px-4">
         <Tabs defaultValue="widgets" className="w-full h-full flex flex-col">
           {/* Fixed TabsList positioned under navbar */}
@@ -62,26 +62,26 @@ export default function Home() {
           
           <TabsContent 
             value="table" 
-            className="flex-1"
+            className="flex-1 -mt-16"
           >
             <TradeTableReview />
           </TabsContent>
           
           <TabsContent
             value="accounts"
-            className="flex-1"
+            className="flex-1 -mt-16"
           >
             <AccountsOverview size="large" />
           </TabsContent>
           
           <TabsContent
             value="analysis"
-            className="flex-1"
+            className="flex-1 -mt-16"
           >
             <AnalysisOverview />
           </TabsContent>
           
-          <TabsContent value="widgets" className="flex-1">
+          <TabsContent value="widgets" className="flex-1 -mt-20">
             <WidgetCanvas />
           </TabsContent>
         </Tabs>

@@ -172,7 +172,7 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
               {/* Profits */}
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.profits')}</span>
-                <span className="text-xs font-medium text-green-500 font-mono">{formatCurrency(grossWin)}</span>
+                <span className="text-xs font-medium text font-mono">{formatCurrency(grossWin)}</span>
               </div>
               
               {/* Losses */}
