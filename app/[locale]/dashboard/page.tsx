@@ -14,18 +14,28 @@ export default function Home() {
   const tabsListRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout
+
     const calculateHeight = () => {
-      // Get navbar height - it's fixed at the top
-      const navbar = document.querySelector('nav[class*="fixed"]') as HTMLElement
-      const navbarHeight = navbar?.offsetHeight || 72 // fallback to 72px
+      // Clear any pending timeout
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
 
-      // Get tabs list height
-      const tabsList = tabsListRef.current
-      const tabsListHeight = tabsList?.offsetHeight || 0
+      // Debounce the calculation to account for animations
+      timeoutId = setTimeout(() => {
+        // Get navbar height - it's fixed at the top
+        const navbar = document.querySelector('nav[class*="fixed"]') as HTMLElement
+        const navbarHeight = navbar?.offsetHeight || 96 // fallback to 96px
 
-      // Set CSS custom property for navbar height
-      document.documentElement.style.setProperty('--navbar-height', `${navbarHeight}px`)
-      document.documentElement.style.setProperty('--tabs-height', `${tabsListHeight}px`)
+        // Get tabs list height
+        const tabsList = tabsListRef.current
+        const tabsListHeight = tabsList?.offsetHeight || 0
+
+        // Set CSS custom property for navbar height
+        document.documentElement.style.setProperty('--navbar-height', `${navbarHeight}px`)
+        document.documentElement.style.setProperty('--tabs-height', `${tabsListHeight}px`)
+      }, 100) // Small delay to account for animation
     }
 
     // Calculate on mount
@@ -34,8 +44,50 @@ export default function Home() {
     // Recalculate on window resize
     window.addEventListener('resize', calculateHeight)
     
+    // Create a ResizeObserver to watch for navbar height changes (when filters appear/disappear)
+    const resizeObserver = new ResizeObserver(calculateHeight)
+    const navbar = document.querySelector('nav[class*="fixed"]')
+    if (navbar) {
+      resizeObserver.observe(navbar)
+    }
+
+    // Create a MutationObserver to watch for DOM changes when ActiveFilterTags appear/disappear
+    const mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        // Check if filter tags were added or removed
+        if (mutation.type === 'childList') {
+          const hasFilterTags = Array.from(mutation.addedNodes).some(node => 
+            node.nodeType === Node.ELEMENT_NODE && 
+            (node as Element).classList?.contains('border-t')
+          ) || Array.from(mutation.removedNodes).some(node => 
+            node.nodeType === Node.ELEMENT_NODE && 
+            (node as Element).classList?.contains('border-t')
+          )
+          
+          if (hasFilterTags) {
+            calculateHeight()
+          }
+        }
+      })
+    })
+
+    // Observe the navbar for DOM changes
+    if (navbar) {
+      mutationObserver.observe(navbar, {
+        childList: true,
+        subtree: true
+      })
+    }
+    
     // Cleanup
-    return () => window.removeEventListener('resize', calculateHeight)
+    return () => {
+      window.removeEventListener('resize', calculateHeight)
+      resizeObserver.disconnect()
+      mutationObserver.disconnect()
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+    }
   }, [])
 
   return (
