@@ -4,6 +4,7 @@ import { twMerge } from "tailwind-merge"
 import { format } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/app/[locale]/dashboard/types/statistics"
+import { Account } from "@/context/data-provider"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -27,7 +28,7 @@ export function parsePositionTime(timeInSeconds: number): string {
   return formattedTime;
 }
 
-export function calculateStatistics(trades: Trade[]): StatisticsProps {
+export function calculateStatistics(trades: Trade[], accounts: Account[] = []): StatisticsProps {
   if (!trades.length) {
     return {
       cumulativeFees: 0,
@@ -43,6 +44,9 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
       profitFactor: 1,
       grossLosses: 0,
       grossWin: 0,
+      // Payout statistics
+      totalPayouts: 0,
+      nbPayouts: 0,
     }
   }
 
@@ -60,6 +64,9 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
     profitFactor: 1,
     grossLosses: 0,
     grossWin: 0,
+    // Payout statistics
+    totalPayouts: 0,
+    nbPayouts: 0,
   };
 
   const statistics = trades.reduce((acc: StatisticsProps, trade: Trade) => {
@@ -87,6 +94,20 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
 
     return acc;
   }, initialStatistics);
+
+  // Get unique account numbers from the filtered trades
+  const tradeAccountNumbers = new Set(trades.map(trade => trade.accountNumber));
+  
+  // Calculate total payouts only from accounts that have trades in the current dataset
+  accounts.forEach(account => {
+    if (tradeAccountNumbers.has(account.number)) {
+      const payouts = account.payouts || [];
+      payouts.forEach(payout => {
+        statistics.totalPayouts += payout.amount;
+        statistics.nbPayouts++;
+      });
+    }
+  });
 
   const averageTimeInSeconds = Math.round(statistics.totalPositionTime / trades.length);
   statistics.averagePositionTime = parsePositionTime(averageTimeInSeconds);

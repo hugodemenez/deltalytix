@@ -927,7 +927,12 @@ export default {
             title: 'Profit/Loss',
             net: 'Net P&L',
             gross: 'Gross P&L',
-            fees: 'Total Fees'
+            fees: 'Total Fees',
+            payouts: 'Payouts',
+            profits: 'Profits',
+            losses: 'Losses',
+            breakdown: 'P&L Breakdown',
+            hoverInfo: 'Hover over the value for detailed breakdown'
         },
         performance: {
             title: 'Performance',
@@ -955,6 +960,16 @@ export default {
             longRate: 'Long Rate',
             shortRate: 'Short Rate',
             winningStreak: 'Best Streak'
+        },
+        payouts: {
+            title: 'Payouts',
+            total: 'Total Payouts',
+            paid: 'Paid Payouts',
+            pending: 'Pending Payouts',
+            count: 'Payout Count',
+            totalCount: 'Total Count',
+            avgPayout: 'Avg Payout',
+            payoutRate: 'Payout Rate'
         }
     },
     rithmic: {

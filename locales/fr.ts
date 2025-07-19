@@ -646,7 +646,12 @@ export default {
             title: 'Profits/Pertes',
             net: 'P&L Net',
             gross: 'P&L Brut',
-            fees: 'Frais Totaux'
+            fees: 'Frais Totaux',
+            payouts: 'Payouts',
+            profits: 'Profits',
+            losses: 'Pertes',
+            breakdown: 'Détail P&L',
+            hoverInfo: 'Survolez la valeur pour voir le détail'
         },
         performance: {
             title: 'Performance',
@@ -674,6 +679,16 @@ export default {
             longRate: 'Taux de Long',
             shortRate: 'Taux de Short',
             winningStreak: 'Meilleure Série'
+        },
+        payouts: {
+            title: 'Paiements',
+            total: 'Total des Paiements',
+            paid: 'Paiements Effectués',
+            pending: 'Paiements en Attente',
+            count: 'Nombre de Paiements',
+            totalCount: 'Nombre Total',
+            avgPayout: 'Paiement Moyen',
+            payoutRate: 'Taux de Paiement'
         }
     },
     common: {

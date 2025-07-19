@@ -36,8 +36,13 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
     cumulativePnl, cumulativeFees,
     winningStreak,
     grossLosses,
-    grossWin
+    grossWin,
+    totalPayouts,
+    nbPayouts
   } = statistics
+
+  // Calculate Net P&L including payouts
+  const netPnlWithPayouts = cumulativePnl - cumulativeFees - totalPayouts
 
   // Calculate rates
   const winRate = Number((nbWin / nbTrades * 100).toFixed(2))
@@ -147,26 +152,56 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
             size === 'tiny' ? "p-1.5" : "p-3"
           )}>
             <h3 className="text-xs font-medium mb-1.5">{t('statistics.profitLoss.title')}</h3>
-            <div className="flex-1 flex flex-col justify-center gap-1.5">
+            <div className="flex-1 flex flex-col justify-center gap-0.5">
+              {/* Profits */}
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.net')}</span>
+                <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.profits')}</span>
+                <span className="text-xs font-medium text-green-500">${grossWin.toFixed(2)}</span>
+              </div>
+              
+              {/* Losses */}
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">- {t('statistics.profitLoss.losses')}</span>
+                <span className="text-xs font-medium text-red-500">${grossLosses.toFixed(2)}</span>
+              </div>
+              
+              {/* Fees */}
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">- {t('statistics.profitLoss.fees')}</span>
+                <span className="text-xs font-medium text-red-500">${cumulativeFees.toFixed(2)}</span>
+              </div>
+              
+              {/* Payouts */}
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-xs">- {t('statistics.profitLoss.payouts')} ({nbPayouts})</span>
+                <span className="text-xs font-medium text-red-500">${totalPayouts.toFixed(2)}</span>
+              </div>
+              
+              {/* Divider */}
+              <div className="border-t border-dashed my-1"></div>
+              
+              {/* Net Result */}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground text-xs font-medium">{t('statistics.profitLoss.net')}</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>{t('statistics.profitLoss.hoverInfo')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <span className={cn(
-                  "text-sm font-medium",
-                  cumulativePnl - cumulativeFees > 0 ? "text-green-500" : "text-red-500"
+                  "text-sm font-bold",
+                  netPnlWithPayouts > 0 ? "text-green-500" : "text-red-500"
                 )}>
-                  ${(cumulativePnl - cumulativeFees).toFixed(2)}
+                  ${netPnlWithPayouts.toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.gross')}</span>
-                <span className="text-sm font-medium">${cumulativePnl.toFixed(2)}</span>
-              </div>
-              {size !== 'tiny' && (
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground text-xs">{t('statistics.profitLoss.fees')}</span>
-                  <span className="text-sm font-medium text-red-500">-${cumulativeFees.toFixed(2)}</span>
-                </div>
-              )}
             </div>
           </div>
 

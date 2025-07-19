@@ -4,7 +4,6 @@ const nextConfig = {
     remotePatterns: [
       {
         hostname: 'fhvmtnvjiotzztimdxbi.supabase.co',
-        hostname: 'v5.airtableusercontent.com',
       },
     ],
   },

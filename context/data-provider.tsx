@@ -86,6 +86,8 @@ type StatisticsProps = {
   profitFactor: number
   grossLosses: number
   grossWin: number
+  totalPayouts: number
+  nbPayouts: number
 }
 
 type CalendarData = {
@@ -811,7 +813,7 @@ export const DataProvider: React.FC<{
   ]);
 
   const statistics = useMemo(() => {
-    const stats = calculateStatistics(formattedTrades);
+    const stats = calculateStatistics(formattedTrades, accounts);
 
     // Calculate gross profits and gross losses including commissions
     const grossProfits = formattedTrades.reduce((sum, trade) => {
@@ -833,7 +835,7 @@ export const DataProvider: React.FC<{
       ...stats,
       profitFactor
     };
-  }, [formattedTrades]);
+  }, [formattedTrades, accounts]);
 
   const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades]);
 
