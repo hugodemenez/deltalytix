@@ -50,8 +50,14 @@ export function AccountTable({
   const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
 
+  // Helper function to safely calculate percentage of target
+  const calculatePercentageOfTarget = (runningBalance: number, startingBalance: number, profitTarget: number) => {
+    if (profitTarget <= 0) return '-'
+    return `${((runningBalance - startingBalance) / profitTarget * 100).toFixed(1)}%`
+  }
+
   // Check if account is configured and has no pending changes
-  const isConfigured =  !hasPendingChanges
+  const isConfigured = !hasPendingChanges
 
   if (!isConfigured) {
     return (
@@ -150,7 +156,7 @@ export function AccountTable({
           ${runningBalance.toFixed(2)}
         </TableCell>
         <TableCell className="text-right">
-          {((runningBalance - startingBalance) / profitTarget * 100).toFixed(1)}%
+          {calculatePercentageOfTarget(runningBalance, startingBalance, profitTarget)}
         </TableCell>
         <TableCell className="text-right">
           {percentageOfTotal !== null ? `${percentageOfTotal.toFixed(1)}%` : '-'}
@@ -236,7 +242,7 @@ export function AccountTable({
           ${runningBalance.toFixed(2)}
         </TableCell>
         <TableCell className="text-right">
-          {((runningBalance - startingBalance) / profitTarget * 100).toFixed(1)}%
+          {calculatePercentageOfTarget(runningBalance, startingBalance, profitTarget)}
         </TableCell>
         <TableCell className="text-right">
           {totalPnL > 0 ? '100%' : '-'}
