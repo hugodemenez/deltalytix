@@ -127,19 +127,6 @@ export function AnalysisOverview() {
     return 'text-red-600'
   }
 
-
-
-  const handleAnalyzeSection = useCallback((section: 'global' | 'instrument' | 'accounts' | 'timeOfDay') => {
-    if (checkRateLimit()) {
-      setIsRateLimited(true)
-      return
-    }
-    
-    console.log(`Starting analysis for section: ${section}`)
-    setLastRequestTime(Date.now())
-    analyzeSection(section, currentLocale)
-  }, [checkRateLimit, currentLocale, analyzeSection])
-
   const handleClearCache = useCallback(() => {
     if (hasAnyLoading) return
     clearCache()
@@ -237,8 +224,8 @@ export function AnalysisOverview() {
           // Debug logging
           console.log(`Section ${config.key}:`, { isCurrentlyLoading, hasData: !!sectionData })
           
-          // Show skeleton loader if currently loading
-          if (isCurrentlyLoading) {
+          // Show skeleton loader if currently loading or if any section is loading (for analyze all) and this section has no data
+          if ((isCurrentlyLoading || hasAnyLoading) && !sectionData) {
             return (
               <AnalysisSkeleton
                 key={config.key}
@@ -310,12 +297,6 @@ export function AnalysisOverview() {
                     <p className="text-muted-foreground mb-4">
                       {error[config.key] || t('analysis.noData')}
                     </p>
-                    <Button
-                      onClick={() => handleAnalyzeSection(config.key)}
-                      disabled={isCurrentlyLoading || isRateLimited}
-                    >
-                      {isCurrentlyLoading ? t('analysis.loading') : t('analysis.generate')}
-                    </Button>
                   </div>
                 )}
               </CardContent>
