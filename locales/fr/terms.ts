@@ -18,6 +18,8 @@ export default {
             subscriptionPayments: {
                 title: "4. Abonnement et paiements",
                 content: "Nous proposons des plans payants sur une base mensuelle, trimestrielle, annuelle et à vie. Le paiement est traité via Stripe. Les remboursements ne sont généralement pas fournis après la période d'abonnement, mais peuvent être considérés au cas par cas. Tout remboursement peut être soumis aux frais de traitement facturés par notre fournisseur de services de paiement.",
+                storageClarification: "Le stockage illimité prévu dans le plan à vie couvre les textes, images et documents standards liés aux trades. L'enregistrement ou le stockage de fichiers vidéo n'est pas pris en charge.",
+                fairUse: "Le terme \"illimité\" s'entend dans le cadre d'un usage normal et non abusif du service. Nous nous réservons le droit de limiter ou restreindre l'usage en cas d'utilisation excessive ou contraire à la finalité de la plateforme.",
                 lifetimePlan: {
                     title: "Conditions du plan à vie",
                     description: "Le plan \"À vie\" fournit l'accès au service Deltalytix pour la durée de vie opérationnelle du service, sous réserve des conditions suivantes :",
@@ -35,7 +37,8 @@ export default {
             },
             dataProtection: {
                 title: "6. Protection des données et confidentialité",
-                content: "Nous nous conformons au Règlement Général sur la Protection des Données (RGPD) et aux autres lois applicables sur la protection des données. Nous protégeons les données utilisateur en utilisant Supabase, qui est conforme SOC 2, et en anonymisant les données dans notre base de données. Nous n'utilisons pas de services d'analyse tiers. Pour plus d'informations, veuillez consulter notre Politique de confidentialité."
+                content: "Nous nous conformons au Règlement Général sur la Protection des Données (RGPD) et aux autres lois applicables sur la protection des données. Nous protégeons les données utilisateur en utilisant Supabase, qui est conforme SOC 2, et en anonymisant les données dans notre base de données. Nous n'utilisons pas de services d'analyse tiers. Pour plus d'informations, veuillez consulter notre Politique de confidentialité.",
+                dataExport: "Les utilisateurs peuvent, à tout moment, demander une copie de leurs données dans un format lisible (CSV, JSON)."
             },
             liability: {
                 title: "7. Limitation de responsabilité",
@@ -43,7 +46,7 @@ export default {
             },
             termination: {
                 title: "8. Résiliation",
-                content: "Nous nous réservons le droit de suspendre ou de résilier votre accès au service à tout moment pour toute raison, y compris mais sans s'y limiter à une violation de ces Conditions. Vous pouvez résilier votre compte à tout moment en nous contactant."
+                content: "Nous nous réservons le droit de suspendre ou de résilier votre accès au service à tout moment pour toute raison, y compris mais sans s'y limiter à une violation de ces Conditions. Vous pouvez résilier votre compte à tout moment directement depuis l'interface du service ou en nous contactant. Cette résiliation prendra effet immédiatement ou à la fin de votre période d'abonnement."
             },
             serviceAvailability: {
                 title: "9. Disponibilité et continuité du service",

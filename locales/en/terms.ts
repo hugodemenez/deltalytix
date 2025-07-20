@@ -18,6 +18,8 @@ export default {
             subscriptionPayments: {
                 title: "4. Subscription and Payments",
                 content: "We offer paid plans on a monthly, quarterly, yearly, and lifetime basis. Payment is processed through Stripe. Refunds are generally not provided after the subscription period, but may be considered on a case-by-case basis. Any refunds may be subject to processing fees charged by our payment service provider.",
+                storageClarification: "The unlimited storage provided in the lifetime plan covers texts, images, and standard documents related to trades. Recording or storing video files is not supported.",
+                fairUse: "The term \"unlimited\" is understood within the framework of normal and non-abusive use of the service. We reserve the right to limit or restrict usage in case of excessive use or use contrary to the platform's purpose.",
                 lifetimePlan: {
                     title: "Lifetime Plan Terms",
                     description: "The \"Lifetime\" plan provides access to the Deltalytix service for the operational lifetime of the service, subject to the following conditions:",
@@ -35,7 +37,8 @@ export default {
             },
             dataProtection: {
                 title: "6. Data Protection and Privacy",
-                content: "We comply with the General Data Protection Regulation (GDPR) and other applicable data protection laws. We protect user data by using Supabase, which is SOC 2 compliant, and by anonymizing data in our database. We do not use third-party analytics services. For more information, please see our Privacy Policy."
+                content: "We comply with the General Data Protection Regulation (GDPR) and other applicable data protection laws. We protect user data by using Supabase, which is SOC 2 compliant, and by anonymizing data in our database. We do not use third-party analytics services. For more information, please see our Privacy Policy.",
+                dataExport: "Users can, at any time, request a copy of their data in a readable format (CSV, JSON)."
             },
             liability: {
                 title: "7. Limitation of Liability",
@@ -43,7 +46,7 @@ export default {
             },
             termination: {
                 title: "8. Termination",
-                content: "We reserve the right to suspend or terminate your access to the service at any time for any reason, including but not limited to a violation of these Terms. You may terminate your account at any time by contacting us."
+                content: "We reserve the right to suspend or terminate your access to the service at any time for any reason, including but not limited to a violation of these Terms. You may terminate your account at any time directly from the service interface or by contacting us. This termination will take effect immediately or at the end of your subscription period."
             },
             serviceAvailability: {
                 title: "9. Service Availability and Continuity",
