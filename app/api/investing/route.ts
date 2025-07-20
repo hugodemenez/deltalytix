@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { parseISO, isValid } from 'date-fns'
-import { chromium } from 'playwright-core'
-import sparticuzChromium from '@sparticuz/chromium-min'
+import { scrapeWithSandbox } from '@/lib/browser-sandbox'
 
 interface InvestingEvent {
   time: string
@@ -47,7 +46,6 @@ function mapImpactToImportance(impact: string): 'HIGH' | 'MEDIUM' | 'LOW' {
 }
 
 async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
-  let browser: any = null;
   try {
     // Map language to Investing.com language code
     const langMap = {
@@ -55,57 +53,14 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
       en: '1'   // English
     }
 
-    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
-    
-    if (isProduction) {
-      console.log('Launching Playwright with @sparticuz/chromium-min for production...');
-      const userDataDir = '/tmp/playwright_user_data';
-      browser = await chromium.launch({
-        args: [
-          ...sparticuzChromium.args,
-          `--user-data-dir=${userDataDir}`,
-          '--disable-dev-shm-usage', // Common for Docker/serverless
-          '--no-sandbox' // Often required in serverless/Docker
-        ],
-        executablePath: await sparticuzChromium.executablePath(),
-        headless: true, 
-      });
-    } else {
-      console.log('Launching Playwright with local Chromium for development...');
-      browser = await chromium.launch({
-        headless: true 
-      });
-    }
-
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      // Consider reducing resource usage for serverless:
-      // javaScriptEnabled: false, // If the site works without JS after initial challenge
-      // viewport: null, // Disables viewport emulation if not strictly needed
-    });
-    const page = await context.newPage();
-
-    // Navigate to the page
     const targetUrl = `https://sslecal2.investing.com/?timeZone=55&lang=${langMap[lang]}`;
-    console.log(`Navigating to ${targetUrl} with Playwright...`);
+    console.log(`Fetching calendar events from ${targetUrl} using Vercel Sandbox...`);
     
-    const response = await page.goto(targetUrl, {
-      waitUntil: 'domcontentloaded', // Or 'networkidle' for more sensitive cases
-      timeout: 60000 // Increase timeout as page loading + JS challenges can take time
+    // Use the sandbox browser approach
+    const html = await scrapeWithSandbox(targetUrl, {
+      timeout: 60000,
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     });
-
-    if (!response || !response.ok()) {
-      console.error('Playwright navigation response:', {
-        status: response?.status(),
-        statusText: response?.statusText(),
-        headers: response?.headers()
-      });
-      throw new Error(`Playwright navigation failed! status: ${response?.status()} - ${response?.statusText()}`);
-    }
-
-    console.log('Page loaded successfully. Getting HTML content...');
-    const html = await page.content();
-    console.log('HTML length:', html.length);
     
     // Parse the HTML table
     const events: InvestingEvent[] = []
@@ -354,11 +309,9 @@ async function fetchInvestingCalendarEvents(lang: 'fr' | 'en' = 'fr') {
       lang: event.lang,
       timezone: event.timezone
     }))
-  } finally {
-    if (browser) {
-      console.log('Closing Playwright browser...');
-      await browser.close();
-    }
+  } catch (error) {
+    console.error('Error fetching calendar events:', error)
+    throw error
   }
 }
 
