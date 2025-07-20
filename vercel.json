@@ -1,12 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/investing?lang=fr",
-      "schedule": "0 6 * * 1"
+      "path": "/api/investing?lang=fr&db=true",
+      "schedule": "0 5 * * 1"
     },
     {
-      "path": "/api/investing?lang=en",
-      "schedule": "0 6 * * 1"
+      "path": "/api/investing?lang=en&db=true",
+      "schedule": "0 5 * * 1"
     },
     {
       "path": "/api/cron/renewal-notice",

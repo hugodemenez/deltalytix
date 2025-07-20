@@ -225,15 +225,15 @@ export function AccountConfigurator({
                 <Label>{t('propFirm.accountSize')}</Label>
                 <Popover modal open={accountSizeOpen} onOpenChange={setAccountSizeOpen}>
                   <PopoverTrigger asChild>
-                                    <Input
-                  type="number"
-                  value={pendingChanges?.startingBalance ?? account.startingBalance ?? ''}
-                  onChange={(e) => handleInputChange('startingBalance', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                />
+                    <Input
+                      type="number"
+                      value={pendingChanges?.startingBalance ?? account.startingBalance ?? ''}
+                      onChange={(e) => handleInputChange('startingBalance', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                    />
                   </PopoverTrigger>
                   <PopoverContent className="w-80">
                     <div className="grid grid-cols-2 gap-2">
-                      {[25000, 50000, 100000, 150000, 300000].map((size) => (
+                      {[0,25000, 50000, 100000, 150000, 300000].map((size) => (
                         <Button
                           key={size}
                           variant="outline"

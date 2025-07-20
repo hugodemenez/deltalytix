@@ -105,6 +105,9 @@ export default {
                 selectPaymentFrequency: 'Sélectionnez la fréquence de paiement',
                 selectTrailingType: 'Sélectionnez le type de trailing',
                 noPaymentDateSet: 'Aucune date de paiement définie'
+            },
+            suggestions: {
+                zeroStartingBalance: '💡 Considérez définir un solde de départ pour suivre précisément les performances de votre compte. Un solde nul peut affecter les calculs et les statistiques.'
             }
 
         },
