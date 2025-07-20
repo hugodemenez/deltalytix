@@ -56,6 +56,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { LinkedAccounts } from "@/components/linked-accounts"
 
 type Locale = 'en' | 'fr'
 
@@ -494,6 +495,9 @@ export default function SettingsPage() {
             )}
           </CardContent>
         </Card>
+
+        {/* Linked Accounts Section */}
+        <LinkedAccounts />
 
         {/* Account Management Section */}
         <Card>

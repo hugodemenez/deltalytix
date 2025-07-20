@@ -9,6 +9,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   // if "next" is in param, use it as the redirect URL
   const next = searchParams.get('next')
+  const action = searchParams.get('action')
 
    // Redirect to the decoded 'next' URL if it exists, otherwise to the homepage
    let decodedNext: string | null = null;
@@ -20,6 +21,17 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      // Handle identity linking redirect
+      if (action === 'link') {
+        const forwardedHost = request.headers.get('x-forwarded-host')
+        const isLocalEnv = process.env.NODE_ENV === 'development'
+        const baseUrl = isLocalEnv 
+          ? `${origin}/dashboard/settings` 
+          : `https://${forwardedHost || origin}/dashboard/settings`
+        const redirectUrl = `${baseUrl}?linked=true`
+        return NextResponse.redirect(redirectUrl)
+      }
+
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
       const isLocalEnv = process.env.NODE_ENV === 'development'
       if (isLocalEnv) {
