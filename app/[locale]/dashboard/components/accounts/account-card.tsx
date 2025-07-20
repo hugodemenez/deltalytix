@@ -220,7 +220,9 @@ export function AccountCard({ account, trades, allTrades, metrics, onClick, size
                   remainingLoss > account.drawdownThreshold * 0.5 ? "text-success" :
                     remainingLoss > account.drawdownThreshold * 0.2 ? "text-warning" : "text-destructive"
                 )}>
-                  {t('propFirm.card.remainingLoss', { amount: remainingLoss.toFixed(2) })}
+                  {remainingLoss > 0
+                    ? t('propFirm.card.remainingLoss', { amount: remainingLoss.toFixed(2) })
+                    : t('propFirm.card.drawdownBreached')}
                 </span>
               </div>
               <Progress
