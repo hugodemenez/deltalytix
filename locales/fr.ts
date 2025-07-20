@@ -1494,4 +1494,14 @@ export default {
     },
     'calendar.maxProfit': 'Max P',
     'calendar.maxDD': 'Max DD',
+    'table.sortAscending': 'Tri croissant',
+    'table.sortDescending': 'Tri décroissant',
+    'table.filter': 'Filtrer',
+    'table.filterByRange': 'Filtrer par plage',
+    'table.min': 'Min',
+    'table.max': 'Max',
+    'table.clear': 'Effacer',
+    'table.apply': 'Appliquer',
+    'table.hideColumn': 'Masquer la colonne',
+    'table.showPoints': 'Afficher les points'
 } as const

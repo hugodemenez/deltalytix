@@ -28,16 +28,5 @@ export default {
     showMore: 'Afficher plus',
     showLess: 'Afficher moins',
     showAll: 'Afficher tous',
-  },
-  table: {
-    sortAscending: 'Tri croissant',
-    sortDescending: 'Tri décroissant',
-    filter: 'Filtrer',
-    filterByRange: 'Filtrer par plage',
-    min: 'Min',
-    max: 'Max',
-    clear: 'Effacer',
-    apply: 'Appliquer',
-    hideColumn: 'Masquer la colonne'
   }
 } as const;

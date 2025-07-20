@@ -1403,4 +1403,14 @@ export default {
     },
     'calendar.maxProfit': 'Max P',
     'calendar.maxDD': 'Max DD',
+    'table.sortAscending': 'Sort Ascending',
+    'table.sortDescending': 'Sort Descending',
+    'table.filter': 'Filter',
+    'table.filterByRange': 'Filter by range',
+    'table.min': 'Min',
+    'table.max': 'Max',
+    'table.clear': 'Clear',
+    'table.apply': 'Apply',
+    'table.hideColumn': 'Hide Column',
+    'table.showPoints': 'Show Points'
 } as const

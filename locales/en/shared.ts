@@ -28,16 +28,5 @@ export default {
     showMore: 'Show more',
     showLess: 'Show less',
     showAll: 'Show all',
-  },
-  table: {
-    sortAscending: 'Sort Ascending',
-    sortDescending: 'Sort Descending',
-    filter: 'Filter',
-    filterByRange: 'Filter by range',
-    min: 'Min',
-    max: 'Max',
-    clear: 'Clear',
-    apply: 'Apply',
-    hideColumn: 'Hide Column'
   }
 } as const;
