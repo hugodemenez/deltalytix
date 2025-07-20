@@ -37,7 +37,7 @@ export function AccountCard({ account, trades, allTrades, metrics, onClick, size
   const chartTrades = allTrades || trades
 
   const { drawdownProgress, remainingLoss, progress, isConfigured, currentBalance, remainingToTarget } = useMemo(() => {
-    const isConfigured = account.profitTarget || account.drawdownThreshold
+    const isConfigured = (account.profitTarget !== undefined && account.profitTarget !== null) || (account.drawdownThreshold !== undefined && account.drawdownThreshold !== null)
     const progress = account.profitTarget > 0
       ? ((account.balanceToDate ?? account.startingBalance) / account.profitTarget) * 100
       : 0
