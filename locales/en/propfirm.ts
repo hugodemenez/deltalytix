@@ -105,6 +105,9 @@ export default {
                 selectPaymentFrequency: 'Select payment frequency',
                 selectTrailingType: 'Select trailing type',
                 noPaymentDateSet: 'No payment date set'
+            },
+            suggestions: {
+                zeroStartingBalance: '💡 Consider setting a starting balance to track your account performance accurately. A zero balance may affect calculations and statistics.'
             }
 
         },
