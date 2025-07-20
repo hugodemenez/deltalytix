@@ -130,12 +130,6 @@ export function AccountCard({ account, trades, allTrades, metrics, onClick, size
                 size === 'small' || size === 'small-long' ? "text-xs" : "text-sm"
               )}>
 
-                  <div className={cn(
-                    "rounded-full flex-shrink-0",
-                    size === 'small' || size === 'small-long' ? "h-1.5 w-1.5" : "h-2 w-2",
-                    !metrics?.hasProfitableData ? "bg-muted" :
-                      !metrics?.isConsistent ? "bg-destructive" : "bg-green-500"
-                  )} />
                 <div className="flex w-full justify-between min-w-0">
                   <span className="truncate">{account.propfirm || t('propFirm.card.unnamedAccount')}</span>
                   {
@@ -256,10 +250,10 @@ export function AccountCard({ account, trades, allTrades, metrics, onClick, size
                   <span className={cn(
                     "font-medium",
                     !metrics.hasProfitableData ? "text-muted-foreground italic" :
-                      metrics.isConsistent ? "text-success" : "text-destructive"
+                      (metrics.isConsistent || account.consistencyPercentage === 100) ? "text-success" : "text-destructive"
                   )}>
                     {!metrics.hasProfitableData ? t('propFirm.status.unprofitable') :
-                      metrics.isConsistent ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
+                      (metrics.isConsistent || account.consistencyPercentage === 100) ? t('propFirm.status.consistent') : t('propFirm.status.inconsistent')}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
