@@ -46,8 +46,41 @@ export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
     }
 
     try {
+      // Clean the data to remove undefined values and ensure all required fields are present
+      const cleanedData = data.map(trade => {
+        const cleanTrade = Object.fromEntries(
+          Object.entries(trade).filter(([_, value]) => value !== undefined)
+        ) as Partial<Trade>
+        
+        return {
+          ...cleanTrade,
+          // Ensure required fields have default values
+          accountNumber: cleanTrade.accountNumber || '',
+          instrument: cleanTrade.instrument || '',
+          entryPrice: cleanTrade.entryPrice || '',
+          closePrice: cleanTrade.closePrice || '',
+          entryDate: cleanTrade.entryDate || '',
+          closeDate: cleanTrade.closeDate || '',
+          quantity: cleanTrade.quantity || 0,
+          pnl: cleanTrade.pnl || 0,
+          timeInPosition: cleanTrade.timeInPosition || 0,
+          userId: cleanTrade.userId || '',
+          side: cleanTrade.side || '',
+          commission: cleanTrade.commission || 0,
+          entryId: cleanTrade.entryId || null,
+          closeId: cleanTrade.closeId || null,
+          comment: cleanTrade.comment || null,
+          videoUrl: cleanTrade.videoUrl || null,
+          tags: cleanTrade.tags || [],
+          imageBase64: cleanTrade.imageBase64 || null,
+          imageBase64Second: cleanTrade.imageBase64Second || null,
+          groupId: cleanTrade.groupId || null,
+          createdAt: cleanTrade.createdAt || new Date(),
+        } as Trade
+      })
+
       const result = await prisma.trade.createMany({
-        data,
+        data: cleanedData,
         skipDuplicates: true
       })
       
@@ -120,10 +153,10 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
 }
 
 
-export async function getTradesAction(): Promise<Trade[]> {
+export async function getTradesAction(userId: string | null = null): Promise<Trade[]> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
+    if (!user && !userId) {
       throw new Error('User not found')
     }
 
@@ -135,7 +168,7 @@ export async function getTradesAction(): Promise<Trade[]> {
     // Per page
     const query: any = {
       where: { 
-        userId: user.id,
+        userId: userId || user?.id,
        }
     }
     if (!isSubscribed) {
@@ -149,7 +182,7 @@ export async function getTradesAction(): Promise<Trade[]> {
     const totalPages = Math.ceil(count / chunkSize)
     const trades: Trade[] = []
     for (let page = 1; page <= totalPages; page++) {
-      const pageTrades = await getCachedTrades(user.id, isSubscribed, page, chunkSize)
+      const pageTrades = await getCachedTrades(userId || user?.id || '', isSubscribed, page, chunkSize)
       trades.push(...pageTrades)
     }
     console.log(`[getTrades] Found ${count} trades fetched ${trades.length}`)

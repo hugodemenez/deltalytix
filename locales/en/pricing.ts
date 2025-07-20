@@ -130,6 +130,15 @@ export default {
             confirm: 'Continue to lifetime upgrade',
             cancel: 'Keep current plan'
         },
+        countdown: {
+            title: 'Price increase in',
+            urgent: 'Last chance! Price increases July 20th at midnight',
+            hours: 'hours',
+            minutes: 'minutes',
+            seconds: 'seconds',
+            expired: 'Price increase active',
+            urgentButton: 'Get Lifetime Access Now!'
+        },
     },
     billing: {
         error: 'Error',

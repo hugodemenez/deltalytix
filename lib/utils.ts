@@ -4,6 +4,7 @@ import { twMerge } from "tailwind-merge"
 import { format } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/app/[locale]/dashboard/types/statistics"
+import { Account } from "@/context/data-provider"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -27,7 +28,7 @@ export function parsePositionTime(timeInSeconds: number): string {
   return formattedTime;
 }
 
-export function calculateStatistics(trades: Trade[]): StatisticsProps {
+export function calculateStatistics(trades: Trade[], accounts: Account[] = []): StatisticsProps {
   if (!trades.length) {
     return {
       cumulativeFees: 0,
@@ -43,6 +44,44 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
       profitFactor: 1,
       grossLosses: 0,
       grossWin: 0,
+      // Payout statistics
+      totalPayouts: 0,
+      nbPayouts: 0,
+    }
+  }
+
+  // Create a map of accounts for quick lookup
+  const accountMap = new Map(accounts.map(account => [account.number, account]));
+
+  // Filter trades based on reset dates for each account
+  const filteredTrades = trades.filter(trade => {
+    const account = accountMap.get(trade.accountNumber);
+    if (!account || !account.resetDate) {
+      return true; // Include trade if no account found or no reset date
+    }
+    
+    // Only include trades that occurred after the reset date
+    return new Date(trade.entryDate) >= new Date(account.resetDate);
+  });
+
+  if (!filteredTrades.length) {
+    return {
+      cumulativeFees: 0,
+      cumulativePnl: 0,
+      winningStreak: 0,
+      winRate: 0,
+      nbTrades: 0,
+      nbBe: 0,
+      nbWin: 0,
+      nbLoss: 0,
+      totalPositionTime: 0,
+      averagePositionTime: '0s',
+      profitFactor: 1,
+      grossLosses: 0,
+      grossWin: 0,
+      // Payout statistics
+      totalPayouts: 0,
+      nbPayouts: 0,
     }
   }
 
@@ -60,9 +99,12 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
     profitFactor: 1,
     grossLosses: 0,
     grossWin: 0,
+    // Payout statistics
+    totalPayouts: 0,
+    nbPayouts: 0,
   };
 
-  const statistics = trades.reduce((acc: StatisticsProps, trade: Trade) => {
+  const statistics = filteredTrades.reduce((acc: StatisticsProps, trade: Trade) => {
     const pnl = trade.pnl;
     
     acc.nbTrades++;
@@ -88,14 +130,46 @@ export function calculateStatistics(trades: Trade[]): StatisticsProps {
     return acc;
   }, initialStatistics);
 
-  const averageTimeInSeconds = Math.round(statistics.totalPositionTime / trades.length);
+  // Get unique account numbers from the filtered trades
+  const tradeAccountNumbers = new Set(filteredTrades.map(trade => trade.accountNumber));
+  
+  // Calculate total payouts only from accounts that have trades in the current dataset
+  // and only include payouts that occurred after the reset date
+  accounts.forEach(account => {
+    if (tradeAccountNumbers.has(account.number)) {
+      const payouts = account.payouts || [];
+      payouts.forEach(payout => {
+        // Only include payouts that occurred after the reset date
+        if (!account.resetDate || new Date(payout.date) >= new Date(account.resetDate)) {
+          statistics.totalPayouts += payout.amount;
+          statistics.nbPayouts++;
+        }
+      });
+    }
+  });
+
+  const averageTimeInSeconds = Math.round(statistics.totalPositionTime / filteredTrades.length);
   statistics.averagePositionTime = parsePositionTime(averageTimeInSeconds);
 
   return statistics;
 }
 
-export function formatCalendarData(trades: Trade[]) {
-  return trades.reduce((acc: any, trade: Trade) => {
+export function formatCalendarData(trades: Trade[], accounts: Account[] = []) {
+  // Create a map of accounts for quick lookup
+  const accountMap = new Map(accounts.map(account => [account.number, account]));
+
+  // Filter trades based on reset dates for each account
+  const filteredTrades = trades.filter(trade => {
+    const account = accountMap.get(trade.accountNumber);
+    if (!account || !account.resetDate) {
+      return true; // Include trade if no account found or no reset date
+    }
+    
+    // Only include trades that occurred after the reset date
+    return new Date(trade.entryDate) >= new Date(account.resetDate);
+  });
+
+  return filteredTrades.reduce((acc: any, trade: Trade) => {
     // Parse the date and format it in UTC to ensure consistency across timezones
     const date = formatInTimeZone(new Date(trade.entryDate), 'UTC', 'yyyy-MM-dd')
     
@@ -126,6 +200,7 @@ export function groupBy<T>(array: T[], key: keyof T): { [key: string]: T[] } {
 }
 
 export function generateTradeHash(trade: Partial<Trade>): string {
-  const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
+  // Handle undefined values by converting them to empty strings or default values
+  const hashString = `${trade.userId || ''}-${trade.accountNumber || ''}-${trade.instrument || ''}-${trade.entryDate || ''}-${trade.closeDate || ''}-${trade.quantity || 0}-${trade.entryId || ''}-${trade.closeId || ''}-${trade.timeInPosition || 0}`
   return hashString
 }

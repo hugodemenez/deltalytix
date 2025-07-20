@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useMemo } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react"
@@ -126,7 +126,7 @@ interface PricingPlansProps {
 }
 
 export default function PricingPlans({ isModal, onClose, trigger, currentSubscription }: PricingPlansProps) {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly')
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('lifetime')
   const [isLoading, setIsLoading] = useState(false)
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false)
   const [pendingLookupKey, setPendingLookupKey] = useState<string>('')
@@ -302,23 +302,115 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     await executePlanSwitch(pendingLookupKey)
   }
 
-  // New pricing structure
-  const pricing = {
+  // Countdown timer component - isolated to prevent parent re-renders
+  const CountdownTimer = React.memo(() => {
+    const [timeLeft, setTimeLeft] = useState<{
+      hours: number;
+      minutes: number;
+      seconds: number;
+      total: number;
+    }>({ hours: 0, minutes: 0, seconds: 0, total: 0 });
+
+    useEffect(() => {
+      const calculateTimeLeft = () => {
+        const now = new Date();
+        // Set target to July 20th, 2025 at midnight
+        // Using July 21st 00:00 UTC to ensure it's July 20th midnight in most timezones
+        const targetDate = new Date('2025-07-21T00:00:00.000Z');
+        
+        const difference = targetDate.getTime() - now.getTime();
+        
+        if (difference > 0) {
+          const hours = Math.floor(difference / (1000 * 60 * 60));
+          const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+          
+          setTimeLeft(prev => {
+            // Only update if values actually changed
+            if (prev.hours !== hours || prev.minutes !== minutes || prev.seconds !== seconds) {
+              return { hours, minutes, seconds, total: difference };
+            }
+            return prev;
+          });
+        } else {
+          setTimeLeft(prev => {
+            if (prev.total !== 0) {
+              return { hours: 0, minutes: 0, seconds: 0, total: 0 };
+            }
+            return prev;
+          });
+        }
+      };
+
+      calculateTimeLeft();
+      const timer = setInterval(calculateTimeLeft, 1000);
+
+      return () => clearInterval(timer);
+    }, []);
+
+    const isBeforeMidnight = timeLeft.total > 0;
+    const t = useI18n();
+
+    // Don't show anything if we're past the target date
+    if (!isBeforeMidnight) {
+      return null;
+    }
+
+    return (
+      <div className="absolute -top-3 -translate-y-2 -right-2 bg-red-500 text-white text-[10px] sm:text-xs font-medium px-1 py-0.5 sm:px-1.5 rounded-full">
+        <div className="text-center">
+          <div className="text-[8px] leading-none">{t('pricing.countdown.title')}</div>
+          <div className="font-bold">
+            {timeLeft.hours.toString().padStart(2, '0')}:{timeLeft.minutes.toString().padStart(2, '0')}:{timeLeft.seconds.toString().padStart(2, '0')}
+          </div>
+        </div>
+      </div>
+    );
+  });
+
+  CountdownTimer.displayName = 'CountdownTimer';
+
+  // Check if we're before July 20th, 2025 midnight (for pricing calculations)
+  const isBeforeMidnight = useMemo(() => {
+    const now = new Date();
+    // Using July 21st 00:00 UTC to ensure it's July 20th midnight in most timezones
+    const targetDate = new Date('2025-07-21T00:00:00.000Z');
+    return targetDate.getTime() - now.getTime() > 0;
+  }, []);
+
+  // Update pricing when July 20th midnight passes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Check if July 20th midnight has passed
+      const now = new Date();
+      // Using July 21st 00:00 UTC to ensure it's July 20th midnight in most timezones
+      const targetDate = new Date('2025-07-21T00:00:00.000Z');
+      if (targetDate.getTime() - now.getTime() <= 0) {
+        // July 20th midnight has passed, trigger re-render
+        window.location.reload();
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Pricing structure - changes at midnight (memoized to prevent re-renders)
+  const pricing = useMemo(() => ({
     yearly: 120,
     quarterly: 45,
     monthly: 19.99,
-    lifetime: 250
-  }
+    lifetime: isBeforeMidnight ? 250 : 300
+  }), [isBeforeMidnight]);
 
-  // Previous pricing (for line-through display)
-  const previousPricing = {
+  // Previous pricing (for line-through display) (memoized to prevent re-renders)
+  const previousPricing = useMemo(() => ({
     yearly: 300,
     quarterly: 82.5,
     monthly: 29.99,
-    lifetime: 999
-  }
+    lifetime: isBeforeMidnight ? 999 : 250
+  }), [isBeforeMidnight]);
 
-  const plans: Plans = {
+  const plans: Plans = useMemo(() => ({
     basic: {
       name: t('pricing.basic.name'),
       description: t('pricing.basic.description'),
@@ -343,7 +435,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
         t('pricing.plus.feature6'),
       ]
     }
-  }
+  }), [t, pricing]);
 
   function formatPrice(plan: Plan, planKey: string): number {
     if (plan.price.yearly === 0 || planKey === 'basic') {
@@ -411,7 +503,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     )
   }
 
-  const PlusPlan = ({ plan, billingPeriod, setBillingPeriod, currency, symbol }: { plan: Plan, billingPeriod: BillingPeriod, setBillingPeriod: (period: BillingPeriod) => void, currency: 'USD' | 'EUR', symbol: string }) => {
+  const PlusPlan = React.memo(({ plan, billingPeriod, setBillingPeriod, currency, symbol }: { plan: Plan, billingPeriod: BillingPeriod, setBillingPeriod: (period: BillingPeriod) => void, currency: 'USD' | 'EUR', symbol: string }) => {
     const [currentPricing, setCurrentPricing] = useState(0)
     const [previousPrice, setPreviousPrice] = useState(0)
 
@@ -429,7 +521,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
 
     const t = useI18n()
 
-    const recurringBillingOptions = [
+    const recurringBillingOptions = useMemo(() => [
       {
         key: 'monthly' as BillingPeriod,
         label: t('pricing.monthly'),
@@ -445,7 +537,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
         label: t('pricing.yearly'),
         description: `${symbol}${plan.price.yearly} billed yearly (${symbol}${(plan.price.yearly / 12).toFixed(2)}/month)`
       }
-    ]
+    ], [t, symbol, plan.price.quarterly, plan.price.yearly]);
 
     return (
       <div className="relative z-10 w-full">
@@ -494,9 +586,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                   >
                     {t('pricing.lifetimeAccess')}
                   </Button>
-                  <span className="absolute -top-3 -right-2 bg-green-500 text-white text-[10px] sm:text-xs font-medium px-1 py-0.5 sm:px-1.5 rounded-full">
-                    {t('pricing.new')}
-                  </span>
+                                    {billingPeriod === 'lifetime' && <CountdownTimer />}
                 </div>
               </div>
             </div>
@@ -505,6 +595,15 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
               {billingPeriod === 'lifetime' ? (
                 /* Lifetime pricing - no previous price comparison */
                 <div className="text-center">
+                  {/* Urgent message before July 20th midnight */}
+                  {isBeforeMidnight && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 mb-3">
+                      <p className="text-red-800 dark:text-red-200 text-sm font-medium">
+                        {t('pricing.countdown.urgent')}
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="flex flex-col items-center mb-3">
                     {/* Lifetime Price */}
                     <div className="flex items-baseline justify-center">
@@ -591,7 +690,16 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
           </CardContent>
           <CardFooter className="flex flex-col space-y-3">
             {(() => {
-              const lookupKey = `plus_${billingPeriod}_${currency.toLowerCase()}`
+              // Generate lookup key based on time and billing period
+              let lookupKey: string;
+              if (billingPeriod === 'lifetime') {
+                lookupKey = isBeforeMidnight 
+                  ? `plus_${billingPeriod}_${currency.toLowerCase()}`
+                  : `plus_lifetimeUpdate_${currency.toLowerCase()}`;
+              } else {
+                lookupKey = `plus_${billingPeriod}_${currency.toLowerCase()}`;
+              }
+              
               const isCurrent = isCurrentPlan(lookupKey)
               const isLifetimeUser = hasLifetimeSubscription()
               const isBlockedRecurring = isBlockedFromRecurring(lookupKey)
@@ -612,8 +720,14 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                    isBlockedLifetime ? t('billing.lifetimeOwned') :
                    isBlockedRecurring ? t('billing.lifetimeActive') :
                    currentSubscription ? (
-                     billingPeriod === 'lifetime' ? t('pricing.upgradeToLifetime') || 'Upgrade to Lifetime' : t('billing.changePlan')
-                   ) : t('pricing.trialPeriod')}
+                     billingPeriod === 'lifetime' ? 
+                       (isBeforeMidnight ? t('pricing.countdown.urgentButton') : t('pricing.upgradeToLifetime') || 'Upgrade to Lifetime') 
+                       : t('billing.changePlan')
+                   ) : (
+                     billingPeriod === 'lifetime' && isBeforeMidnight 
+                       ? t('pricing.countdown.urgentButton') 
+                       : t('pricing.trialPeriod')
+                   )}
                 </Button>
               )
             })()}
@@ -628,7 +742,9 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
         </Card>
       </div>
     )
-  }
+  });
+
+  PlusPlan.displayName = 'PlusPlan';
 
   const PricingContent = () => (
     <div className="sm:px-6">

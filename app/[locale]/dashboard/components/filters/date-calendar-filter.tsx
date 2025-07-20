@@ -14,6 +14,7 @@ import { useI18n } from "@/locales/client"
 import { useParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CalendarDaysIcon, type CalendarDaysIconHandle } from "@/components/animated-icons/calendar-days"
+import { X } from "lucide-react"
 
 export default function DateCalendarFilter() {
   const { dateRange, setDateRange } = useData()
@@ -87,6 +88,19 @@ export default function DateCalendarFilter() {
           <TabsTrigger value="single">{t('filters.singleDay')}</TabsTrigger>
           <TabsTrigger value="range">{t('filters.dateRange')}</TabsTrigger>
         </TabsList>
+        {dateRange && (
+          <Button
+            variant="destructive"
+            className="w-full mb-4"
+            onClick={() => {
+              setDateRange(undefined)
+              if (isMobile) setCalendarOpen(false)
+            }}
+          >
+            <X className="h-4 w-4 mr-2" />
+            {t('filters.clearDate')}
+          </Button>
+        )}
         <TabsContent value="single">
           <div className="mb-4 space-y-2">
             {quickSelectors.map((selector, index) => (

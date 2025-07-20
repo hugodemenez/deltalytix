@@ -95,8 +95,58 @@ model User {
   comments        Comment[]
   language        String           @default("en")
   orders          Order[]
+  businesses      Business[]
 
   @@index([email])
+  @@schema("public")
+}
+
+model Business {
+  id          String   @id @default(uuid())
+  name        String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  traderIds   String[] @default([]) // List of trader IDs
+  managers    BusinessManager[] // Relation to managers
+  invitations BusinessInvitation[] // Relation to invitations
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([name, userId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model BusinessManager {
+  id          String   @id @default(uuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  managerId   String
+  access      String   @default("viewer") // "admin" or "viewer"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([businessId, managerId]) // Prevent duplicate managers per business
+  @@index([businessId])
+  @@index([managerId]) // This makes querying by manager ID very efficient!
+  @@schema("public")
+}
+
+model BusinessInvitation {
+  id          String   @id @default(uuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  email       String
+  invitedBy   String   // User ID of the person who sent the invitation
+  status      String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED
+  expiresAt   DateTime @default(dbgenerated("(NOW() + INTERVAL '7 days')"))
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([businessId, email]) // Prevent duplicate invitations
+  @@index([businessId])
+  @@index([email])
+  @@index([status])
   @@schema("public")
 }
 

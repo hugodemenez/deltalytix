@@ -78,6 +78,43 @@ export async function POST(req: Request) {
               where: { email: data.customer_details?.email as string },
             });
 
+            // Check if this is a business subscription
+            const isBusinessSubscription = data.metadata?.plan === 'business_monthly_usd' || 
+                                        subscriptionPlan === 'BUSINESS' || 
+                                        price.lookup_key === 'business_monthly_usd';
+
+            if (isBusinessSubscription) {
+              // Handle business subscription
+              console.log('Business subscription completed')
+              
+              // Create the business after successful payment
+              const businessName = data.metadata?.businessName || subscription.metadata?.businessName || 'My Business';
+              const userId = data.metadata?.userId || subscription.metadata?.userId;
+
+              if (userId) {
+                try {
+                  // Create the business
+                  const business = await prisma.business.create({
+                    data: {
+                      name: businessName,
+                      userId: userId,
+                      traderIds: [userId], // Add the creator as the first trader
+                      managers: {
+                        create: {
+                          managerId: userId,
+                          access: 'admin', // Add the creator as admin manager
+                        }
+                      }
+                    },
+                  });
+
+                  console.log('Business created:', business);
+                } catch (error) {
+                  console.error('Error creating business:', error);
+                }
+              }
+            }
+
             await prisma.subscription.upsert({
               where: {
                 email: data.customer_details?.email as string,

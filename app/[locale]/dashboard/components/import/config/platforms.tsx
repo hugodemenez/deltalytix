@@ -19,6 +19,8 @@ import RithmicPerformanceProcessor from '../rithmic/rithmic-performance-processo
 import RithmicOrderProcessor from '../rithmic/rithmic-order-processor-new'
 import PdfUpload from '../ibkr-pdf/pdf-upload'
 import PdfProcessing from '../ibkr-pdf/pdf-processing'
+import AtasFileUpload from '../atas/atas-file-upload'
+import AtasProcessor from '../atas/atas-processor'
 import { Step } from '../import-button'
 import { Sparkles } from 'lucide-react'
 
@@ -66,6 +68,8 @@ type StepComponent =
   | typeof ThorSync
   | typeof PdfUpload
   | typeof PdfProcessing
+  | typeof AtasFileUpload
+  | typeof AtasProcessor
 
 export interface PlatformConfig {
   platformName: string
@@ -627,6 +631,48 @@ export const platforms: PlatformConfig[] = [
         description: 'import.steps.selectAccountDescription',
         component: AccountSelection
       },
+    ]
+  },
+  {
+    platformName: 'atas',
+    type: 'atas',
+    name: 'import.type.atas.name',
+    description: 'import.type.atas.description',
+    category: 'Platform CSV Import',
+    videoUrl: process.env.NEXT_PUBLIC_ATAS_TUTORIAL_VIDEO || '',
+    details: 'import.type.atas.details',
+    logo: {
+      path: '/logos/atas.png',
+      alt: 'ATAS Logo'
+    },
+    requiresAccountSelection: true,
+    processorComponent: AtasProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'upload-file',
+        title: 'import.steps.uploadFile',
+        description: 'import.steps.uploadFileDescription',
+        component: AtasFileUpload
+      },
+      {
+        id: 'select-account',
+        title: 'import.steps.selectAccount',
+        description: 'import.steps.selectAccountDescription',
+        component: AccountSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.processTrades',
+        description: 'import.steps.processTradesDescription',
+        component: AtasProcessor,
+        isLastStep: true
+      }
     ]
   }
 ] as const

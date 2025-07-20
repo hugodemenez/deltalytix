@@ -3,6 +3,7 @@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Label } from "@/components/ui/label"
 import { useI18n } from "@/locales/client"
 import { useState, useEffect } from "react"
 import { Settings } from "lucide-react"
@@ -144,20 +145,23 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
   }
 
   return (
-    <div className="p-2">
-      <Command shouldFilter={false}>
-        <CommandInput 
-          placeholder={t('filters.search')} 
-          value={searchTerm}
-          onValueChange={setSearchTerm}
-        />
-        <CommandEmpty>{t('filters.noResults')}</CommandEmpty>
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">{t('filters.accounts')}</Label>
+      <Command className="rounded-lg border" shouldFilter={false}>
+        <div className="border-b">
+          <CommandInput 
+            placeholder={t('filters.search')} 
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            className="border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-8"
+          />
+        </div>
         <CommandList>
           <ScrollArea className="h-[300px]">
             <CommandGroup>
               <CommandItem
                 onSelect={() => setAccountGroupBoardOpen(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 px-2"
               >
                 <Settings className="h-4 w-4" />
                 <span className="text-sm">{t('filters.manageAccounts')}</span>
@@ -166,7 +170,7 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
 
               <CommandItem
                 onSelect={handleSelectAll}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 px-2 bg-muted/50"
               >
                 <Checkbox
                   checked={[
@@ -177,7 +181,7 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
                   ].every(item => isItemSelected(item))}
                   className="h-4 w-4"
                 />
-                <span className="text-sm">{t('filters.selectAllAccounts')}</span>
+                <span className="text-sm font-medium">{t('filters.selectAllAccounts')}</span>
               </CommandItem>
 
               {/* Show trade-only accounts first */}

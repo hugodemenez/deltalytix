@@ -129,7 +129,16 @@ export default {
             currentSubscription: 'Détails de l\'abonnement actuel',
             confirm: 'Continuer vers l\'accès à vie',
             cancel: 'Garder le plan actuel'
-        }
+        },
+        countdown: {
+            title: 'Augmentation de prix dans',
+            urgent: 'Dernière chance ! Le prix augmente le 20 juillet à minuit',
+            hours: 'heures',
+            minutes: 'minutes',
+            seconds: 'secondes',
+            expired: 'Augmentation de prix active',
+            urgentButton: 'Obtenez l\'accès à vie maintenant !'
+        },
     },
     billing: {
         error: 'Erreur',

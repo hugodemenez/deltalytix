@@ -263,7 +263,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                             name="otp"
                             render={({ field }) => (
                                 <FormItem className="space-y-2">
-                                    <FormLabel className="text-center block">Verification Code</FormLabel>
+                                    <FormLabel className="text-center block">{t('auth.verificationCode')}</FormLabel>
                                     <FormControl>
                                         <div className="flex justify-center">
                                             <InputOTP
@@ -298,7 +298,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                             {isLoading ? (
                                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                             ) : null}
-                            Verify Code
+                            {t('auth.verifyCode')}
                         </Button>
                     </form>
                 </Form>

@@ -431,11 +431,14 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
         {viewMode === 'daily' ? (
           <>
             <div className="grid grid-cols-8 gap-x-[1px] mb-1">
-              {[...WEEKDAYS, 'calendar.weekdays.weekly' as const].map((day) => (
+              {WEEKDAYS.map((day) => (
                 <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
                   {t(day)}
                 </div>
               ))}
+              <div className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
+                {t('calendar.weekdays.weekly')}
+              </div>
             </div>
             <div className="grid grid-cols-8 auto-rows-fr rounded-lg h-[calc(100%-20px)]">
               {calendarDays.map((date, index) => {
@@ -445,6 +448,39 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
                 const isCurrentMonth = isSameMonth(date, currentDate)
                 const dateEvents = filterByImpactLevel(getEventsForDate(date))
                 const dateRenewals = getRenewalsForDate(date)
+
+                // Add calculations if dayData exists
+                let maxProfit = 0;
+                let maxDrawdown = 0;
+                if (dayData) {
+                  const sortedTrades = dayData.trades.sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime());
+                  const equity = [0];
+                  let cumulative = 0;
+                  sortedTrades.forEach(trade => {
+                    cumulative += trade.pnl - (trade.commission || 0);
+                    equity.push(cumulative);
+                  });
+
+                  // Max drawdown
+                  let peak = -Infinity;
+                  let maxDD = 0;
+                  equity.forEach(val => {
+                    if (val > peak) peak = val;
+                    const dd = peak - val;
+                    if (dd > maxDD) maxDD = dd;
+                  });
+                  maxDrawdown = maxDD;
+
+                  // Max profit (runup)
+                  let trough = Infinity;
+                  let maxRU = 0;
+                  equity.forEach(val => {
+                    if (val < trough) trough = val;
+                    const ru = val - trough;
+                    if (ru > maxRU) maxRU = ru;
+                  });
+                  maxProfit = maxRU;
+                }
 
                 return (
                   <React.Fragment key={dateString}>
@@ -504,6 +540,22 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
                             ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`
                             : t('calendar.noTrades')}
                         </div>
+                        {dayData && (
+                          <>
+                            <div className={cn(
+                              "text-[7px] sm:text-[9px] text-green-600 dark:text-green-400 truncate text-center",
+                              !isCurrentMonth && "opacity-50"
+                            )}>
+                              {t('calendar.maxProfit')}: {formatCurrency(maxProfit)}
+                            </div>
+                            <div className={cn(
+                              "text-[7px] sm:text-[9px] text-red-600 dark:text-red-400 truncate text-center",
+                              !isCurrentMonth && "opacity-50"
+                            )}>
+                              {t('calendar.maxDD')}: -{formatCurrency(maxDrawdown)}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                     {isLastDayOfWeek && (() => {

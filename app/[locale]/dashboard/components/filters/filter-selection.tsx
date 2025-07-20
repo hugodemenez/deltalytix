@@ -8,12 +8,12 @@ import { useI18n } from "@/locales/client"
 
 interface FilterSectionProps {
   items: FilterItem[]
-  type: 'account' | 'instrument' | 'propfirm'
+  type: 'instrument' | 'propfirm'
   searchTerm: string
   handleSelect: (value: string) => void
   isItemDisabled: (item: FilterItem) => boolean
   isItemSelected: (item: FilterItem) => boolean
-  handleSelectAll: (type: 'account' | 'instrument' | 'propfirm') => void
+  handleSelectAll: (type: 'instrument' | 'propfirm') => void
   anonymizeAccount: (account: string) => string
 }
 
@@ -21,7 +21,6 @@ export function FilterSection({ type, items, searchTerm, handleSelect, isItemDis
   const t = useI18n()
   
   const selectAllText = {
-    account: t('filters.selectAllAccounts'),
     propfirm: t('filters.selectAllPropfirms'),
     instrument: t('filters.selectAllInstruments')
   }
@@ -52,7 +51,7 @@ export function FilterSection({ type, items, searchTerm, handleSelect, isItemDis
         <span className="text-sm font-medium">{selectAllText[type]}</span>
       </CommandItem>
       <ScrollArea 
-        className={`overflow-y-auto ${type === 'account' ? 'max-h-[200px]' : 'flex-1'}`}
+        className="flex-1"
         onWheel={handleScroll}
         style={{ overscrollBehavior: 'contain' }}
       >
@@ -72,7 +71,7 @@ export function FilterSection({ type, items, searchTerm, handleSelect, isItemDis
                 className="mr-2" 
                 disabled={isItemDisabled(item)}
               />
-              {type === 'account' ? anonymizeAccount(item.value) : item.value}
+              {item.value}
             </CommandItem>
           ))}
         </div>

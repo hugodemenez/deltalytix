@@ -24,6 +24,8 @@ import { useTradesStore } from '@/store/trades-store'
 import { usePdfProcessingStore } from '@/store/pdf-processing-store'
 import PdfUpload from './ibkr-pdf/pdf-upload'
 import PdfProcessing from './ibkr-pdf/pdf-processing'
+import AtasFileUpload from './atas/atas-file-upload'
+import { generateTradeHash } from '@/lib/utils'
 
 type ColumnConfig = {
   [key: string]: {
@@ -83,14 +85,6 @@ export default function ImportButton() {
   const t = useI18n()
 
 
-  const generateTradeHash = (trade: Partial<Trade>): string => {
-    if (!user) {
-      return ''
-    }
-    const hashString = `${user.id}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
-    return hashString
-  }
-
   const handleSave = async () => {
     if (!user) {
       toast({
@@ -105,12 +99,39 @@ export default function ImportButton() {
     try {
       let newTrades: Trade[] = []
           console.log('[ImportButton] Processing trades:', processedTrades)
-          newTrades = processedTrades.map(trade => ({
-            ...trade,
-            accountNumber: trade.accountNumber || accountNumber || newAccountNumber,
-            userId: user.id,
-            id: generateTradeHash(trade),
-          }))
+          newTrades = processedTrades.map(trade => {
+            // Clean up the trade object to remove undefined values
+            const cleanTrade = Object.fromEntries(
+              Object.entries(trade).filter(([_, value]) => value !== undefined)
+            ) as Partial<Trade>
+            
+            return {
+              ...cleanTrade,
+              accountNumber: cleanTrade.accountNumber || accountNumber || newAccountNumber,
+              userId: user.id,
+              id: generateTradeHash({ ...cleanTrade, userId: user.id }),
+              // Ensure required fields have default values
+              instrument: cleanTrade.instrument || '',
+              entryPrice: cleanTrade.entryPrice || '',
+              closePrice: cleanTrade.closePrice || '',
+              entryDate: cleanTrade.entryDate || '',
+              closeDate: cleanTrade.closeDate || '',
+              quantity: cleanTrade.quantity || 0,
+              pnl: cleanTrade.pnl || 0,
+              timeInPosition: cleanTrade.timeInPosition || 0,
+              side: cleanTrade.side || '',
+              commission: cleanTrade.commission || 0,
+              entryId: cleanTrade.entryId || null,
+              closeId: cleanTrade.closeId || null,
+              comment: cleanTrade.comment || null,
+              videoUrl: cleanTrade.videoUrl || null,
+              tags: cleanTrade.tags || [],
+              imageBase64: cleanTrade.imageBase64 || null,
+              imageBase64Second: cleanTrade.imageBase64Second || null,
+              groupId: cleanTrade.groupId || null,
+              createdAt: cleanTrade.createdAt || new Date(),
+            } as Trade
+          })
      
           // Filter out empty trades
           newTrades = newTrades.filter(trade => {
@@ -259,6 +280,19 @@ export default function ImportButton() {
     }
 
     if (Component === FileUpload) {
+      return (
+        <Component
+          importType={importType}
+          setRawCsvData={setRawCsvData}
+          setCsvData={setCsvData}
+          setHeaders={setHeaders}
+          setStep={setStep}
+          setError={setError}
+        />
+      )
+    }
+
+    if (Component === AtasFileUpload) {
       return (
         <Component
           importType={importType}

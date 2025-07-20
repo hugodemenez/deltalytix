@@ -26,6 +26,7 @@ import { cn } from '@/lib/utils'
 import { AccountsOverview } from '../components/accounts/accounts-overview'
 import { TagWidget } from '../components/filters/tag-widget'
 import ProfitFactorCard from '../components/statistics/profit-factor-card'
+import DailyTickTargetChart from '../components/charts/daily-tick-target'
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import { MindsetWidget } from '../components/mindset/mindset-widget'
 import ChatWidget from '../components/chat/chat'
@@ -201,7 +202,7 @@ function createMindsetPreview() {
   )
 }
 
-function createCalendarPreview() {
+function CreateCalendarPreview() {
   const t = useI18n()
   const weekdays = [
     'calendar.weekdays.sun',
@@ -268,7 +269,7 @@ function createCalendarPreview() {
   )
 }
 
-function createChatPreview() {
+function CreateChatPreview() {
   const t = useI18n()
 
   return (
@@ -474,6 +475,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     getComponent: ({ size }) => <ProfitFactorCard size={size} />,
     getPreview: () => <ProfitFactorCard size="tiny" />
   },
+  dailyTickTarget: {
+    type: 'dailyTickTarget',
+    defaultSize: 'medium',
+    allowedSizes: ['small', 'small-long', 'medium', 'large'],
+    category: 'charts',
+    previewHeight: 300,
+    getComponent: ({ size }) => <DailyTickTargetChart size={size} />,
+    getPreview: () => <DailyTickTargetChart size="small" />
+  },
   statisticsWidget: {
     type: 'statisticsWidget',
     defaultSize: 'medium',
@@ -490,7 +500,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     category: 'other',
     previewHeight: 300,
     getComponent: ({ size }) => <ChatWidget size={size} />,
-    getPreview: () => createChatPreview()
+    getPreview: () => <CreateChatPreview />
   },
   calendarWidget: {
     type: 'calendarWidget',
@@ -499,7 +509,7 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     category: 'other',
     previewHeight: 500,
     getComponent: () => <CalendarPnl />,
-    getPreview: () => createCalendarPreview()
+    getPreview: () => <CreateCalendarPreview />
   },
   tradeTableReview: {
     type: 'tradeTableReview',

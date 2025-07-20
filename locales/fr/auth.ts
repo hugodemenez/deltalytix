@@ -10,6 +10,31 @@ export default {
         signInWithGoogle: 'Google',
         openMailbox: 'Ouvrir la Boîte Mail',
         resendIn: 'Renvoyer dans',
-        resendEmail: 'Renvoyer l\'Email'
+        resendEmail: 'Renvoyer l\'Email',
+        verificationCode: 'Code de Vérification',
+        verifyCode: 'Vérifier le Code',
+        // Identity linking
+        linkedAccounts: 'Comptes Liés',
+        linkedAccountsDescription: 'Gérez vos méthodes d\'authentification connectées',
+        linkDiscord: 'Lier le Compte Discord',
+        linkGoogle: 'Lier le Compte Google',
+        unlinkAccount: 'Délier le Compte',
+        unlinkConfirm: 'Êtes-vous sûr de vouloir délier ce compte ?',
+        unlinkConfirmDescription: 'Vous ne pourrez plus vous connecter avec cette méthode.',
+        accountLinked: 'Compte lié avec succès',
+        accountUnlinked: 'Compte délié avec succès',
+        linkingFailed: 'Échec de la liaison du compte',
+        unlinkingFailed: 'Échec de la déliaison du compte',
+        primaryAccount: 'Compte Principal',
+        linkedMethod: 'Méthode Liée',
+        lastUsed: 'Dernière Utilisation',
+        noLinkedAccounts: 'Aucun compte supplémentaire lié',
+        linkNewAccount: 'Lier un Nouveau Compte',
+        linkAccountDescription: 'Liez des méthodes d\'authentification supplémentaires à votre compte pour un accès plus facile.',
+        emailMethod: 'Email',
+        discordMethod: 'Discord',
+        googleMethod: 'Google',
+        cancel: 'Annuler',
+        primary: 'Principal'
     }
 } as const;

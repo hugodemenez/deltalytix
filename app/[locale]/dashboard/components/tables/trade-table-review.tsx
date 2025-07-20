@@ -14,9 +14,11 @@ import {
   VisibilityState,
   getExpandedRowModel,
   ExpandedState,
+  OnChangeFn,
 } from "@tanstack/react-table"
 import { Button } from '@/components/ui/button'
-import { ChevronRight, ChevronDown, ChevronLeft, Info } from 'lucide-react'
+import { ChevronRight, ChevronDown, ChevronLeft, Info, Search, Filter, X } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 import { Trade } from '@prisma/client'
 import {
   Popover,
@@ -62,7 +64,167 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useUserStore } from '@/store/user-store'
+import { useTableConfigStore } from '@/store/table-config-store'
+import { useTickDetailsStore } from '@/store/tick-details-store'
 import { TradeImageEditor } from './trade-image-editor'
+import { ColumnConfigDialog } from '@/components/ui/column-config-dialog'
+import { calculateTicksAndPointsForTrades, calculateTicksAndPointsForGroupedTrade } from '@/lib/tick-calculations'
+import { Input } from '@/components/ui/input'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu"
+
+// Custom Tags Header Component
+function TagsColumnHeader() {
+  const t = useI18n()
+  const { tagFilter, setTagFilter } = useData()
+  const tags = useUserStore(state => state.tags)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
+
+  const filteredTags = useMemo(() => {
+    return tags?.filter(tag => 
+      tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ) ?? []
+  }, [tags, searchQuery])
+
+  const hasActiveFilter = tagFilter.tags.length > 0
+
+  const handleClearFilter = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setTagFilter({ tags: [] })
+  }
+
+  return (
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn(
+            "-ml-3 h-8 data-[state=open]:bg-accent",
+            hasActiveFilter && "bg-accent"
+          )}
+        >
+          <span>{t('trade-table.tags')}</span>
+          {hasActiveFilter && (
+            <Filter className="ml-1 h-3.5 w-3.5 text-muted-foreground/70" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-80">
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <Filter className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+            {t('table.filter')}
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="w-80">
+            <div className="grid gap-4 p-2">
+              <div className="space-y-2">
+                <h4 className="font-medium leading-none">{t('trade-table.tags')}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {t('widgets.tags.searchPlaceholder')}
+                </p>
+              </div>
+              
+              {/* Search input */}
+              <div className="flex items-center gap-2 bg-muted/30 rounded-md px-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder={t('widgets.tags.searchPlaceholder')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-8 text-sm"
+                />
+              </div>
+
+              {/* Tags list */}
+              <div className="max-h-60 min-h-[100px]">
+                <ScrollArea className="h-full">
+                  <div className="space-y-1">
+                    {filteredTags.map((tag) => (
+                      <div
+                        key={tag.id}
+                        className="flex items-center justify-between rounded-md hover:bg-muted/50 transition-colors p-1.5"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Checkbox
+                            checked={tagFilter.tags.includes(tag.name)}
+                            onCheckedChange={(checked) => {
+                              setTagFilter(prev => ({
+                                tags: checked 
+                                  ? [...prev.tags, tag.name]
+                                  : prev.tags.filter(t => t !== tag.name)
+                              }))
+                            }}
+                            id={`tag-filter-${tag.id}`}
+                            className="h-4 w-4"
+                          />
+                          <div
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: tag.color || '#CBD5E1' }}
+                          />
+                          <label
+                            htmlFor={`tag-filter-${tag.id}`}
+                            className="font-medium cursor-pointer truncate flex-1 text-sm"
+                          >
+                            {tag.name}
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                    {filteredTags.length === 0 && (
+                      <div className="flex items-center justify-center text-muted-foreground h-[100px] text-sm">
+                        {searchQuery ? t('widgets.tags.noResults') : t('widgets.tags.noTags')}
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearFilter}
+                  className="flex-1"
+                  disabled={!hasActiveFilter}
+                >
+                  {t('table.clear')}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => setIsOpen(false)}
+                  className="flex-1"
+                >
+                  {t('table.apply')}
+                </Button>
+              </div>
+            </div>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        
+        {hasActiveFilter && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleClearFilter}>
+              <X className="mr-2 h-3.5 w-3.5 text-muted-foreground/70" />
+              {t('widgets.tags.clearFilter')} ({tagFilter.tags.length})
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 interface ExtendedTrade extends Trade {
   imageUrl?: string | undefined
@@ -84,16 +246,70 @@ export function TradeTableReview() {
   } = useData()
   const tags = useUserStore(state => state.tags)
   const timezone = useUserStore(state => state.timezone)
+  const tickDetails = useTickDetailsStore(state => state.tickDetails)
 
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "entryDate", desc: true }
-  ])
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
+  // Debug: Log tick details
+  console.log('Available tick details:', tickDetails)
+
+  // Get table configuration from store
+  const {
+    tables,
+    updateSorting,
+    updateColumnFilters,
+    updateColumnVisibilityState,
+    updatePageSize,
+    updateGroupingGranularity,
+  } = useTableConfigStore()
+
+  const tableConfig = tables['trade-table']
+  const [sorting, setSorting] = useState<SortingState>(tableConfig?.sorting || [{ id: "entryDate", desc: true }])
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(tableConfig?.columnFilters || [])
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(tableConfig?.columnVisibility || {})
   const [expanded, setExpanded] = useState<ExpandedState>({})
-  const [pageSize, setPageSize] = useState(10)
-  const [groupingGranularity, setGroupingGranularity] = useState<number>(0)
+  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 10)
+  const [groupingGranularity, setGroupingGranularity] = useState<number>(tableConfig?.groupingGranularity || 0)
   const [selectedTrades, setSelectedTrades] = useState<string[]>([])
+  const [showPoints, setShowPoints] = useState(false)
+
+  // Sync local state with store
+  React.useEffect(() => {
+    if (tableConfig) {
+      setSorting(tableConfig.sorting)
+      setColumnFilters(tableConfig.columnFilters)
+      setColumnVisibility(tableConfig.columnVisibility)
+      setPageSize(tableConfig.pageSize)
+      setGroupingGranularity(tableConfig.groupingGranularity)
+    }
+  }, [tableConfig])
+
+  // Update store when local state changes
+  const handleSortingChange: OnChangeFn<SortingState> = (updaterOrValue) => {
+    const newSorting = typeof updaterOrValue === 'function' ? updaterOrValue(sorting) : updaterOrValue
+    setSorting(newSorting)
+    updateSorting('trade-table', newSorting)
+  }
+
+  const handleColumnFiltersChange: OnChangeFn<ColumnFiltersState> = (updaterOrValue) => {
+    const newFilters = typeof updaterOrValue === 'function' ? updaterOrValue(columnFilters) : updaterOrValue
+    setColumnFilters(newFilters)
+    updateColumnFilters('trade-table', newFilters)
+  }
+
+  const handleColumnVisibilityChange: OnChangeFn<VisibilityState> = (updaterOrValue) => {
+    const newVisibility = typeof updaterOrValue === 'function' ? updaterOrValue(columnVisibility) : updaterOrValue
+    setColumnVisibility(newVisibility)
+    updateColumnVisibilityState('trade-table', newVisibility)
+  }
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize)
+    updatePageSize('trade-table', newPageSize)
+  }
+
+  const handleGroupingGranularityChange = (newGranularity: number) => {
+    setGroupingGranularity(newGranularity)
+    updateGroupingGranularity('trade-table', newGranularity)
+  }
 
   const trades = contextTrades
 
@@ -322,7 +538,7 @@ export function TradeTableReview() {
     {
       accessorKey: "entryDate",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.entryDate')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.entryDate')} tableId="trade-table" />
       ),
       cell: ({ row }) => formatInTimeZone(new Date(row.original.entryDate), timezone, 'yyyy-MM-dd'),
       sortingFn: (rowA, rowB, columnId) => {
@@ -335,7 +551,7 @@ export function TradeTableReview() {
     {
       accessorKey: "instrument",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.instrument')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.instrument')} tableId="trade-table" />
       ),
       size: 120,
       cell: ({ row }) => {
@@ -350,7 +566,7 @@ export function TradeTableReview() {
     {
       accessorKey: "direction",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.direction')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.direction')} tableId="trade-table" />
       ),
       size: 100,
       cell: ({ row }) => {
@@ -375,7 +591,7 @@ export function TradeTableReview() {
     {
       accessorKey: "entryPrice",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.entryPrice')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.entryPrice')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const entryPrice = parseFloat(row.original.entryPrice)
@@ -390,7 +606,7 @@ export function TradeTableReview() {
     {
       accessorKey: "closePrice",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.exitPrice')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.exitPrice')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const exitPrice = parseFloat(row.original.closePrice)
@@ -405,7 +621,7 @@ export function TradeTableReview() {
     {
       accessorKey: "timeInPosition",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.positionTime')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.positionTime')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const timeInPosition = row.original.timeInPosition || 0
@@ -422,7 +638,7 @@ export function TradeTableReview() {
       accessorKey: "entryTime",
       accessorFn: (row) => row.entryDate,
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.entryTime')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.entryTime')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const dateStr = row.original.entryDate
@@ -433,7 +649,7 @@ export function TradeTableReview() {
     {
       accessorKey: "closeDate",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.exitTime')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.exitTime')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const dateStr = row.original.closeDate
@@ -444,7 +660,7 @@ export function TradeTableReview() {
     {
       accessorKey: "pnl",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.pnl')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.pnl')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const pnl = row.original.pnl
@@ -464,7 +680,7 @@ export function TradeTableReview() {
     {
       accessorKey: "commission",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Commission" />
+        <DataTableColumnHeader column={column} title="Commission" tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const commission = row.original.commission
@@ -479,7 +695,7 @@ export function TradeTableReview() {
     {
       accessorKey: "quantity",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.quantity')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.quantity')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const quantity = row.original.quantity
@@ -491,6 +707,48 @@ export function TradeTableReview() {
       },
       sortingFn: "basic",
       size: 100,
+    },
+    {
+      id: "ticksAndPoints",
+      header: ({ column }) => (
+        <DataTableColumnHeader 
+          column={column} 
+          title={showPoints ? t('trade-table.points') : t('trade-table.ticks')} 
+          tableId="trade-table" 
+          showFilter={true}
+          showToggle={true}
+          toggleLabel={t('table.showPoints')}
+          toggleValue={showPoints}
+          onToggleChange={setShowPoints}
+        />
+      ),
+      accessorFn: (row) => {
+        const calculation = calculateTicksAndPointsForGroupedTrade(row, tickDetails)
+        return showPoints ? calculation.points : calculation.ticks
+      },
+      cell: ({ row }) => {
+        const calculation = calculateTicksAndPointsForGroupedTrade(row.original, tickDetails)
+        const value = showPoints ? calculation.points : calculation.ticks
+        return (
+          <div className="text-right font-medium">
+            <span className={cn(
+              value >= 0 ? 'text-green-600' : 'text-red-600'
+            )}>
+              {showPoints ? value.toFixed(2) : value}
+            </span>
+          </div>
+        )
+      },
+      sortingFn: "basic",
+      size: 100,
+      filterFn: (row, columnId, filterValue) => {
+        const value = row.getValue(columnId) as number
+        const { min, max } = filterValue as { min?: number; max?: number }
+        
+        if (min !== undefined && value < min) return false
+        if (max !== undefined && value > max) return false
+        return true
+      },
     },
     {
       id: "image",
@@ -522,15 +780,7 @@ export function TradeTableReview() {
     },
     {
       id: "tags",
-      header: ({ column }) => (
-        <Button
-            variant="ghost"
-            size="sm"
-            className="-ml-3 h-8 data-[state=open]:bg-accent"
-          >
-          {t('trade-table.tags')}
-        </Button>
-      ),
+      header: () => <TagsColumnHeader />,
       cell: ({ row }) => {
         const trade = row.original
         const tradeIds = trade.trades.length > 0
@@ -550,7 +800,7 @@ export function TradeTableReview() {
     {
       accessorKey: "comment",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.comment')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.comment')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const trade = row.original
@@ -571,7 +821,7 @@ export function TradeTableReview() {
     {
       accessorKey: "videoUrl",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('trade-table.videoUrl')} />
+        <DataTableColumnHeader column={column} title={t('trade-table.videoUrl')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
         const trade = row.original
@@ -592,7 +842,7 @@ export function TradeTableReview() {
       },
       size: 200,
     }
-  ], [t, timezone, tags, expanded])
+  ], [t, timezone, tags, expanded, tickDetails, showPoints])
 
   const table = useReactTable({
     data: groupedTrades,
@@ -602,6 +852,10 @@ export function TradeTableReview() {
       columnFilters,
       columnVisibility,
       expanded,
+      pagination: {
+        pageIndex: 0,
+        pageSize,
+      },
     },
     paginateExpandedRows: false,
     onExpandedChange: setExpanded,
@@ -612,9 +866,9 @@ export function TradeTableReview() {
     getFilteredRowModel: getFilteredRowModel(),
     getRowCanExpand: (row) => row.original.trades.length > 0,
     getExpandedRowModel: getExpandedRowModel(),
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
+    onSortingChange: handleSortingChange,
+    onColumnFiltersChange: handleColumnFiltersChange,
+    onColumnVisibilityChange: handleColumnVisibilityChange,
     defaultColumn: {
       size: 400,
       minSize: 100,
@@ -663,10 +917,25 @@ export function TradeTableReview() {
             )}
             <Select
               value={groupingGranularity.toString()}
-              onValueChange={(value) => setGroupingGranularity(parseInt(value))}
+              onValueChange={(value) => handleGroupingGranularityChange(parseInt(value))}
             >
               <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder={t('trade-table.granularity.label')} />
+                <div className="flex items-center w-full">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info 
+                          className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help mr-2" 
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="z-50">
+                        <p>{t('trade-table.granularity.tooltip')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <SelectValue placeholder={t('trade-table.granularity.label')} />
+                </div>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="0">{t('trade-table.granularity.exact')}</SelectItem>
@@ -676,16 +945,7 @@ export function TradeTableReview() {
                 <SelectItem value="60">{t('trade-table.granularity.oneMinute')}</SelectItem>
               </SelectContent>
             </Select>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p>{t('trade-table.granularity.tooltip')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <ColumnConfigDialog tableId="trade-table" />
           </div>
         </div>
       </CardHeader>
@@ -787,17 +1047,18 @@ export function TradeTableReview() {
             variant="outline"
             size="sm"
             onClick={() => {
-              setPageSize(pageSize + 10)
-              table.setPageSize(pageSize)
+              const newPageSize = pageSize + 10
+              handlePageSizeChange(newPageSize)
+              table.setPageSize(newPageSize)
             }}
           >
             {t('trade-table.pageSize')}
           </Button>
           <Button
             variant="outline"
-            size="sm"
+            className="w-[180px] h-10"
             onClick={() => {
-              setPageSize(10)
+              handlePageSizeChange(10)
               table.resetPageSize()
             }}
           >
