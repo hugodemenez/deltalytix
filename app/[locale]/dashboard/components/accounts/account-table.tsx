@@ -51,7 +51,7 @@ export function AccountTable({
   const dateLocale = locale === 'fr' ? fr : enUS
 
   // Check if account is configured and has no pending changes
-  const isConfigured = profitTarget > 0 && !hasPendingChanges
+  const isConfigured =  !hasPendingChanges
 
   if (!isConfigured) {
     return (
