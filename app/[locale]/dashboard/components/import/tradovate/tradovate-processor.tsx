@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
 import { useI18n } from '@/locales/client'
 import { useTradesStore } from '@/store/trades-store'
+import { generateTradeHash } from '@/lib/utils'
 
 interface TradovateProcessorProps {
     headers: string[];
@@ -57,10 +58,6 @@ const convertTimeInPosition = (time: string | undefined): number | undefined => 
     return timeInSeconds;
 }
 
-const generateTradeHash = (trade: Partial<Trade>): string => {
-    const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
-    return hashString
-}
 const newMappings: { [key: string]: string } = {
     "symbol": "instrument",
     "qty": "quantity",

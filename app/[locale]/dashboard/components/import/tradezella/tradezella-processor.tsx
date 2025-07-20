@@ -5,16 +5,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
+import { generateTradeHash } from '@/lib/utils'
 
 interface TradezellaProcessorProps {
   headers: string[];
   csvData: string[][];
   setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
-}
-
-const generateTradeHash = (trade: Partial<Trade>): string => {
-  const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
-  return hashString
 }
 
 const newMappings: { [key: string]: string } = {

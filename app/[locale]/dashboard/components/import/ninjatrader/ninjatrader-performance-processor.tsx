@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
+import { generateTradeHash } from '@/lib/utils'
 
 interface NinjaTraderPerformanceProcessorProps {
   headers: string[];
@@ -39,11 +40,6 @@ const formatPriceValue = (price: string | undefined): { price: number, error?: s
   }
   return { price: numericValue };
 };
-
-const generateTradeHash = (trade: Partial<Trade>, index: number): string => {
-  const hashString = `${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}-${index}`
-  return hashString
-}
 
 const englishMappings: { [key: string]: string } = {
   "Account": "accountNumber",
@@ -192,7 +188,8 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
         item.pnl = item.pnl + item.commission;
       }
 
-      item.id = generateTradeHash(item as Trade, rowIndex).toString();
+      // Add rowIndex to the trade object for unique identification
+      item.id = generateTradeHash({ ...item as Trade, entryId: `${item.entryId || ''}-${rowIndex}` }).toString();
       newTrades.push(item as Trade);
     })
 

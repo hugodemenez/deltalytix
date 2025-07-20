@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
 import { useI18n } from '@/locales/client'
 import { useTradesStore } from '@/store/trades-store'
+import { generateTradeHash } from '@/lib/utils'
 
 interface AtasProcessorProps {
     headers: string[];
@@ -109,11 +110,6 @@ const parseAtasDate = (dateValue: any): string | undefined => {
         return undefined;
     }
 };
-
-const generateTradeHash = (trade: Partial<Trade>): string => {
-    const hashString = `${trade.userId}-${trade.accountNumber}-${trade.instrument}-${trade.entryDate}-${trade.closeDate}-${trade.quantity}-${trade.entryId}-${trade.closeId}-${trade.timeInPosition}`
-    return hashString
-}
 
 // ATAS column mappings - only map fields that exist in the database schema
 const atasMappings: { [key: string]: string } = {
