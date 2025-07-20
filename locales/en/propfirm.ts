@@ -96,7 +96,8 @@ export default {
                 custom: 'Custom'
             },
             tooltips: {
-                trailingDrawdown: 'Trailing drawdown follows your profits upward but never moves down when you lose money. When enabled with a trailing stop, it stops following profits once you reach the specified profit amount. The calculation can be done intraday (real-time) or end-of-day (computed once daily based on total daily profit/loss).'
+                trailingDrawdown: 'Trailing drawdown follows your profits upward but never moves down when you lose money. When enabled with a trailing stop, it stops following profits once you reach the specified profit amount. The calculation can be done intraday (real-time) or end-of-day (computed once daily based on total daily profit/loss).',
+                trailingStopProfit: 'Example: If you set $3,000, once you reach $3,000 in profits, the trailing drawdown will stop increasing and lock at that level. This means your stop loss will no longer follow your profits upward beyond this point.'
             },
             placeholders: {
                 enterPrice: 'Enter price',

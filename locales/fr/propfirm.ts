@@ -96,7 +96,8 @@ export default {
                 custom: 'Personnalisé'
             },
             tooltips: {
-                trailingDrawdown: 'Le drawdown trailing suit vos profits à la hausse mais ne descend jamais quand vous perdez de l\'argent. Lorsqu\'il est activé avec un stop trailing, il arrête de suivre les profits une fois que vous atteignez le montant de profit spécifié. Le calcul peut être fait en intraday (temps réel) ou en fin de journée (calculé une fois par jour basé sur le profit/perte total quotidien).'
+                trailingDrawdown: 'Le drawdown trailing suit vos profits à la hausse mais ne descend jamais quand vous perdez de l\'argent. Lorsqu\'il est activé avec un stop trailing, il arrête de suivre les profits une fois que vous atteignez le montant de profit spécifié. Le calcul peut être fait en intraday (temps réel) ou en fin de journée (calculé une fois par jour basé sur le profit/perte total quotidien).',
+                trailingStopProfit: 'Exemple : Si vous définissez 3 000$, une fois que vous atteignez 3 000$ de profits, le drawdown trailing s\'arrêtera d\'augmenter et se verrouillera à ce niveau. Cela signifie que votre stop loss ne suivra plus vos profits à la hausse au-delà de ce point.'
             },
             placeholders: {
                 enterPrice: 'Entrez le prix',

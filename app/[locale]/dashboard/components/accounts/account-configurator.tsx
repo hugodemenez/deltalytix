@@ -323,6 +323,7 @@ export function AccountConfigurator({
                 {(pendingChanges?.trailingDrawdown ?? account.trailingDrawdown) && (
                   <div className="flex flex-col gap-2">
                     <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.trailingStopProfit')}</Label>
+                    <p className="text-xs text-muted-foreground">{t('propFirm.configurator.tooltips.trailingStopProfit')}</p>
                     <Input
                       type="number"
                       value={pendingChanges?.trailingStopProfit ?? account.trailingStopProfit ?? ''}
