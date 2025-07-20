@@ -837,7 +837,7 @@ export const DataProvider: React.FC<{
     };
   }, [formattedTrades, accounts]);
 
-  const calendarData = useMemo(() => formatCalendarData(formattedTrades), [formattedTrades]);
+  const calendarData = useMemo(() => formatCalendarData(formattedTrades, accounts), [formattedTrades, accounts]);
 
   const isPlusUser = () => {
     return Boolean(subscription?.status === 'active' && ['plus', 'pro'].includes(subscription?.plan?.split('_')[0].toLowerCase() || ''));
