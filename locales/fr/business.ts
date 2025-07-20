@@ -196,6 +196,13 @@ export default {
   'business.invitations.notFound': 'Invitation non trouvée',
   'business.invitations.wrongEmail': 'Cette invitation a été envoyée à une adresse email différente',
   
+  // Join business
+  'business.join.success': 'Business rejoint avec succès',
+  'business.join.error': 'Échec de la jonction au business',
+  'business.join.invalidInvitation': 'Invitation invalide',
+  'business.join.expiredInvitation': 'L\'invitation a expiré',
+  'business.join.alreadyMember': 'Vous êtes déjà membre de ce business',
+  
   // Business join page
   'business.join.title': 'Invitation Business',
   'business.join.subtitle': 'Vous avez été invité à rejoindre une équipe business',
