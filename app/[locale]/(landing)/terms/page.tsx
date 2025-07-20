@@ -30,6 +30,9 @@ export default function TermsOfService() {
         <h2 className="text-2xl font-semibold mb-3">{t('terms.sections.subscriptionPayments.title')}</h2>
         <p>{t('terms.sections.subscriptionPayments.content')}</p>
         
+        <h3 className="text-lg font-semibold mt-4 mb-2">{t('terms.sections.subscriptionPayments.storageClarification')}</h3>
+        <p className="mb-3">{t('terms.sections.subscriptionPayments.fairUse')}</p>
+        
         <h3 className="text-lg font-semibold mt-4 mb-2">{t('terms.sections.subscriptionPayments.lifetimePlan.title')}</h3>
         <p>{t('terms.sections.subscriptionPayments.lifetimePlan.description')}</p>
         <ul className="list-disc ml-6 mt-2 space-y-1">
@@ -50,6 +53,7 @@ export default function TermsOfService() {
       <section className="mb-6">
         <h2 className="text-2xl font-semibold mb-3">{t('terms.sections.dataProtection.title')}</h2>
         <p>{t('terms.sections.dataProtection.content')}</p>
+        <p className="mt-2">{t('terms.sections.dataProtection.dataExport')}</p>
       </section>
 
       <section className="mb-6">
