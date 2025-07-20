@@ -2,6 +2,7 @@ import { getTradesAction } from "@/server/database";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
 import { z } from "zod";
+import { formatInTimeZone } from "date-fns-tz";
 
 interface TimePerformance {
   period: string;
@@ -43,7 +44,7 @@ interface TimeAnalysis {
   recommendations: string[];
 }
 
-function calculateTimeMetrics(trades: Trade[]): TimePerformance | null {
+function calculateTimeMetrics(trades: Trade[], timezone: string = 'UTC'): TimePerformance | null {
   if (!trades || trades.length === 0) return null;
   
   const totalTrades = trades.length;
@@ -59,7 +60,7 @@ function calculateTimeMetrics(trades: Trade[]): TimePerformance | null {
   
   // Calculate consistency (percentage of profitable days)
   const dailyGroups = trades.reduce((groups, trade) => {
-    const date = new Date(trade.entryDate).toISOString().split('T')[0];
+    const date = formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd');
     if (!groups[date]) groups[date] = [];
     groups[date].push(trade);
     return groups;
@@ -84,7 +85,7 @@ function calculateTimeMetrics(trades: Trade[]): TimePerformance | null {
   };
 }
 
-function analyzeTimeOfDay(trades: Trade[]): TimeAnalysis {
+function analyzeTimeOfDay(trades: Trade[], timezone: string = 'UTC'): TimeAnalysis {
   if (!trades || trades.length === 0) {
     return {
       hourlyPerformance: [],
@@ -101,7 +102,7 @@ function analyzeTimeOfDay(trades: Trade[]): TimeAnalysis {
     };
   }
   
-  // Define trading sessions
+  // Define trading sessions (these hours are in the user's timezone now)
   const sessions = [
     { session: 'Asian Session', description: 'Asian markets open', startHour: 21, endHour: 6 },
     { session: 'London Session', description: 'European markets open', startHour: 7, endHour: 16 },
@@ -109,9 +110,9 @@ function analyzeTimeOfDay(trades: Trade[]): TimeAnalysis {
     { session: 'Overlap: London/NY', description: 'London and New York overlap', startHour: 13, endHour: 16 }
   ];
   
-  // Group trades by hour (0-23)
+  // Group trades by hour (0-23) in user's timezone
   const hourlyGroups = trades.reduce((groups, trade) => {
-    const hour = new Date(trade.entryDate).getHours();
+    const hour = parseInt(formatInTimeZone(new Date(trade.entryDate), timezone, 'H'), 10);
     if (!groups[hour]) groups[hour] = [];
     groups[hour].push(trade);
     return groups;
@@ -120,14 +121,14 @@ function analyzeTimeOfDay(trades: Trade[]): TimeAnalysis {
   // Calculate hourly performance
   const hourlyPerformance = Array.from({ length: 24 }, (_, hour) => {
     const hourTrades = hourlyGroups[hour] || [];
-    const metrics = calculateTimeMetrics(hourTrades);
+    const metrics = calculateTimeMetrics(hourTrades, timezone);
     return metrics ? { ...metrics, period: `${hour}:00-${hour}:59` } : null;
   }).filter(h => h !== null);
   
-  // Group trades by day of week
+  // Group trades by day of week in user's timezone
   const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const dayOfWeekGroups = trades.reduce((groups, trade) => {
-    const dayOfWeek = new Date(trade.entryDate).getDay();
+    const dayOfWeek = parseInt(formatInTimeZone(new Date(trade.entryDate), timezone, 'e'), 10) % 7;
     if (!groups[dayOfWeek]) groups[dayOfWeek] = [];
     groups[dayOfWeek].push(trade);
     return groups;
@@ -136,14 +137,14 @@ function analyzeTimeOfDay(trades: Trade[]): TimeAnalysis {
   // Calculate day of week performance
   const dayOfWeekPerformance = dayNames.map((dayName, index) => {
     const dayTrades = dayOfWeekGroups[index] || [];
-    const metrics = calculateTimeMetrics(dayTrades);
+    const metrics = calculateTimeMetrics(dayTrades, timezone);
     return metrics ? { ...metrics, period: dayName } : null;
   }).filter(d => d !== null);
   
-  // Calculate session performance
+  // Calculate session performance using user's timezone
   const sessionPerformance = sessions.map(sessionInfo => {
     const sessionTrades = trades.filter(trade => {
-      const hour = new Date(trade.entryDate).getHours();
+      const hour = parseInt(formatInTimeZone(new Date(trade.entryDate), timezone, 'H'), 10);
       if (sessionInfo.startHour <= sessionInfo.endHour) {
         return hour >= sessionInfo.startHour && hour <= sessionInfo.endHour;
       } else {
@@ -152,7 +153,7 @@ function analyzeTimeOfDay(trades: Trade[]): TimeAnalysis {
       }
     });
     
-    const metrics = calculateTimeMetrics(sessionTrades);
+    const metrics = calculateTimeMetrics(sessionTrades, timezone);
     if (!metrics) return null;
     
     return {
@@ -270,9 +271,6 @@ export const getTimeOfDayPerformance = tool({
       });
     }
     
-    // Note: Timezone conversion would be implemented here if needed
-    // For now, we'll use the trade timestamps as-is
-    
-    return analyzeTimeOfDay(trades);
+    return analyzeTimeOfDay(trades, timezone);
   }
 }); 

@@ -23,6 +23,7 @@ import {
   Trash2
 } from "lucide-react"
 import { useEffect, useState, useCallback } from "react"
+import { useUserStore } from "@/store/user-store"
 
 interface AnalysisSection {
   title: string
@@ -44,6 +45,7 @@ export function AnalysisOverview() {
   const currentLocale = useCurrentLocale()
   const { analyzeSection, analyzeSectionDirect, analyzeAllSections, isLoading, error, completionError } = useAnalysis()
   const { getSectionData, getLastUpdated, clearCache } = useAnalysisStore()
+  const { timezone } = useUserStore()
   
   // Rate limiting state
   const [lastRequestTime, setLastRequestTime] = useState<number>(0)
@@ -142,8 +144,8 @@ export function AnalysisOverview() {
     setLastRequestTime(Date.now())
     
     // Use the analyzeAllSections function from the hook
-    analyzeAllSections(currentLocale)
-  }, [checkRateLimit, currentLocale, analyzeAllSections])
+    analyzeAllSections(currentLocale, timezone)
+  }, [checkRateLimit, currentLocale, analyzeAllSections, timezone])
   
 
 
