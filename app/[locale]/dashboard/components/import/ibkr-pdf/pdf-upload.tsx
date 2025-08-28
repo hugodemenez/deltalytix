@@ -31,6 +31,7 @@ export default function PdfUpload({
   } | null>(null)
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    setText('')
     const pdfFiles = acceptedFiles.filter(file => file.type === 'application/pdf')
     setLocalFiles(prev => [...prev, ...pdfFiles])
     setFiles(prev => [...prev, ...pdfFiles])
