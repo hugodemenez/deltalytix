@@ -1317,9 +1317,59 @@ export default {
             'notAvailable': 'Tutorial video is not yet available.'
         }
     },
+    'tradovateSync': {
+        'title': 'Tradovate Account Sync',
+        'description': 'Connect your Tradovate account to automatically sync your trades using OAuth authentication.',
+        'environment': 'Environment',
+        'environments': {
+            'demo': 'Demo (Recommended for testing)',
+            'live': 'Live (Real money)'
+        },
+        'liveWarning': 'You are connecting to the live environment with real money. Make sure this is intended.',
+        'connectAccount': 'Connect Tradovate Account',
+        'connected': 'Tradovate account connected successfully',
+        'disconnected': 'Tradovate account disconnected',
+        'disconnect': 'Disconnect',
+        'copied': 'Access token copied to clipboard',
+        'noToken': 'No access token',
+        'revealToken': 'Reveal Access Token',
+        'revealWarning': 'Are you sure you want to reveal your access token? Make sure no one else can see your screen.',
+        'reveal': 'Reveal Token',
+        'cancel': 'Cancel',
+        'notice': 'Your Tradovate credentials are securely stored and tokens are automatically refreshed.',
+        'oauthNotice': 'You will be redirected to Tradovate to authorize access to your account.',
+        'accounts': 'Connected Accounts',
+        'syncTrades': 'Sync Trades',
+        'syncComplete': 'Trades synchronized successfully',
+        'error': {
+            'oauthInit': 'Failed to initialize OAuth flow',
+            'oauthCallback': 'Failed to complete OAuth authentication',
+            'invalidState': 'Invalid OAuth state parameter. Please try connecting again.',
+            'loadAccounts': 'Failed to load account information',
+            'syncTrades': 'Failed to sync trades for account: {account}'
+        },
+        'callback': {
+            'title': 'Tradovate Authentication',
+            'processing': 'Processing your authentication...',
+            'success': 'Authentication successful!',
+            'error': 'Authentication failed',
+            'exchangingCode': 'Exchanging authorization code for access token...',
+            'redirecting': 'Redirecting you back to the dashboard...',
+            'retry': 'Try Again',
+            'backToDashboard': 'Back to Dashboard'
+        },
+        'tutorial': {
+            'title': 'How to Connect Your Tradovate Account',
+            'description': 'Watch this tutorial to learn how to connect and sync your Tradovate account.',
+            'notAvailable': 'Tutorial video is not yet available.'
+        }
+    },
     'import.type.thorSync.name': 'Thor',
     'import.type.thorSync.description': 'Direct account synchronization with Thor',
     'import.type.thorSync.details': 'Direct sync with your Thor account. Requires API token authentication.',
+    'import.type.tradovateSync.name': 'Tradovate',
+    'import.type.tradovateSync.description': 'Direct account synchronization with Tradovate',
+    'import.type.tradovateSync.details': 'Direct sync with your Tradovate account. Requires OAuth authentication.',
     'import.type.atas.name': 'ATAS',
     'import.type.atas.description': 'Import from ATAS Excel files',
     'import.type.atas.details': 'Import trades from ATAS Excel files. Make sure your file has a "Journal" sheet with the required columns.',
@@ -1412,5 +1462,7 @@ export default {
     'table.clear': 'Clear',
     'table.apply': 'Apply',
     'table.hideColumn': 'Hide Column',
-    'table.showPoints': 'Show Points'
+    'table.showPoints': 'Show Points',
+    'widgets.duplicate.title': 'Widget already added',
+    'widgets.duplicate.description': "You can't add the same widget twice to your dashboard."
 } as const

@@ -21,6 +21,7 @@ import { cn } from '@/lib/utils'
 import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
 import { useUserStore } from '../../../../store/user-store'
+import { useToast } from "@/hooks/use-toast"
 
 
 // Update sizeToGrid to handle responsive sizes
@@ -367,6 +368,8 @@ export default function WidgetCanvas() {
   const { saveDashboardLayout } = useData()
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
+  const { toast } = useToast()
+  const t = useI18n()
 
   // Add this state to track if the layout change is from user interaction
   const activeLayout = useMemo(() => isMobile ? 'mobile' : 'desktop', [isMobile])
@@ -392,7 +395,13 @@ export default function WidgetCanvas() {
 
   const currentLayout = useMemo(() => {
     if (!layouts?.[activeLayout]) return []
-    return Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+    // Filter out duplicate widgets by type, keep only the first occurrence
+    const seenTypes = new Set()
+    return (Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []).filter(widget => {
+      if (seenTypes.has(widget.type)) return false
+      seenTypes.add(widget.type)
+      return true
+    })
   }, [layouts, activeLayout])
 
   // Define handleOutsideClick before using it in useEffect
@@ -462,10 +471,21 @@ export default function WidgetCanvas() {
   const addWidget = useCallback(async (type: WidgetType, size: WidgetSize = 'medium') => {
     if (!user?.id || !layouts) return
     
+    const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+
+    // Prevent adding duplicate widget types
+    if (currentLayout.some(widget => widget.type === type)) {
+      toast({
+        title: t('widgets.duplicate.title'),
+        description: t('widgets.duplicate.description'),
+        variant: "destructive"
+      })
+      return
+    }
+
     // Determine default size based on widget type
     let effectiveSize = size
 
-    const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
     const grid = sizeToGrid(effectiveSize, activeLayout === 'mobile')
     
     // Initialize variables for finding the best position
@@ -542,6 +562,10 @@ export default function WidgetCanvas() {
             }
             
             setLayouts(newLayouts)
+            toast({
+              title: t('widgets.widgetAdded'),
+              description: t('widgets.widgetAddedDescription'),
+            })
             await saveDashboardLayout(newLayouts)
             return
           }
@@ -569,8 +593,14 @@ export default function WidgetCanvas() {
     }
     
     setLayouts(newLayouts)
+    
+    toast({
+      title: t('widgets.widgetAdded'),
+      description: t('widgets.widgetAddedDescription'),
+    })
     await saveDashboardLayout(newLayouts)
-  }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
+
+  }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout, t, toast]);
 
   // Define removeWidget with all dependencies
   const removeWidget = useCallback(async (i: string) => {

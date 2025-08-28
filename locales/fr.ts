@@ -1379,9 +1379,59 @@ export default {
             'notAvailable': 'La vidéo tutoriel n\'est pas encore disponible.'
         }
     },
+    'tradovateSync': {
+        'title': 'Synchronisation Compte Tradovate',
+        'description': 'Connectez votre compte Tradovate pour synchroniser automatiquement vos trades en utilisant l\'authentification OAuth.',
+        'environment': 'Environnement',
+        'environments': {
+            'demo': 'Démo (Recommandé pour les tests)',
+            'live': 'Live (Argent réel)'
+        },
+        'liveWarning': 'Vous vous connectez à l\'environnement live avec de l\'argent réel. Assurez-vous que c\'est intentionnel.',
+        'connectAccount': 'Connecter Compte Tradovate',
+        'connected': 'Compte Tradovate connecté avec succès',
+        'disconnected': 'Compte Tradovate déconnecté',
+        'disconnect': 'Déconnecter',
+        'copied': 'Token d\'accès copié dans le presse-papiers',
+        'noToken': 'Aucun token d\'accès',
+        'revealToken': 'Afficher le Token d\'Accès',
+        'revealWarning': 'Êtes-vous sûr de vouloir afficher votre token d\'accès ? Assurez-vous que personne d\'autre ne peut voir votre écran.',
+        'reveal': 'Afficher le Token',
+        'cancel': 'Annuler',
+        'notice': 'Vos identifiants Tradovate sont stockés de manière sécurisée et les tokens sont automatiquement renouvelés.',
+        'oauthNotice': 'Vous serez redirigé vers Tradovate pour autoriser l\'accès à votre compte.',
+        'accounts': 'Comptes Connectés',
+        'syncTrades': 'Synchroniser les Trades',
+        'syncComplete': 'Trades synchronisés avec succès',
+        'error': {
+            'oauthInit': 'Échec de l\'initialisation du flux OAuth',
+            'oauthCallback': 'Échec de l\'authentification OAuth',
+            'invalidState': 'Paramètre d\'état OAuth invalide. Veuillez essayer de vous reconnecter.',
+            'loadAccounts': 'Échec du chargement des informations du compte',
+            'syncTrades': 'Échec de la synchronisation des trades pour le compte : {account}'
+        },
+        'callback': {
+            'title': 'Authentification Tradovate',
+            'processing': 'Traitement de votre authentification...',
+            'success': 'Authentification réussie !',
+            'error': 'Échec de l\'authentification',
+            'exchangingCode': 'Échange du code d\'autorisation contre un jeton d\'accès...',
+            'redirecting': 'Redirection vers le tableau de bord...',
+            'retry': 'Réessayer',
+            'backToDashboard': 'Retour au tableau de bord'
+        },
+        'tutorial': {
+            'title': 'Comment Connecter Votre Compte Tradovate',
+            'description': 'Regardez ce tutoriel pour apprendre à connecter et synchroniser votre compte Tradovate.',
+            'notAvailable': 'La vidéo tutoriel n\'est pas encore disponible.'
+        }
+    },
     'import.type.thorSync.name': 'Thor',
     'import.type.thorSync.description': 'Synchronisation directe de vos comptes connectés à Thor',
     'import.type.thorSync.details': 'Synchronisation directe avec votre compte Thor. Nécessite une authentification par token API.',
+    'import.type.tradovateSync.name': 'Tradovate',
+    'import.type.tradovateSync.description': 'Synchronisation directe de compte avec Tradovate',
+    'import.type.tradovateSync.details': 'Synchronisation directe avec votre compte Tradovate. Nécessite une authentification OAuth.',
     'import.type.atas.name': 'ATAS',
     'import.type.atas.description': 'Import depuis les fichiers Excel ATAS',
     'import.type.atas.details': 'Importez les trades depuis les fichiers Excel ATAS. Assurez-vous que votre fichier contient une feuille "Journal" avec les colonnes requises.',
@@ -1503,5 +1553,7 @@ export default {
     'table.clear': 'Effacer',
     'table.apply': 'Appliquer',
     'table.hideColumn': 'Masquer la colonne',
-    'table.showPoints': 'Afficher les points'
+    'table.showPoints': 'Afficher les points',
+    'widgets.duplicate.title': 'Widget déjà ajouté',
+    'widgets.duplicate.description': 'Vous ne pouvez pas ajouter deux fois le même widget à votre tableau de bord.',
 } as const

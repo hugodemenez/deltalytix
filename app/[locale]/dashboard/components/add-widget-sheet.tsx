@@ -132,9 +132,6 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
     const handleAddWidget = (type: WidgetType) => {
       const config = WIDGET_REGISTRY[type]
       onAddWidget(type, config.defaultSize)
-      toast(t('widgets.widgetAdded'), {
-        description: t('widgets.widgetAddedDescription'),
-      })
     }
 
     const startLoading = useCallback(() => {
