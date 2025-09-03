@@ -1,6 +1,7 @@
 import { Trade } from '@prisma/client'
 import { EtpSync } from '../etp/etp-sync'
 import { ThorSync } from '../thor/thor-sync'
+import { TradovateSync } from '../tradovate/tradovate-sync'
 import { ImportType } from '../import-type-selection'
 import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-new'
 import type { ComponentType } from 'react'
@@ -66,6 +67,7 @@ type StepComponent =
   | typeof RithmicSyncWrapper
   | typeof EtpSync
   | typeof ThorSync
+  | typeof TradovateSync
   | typeof PdfUpload
   | typeof PdfProcessing
   | typeof AtasFileUpload
@@ -589,6 +591,35 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.connectAccount',
         description: 'import.steps.connectAccountDescription',
         component: ThorSync,
+        isLastStep: true
+      }
+    ]
+  },
+  {
+    platformName: 'tradovate-sync',
+    type: 'tradovate-sync',
+    name: 'import.type.tradovateSync.name',
+    description: 'import.type.tradovateSync.description',
+    category: 'Direct Account Sync',
+    videoUrl: process.env.NEXT_PUBLIC_TRADOVATE_SYNC_TUTORIAL_VIDEO || '',
+    details: 'import.type.tradovateSync.details',
+    logo: {
+      path: '/logos/tradovate.png',
+      alt: 'Tradovate Logo'
+    },
+    customComponent: TradovateSync,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'complete',
+        title: 'import.steps.connectAccount',
+        description: 'import.steps.connectAccountDescription',
+        component: TradovateSync,
         isLastStep: true
       }
     ]
