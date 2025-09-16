@@ -231,7 +231,7 @@ export default function Navbar() {
                     </div>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard">
-                        <div className="flex w-full">
+                        <div className="flex items-center w-full">
                           <LayoutDashboard className="mr-2 h-4 w-4" />
                           <span>{t('landing.navbar.dashboard')}</span>
                           <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
@@ -240,7 +240,7 @@ export default function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard/settings">
-                        <div className="flex w-full">
+                        <div className="flex items-center w-full">
                           <Settings className="mr-2 h-4 w-4" />
                           <span>{t('dashboard.settings')}</span>
                           <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
@@ -249,7 +249,7 @@ export default function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard/billing">
-                        <div className="flex w-full">
+                        <div className="flex items-center w-full">
                           <CreditCard className="mr-2 h-4 w-4" />
                           <span>{t('dashboard.billing')}</span>
                           <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
@@ -257,20 +257,20 @@ export default function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                     <Link href={"/dashboard/data"}>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
                         <Database className="mr-2 h-4 w-4" />
                         <span>{t('dashboard.data')}</span>
                         <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                       </DropdownMenuItem>
                     </Link>
-                    <DropdownMenuItem onClick={async ()=>await refreshTrades()}>
+                    <DropdownMenuItem onClick={async ()=>await refreshTrades()} className="flex items-center">
                       <RefreshCw className="mr-2 h-4 w-4" />
                       <span>{t('dashboard.refreshData')}</span>
                       <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <Link href="/support">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
                         <LifeBuoy className="mr-2 h-4 w-4" />
                         <span>{t('dashboard.support')}</span>
                       </DropdownMenuItem>
@@ -313,7 +313,7 @@ export default function Navbar() {
                     <DropdownMenuItem onClick={() => {
                       localStorage.removeItem('deltalytix_user_data')
                       signOut()
-                    }}>
+                    }} className="flex items-center">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>{t('dashboard.logOut')}</span>
                       <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
