@@ -329,6 +329,38 @@ export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promi
   }
 }
 
+export async function createDefaultDashboardLayout(userId: string): Promise<void> {
+  try {
+    // If a layout already exists for this user, do nothing (idempotent)
+    const existing = await prisma.dashboardLayout.findUnique({ where: { userId } })
+    if (existing) {
+      return
+    }
+
+    // Import default layouts from the data provider
+    const { defaultLayouts } = await import('@/context/data-provider')
+
+    const desktopLayout = Array.isArray(defaultLayouts.desktop) ? defaultLayouts.desktop : []
+    const mobileLayout = Array.isArray(defaultLayouts.mobile) ? defaultLayouts.mobile : []
+
+    // Use upsert to guard against race conditions creating the same row concurrently
+    await prisma.dashboardLayout.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        userId,
+        desktop: JSON.stringify(desktopLayout),
+        mobile: JSON.stringify(mobileLayout)
+      }
+    })
+
+    console.log('[createDefaultDashboardLayout] SUCCESS: Default layout ensured for user:', userId)
+  } catch (error) {
+    console.error('[createDefaultDashboardLayout] ERROR: Failed to create default layout:', error)
+    throw error
+  }
+}
+
 export async function groupTradesAction(tradeIds: string[]): Promise<boolean> {
   try {
     const userId = await getUserId()

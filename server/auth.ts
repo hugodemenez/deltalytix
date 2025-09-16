@@ -192,6 +192,17 @@ export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) 
         },
       });
       console.log('[ensureUserInDatabase] SUCCESS: New user created successfully');
+      
+      // Create default dashboard layout for new user
+      try {
+        const { createDefaultDashboardLayout } = await import('@/server/database');
+        await createDefaultDashboardLayout(user.id);
+        console.log('[ensureUserInDatabase] SUCCESS: Default dashboard layout created');
+      } catch (layoutError) {
+        console.error('[ensureUserInDatabase] WARNING: Failed to create default dashboard layout:', layoutError);
+        // Don't throw here - user creation succeeded, layout can be created later
+      }
+      
       return newUser;
     } catch (createError) {
       if (createError instanceof Error &&

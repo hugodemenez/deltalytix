@@ -180,7 +180,7 @@ export default function PdfProcessing({
 
       try {
         // Start streaming orders
-        await submitOrders({ text: extractedText });
+        submitOrders({ text: extractedText });
       } catch (error) {
         console.error('Error processing orders:', error);
         setError(error instanceof Error ? error.message : 'Failed to process orders');

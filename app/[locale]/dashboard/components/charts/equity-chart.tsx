@@ -581,8 +581,8 @@ const AccountsLegend = React.memo(({
     .sort((a, b) => b.latestEquity - a.latestEquity)
 
   return (
-    <div className="border-t pt-2 mt-2">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="border-t pt-2 mt-2 h-[88px] flex flex-col">
+      <div className="flex items-center gap-2 mb-2 flex-shrink-0">
         <span className="text-xs font-medium text-muted-foreground">
           {t('equity.legend.title')}
           {isHovered && displayData && (
@@ -595,36 +595,38 @@ const AccountsLegend = React.memo(({
           ({accountsWithEquity.length} {t('equity.legend.accounts')})
         </span>
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-2 max-w-full">
+      <div className="flex gap-3 overflow-x-auto max-w-full flex-1 scrollbar-hide">
         <div className="flex gap-3 min-w-max">
           {accountsWithEquity.slice(0, 20).map(({ accountNumber, equity, color, hasPayout, hasReset, payoutStatus, payoutAmount }) => (
             <div key={accountNumber} className="flex items-center gap-1.5 flex-shrink-0">
               <div 
-                className="w-2.5 h-2.5 rounded-full" 
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
                 style={{ backgroundColor: color }}
               />
-              <div className="flex flex-col">
-                <span className="text-xs font-medium text-foreground">
+              <div className="flex flex-col h-[50px] justify-start">
+                <span className="text-xs font-medium text-foreground leading-tight">
                   {accountNumber}
                 </span>
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground leading-tight">
                   {formatCurrency(equity)}
                 </span>
-                {hasPayout && (
-                  <span className="text-xs" style={{ color: getPayoutColor(payoutStatus) }}>
-                    {t('equity.legend.payout')}: {formatCurrency(payoutAmount)}
-                  </span>
-                )}
-                {hasReset && (
-                  <span className="text-xs text-red-500">
-                    {t('equity.legend.reset')}
-                  </span>
-                )}
+                <div className="min-h-[14px] flex flex-col">
+                  {hasPayout && (
+                    <span className="text-xs leading-tight" style={{ color: getPayoutColor(payoutStatus) }}>
+                      {t('equity.legend.payout')}: {formatCurrency(payoutAmount)}
+                    </span>
+                  )}
+                  {hasReset && (
+                    <span className="text-xs text-red-500 leading-tight">
+                      {t('equity.legend.reset')}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
           {accountsWithEquity.length > 20 && (
-            <div className="flex items-center gap-1.5 flex-shrink-0 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5 flex-shrink-0 text-xs text-muted-foreground h-[50px]">
               +{accountsWithEquity.length - 20} more
             </div>
           )}

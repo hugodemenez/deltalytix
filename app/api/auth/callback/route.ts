@@ -11,9 +11,18 @@ export async function GET(request: Request) {
   const next = searchParams.get('next')
   const action = searchParams.get('action')
 
-   // Redirect to the decoded 'next' URL if it exists, otherwise to the homepage
-   let decodedNext: string | null = null;
-   if (next) {
+  // Add debugging for Edge
+  console.log('Auth callback debug:', {
+    userAgent: request.headers.get('user-agent'),
+    origin,
+    hasCode: !!code,
+    next,
+    action
+  })
+
+  // Redirect to the decoded 'next' URL if it exists, otherwise to the homepage
+  let decodedNext: string | null = null;
+  if (next) {
     decodedNext = decodeURIComponent(next)
   }
   if (code) {
@@ -25,8 +34,8 @@ export async function GET(request: Request) {
       if (action === 'link') {
         const forwardedHost = request.headers.get('x-forwarded-host')
         const isLocalEnv = process.env.NODE_ENV === 'development'
-        const baseUrl = isLocalEnv 
-          ? `${origin}/dashboard/settings` 
+        const baseUrl = isLocalEnv
+          ? `${origin}/dashboard/settings`
           : `https://${forwardedHost || origin}/dashboard/settings`
         const redirectUrl = `${baseUrl}?linked=true`
         return NextResponse.redirect(redirectUrl)
