@@ -613,9 +613,9 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      setUser(data.userData);
-      await ensureUserInDatabase(user, locale)
-        
+      
+
+      setUser(await ensureUserInDatabase(user, locale));
       setSubscription(data.subscription as PrismaSubscription | null);
       setTags(data.tags);
       setGroups(data.groups);
