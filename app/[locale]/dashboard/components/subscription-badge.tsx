@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { format, differenceInDays } from "date-fns"
@@ -10,16 +11,33 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import Link from "next/link"
-import { useI18n } from "@/locales/client"
-import { useUserStore } from "@/store/user-store"
+import { useI18n, useCurrentLocale } from "@/locales/client"
+import { getSubscriptionData, type SubscriptionWithPrice } from "../actions/billing"
 
 
 
   export function SubscriptionBadge({ className }: { className?: string }) {
     const t = useI18n()
-  const  subscription = useUserStore(state => state.subscription)
+  const locale = useCurrentLocale()
+  const [stripeSubscription, setStripeSubscription] = useState<SubscriptionWithPrice | null>(null)
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  if (!subscription || !subscription.plan.toUpperCase().includes('PLUS')) {
+  useEffect(() => {
+    let isMounted = true
+    ;(async () => {
+      try {
+        const data = await getSubscriptionData()
+        if (isMounted) setStripeSubscription(data)
+      } catch {
+        if (isMounted) setStripeSubscription(null)
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    })()
+    return () => { isMounted = false }
+  }, [])
+
+  if (!stripeSubscription) {
     return (
       <TooltipProvider>
         <Tooltip>
@@ -45,8 +63,10 @@ import { useUserStore } from "@/store/user-store"
     )
   }
 
-  // Clean up plan name by taking only what's before underscore and capitalizing first letter
-  const formattedPlan = subscription.plan.toLowerCase().includes('plus') ? 'Plus' : 'Free'
+  // Derive plan label from Stripe data
+  const formattedPlan = stripeSubscription.plan?.name
+    ? stripeSubscription.plan.name
+    : t('pricing.free.name')
   
   const getDaysRemaining = (date: Date | null) => {
     if (!date) return null
@@ -55,110 +75,68 @@ import { useUserStore } from "@/store/user-store"
     return differenceInDays(end, today)
   }
 
-  const trialDays = subscription.trialEndsAt ? getDaysRemaining(subscription.trialEndsAt) : null
-  const subscriptionDays = subscription.status !== 'ACTIVE' ? getDaysRemaining(subscription.endDate) : null
+  const trialDays = stripeSubscription.trial_end ? getDaysRemaining(new Date(stripeSubscription.trial_end * 1000)) : null
+  const subscriptionDays = stripeSubscription.cancel_at_period_end && stripeSubscription.current_period_end
+    ? getDaysRemaining(new Date(stripeSubscription.current_period_end * 1000))
+    : null
 
   // Get badge content based on status
+  const formatStripeDate = (timestamp?: number | null) => {
+    if (!timestamp) return null
+    const date = new Date(timestamp * 1000)
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
+  }
+
   const getBadgeContent = () => {
-    switch (subscription.status) {
-      case 'TRIAL':
-        if (!trialDays) return {
-          text: `${formattedPlan} • ${t('billing.status.trialing')}`,
-          variant: 'expired',
-          tooltip: t('billing.status.incomplete_expired')
-        }
-        return {
-          text: `${formattedPlan} • ${trialDays}d ${t('calendar.charts.remaining')}`,
-          variant: 'trial',
-          tooltip: t('billing.trialEndsIn', { date: format(new Date(subscription.trialEndsAt!), 'MMM d') })
-        }
-      
-      case 'ACTIVE':
-        return {
-          text: `${formattedPlan}`,
-          variant: 'active',
-          tooltip: subscription.endDate ? t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate), 'MMM d') }) : undefined
-        }
+    const status = (stripeSubscription.status || '').toLowerCase()
+    const isLifetime = stripeSubscription.plan?.interval === 'lifetime'
 
-      case 'PAYMENT_FAILED':
-        return {
-          text: `${formattedPlan} • ${t('billing.status.past_due')}`,
-          variant: 'expired',
-          tooltip: t('billing.status.past_due')
-        }
-
-      case 'PAYMENT_PENDING':
-        return {
-          text: `${formattedPlan} • ${t('billing.status.incomplete')}`,
-          variant: 'expiring',
-          tooltip: t('billing.status.incomplete')
-        }
-
-      case 'PAST_DUE':
-        return {
-          text: `${formattedPlan} • ${t('billing.status.past_due')}`,
-          variant: 'expired',
-          tooltip: t('billing.status.past_due')
-        }
-
-      case 'CANCELLED':
-        return {
-          text: `${formattedPlan} • ${t('billing.status.canceled')}`,
-          variant: 'expired',
-          tooltip: t('billing.subscriptionCancelled')
-        }
-
-      case 'UNPAID':
-        return {
-          text: `${formattedPlan} • ${t('billing.status.unpaid')}`,
-          variant: 'expired',
-          tooltip: t('billing.status.unpaid')
-        }
-
-      case 'EXPIRED':
-        return {
-          text: `${formattedPlan} • ${t('billing.status.incomplete_expired')}`,
-          variant: 'expired',
-          tooltip: t('billing.status.incomplete_expired')
-        }
-
-      case 'SCHEDULED_CANCELLATION':
-        if (!subscriptionDays || subscriptionDays <= 0) {
-          return {
-            text: `${formattedPlan} • ${t('billing.status.canceled')}`,
-            variant: 'expired',
-            tooltip: t('billing.subscriptionCancelled')
-          }
-        }
-        return {
-          text: `${formattedPlan} • ${t('billing.scheduledToCancel')}`,
-          variant: 'expiring',
-          tooltip: subscription.endDate ? t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate), 'MMM d') }) : undefined
-        }
-
-      default:
-        if (!subscriptionDays || subscriptionDays <= 0) {
-          return {
-            text: `${formattedPlan} • ${t('billing.status.incomplete_expired')}`,
-            variant: 'expired',
-            tooltip: t('billing.status.incomplete_expired')
-          }
-        }
-
-        if (subscriptionDays <= 5) {
-          return {
-            text: `${formattedPlan} • ${subscriptionDays}d ${t('calendar.charts.remaining')}`,
-            variant: 'expiring',
-            tooltip: subscription.endDate ? t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate), 'MMM d') }) : undefined
-          }
-        }
-
-        return {
-          text: `${formattedPlan} • ${t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate!), 'MMM d') })}`,
-          variant: 'normal',
-          tooltip: subscription.endDate ? t('billing.dates.nextBilling', { date: format(new Date(subscription.endDate), 'MMM d') }) : undefined
-        }
+    // Lifetime: simply show the plan name as active
+    if (isLifetime) {
+      return { text: formattedPlan, variant: 'active' as const, tooltip: undefined as string | undefined }
     }
+
+    if (status === 'trialing') {
+      if (!trialDays) {
+        return { text: `${formattedPlan} • ${t('billing.status.trialing')}`, variant: 'expired' as const, tooltip: t('billing.status.incomplete_expired') }
+      }
+      const dateStr = formatStripeDate(stripeSubscription.trial_end)
+      return { text: `${formattedPlan} • ${trialDays}d ${t('calendar.charts.remaining')}`, variant: 'trial' as const, tooltip: dateStr ? t('billing.trialEndsIn', { date: dateStr }) : undefined }
+    }
+
+    if (status === 'active') {
+      const next = formatStripeDate(stripeSubscription.current_period_end)
+      return { text: `${formattedPlan}`, variant: 'active' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
+    }
+
+    if (status === 'past_due') {
+      return { text: `${formattedPlan} • ${t('billing.status.past_due')}`, variant: 'expired' as const, tooltip: t('billing.status.past_due') }
+    }
+
+    if (status === 'incomplete') {
+      return { text: `${formattedPlan} • ${t('billing.status.incomplete')}`, variant: 'expiring' as const, tooltip: t('billing.status.incomplete') }
+    }
+
+    if (status === 'unpaid') {
+      return { text: `${formattedPlan} • ${t('billing.status.unpaid')}`, variant: 'expired' as const, tooltip: t('billing.status.unpaid') }
+    }
+
+    if (stripeSubscription.cancel_at_period_end) {
+      const next = formatStripeDate(stripeSubscription.current_period_end)
+      if (!subscriptionDays || subscriptionDays <= 0) {
+        return { text: `${formattedPlan} • ${t('billing.status.canceled')}`, variant: 'expired' as const, tooltip: t('billing.subscriptionCancelled') }
+      }
+      return { text: `${formattedPlan} • ${t('billing.scheduledToCancel')}`, variant: 'expiring' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
+    }
+
+    const next = formatStripeDate(stripeSubscription.current_period_end)
+    if (!subscriptionDays || subscriptionDays <= 0) {
+      return { text: `${formattedPlan} • ${t('billing.status.incomplete_expired')}`, variant: 'expired' as const, tooltip: t('billing.status.incomplete_expired') }
+    }
+    if (subscriptionDays <= 5) {
+      return { text: `${formattedPlan} • ${subscriptionDays}d ${t('calendar.charts.remaining')}`, variant: 'expiring' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
+    }
+    return { text: `${formattedPlan} • ${next ? t('billing.dates.nextBilling', { date: next }) : t('billing.notApplicable')}`, variant: 'normal' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
   }
 
   const badge = getBadgeContent()
@@ -172,7 +150,7 @@ import { useUserStore } from "@/store/user-store"
               variant="secondary" 
               className={cn(
                 "px-2 py-0.5 text-xs whitespace-nowrap cursor-help transition-colors", 
-                badge.variant === 'active' && subscription.plan.toLowerCase().includes('plus') && "bg-primary text-primary-foreground hover:bg-primary/90",
+                badge.variant === 'active' && "bg-primary text-primary-foreground hover:bg-primary/90",
                 badge.variant === 'trial' && "bg-blue-500 text-white dark:bg-blue-400 hover:bg-blue-600 dark:hover:bg-blue-500",
                 badge.variant === 'expiring' && "bg-destructive text-destructive-foreground hover:bg-destructive/90",
                 badge.variant === 'expired' && "bg-destructive/80 text-destructive-foreground hover:bg-destructive/70",

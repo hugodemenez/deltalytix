@@ -144,9 +144,6 @@ export default function Navbar() {
                   </div>
                 </PopoverContent>
               </Popover>
-              <div className="mt-[-8px]">
-                <SubscriptionBadge />
-              </div>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -217,12 +214,15 @@ export default function Navbar() {
               <div className="relative">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Avatar className="cursor-pointer h-8 w-8">
-                      <AvatarImage src={user?.user_metadata.avatar_url} />
-                      <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
-                        {user?.email![0]}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative inline-block">
+                      <Avatar className="cursor-pointer h-8 w-8">
+                        <AvatarImage src={user?.user_metadata.avatar_url} />
+                        <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
+                          {user?.email![0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <SubscriptionBadge className="absolute -bottom-1 -right-1 px-1 py-0 text-[10px] leading-3" />
+                    </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56">
                     <DropdownMenuLabel>{t('dashboard.myAccount')}</DropdownMenuLabel>

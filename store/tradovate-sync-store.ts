@@ -21,7 +21,7 @@ interface TradovateOAuthState {
   isAuthenticated: boolean
   accessToken?: string
   refreshToken?: string
-  expiresAt?: number
+  expiresAt?: string
   accounts?: TradovateAccount[]
   lastSync?: string
   oauthState?: string // For OAuth flow security
@@ -31,7 +31,7 @@ interface TradovateOAuthState {
 interface TradovateSyncStore extends TradovateOAuthState {
   // Actions
   setAuthenticated: (authenticated: boolean) => void
-  setTokens: (accessToken: string, refreshToken: string, expiresAt: number) => void
+  setTokens: (accessToken: string, refreshToken: string, expiresAt: string) => void
   setAccounts: (accounts: TradovateAccount[]) => void
   setOAuthState: (state: string) => void
   clearOAuthState: () => void
@@ -61,7 +61,7 @@ export const useTradovateSyncStore = create<TradovateSyncStore>()(
         set({ isAuthenticated: authenticated })
       },
 
-      setTokens: (accessToken: string, refreshToken: string, expiresAt: number) => {
+      setTokens: (accessToken: string, refreshToken: string, expiresAt: string) => {
         set({
           isAuthenticated: true,
           accessToken,
@@ -102,7 +102,7 @@ export const useTradovateSyncStore = create<TradovateSyncStore>()(
       isTokenExpired: () => {
         const state = get()
         if (!state.expiresAt) return true
-        return Date.now() > state.expiresAt
+        return Date.now() > new Date(state.expiresAt).getTime()
       },
 
       getValidToken: () => {

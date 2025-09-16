@@ -81,7 +81,7 @@ export default {
     'updates.milestone12.description': 'We\'ve added the ability to customize your dashboard layout. You can now create your own personalized dashboard with favorite charts, statistics, and widgets arranged exactly how you want them.',
     'dashboard.myAccount': 'My Account',
     'dashboard.profile': 'Profile',
-    'dashboard.billing': 'Billing',
+    'dashboard.billing': 'Subscription',
     'dashboard.data': 'Data',
     'dashboard.refreshData': 'Refresh Data',
     'dashboard.inviteUsers': 'Invite users',

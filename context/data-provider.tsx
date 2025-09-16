@@ -591,7 +591,16 @@ export const DataProvider: React.FC<{
           setDashboardLayout(dashboardLayoutResponse)
         }
         else {
-          setDashboardLayout(defaultLayouts)
+          // If no layout exists in database, create one for existing users
+          try {
+            const { createDefaultDashboardLayout } = await import('@/server/database');
+            await createDefaultDashboardLayout(user.id);
+            console.log('[DataProvider] Created default dashboard layout for existing user');
+            setDashboardLayout(defaultLayouts)
+          } catch (layoutError) {
+            console.error('[DataProvider] Failed to create default dashboard layout:', layoutError);
+            setDashboardLayout(defaultLayouts)
+          }
         }
       }
 

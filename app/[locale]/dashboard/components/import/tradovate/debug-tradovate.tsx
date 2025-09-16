@@ -54,15 +54,15 @@ export function TradovateDebug() {
           <div className="grid gap-2">
             <div className="flex items-center gap-2">
               <Badge variant="outline">TRADOVATE_CLIENT_ID</Badge>
-              <span className="text-sm text-muted-foreground">Should be: 7180</span>
+              <span className="text-sm text-muted-foreground">Should be: {process.env.TRADOVATE_CLIENT_ID}</span>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">TRADOVATE_CLIENT_SECRET</Badge>
-              <span className="text-sm text-muted-foreground">Should be: 16248579-826b-48e9-bba6-98847f3e0c61</span>
+              <span className="text-sm text-muted-foreground">Should be: {process.env.TRADOVATE_CLIENT_SECRET}</span>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">TRADOVATE_REDIRECT_URI</Badge>
-              <span className="text-sm text-muted-foreground">Should be: http://localhost:3000/dashboard/import</span>
+              <span className="text-sm text-muted-foreground">Should be: {process.env.TRADOVATE_REDIRECT_URI}</span>
             </div>
           </div>
           <div className="text-xs text-muted-foreground">
@@ -85,7 +85,7 @@ export function TradovateDebug() {
         <div className="space-y-2">
           <h3 className="font-semibold">Remaining Issues to Check:</h3>
           <ul className="text-sm space-y-1 text-muted-foreground">
-            <li>• Make sure your client ID (7180) is registered in Tradovate developer console</li>
+            <li>• Make sure your client ID ({process.env.TRADOVATE_CLIENT_ID}) is registered in Tradovate developer console</li>
             <li>• Verify redirect URI is whitelisted in Tradovate developer console</li>
           </ul>
         </div>

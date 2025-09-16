@@ -129,7 +129,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       tradovateStore.setTokens(
         result.accessToken,
         result.refreshToken,
-        new Date(result.expiresAt).getTime()
+        result.expiresAt
       )
     } catch (error) {
       console.error('Token refresh failed:', error)
@@ -208,7 +208,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
           toast({
             title: `${account.name}`,
             description: `Found ${fillsCount} fills, saved ${savedCount} new trades`,
-            variant: savedCount > 0 ? "default" : "secondary",
+            variant: savedCount > 0 ? "default" : "destructive",
           })
         }
       }
@@ -226,13 +226,13 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
         toast({
           title: "🔄 Sync Complete",
           description: `Processed ${totalFillsProcessed} fills (no new trades - likely duplicates)`,
-          variant: "secondary"
+          variant: "default"
         })
       } else {
         toast({
           title: "📭 Sync Complete",
           description: "No new fills found in the last 30 days",
-          variant: "secondary"
+          variant: "default"
         })
       }
     } catch (error) {
