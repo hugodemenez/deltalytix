@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useData } from "@/context/data-provider"
-import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home, Moon, Sun, Laptop, Settings } from "lucide-react"
+import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home, Moon, Sun, Laptop, Settings, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -112,11 +112,24 @@ export default function Navbar() {
             <div className="flex flex-col items-center">
               <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="p-0">
-                    <Logo className='fill-black h-6 w-6 dark:fill-white' />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
+                    aria-haspopup="menu"
+                    aria-expanded={isLogoPopoverOpen}
+                    aria-label={t('landing.navbar.logo.title')}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Logo className='fill-black h-6 w-6 dark:fill-white' />
+                      <ChevronDown 
+                        className={`h-4 w-4 transition-transform duration-200 ${isLogoPopoverOpen ? 'rotate-180' : 'rotate-0'}`}
+                        aria-hidden="true"
+                      />
+                    </span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-48" align="start">
+                <PopoverContent className="w-64" align="start">
                   <div className="space-y-2">
                     <h4 className="font-medium leading-none mb-3">{t('landing.navbar.logo.title')}</h4>
                     <div className="grid gap-2">
@@ -136,7 +149,7 @@ export default function Navbar() {
                         onClick={() => setIsLogoPopoverOpen(false)}
                       >
                         <div className="flex-shrink-0 w-4 h-4">
-                          <Home className="h-full w-full" />
+                          <Globe className="h-full w-full" />
                         </div>
                         {t('landing.navbar.logo.home')}
                       </Link>

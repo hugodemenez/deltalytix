@@ -26,7 +26,6 @@ import {
   updateIsFirstConnectionAction
 } from '@/server/user-data';
 import {
-  createDefaultDashboardLayout,
   getTradesAction,
   groupTradesAction,
   revalidateCache,
@@ -592,15 +591,8 @@ export const DataProvider: React.FC<{
           setDashboardLayout(dashboardLayoutResponse)
         }
         else {
-          // If no layout exists in database, create one for existing users
-          try {
-            await createDefaultDashboardLayout(user.id);
-            console.log('[DataProvider] Created default dashboard layout for existing user');
+          // If no layout exists in database, use default layout
             setDashboardLayout(defaultLayouts)
-          } catch (layoutError) {
-            console.error('[DataProvider] Failed to create default dashboard layout:', layoutError);
-            setDashboardLayout(defaultLayouts)
-          }
         }
       }
 

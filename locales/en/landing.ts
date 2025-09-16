@@ -164,8 +164,8 @@ export default {
             updates: 'Updates',
             logo: {
                 title: 'Navigation',
-                dashboard: 'Go to Dashboard',
-                home: 'Go to Home'
+                dashboard: 'Dashboard',
+                home: 'Website'
             },
             productUpdates: 'Product Updates',
             productUpdatesDescription: 'Stay up to date with our latest features and improvements.',

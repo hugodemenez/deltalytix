@@ -164,8 +164,8 @@ export default {
             updates: 'Mises à jour',
             logo: {
                 title: 'Navigation',
-                dashboard: 'Aller au tableau de bord',
-                home: 'Aller à l\'accueil'
+                dashboard: 'Tableau de bord',
+                home: 'Site web'
             },
             productUpdates: 'Mises à jour du produit',
             productUpdatesDescription: 'Restez informé de nos dernières fonctionnalités et améliorations.',

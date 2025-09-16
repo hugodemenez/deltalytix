@@ -22,6 +22,7 @@ import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
 import { useUserStore } from '../../../../store/user-store'
 import { useToast } from "@/hooks/use-toast"
+import { defaultLayouts } from "@/context/data-provider"
 
 
 // Update sizeToGrid to handle responsive sizes
@@ -469,7 +470,14 @@ export default function WidgetCanvas() {
 
   // Define addWidget with all dependencies
   const addWidget = useCallback(async (type: WidgetType, size: WidgetSize = 'medium') => {
-    if (!user?.id || !layouts) return
+    if (!user?.id) {
+      console.error('Error adding widget missing user data:', { user})
+      return
+    }
+    if (!layouts) {
+      console.error('Error adding widget missing layouts:', { layouts })
+      return
+    }
     
     const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
 
@@ -672,6 +680,23 @@ export default function WidgetCanvas() {
     await saveDashboardLayout(newLayouts)
   }, [user?.id, layouts, setLayouts, saveDashboardLayout]);
 
+  // Restore default layout for both desktop and mobile
+  const restoreDefaultLayout = useCallback(async () => {
+    if (!user?.id || !layouts) return
+    const newLayouts = {
+      ...layouts,
+      desktop: defaultLayouts.desktop,
+      mobile: defaultLayouts.mobile,
+      updatedAt: new Date()
+    }
+    setLayouts(newLayouts)
+    await saveDashboardLayout(newLayouts)
+    toast({
+      title: t('widgets.restoredDefaultsTitle'),
+      description: t('widgets.restoredDefaultsDescription')
+    })
+  }, [user?.id, layouts, setLayouts, saveDashboardLayout, t, toast])
+
   // Define renderWidget with all dependencies
   const renderWidget = useCallback((widget: Widget) => {
     // Ensure widget.type is a valid WidgetType
@@ -722,6 +747,7 @@ export default function WidgetCanvas() {
         }}
         currentLayout={layouts || { desktop: [], mobile: [] }}
         onRemoveAll={removeAllWidgets}
+        onRestoreDefaults={restoreDefaultLayout}
       />
       {layouts && (
         <div className="relative">

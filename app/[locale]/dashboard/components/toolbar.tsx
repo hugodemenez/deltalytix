@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
 import { useData } from "@/context/data-provider"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, RotateCcw } from "lucide-react"
 import { ShareButton } from "./share-button"
 import { AddWidgetSheet } from "./add-widget-sheet"
 import FilterLeftPane from "./filters/filter-left-pane"
@@ -41,6 +41,7 @@ interface ToolbarProps {
     mobile: any[]
   }
   onRemoveAll: () => void
+  onRestoreDefaults: () => void
 }
 
 export function Toolbar({
@@ -48,7 +49,8 @@ export function Toolbar({
   isCustomizing,
   onEditToggle,
   currentLayout,
-  onRemoveAll
+  onRemoveAll,
+  onRestoreDefaults
 }: ToolbarProps) {
   const t = useI18n()
   const { isMobile } = useData()
@@ -253,35 +255,66 @@ export function Toolbar({
                 )}
                 
                 {isCustomizing && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        className={cn(
-                          "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-                        )}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t('widgets.deleteAllConfirmTitle')}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t('widgets.deleteAllConfirmDescription')}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={onRemoveAll}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  <div className="flex items-center gap-2">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
+                          )}
+                          title={t('widgets.restoreDefaults')}
                         >
-                          {t('widgets.confirmDeleteAll')}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{t('widgets.restoreDefaultsConfirmTitle')}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t('widgets.restoreDefaultsConfirmDescription')}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                          <AlertDialogAction onClick={onRestoreDefaults}>
+                            {t('widgets.confirmRestoreDefaults')}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          className={cn(
+                            "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
+                          )}
+                          title={t('widgets.deleteAll')}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{t('widgets.deleteAllConfirmTitle')}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t('widgets.deleteAllConfirmDescription')}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={onRemoveAll}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {t('widgets.confirmDeleteAll')}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 )}
               </motion.div>
         </motion.div>
