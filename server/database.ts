@@ -7,6 +7,7 @@ import { startOfDay } from 'date-fns'
 import { getSubscriptionDetails } from './subscription'
 import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
+import { defaultLayouts } from '@/context/data-provider'
 
 type TradeError = 
   | 'DUPLICATE_TRADES'
@@ -336,9 +337,6 @@ export async function createDefaultDashboardLayout(userId: string): Promise<void
     if (existing) {
       return
     }
-
-    // Import default layouts from the data provider
-    const { defaultLayouts } = await import('@/context/data-provider')
 
     const desktopLayout = Array.isArray(defaultLayouts.desktop) ? defaultLayouts.desktop : []
     const mobileLayout = Array.isArray(defaultLayouts.mobile) ? defaultLayouts.mobile : []

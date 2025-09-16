@@ -66,75 +66,66 @@ export async function getUserData(): Promise<{
   const userId = await getUserId()
   const locale = await getCurrentLocale()
 
-
-  return unstable_cache(
+  // Cache only lightweight, stable core data. Heavy/volatile data is fetched outside cache.
+  const getCachedCoreUserData = unstable_cache(
     async () => {
-      console.log(`[Cache MISS] Fetching user data for user ${userId}`)
-      
-      // Run all independent queries in parallel for better performance
-      const [
-        userData,
-        subscription,
-        tickDetails,
-        tags,
-        accounts,
-        groups,
-        financialEvents,
-        moodHistory
-      ] = await Promise.all([
+      console.log(`[Cache MISS] Fetching core user data for user ${userId}`)
+
+      const [userData, subscription, tickDetails, accounts, groups] = await Promise.all([
         prisma.user.findUnique({
-          where: {
-            id: userId
-          }
+          where: { id: userId }
         }),
         prisma.subscription.findUnique({
-          where: {
-            userId: userId
-          }
+          where: { userId: userId }
         }),
         prisma.tickDetails.findMany(),
-        prisma.tag.findMany({
-          where: {
-            userId: userId
-          }
-        }),
         prisma.account.findMany({
-          where: {
-            userId: userId
-          },
+          where: { userId: userId },
           include: {
             payouts: true,
             group: true
           }
         }),
         prisma.group.findMany({
-          where: {
-            userId: userId
-          },
-          include: {
-            accounts: true
-          }
-        }),
-        prisma.financialEvent.findMany({
-          where: {
-            lang: locale
-          }
-        }),
-        prisma.mood.findMany({
-          where: {
-            userId: userId
-          }
+          where: { userId: userId },
+          include: { accounts: true }
         })
       ])
 
-      return { userData, subscription, tickDetails, tags, accounts, groups, financialEvents, moodHistory }
+      return { userData, subscription, tickDetails, accounts, groups }
     },
     [`user-data-${userId}-${locale}`],
     {
       tags: [`user-data-${userId}-${locale}`, `user-data-${userId}`],
       revalidate: 86400 // 24 hours in seconds
     }
-  )()
+  )
+
+  const core = await getCachedCoreUserData()
+
+  // Fetch non-cached, potentially large/volatile datasets
+  const [tags, financialEvents, moodHistory] = await Promise.all([
+    prisma.tag.findMany({
+      where: { userId: userId }
+    }),
+    prisma.financialEvent.findMany({
+      where: { lang: locale }
+    }),
+    prisma.mood.findMany({
+      where: { userId: userId }
+    })
+  ])
+
+  return {
+    userData: core.userData,
+    subscription: core.subscription,
+    tickDetails: core.tickDetails,
+    tags,
+    accounts: core.accounts,
+    groups: core.groups,
+    financialEvents,
+    moodHistory
+  }
 }
 
 export async function getDashboardLayout(userId: string): Promise<DashboardLayout | null> {
