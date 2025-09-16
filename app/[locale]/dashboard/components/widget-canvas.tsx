@@ -365,7 +365,8 @@ function getWidgetDimensions(widget: Widget, isMobile: boolean) {
 type WidgetDimensions = { w: number; h: number; width: string; height: string }
 
 export default function WidgetCanvas() {
-  const { user, isMobile, dashboardLayout:layouts, setDashboardLayout:setLayouts } = useUserStore(state => state)
+  const { isMobile, dashboardLayout:layouts, setDashboardLayout:setLayouts } = useUserStore(state => state)
+  const  user = useUserStore(state => state.user)
   const { saveDashboardLayout } = useData()
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
