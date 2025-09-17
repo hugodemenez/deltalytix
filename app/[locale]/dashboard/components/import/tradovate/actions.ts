@@ -4,11 +4,13 @@ import { createClient } from '@/server/auth'
 import { saveTradesAction } from '@/server/database'
 import { Trade } from '@prisma/client'
 import crypto from 'crypto'
+import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 
 // Environment variables for Tradovate OAuth
 const TRADOVATE_CLIENT_ID = process.env.TRADOVATE_CLIENT_ID
 const TRADOVATE_CLIENT_SECRET = process.env.TRADOVATE_CLIENT_SECRET
 const TRADOVATE_REDIRECT_URI = process.env.TRADOVATE_REDIRECT_URI
+
 
 // Environment URLs - demo only
 const TRADOVATE_ENVIRONMENTS = {
@@ -585,8 +587,22 @@ function buildTradesFromFills(
       const exitFeeShare = Math.abs(fillData.fee) * Math.min(1, closeQuantity / Math.abs(fillData.qty))
       const totalCommission = Number((entryFeeShare + exitFeeShare).toFixed(2))
 
+      const tradeData = {
+        accountNumber: accountLabel,
+        entryId: `fill_${position.fills[0].fillId}`, // First fill in position
+        closeId: `fill_${fillData.fillId}`,
+        instrument: contractSymbol,
+        entryPrice: position.averagePrice.toString(),
+        closePrice: fillData.price.toString(),
+        entryDate: position.fills[0].timestamp,
+        closeDate: fillData.timestamp,
+        quantity: closeQuantity,
+        side: 'Long',
+        userId: userId
+      }
+
       const trade: Trade = {
-        id: crypto.randomUUID(),
+        id: generateDeterministicTradeId(tradeData),
         accountNumber: accountLabel,
         quantity: closeQuantity,
         entryId: `fill_${position.fills[0].fillId}`, // First fill in position
@@ -646,8 +662,22 @@ function buildTradesFromFills(
       const exitFeeShareShort = Math.abs(fillData.fee) * Math.min(1, closeQuantity / Math.abs(fillData.qty))
       const totalCommissionShort = Number((entryFeeShareShort + exitFeeShareShort).toFixed(2))
 
+      const tradeDataShort = {
+        accountNumber: accountLabel,
+        entryId: `fill_${position.fills[0].fillId}`, // First fill in position
+        closeId: `fill_${fillData.fillId}`,
+        instrument: contractSymbol,
+        entryPrice: position.averagePrice.toString(),
+        closePrice: fillData.price.toString(),
+        entryDate: position.fills[0].timestamp,
+        closeDate: fillData.timestamp,
+        quantity: closeQuantity,
+        side: 'Short',
+        userId: userId
+      }
+
       const trade: Trade = {
-        id: crypto.randomUUID(),
+        id: generateDeterministicTradeId(tradeDataShort),
         accountNumber: accountLabel,
         quantity: closeQuantity,
         entryId: `fill_${position.fills[0].fillId}`, // First fill in position

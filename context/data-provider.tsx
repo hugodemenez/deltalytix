@@ -51,7 +51,7 @@ import {
 } from '@/server/groups';
 import { createClient } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
-import { ensureUserInDatabase, signOut } from '@/server/auth';
+import { ensureUserInDatabase, signOut, getUserId } from '@/server/auth';
 import { useUserStore } from '@/store/user-store';
 import { useTickDetailsStore } from '@/store/tick-details-store';
 import { useFinancialEventsStore } from '@/store/financial-events-store';
@@ -586,7 +586,8 @@ export const DataProvider: React.FC<{
       // But check if the layout is already in the state
       // TODO: Cache layout client side (lightweight)
       if (!dashboardLayout) {
-        const dashboardLayoutResponse = await getDashboardLayout(user.id)
+        const userId = await getUserId()
+        const dashboardLayoutResponse = await getDashboardLayout(userId)
         if (dashboardLayoutResponse) {
           setDashboardLayout(dashboardLayoutResponse)
         }
@@ -660,15 +661,18 @@ export const DataProvider: React.FC<{
   }, [isSharedView]); // Only depend on isSharedView
 
   const refreshTrades = useCallback(async () => {
-    if (!user?.id) return
+    if (!supabaseUser?.id) return
     
     setIsLoading(true)
     
     try {
       console.log('[refreshTrades] Force refreshing trades - bypassing cache')
       
+      // Get the correct user ID from server
+      const userId = await getUserId()
+      
       // Force refresh by calling getTradesAction with forceRefresh: true
-      const trades = await getTradesAction(user.id, true)
+      const trades = await getTradesAction(userId, true)
       setTrades(Array.isArray(trades) ? trades : [])
       
       // Also refresh other data
@@ -695,7 +699,7 @@ export const DataProvider: React.FC<{
     } finally {
       setIsLoading(false)
     }
-  }, [user?.id, supabaseUser, locale, setTrades, setUser, setSubscription, setTags, setGroups, setMoods, setEvents, setTickDetails, setAccounts])
+  }, [supabaseUser?.id, supabaseUser, locale, setTrades, setUser, setSubscription, setTags, setGroups, setMoods, setEvents, setTickDetails, setAccounts])
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
@@ -855,9 +859,12 @@ export const DataProvider: React.FC<{
 
 
   const saveAccount = useCallback(async (newAccount: Account) => {
-    if (!user?.id) return
+    if (!supabaseUser?.id) return
 
     try {
+      // Get the correct user ID from server
+      const userId = await getUserId()
+      
       // Get the current account to preserve other properties
       const { accounts } = useUserStore.getState()
       const currentAccount = accounts.find(acc => acc.number === newAccount.number) as Account
@@ -866,7 +873,7 @@ export const DataProvider: React.FC<{
         const createdAccount = await setupAccountAction(newAccount)
         setAccounts([...accounts, createdAccount])
         // Revalidate cache for next reload
-        revalidateCache([`user-data-${user.id}`])
+        revalidateCache([`user-data-${userId}`])
         return
       }
 
@@ -880,17 +887,17 @@ export const DataProvider: React.FC<{
         return account;
       });
       setAccounts(updatedAccounts);
-      revalidateCache([`user-data-${user.id}`])
+      revalidateCache([`user-data-${userId}`])
     } catch (error) {
       console.error('Error updating account:', error)
       throw error
     }
-  }, [user?.id, accounts, setAccounts])
+  }, [supabaseUser?.id, accounts, setAccounts])
 
 
   // Add createGroup function
   const saveGroup = useCallback(async (name: string) => {
-    if (!user?.id) return
+    if (!supabaseUser?.id) return
     try {
       const newGroup = await saveGroupAction(name)
       setGroups(([...groups, newGroup]))
@@ -899,10 +906,10 @@ export const DataProvider: React.FC<{
       console.error('Error creating group:', error)
       throw error
     }
-  }, [user?.id, accounts, groups, setGroups])
+  }, [supabaseUser?.id, accounts, groups, setGroups])
 
   const renameGroup = useCallback(async (groupId: string, name: string) => {
-    if (!user?.id) return
+    if (!supabaseUser?.id) return
     try {
       setGroups(groups.map(group => group.id === groupId ? { ...group, name } : group))
       await renameGroupAction(groupId, name)
@@ -910,7 +917,7 @@ export const DataProvider: React.FC<{
       console.error('Error renaming group:', error)
       throw error
     }
-  }, [user?.id])
+  }, [supabaseUser?.id])
 
   // Add deleteGroup function
   const deleteGroup = useCallback(async (groupId: string) => {
@@ -974,7 +981,7 @@ export const DataProvider: React.FC<{
 
   // Add savePayout function
   const savePayout = useCallback(async (payout: PrismaPayout) => {
-    if (!user?.id || isSharedView) return;
+    if (!supabaseUser?.id || isSharedView) return;
 
     try {
       // Add to database
@@ -996,11 +1003,11 @@ export const DataProvider: React.FC<{
       console.error('Error adding payout:', error);
       throw error;
     }
-  }, [user?.id, isSharedView, accounts, setAccounts]);
+  }, [supabaseUser?.id, isSharedView, accounts, setAccounts]);
 
   // Add deleteAccount function
   const deleteAccount = useCallback(async (account: Account) => {
-    if (!user?.id || isSharedView) return;
+    if (!supabaseUser?.id || isSharedView) return;
 
     try {
       // Update local state
@@ -1011,11 +1018,11 @@ export const DataProvider: React.FC<{
       console.error('Error deleting account:', error);
       throw error;
     }
-  }, [user?.id, isSharedView, accounts, setAccounts]);
+  }, [supabaseUser?.id, isSharedView, accounts, setAccounts]);
 
   // Add deletePayout function
   const deletePayout = useCallback(async (payoutId: string) => {
-    if (!user?.id || isSharedView) return;
+    if (!supabaseUser?.id || isSharedView) return;
 
     try {
 
@@ -1034,17 +1041,17 @@ export const DataProvider: React.FC<{
       console.error('Error deleting payout:', error);
       throw error;
     }
-  }, [user?.id, isSharedView, accounts, setAccounts]);
+  }, [supabaseUser?.id, isSharedView, accounts, setAccounts]);
 
   const changeIsFirstConnection = useCallback(async (isFirstConnection: boolean) => {
-    if (!user?.id) return
+    if (!supabaseUser?.id) return
     // Update the user in the database
     setIsFirstConnection(isFirstConnection)
     await updateIsFirstConnectionAction(isFirstConnection)
-  }, [user?.id, setIsFirstConnection])
+  }, [supabaseUser?.id, setIsFirstConnection])
 
   const updateTrades = useCallback(async (tradeIds: string[], update: Partial<PrismaTrade>) => {
-    if (!user?.id) return
+    if (!supabaseUser?.id) return
     const updatedTrades = trades.map(
       trade =>
         tradeIds.includes(trade.id) ? {
@@ -1054,32 +1061,41 @@ export const DataProvider: React.FC<{
     )
     setTrades(updatedTrades)
     await updateTradesAction(tradeIds, update)
-  }, [user?.id, trades, setTrades])
+  }, [supabaseUser?.id, trades, setTrades])
 
   const groupTrades = useCallback(async (tradeIds: string[]) => {
-    if (!user?.id) return
+    if (!supabaseUser?.id) return
     setTrades(trades.map(trade => ({
       ...trade,
       groupId: tradeIds[0]
     })))
     await groupTradesAction(tradeIds)
-  }, [user?.id, trades, setTrades])
+  }, [supabaseUser?.id, trades, setTrades])
 
   const ungroupTrades = useCallback(async (tradeIds: string[]) => {
-    if (!user?.id) return
+    if (!supabaseUser?.id) return
     setTrades(trades.map(trade => ({
       ...trade,
       groupId: null
     })))
     await ungroupTradesAction(tradeIds)
-  }, [user?.id, trades, setTrades])
+  }, [supabaseUser?.id, trades, setTrades])
 
   const saveDashboardLayout = useCallback(async (layout: PrismaDashboardLayout) => {
-    if (!user?.id) return
-    setDashboardLayout(layout)
-    await saveDashboardLayoutAction(layout)
-    revalidateCache([`user-data-${user.id}`])
-  }, [user?.id, setDashboardLayout])
+    if (!supabaseUser?.id) return
+    
+    try {
+      // Get the correct user ID from server
+      const userId = await getUserId()
+      
+      setDashboardLayout(layout)
+      await saveDashboardLayoutAction(layout)
+      revalidateCache([`user-data-${userId}`])
+    } catch (error) {
+      console.error('Error saving dashboard layout:', error)
+      throw error
+    }
+  }, [supabaseUser?.id, setDashboardLayout])
 
   const contextValue: DataContextType = {
     isPlusUser,

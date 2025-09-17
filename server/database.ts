@@ -168,6 +168,7 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
     if (forceRefresh) {
       console.log(`[getTrades] Force refresh - bypassing cache for user ${userId || user?.id}`)
       
+      
       const query: any = {
         where: { 
           userId: userId || user?.id,
