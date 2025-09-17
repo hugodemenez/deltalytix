@@ -154,7 +154,7 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
 }
 
 
-export async function getTradesAction(userId: string | null = null): Promise<Trade[]> {
+export async function getTradesAction(userId: string | null = null, forceRefresh: boolean = false): Promise<Trade[]> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user && !userId) {
@@ -164,6 +164,31 @@ export async function getTradesAction(userId: string | null = null): Promise<Tra
     const subscriptionDetails = await getSubscriptionDetails()
     const isSubscribed = subscriptionDetails?.isActive || false
 
+    // If forceRefresh is true, bypass cache and fetch directly
+    if (forceRefresh) {
+      console.log(`[getTrades] Force refresh - bypassing cache for user ${userId || user?.id}`)
+      
+      const query: any = {
+        where: { 
+          userId: userId || user?.id,
+        },
+        orderBy: { entryDate: 'desc' }
+      }
+      if (!isSubscribed) {
+        const oneWeekAgo = startOfDay(new Date())
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+        query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+      }
+      
+      const trades = await prisma.trade.findMany(query)
+      console.log(`[getTrades] Force refresh - Found ${trades.length} trades`)
+      
+      return trades.map(trade => ({
+        ...trade,
+        entryDate: new Date(trade.entryDate).toISOString(),
+        exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
+      }))
+    }
 
     // Get cached trades
     // Per page

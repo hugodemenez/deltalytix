@@ -545,7 +545,7 @@ export const DataProvider: React.FC<{
       }
 
       if (adminView) {
-        const trades = await getTradesAction(adminView.userId as string);
+        const trades = await getTradesAction(adminView.userId as string, false);
         setTrades(trades as PrismaTrade[]);
         // RESET ALL OTHER STATES
         setUser(null);
@@ -662,31 +662,40 @@ export const DataProvider: React.FC<{
   const refreshTrades = useCallback(async () => {
     if (!user?.id) return
     
-    // Explicitly set loading state before cache invalidation
     setIsLoading(true)
     
     try {
-      // Force cache invalidation
-      await revalidateCache([`trades-${user.id}`, `user-data-${user.id}-${locale}`])
+      console.log('[refreshTrades] Force refreshing trades - bypassing cache')
       
-      // Add a small delay to ensure cache invalidation takes effect
-      await new Promise(resolve => setTimeout(resolve, 100))
+      // Force refresh by calling getTradesAction with forceRefresh: true
+      const trades = await getTradesAction(user.id, true)
+      setTrades(Array.isArray(trades) ? trades : [])
       
-      // In production, also try to force a cache miss by adding a timestamp
-      // This ensures fresh data even if revalidateTag doesn't work properly
-      if (process.env.NODE_ENV === 'production') {
-        console.log('[refreshTrades] Production environment - forcing cache miss')
-        // Force refetch by clearing any client-side caches if needed
-        // The server-side cache should be invalidated by revalidateTag
+      // Also refresh other data
+      const data = await getUserData()
+      if (data && supabaseUser) {
+        setUser(await ensureUserInDatabase(supabaseUser, locale))
+        setSubscription(data.subscription as PrismaSubscription | null)
+        setTags(data.tags)
+        setGroups(data.groups)
+        setMoods(data.moodHistory)
+        setEvents(data.financialEvents)
+        setTickDetails(data.tickDetails)
+        
+        const accountsWithBalance = (data.accounts || []).map(account => ({
+          ...account,
+          balanceToDate: calculateAccountBalance(account, Array.isArray(trades) ? trades : [])
+        }))
+        setAccounts(accountsWithBalance)
       }
       
-      // Reload data
-      await loadData()
+      console.log('[refreshTrades] Successfully refreshed trades and user data')
     } catch (error) {
       console.error('Error refreshing trades:', error)
+    } finally {
       setIsLoading(false)
     }
-  }, [user?.id, loadData, setIsLoading, locale])
+  }, [user?.id, supabaseUser, locale, setTrades, setUser, setSubscription, setTags, setGroups, setMoods, setEvents, setTickDetails, setAccounts])
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
