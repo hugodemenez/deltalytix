@@ -24,7 +24,7 @@ import { useI18n } from "@/locales/client"
 import { useTradovateSyncStore } from "@/store/tradovate-sync-store"
 import { initiateTradovateOAuth, handleTradovateCallback, refreshTradovateToken, getTradovateAccounts, getTradovateTrades, testTradovateAuth } from './actions'
 import { TradovateDebug } from './debug-tradovate'
-
+import { useData } from "@/context/data-provider"
 
 
 export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
@@ -36,6 +36,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
   const t = useI18n()
   const videoRef = useRef<HTMLVideoElement>(null)
 
+  const { refreshTrades } = useData()
   // Handle video playback
   useEffect(() => {
     const video = videoRef.current
@@ -244,6 +245,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       })
     } finally {
       setIsSyncing(false)
+      await refreshTrades()
     }
   }
 
@@ -274,7 +276,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
   return (
     <div className="flex flex-col space-y-4 p-6">
       {/* Temporary debug component - remove this once OAuth is working */}
-      <TradovateDebug />
+      {/* <TradovateDebug /> */}
       
       <div className="border-t pt-6"></div>
       <div className="flex flex-col space-y-2">
