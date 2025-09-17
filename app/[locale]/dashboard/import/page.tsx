@@ -37,7 +37,10 @@ export default function ImportCallbackPage() {
           hasCode: !!code, 
           hasState: !!state,
           state: state?.substring(0, 8) + '...',
-          environment: tradovateStore.environment
+          environment: tradovateStore.environment,
+          userAgent: navigator.userAgent,
+          timestamp: new Date().toISOString(),
+          url: window.location.href
         })
 
         if (!code) {
@@ -53,10 +56,22 @@ export default function ImportCallbackPage() {
         }
 
         // Verify state matches what we stored
+        if (!tradovateStore || typeof tradovateStore.oauthState === 'undefined') {
+          console.error('Tradovate store not properly initialized:', {
+            hasStore: !!tradovateStore,
+            oauthState: tradovateStore?.oauthState
+          })
+          setError('OAuth state not found - please try again')
+          setStatus('error')
+          return
+        }
+
         if (state !== tradovateStore.oauthState) {
           console.error('State mismatch:', {
             received: state?.substring(0, 8) + '...',
-            expected: tradovateStore.oauthState?.substring(0, 8) + '...'
+            expected: tradovateStore.oauthState?.substring(0, 8) + '...',
+            receivedLength: state?.length,
+            expectedLength: tradovateStore.oauthState?.length
           })
           setError('Invalid state parameter - possible security issue')
           setStatus('error')
@@ -66,32 +81,64 @@ export default function ImportCallbackPage() {
         // Exchange code for tokens
         const result = await handleTradovateCallback(code, state)
         
+        // Defensive programming: ensure result is an object
+        if (!result || typeof result !== 'object') {
+          console.error('Invalid result from handleTradovateCallback:', result)
+          setError('Invalid response from OAuth callback handler')
+          setStatus('error')
+          return
+        }
+        
         if (result.error) {
+          console.error('OAuth callback error:', result.error)
           setError(result.error)
           setStatus('error')
           return
         }
 
-        if (result.accessToken && result.refreshToken && result.expiresAt) {
-          // Store tokens in Zustand
-          tradovateStore.setTokens(result.accessToken, result.refreshToken, result.expiresAt)
-          tradovateStore.setAuthenticated(true)
-          tradovateStore.clearOAuthState()
-          
-          console.log('OAuth flow completed successfully')
-          setStatus('success')
-          
-          // Redirect back to dashboard after a short delay
-          setTimeout(() => {
-            router.push('/dashboard')
-          }, 2000)
-        } else {
-          setError('Invalid response from token exchange')
+        // Validate all required fields exist and are strings
+        if (!result.accessToken || !result.refreshToken || !result.expiresAt) {
+          console.error('Missing required fields in OAuth result:', {
+            hasAccessToken: !!result.accessToken,
+            hasRefreshToken: !!result.refreshToken,
+            hasExpiresAt: !!result.expiresAt,
+            result
+          })
+          setError('Invalid response from token exchange - missing required fields')
           setStatus('error')
+          return
         }
+
+        // Store tokens in Zustand
+        tradovateStore.setTokens(result.accessToken, result.refreshToken, result.expiresAt)
+        tradovateStore.setAuthenticated(true)
+        tradovateStore.clearOAuthState()
+        
+        console.log('OAuth flow completed successfully')
+        setStatus('success')
+        
+        // Redirect back to dashboard after a short delay
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 2000)
       } catch (error) {
-        console.error('OAuth callback error:', error)
-        setError(error instanceof Error ? error.message : 'Unknown error occurred')
+        console.error('OAuth callback error:', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : undefined,
+          errorType: typeof error,
+          errorString: String(error)
+        })
+        
+        let errorMessage = 'Unknown error occurred'
+        if (error instanceof Error) {
+          errorMessage = error.message
+        } else if (typeof error === 'string') {
+          errorMessage = error
+        } else if (error && typeof error === 'object' && 'message' in error) {
+          errorMessage = String(error.message)
+        }
+        
+        setError(errorMessage)
         setStatus('error')
       }
     }

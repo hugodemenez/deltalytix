@@ -215,7 +215,11 @@ export async function initiateTradovateOAuth(): Promise<TradovateOAuthResult> {
 
     return { authUrl: authUrl.toString(), state }
   } catch (error) {
-    console.error('Failed to initiate Tradovate OAuth:', error)
+    console.error('Failed to initiate Tradovate OAuth:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      errorType: typeof error
+    })
     return { error: 'Failed to initiate OAuth flow' }
   }
 }
@@ -227,6 +231,16 @@ export async function handleTradovateCallback(code: string, state: string): Prom
       hasState: !!state,
       state: state?.substring(0, 8) + '...'
     })
+
+    // Validate environment variables first
+    if (!TRADOVATE_CLIENT_ID || !TRADOVATE_CLIENT_SECRET || !TRADOVATE_REDIRECT_URI) {
+      console.error('Missing Tradovate OAuth environment variables:', {
+        hasClientId: !!TRADOVATE_CLIENT_ID,
+        hasClientSecret: !!TRADOVATE_CLIENT_SECRET,
+        hasRedirectUri: !!TRADOVATE_REDIRECT_URI
+      })
+      return { error: 'Tradovate OAuth credentials not configured' }
+    }
 
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -249,30 +263,52 @@ export async function handleTradovateCallback(code: string, state: string): Prom
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code,
-        redirect_uri: TRADOVATE_REDIRECT_URI!,
-        client_id: TRADOVATE_CLIENT_ID!
+        redirect_uri: TRADOVATE_REDIRECT_URI,
+        client_id: TRADOVATE_CLIENT_ID
       })
     })
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      console.error('Token exchange failed:', errorText)
-      return { error: 'Failed to exchange code for tokens' }
+      console.error('Token exchange failed:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        errorText,
+        url: tokenResponse.url
+      })
+      return { error: `Failed to exchange code for tokens: ${tokenResponse.status} ${tokenResponse.statusText}` }
     }
 
-    const tokens: TradovateTokenResponse = await tokenResponse.json()
+    let tokens: TradovateTokenResponse
+    try {
+      tokens = await tokenResponse.json()
+    } catch (parseError) {
+      console.error('Failed to parse token response:', parseError)
+      return { error: 'Invalid response format from Tradovate' }
+    }
+
     console.log('Token exchange response:', { 
-      hasAccessToken: !!tokens.access_token,
-      hasRefreshToken: !!tokens.refresh_token,
-      expiresIn: tokens.expires_in,
-      scope: tokens.scope,
+      hasAccessToken: !!tokens?.access_token,
+      hasRefreshToken: !!tokens?.refresh_token,
+      expiresIn: tokens?.expires_in,
+      scope: tokens?.scope,
       fullResponse: tokens
     })
     
-    // Validate the token response
+    // Validate the token response structure
+    if (!tokens || typeof tokens !== 'object') {
+      console.error('Invalid token response structure:', tokens)
+      return { error: 'Invalid token response structure from Tradovate' }
+    }
+
     if (!tokens.access_token || !tokens.refresh_token || !tokens.expires_in) {
-      console.error('Invalid token response:', tokens)
-      return { error: 'Invalid token response from Tradovate' }
+      console.error('Missing required token fields:', {
+        hasAccessToken: !!tokens.access_token,
+        hasRefreshToken: !!tokens.refresh_token,
+        hasExpiresIn: !!tokens.expires_in,
+        tokens
+      })
+      return { error: 'Invalid token response from Tradovate - missing required fields' }
     }
     
     // Calculate expiration time
@@ -284,8 +320,12 @@ export async function handleTradovateCallback(code: string, state: string): Prom
       expiresAt
     }
   } catch (error) {
-    console.error('Failed to handle OAuth callback:', error)
-    return { error: 'Failed to process OAuth callback' }
+    console.error('Failed to handle OAuth callback:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      errorType: typeof error
+    })
+    return { error: `Failed to process OAuth callback: ${error instanceof Error ? error.message : 'Unknown error'}` }
   }
 }
 
@@ -319,11 +359,38 @@ export async function refreshTradovateToken(refreshToken: string): Promise<Trado
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      console.error('Token refresh failed:', errorText)
-      return { error: 'Failed to refresh token' }
+      console.error('Token refresh failed:', {
+        status: tokenResponse.status,
+        statusText: tokenResponse.statusText,
+        errorText,
+        url: tokenResponse.url
+      })
+      return { error: `Failed to refresh token: ${tokenResponse.status} ${tokenResponse.statusText}` }
     }
 
-    const tokens: TradovateTokenResponse = await tokenResponse.json()
+    let tokens: TradovateTokenResponse
+    try {
+      tokens = await tokenResponse.json()
+    } catch (parseError) {
+      console.error('Failed to parse refresh token response:', parseError)
+      return { error: 'Invalid response format from Tradovate' }
+    }
+
+    // Validate the token response structure
+    if (!tokens || typeof tokens !== 'object') {
+      console.error('Invalid refresh token response structure:', tokens)
+      return { error: 'Invalid refresh token response structure from Tradovate' }
+    }
+
+    if (!tokens.access_token || !tokens.refresh_token || !tokens.expires_in) {
+      console.error('Missing required fields in refresh token response:', {
+        hasAccessToken: !!tokens.access_token,
+        hasRefreshToken: !!tokens.refresh_token,
+        hasExpiresIn: !!tokens.expires_in,
+        tokens
+      })
+      return { error: 'Invalid refresh token response from Tradovate - missing required fields' }
+    }
     
     // Calculate expiration time
     const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString()
@@ -334,8 +401,12 @@ export async function refreshTradovateToken(refreshToken: string): Promise<Trado
       expiresAt
     }
   } catch (error) {
-    console.error('Failed to refresh Tradovate token:', error)
-    return { error: 'Failed to refresh token' }
+    console.error('Failed to refresh Tradovate token:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      errorType: typeof error
+    })
+    return { error: `Failed to refresh token: ${error instanceof Error ? error.message : 'Unknown error'}` }
   }
 }
 
