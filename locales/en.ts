@@ -1328,7 +1328,7 @@ export default {
         'description': 'Connect your Tradovate account to automatically sync your trades using OAuth authentication.',
         'environment': 'Environment',
         'environments': {
-            'demo': 'Demo (Recommended for testing)',
+            'demo': 'Demo (Propfirms Simulated Accounts)',
             'live': 'Live (Real money)'
         },
         'liveWarning': 'You are connecting to the live environment with real money. Make sure this is intended.',

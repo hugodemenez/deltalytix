@@ -86,7 +86,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
   const handleStartOAuth = async () => {
     try {
       setIsLoading(true)
-      const result = await initiateTradovateOAuth(tradovateStore.environment)
+      const result = await initiateTradovateOAuth()
       if (result.error || !result.authUrl || !result.state) {
         toast({
           title: "Error",
@@ -118,7 +118,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
     if (!tradovateStore.refreshToken) return
 
     try {
-      const result = await refreshTradovateToken(tradovateStore.refreshToken, tradovateStore.environment)
+      const result = await refreshTradovateToken(tradovateStore.refreshToken)
       if (result.error || !result.accessToken || !result.refreshToken || !result.expiresAt) {
         // Refresh failed, need to re-authenticate
         tradovateStore.clearAll()
@@ -141,7 +141,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
     try {
       // First test authentication with /me endpoint
       console.log('Testing authentication before loading accounts...')
-      const authTest = await testTradovateAuth(accessToken, tradovateStore.environment)
+      const authTest = await testTradovateAuth(accessToken)
       
       if (!authTest.success) {
         console.error('Authentication test failed:', authTest.error)
@@ -154,7 +154,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       }
       
       console.log('Authentication test passed, now fetching accounts...')
-      const accounts = await getTradovateAccounts(accessToken, tradovateStore.environment)
+      const accounts = await getTradovateAccounts(accessToken)
       if (accounts.error || !accounts.accounts) {
         toast({
           title: "Warning",
@@ -183,7 +183,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       for (const account of tradovateStore.accounts) {
         console.log(`Syncing trades for account: ${account.name} (${account.id})`)
         
-        const result = await getTradovateTrades(accessToken, account.id, tradovateStore.environment)
+        const result = await getTradovateTrades(accessToken, account.id)
         
         if (result.error) {
           toast({
@@ -309,19 +309,6 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
             </SelectItem>
           </SelectContent>
         </Select>
-        <div className="text-xs space-y-1">
-          {tradovateStore.environment === 'live' && (
-            <p className="text-amber-600 dark:text-amber-400">
-              ⚠️ {t('tradovateSync.liveWarning')}
-            </p>
-          )}
-          <p className="text-blue-600 dark:text-blue-400">
-            💡 <strong>ApexTraderFunding users:</strong> Use Demo for sim accounts, Live for funded accounts
-          </p>
-          <p className="text-muted-foreground">
-            Note: Authentication always uses live.tradovateapi.com regardless of environment
-          </p>
-        </div>
       </div>
 
       {!tradovateStore.isAuthenticated ? (

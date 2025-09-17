@@ -1393,7 +1393,7 @@ export default {
         'description': 'Connectez votre compte Tradovate pour synchroniser automatiquement vos trades en utilisant l\'authentification OAuth.',
         'environment': 'Environnement',
         'environments': {
-            'demo': 'Démo (Recommandé pour les tests)',
+            'demo': 'Démo (Comptes Propfirms Simulés)',
             'live': 'Live (Argent réel)'
         },
         'liveWarning': 'Vous vous connectez à l\'environnement live avec de l\'argent réel. Assurez-vous que c\'est intentionnel.',

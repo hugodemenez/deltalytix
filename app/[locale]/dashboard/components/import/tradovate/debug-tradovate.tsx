@@ -16,7 +16,7 @@ export function TradovateDebug() {
     console.clear() // Clear console for better debugging
     
     try {
-      const result = await initiateTradovateOAuth('demo')
+      const result = await initiateTradovateOAuth()
       setDebugInfo({
         success: !result.error,
         result,
@@ -49,58 +49,6 @@ export function TradovateDebug() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <h3 className="font-semibold">Environment Variables Checklist:</h3>
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">TRADOVATE_CLIENT_ID</Badge>
-              <span className="text-sm text-muted-foreground">Should be: {process.env.TRADOVATE_CLIENT_ID}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">TRADOVATE_CLIENT_SECRET</Badge>
-              <span className="text-sm text-muted-foreground">Should be: {process.env.TRADOVATE_CLIENT_SECRET}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">TRADOVATE_REDIRECT_URI</Badge>
-              <span className="text-sm text-muted-foreground">Should be: {process.env.TRADOVATE_REDIRECT_URI}</span>
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            <p><strong>Note:</strong> The OAuth URL will use <code>trader.tradovate.com/oauth</code> for authorization and <code>demo.tradovateapi.com/auth/oauthtoken</code> for token exchange.</p>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="font-semibold">Fixed Issues:</h3>
-          <ul className="text-sm space-y-1 text-green-600">
-            <li>✅ Updated OAuth endpoint from /v1/oauth/authorize to /oauth</li>
-            <li>✅ Updated token endpoint from /v1/oauth/token to /auth/oauthtoken</li>
-            <li>✅ Using correct trader.tradovate.com domain for OAuth</li>
-            <li>✅ Added validation for token response to prevent Invalid time value error</li>
-            <li>✅ Prevented double execution in callback page (React StrictMode fix)</li>
-            <li>✅ Added OAuth state persistence for callback verification</li>
-          </ul>
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="font-semibold">Remaining Issues to Check:</h3>
-          <ul className="text-sm space-y-1 text-muted-foreground">
-            <li>• Make sure your client ID ({process.env.TRADOVATE_CLIENT_ID}) is registered in Tradovate developer console</li>
-            <li>• Verify redirect URI is whitelisted in Tradovate developer console</li>
-          </ul>
-        </div>
-
-        <div className="space-y-2">
-          <h3 className="font-semibold">Common Issues:</h3>
-          <ul className="text-sm space-y-1 text-muted-foreground">
-            <li>• Environment variables not set in .env.local</li>
-            <li>• Development server not restarted after adding env variables</li>
-            <li>• Wrong redirect URI format (check for typos)</li>
-            <li>• User not authenticated (try logging out and back in)</li>
-            <li>• CORS issues with Tradovate API</li>
-          </ul>
-        </div>
-
         <div className="flex gap-2">
           <Button onClick={runDebugTest} disabled={isLoading}>
             {isLoading ? 'Testing...' : 'Test OAuth Configuration'}
@@ -144,13 +92,6 @@ export function TradovateDebug() {
             </div>
           </div>
         )}
-
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p><strong>Next Steps if test succeeds:</strong></p>
-          <p>1. The OAuth URL will be logged in the console</p>
-          <p>2. You can manually test by pasting the URL in a new tab</p>
-          <p>3. You should see the Tradovate OAuth login page</p>
-        </div>
       </CardContent>
     </Card>
   )

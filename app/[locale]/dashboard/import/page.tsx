@@ -64,7 +64,7 @@ export default function ImportCallbackPage() {
         }
 
         // Exchange code for tokens
-        const result = await handleTradovateCallback(code, state, tradovateStore.environment)
+        const result = await handleTradovateCallback(code, state)
         
         if (result.error) {
           setError(result.error)

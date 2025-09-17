@@ -10,15 +10,11 @@ const TRADOVATE_CLIENT_ID = process.env.TRADOVATE_CLIENT_ID
 const TRADOVATE_CLIENT_SECRET = process.env.TRADOVATE_CLIENT_SECRET
 const TRADOVATE_REDIRECT_URI = process.env.TRADOVATE_REDIRECT_URI
 
-// Environment URLs - based on official Tradovate OAuth example
+// Environment URLs - demo only
 const TRADOVATE_ENVIRONMENTS = {
   demo: {
-    auth: 'https://trader.tradovate.com', // OAuth authorization (same for both)
+    auth: 'https://trader.tradovate.com', // OAuth authorization
     api: 'https://demo.tradovateapi.com'   // API calls
-  },
-  live: {
-    auth: 'https://trader.tradovate.com', // OAuth authorization (same for both)
-    api: 'https://live.tradovateapi.com'   // API calls
   }
 }
 
@@ -58,7 +54,7 @@ interface TradovateAccountsResult {
   error?: string
 }
 
-// Tradovate Fill/Execution data structure (based on API docs)
+// Tradovate Fill data structure (based on API docs)
 interface TradovateFill {
   id: number
   orderId: number
@@ -70,12 +66,48 @@ interface TradovateFill {
   qty: number
   price: number
   active: boolean
-  instrument?: {
-    name: string
-    masterInstrument: {
-      name: string
-    }
-  }
+}
+
+// Tradovate Contract data structure
+interface TradovateContract {
+  id: number
+  name: string
+  symbol: string
+  description?: string
+}
+
+// Tradovate Fill Fee data structure
+interface TradovateFillFee {
+  id: number
+  clearingFee: number
+  clearingCurrencyId: number
+  exchangeFee: number
+  exchangeCurrencyId: number
+  nfaFee: number
+  nfaCurrencyId: number
+  brokerageFee: number
+  brokerageCurrencyId: number
+  commission: number
+  commissionCurrencyId: number
+  orderRoutingFee: number
+  orderRoutingCurrencyId: number
+}
+
+// FIFO position tracking
+interface FIFOPosition {
+  contractId: number
+  contractName: string
+  contractSymbol: string
+  quantity: number
+  averagePrice: number
+  totalValue: number
+  fills: Array<{
+    fillId: number
+    qty: number
+    price: number
+    timestamp: string
+    fee: number
+  }>
 }
 
 interface TradovateTradesResult {
@@ -85,9 +117,57 @@ interface TradovateTradesResult {
   error?: string
 }
 
-export async function initiateTradovateOAuth(environment: 'demo' | 'live' = 'demo'): Promise<TradovateOAuthResult> {
+// Helper function to fetch contract details
+async function getContractById(accessToken: string, contractId: number): Promise<TradovateContract | null> {
   try {
-    console.log('Initiating Tradovate OAuth...', { environment })
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const params = new URLSearchParams({ id: String(contractId) }).toString()
+    const response = await fetch(`${apiBaseUrl}/v1/contract/item?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      console.warn(`Failed to fetch contract ${contractId}:`, response.status, response.statusText)
+      return null
+    }
+    
+    return await response.json()
+  } catch (error) {
+    console.warn(`Error fetching contract ${contractId}:`, error)
+    return null
+  }
+}
+
+// Helper function to fetch fill fees
+async function getFillFeeById(accessToken: string, fillId: number): Promise<TradovateFillFee | null> {
+  try {
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const params = new URLSearchParams({ id: String(fillId) }).toString()
+    const response = await fetch(`${apiBaseUrl}/v1/fillFee/item?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      console.warn(`Failed to fetch fill fee ${fillId}:`, response.status, response.statusText)
+      return null
+    }
+    
+    return await response.json()
+  } catch (error) {
+    console.warn(`Error fetching fill fee ${fillId}:`, error)
+    return null
+  }
+}
+
+export async function initiateTradovateOAuth(): Promise<TradovateOAuthResult> {
+  try {
+    console.log('Initiating Tradovate OAuth (demo only)...')
     console.log('Environment variables check:', {
       hasClientId: !!TRADOVATE_CLIENT_ID,
       hasRedirectUri: !!TRADOVATE_REDIRECT_URI,
@@ -118,9 +198,9 @@ export async function initiateTradovateOAuth(environment: 'demo' | 'live' = 'dem
 
     console.log('User authenticated:', { userId: user.id })
 
-    // Build OAuth URL using selected environment - based on official Tradovate example
-    const authBaseUrl = TRADOVATE_ENVIRONMENTS[environment].auth
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
+    // Build OAuth URL using demo environment
+    const authBaseUrl = TRADOVATE_ENVIRONMENTS.demo.auth
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
     console.log('Using auth URL:', authBaseUrl)
     console.log('Using API URL:', apiBaseUrl)
     
@@ -140,13 +220,12 @@ export async function initiateTradovateOAuth(environment: 'demo' | 'live' = 'dem
   }
 }
 
-export async function handleTradovateCallback(code: string, state: string, environment: 'demo' | 'live' = 'demo'): Promise<TradovateOAuthResult> {
+export async function handleTradovateCallback(code: string, state: string): Promise<TradovateOAuthResult> {
   try {
-    console.log('Processing Tradovate OAuth callback:', { 
+    console.log('Processing Tradovate OAuth callback (demo only):', { 
       hasCode: !!code, 
       hasState: !!state,
-      state: state?.substring(0, 8) + '...',
-      environment 
+      state: state?.substring(0, 8) + '...'
     })
 
     const supabase = await createClient()
@@ -157,8 +236,8 @@ export async function handleTradovateCallback(code: string, state: string, envir
       return { error: 'User not authenticated' }
     }
 
-    // Exchange code for tokens using selected environment - based on official Tradovate example
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
+    // Exchange code for tokens using demo environment
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
     console.log('Exchanging code for tokens:', { apiBaseUrl, userId: user.id })
     
     const tokenResponse = await fetch(`${apiBaseUrl}/auth/oauthtoken`, {
@@ -210,7 +289,7 @@ export async function handleTradovateCallback(code: string, state: string, envir
   }
 }
 
-export async function refreshTradovateToken(refreshToken: string, environment: 'demo' | 'live' = 'demo'): Promise<TradovateOAuthResult> {
+export async function refreshTradovateToken(refreshToken: string): Promise<TradovateOAuthResult> {
   try {
     if (!TRADOVATE_CLIENT_ID || !TRADOVATE_CLIENT_SECRET) {
       return { error: 'Tradovate OAuth credentials not configured' }
@@ -224,7 +303,7 @@ export async function refreshTradovateToken(refreshToken: string, environment: '
       return { error: 'User not authenticated' }
     }
 
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
     const tokenResponse = await fetch(`${apiBaseUrl}/auth/oauthtoken`, {
       method: 'POST',
       headers: {
@@ -260,21 +339,20 @@ export async function refreshTradovateToken(refreshToken: string, environment: '
   }
 }
 
-// Test authentication with /me endpoint first
-export async function testTradovateAuth(accessToken: string, environment: 'demo' | 'live' = 'demo') {
+// Test authentication with demo user list endpoint
+export async function testTradovateAuth(accessToken: string) {
   try {
-    // /me endpoint always uses live environment regardless of selected environment
-    const liveApiBaseUrl = TRADOVATE_ENVIRONMENTS['live'].api
-    console.log('Testing Tradovate authentication with /me endpoint (always on live)')
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    console.log('Testing Tradovate authentication with demo user list endpoint')
     
-    const response = await fetch(`${liveApiBaseUrl}/v1/auth/me`, {
+    const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
       }
     })
     
-    console.log('/me endpoint response:', {
+    console.log('User list endpoint response:', {
       status: response.status,
       statusText: response.statusText,
       ok: response.ok
@@ -282,11 +360,11 @@ export async function testTradovateAuth(accessToken: string, environment: 'demo'
     
     if (response.ok) {
       const userData = await response.json()
-      console.log('User data from /me:', userData)
+      console.log('User data from demo user list:', userData)
       return { success: true, userData }
     } else {
       const errorText = await response.text()
-      console.error('/me endpoint failed:', { status: response.status, errorText })
+      console.error('Demo user list endpoint failed:', { status: response.status, errorText })
       return { success: false, error: errorText }
     }
   } catch (error) {
@@ -295,156 +373,44 @@ export async function testTradovateAuth(accessToken: string, environment: 'demo'
   }
 }
 
-export async function getTradovateAccounts(accessToken: string, environment: 'demo' | 'live' = 'demo'): Promise<TradovateAccountsResult> {
+export async function getTradovateAccounts(accessToken: string): Promise<TradovateAccountsResult> {
   try {
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
-    console.log('Fetching Tradovate accounts:', { 
-      apiBaseUrl, 
-      environment,
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    console.log('Fetching Tradovate accounts (demo only):', { 
+      apiBaseUrl,
       hasToken: !!accessToken,
       tokenPrefix: accessToken?.substring(0, 10) + '...'
     })
     
-    // First, get user info again to see if it contains account references
-    // Note: /me endpoint always uses live environment regardless of selected environment
-    console.log('Getting user info first to check for account references...')
-    const liveApiBaseUrl = TRADOVATE_ENVIRONMENTS['live'].api
-    const userInfoResponse = await fetch(`${liveApiBaseUrl}/v1/auth/me`, {
+    // Use simple account list endpoint that we validated works
+    const response = await fetch(`${apiBaseUrl}/v1/account/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
       }
     })
     
-    if (userInfoResponse.ok) {
-      const userInfo = await userInfoResponse.json()
-      console.log('User info for account discovery:', userInfo)
-    } else {
-      const errorText = await userInfoResponse.text()
-      console.log('User info error:', { errorText })
-    }
+    console.log('Account list response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    })
     
-    // Try multiple account endpoints since prop firms often use different ones
-    const accountEndpoints = [
-      { name: 'Standard accounts', url: `${apiBaseUrl}/v1/account/list`, method: 'GET' },
-      { name: 'Sim accounts find', url: `${apiBaseUrl}/v1/account/find`, method: 'POST', body: {} },
-      { name: 'Demo accounts', url: `${apiBaseUrl}/v1/account/demo/list`, method: 'GET' },
-      { name: 'User accounts', url: `${apiBaseUrl}/v1/user/accounts`, method: 'GET' },
-      { name: 'Account search all', url: `${apiBaseUrl}/v1/account/search`, method: 'POST', body: { userSearchType: 'All' } },
-      { name: 'Sim account list', url: `${apiBaseUrl}/v1/account/sim/list`, method: 'GET' },
-      { name: 'Account deps', url: `${apiBaseUrl}/v1/account/deps`, method: 'GET' },
-      { name: 'Account item', url: `${apiBaseUrl}/v1/account/item`, method: 'GET' },
-      // Try with prop firm organization context
-      { name: 'Organization accounts', url: `${apiBaseUrl}/v1/organization/accounts`, method: 'GET' },
-      { name: 'User owned accounts', url: `${apiBaseUrl}/v1/user/ownedAccounts`, method: 'GET' }
-    ]
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Failed to fetch accounts:', { status: response.status, errorText })
+      return { error: `Failed to fetch accounts: ${errorText}` }
+    }
 
-    let accounts: any[] = []
+    const accounts = await response.json()
+    console.log('Received accounts from Tradovate:', { 
+      accountCount: accounts.length,
+      sampleAccount: accounts[0]
+    })
     
-    for (const endpoint of accountEndpoints) {
-      try {
-        console.log(`Trying ${endpoint.name} at ${endpoint.url}`)
-        
-        const requestOptions: RequestInit = {
-          method: endpoint.method,
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        }
-        
-        if (endpoint.body) {
-          requestOptions.body = JSON.stringify(endpoint.body)
-        }
-        
-        const response = await fetch(endpoint.url, requestOptions)
-        
-        console.log(`${endpoint.name} response:`, {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok,
-          contentLength: response.headers.get('content-length')
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          console.log(`${endpoint.name} data:`, data)
-          
-          if (Array.isArray(data) && data.length > 0) {
-            accounts = data
-            console.log(`✅ Found ${data.length} accounts via ${endpoint.name}`)
-            break
-          } else if (data && !Array.isArray(data)) {
-            // Single account object
-            accounts = [data]
-            console.log(`✅ Found 1 account via ${endpoint.name}`)
-            break
-          }
-        }
-      } catch (error) {
-        console.log(`${endpoint.name} failed:`, error)
-        continue
-      }
-    }
-
-    // If no accounts found and we're on live, try demo environment for prop firm sim accounts
-    if (accounts.length === 0 && environment === 'live') {
-      console.log('No accounts found on live environment, trying demo environment for prop firm sim accounts...')
-      
-      const demoApiBaseUrl = TRADOVATE_ENVIRONMENTS['demo'].api
-      for (const endpoint of accountEndpoints) {
-        try {
-          console.log(`Trying ${endpoint.name} on DEMO at ${endpoint.url.replace(apiBaseUrl, demoApiBaseUrl)}`)
-          
-          const requestOptions: RequestInit = {
-            method: endpoint.method,
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Accept': 'application/json',
-              'Content-Type': 'application/json'
-            }
-          }
-          
-          if (endpoint.body) {
-            requestOptions.body = JSON.stringify(endpoint.body)
-          }
-          
-          const demoUrl = endpoint.url.replace(apiBaseUrl, demoApiBaseUrl)
-          const response = await fetch(demoUrl, requestOptions)
-          
-          console.log(`${endpoint.name} (DEMO) response:`, {
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok,
-            contentLength: response.headers.get('content-length')
-          })
-          
-          if (response.ok) {
-            const data = await response.json()
-            console.log(`${endpoint.name} (DEMO) data:`, data)
-            
-            if (Array.isArray(data) && data.length > 0) {
-              accounts = data
-              console.log(`✅ Found ${data.length} accounts via ${endpoint.name} on DEMO environment`)
-              break
-            } else if (data && !Array.isArray(data)) {
-              accounts = [data]
-              console.log(`✅ Found 1 account via ${endpoint.name} on DEMO environment`)
-              break
-            }
-          }
-        } catch (error) {
-          console.log(`${endpoint.name} (DEMO) failed:`, error)
-          continue
-        }
-      }
-    }
-
-    // Check if we found any accounts
-    if (accounts.length === 0) {
-      console.error('No accounts found via any endpoint on either environment')
-      return { error: 'No accounts found on live or demo environments. For ApexTraderFunding, try switching to Demo environment and reconnecting.' }
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      console.log('No accounts returned from Tradovate')
+      return { error: 'No accounts found on demo environment' }
     }
 
     console.log('Final accounts result:', {
@@ -460,85 +426,203 @@ export async function getTradovateAccounts(accessToken: string, environment: 'de
   }
 }
 
-// Transform Tradovate fills to our Trade format
-function transformTradovateToTrades(fills: TradovateFill[], accountId: number, userId: string): Trade[] {
-  console.log('Transforming Tradovate fills:', { fillCount: fills.length, accountId, userId })
-
-  // Group fills by instrument and pair buy/sell orders
-  const fillsByInstrument = new Map<string, TradovateFill[]>()
-  
-  fills.forEach(fill => {
-    const instrumentName = fill.instrument?.masterInstrument?.name || fill.instrument?.name || 'UNKNOWN'
-    if (!fillsByInstrument.has(instrumentName)) {
-      fillsByInstrument.set(instrumentName, [])
-    }
-    fillsByInstrument.get(instrumentName)!.push(fill)
-  })
+// FIFO algorithm to build trades from fills
+function buildTradesFromFills(
+  fills: TradovateFill[],
+  contracts: Map<number, TradovateContract>,
+  fillCommissionById: Map<number, number>,
+  accountLabel: string,
+  userId: string
+): Trade[] {
+  console.log('Building trades from fills using FIFO algorithm:', { fillCount: fills.length, accountLabel, userId })
 
   const trades: Trade[] = []
+  const positions = new Map<number, FIFOPosition>() // contractId -> position
 
-  fillsByInstrument.forEach((instrumentFills, instrumentName) => {
-    console.log(`Processing ${instrumentFills.length} fills for ${instrumentName}`)
-    
-    // Sort by timestamp
-    instrumentFills.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-    
-    // Simple approach: pair each buy with the next sell (FIFO)
-    const buyFills = instrumentFills.filter(f => f.action === 'Buy')
-    const sellFills = instrumentFills.filter(f => f.action === 'Sell')
-    
-    // Create trades by pairing buy and sell fills
-    let sellIndex = 0
-    buyFills.forEach(buyFill => {
-      if (sellIndex < sellFills.length) {
-        const sellFill = sellFills[sellIndex]
-        sellIndex++
-        
-        // Calculate PnL (simplified - you may need to adjust for contract multipliers)
-        const pnl = (sellFill.price - buyFill.price) * buyFill.qty
-        
-        // Calculate time in position (seconds)
-        const entryTime = new Date(buyFill.timestamp).getTime()
-        const exitTime = new Date(sellFill.timestamp).getTime()
-        const timeInPosition = Math.round((exitTime - entryTime) / 1000)
-        
-        const trade: Trade = {
-          id: crypto.randomUUID(),
-          accountNumber: accountId.toString(),
-          quantity: buyFill.qty,
-          entryId: buyFill.id.toString(),
-          closeId: sellFill.id.toString(),
-          instrument: instrumentName,
-          entryPrice: buyFill.price.toString(),
-          closePrice: sellFill.price.toString(),
-          entryDate: buyFill.timestamp,
-          closeDate: sellFill.timestamp,
-          pnl: pnl,
-          timeInPosition: timeInPosition,
-          userId: userId,
-          side: 'Long', // Tradovate fills start with buy, so it's a long position
-          commission: 0, // You might need to fetch this separately or estimate
-          createdAt: new Date(),
-          comment: `Tradovate sync - ${buyFill.fillType}`,
-          videoUrl: null,
-          tags: ['tradovate-sync'],
-          imageBase64: null,
-          imageBase64Second: null,
-          groupId: null
-        }
-        
-        trades.push(trade)
+  // Sort fills by timestamp to ensure proper FIFO order
+  const sortedFills = fills.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+
+  for (const fill of sortedFills) {
+    const contract = contracts.get(fill.contractId)
+    const contractName = contract?.name || `Contract_${fill.contractId}`
+    // Derive base symbol from symbol or name (e.g., "ES" from "ESZ5")
+    const rawCode = (contract?.symbol || contract?.name || '').toUpperCase()
+    let contractSymbol = 'Unknown'
+    const monthCodeMatch = rawCode.match(/^([A-Z]+?)[FGHJKMNQUVXZ][0-9]+$/i)
+    if (monthCodeMatch) {
+      contractSymbol = monthCodeMatch[1].toUpperCase()
+    } else if (rawCode) {
+      const lettersOnly = rawCode.replace(/[^A-Z]/g, '')
+      contractSymbol = lettersOnly.slice(0, 2) || 'Unknown'
+    }
+
+    // Get or create position for this contract
+    let position = positions.get(fill.contractId)
+    if (!position) {
+      position = {
+        contractId: fill.contractId,
+        contractName,
+        contractSymbol,
+        quantity: 0,
+        averagePrice: 0,
+        totalValue: 0,
+        fills: []
       }
-    })
-  })
+      positions.set(fill.contractId, position)
+    }
 
-  console.log(`Transformed ${fills.length} fills into ${trades.length} trades`)
+    // Add fill to position
+    const fillData = {
+      fillId: fill.id,
+      qty: fill.action === 'Buy' ? fill.qty : -fill.qty, // Negative for sells
+      price: fill.price,
+      timestamp: fill.timestamp,
+      fee: Math.abs(fillCommissionById.get(fill.id) || 0)
+    }
+    position.fills.push(fillData)
+
+    // Update position quantities
+    const oldQuantity = position.quantity
+    const newQuantity = oldQuantity + fillData.qty
+    const fillValue = fillData.qty * fillData.price
+
+    if (oldQuantity === 0) {
+      // First fill for this contract
+      position.quantity = newQuantity
+      position.averagePrice = fillData.price
+      position.totalValue = fillValue
+    } else if (oldQuantity > 0 && newQuantity > 0) {
+      // Adding to long position
+      position.quantity = newQuantity
+      position.totalValue += fillValue
+      position.averagePrice = position.totalValue / position.quantity
+    } else if (oldQuantity > 0 && newQuantity <= 0) {
+      // Closing long position (and possibly opening short)
+      const closeQuantity = Math.min(oldQuantity, Math.abs(fillData.qty))
+      const remainingQuantity = oldQuantity - closeQuantity
+      
+      // Create trade for the closed portion
+      const entryValue = closeQuantity * position.averagePrice
+      const exitValue = closeQuantity * fillData.price
+      const pnl = exitValue - entryValue
+      
+      // Commission allocation: proportional share of entry fees + proportional share of this exit fill fee
+      const totalEntryFees = position.fills
+        .filter(f => f.fillId !== fillData.fillId)
+        .reduce((sum, f) => sum + Math.abs(f.fee), 0)
+      const entryFeeShare = oldQuantity > 0 ? (totalEntryFees * (closeQuantity / oldQuantity)) : 0
+      const exitFeeShare = Math.abs(fillData.fee) * Math.min(1, closeQuantity / Math.abs(fillData.qty))
+      const totalCommission = Number((entryFeeShare + exitFeeShare).toFixed(2))
+
+      const trade: Trade = {
+        id: crypto.randomUUID(),
+        accountNumber: accountLabel,
+        quantity: closeQuantity,
+        entryId: `fill_${position.fills[0].fillId}`, // First fill in position
+        closeId: `fill_${fillData.fillId}`,
+        instrument: contractSymbol,
+        entryPrice: position.averagePrice.toString(),
+        closePrice: fillData.price.toString(),
+        entryDate: position.fills[0].timestamp,
+        closeDate: fillData.timestamp,
+        pnl: pnl,
+        timeInPosition: Math.max(0, Math.round((new Date(fillData.timestamp).getTime() - new Date(position.fills[0].timestamp).getTime()) / 1000)),
+        userId: userId,
+        side: 'Long',
+        commission: totalCommission,
+        createdAt: new Date(),
+        comment: `Tradovate FIFO trade - ${contractSymbol}`,
+        videoUrl: null,
+        tags: ['tradovate-sync', 'fifo'],
+        imageBase64: null,
+        imageBase64Second: null,
+        groupId: null
+      }
+      
+      trades.push(trade)
+      
+      // Update position for remaining quantity
+      if (remainingQuantity > 0) {
+        position.quantity = remainingQuantity
+        position.totalValue = remainingQuantity * position.averagePrice
+      } else {
+        // Position closed, reset for potential short position
+        position.quantity = Math.abs(newQuantity)
+        position.averagePrice = fillData.price
+        position.totalValue = Math.abs(newQuantity) * fillData.price
+        position.fills = [fillData] // Reset fills for new position
+      }
+    } else if (oldQuantity < 0 && newQuantity < 0) {
+      // Adding to short position
+      position.quantity = newQuantity
+      position.totalValue += fillValue
+      position.averagePrice = position.totalValue / position.quantity
+    } else if (oldQuantity < 0 && newQuantity >= 0) {
+      // Closing short position (and possibly opening long)
+      const closeQuantity = Math.min(Math.abs(oldQuantity), Math.abs(fillData.qty))
+      const remainingQuantity = Math.abs(oldQuantity) - closeQuantity
+      
+      // Create trade for the closed portion
+      const entryValue = closeQuantity * position.averagePrice
+      const exitValue = closeQuantity * fillData.price
+      const pnl = entryValue - exitValue // Reversed for short
+      
+      // Commission allocation for short: proportional share of entry (short entry sells) + proportional share of exit buy fee
+      const totalEntryFeesShort = position.fills
+        .filter(f => f.fillId !== fillData.fillId)
+        .reduce((sum, f) => sum + Math.abs(f.fee), 0)
+      const entryFeeShareShort = Math.abs(oldQuantity) > 0 ? (totalEntryFeesShort * (closeQuantity / Math.abs(oldQuantity))) : 0
+      const exitFeeShareShort = Math.abs(fillData.fee) * Math.min(1, closeQuantity / Math.abs(fillData.qty))
+      const totalCommissionShort = Number((entryFeeShareShort + exitFeeShareShort).toFixed(2))
+
+      const trade: Trade = {
+        id: crypto.randomUUID(),
+        accountNumber: accountLabel,
+        quantity: closeQuantity,
+        entryId: `fill_${position.fills[0].fillId}`, // First fill in position
+        closeId: `fill_${fillData.fillId}`,
+        instrument: contractSymbol,
+        entryPrice: position.averagePrice.toString(),
+        closePrice: fillData.price.toString(),
+        entryDate: position.fills[0].timestamp,
+        closeDate: fillData.timestamp,
+        pnl: pnl,
+        timeInPosition: Math.max(0, Math.round((new Date(fillData.timestamp).getTime() - new Date(position.fills[0].timestamp).getTime()) / 1000)),
+        userId: userId,
+        side: 'Short',
+        commission: totalCommissionShort,
+        createdAt: new Date(),
+        comment: `Tradovate FIFO trade - ${contractSymbol}`,
+        videoUrl: null,
+        tags: ['tradovate-sync', 'fifo'],
+        imageBase64: null,
+        imageBase64Second: null,
+        groupId: null
+      }
+      
+      trades.push(trade)
+      
+      // Update position for remaining quantity
+      if (remainingQuantity > 0) {
+        position.quantity = -remainingQuantity
+        position.totalValue = -remainingQuantity * position.averagePrice
+      } else {
+        // Position closed, reset for potential long position
+        position.quantity = newQuantity
+        position.averagePrice = fillData.price
+        position.totalValue = newQuantity * fillData.price
+        position.fills = [fillData] // Reset fills for new position
+      }
+    }
+  }
+
+  console.log(`Built ${trades.length} trades from ${fills.length} fills using FIFO algorithm`)
   return trades
 }
 
-export async function getTradovateTrades(accessToken: string, accountId: number, environment: 'demo' | 'live' = 'demo'): Promise<TradovateTradesResult> {
+export async function getTradovateTrades(accessToken: string, accountId: number): Promise<TradovateTradesResult> {
   try {
-    console.log('Fetching Tradovate trades:', { accountId, environment })
+    console.log('Fetching Tradovate fills for FIFO trade building (demo only):', { accountId })
     
     // Get current user for userId
     const supabase = await createClient()
@@ -548,70 +632,101 @@ export async function getTradovateTrades(accessToken: string, accountId: number,
       return { error: 'User not authenticated' }
     }
 
-    // Use the selected environment for fills/trades data
-    const apiBaseUrl = TRADOVATE_ENVIRONMENTS[environment].api
-    const response = await fetch(`${apiBaseUrl}/v1/fill/list`, {
-      method: 'POST',
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+
+    // Fetch fills
+    console.log('Fetching fills...')
+    const fillsResponse = await fetch(`${apiBaseUrl}/v1/fill/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
         'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        accountId,
-        startTimestamp: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // Last 30 days
-        endTimestamp: new Date().toISOString()
-      })
+      }
     })
 
-    console.log('Tradovate fills response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Failed to fetch trades:', { status: response.status, errorText })
-      return { error: `Failed to fetch trades: ${errorText}` }
+    if (!fillsResponse.ok) {
+      const errorText = await fillsResponse.text()
+      console.error('Failed to fetch fills:', { status: fillsResponse.status, errorText })
+      return { error: `Failed to fetch fills: ${errorText}` }
     }
 
-    const fills: TradovateFill[] = await response.json()
+    const fills: TradovateFill[] = await fillsResponse.json()
     console.log('Received fills from Tradovate:', { 
       fillCount: fills.length,
-      sampleFill: fills[0] // Log first fill to understand structure
+      sampleFill: fills[0]
     })
     
     if (!Array.isArray(fills) || fills.length === 0) {
       console.log('No fills returned from Tradovate')
-      return { trades: fills, processedTrades: [], savedCount: 0 }
+      return { trades: [], processedTrades: [], savedCount: 0 }
     }
 
-    // Transform fills to our Trade format
-    const processedTrades = transformTradovateToTrades(fills, accountId, user.id)
+    // Resolve account label (name) from account list
+    console.log('Resolving account name for accountId:', accountId)
+    const accountsRes = await fetch(`${apiBaseUrl}/v1/account/list`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    })
+    const accounts: Array<{ id: number; name: string }> = accountsRes.ok ? await accountsRes.json() : []
+    const account = accounts.find(a => a.id === accountId)
+    const accountLabel = account?.name || accountId.toString()
+
+    // Extract unique contract IDs and fetch contract details
+    const uniqueContractIds = [...new Set(fills.map(fill => fill.contractId))]
+    console.log(`Found ${uniqueContractIds.length} unique contract IDs:`, uniqueContractIds)
+
+    const contracts = new Map<number, TradovateContract>()
+    for (const contractId of uniqueContractIds) {
+      try {
+        console.log(`Fetching contract details for ID: ${contractId}`)
+        const contract = await getContractById(accessToken, contractId)
+        if (contract) {
+          contracts.set(contractId, contract)
+          console.log(`Contract ${contractId}: ${contract.name} (${contract.symbol})`)
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch contract ${contractId}:`, error)
+      }
+    }
+
+    // Build fee map for fills (commission only)
+    const fillCommissionById = new Map<number, number>()
+    for (const f of fills) {
+      try {
+        const fee = await getFillFeeById(accessToken, f.id)
+        if (fee) {
+          const commission = Number(fee.commission || 0)
+          fillCommissionById.set(f.id, commission)
+        }
+      } catch {}
+    }
+
+    // Build trades using FIFO algorithm
+    const processedTrades = buildTradesFromFills(fills, contracts, fillCommissionById, accountLabel, user.id)
     
     if (processedTrades.length === 0) {
-      console.log('No trades could be created from fills')
-      return { trades: fills, processedTrades: [], savedCount: 0 }
+      console.log('No trades could be created from fills using FIFO algorithm')
+      return { trades: [], processedTrades: [], savedCount: 0 }
     }
 
     // Save trades to database
-    console.log(`Attempting to save ${processedTrades.length} trades to database`)
+    console.log(`Attempting to save ${processedTrades.length} FIFO trades to database`)
     const saveResult = await saveTradesAction(processedTrades)
     
     if (saveResult.error) {
       console.error('Failed to save trades:', saveResult.error, saveResult.details)
       return { 
         error: `Failed to save trades: ${saveResult.error}`,
-        trades: fills,
+        trades: [],
         processedTrades: processedTrades 
       }
     }
 
-    console.log(`Successfully saved ${saveResult.numberOfTradesAdded} trades`)
+    console.log(`Successfully saved ${saveResult.numberOfTradesAdded} FIFO trades`)
     
     return { 
-      trades: fills,
+      trades: [],
       processedTrades: processedTrades,
       savedCount: saveResult.numberOfTradesAdded
     }
