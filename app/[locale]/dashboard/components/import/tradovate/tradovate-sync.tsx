@@ -90,7 +90,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       const result = await initiateTradovateOAuth()
       if (result.error || !result.authUrl || !result.state) {
         toast({
-          title: "Error",
+          title: t('tradovateSync.sync.error'),
           description: t('tradovateSync.error.oauthInit'),
           variant: "destructive",
         })
@@ -104,7 +104,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       window.location.href = result.authUrl
     } catch (error) {
       toast({
-        title: "Error",
+        title: t('tradovateSync.sync.error'),
         description: t('tradovateSync.error.oauthInit'),
         variant: "destructive",
       })
@@ -147,8 +147,8 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       if (!authTest.success) {
         console.error('Authentication test failed:', authTest.error)
         toast({
-          title: "Warning",
-          description: `Authentication failed: ${authTest.error}`,
+          title: t('tradovateSync.sync.warning'),
+          description: t('tradovateSync.sync.authFailed', { error: authTest.error }),
           variant: "destructive",
         })
         return
@@ -158,7 +158,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       const accounts = await getTradovateAccounts(accessToken)
       if (accounts.error || !accounts.accounts) {
         toast({
-          title: "Warning",
+          title: t('tradovateSync.sync.warning'),
           description: t('tradovateSync.error.loadAccounts'),
           variant: "destructive",
         })
@@ -188,7 +188,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
         
         if (result.error) {
           toast({
-            title: "Warning",
+            title: t('tradovateSync.sync.warning'),
             description: t('tradovateSync.error.syncTrades', { account: account.name }) + `: ${result.error}`,
             variant: "destructive",
           })
@@ -208,7 +208,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
         if (fillsCount > 0) {
           toast({
             title: `${account.name}`,
-            description: `Found ${fillsCount} fills, saved ${savedCount} new trades`,
+            description: t('tradovateSync.sync.accountProgress', { fillsCount, savedCount }),
             variant: savedCount > 0 ? "default" : "destructive",
           })
         }
@@ -220,27 +220,27 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       // Show final summary
       if (totalTradesSaved > 0) {
         toast({
-          title: "✅ Sync Complete",
-          description: `Processed ${totalFillsProcessed} fills and saved ${totalTradesSaved} new trades`,
+          title: t('tradovateSync.sync.syncComplete'),
+          description: t('tradovateSync.sync.syncCompleteWithTrades', { totalFillsProcessed, totalTradesSaved }),
         })
       } else if (totalFillsProcessed > 0) {
         toast({
-          title: "🔄 Sync Complete",
-          description: `Processed ${totalFillsProcessed} fills (no new trades - likely duplicates)`,
+          title: t('tradovateSync.sync.syncCompleteNoNewTrades'),
+          description: t('tradovateSync.sync.syncCompleteNoNewTradesDesc', { totalFillsProcessed }),
           variant: "default"
         })
       } else {
         toast({
-          title: "📭 Sync Complete",
-          description: "No new fills found in the last 30 days",
+          title: t('tradovateSync.sync.syncCompleteNoFills'),
+          description: t('tradovateSync.sync.syncCompleteNoFillsDesc'),
           variant: "default"
         })
       }
     } catch (error) {
       console.error('Trade sync error:', error)
       toast({
-        title: "Error",
-        description: `Trade sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        title: t('tradovateSync.sync.error'),
+        description: t('tradovateSync.sync.syncFailed', { error: error instanceof Error ? error.message : t('tradovateSync.sync.unknownError') }),
         variant: "destructive",
       })
     } finally {
@@ -254,7 +254,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
     if (!accessToken) return
     navigator.clipboard.writeText(accessToken)
     toast({
-      title: "Success",
+      title: t('tradovateSync.sync.success'),
       description: t('tradovateSync.copied'),
     })
   }
@@ -262,7 +262,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
   const handleDisconnect = () => {
     tradovateStore.clearAll()
     toast({
-      title: "Success",
+      title: t('tradovateSync.sync.success'),
       description: t('tradovateSync.disconnected'),
     })
   }
@@ -411,20 +411,20 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
           {/* Debug info for account loading */}
           {tradovateStore.isAuthenticated && (
             <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
-              <p><strong>Debug Info:</strong></p>
-              <p>• Authenticated: ✅</p>
-              <p>• Organization: ApexTraderFunding (Prop Firm)</p>
-              <p>• Environment: {tradovateStore.environment} (accounts), live (auth)</p>
-              <p>• Accounts loaded: {tradovateStore.accounts ? `✅ (${tradovateStore.accounts.length})` : '❌'}</p>
-              <p>• Accounts data: {JSON.stringify(tradovateStore.accounts)}</p>
+              <p><strong>{t('tradovateSync.sync.debugInfo')}</strong></p>
+              <p>• {t('tradovateSync.sync.authenticated')}</p>
+              <p>• {t('tradovateSync.sync.organization')}</p>
+              <p>• {t('tradovateSync.sync.environment', { environment: tradovateStore.environment })}</p>
+              <p>• {t('tradovateSync.sync.accountsLoaded', { status: tradovateStore.accounts ? `✅ (${tradovateStore.accounts.length})` : '❌' })}</p>
+              <p>• {t('tradovateSync.sync.accountsData', { data: JSON.stringify(tradovateStore.accounts) })}</p>
               {(!tradovateStore.accounts || tradovateStore.accounts.length === 0) && (
                 <div className="text-amber-600 mt-1">
-                  <p>⚠️ No accounts found - trying multiple sim account endpoints...</p>
-                  <p>💡 Check console logs to see which endpoint works for your prop firm</p>
+                  <p>{t('tradovateSync.sync.noAccountsWarning')}</p>
+                  <p>{t('tradovateSync.sync.checkConsoleLogs')}</p>
                   {tradovateStore.environment === 'live' && (
-                    <p className="text-blue-600 mt-1">
-                      🔄 For ApexTraderFunding: Try switching to Demo environment and reconnecting
-                    </p>
+                      <p className="text-blue-600 mt-1">
+                        {t('tradovateSync.sync.apexTraderFundingTip')}
+                      </p>
                   )}
                 </div>
               )}

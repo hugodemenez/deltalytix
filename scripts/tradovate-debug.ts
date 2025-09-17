@@ -437,6 +437,21 @@ async function getFillFeeById(accessToken: string, env: Environment, fillId: num
   return res.json()
 }
 
+async function listExecutionReports(accessToken: string, env: Environment) {
+  const apiBase = TRADOVATE_ENVIRONMENTS[env].api
+  const res = await fetch(`${apiBase}/v1/executionReport/list`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: 'application/json',
+    },
+  })
+  if (!res.ok) {
+    const msg = await res.text()
+    throw new Error(`/v1/executionReport/list failed: ${res.status} ${res.statusText} - ${msg}`)
+  }
+  return res.json()
+}
+
 async function listFills(accessToken: string, env: Environment) {
   const apiBase = TRADOVATE_ENVIRONMENTS[env].api
   const res = await fetch(`${apiBase}/v1/fill/list`, {
@@ -627,6 +642,18 @@ async function main() {
     }
   } catch (e) {
     console.warn('Fills list failed:', e instanceof Error ? e.message : e)
+  }
+
+  // List execution reports
+  console.log('Listing execution reports...')
+  try {
+    const executionReports = await listExecutionReports(accessToken, 'demo')
+    console.log(`Execution reports result: ${Array.isArray(executionReports) ? executionReports.length : 0} reports found`)
+    if (Array.isArray(executionReports) && executionReports.length > 0) {
+      console.log('Sample execution report:', executionReports[0])
+    }
+  } catch (e) {
+    console.warn('Execution reports list failed:', e instanceof Error ? e.message : e)
   }
 
   //   const targetAccount = accounts[0]
