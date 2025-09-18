@@ -201,6 +201,20 @@ export default {
     'import.applyCommissions': 'Apply Commissions',
     'import.atas.processedTrades': 'Processed {count} trades from ATAS file',
     'import.preview.note': 'Review the trades below. Click "Save" to import them to your account.',
+    'import.processing': {
+        'startProcessing': 'Start Processing',
+        'starting': 'Starting...',
+        'stopProcessing': 'Stop Processing',
+        'resumeProcessing': 'Resume Processing',
+        'resuming': 'Resuming...',
+        'reset': 'Reset',
+        'autoProcessing': 'Auto-processing',
+        'allBatchesCompleted': 'All batches completed!',
+        'processingProgress': 'Processing Progress',
+        'tradesFormatted': '{formatted} of {total} trades formatted',
+        'batchesCompleted': 'Batches: {completed}/{total} completed',
+        'batchesProcessing': ', {processing} processing',
+    },
 
     'import.table.instrument': 'Instrument',
     'import.table.entryDate': 'Entry Date',
@@ -820,6 +834,11 @@ export default {
         'resetConfigConfirmTitle': 'Reset Table Configuration',
         'resetConfigConfirmDescription': 'Are you sure you want to reset the table configuration? This will restore all columns, sorting, and filters to their default state.',
         'confirmReset': 'Yes, reset configuration',
+        'footer': {
+            'totalPnl': 'Total PnL',
+            'totalCommission': 'Total Commission',
+            'netPnl': 'Net PnL'
+        },
     },
     'share.button': 'Share trades',
     'share.success': 'Trades shared successfully',
