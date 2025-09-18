@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { fr, enUS } from 'date-fns/locale'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 
 interface DailyMetric {
   date: Date
@@ -175,7 +176,7 @@ export function AccountTable({
             <div className="flex items-center justify-end gap-2">
               <div 
                 className={cn(
-                  "flex items-center gap-2 relative group",
+                  "flex items-center gap-2",
                   onEditPayout && "cursor-pointer hover:opacity-80 transition-opacity"
                 )}
                 onClick={() => onEditPayout?.(metric.payout!)}
@@ -187,26 +188,41 @@ export function AccountTable({
                 </span>
                 <Badge 
                   variant={metric.payout.status === 'PENDING' ? 'secondary' : 'default'}
-                  className={cn(
-                    onDeletePayout && "pr-6"
-                  )}
                 >
                   {metric.payout.status}
-                  {onDeletePayout && (
+                </Badge>
+              </div>
+              {onDeletePayout && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="absolute right-0 top-1/2 -translate-y-1/2 h-full w-6 p-0 hover:bg-transparent opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDeletePayout(metric.payout!.id)
-                      }}
+                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
                     >
                       <X className="h-3 w-3" />
                     </Button>
-                  )}
-                </Badge>
-              </div>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t('propFirm.payout.delete')}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t('propFirm.payout.deleteConfirm')} ${metric.payout!.amount.toFixed(2)} on {format(metric.payout!.date, 'PP', { locale: dateLocale })}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => onDeletePayout(metric.payout!.id)}
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        {t('propFirm.payout.delete')}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </div>
           )}
         </TableCell>

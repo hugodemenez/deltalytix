@@ -47,6 +47,15 @@ interface ColumnMappingProps {
   importType: ImportType;
 }
 
+// Helper function to create unique column identifiers
+const createUniqueColumnId = (header: string, index: number) => `${header}_${index}`;
+
+// Helper function to get display name for duplicate columns
+const getColumnDisplayName = (header: string, index: number, headers: string[]) => {
+  const duplicateCount = headers.filter(h => h === header).length;
+  return duplicateCount > 1 ? `${header} (${index + 1})` : header;
+};
+
 export default function ColumnMapping({ headers, csvData, mappings, setMappings, error, importType }: ColumnMappingProps) {
 
   const { object, submit, isLoading } = useObject<MappingObject>({
@@ -56,46 +65,99 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
       console.error('Error generating AI mappings:', error);
     },
     onFinish({ object }) {
+      console.log('=== AI MAPPING DEBUG ===');
+      console.log('AI Response Object:', object);
+      console.log('Headers:', headers);
       
       setMappings(prev => {
         const newMappings = { ...prev };
         // For each destination column in the object
         if (object) {
-          Object.entries(object).forEach(([destinationColumn, header]) => {
-            // If this header exists in our CSV and isn't already mapped
-            if (headers.includes(header) && !Object.values(prev).includes(destinationColumn)) {
-              newMappings[header] = destinationColumn;
+          Object.entries(object).forEach(([destinationColumn, headerValue]) => {
+            console.log(`Processing: ${destinationColumn} -> ${headerValue}`);
+            
+            // Check if the header value includes position information (e.g., "Prix_1", "Prix_2")
+            const positionMatch = headerValue.match(/^(.+)_(\d+)$/);
+            
+            if (positionMatch) {
+              // Handle position-based mapping
+              const [, headerName, positionStr] = positionMatch;
+              const position = parseInt(positionStr, 10) - 1; // Convert to 0-based index
+              
+              console.log(`Position-based mapping: ${headerName} at position ${position + 1}`);
+              
+              // Find the header at the specific position
+              if (position >= 0 && position < headers.length && headers[position] === headerName) {
+                const uniqueId = createUniqueColumnId(headerName, position);
+                console.log(`Mapped to unique ID: ${uniqueId}`);
+                // Remove any existing mapping for this unique column first
+                if (newMappings[uniqueId]) {
+                  delete newMappings[uniqueId];
+                }
+                newMappings[uniqueId] = destinationColumn;
+              } else {
+                console.log(`Position ${position + 1} not found or header mismatch`);
+              }
+            } else {
+              // Handle regular mapping (fallback for backward compatibility)
+              console.log(`Regular mapping for: ${headerValue}`);
+              const headerIndex = headers.findIndex(h => h === headerValue);
+              if (headerIndex !== -1 && !Object.values(newMappings).includes(destinationColumn)) {
+                const uniqueId = createUniqueColumnId(headerValue, headerIndex);
+                console.log(`Mapped to unique ID: ${uniqueId}`);
+                // Remove any existing mapping for this unique column first
+                if (newMappings[uniqueId]) {
+                  delete newMappings[uniqueId];
+                }
+                newMappings[uniqueId] = destinationColumn;
+              } else {
+                console.log(`Header ${headerValue} not found or already mapped`);
+              }
             }
           });
         }
+        console.log('Final mappings:', newMappings);
         return newMappings;
       });
 
     }
   });
 
-  const handleMapping = (header: string, value: string) => {
+  const handleMapping = (uniqueId: string, value: string) => {
     setMappings(prev => {
       const newMappings = { ...prev }
-      if (newMappings[header]) {
-        delete newMappings[header]
+      
+      // Remove any existing mapping for this unique column
+      if (newMappings[uniqueId]) {
+        delete newMappings[uniqueId]
       }
+      
+      // Remove any other column that was mapped to the same destination
       Object.keys(newMappings).forEach(key => {
         if (newMappings[key] === value) {
           delete newMappings[key]
         }
       })
-      newMappings[header] = value
+      
+      // Only add the new mapping if a destination was selected
+      if (value) {
+        newMappings[uniqueId] = value
+      }
+      
       return newMappings
     })
   }
 
-  const handleRemoveMapping = (header: string) => {
+  const handleRemoveMapping = (uniqueId: string) => {
     setMappings(prev => {
       const newMappings = { ...prev }
-      delete newMappings[header]
+      delete newMappings[uniqueId]
       return newMappings
     })
+  }
+
+  const handleUnmapAll = () => {
+    setMappings({})
   }
 
   const getRemainingFieldsToMap = (): string[] => {
@@ -123,7 +185,17 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => submit({ fieldColumns: headers, firstRows: csvData.slice(1, 6) })}
+                onClick={() => {
+                  // Convert CSV data to array of objects for AI analysis
+                  const sampleData = csvData.slice(1, 6).map(row => {
+                    const rowObj: Record<string, string> = {};
+                    headers.forEach((header, index) => {
+                      rowObj[header] = row[index] || '';
+                    });
+                    return rowObj;
+                  });
+                  submit({ fieldColumns: headers, firstRows: sampleData });
+                }}
                 className="flex items-center gap-2 bg-white/50 dark:bg-yellow-900/30 hover:bg-white/80 dark:hover:bg-yellow-900/50 text-yellow-700 dark:text-yellow-200 border-yellow-200 dark:border-yellow-700 transition-colors"
               >
                 <RefreshCwIcon className={cn("h-4 w-4", isLoading && "animate-spin")} />
@@ -159,51 +231,79 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
               <TableHead>Your File Column</TableHead>
               <TableHead>Your Sample Data</TableHead>
               <TableHead>Destination Column</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="flex items-center gap-2">
+                Actions
+                {Object.keys(mappings).length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleUnmapAll}
+                    className="h-6 w-6 p-0"
+                    title="Unmap all fields"
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </Button>
+                )}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {headers.map((header, index) => (
-              <TableRow key={index}>
-                <TableCell>{header}</TableCell>
-                <TableCell>
-                  {csvData.slice(1, 4).map((row, i) => (
-                    <span key={i} className="mr-2">{row[index]}</span>
-                  ))}
-                </TableCell>
-                <TableCell>
-                  <Select 
-                    onValueChange={(value) => handleMapping(header, value)} 
-                    value={Object.entries(object || {}).find(([_, value]) => value === header)?.[0]}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select one" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {destinationColumns.map((column, i) => (
-                        <SelectItem key={i} value={column} disabled={Object.values(mappings).includes(column) && mappings[header] !== column}>
-                          {column}
-                          {columnConfig[column].required && (
-                            <span className="ml-1 text-yellow-500">*</span>
-                          )}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  {mappings[header] && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveMapping(header)}
+            {headers.map((header, index) => {
+              const uniqueId = createUniqueColumnId(header, index);
+              const displayName = getColumnDisplayName(header, index, headers);
+              return (
+                <TableRow key={uniqueId}>
+                  <TableCell>{displayName}</TableCell>
+                  <TableCell>
+                    {csvData.slice(1, 4).map((row, i) => (
+                      <span key={i} className="mr-2">{row[index]}</span>
+                    ))}
+                  </TableCell>
+                  <TableCell>
+                    <Select 
+                      onValueChange={(value) => handleMapping(uniqueId, value)} 
+                      value={mappings[uniqueId] || ""}
                     >
-                      <XIcon className="h-4 w-4" />
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select one" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {destinationColumns.map((column, i) => {
+                          const isAlreadyMapped = Object.values(mappings).includes(column) && mappings[uniqueId] !== column;
+                          return (
+                            <SelectItem 
+                              key={i} 
+                              value={column} 
+                              disabled={isAlreadyMapped}
+                              className={isAlreadyMapped ? "opacity-50 cursor-not-allowed" : ""}
+                            >
+                              {column}
+                              {columnConfig[column].required && (
+                                <span className="ml-1 text-yellow-500">*</span>
+                              )}
+                              {isAlreadyMapped && (
+                                <span className="ml-2 text-xs text-muted-foreground">(already mapped)</span>
+                              )}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    {mappings[uniqueId] && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveMapping(uniqueId)}
+                      >
+                        <XIcon className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

@@ -28,7 +28,6 @@ import {
 import {
   getTradesAction,
   groupTradesAction,
-  revalidateCache,
   saveDashboardLayoutAction,
   ungroupTradesAction,
   updateTradesAction
@@ -675,8 +674,8 @@ export const DataProvider: React.FC<{
       const trades = await getTradesAction(userId, true)
       setTrades(Array.isArray(trades) ? trades : [])
       
-      // Also refresh other data
-      const data = await getUserData()
+      // Also refresh other data with forceRefresh: true
+      const data = await getUserData(true)
       if (data && supabaseUser) {
         setUser(await ensureUserInDatabase(supabaseUser, locale))
         setSubscription(data.subscription as PrismaSubscription | null)
@@ -872,8 +871,6 @@ export const DataProvider: React.FC<{
       if (!currentAccount) {
         const createdAccount = await setupAccountAction(newAccount)
         setAccounts([...accounts, createdAccount])
-        // Revalidate cache for next reload
-        revalidateCache([`user-data-${userId}`])
         return
       }
 
@@ -887,7 +884,6 @@ export const DataProvider: React.FC<{
         return account;
       });
       setAccounts(updatedAccounts);
-      revalidateCache([`user-data-${userId}`])
     } catch (error) {
       console.error('Error updating account:', error)
       throw error
@@ -990,17 +986,29 @@ export const DataProvider: React.FC<{
       // Update local state
       setAccounts(accounts.map((account: Account) => {
         if (account.number === payout.accountNumber) {
-          return {
-            ...account,
-            payouts: [...(account.payouts || []), newPayout]
-          };
+          const existingPayouts = account.payouts || [];
+          const isUpdate = payout.id && existingPayouts.some(p => p.id === payout.id);
+          
+          if (isUpdate) {
+            // Update existing payout
+            return {
+              ...account,
+              payouts: existingPayouts.map(p => p.id === payout.id ? newPayout : p)
+            };
+          } else {
+            // Add new payout
+            return {
+              ...account,
+              payouts: [...existingPayouts, newPayout]
+            };
+          }
         }
         return account;
       })
       );
 
     } catch (error) {
-      console.error('Error adding payout:', error);
+      console.error('Error saving payout:', error);
       throw error;
     }
   }, [supabaseUser?.id, isSharedView, accounts, setAccounts]);
@@ -1025,9 +1033,6 @@ export const DataProvider: React.FC<{
     if (!supabaseUser?.id || isSharedView) return;
 
     try {
-
-      // Update local state
-      const accounts = useUserStore(state => state.accounts)
       setAccounts(accounts.map((account: Account) => ({
         ...account,
         payouts: account.payouts?.filter(p => p.id !== payoutId) || []
@@ -1090,7 +1095,6 @@ export const DataProvider: React.FC<{
       
       setDashboardLayout(layout)
       await saveDashboardLayoutAction(layout)
-      revalidateCache([`user-data-${userId}`])
     } catch (error) {
       console.error('Error saving dashboard layout:', error)
       throw error

@@ -53,7 +53,7 @@ export async function loadSharedData(slug: string): Promise<SharedDataResponse> 
 } 
 
 
-export async function getUserData(): Promise<{
+export async function getUserData(forceRefresh: boolean = false): Promise<{
   userData: User | null;
   subscription: Subscription | null;
   tickDetails: TickDetails[];
@@ -65,6 +65,59 @@ export async function getUserData(): Promise<{
 }> {
   const userId = await getUserId()
   const locale = await getCurrentLocale()
+
+  // If forceRefresh is true, bypass cache and fetch directly
+  if (forceRefresh) {
+    console.log(`[getUserData] Force refresh - bypassing cache for user ${userId}`)
+    revalidateTag(`user-data-${userId}`)
+    
+    const [userData, subscription, tickDetails, accounts, groups] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: userId }
+      }),
+      prisma.subscription.findUnique({
+        where: { userId: userId }
+      }),
+      prisma.tickDetails.findMany(),
+      prisma.account.findMany({
+        where: { userId: userId },
+        include: {
+          payouts: true,
+          group: true
+        }
+      }),
+      prisma.group.findMany({
+        where: { userId: userId },
+        include: { accounts: true }
+      })
+    ])
+
+    const core = { userData, subscription, tickDetails, accounts, groups }
+    
+    // Fetch non-cached, potentially large/volatile datasets
+    const [tags, financialEvents, moodHistory] = await Promise.all([
+      prisma.tag.findMany({
+        where: { userId: userId }
+      }),
+      prisma.financialEvent.findMany({
+        where: { lang: locale }
+      }),
+      prisma.mood.findMany({
+        where: { userId: userId }
+      })
+    ])
+
+    return {
+      userData: core.userData,
+      subscription: core.subscription,
+      tickDetails: core.tickDetails,
+      tags,
+      accounts: core.accounts,
+      groups: core.groups,
+      financialEvents,
+      moodHistory
+    }
+  }
 
   // Cache only lightweight, stable core data. Heavy/volatile data is fetched outside cache.
   const getCachedCoreUserData = unstable_cache(
