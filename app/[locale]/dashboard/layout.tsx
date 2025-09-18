@@ -1,37 +1,24 @@
-import { ThemeProvider } from "@/context/theme-provider";
-import { DataProvider } from "@/context/data-provider";
-import Modals from "@/components/modals";
-import { Toaster } from "@/components/ui/toaster";
-import { ReactElement } from "react";
-import Navbar from "./components/navbar";
-import { WebSocketProvider } from "@/context/rithmic-sync-context";
-import { WebSocketNotifications } from './components/import/rithmic/sync/rithmic-notifications'
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 
-export default async function RootLayout(props: { params: Promise<{ locale: string }>, children: ReactElement }) {
-  const {
-    children
-  } = props;
-
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <TooltipProvider>
-      <ThemeProvider>
-        <DataProvider>
-            <WebSocketProvider>
-              <WebSocketNotifications />
-              <div className="min-h-screen flex flex-col">
-                    <SonnerToaster/>
-                    <Toaster />
-                    <Navbar />
-                    <div className="flex flex-1 px-2 sm:px-8">
-                      {children}
-                    </div>
-                    <Modals />
-              </div>
-            </WebSocketProvider>
-        </DataProvider>
-      </ThemeProvider>
-    </TooltipProvider>
-  );
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+          <div className="flex items-center gap-2 px-4">
+            <SidebarTrigger className="-ml-1" />
+          </div>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
+  )
 }
