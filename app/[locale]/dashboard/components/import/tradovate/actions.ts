@@ -6,6 +6,34 @@ import { Trade } from '@prisma/client'
 import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 
+// Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
+function formatDateForAPI(date: Date): string {
+  return date.toISOString().replace('Z', '+00:00')
+}
+
+// Helper function to ensure timestamps are in the correct format
+function formatTimestamp(timestamp: string): string {
+  // If the timestamp already has the correct format, return it
+  if (timestamp.includes('+00:00')) {
+    return timestamp
+  }
+  // If it ends with 'Z', convert to +00:00 format
+  if (timestamp.endsWith('Z')) {
+    return timestamp.replace('Z', '+00:00')
+  }
+  // If it's a valid ISO string, convert it
+  try {
+    const date = new Date(timestamp)
+    if (!isNaN(date.getTime())) {
+      return formatDateForAPI(date)
+    }
+  } catch (error) {
+    console.warn('Failed to parse timestamp:', timestamp, error)
+  }
+  // Return as-is if we can't parse it
+  return timestamp
+}
+
 // Environment variables for Tradovate OAuth
 const TRADOVATE_CLIENT_ID = process.env.TRADOVATE_CLIENT_ID
 const TRADOVATE_CLIENT_SECRET = process.env.TRADOVATE_CLIENT_SECRET
@@ -314,7 +342,7 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     }
     
     // Calculate expiration time
-    const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString()
+    const expiresAt = formatDateForAPI(new Date(Date.now() + (tokens.expires_in * 1000)))
     
     return {
       accessToken: tokens.access_token,
@@ -395,7 +423,7 @@ export async function refreshTradovateToken(refreshToken: string): Promise<Trado
     }
     
     // Calculate expiration time
-    const expiresAt = new Date(Date.now() + (tokens.expires_in * 1000)).toISOString()
+    const expiresAt = formatDateForAPI(new Date(Date.now() + (tokens.expires_in * 1000)))
     
     return {
       accessToken: tokens.access_token,
@@ -549,7 +577,7 @@ function buildTradesFromFills(
       fillId: fill.id,
       qty: fill.action === 'Buy' ? fill.qty : -fill.qty, // Negative for sells
       price: fill.price,
-      timestamp: fill.timestamp,
+      timestamp: formatTimestamp(fill.timestamp),
       fee: Math.abs(fillCommissionById.get(fill.id) || 0)
     }
     position.fills.push(fillData)
