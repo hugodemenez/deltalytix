@@ -275,6 +275,7 @@ export function TradeTableReview() {
   const [groupingGranularity, setGroupingGranularity] = useState<number>(tableConfig?.groupingGranularity || 0)
   const [selectedTrades, setSelectedTrades] = useState<string[]>([])
   const [showPoints, setShowPoints] = useState(false)
+  const [pageIndex, setPageIndex] = useState(0)
 
   // Sync local state with store
   React.useEffect(() => {
@@ -308,12 +309,20 @@ export function TradeTableReview() {
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize)
+    setPageIndex(0) // Reset to first page when page size changes
     updatePageSize('trade-table', newPageSize)
   }
 
   const handleGroupingGranularityChange = (newGranularity: number) => {
     setGroupingGranularity(newGranularity)
     updateGroupingGranularity('trade-table', newGranularity)
+  }
+
+  const handlePaginationChange = (updaterOrValue: any) => {
+    const newPagination = typeof updaterOrValue === 'function' 
+      ? updaterOrValue({ pageIndex, pageSize }) 
+      : updaterOrValue
+    setPageIndex(newPagination.pageIndex)
   }
 
   const trades = contextTrades
@@ -885,12 +894,13 @@ export function TradeTableReview() {
       columnVisibility,
       expanded,
       pagination: {
-        pageIndex: 0,
+        pageIndex,
         pageSize,
       },
     },
     paginateExpandedRows: false,
     onExpandedChange: setExpanded,
+    onPaginationChange: handlePaginationChange,
     getSubRows: (row) => row.trades,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -1098,10 +1108,12 @@ export function TradeTableReview() {
           </Button>
           <Button
             variant="outline"
-            className="w-[180px] h-10"
+            size="sm"
+            className="w-[180px]"
             onClick={() => {
               handlePageSizeChange(10)
               table.resetPageSize()
+              table.setPageIndex(0)
             }}
           >
             {t('trade-table.resetPageSize')}

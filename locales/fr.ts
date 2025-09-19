@@ -1034,8 +1034,8 @@ export default {
         'expandAll': 'Tout développer',
         'collapseAll': 'Tout réduire',
         'pageInfo': 'Page {current} sur {total}',
-        'pageSize': 'Augmenter la Taille de la Page',
-        'resetPageSize': 'Réinitialiser la Taille de la Page',
+        'pageSize': 'Augmenter la taille de la page',
+        'resetPageSize': 'Réinitialiser la taille de la page',
         'account': 'Compte',
         'accountNumber': 'Numéro de compte',
         'deleteTag': {
