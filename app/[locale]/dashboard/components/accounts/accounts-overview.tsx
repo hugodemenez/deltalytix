@@ -34,7 +34,7 @@ import {
 import { Account } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
-import { savePayoutAction } from '@/server/accounts'
+import { savePayoutAction, removeAccountsFromTradesAction } from '@/server/accounts'
 
 interface DailyMetric {
   date: Date
@@ -786,7 +786,10 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
 
     try {
       setIsDeleting(true)
-      await deleteAccount(selectedAccountForTable)
+      // Delete both account configuration and all associated trades
+      await removeAccountsFromTradesAction([selectedAccountForTable.number])
+      // Refresh trades to update the UI
+      await refreshTrades()
       setSelectedAccountForTable(null)
 
       toast({
