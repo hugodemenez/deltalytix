@@ -173,52 +173,44 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
 
   const handleSyncTrades = async () => {
     const accessToken = tradovateStore.getValidToken()
-    if (!accessToken || !tradovateStore.accounts) return
+    if (!accessToken) return
 
     try {
       setIsSyncing(true)
-      let totalTradesSaved = 0
-      let totalOrdersProcessed = 0
       
-      // Sync trades for all accounts
-      for (const account of tradovateStore.accounts) {
-        console.log(`Syncing trades for account: ${account.name} (${account.id})`)
-        
-        const result = await getTradovateTrades(accessToken, account.id)
-        
-        if (result.error) {
-          toast({
-            title: t('tradovateSync.sync.warning'),
-            description: t('tradovateSync.error.syncTrades', { account: account.name }) + `: ${result.error}`,
-            variant: "destructive",
-          })
-          continue
-        }
-
-        // Track progress
-        const savedCount = result.savedCount || 0
-        const ordersCount = result.ordersCount || 0
-        
-        totalTradesSaved += savedCount
-        totalOrdersProcessed += ordersCount
-        
-        console.log(`Account ${account.name}: ${savedCount} trades saved, ${ordersCount} orders processed`)
-        
+      // Sync all trades (no need to loop through accounts since we get all fillpairs)
+      console.log('Syncing all trades from fillpairs...')
+      
+      const result = await getTradovateTrades(accessToken)
+      
+      if (result.error) {
+        toast({
+          title: t('tradovateSync.sync.warning'),
+          description: t('tradovateSync.error.syncTrades', { account: 'all accounts' }) + `: ${result.error}`,
+          variant: "destructive",
+        })
+        return
       }
+
+      // Track progress
+      const savedCount = result.savedCount || 0
+      const ordersCount = result.ordersCount || 0
+      
+      console.log(`Sync complete: ${savedCount} trades saved, ${ordersCount} orders processed`)
 
       // Update last sync time
       tradovateStore.updateLastSync()
 
       // Show final summary
-      if (totalTradesSaved > 0) {
+      if (savedCount > 0) {
         toast({
           title: t('tradovateSync.sync.syncComplete'),
-          description: t('tradovateSync.sync.syncCompleteWithTrades', { totalOrdersProcessed, totalTradesSaved }),
+          description: t('tradovateSync.sync.syncCompleteWithTrades', { totalOrdersProcessed: ordersCount, totalTradesSaved: savedCount }),
         })
-      } else if (totalOrdersProcessed > 0) {
+      } else if (ordersCount > 0) {
         toast({
           title: t('tradovateSync.sync.syncCompleteNoNewTrades'),
-          description: t('tradovateSync.sync.syncCompleteNoNewTradesDesc', { totalOrdersProcessed }),
+          description: t('tradovateSync.sync.syncCompleteNoNewTradesDesc', { totalOrdersProcessed: ordersCount }),
           variant: "default"
         })
       } else {

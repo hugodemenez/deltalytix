@@ -249,6 +249,30 @@ async function getFillById(accessToken: string, fillId: number): Promise<any | n
   }
 }
 
+// Helper function to fetch order details by orderId
+async function getOrderById(accessToken: string, orderId: number): Promise<any | null> {
+  try {
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const params = new URLSearchParams({ id: String(orderId) }).toString()
+    const response = await fetch(`${apiBaseUrl}/v1/order/item?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      console.warn(`Failed to fetch order ${orderId}:`, response.status, response.statusText)
+      return null
+    }
+    
+    return await response.json()
+  } catch (error) {
+    console.warn(`Error fetching order ${orderId}:`, error)
+    return null
+  }
+}
+
 
 export async function initiateTradovateOAuth(): Promise<TradovateOAuthResult> {
   try {
@@ -587,11 +611,12 @@ async function buildTradesFromFillPairs(
   fillPairs: TradovateFillPair[],
   contracts: Map<number, TradovateContract>,
   fillsById: Map<number, Fill>,
-  accountLabel: string,
+  ordersById: Map<number, any>,
+  accountsById: Map<number, TradovateAccount>,
   userId: string,
   tickDetails: TickDetails[]
 ): Promise<Trade[]> {
-  console.log('Building trades from fill pairs:', { fillPairCount: fillPairs.length, accountLabel, userId })
+  console.log('Building trades from fill pairs:', { fillPairCount: fillPairs.length, userId })
 
   const trades: Trade[] = []
 
@@ -608,6 +633,33 @@ async function buildTradesFromFillPairs(
 
       const buyFill = buyFillData.details
       const sellFill = sellFillData.details
+
+      // Get order details to determine account
+      const buyOrder = ordersById.get(buyFill.orderId)
+      const sellOrder = ordersById.get(sellFill.orderId)
+
+      if (!buyOrder || !sellOrder) {
+        console.warn(`Missing order details for pair ${fillPair.id}:`, { buyOrder: !!buyOrder, sellOrder: !!sellOrder })
+        continue
+      }
+
+      // Both fills should be from the same account, but let's verify
+      const buyAccountId = buyOrder.accountId
+      const sellAccountId = sellOrder.accountId
+
+      if (buyAccountId !== sellAccountId) {
+        console.warn(`Fill pair ${fillPair.id} has mismatched accounts:`, { buyAccountId, sellAccountId })
+        continue
+      }
+
+      // Get account details
+      const account = accountsById.get(buyAccountId)
+      if (!account) {
+        console.warn(`Account not found for ID ${buyAccountId} in fill pair ${fillPair.id}`)
+        continue
+      }
+
+      const accountLabel = account.name || account.nickname || buyAccountId.toString()
 
       // Get contract information
       const contract = contracts.get(buyFill.contractId)
@@ -734,9 +786,9 @@ async function buildTradesFromFillPairs(
 }
 
 
-export async function getTradovateTrades(accessToken: string, accountId: number): Promise<TradovateTradesResult> {
+export async function getTradovateTrades(accessToken: string): Promise<TradovateTradesResult> {
   try {
-    console.log('Fetching Tradovate fill pairs for improved trade building (demo only):', { accountId })
+    console.log('Fetching Tradovate fill pairs for improved trade building (demo only)')
     
     // Get current user for userId
     const supabase = await createClient()
@@ -762,28 +814,27 @@ export async function getTradovateTrades(accessToken: string, accountId: number)
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
-    // To identify which account took which trade
-    // Resolve account label (name) from account list
-    console.log('Resolving account name for accountId:', accountId)
+    // Fetch all accounts to map account IDs to account details
+    console.log('Fetching accounts for account resolution...')
     const accountsRes = await fetch(`${apiBaseUrl}/v1/account/list`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json'
       }
     })
-    const accounts: Array<{ id: number; name: string }> = accountsRes.ok ? await accountsRes.json() : []
-    // There is ID of account and LABEL of account
-    const account = accounts.find(a => a.id === accountId)
-    const accountLabel = account?.name || accountId.toString()
+    const accounts: TradovateAccount[] = accountsRes.ok ? await accountsRes.json() : []
+    const accountsById = new Map<number, TradovateAccount>()
+    accounts.forEach(account => accountsById.set(account.id, account))
+    console.log(`Fetched ${accounts.length} accounts for resolution`)
 
-    // Get unique contract IDs and collect fill data (details + commission) from fill pairs
-    // We identify unique contract so we don't fetch contract details multiple times
-    // Also collect fill details and fees to avoid duplicate API calls
+    // Get unique contract IDs, collect fill data (details + commission), and order data from fill pairs
+    // We identify unique contracts and orders so we don't fetch details multiple times
     const uniqueContractIds = new Set<number>()
+    const uniqueOrderIds = new Set<number>()
     const fillsById = new Map<number, Fill>()
     
     for (const fillPair of fillPairs) {
-      // We need to get the contract ID from the individual fills
+      // We need to get the contract ID and order ID from the individual fills
       try {
         const [buyFill, sellFill, buyFee, sellFee] = await Promise.all([
           getFillById(accessToken, fillPair.buyFillId),
@@ -794,6 +845,7 @@ export async function getTradovateTrades(accessToken: string, accountId: number)
         
         if (buyFill) {
           uniqueContractIds.add(buyFill.contractId)
+          uniqueOrderIds.add(buyFill.orderId)
           const buyCommission = buyFee ? Number(buyFee.commission || 0) : 0
           fillsById.set(fillPair.buyFillId, {
             details: buyFill,
@@ -801,6 +853,7 @@ export async function getTradovateTrades(accessToken: string, accountId: number)
           })
         }
         if (sellFill) {
+          uniqueOrderIds.add(sellFill.orderId)
           const sellCommission = sellFee ? Number(sellFee.commission || 0) : 0
           fillsById.set(fillPair.sellFillId, {
             details: sellFill,
@@ -813,6 +866,7 @@ export async function getTradovateTrades(accessToken: string, accountId: number)
     }
 
     console.log(`Found ${uniqueContractIds.size} unique contract IDs:`, Array.from(uniqueContractIds))
+    console.log(`Found ${uniqueOrderIds.size} unique order IDs:`, Array.from(uniqueOrderIds))
 
     // Fetch contract details (only once per contract)
     const contracts = new Map<number, TradovateContract>()
@@ -829,14 +883,28 @@ export async function getTradovateTrades(accessToken: string, accountId: number)
       }
     }
 
+    // Fetch order details (only once per order) to get account IDs
+    const ordersById = new Map<number, any>()
+    for (const orderId of uniqueOrderIds) {
+      try {
+        console.log(`Fetching order details for ID: ${orderId}`)
+        const order = await getOrderById(accessToken, orderId)
+        if (order) {
+          ordersById.set(orderId, order)
+          console.log(`Order ${orderId}: accountId=${order.accountId}`)
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch order ${orderId}:`, error)
+      }
+    }
 
     // Fetch tick details for P&L calculation
     console.log('Fetching tick details for P&L calculation...')
     const tickDetails = await getTickDetails()
     console.log(`Fetched ${tickDetails.length} tick details`)
 
-    // Build trades using fill pairs
-    const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, accountLabel, user.id, tickDetails)
+    // Build trades using fill pairs with account resolution
+    const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, ordersById, accountsById, user.id, tickDetails)
     
     if (processedTrades.length === 0) {
       console.log('No trades could be created from fill pairs')
