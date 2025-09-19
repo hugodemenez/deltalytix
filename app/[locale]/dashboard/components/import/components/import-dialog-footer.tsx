@@ -57,7 +57,7 @@ export function ImportDialogFooter({
           onClick={onNext}
           className={cn(
             "w-fit min-w-[100px]",
-            (currentStepIndex === 0 && importType === 'rithmic-sync') && "invisible"
+            (currentStepIndex === 0 && (importType === 'rithmic-sync' || importType === 'tradovate-sync')) && "invisible"
           )}
           disabled={isNextDisabled}
         >
