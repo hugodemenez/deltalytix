@@ -726,10 +726,30 @@ async function buildTradesFromFillPairs(
       // Calculate duration in seconds (exit time - entry time)
       const durationSeconds = Math.max(0, Math.round((exitTime.getTime() - entryTime.getTime()) / 1000))
 
-      // Get commission for both fills
-      const buyCommission = buyFillData.commission
-      const sellCommission = sellFillData.commission
+      // Get commission for both fills, adjusted for quantity differences
+      // Fee is per fill, but we need to calculate based on fill pair quantity
+      const buyFillQty = buyFill.qty || 1
+      const sellFillQty = sellFill.qty || 1
+      
+      // Calculate fee per unit for each fill, then multiply by fill pair quantity
+      const buyCommissionPerUnit = buyFillData.commission / buyFillQty
+      const sellCommissionPerUnit = sellFillData.commission / sellFillQty
+      
+      // Apply the fill pair quantity to get the correct commission
+      const buyCommission = buyCommissionPerUnit * fillPair.qty
+      const sellCommission = sellCommissionPerUnit * fillPair.qty
       const totalCommission = Number((buyCommission + sellCommission).toFixed(2))
+      
+      console.log(`Commission calculation for ${contractSymbol}:`, {
+        buyFillQty,
+        sellFillQty,
+        fillPairQty: fillPair.qty,
+        buyCommissionPerUnit,
+        sellCommissionPerUnit,
+        buyCommission,
+        sellCommission,
+        totalCommission
+      })
 
       // P&L is already calculated correctly with tick value
       const netPnl = pnl
@@ -842,6 +862,8 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
           getFillFeeById(accessToken, fillPair.buyFillId),
           getFillFeeById(accessToken, fillPair.sellFillId)
         ])
+
+        console.log('Fetched fills and fees for pair:', { buyFill, sellFill, buyFee, sellFee })
         
         if (buyFill) {
           uniqueContractIds.add(buyFill.contractId)
