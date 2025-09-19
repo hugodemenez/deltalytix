@@ -2,9 +2,10 @@
 
 import { createClient } from '@/server/auth'
 import { saveTradesAction } from '@/server/database'
-import { Trade } from '@prisma/client'
+import { Trade, TickDetails } from '@prisma/client'
 import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
+import { getTickDetails } from '@/server/tick-details'
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -32,6 +33,22 @@ function formatTimestamp(timestamp: string): string {
   }
   // Return as-is if we can't parse it
   return timestamp
+}
+
+// Helper function to format duration in a readable format (e.g., "1min 34sec")
+function formatDuration(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}sec`
+  }
+  
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  
+  if (remainingSeconds === 0) {
+    return `${minutes}min`
+  }
+  
+  return `${minutes}min ${remainingSeconds}sec`
 }
 
 // Environment variables for Tradovate OAuth
@@ -84,19 +101,6 @@ interface TradovateAccountsResult {
   error?: string
 }
 
-// Tradovate Fill data structure (based on API docs)
-interface TradovateFill {
-  id: number
-  orderId: number
-  contractId: number
-  timestamp: string
-  tradeDate: string
-  action: 'Buy' | 'Sell'
-  fillType: string
-  qty: number
-  price: number
-  active: boolean
-}
 
 // Tradovate Contract data structure
 interface TradovateContract {
@@ -123,27 +127,29 @@ interface TradovateFillFee {
   orderRoutingCurrencyId: number
 }
 
-// FIFO position tracking
-interface FIFOPosition {
-  contractId: number
-  contractName: string
-  contractSymbol: string
-  quantity: number
-  averagePrice: number
-  totalValue: number
-  fills: Array<{
-    fillId: number
-    qty: number
-    price: number
-    timestamp: string
-    fee: number
-  }>
+// Tradovate Fill Pair data structure (from fillPair/list endpoint)
+interface TradovateFillPair {
+  id: number
+  positionId: number
+  buyFillId: number
+  sellFillId: number
+  qty: number
+  buyPrice: number
+  sellPrice: number
+  active: boolean
 }
 
+// Combined fill data with details and commission
+interface Fill {
+  details: any
+  commission: number
+}
+
+
 interface TradovateTradesResult {
-  trades?: TradovateFill[]
   processedTrades?: Trade[]
   savedCount?: number
+  ordersCount?: number
   error?: string
 }
 
@@ -194,6 +200,55 @@ async function getFillFeeById(accessToken: string, fillId: number): Promise<Trad
     return null
   }
 }
+
+// Helper function to fetch fill pairs
+async function getFillPairs(accessToken: string): Promise<TradovateFillPair[]> {
+  try {
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const response = await fetch(`${apiBaseUrl}/v1/fillPair/list`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      console.warn(`Failed to fetch fill pairs:`, response.status, response.statusText)
+      return []
+    }
+    
+    const fillPairs = await response.json()
+    return Array.isArray(fillPairs) ? fillPairs : []
+  } catch (error) {
+    console.warn(`Error fetching fill pairs:`, error)
+    return []
+  }
+}
+
+// Helper function to fetch individual fill details
+async function getFillById(accessToken: string, fillId: number): Promise<any | null> {
+  try {
+    const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+    const params = new URLSearchParams({ id: String(fillId) }).toString()
+    const response = await fetch(`${apiBaseUrl}/v1/fill/item?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    })
+    
+    if (!response.ok) {
+      console.warn(`Failed to fetch fill ${fillId}:`, response.status, response.statusText)
+      return null
+    }
+    
+    return await response.json()
+  } catch (error) {
+    console.warn(`Error fetching fill ${fillId}:`, error)
+    return null
+  }
+}
+
 
 export async function initiateTradovateOAuth(): Promise<TradovateOAuthResult> {
   try {
@@ -527,231 +582,161 @@ export async function getTradovateAccounts(accessToken: string): Promise<Tradova
   }
 }
 
-// FIFO algorithm to build trades from fills
-function buildTradesFromFills(
-  fills: TradovateFill[],
+// Process fill pairs into trades with proper P&L calculation
+async function buildTradesFromFillPairs(
+  fillPairs: TradovateFillPair[],
   contracts: Map<number, TradovateContract>,
-  fillCommissionById: Map<number, number>,
+  fillsById: Map<number, Fill>,
   accountLabel: string,
-  userId: string
-): Trade[] {
-  console.log('Building trades from fills using FIFO algorithm:', { fillCount: fills.length, accountLabel, userId })
+  userId: string,
+  tickDetails: TickDetails[]
+): Promise<Trade[]> {
+  console.log('Building trades from fill pairs:', { fillPairCount: fillPairs.length, accountLabel, userId })
 
   const trades: Trade[] = []
-  const positions = new Map<number, FIFOPosition>() // contractId -> position
 
-  // Sort fills by timestamp to ensure proper FIFO order
-  const sortedFills = fills.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+  for (const fillPair of fillPairs) {
+    try {
+        // Get detailed fill information from pre-fetched data
+        const buyFillData = fillsById.get(fillPair.buyFillId)
+        const sellFillData = fillsById.get(fillPair.sellFillId)
 
-  for (const fill of sortedFills) {
-    const contract = contracts.get(fill.contractId)
-    const contractName = contract?.name || `Contract_${fill.contractId}`
-    // Derive base symbol from symbol or name (e.g., "ES" from "ESZ5")
-    const rawCode = (contract?.symbol || contract?.name || '').toUpperCase()
-    let contractSymbol = 'Unknown'
-    const monthCodeMatch = rawCode.match(/^([A-Z]+?)[FGHJKMNQUVXZ][0-9]+$/i)
-    if (monthCodeMatch) {
-      contractSymbol = monthCodeMatch[1].toUpperCase()
-    } else if (rawCode) {
-      const lettersOnly = rawCode.replace(/[^A-Z]/g, '')
-      contractSymbol = lettersOnly.slice(0, 2) || 'Unknown'
-    }
-
-    // Get or create position for this contract
-    let position = positions.get(fill.contractId)
-    if (!position) {
-      position = {
-        contractId: fill.contractId,
-        contractName,
-        contractSymbol,
-        quantity: 0,
-        averagePrice: 0,
-        totalValue: 0,
-        fills: []
+      if (!buyFillData || !sellFillData) {
+        console.warn(`Missing fill details for pair ${fillPair.id}:`, { buyFill: !!buyFillData, sellFill: !!sellFillData })
+        continue
       }
-      positions.set(fill.contractId, position)
-    }
 
-    // Add fill to position
-    const fillData = {
-      fillId: fill.id,
-      qty: fill.action === 'Buy' ? fill.qty : -fill.qty, // Negative for sells
-      price: fill.price,
-      timestamp: formatTimestamp(fill.timestamp),
-      fee: Math.abs(fillCommissionById.get(fill.id) || 0)
-    }
-    position.fills.push(fillData)
+      const buyFill = buyFillData.details
+      const sellFill = sellFillData.details
 
-    // Update position quantities
-    const oldQuantity = position.quantity
-    const newQuantity = oldQuantity + fillData.qty
-    const fillValue = fillData.qty * fillData.price
+      // Get contract information
+      const contract = contracts.get(buyFill.contractId)
+      if (!contract) {
+        console.warn(`Contract not found for fill pair ${fillPair.id}:`, buyFill.contractId)
+        continue
+      }
 
-    if (oldQuantity === 0) {
-      // First fill for this contract
-      position.quantity = newQuantity
-      position.averagePrice = fillData.price
-      position.totalValue = fillValue
-    } else if (oldQuantity > 0 && newQuantity > 0) {
-      // Adding to long position
-      position.quantity = newQuantity
-      position.totalValue += fillValue
-      position.averagePrice = position.totalValue / position.quantity
-    } else if (oldQuantity > 0 && newQuantity <= 0) {
-      // Closing long position (and possibly opening short)
-      const closeQuantity = Math.min(oldQuantity, Math.abs(fillData.qty))
-      const remainingQuantity = oldQuantity - closeQuantity
+      // Extract symbol from contract
+      const rawCode = (contract.symbol || contract.name || '').toUpperCase()
+      let contractSymbol = 'Unknown'
+      const monthCodeMatch = rawCode.match(/^([A-Z]+?)[FGHJKMNQUVXZ][0-9]+$/i)
+      if (monthCodeMatch) {
+        contractSymbol = monthCodeMatch[1].toUpperCase()
+      } else if (rawCode) {
+        const lettersOnly = rawCode.replace(/[^A-Z]/g, '')
+        contractSymbol = lettersOnly.slice(0, 2) || 'Unknown'
+      }
+
+      // Determine side based on which fill happened first (entry vs exit)
+      const buyTime = new Date(buyFill.timestamp)
+      const sellTime = new Date(sellFill.timestamp)
+      const isBuyFirst = buyTime < sellTime
       
-      // Create trade for the closed portion
-      const entryValue = closeQuantity * position.averagePrice
-      const exitValue = closeQuantity * fillData.price
-      const pnl = exitValue - entryValue
+      // If buy happened first, it's a long trade (buy then sell)
+      // If sell happened first, it's a short trade (sell then buy)
+      const side = isBuyFirst ? 'Long' : 'Short'
       
-      // Commission allocation: proportional share of entry fees + proportional share of this exit fill fee
-      const totalEntryFees = position.fills
-        .filter(f => f.fillId !== fillData.fillId)
-        .reduce((sum, f) => sum + Math.abs(f.fee), 0)
-      const entryFeeShare = oldQuantity > 0 ? (totalEntryFees * (closeQuantity / oldQuantity)) : 0
-      const exitFeeShare = Math.abs(fillData.fee) * Math.min(1, closeQuantity / Math.abs(fillData.qty))
-      const totalCommission = Number((entryFeeShare + exitFeeShare).toFixed(2))
+      // Calculate P&L using tick value (more accurate for futures)
+      const tickDetail = tickDetails.find(detail => detail.ticker === contractSymbol)
+      const tickSize = tickDetail?.tickSize || 0.25 // Default tick size for MES
+      const tickValue = tickDetail?.tickValue || 5.0 // Default tick value for MES
+      
+      // Determine entry and exit prices based on trade direction
+      const entryPrice = isBuyFirst ? fillPair.buyPrice : fillPair.sellPrice
+      const exitPrice = isBuyFirst ? fillPair.sellPrice : fillPair.buyPrice
+      const entryTime = isBuyFirst ? buyTime : sellTime
+      const exitTime = isBuyFirst ? sellTime : buyTime
+      
+      // Calculate price difference (exit - entry)
+      const priceDifference = exitPrice - entryPrice
+      const ticks = priceDifference / tickSize
+      let pnl = ticks * tickValue * fillPair.qty
+      
+      // For short trades, we need to reverse the P&L calculation
+      // Short: sell first (entry), buy later (exit) = profit when exit price < entry price
+      if (!isBuyFirst) {
+        pnl = -pnl // Reverse for short trades
+      }
+      
+      console.log(`P&L calculation for ${contractSymbol}:`, {
+        isBuyFirst,
+        side: isBuyFirst ? 'Long' : 'Short',
+        entryPrice,
+        exitPrice,
+        priceDifference,
+        tickSize,
+        tickValue,
+        ticks,
+        quantity: fillPair.qty,
+        pnl
+      })
+
+      // Calculate duration in seconds (exit time - entry time)
+      const durationSeconds = Math.max(0, Math.round((exitTime.getTime() - entryTime.getTime()) / 1000))
+
+      // Get commission for both fills
+      const buyCommission = buyFillData.commission
+      const sellCommission = sellFillData.commission
+      const totalCommission = Number((buyCommission + sellCommission).toFixed(2))
+
+      // P&L is already calculated correctly with tick value
+      const netPnl = pnl
 
       const tradeData = {
         accountNumber: accountLabel,
-        entryId: `fill_${position.fills[0].fillId}`, // First fill in position
-        closeId: `fill_${fillData.fillId}`,
+        entryId: isBuyFirst ? `fill_${fillPair.buyFillId}` : `fill_${fillPair.sellFillId}`,
+        closeId: isBuyFirst ? `fill_${fillPair.sellFillId}` : `fill_${fillPair.buyFillId}`,
         instrument: contractSymbol,
-        entryPrice: position.averagePrice.toString(),
-        closePrice: fillData.price.toString(),
-        entryDate: position.fills[0].timestamp,
-        closeDate: fillData.timestamp,
-        quantity: closeQuantity,
-        side: 'Long',
+        entryPrice: entryPrice.toString(),
+        closePrice: exitPrice.toString(),
+        entryDate: formatTimestamp(entryTime.toISOString()),
+        closeDate: formatTimestamp(exitTime.toISOString()),
+        quantity: fillPair.qty,
+        side: side,
         userId: userId
       }
 
       const trade: Trade = {
         id: generateDeterministicTradeId(tradeData),
         accountNumber: accountLabel,
-        quantity: closeQuantity,
-        entryId: `fill_${position.fills[0].fillId}`, // First fill in position
-        closeId: `fill_${fillData.fillId}`,
+        quantity: fillPair.qty,
+        entryId: isBuyFirst ? `fill_${fillPair.buyFillId}` : `fill_${fillPair.sellFillId}`,
+        closeId: isBuyFirst ? `fill_${fillPair.sellFillId}` : `fill_${fillPair.buyFillId}`,
         instrument: contractSymbol,
-        entryPrice: position.averagePrice.toString(),
-        closePrice: fillData.price.toString(),
-        entryDate: position.fills[0].timestamp,
-        closeDate: fillData.timestamp,
-        pnl: pnl,
-        timeInPosition: Math.max(0, Math.round((new Date(fillData.timestamp).getTime() - new Date(position.fills[0].timestamp).getTime()) / 1000)),
+        entryPrice: entryPrice.toString(),
+        closePrice: exitPrice.toString(),
+        entryDate: formatTimestamp(entryTime.toISOString()),
+        closeDate: formatTimestamp(exitTime.toISOString()),
+        pnl: netPnl,
+        timeInPosition: durationSeconds,
         userId: userId,
-        side: 'Long',
+        side: side,
         commission: totalCommission,
         createdAt: new Date(),
-        comment: `Tradovate FIFO trade - ${contractSymbol}`,
+        comment: ``,
         videoUrl: null,
-        tags: ['tradovate-sync', 'fifo'],
+        tags: ['tradovate'],
         imageBase64: null,
         imageBase64Second: null,
         groupId: null
       }
-      
-      trades.push(trade)
-      
-      // Update position for remaining quantity
-      if (remainingQuantity > 0) {
-        position.quantity = remainingQuantity
-        position.totalValue = remainingQuantity * position.averagePrice
-      } else {
-        // Position closed, reset for potential short position
-        position.quantity = Math.abs(newQuantity)
-        position.averagePrice = fillData.price
-        position.totalValue = Math.abs(newQuantity) * fillData.price
-        position.fills = [fillData] // Reset fills for new position
-      }
-    } else if (oldQuantity < 0 && newQuantity < 0) {
-      // Adding to short position
-      position.quantity = newQuantity
-      position.totalValue += fillValue
-      position.averagePrice = position.totalValue / position.quantity
-    } else if (oldQuantity < 0 && newQuantity >= 0) {
-      // Closing short position (and possibly opening long)
-      const closeQuantity = Math.min(Math.abs(oldQuantity), Math.abs(fillData.qty))
-      const remainingQuantity = Math.abs(oldQuantity) - closeQuantity
-      
-      // Create trade for the closed portion
-      const entryValue = closeQuantity * position.averagePrice
-      const exitValue = closeQuantity * fillData.price
-      const pnl = entryValue - exitValue // Reversed for short
-      
-      // Commission allocation for short: proportional share of entry (short entry sells) + proportional share of exit buy fee
-      const totalEntryFeesShort = position.fills
-        .filter(f => f.fillId !== fillData.fillId)
-        .reduce((sum, f) => sum + Math.abs(f.fee), 0)
-      const entryFeeShareShort = Math.abs(oldQuantity) > 0 ? (totalEntryFeesShort * (closeQuantity / Math.abs(oldQuantity))) : 0
-      const exitFeeShareShort = Math.abs(fillData.fee) * Math.min(1, closeQuantity / Math.abs(fillData.qty))
-      const totalCommissionShort = Number((entryFeeShareShort + exitFeeShareShort).toFixed(2))
 
-      const tradeDataShort = {
-        accountNumber: accountLabel,
-        entryId: `fill_${position.fills[0].fillId}`, // First fill in position
-        closeId: `fill_${fillData.fillId}`,
-        instrument: contractSymbol,
-        entryPrice: position.averagePrice.toString(),
-        closePrice: fillData.price.toString(),
-        entryDate: position.fills[0].timestamp,
-        closeDate: fillData.timestamp,
-        quantity: closeQuantity,
-        side: 'Short',
-        userId: userId
-      }
-
-      const trade: Trade = {
-        id: generateDeterministicTradeId(tradeDataShort),
-        accountNumber: accountLabel,
-        quantity: closeQuantity,
-        entryId: `fill_${position.fills[0].fillId}`, // First fill in position
-        closeId: `fill_${fillData.fillId}`,
-        instrument: contractSymbol,
-        entryPrice: position.averagePrice.toString(),
-        closePrice: fillData.price.toString(),
-        entryDate: position.fills[0].timestamp,
-        closeDate: fillData.timestamp,
-        pnl: pnl,
-        timeInPosition: Math.max(0, Math.round((new Date(fillData.timestamp).getTime() - new Date(position.fills[0].timestamp).getTime()) / 1000)),
-        userId: userId,
-        side: 'Short',
-        commission: totalCommissionShort,
-        createdAt: new Date(),
-        comment: `Tradovate FIFO trade - ${contractSymbol}`,
-        videoUrl: null,
-        tags: ['tradovate-sync', 'fifo'],
-        imageBase64: null,
-        imageBase64Second: null,
-        groupId: null
-      }
-      
       trades.push(trade)
-      
-      // Update position for remaining quantity
-      if (remainingQuantity > 0) {
-        position.quantity = -remainingQuantity
-        position.totalValue = -remainingQuantity * position.averagePrice
-      } else {
-        // Position closed, reset for potential long position
-        position.quantity = newQuantity
-        position.averagePrice = fillData.price
-        position.totalValue = newQuantity * fillData.price
-        position.fills = [fillData] // Reset fills for new position
-      }
+      console.log(`Created trade for ${contractSymbol}: ${side} ${fillPair.qty} @ ${entryPrice} -> ${exitPrice} = $${netPnl.toFixed(2)} (${formatDuration(durationSeconds)}) [Commission: $${totalCommission.toFixed(2)}]`)
+
+    } catch (error) {
+      console.error(`Error processing fill pair ${fillPair.id}:`, error)
     }
   }
 
-  console.log(`Built ${trades.length} trades from ${fills.length} fills using FIFO algorithm`)
+  console.log(`Built ${trades.length} trades from ${fillPairs.length} fill pairs`)
   return trades
 }
 
+
 export async function getTradovateTrades(accessToken: string, accountId: number): Promise<TradovateTradesResult> {
   try {
-    console.log('Fetching Tradovate fills for FIFO trade building (demo only):', { accountId })
+    console.log('Fetching Tradovate fill pairs for improved trade building (demo only):', { accountId })
     
     // Get current user for userId
     const supabase = await createClient()
@@ -763,32 +748,21 @@ export async function getTradovateTrades(accessToken: string, accountId: number)
 
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
 
-    // Fetch fills
-    console.log('Fetching fills...')
-    const fillsResponse = await fetch(`${apiBaseUrl}/v1/fill/list`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json'
-      }
-    })
-
-    if (!fillsResponse.ok) {
-      const errorText = await fillsResponse.text()
-      console.error('Failed to fetch fills:', { status: fillsResponse.status, errorText })
-      return { error: `Failed to fetch fills: ${errorText}` }
-    }
-
-    const fills: TradovateFill[] = await fillsResponse.json()
-    console.log('Received fills from Tradovate:', { 
-      fillCount: fills.length,
-      sampleFill: fills[0]
+    // Fetch fill pairs which are trades
+    console.log('Fetching fill pairs...')
+    const fillPairs = await getFillPairs(accessToken)
+    console.log('Received fill pairs from Tradovate:', { 
+      fillPairCount: fillPairs.length,
+      sampleFillPair: fillPairs[0]
     })
     
-    if (!Array.isArray(fills) || fills.length === 0) {
-      console.log('No fills returned from Tradovate')
-      return { trades: [], processedTrades: [], savedCount: 0 }
+    // Means there are no trades to import
+    if (fillPairs.length === 0) {
+      console.log('No fill pairs returned from Tradovate')
+      return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
+    // To identify which account took which trade
     // Resolve account label (name) from account list
     console.log('Resolving account name for accountId:', accountId)
     const accountsRes = await fetch(`${apiBaseUrl}/v1/account/list`, {
@@ -798,13 +772,49 @@ export async function getTradovateTrades(accessToken: string, accountId: number)
       }
     })
     const accounts: Array<{ id: number; name: string }> = accountsRes.ok ? await accountsRes.json() : []
+    // There is ID of account and LABEL of account
     const account = accounts.find(a => a.id === accountId)
     const accountLabel = account?.name || accountId.toString()
 
-    // Extract unique contract IDs and fetch contract details
-    const uniqueContractIds = [...new Set(fills.map(fill => fill.contractId))]
-    console.log(`Found ${uniqueContractIds.length} unique contract IDs:`, uniqueContractIds)
+    // Get unique contract IDs and collect fill data (details + commission) from fill pairs
+    // We identify unique contract so we don't fetch contract details multiple times
+    // Also collect fill details and fees to avoid duplicate API calls
+    const uniqueContractIds = new Set<number>()
+    const fillsById = new Map<number, Fill>()
+    
+    for (const fillPair of fillPairs) {
+      // We need to get the contract ID from the individual fills
+      try {
+        const [buyFill, sellFill, buyFee, sellFee] = await Promise.all([
+          getFillById(accessToken, fillPair.buyFillId),
+          getFillById(accessToken, fillPair.sellFillId),
+          getFillFeeById(accessToken, fillPair.buyFillId),
+          getFillFeeById(accessToken, fillPair.sellFillId)
+        ])
+        
+        if (buyFill) {
+          uniqueContractIds.add(buyFill.contractId)
+          const buyCommission = buyFee ? Number(buyFee.commission || 0) : 0
+          fillsById.set(fillPair.buyFillId, {
+            details: buyFill,
+            commission: buyCommission
+          })
+        }
+        if (sellFill) {
+          const sellCommission = sellFee ? Number(sellFee.commission || 0) : 0
+          fillsById.set(fillPair.sellFillId, {
+            details: sellFill,
+            commission: sellCommission
+          })
+        }
+      } catch (error) {
+        console.warn(`Failed to get fills and fees for pair ${fillPair.id}:`, error)
+      }
+    }
 
+    console.log(`Found ${uniqueContractIds.size} unique contract IDs:`, Array.from(uniqueContractIds))
+
+    // Fetch contract details (only once per contract)
     const contracts = new Map<number, TradovateContract>()
     for (const contractId of uniqueContractIds) {
       try {
@@ -819,50 +829,45 @@ export async function getTradovateTrades(accessToken: string, accountId: number)
       }
     }
 
-    // Build fee map for fills (commission only)
-    const fillCommissionById = new Map<number, number>()
-    for (const f of fills) {
-      try {
-        const fee = await getFillFeeById(accessToken, f.id)
-        if (fee) {
-          const commission = Number(fee.commission || 0)
-          fillCommissionById.set(f.id, commission)
-        }
-      } catch {}
-    }
 
-    // Build trades using FIFO algorithm
-    const processedTrades = buildTradesFromFills(fills, contracts, fillCommissionById, accountLabel, user.id)
+    // Fetch tick details for P&L calculation
+    console.log('Fetching tick details for P&L calculation...')
+    const tickDetails = await getTickDetails()
+    console.log(`Fetched ${tickDetails.length} tick details`)
+
+    // Build trades using fill pairs
+    const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, accountLabel, user.id, tickDetails)
     
     if (processedTrades.length === 0) {
-      console.log('No trades could be created from fills using FIFO algorithm')
-      return { trades: [], processedTrades: [], savedCount: 0 }
+      console.log('No trades could be created from fill pairs')
+      return { processedTrades: [], savedCount: 0 }
     }
 
     // Save trades to database
-    console.log(`Attempting to save ${processedTrades.length} FIFO trades to database`)
+    console.log(`Attempting to save ${processedTrades.length} fill pair trades to database`)
     const saveResult = await saveTradesAction(processedTrades)
     
     if (saveResult.error) {
       console.error('Failed to save trades:', saveResult.error, saveResult.details)
       return { 
         error: `Failed to save trades: ${saveResult.error}`,
-        trades: [],
-        processedTrades: processedTrades 
+        processedTrades: processedTrades,
+        ordersCount: fillPairs.length * 2
       }
     }
 
-    console.log(`Successfully saved ${saveResult.numberOfTradesAdded} FIFO trades`)
+    console.log(`Successfully saved ${saveResult.numberOfTradesAdded} fill pair trades`)
     
     return { 
-      trades: [],
       processedTrades: processedTrades,
-      savedCount: saveResult.numberOfTradesAdded
+      savedCount: saveResult.numberOfTradesAdded,
+      ordersCount: fillPairs.length * 2
     }
   } catch (error) {
     console.error('Failed to get Tradovate trades:', error)
     return { error: 'Failed to get trades' }
   }
 }
+
 
  

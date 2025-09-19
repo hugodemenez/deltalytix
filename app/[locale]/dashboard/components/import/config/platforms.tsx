@@ -1,3 +1,4 @@
+'use client'
 import { Trade } from '@prisma/client'
 import { EtpSync } from '../etp/etp-sync'
 import { ThorSync } from '../thor/thor-sync'

@@ -70,6 +70,9 @@ import { TradeImageEditor } from './trade-image-editor'
 import { ColumnConfigDialog } from '@/components/ui/column-config-dialog'
 import { calculateTicksAndPointsForTrades, calculateTicksAndPointsForGroupedTrade } from '@/lib/tick-calculations'
 import { Input } from '@/components/ui/input'
+import { useToast } from '@/hooks/use-toast'
+import { deleteTradesByIdsAction } from '@/server/accounts'
+import { Trash } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -243,10 +246,12 @@ export function TradeTableReview() {
   const {
     formattedTrades: contextTrades,
     updateTrades,
+    refreshTrades,
   } = useData()
   const tags = useUserStore(state => state.tags)
   const timezone = useUserStore(state => state.timezone)
   const tickDetails = useTickDetailsStore(state => state.tickDetails)
+  const { toast } = useToast()
 
   // Debug: Log tick details
   console.log('Available tick details:', tickDetails)
@@ -338,6 +343,32 @@ export function TradeTableReview() {
     setSelectedTrades([])
   }
 
+  const handleDeleteTrades = async () => {
+    if (selectedTrades.length === 0) return
+
+    // Filter out empty IDs (group rows have empty IDs)
+    const validTradeIds = selectedTrades.filter(id => id && id !== '')
+    if (validTradeIds.length === 0) return
+
+    try {
+      await deleteTradesByIdsAction(validTradeIds)
+      setSelectedTrades([])
+      table.resetRowSelection()
+      refreshTrades()
+      toast({
+        title: t('trade-table.deleteSuccess'),
+        description: t('trade-table.deleteSuccessDescription', { count: validTradeIds.length }),
+      })
+    } catch (error) {
+      console.error('Error deleting trades:', error)
+      toast({
+        title: t('trade-table.deleteError'),
+        description: t('trade-table.deleteErrorDescription'),
+        variant: "destructive"
+      })
+    }
+  }
+
   // Group trades by instrument, entry date, and close date with granularity
   const groupedTrades = useMemo(() => {
     const groups = new Map<string, ExtendedTrade>()
@@ -423,10 +454,12 @@ export function TradeTableReview() {
           checked={table.getIsAllPageRowsSelected()}
           onCheckedChange={(value) => {
             table.toggleAllPageRowsSelected(!!value)
-            // Get all trade IDs including subrows
+            // Get all trade IDs including subrows (only actual trades, not group rows)
             const allTradeIds = table.getRowModel().rows.flatMap(row => {
               const subTradeIds = row.original.trades.map(t => t.id)
-              return [row.original.id, ...subTradeIds]
+              // Only include group row ID if it's not empty (i.e., it's an actual trade, not a group)
+              const groupId = row.original.id && row.original.id !== '' ? [row.original.id] : []
+              return [...groupId, ...subTradeIds]
             })
             setSelectedTrades(value ? allTradeIds : [])
           }}
@@ -439,11 +472,10 @@ export function TradeTableReview() {
           checked={row.getIsSelected()}
           onCheckedChange={(value) => {
             row.toggleSelected(!!value)
-            // Get all trade IDs for this row including subrows
-            const tradeIds = [
-              row.original.id,
-              ...row.original.trades.map(t => t.id)
-            ]
+            // Get all trade IDs for this row including subrows (only actual trades, not group rows)
+            const subTradeIds = row.original.trades.map(t => t.id)
+            const groupId = row.original.id && row.original.id !== '' ? [row.original.id] : []
+            const tradeIds = [...groupId, ...subTradeIds]
             setSelectedTrades(prev =>
               value
                 ? [...prev, ...tradeIds]
@@ -897,6 +929,16 @@ export function TradeTableReview() {
             </TooltipProvider>
           </div>
           <div className="flex items-center gap-2">
+            {selectedTrades.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteTrades}
+              >
+                <Trash className="mr-2 h-4 w-4" />
+                {t('trade-table.deleteSelected')}
+              </Button>
+            )}
             {selectedTrades.length >= 2 && (
               <Button
                 variant="outline"

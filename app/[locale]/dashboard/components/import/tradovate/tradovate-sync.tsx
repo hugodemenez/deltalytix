@@ -178,7 +178,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
     try {
       setIsSyncing(true)
       let totalTradesSaved = 0
-      let totalFillsProcessed = 0
+      let totalOrdersProcessed = 0
       
       // Sync trades for all accounts
       for (const account of tradovateStore.accounts) {
@@ -196,22 +196,14 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
         }
 
         // Track progress
-        const fillsCount = result.trades?.length || 0
         const savedCount = result.savedCount || 0
+        const ordersCount = result.ordersCount || 0
         
-        totalFillsProcessed += fillsCount
         totalTradesSaved += savedCount
+        totalOrdersProcessed += ordersCount
         
-        console.log(`Account ${account.name}: ${fillsCount} fills → ${savedCount} trades saved`)
+        console.log(`Account ${account.name}: ${savedCount} trades saved, ${ordersCount} orders processed`)
         
-        // Show progress for each account
-        if (fillsCount > 0) {
-          toast({
-            title: `${account.name}`,
-            description: t('tradovateSync.sync.accountProgress', { fillsCount, savedCount }),
-            variant: savedCount > 0 ? "default" : "destructive",
-          })
-        }
       }
 
       // Update last sync time
@@ -221,18 +213,18 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
       if (totalTradesSaved > 0) {
         toast({
           title: t('tradovateSync.sync.syncComplete'),
-          description: t('tradovateSync.sync.syncCompleteWithTrades', { totalFillsProcessed, totalTradesSaved }),
+          description: t('tradovateSync.sync.syncCompleteWithTrades', { totalOrdersProcessed, totalTradesSaved }),
         })
-      } else if (totalFillsProcessed > 0) {
+      } else if (totalOrdersProcessed > 0) {
         toast({
           title: t('tradovateSync.sync.syncCompleteNoNewTrades'),
-          description: t('tradovateSync.sync.syncCompleteNoNewTradesDesc', { totalFillsProcessed }),
+          description: t('tradovateSync.sync.syncCompleteNoNewTradesDesc', { totalOrdersProcessed }),
           variant: "default"
         })
       } else {
         toast({
-          title: t('tradovateSync.sync.syncCompleteNoFills'),
-          description: t('tradovateSync.sync.syncCompleteNoFillsDesc'),
+          title: t('tradovateSync.sync.syncCompleteNoOrders'),
+          description: t('tradovateSync.sync.syncCompleteNoOrdersDesc'),
           variant: "default"
         })
       }
