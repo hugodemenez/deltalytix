@@ -21,15 +21,53 @@ export async function POST(req: NextRequest) {
     const result = streamObject({
       model: openai("gpt-4o-mini-2024-07-18"),
       schema: mappingSchema,
+      temperature: 1,
+      onFinish: (result) => {
+        console.log('=== AI RESPONSE ===');
+        console.log('AI Mapping Result:', JSON.stringify(result.object, null, 2));
+      },
+      onError: (error) => {
+        console.error('=== AI ERROR ===');
+        console.error('AI Mapping Error:', error);
+      },
       prompt:
-        `The following columns are the headings from a CSV import file for a trading system. ` +
-        `Map these column names to the correct fields in our database (accountNumber, instrument, entryId, closeId, quantity, entryPrice, closePrice, entryDate, closeDate, pnl, timeInPosition, side, commission) by providing the matching column name for each field. ` +
-        `You may also consult the first few rows of data to help you make the mapping, but you are mapping the columns, not the values. ` +
-        `If you are not sure or there is no matching column, omit the value.\n\n` +
-        `Columns:\n${fieldColumns.join(",")}\n\n` +
-        `First few rows of data:\n` +
-        firstRows.map((row: Record<string, string>) => JSON.stringify(row)).join("\n"),
-      temperature: 0.2,
+        `You are a trading data expert. Analyze the CSV columns and their data patterns to map them to the correct database fields. ` +
+        `Look at BOTH the column names AND the actual data values to make intelligent mappings.\n\n` +
+        `Available database fields:\n` +
+        `- accountNumber: Account identifier (numbers, letters, or alphanumeric)\n` +
+        `- instrument: Trading symbol/ticker (e.g., EURNZD, BTCUSD, ES, etc.)\n` +
+        `- entryId: Unique buy transaction ID (usually numeric or alphanumeric)\n` +
+        `- closeId: Unique sell transaction ID (usually numeric or alphanumeric)\n` +
+        `- quantity: Number of units traded (decimal numbers)\n` +
+        `- entryPrice: Buy/entry price (decimal numbers)\n` +
+        `- closePrice: Sell/exit price (decimal numbers)\n` +
+        `- entryDate: Entry/buy date (date/time strings like "2025-09-12 09:41:09")\n` +
+        `- closeDate: Exit/sell date (date/time strings like "2025-09-18 02:12:02")\n` +
+        `- pnl: Profit/loss amount (decimal numbers, can be negative)\n` +
+        `- timeInPosition: Duration in seconds (numeric values)\n` +
+        `- side: Trade direction ("buy", "sell", "long", "short")\n` +
+        `- commission: Trading fees (decimal numbers)\n\n` +
+        `CRITICAL: Analyze column CONTEXT and ORDER, not just names:\n` +
+        `- Column order matters: entryDate → entryPrice → closeDate → closePrice is typical\n` +
+        `- If you see duplicate column names (like "Prix"), use POSITION to distinguish:\n` +
+        `  * First "Prix" after entryDate = entryPrice\n` +
+        `  * Second "Prix" after closeDate = closePrice\n` +
+        `- Look for logical sequences: Date → Price → Date → Price\n` +
+        `- Analyze data patterns:\n` +
+        `  * Date columns: timestamps like "2025-09-12 09:41:09"\n` +
+        `  * Price columns: decimal numbers\n` +
+        `  * ID columns: unique identifiers (often numeric)\n` +
+        `  * Quantity columns: trade sizes (decimal numbers)\n` +
+        `  * PnL columns: profit/loss amounts (can be negative)\n\n` +
+        `IMPORTANT: For duplicate column names, you MUST include the column position (1-based index) in your response.\n` +
+        `Format: "ColumnName_Position" (e.g., "Prix_1", "Prix_2")\n\n` +
+        `Map each column by providing the matching column name with position for each database field. Use column position and context to resolve duplicates. If unsure or no match exists, omit the value.\n\n` +
+        `Column order and context:\n` +
+        fieldColumns.map((col: string, index: number) => `${index + 1}. ${col}`).join("\n") + "\n\n" +
+        `Sample data (first few rows):\n` +
+        firstRows.map((row: Record<string, string>, index: number) => 
+          `Row ${index + 1}: ${Object.entries(row).map(([col, val]) => `${col}: "${val}"`).join(", ")}`
+        ).join("\n"),
     });
 
     return result.toTextStreamResponse();

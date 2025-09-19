@@ -21,6 +21,8 @@ import { cn } from '@/lib/utils'
 import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
 import { useUserStore } from '../../../../store/user-store'
+import { useToast } from "@/hooks/use-toast"
+import { defaultLayouts } from "@/context/data-provider"
 
 
 // Update sizeToGrid to handle responsive sizes
@@ -363,10 +365,13 @@ function getWidgetDimensions(widget: Widget, isMobile: boolean) {
 type WidgetDimensions = { w: number; h: number; width: string; height: string }
 
 export default function WidgetCanvas() {
-  const { user, isMobile, dashboardLayout:layouts, setDashboardLayout:setLayouts } = useUserStore(state => state)
+  const { isMobile, dashboardLayout:layouts, setDashboardLayout:setLayouts } = useUserStore(state => state)
+  const  user = useUserStore(state => state.user)
   const { saveDashboardLayout } = useData()
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
+  const { toast } = useToast()
+  const t = useI18n()
 
   // Add this state to track if the layout change is from user interaction
   const activeLayout = useMemo(() => isMobile ? 'mobile' : 'desktop', [isMobile])
@@ -392,7 +397,13 @@ export default function WidgetCanvas() {
 
   const currentLayout = useMemo(() => {
     if (!layouts?.[activeLayout]) return []
-    return Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+    // Filter out duplicate widgets by type, keep only the first occurrence
+    const seenTypes = new Set()
+    return (Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []).filter(widget => {
+      if (seenTypes.has(widget.type)) return false
+      seenTypes.add(widget.type)
+      return true
+    })
   }, [layouts, activeLayout])
 
   // Define handleOutsideClick before using it in useEffect
@@ -460,12 +471,30 @@ export default function WidgetCanvas() {
 
   // Define addWidget with all dependencies
   const addWidget = useCallback(async (type: WidgetType, size: WidgetSize = 'medium') => {
-    if (!user?.id || !layouts) return
+    if (!user?.id) {
+      console.error('Error adding widget missing user data:', { user})
+      return
+    }
+    if (!layouts) {
+      console.error('Error adding widget missing layouts:', { layouts })
+      return
+    }
     
+    const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+
+    // Prevent adding duplicate widget types
+    if (currentLayout.some(widget => widget.type === type)) {
+      toast({
+        title: t('widgets.duplicate.title'),
+        description: t('widgets.duplicate.description'),
+        variant: "destructive"
+      })
+      return
+    }
+
     // Determine default size based on widget type
     let effectiveSize = size
 
-    const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
     const grid = sizeToGrid(effectiveSize, activeLayout === 'mobile')
     
     // Initialize variables for finding the best position
@@ -542,6 +571,10 @@ export default function WidgetCanvas() {
             }
             
             setLayouts(newLayouts)
+            toast({
+              title: t('widgets.widgetAdded'),
+              description: t('widgets.widgetAddedDescription'),
+            })
             await saveDashboardLayout(newLayouts)
             return
           }
@@ -569,8 +602,14 @@ export default function WidgetCanvas() {
     }
     
     setLayouts(newLayouts)
+    
+    toast({
+      title: t('widgets.widgetAdded'),
+      description: t('widgets.widgetAddedDescription'),
+    })
     await saveDashboardLayout(newLayouts)
-  }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
+
+  }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout, t, toast]);
 
   // Define removeWidget with all dependencies
   const removeWidget = useCallback(async (i: string) => {
@@ -642,6 +681,23 @@ export default function WidgetCanvas() {
     await saveDashboardLayout(newLayouts)
   }, [user?.id, layouts, setLayouts, saveDashboardLayout]);
 
+  // Restore default layout for both desktop and mobile
+  const restoreDefaultLayout = useCallback(async () => {
+    if (!user?.id || !layouts) return
+    const newLayouts = {
+      ...layouts,
+      desktop: defaultLayouts.desktop,
+      mobile: defaultLayouts.mobile,
+      updatedAt: new Date()
+    }
+    setLayouts(newLayouts)
+    await saveDashboardLayout(newLayouts)
+    toast({
+      title: t('widgets.restoredDefaultsTitle'),
+      description: t('widgets.restoredDefaultsDescription')
+    })
+  }, [user?.id, layouts, setLayouts, saveDashboardLayout, t, toast])
+
   // Define renderWidget with all dependencies
   const renderWidget = useCallback((widget: Widget) => {
     // Ensure widget.type is a valid WidgetType
@@ -692,6 +748,7 @@ export default function WidgetCanvas() {
         }}
         currentLayout={layouts || { desktop: [], mobile: [] }}
         onRemoveAll={removeAllWidgets}
+        onRestoreDefaults={restoreDefaultLayout}
       />
       {layouts && (
         <div className="relative">

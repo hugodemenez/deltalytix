@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useData } from "@/context/data-provider"
-import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home, Moon, Sun, Laptop, Settings } from "lucide-react"
+import { LifeBuoy, CreditCard, Database, LogOut, Globe, LayoutDashboard, HelpCircle, Clock, RefreshCw, Home, Moon, Sun, Laptop, Settings, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -112,11 +112,24 @@ export default function Navbar() {
             <div className="flex flex-col items-center">
               <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen}>
                 <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon" className="p-0">
-                    <Logo className='fill-black h-6 w-6 dark:fill-white' />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
+                    aria-haspopup="menu"
+                    aria-expanded={isLogoPopoverOpen}
+                    aria-label={t('landing.navbar.logo.title')}
+                  >
+                    <span className="flex items-center gap-1">
+                      <Logo className='fill-black h-6 w-6 dark:fill-white' />
+                      <ChevronDown 
+                        className={`h-4 w-4 transition-transform duration-200 ${isLogoPopoverOpen ? 'rotate-180' : 'rotate-0'}`}
+                        aria-hidden="true"
+                      />
+                    </span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-48" align="start">
+                <PopoverContent className="w-64" align="start">
                   <div className="space-y-2">
                     <h4 className="font-medium leading-none mb-3">{t('landing.navbar.logo.title')}</h4>
                     <div className="grid gap-2">
@@ -136,7 +149,7 @@ export default function Navbar() {
                         onClick={() => setIsLogoPopoverOpen(false)}
                       >
                         <div className="flex-shrink-0 w-4 h-4">
-                          <Home className="h-full w-full" />
+                          <Globe className="h-full w-full" />
                         </div>
                         {t('landing.navbar.logo.home')}
                       </Link>
@@ -144,9 +157,6 @@ export default function Navbar() {
                   </div>
                 </PopoverContent>
               </Popover>
-              <div className="mt-[-8px]">
-                <SubscriptionBadge />
-              </div>
             </div>
           </div>
           <div className="flex items-center space-x-4">
@@ -217,12 +227,15 @@ export default function Navbar() {
               <div className="relative">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Avatar className="cursor-pointer h-8 w-8">
-                      <AvatarImage src={user?.user_metadata.avatar_url} />
-                      <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
-                        {user?.email![0]}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative inline-block">
+                      <Avatar className="cursor-pointer h-8 w-8">
+                        <AvatarImage src={user?.user_metadata.avatar_url} />
+                        <AvatarFallback className="uppercase text-xs bg-secondary text-secondary-foreground">
+                          {user?.email![0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <SubscriptionBadge className="absolute -bottom-1 -right-1 px-1 py-0 text-[10px] leading-3" />
+                    </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-56">
                     <DropdownMenuLabel>{t('dashboard.myAccount')}</DropdownMenuLabel>
@@ -231,7 +244,7 @@ export default function Navbar() {
                     </div>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard">
-                        <div className="flex w-full">
+                        <div className="flex items-center w-full">
                           <LayoutDashboard className="mr-2 h-4 w-4" />
                           <span>{t('landing.navbar.dashboard')}</span>
                           <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
@@ -240,7 +253,7 @@ export default function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard/settings">
-                        <div className="flex w-full">
+                        <div className="flex items-center w-full">
                           <Settings className="mr-2 h-4 w-4" />
                           <span>{t('dashboard.settings')}</span>
                           <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
@@ -249,7 +262,7 @@ export default function Navbar() {
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <Link href="/dashboard/billing">
-                        <div className="flex w-full">
+                        <div className="flex items-center w-full">
                           <CreditCard className="mr-2 h-4 w-4" />
                           <span>{t('dashboard.billing')}</span>
                           <DropdownMenuShortcut>⌘B</DropdownMenuShortcut>
@@ -257,20 +270,20 @@ export default function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                     <Link href={"/dashboard/data"}>
-                      <DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
                         <Database className="mr-2 h-4 w-4" />
                         <span>{t('dashboard.data')}</span>
                         <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
                       </DropdownMenuItem>
                     </Link>
-                    <DropdownMenuItem onClick={async ()=>await refreshTrades()}>
+                    <DropdownMenuItem onClick={async ()=>await refreshTrades()} className="flex items-center">
                       <RefreshCw className="mr-2 h-4 w-4" />
                       <span>{t('dashboard.refreshData')}</span>
                       <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <Link href="/support">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
                         <LifeBuoy className="mr-2 h-4 w-4" />
                         <span>{t('dashboard.support')}</span>
                       </DropdownMenuItem>
@@ -313,7 +326,7 @@ export default function Navbar() {
                     <DropdownMenuItem onClick={() => {
                       localStorage.removeItem('deltalytix_user_data')
                       signOut()
-                    }}>
+                    }} className="flex items-center">
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>{t('dashboard.logOut')}</span>
                       <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>

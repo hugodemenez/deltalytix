@@ -39,6 +39,7 @@ import { z } from 'zod'
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { DataTableColumnHeader } from '../../tables/column-header'
 import { Trade as PrismaTrade } from '@prisma/client'
+import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 
 type Order = z.infer<typeof orderSchema>
 type Trade = z.infer<typeof tradeSchema>
@@ -49,6 +50,7 @@ interface PdfProcessingProps {
   processedTrades: PrismaTrade[]
   setProcessedTrades: (trades: PrismaTrade[]) => void;
   extractedText: string
+  userId: string
 }
 
 export default function PdfProcessing({
@@ -56,7 +58,8 @@ export default function PdfProcessing({
   setStep,
   processedTrades,
   setProcessedTrades,
-  extractedText
+  extractedText,
+  userId
 }: PdfProcessingProps) {
   const t = useI18n()
   const tableContainerRef = useRef<HTMLDivElement>(null)
@@ -134,30 +137,46 @@ export default function PdfProcessing({
       setTrades(newTrades);
       
       // Convert ApiTrade to Prisma Trade format for processedTrades
-      const convertedTrades: PrismaTrade[] = newTrades.map(trade => ({
-        id: crypto.randomUUID(),
-        accountNumber: '',
-        quantity: trade.quantity,
-        entryId: trade.entryId || '',
-        closeId: trade.closeId || '',
-        instrument: trade.instrument,
-        entryPrice: trade.entryPrice,
-        closePrice: trade.closePrice,
-        entryDate: trade.entryDate,
-        closeDate: trade.closeDate,
-        pnl: trade.pnl,
-        timeInPosition: trade.timeInPosition,
-        userId: '', // Will be set when saving
-        side: trade.side || '',
-        commission: Math.abs(trade.commission || 0),
-        createdAt: new Date(),
-        comment: null,
-        videoUrl: null,
-        tags: [],
-        imageBase64: null,
-        imageBase64Second: null,
-        groupId: null
-      }));
+      const convertedTrades: PrismaTrade[] = newTrades.map(trade => {
+        const tradeData = {
+          accountNumber: '',
+          entryId: trade.entryId || '',
+          closeId: trade.closeId || '',
+          instrument: trade.instrument,
+          entryPrice: trade.entryPrice,
+          closePrice: trade.closePrice,
+          entryDate: trade.entryDate,
+          closeDate: trade.closeDate,
+          quantity: trade.quantity,
+          side: trade.side || '',
+          userId: userId
+        }
+
+        return {
+          id: generateDeterministicTradeId(tradeData),
+          accountNumber: '',
+          quantity: trade.quantity,
+          entryId: trade.entryId || '',
+          closeId: trade.closeId || '',
+          instrument: trade.instrument,
+          entryPrice: trade.entryPrice,
+          closePrice: trade.closePrice,
+          entryDate: trade.entryDate,
+          closeDate: trade.closeDate,
+          pnl: trade.pnl,
+          timeInPosition: trade.timeInPosition,
+          userId: userId,
+          side: trade.side || '',
+          commission: Math.abs(trade.commission || 0),
+          createdAt: new Date(),
+          comment: null,
+          videoUrl: null,
+          tags: [],
+          imageBase64: null,
+          imageBase64Second: null,
+          groupId: null
+        }
+      });
       
       setProcessedTrades(convertedTrades);
 
@@ -180,7 +199,7 @@ export default function PdfProcessing({
 
       try {
         // Start streaming orders
-        await submitOrders({ text: extractedText });
+        submitOrders({ text: extractedText });
       } catch (error) {
         console.error('Error processing orders:', error);
         setError(error instanceof Error ? error.message : 'Failed to process orders');

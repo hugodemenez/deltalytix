@@ -1,14 +1,16 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings } from "lucide-react"
+import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -32,7 +34,7 @@ import {
 import { Account } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
-import { savePayoutAction } from '@/server/accounts'
+import { savePayoutAction, removeAccountsFromTradesAction } from '@/server/accounts'
 
 interface DailyMetric {
   date: Date
@@ -66,6 +68,8 @@ interface PayoutDialogProps {
   }
   onSubmit: (payout: Payout) => Promise<void>
   onDelete?: () => Promise<void>
+  isLoading?: boolean
+  isDeleting?: boolean
 }
 
 
@@ -81,7 +85,9 @@ function PayoutDialog({
   accountNumber,
   existingPayout,
   onSubmit,
-  onDelete
+  onDelete,
+  isLoading = false,
+  isDeleting = false
 }: PayoutDialogProps) {
   const params = useParams()
   const locale = params.locale as string
@@ -90,7 +96,11 @@ function PayoutDialog({
   const [amount, setAmount] = useState<number>(existingPayout?.amount ?? 0)
   const [inputValue, setInputValue] = useState<string>(existingPayout?.amount?.toString() ?? "")
   const [status, setStatus] = useState<string>(existingPayout?.status ?? 'PENDING')
+  const [dateInputValue, setDateInputValue] = useState<string>("")
   const t = useI18n()
+  
+  // Combined loading state for both saving and deleting
+  const isProcessing = isLoading || isDeleting
 
   useEffect(() => {
     if (existingPayout) {
@@ -98,11 +108,14 @@ function PayoutDialog({
       setAmount(existingPayout.amount)
       setInputValue(existingPayout.amount.toString())
       setStatus(existingPayout.status)
+      setDateInputValue(format(existingPayout.date, 'yyyy-MM-dd'))
     } else {
-      setDate(new Date())
+      const today = new Date()
+      setDate(today)
       setAmount(0)
       setInputValue("")
       setStatus('PENDING')
+      setDateInputValue(format(today, 'yyyy-MM-dd'))
     }
   }, [existingPayout, open])
 
@@ -115,6 +128,29 @@ function PayoutDialog({
     }
   }
 
+  const handleDateInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setDateInputValue(value)
+    
+    // Try to parse the date
+    const parsedDate = new Date(value)
+    if (!isNaN(parsedDate.getTime())) {
+      // Set the time to noon to prevent timezone issues
+      parsedDate.setHours(12, 0, 0, 0)
+      setDate(parsedDate)
+    }
+  }
+
+  const handleCalendarDateSelect = (newDate: Date | undefined) => {
+    if (newDate) {
+      // Set the time to noon to prevent timezone issues
+      const adjustedDate = new Date(newDate);
+      adjustedDate.setHours(12, 0, 0, 0);
+      setDate(adjustedDate);
+      setDateInputValue(format(adjustedDate, 'yyyy-MM-dd'));
+    }
+  }
+
   const statusOptions = [
     { value: 'PENDING', label: t('propFirm.payout.statuses.pending'), icon: <Clock className="h-4 w-4" /> },
     { value: 'VALIDATED', label: t('propFirm.payout.statuses.validated'), icon: <CheckCircle className="h-4 w-4" /> },
@@ -123,15 +159,16 @@ function PayoutDialog({
   ]
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] sm:max-w-3xl sm:max-h-[75vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{existingPayout ? t('propFirm.payout.edit') : t('propFirm.payout.add')}</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-[400px] sm:w-[540px] flex flex-col h-full max-h-screen">
+        <SheetHeader className="flex-shrink-0">
+          <SheetTitle>{existingPayout ? t('propFirm.payout.edit') : t('propFirm.payout.add')}</SheetTitle>
+          <SheetDescription>
             {existingPayout ? t('propFirm.payout.editDescription') : t('propFirm.payout.addDescription')} {accountNumber}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 sm:space-y-6 py-4">
+          </SheetDescription>
+        </SheetHeader>
+        
+        <div className="flex-1 overflow-y-auto space-y-6 py-6 min-h-0">
           {/* Amount Input with Currency Symbol */}
           <div className="space-y-2">
             <Label htmlFor="amount">{t('propFirm.payout.amount')}</Label>
@@ -144,77 +181,284 @@ function PayoutDialog({
                 value={inputValue}
                 onChange={handleAmountChange}
                 placeholder="0.00"
+                disabled={isProcessing}
               />
             </div>
           </div>
 
-          {/* Date Selection */}
-          <div className="space-y-2">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <Label>{t('propFirm.payout.date')}</Label>
-              <p className="text-sm text-muted-foreground">
-                {format(date, 'PPP', { locale: localeMap[params.locale as string] })}
-              </p>
-            </div>
-            <div className="flex justify-center rounded-md border overflow-hidden">
-              <Calendar
-                mode="single"
-                numberOfMonths={1}
-                selected={date}
-                onSelect={(newDate) => {
-                  if (newDate) {
-                    // Set the time to noon to prevent timezone issues
-                    const adjustedDate = new Date(newDate);
-                    adjustedDate.setHours(12, 0, 0, 0);
-                    setDate(adjustedDate);
-                  }
+          {/* Date Selection with Inline Calendar */}
+          <div className="space-y-3">
+            <Label>{t('propFirm.payout.date')}</Label>
+            
+            {/* Quick Date Selection */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const today = new Date()
+                  today.setHours(12, 0, 0, 0)
+                  setDate(today)
+                  setDateInputValue(format(today, 'yyyy-MM-dd'))
                 }}
-                initialFocus
-                locale={localeMap[params.locale as string]}
-                showOutsideDays
-                fixedWeeks
-                className="rounded-md w-full"
-              />
+                className="text-xs"
+                disabled={isProcessing}
+              >
+                {t('propFirm.payout.today')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const yesterday = new Date()
+                  yesterday.setDate(yesterday.getDate() - 1)
+                  yesterday.setHours(12, 0, 0, 0)
+                  setDate(yesterday)
+                  setDateInputValue(format(yesterday, 'yyyy-MM-dd'))
+                }}
+                className="text-xs"
+                disabled={isProcessing}
+              >
+                {t('propFirm.payout.yesterday')}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const lastWeek = new Date()
+                  lastWeek.setDate(lastWeek.getDate() - 7)
+                  lastWeek.setHours(12, 0, 0, 0)
+                  setDate(lastWeek)
+                  setDateInputValue(format(lastWeek, 'yyyy-MM-dd'))
+                }}
+                className="text-xs"
+                disabled={isProcessing}
+              >
+                {t('propFirm.payout.lastWeek')}
+              </Button>
+            </div>
+
+            {/* Selected Date Display */}
+            <div className="p-3 bg-muted/30 rounded-md border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">{t('propFirm.payout.selectedDate')}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(date, 'PPP', { locale: localeMap[params.locale as string] })}
+                  </p>
+                </div>
+                <CalendarIcon className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </div>
+
+            {/* Inline Calendar with Custom Header */}
+            <div className="border rounded-md bg-background max-h-[400px] flex flex-col">
+              {/* Custom Month/Year Header */}
+              <div className="p-3 border-b bg-muted/20 flex-shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newDate = new Date(date)
+                        newDate.setMonth(newDate.getMonth() - 1)
+                        setDate(newDate)
+                      }}
+                      className="h-7 w-7 p-0 hover:bg-muted"
+                      disabled={isProcessing}
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <div className="text-center">
+                      <h3 className="text-base font-semibold">
+                        {format(date, 'MMMM', { locale: localeMap[params.locale as string] })}
+                      </h3>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newDate = new Date(date)
+                        newDate.setMonth(newDate.getMonth() + 1)
+                        setDate(newDate)
+                      }}
+                      className="h-7 w-7 p-0 hover:bg-muted"
+                      disabled={isProcessing}
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  
+                  {/* Year Navigation */}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newDate = new Date(date)
+                        const currentDay = newDate.getDate()
+                        const currentMonth = newDate.getMonth()
+                        newDate.setFullYear(newDate.getFullYear() - 1)
+                        // Ensure the date is valid (e.g., Feb 29 in leap year)
+                        if (newDate.getDate() !== currentDay) {
+                          newDate.setDate(0) // Go to last day of previous month
+                        }
+                        setDate(newDate)
+                      }}
+                      className="h-7 w-7 p-0 hover:bg-muted"
+                      disabled={isProcessing}
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    <span className="text-base font-semibold min-w-[3rem] text-center">
+                      {date.getFullYear()}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const newDate = new Date(date)
+                        const currentDay = newDate.getDate()
+                        const currentMonth = newDate.getMonth()
+                        newDate.setFullYear(newDate.getFullYear() + 1)
+                        // Ensure the date is valid (e.g., Feb 29 in leap year)
+                        if (newDate.getDate() !== currentDay) {
+                          newDate.setDate(0) // Go to last day of previous month
+                        }
+                        setDate(newDate)
+                      }}
+                      className="h-7 w-7 p-0 hover:bg-muted"
+                      disabled={isProcessing}
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="p-2 flex-1 overflow-y-auto">
+                <Calendar
+                  mode="single"
+                  selected={date}
+                  onSelect={handleCalendarDateSelect}
+                  month={date}
+                  onMonthChange={setDate}
+                  locale={localeMap[params.locale as string]}
+                  showOutsideDays={false}
+                  fixedWeeks={false}
+                  className="w-full"
+                  classNames={{
+                    months: "flex flex-col space-y-2",
+                    month: "space-y-2",
+                    caption: "hidden", // Hide default caption since we have custom header
+                    nav: "hidden", // Hide default nav since we have custom navigation
+                    table: "w-full border-collapse space-y-1",
+                    head_row: "flex",
+                    head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.75rem]",
+                    row: "flex w-full mt-1",
+                    cell: "h-8 w-8 text-center text-xs p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                    day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md transition-colors text-xs",
+                    day_range_end: "day-range-end",
+                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground rounded-md",
+                    day_today: "bg-accent text-accent-foreground font-semibold",
+                    day_outside: "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
+                    day_disabled: "text-muted-foreground opacity-50",
+                    day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                    day_hidden: "invisible",
+                  }}
+                />
+              </div>
             </div>
           </div>
 
           {/* Status Selection */}
           <div className="space-y-2">
             <Label htmlFor="status">{t('propFirm.payout.status')}</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {statusOptions.map((option) => (
                 <Button
                   key={option.value}
                   type="button"
                   variant={status === option.value ? "default" : "outline"}
-                  className="justify-start text-xs sm:text-sm"
+                  className="justify-start text-sm"
                   onClick={() => setStatus(option.value)}
+                  disabled={isProcessing}
                 >
                   {option.icon}
-                  <span className="ml-1 sm:ml-2 truncate">{option.label}</span>
+                  <span className="ml-2 truncate">{option.label}</span>
                 </Button>
               ))}
             </div>
           </div>
         </div>
 
-        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+        <SheetFooter className="flex-shrink-0 flex-col-reverse sm:flex-row gap-2 pt-4 border-t mt-auto">
           {existingPayout && onDelete && (
-            <Button
-              variant="destructive"
-              onClick={onDelete}
-              className="w-full sm:w-auto"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              {t('propFirm.payout.delete')}
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  disabled={isProcessing}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t('common.deleting')}
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      {t('propFirm.payout.delete')}
+                    </>
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('propFirm.payout.delete')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('propFirm.payout.deleteConfirm')} ${existingPayout.amount.toFixed(2)} on {format(existingPayout.date, 'PP', { locale: dateLocale })}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={onDelete}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    disabled={isProcessing}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        {t('common.deleting')}
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        {t('propFirm.payout.delete')}
+                      </>
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
           <Button
             onClick={() => onSubmit({ date, amount, status })}
-            disabled={amount <= 0}
+            disabled={amount <= 0 || isProcessing}
+            size="sm"
             className="w-full sm:w-auto"
           >
-            {existingPayout ? (
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {t('common.saving')}
+              </>
+            ) : existingPayout ? (
               <>
                 <Save className="w-4 h-4 mr-2" />
                 {t('propFirm.payout.update')}
@@ -226,9 +470,9 @@ function PayoutDialog({
               </>
             )}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   )
 }
 
@@ -237,7 +481,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const user = useUserStore(state => state.user)
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
-  const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout } = useData()
+  const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout, refreshTrades } = useData()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
@@ -253,11 +497,28 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [canDeleteAccount, setCanDeleteAccount] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [pendingChanges, setPendingChanges] = useState<Partial<Account> | null>(null)
+  const [isSavingPayout, setIsSavingPayout] = useState(false)
+  const [isDeletingPayout, setIsDeletingPayout] = useState(false)
+  const shouldUpdateSelectedAccount = useRef(false)
 
   // Enable delete button when an account is selected
   useEffect(() => {
     setCanDeleteAccount(!!selectedAccountForTable)
   }, [selectedAccountForTable])
+
+  // Update selected account when accounts data is refreshed (e.g., after adding a payout)
+  useEffect(() => {
+    if (shouldUpdateSelectedAccount.current && selectedAccountForTable) {
+      const updatedAccount = accounts.find(acc => acc.number === selectedAccountForTable.number)
+      if (updatedAccount) {
+        setSelectedAccountForTable({
+          ...selectedAccountForTable,
+          payouts: updatedAccount.payouts || []
+        })
+      }
+      shouldUpdateSelectedAccount.current = false
+    }
+  }, [accounts, selectedAccountForTable])
 
   const { filteredAccounts, unconfiguredAccounts } = useMemo(() => {
     const uniqueAccounts = new Set(trades.map(trade => trade.accountNumber))
@@ -440,9 +701,17 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     if (!selectedAccountForTable || !user) return
 
     try {
+      setIsSavingPayout(true)
+      
       if (selectedPayout) {
         // Update existing payout
-        //TODO: Update payout
+        await savePayout({
+          ...payout,
+          id: selectedPayout.id, // Use existing payout ID
+          accountNumber: selectedAccountForTable.number,
+          createdAt: selectedPayout.date, // Keep original creation date
+          accountId: selectedAccountForTable.id
+        })
       } else {
         // Add new payout
         await savePayout({
@@ -453,14 +722,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
           accountId: selectedAccountForTable.id
         })
       }
-      // Update the selected account with new data
-      const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.number)
-      if (updatedDbAccount) {
-        setSelectedAccountForTable({
-          ...selectedAccountForTable,
-          payouts: updatedDbAccount.payouts || []
-        })
-      }
+      
+      // Force refresh of accounts data to get the latest payout information
+      // This ensures the account table shows the new payout immediately
+      shouldUpdateSelectedAccount.current = true
+      await refreshTrades()
 
       setPayoutDialogOpen(false)
       setSelectedPayout(undefined)
@@ -477,6 +743,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         description: t('propFirm.payout.errorDescription'),
         variant: "destructive"
       })
+    } finally {
+      setIsSavingPayout(false)
     }
   }
 
@@ -484,7 +752,14 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     if (!selectedAccountForTable || !user || !selectedPayout) return
 
     try {
+      setIsDeletingPayout(true)
+      
       await deletePayout(selectedPayout.id)
+
+      // Force refresh of accounts data to get the latest payout information
+      // This ensures the account table shows the updated data immediately
+      shouldUpdateSelectedAccount.current = true
+      await refreshTrades()
 
       setPayoutDialogOpen(false)
       setSelectedPayout(undefined)
@@ -501,6 +776,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         description: t('propFirm.payout.deleteErrorDescription'),
         variant: "destructive"
       })
+    } finally {
+      setIsDeletingPayout(false)
     }
   }
 
@@ -509,7 +786,10 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
 
     try {
       setIsDeleting(true)
-      await deleteAccount(selectedAccountForTable)
+      // Delete both account configuration and all associated trades
+      await removeAccountsFromTradesAction([selectedAccountForTable.number])
+      // Refresh trades to update the UI
+      await refreshTrades()
       setSelectedAccountForTable(null)
 
       toast({
@@ -904,16 +1184,13 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                       resetDate={selectedAccountForTable.resetDate ? new Date(selectedAccountForTable.resetDate) : undefined}
                       onDeletePayout={async (payoutId) => {
                         try {
-                          deletePayout(payoutId)
+                          await deletePayout(payoutId)
 
-                          // Update the selected account with new data
-                          const updatedDbAccount = accounts.find(acc => acc.number === selectedAccountForTable.number)
-                          if (updatedDbAccount) {
-                            setSelectedAccountForTable({
-                              ...selectedAccountForTable,
-                              payouts: updatedDbAccount.payouts || []
-                            })
-                          }
+                          // Update the selected account by removing the deleted payout from local state
+                          setSelectedAccountForTable({
+                            ...selectedAccountForTable,
+                            payouts: (selectedAccountForTable.payouts || []).filter(p => p.id !== payoutId)
+                          })
 
                           toast({
                             title: t('propFirm.payout.deleteSuccess'),
@@ -967,6 +1244,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         existingPayout={selectedPayout}
         onSubmit={handleAddPayout}
         onDelete={selectedPayout ? handleDeletePayout : undefined}
+        isLoading={isSavingPayout}
+        isDeleting={isDeletingPayout}
       />
     </Card>
   )

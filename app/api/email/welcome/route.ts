@@ -42,7 +42,7 @@ export async function POST(req: Request) {
         isActive: true
       }
     })
-    
+
     const unsubscribeUrl = `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(record.email)}`
 
     // Check user language preference from database
@@ -50,14 +50,17 @@ export async function POST(req: Request) {
       where: { email: record.email }
     })
     const userLanguage = user?.language || 'en'
-    const youtubeId = await getLatestVideoFromPlaylist()
+    let youtubeId = 'ZBrIZpCh_7Q'
+    if (userLanguage === 'fr') {
+      youtubeId = await getLatestVideoFromPlaylist() || '_-VtBaOGctY'
+    }
 
     // Use react prop instead of rendering to HTML
     const { data, error } = await resend.emails.send({
       from: 'Deltalytix <welcome@eu.auth.deltalytix.app>',
       to: record.email,
       subject: userLanguage === 'fr' ? 'Bienvenue sur Deltalytix' : 'Welcome to Deltalytix',
-      react: WelcomeEmail({ firstName, email: record.email, language: userLanguage, youtubeId: youtubeId || 'ugvyK1c3yPc' }),
+      react: WelcomeEmail({ firstName, email: record.email, language: userLanguage, youtubeId: youtubeId || 'ZBrIZpCh_7Q' }),
       replyTo: 'hugo.demenez@deltalytix.app',
       headers: {
         'List-Unsubscribe': `<${unsubscribeUrl}>`,

@@ -139,6 +139,12 @@ export default {
             addDescription: 'Add a new payout for the account',
             editDescription: 'Edit payout for the account',
             date: 'Payout Date',
+            pickDate: 'Pick a date',
+            selectDate: 'Select Date',
+            selectedDate: 'Selected',
+            today: 'Today',
+            yesterday: 'Yesterday',
+            lastWeek: 'Last Week',
             amount: 'Amount',
             status: 'Status',
             statuses: {

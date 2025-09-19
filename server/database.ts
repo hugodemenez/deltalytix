@@ -7,6 +7,7 @@ import { startOfDay } from 'date-fns'
 import { getSubscriptionDetails } from './subscription'
 import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
+import { defaultLayouts } from '@/context/data-provider'
 
 type TradeError = 
   | 'DUPLICATE_TRADES'
@@ -153,7 +154,7 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
 }
 
 
-export async function getTradesAction(userId: string | null = null): Promise<Trade[]> {
+export async function getTradesAction(userId: string | null = null, forceRefresh: boolean = false): Promise<Trade[]> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user && !userId) {
@@ -163,6 +164,32 @@ export async function getTradesAction(userId: string | null = null): Promise<Tra
     const subscriptionDetails = await getSubscriptionDetails()
     const isSubscribed = subscriptionDetails?.isActive || false
 
+    // If forceRefresh is true, bypass cache and fetch directly
+    if (forceRefresh) {
+      console.log(`[getTrades] Force refresh - bypassing cache for user ${userId || user?.id}`)
+      revalidateTag(`trades-${userId || user?.id}`)
+      
+      const query: any = {
+        where: { 
+          userId: userId || user?.id,
+        },
+        orderBy: { entryDate: 'desc' }
+      }
+      if (!isSubscribed) {
+        const oneWeekAgo = startOfDay(new Date())
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+        query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+      }
+      
+      const trades = await prisma.trade.findMany(query)
+      console.log(`[getTrades] Force refresh - Found ${trades.length} trades`)
+      
+      return trades.map(trade => ({
+        ...trade,
+        entryDate: new Date(trade.entryDate).toISOString(),
+        exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
+      }))
+    }
 
     // Get cached trades
     // Per page
@@ -326,6 +353,35 @@ export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promi
     
   } catch (error) {
     console.error('[saveDashboardLayout] Database error:', error)
+  }
+}
+
+export async function createDefaultDashboardLayout(userId: string): Promise<void> {
+  try {
+    // If a layout already exists for this user, do nothing (idempotent)
+    const existing = await prisma.dashboardLayout.findUnique({ where: { userId } })
+    if (existing) {
+      return
+    }
+
+    const desktopLayout = Array.isArray(defaultLayouts.desktop) ? defaultLayouts.desktop : []
+    const mobileLayout = Array.isArray(defaultLayouts.mobile) ? defaultLayouts.mobile : []
+
+    // Use upsert to guard against race conditions creating the same row concurrently
+    await prisma.dashboardLayout.upsert({
+      where: { userId },
+      update: {},
+      create: {
+        userId,
+        desktop: JSON.stringify(desktopLayout),
+        mobile: JSON.stringify(mobileLayout)
+      }
+    })
+
+    console.log('[createDefaultDashboardLayout] SUCCESS: Default layout ensured for user:', userId)
+  } catch (error) {
+    console.error('[createDefaultDashboardLayout] ERROR: Failed to create default layout:', error)
+    throw error
   }
 }
 

@@ -80,13 +80,14 @@ export default function ImportButton() {
 
   const { toast } = useToast()
   const user = useUserStore(state => state.user)
+  const supabaseUser = useUserStore(state => state.supabaseUser)
   const trades = useTradesStore(state => state.trades)
   const { refreshTrades, updateTrades } = useData()
   const t = useI18n()
 
 
   const handleSave = async () => {
-    if (!user) {
+    if (!user || !supabaseUser) {
       toast({
         title: t('import.error.auth'),
         description: t('import.error.authDescription'),
@@ -108,8 +109,8 @@ export default function ImportButton() {
             return {
               ...cleanTrade,
               accountNumber: cleanTrade.accountNumber || accountNumber || newAccountNumber,
-              userId: user.id,
-              id: generateTradeHash({ ...cleanTrade, userId: user.id }),
+              userId: supabaseUser.id,
+              id: generateTradeHash({ ...cleanTrade, userId: supabaseUser.id }),
               // Ensure required fields have default values
               instrument: cleanTrade.instrument || '',
               entryPrice: cleanTrade.entryPrice || '',
@@ -363,6 +364,7 @@ export default function ImportButton() {
           processedTrades={processedTrades}
           setProcessedTrades={setProcessedTrades}
           extractedText={text}
+          userId={user?.id || ''}
         />
       )
     }

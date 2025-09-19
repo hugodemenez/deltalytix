@@ -70,6 +70,9 @@ import { TradeImageEditor } from './trade-image-editor'
 import { ColumnConfigDialog } from '@/components/ui/column-config-dialog'
 import { calculateTicksAndPointsForTrades, calculateTicksAndPointsForGroupedTrade } from '@/lib/tick-calculations'
 import { Input } from '@/components/ui/input'
+import { useToast } from '@/hooks/use-toast'
+import { deleteTradesByIdsAction } from '@/server/accounts'
+import { Trash } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -243,10 +246,12 @@ export function TradeTableReview() {
   const {
     formattedTrades: contextTrades,
     updateTrades,
+    refreshTrades,
   } = useData()
   const tags = useUserStore(state => state.tags)
   const timezone = useUserStore(state => state.timezone)
   const tickDetails = useTickDetailsStore(state => state.tickDetails)
+  const { toast } = useToast()
 
   // Debug: Log tick details
   console.log('Available tick details:', tickDetails)
@@ -270,6 +275,7 @@ export function TradeTableReview() {
   const [groupingGranularity, setGroupingGranularity] = useState<number>(tableConfig?.groupingGranularity || 0)
   const [selectedTrades, setSelectedTrades] = useState<string[]>([])
   const [showPoints, setShowPoints] = useState(false)
+  const [pageIndex, setPageIndex] = useState(0)
 
   // Sync local state with store
   React.useEffect(() => {
@@ -303,12 +309,20 @@ export function TradeTableReview() {
 
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize)
+    setPageIndex(0) // Reset to first page when page size changes
     updatePageSize('trade-table', newPageSize)
   }
 
   const handleGroupingGranularityChange = (newGranularity: number) => {
     setGroupingGranularity(newGranularity)
     updateGroupingGranularity('trade-table', newGranularity)
+  }
+
+  const handlePaginationChange = (updaterOrValue: any) => {
+    const newPagination = typeof updaterOrValue === 'function' 
+      ? updaterOrValue({ pageIndex, pageSize }) 
+      : updaterOrValue
+    setPageIndex(newPagination.pageIndex)
   }
 
   const trades = contextTrades
@@ -336,6 +350,32 @@ export function TradeTableReview() {
     // Reset table selection
     table.resetRowSelection()
     setSelectedTrades([])
+  }
+
+  const handleDeleteTrades = async () => {
+    if (selectedTrades.length === 0) return
+
+    // Filter out empty IDs (group rows have empty IDs)
+    const validTradeIds = selectedTrades.filter(id => id && id !== '')
+    if (validTradeIds.length === 0) return
+
+    try {
+      await deleteTradesByIdsAction(validTradeIds)
+      setSelectedTrades([])
+      table.resetRowSelection()
+      refreshTrades()
+      toast({
+        title: t('trade-table.deleteSuccess'),
+        description: t('trade-table.deleteSuccessDescription', { count: validTradeIds.length }),
+      })
+    } catch (error) {
+      console.error('Error deleting trades:', error)
+      toast({
+        title: t('trade-table.deleteError'),
+        description: t('trade-table.deleteErrorDescription'),
+        variant: "destructive"
+      })
+    }
   }
 
   // Group trades by instrument, entry date, and close date with granularity
@@ -423,10 +463,12 @@ export function TradeTableReview() {
           checked={table.getIsAllPageRowsSelected()}
           onCheckedChange={(value) => {
             table.toggleAllPageRowsSelected(!!value)
-            // Get all trade IDs including subrows
+            // Get all trade IDs including subrows (only actual trades, not group rows)
             const allTradeIds = table.getRowModel().rows.flatMap(row => {
               const subTradeIds = row.original.trades.map(t => t.id)
-              return [row.original.id, ...subTradeIds]
+              // Only include group row ID if it's not empty (i.e., it's an actual trade, not a group)
+              const groupId = row.original.id && row.original.id !== '' ? [row.original.id] : []
+              return [...groupId, ...subTradeIds]
             })
             setSelectedTrades(value ? allTradeIds : [])
           }}
@@ -439,11 +481,10 @@ export function TradeTableReview() {
           checked={row.getIsSelected()}
           onCheckedChange={(value) => {
             row.toggleSelected(!!value)
-            // Get all trade IDs for this row including subrows
-            const tradeIds = [
-              row.original.id,
-              ...row.original.trades.map(t => t.id)
-            ]
+            // Get all trade IDs for this row including subrows (only actual trades, not group rows)
+            const subTradeIds = row.original.trades.map(t => t.id)
+            const groupId = row.original.id && row.original.id !== '' ? [row.original.id] : []
+            const tradeIds = [...groupId, ...subTradeIds]
             setSelectedTrades(prev =>
               value
                 ? [...prev, ...tradeIds]
@@ -853,12 +894,13 @@ export function TradeTableReview() {
       columnVisibility,
       expanded,
       pagination: {
-        pageIndex: 0,
+        pageIndex,
         pageSize,
       },
     },
     paginateExpandedRows: false,
     onExpandedChange: setExpanded,
+    onPaginationChange: handlePaginationChange,
     getSubRows: (row) => row.trades,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
@@ -897,6 +939,16 @@ export function TradeTableReview() {
             </TooltipProvider>
           </div>
           <div className="flex items-center gap-2">
+            {selectedTrades.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteTrades}
+              >
+                <Trash className="mr-2 h-4 w-4" />
+                {t('trade-table.deleteSelected')}
+              </Button>
+            )}
             {selectedTrades.length >= 2 && (
               <Button
                 variant="outline"
@@ -1056,10 +1108,12 @@ export function TradeTableReview() {
           </Button>
           <Button
             variant="outline"
-            className="w-[180px] h-10"
+            size="sm"
+            className="w-[180px]"
             onClick={() => {
               handlePageSizeChange(10)
               table.resetPageSize()
+              table.setPageIndex(0)
             }}
           >
             {t('trade-table.resetPageSize')}
