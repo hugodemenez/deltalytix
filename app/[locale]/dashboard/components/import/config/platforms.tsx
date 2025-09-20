@@ -685,7 +685,7 @@ export const platforms: PlatformConfig[] = [
     name: 'import.type.tradovateSync.name',
     description: 'import.type.tradovateSync.description',
     category: 'Direct Account Sync',
-    // isComingSoon: true,
+    isComingSoon: true,
     videoUrl: process.env.NEXT_PUBLIC_TRADOVATE_SYNC_TUTORIAL_VIDEO || '',
     details: 'import.type.tradovateSync.details',
     logo: {
