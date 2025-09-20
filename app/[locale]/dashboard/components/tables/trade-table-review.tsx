@@ -899,6 +899,7 @@ export function TradeTableReview() {
       },
     },
     paginateExpandedRows: false,
+    autoResetPageIndex: false, // Prevents pageIndex from resetting on data change
     onExpandedChange: setExpanded,
     onPaginationChange: handlePaginationChange,
     getSubRows: (row) => row.trades,
