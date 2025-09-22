@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { User, Subscription, Tag, DashboardLayout } from '@prisma/client'
 import { User as SupabaseUser } from '@supabase/supabase-js'
 import { Group, Account } from '@/context/data-provider'
@@ -55,7 +56,8 @@ type UserStore = {
   resetUser: () => void
 }
 
-export const useUserStore = create<UserStore>()((
+export const useUserStore = create<UserStore>()(
+  persist(
     (set, get) => ({
       user: null,
       supabaseUser: null,
@@ -176,6 +178,16 @@ export const useUserStore = create<UserStore>()((
         groups: [],
         dashboardLayout: null
       }),
-    })
+    }),
+    {
+      name: 'deltalytix-user-store',
+      storage: createJSONStorage(() => localStorage),
+      // Only persist timezone and other non-sensitive settings
+      partialize: (state) => ({ 
+        timezone: state.timezone,
+        isMobile: state.isMobile,
+        isSharedView: state.isSharedView
+      }),
+    }
   )
 ) 
