@@ -104,40 +104,28 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades,
                 }
             });
 
-            // Process dates with timezone consideration
+            // Process dates - input dates already include timezone info
             try {
                 if (item.entryDate) {
-                    const localDate = new Date(item.entryDate);
-                    if (isNaN(localDate.getTime())) {
+                    const date = new Date(item.entryDate);
+                    if (isNaN(date.getTime())) {
                         isValidTrade = false;
                         return;
                     }
                     
-                    // Get timezone offset in minutes
-                    const timezoneOffsetInMinutes = localDate.getTimezoneOffset();
-                    
-                    // Convert to UTC by adjusting for the timezone offset
-                    const utcDate = new Date(localDate.getTime() - (timezoneOffsetInMinutes * 60000));
-                    
-                    // Format with explicit timezone offset
-                    item.entryDate = utcDate.toISOString().replace('Z', '+00:00');
+                    // The date is already in UTC when parsed from a string with timezone info
+                    item.entryDate = date.toISOString().replace('Z', '+00:00');
                 }
 
                 if (item.closeDate) {
-                    const localDate = new Date(item.closeDate);
-                    if (isNaN(localDate.getTime())) {
+                    const date = new Date(item.closeDate);
+                    if (isNaN(date.getTime())) {
                         isValidTrade = false;
                         return;
                     }
                     
-                    // Get timezone offset in minutes
-                    const timezoneOffsetInMinutes = localDate.getTimezoneOffset();
-                    
-                    // Convert to UTC by adjusting for the timezone offset
-                    const utcDate = new Date(localDate.getTime() - (timezoneOffsetInMinutes * 60000));
-                    
-                    // Format with explicit timezone offset
-                    item.closeDate = utcDate.toISOString().replace('Z', '+00:00');
+                    // The date is already in UTC when parsed from a string with timezone info
+                    item.closeDate = date.toISOString().replace('Z', '+00:00');
                 }
             } catch (e) {
                 isValidTrade = false;
