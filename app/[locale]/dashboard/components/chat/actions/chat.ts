@@ -1,12 +1,31 @@
 'use server'
-import { Message } from "@ai-sdk/react"
+import { UIMessage } from "ai"
 import { prisma } from "@/lib/prisma"
 import { addDays, format } from "date-fns"
 import { Mood } from "@prisma/client"
 import { revalidateTag } from "next/cache"
+import { getUserId } from "@/server/auth"
 
-export async function saveChat(userId: string, messages: Message[]): Promise<Mood | null> {
-  console.log('Saving chat')
+export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
+  console.log('Saving chat', messages)
+  const userId = await getUserId()
+  
+  // Check if user exists before proceeding
+  if (!userId) {
+    console.error('No user ID found')
+    return null
+  }
+
+  // Verify user exists in database
+  const user = await prisma.user.findUnique({
+    where: { id: userId }
+  })
+  
+  if (!user) {
+    console.error('User not found in database:', userId)
+    return null
+  }
+
   const today = new Date()
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12))
 
@@ -15,8 +34,8 @@ export async function saveChat(userId: string, messages: Message[]): Promise<Moo
     if (msg.parts) {
       // If message has parts, only keep text parts
       const textParts = msg.parts
-        .filter(part => part.type === 'text')
-        .map(part => part.text)
+        .filter((part: any) => part.type === 'text')
+        .map((part: any) => part.text)
         .join('')
       return {
         ...msg,
@@ -66,8 +85,26 @@ export async function saveChat(userId: string, messages: Message[]): Promise<Moo
   }
 }
 
-export async function loadChat(userId: string): Promise<Message[]> {
+export async function loadChat(): Promise<UIMessage[]> {
   console.log('Loading chat')
+  const userId = await getUserId()
+  
+  // Check if user exists before proceeding
+  if (!userId) {
+    console.error('No user ID found')
+    return []
+  }
+
+  // Verify user exists in database
+  const user = await prisma.user.findUnique({
+    where: { id: userId }
+  })
+  
+  if (!user) {
+    console.error('User not found in database:', userId)
+    return []
+  }
+
   const today = new Date()
   const todayUTC = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), 12))
 

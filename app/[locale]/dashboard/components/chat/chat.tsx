@@ -6,12 +6,15 @@ import { Button } from "@/components/ui/button"
 import { RotateCcw, ChevronDown, MessageSquare, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
-import { Message, useChat } from "@ai-sdk/react"
+import type { UIMessage } from "@ai-sdk/react"
+import { useChat } from "@ai-sdk/react"
+import { DefaultChatTransport } from "ai"
 import { WidgetSize } from "../../types/dashboard"
 import { BotMessage } from "./bot-message"
 import { UserMessage } from "./user-message"
 import { ChatInput } from "./input"
 import { ChatHeader } from "./header"
+import { EquityChartMessage } from "./equity-chart-message"
 import { useCurrentLocale } from "@/locales/client"
 import { useI18n } from "@/locales/client"
 import { loadChat, saveChat } from "./actions/chat"
@@ -64,7 +67,7 @@ function throttle<T extends (...args: any[]) => any>(func: T, delay: number): (.
 }
 
 // Message virtualization hook
-function useMessageVirtualization(messages: Message[]) {
+function useMessageVirtualization(messages: UIMessage[]) {
     const [visibleRange, setVisibleRange] = useState({ start: 0, end: MESSAGE_BATCH_SIZE })
     const [shouldShowAll, setShouldShowAll] = useState(false)
 
@@ -144,7 +147,8 @@ const FirstMessageLoading = () => {
     )
 }
 
-const ToolCallMessage = ({ toolName, args, state }: { toolName: string; args: any; state: string }) => {
+const ToolCallMessage = ({ toolName, args, state, output }: { toolName: string; args: any; state: string; output?: any }) => {
+    console.log(`[ToolCallMessage] Rendering:`, { toolName, args, state, output })
     const isLoading = state === "call" || state === "partial-call"
     return (
         <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
@@ -178,6 +182,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const locale = useCurrentLocale();
     const t = useI18n()
     const [isStarted, setIsStarted] = useState(false)
+    const [hideFirstMessage, setHideFirstMessage] = useState(false)
     const { messages: storedMessages, setMessages: setStoredMessages } = useChatStore()
     const [isLoadingMessages, setIsLoadingMessages] = useState(true)
     const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -185,6 +190,27 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const [isNearBottom, setIsNearBottom] = useState(true)
     const moods = useMoodStore(state => state.moods)
     const setMoods = useMoodStore(state => state.setMoods)
+
+    // Helper to extract plain text from a UI message
+    const getMessageText = useCallback((message: UIMessage) => {
+        const parts: any[] = (message as any).parts || []
+        console.log(`[Chat] getMessageText called for message:`, message.id, parts)
+
+        // Check if this message contains tool results that should be rendered as components
+        const toolParts = parts.filter((p: any) => p?.type?.startsWith('tool-'))
+        if (toolParts.length > 0) {
+            console.log(`[Chat] Found tool parts in getMessageText:`, toolParts)
+            // Don't extract text for tool messages - they should be handled by the parts renderer
+            return ""
+        }
+
+        const textParts = parts
+            .filter((p: any) => p?.type === 'text' && typeof p?.text === 'string')
+            .map((p: any) => p.text)
+        if (textParts.length > 0) return textParts.join("\n")
+        // Fallback for potential legacy content
+        return ((message as any).content as string) || ""
+    }, [])
 
     // Load stored messages when component mounts
     // Load from user mood store if no messages are stored
@@ -210,7 +236,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 createdAt: msg.createdAt,
                                 toolInvocations: msg.toolInvocations
                             }))
-                            setStoredMessages(validMessages as Message[])
+                            setStoredMessages(validMessages as UIMessage[])
                             setIsStarted(true)
                         } catch (e) {
                             console.error('Failed to parse conversation:', e)
@@ -225,19 +251,27 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
         loadStoredMessages()
     }, [user?.id, moods])
 
+    const [input, setInput] = useState("")
+    const [files, setFiles] = useState<{ type: 'file'; mediaType: string; url: string }[]>([])
 
-    const { messages, input, handleInputChange, handleSubmit, status, stop, setMessages, addToolResult, error, reload, append } =
+    // Debug: Log files state changes
+    useEffect(() => {
+        console.log('Files state updated:', files)
+    }, [files])
+
+    const { messages, sendMessage, status, stop, setMessages, addToolResult, error } =
         useChat({
-            api: "/api/ai/chat",
-            body: {
-                username: user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
-                locale: locale,
-                timezone,
-            },
-            initialMessages: storedMessages,
-            onFinish: async (message: Message) => {
+            transport: new DefaultChatTransport({
+                api: "/api/ai/chat",
+                body: {
+                    username: user?.user_metadata?.full_name || user?.email?.split('@')[0] || "User",
+                    locale: locale,
+                    timezone,
+                },
+            }),
+            onFinish: async ({ message }) => {
                 if (!user?.id) return
-                const updatedMood = await saveChat(user.id, [...storedMessages, message])
+                const updatedMood = await saveChat([...storedMessages, message])
                 if (updatedMood) {
                     // Find current day in moods
                     const currentDay = format(new Date(), 'yyyy-MM-dd')
@@ -256,6 +290,14 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 setStoredMessages([...storedMessages, message])
             },
         })
+
+    // Initialize chat with stored messages (v5 removed initialMessages option)
+    useEffect(() => {
+        if (storedMessages.length > 0 && messages.length === 0) {
+            setMessages(storedMessages as UIMessage[])
+        }
+    }, [storedMessages, messages.length, setMessages])
+
 
 
     // Custom scroll management
@@ -328,7 +370,8 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 >
                                     <div className="flex items-center justify-between">
                                         <span>An error occurred while processing your message.</span>
-                                        <Button type="button" onClick={() => reload()} size="sm" variant="outline">
+                                        {/* v5: no reload helper; allow page refresh for now */}
+                                        <Button type="button" onClick={() => window.location.reload()} size="sm" variant="outline">
                                             <RotateCcw className="h-3 w-3 mr-1" />
                                             Retry
                                         </Button>
@@ -346,13 +389,45 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 </motion.div>
                             )}
 
-                            {visibleMessages.map((message) => {
+                            {visibleMessages.map((message, index) => {
+                                // Hide the first user message (greeting) if hideFirstMessage is true
+                                if (message.role === "user" && hideFirstMessage && index === 0) {
+                                    return null
+                                }
+                                
                                 switch (message.role) {
                                     case "user":
-                                        return <UserMessage key={message.id}>{message.content}</UserMessage>
+                                        return (
+                                            <UserMessage key={message.id}>
+                                                {message.parts ? (
+                                                    message.parts.map((part: any, index: number) => {
+                                                        if (part.type === 'text') {
+                                                            return <span key={`${message.id}-text-${index}`}>{part.text}</span>
+                                                        }
+                                                        if (part.type === 'file' && part.mediaType?.startsWith('image/')) {
+                                                            return (
+                                                                <div key={`${message.id}-image-${index}`} className="mt-2">
+                                                                    <img
+                                                                        src={part.url}
+                                                                        alt={`attachment-${index}`}
+                                                                        className="rounded-lg max-w-full h-auto max-h-96"
+                                                                    />
+                                                                </div>
+                                                            )
+                                                        }
+                                                        return null
+                                                    })
+                                                ) : (
+                                                    getMessageText(message)
+                                                )}
+                                            </UserMessage>
+                                        )
                                     case "assistant":
+                                        console.log(`[Chat] Rendering assistant message:`, message.id, message.parts)
                                         if (message.parts) {
-                                            return message.parts.map((part, index) => {
+                                            console.log(`[Chat] Message has parts, rendering individually:`, message.parts.length, 'parts')
+                                            return message.parts.map((part: any, index: number) => {
+                                                console.log(`[Chat] Rendering part ${index}:`, part.type, part.state)
                                                 switch (part.type) {
                                                     case "step-start":
                                                         if (message.parts && message.parts.length > index) {
@@ -368,87 +443,156 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                                                 {part.text}
                                                             </BotMessage>
                                                         )
-                                                    case "tool-invocation": {
-                                                        const callId = part.toolInvocation.toolCallId
-                                                        switch (part.toolInvocation.toolName) {
-                                                            case "askForConfirmation": {
-                                                                switch (part.toolInvocation.state) {
-                                                                    case "partial-call":
-                                                                        return (
-                                                                            <BotMessage key={`${callId}-partial-call`} status={status}>
-                                                                                {part.toolInvocation.args?.message}
-                                                                            </BotMessage>
-                                                                        )
-                                                                    case "call":
-                                                                        return (
-                                                                            <BotMessage key={`${callId}-call`} status={status}>
-                                                                                {part.toolInvocation.args?.message}
-                                                                                <div className="flex gap-2 mt-2">
-                                                                                    <Button
-                                                                                        variant="secondary"
-                                                                                        size="sm"
-                                                                                        onClick={() =>
-                                                                                            addToolResult({
-                                                                                                toolCallId: callId,
-                                                                                                result: "Yes, confirmed.",
-                                                                                            })
-                                                                                        }
-                                                                                    >
-                                                                                        Yes
-                                                                                    </Button>
-                                                                                    <Button
-                                                                                        variant="secondary"
-                                                                                        size="sm"
-                                                                                        onClick={() =>
-                                                                                            addToolResult({
-                                                                                                toolCallId: callId,
-                                                                                                result: "No, denied",
-                                                                                            })
-                                                                                        }
-                                                                                    >
-                                                                                        No
-                                                                                    </Button>
-                                                                                </div>
-                                                                            </BotMessage>
-                                                                        )
-                                                                    case "result":
-                                                                        return (
-                                                                            <BotMessage key={`${callId}-result`} status={status}>
-                                                                                Response: {part.toolInvocation.result}
-                                                                            </BotMessage>
-                                                                        )
-                                                                }
-                                                            }
-                                                            default:
+                                                    case "file":
+                                                        if (part.mediaType?.startsWith('image/')) {
+                                                            return (
+                                                                <BotMessage
+                                                                    key={`${message.id}-image-${index}`}
+                                                                    status={status}
+                                                                >
+                                                                    <div className="mt-2">
+                                                                        <img
+                                                                            src={part.url}
+                                                                            alt={`attachment-${index}`}
+                                                                            className="rounded-lg max-w-full h-auto max-h-96"
+                                                                        />
+                                                                    </div>
+                                                                </BotMessage>
+                                                            )
+                                                        }
+                                                        return null
+                                                    case "tool-askForConfirmation": {
+                                                        switch (part.state) {
+                                                        case "input-available":
+                                                            return (
+                                                                <BotMessage key={`${part.toolCallId}-input`} status={status}>
+                                                                    {part.input?.message}
+                                                                </BotMessage>
+                                                            )
+                                                        case "call":
+                                                            return (
+                                                                <BotMessage key={`${part.toolCallId}-call`} status={status}>
+                                                                    {part.input?.message}
+                                                                    <div className="flex gap-2 mt-2">
+                                                                        <Button
+                                                                            variant="secondary"
+                                                                            size="sm"
+                                                                            onClick={() =>
+                                                                                addToolResult({
+                                                                                    tool: 'askForConfirmation',
+                                                                                    toolCallId: part.toolCallId,
+                                                                                    output: "Yes, confirmed.",
+                                                                                })
+                                                                            }
+                                                                        >
+                                                                            Yes
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="secondary"
+                                                                            size="sm"
+                                                                            onClick={() =>
+                                                                                addToolResult({
+                                                                                    tool: 'askForConfirmation',
+                                                                                    toolCallId: part.toolCallId,
+                                                                                    output: "No, denied",
+                                                                                })
+                                                                            }
+                                                                        >
+                                                                            No
+                                                                        </Button>
+                                                                    </div>
+                                                                </BotMessage>
+                                                            )
+                                                        case "result":
+                                                        case "output-available":
+                                                            return (
+                                                                <BotMessage key={`${part.toolCallId}-result`} status={status}>
+                                                                    Response: {part.output}
+                                                                </BotMessage>
+                                                            )
+                                                        default:
+                                                            return null
+                                                        }
+                                                    }
+                                                    case "tool-generateEquityChart": {
+                                                        switch (part.state) {
+                                                        case "input-available":
+                                                        case "call":
+                                                            return (
+                                                                <div key={`${part.toolCallId}-input`} className="p-3 rounded-lg bg-muted/50">
+                                                                    {t('chat.chart.generating')}
+                                                                </div>
+                                                            )
+                                                        case "result":
+                                                        case "output-available":
+                                                            const chartData = part.output
+                                                            console.log(`[Chat] generateEquityChart result:`, JSON.stringify(chartData, null, 2))
+
+                                                            // Check if we have valid chart data
+                                                            if (chartData && typeof chartData === 'object' && 'chartData' in chartData) {
+                                                                console.log(`[Chat] Valid chart data found, rendering EquityChartMessage:`, chartData)
                                                                 return (
-                                                                    <ToolCallMessage
-                                                                        key={`${callId}-${part.toolInvocation.state}`}
-                                                                        toolName={part.toolInvocation.toolName}
-                                                                        args={part.toolInvocation.args}
-                                                                        state={part.toolInvocation.state}
-                                                                    />
+                                                                    <div key={`${part.toolCallId}-result`}>
+                                                                        <EquityChartMessage
+                                                                            chartData={chartData.chartData}
+                                                                            accountNumbers={chartData.accountNumbers}
+                                                                            showIndividual={chartData.showIndividual}
+                                                                            dateRange={chartData.dateRange}
+                                                                            timezone={chartData.timezone}
+                                                                            totalTrades={chartData.totalTrades}
+                                                                        />
+                                                                    </div>
                                                                 )
+                                                            } else {
+                                                                console.log(`[Chat] Invalid chart data structure:`, chartData)
+                                                                return (
+                                                                    <div key={`${part.toolCallId}-result`} className="p-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
+                                                                        Error: Invalid chart data received - missing required properties
+                                                                    </div>
+                                                                )
+                                                            }
+                                                        case "error":
+                                                            return (
+                                                                <div key={`${part.toolCallId}-error`} className="p-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
+                                                                    Error: {part.errorText}
+                                                                </div>
+                                                            )
+                                                        default:
+                                                            return null
                                                         }
                                                     }
                                                     default:
+                                                        // Handle other tool types generically
+                                                        if (part.type.startsWith('tool-')) {
+                                                            const toolName = part.type.replace('tool-', '')
+                                                            console.log(`[Chat] Handling generic tool:`, toolName, part.state, part.output)
+                                                            return (
+                                                                <ToolCallMessage
+                                                                    key={`${part.toolCallId}-${part.state}`}
+                                                                    toolName={toolName}
+                                                                    args={part.input}
+                                                                    state={part.state}
+                                                                    output={part.output}
+                                                                />
+                                                            )
+                                                        }
+                                                        console.log(`[Chat] Unknown part type:`, part.type)
                                                         return null
                                                 }
-                                            })
+                                            });
                                         }
+                                        console.log(`[Chat] No parts found, falling back to generic message rendering for:`, message.id)
+                                        const messageText = getMessageText(message)
+                                        console.log(`[Chat] Generic message text:`, messageText)
                                         return (
                                             <BotMessage
                                                 status={status}
                                                 key={message.id}
                                             >
-                                                {message.content}
+                                                {messageText}
                                             </BotMessage>
                                         )
                                     case "system":
-                                        return null
-                                    case "data":
-                                        if (message.content === "thinking") {
-                                            return <ThinkingMessage key={message.id} />
-                                        }
                                         return null
                                     default:
                                         return null
@@ -461,14 +605,32 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 <ResumeScrollButton onClick={scrollToBottom} show={showResumeButton} />
 
                 <ChatInput
-                    onSend={handleSubmit}
+                    onSend={() => {
+                        if (!input.trim() && files.length === 0) return
+                        
+                        const parts: any[] = []
+                        if (input.trim()) {
+                            parts.push({ type: 'text', text: input })
+                        }
+                        if (files.length > 0) {
+                            parts.push(...files)
+                        }
+                        
+                        sendMessage({ 
+                            role: 'user',
+                            parts: parts
+                        })
+                        setInput("")
+                        setFiles([])
+                    }}
                     status={status}
                     stop={stop}
                     input={input}
-                    handleInputChange={handleInputChange}
+                    handleInputChange={(e) => setInput(e.target.value)}
+                    onFilesChange={setFiles}
+                    files={files}
                 />
             </CardContent>
-
             {!isStarted && !isLoadingMessages && storedMessages.length === 0 && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="w-full max-w-md p-4 sm:p-6 space-y-4 sm:space-y-6 text-center">
@@ -483,13 +645,12 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 {t('chat.overlay.description')}
                             </p>
                         </div>
-                        <Button
+                            <Button
                             onClick={() => {
                                 setIsStarted(true)
-                                append({
-                                    role: 'system',
-                                    content: 'Say hello to the user when the chat starts remind the time of date and current trading data for week and day',
-                                })
+                                setHideFirstMessage(true)
+                                // Send a greeting message to trigger AI response
+                                sendMessage({ text: t('chat.greeting.message') })
                             }}
                             size="lg"
                             className="w-full text-sm sm:text-base animate-in fade-in zoom-in"
@@ -500,5 +661,5 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 </div>
             )}
         </Card>
-    )
+    );
 }
