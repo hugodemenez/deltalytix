@@ -83,6 +83,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu"
+import { EditableTimeCell } from './editable-time-cell'
+import { EditableInstrumentCell } from './editable-instrument-cell'
+import { BulkEditPanel } from './bulk-edit-panel'
 
 // Custom Tags Header Component
 function TagsColumnHeader() {
@@ -276,6 +279,7 @@ export function TradeTableReview() {
   const [selectedTrades, setSelectedTrades] = useState<string[]>([])
   const [showPoints, setShowPoints] = useState(false)
   const [pageIndex, setPageIndex] = useState(0)
+  const [showBulkEdit, setShowBulkEdit] = useState(false)
 
   // Sync local state with store
   React.useEffect(() => {
@@ -287,6 +291,11 @@ export function TradeTableReview() {
       setGroupingGranularity(tableConfig.groupingGranularity)
     }
   }, [tableConfig])
+
+  // Show bulk edit panel when multiple trades are selected
+  React.useEffect(() => {
+    setShowBulkEdit(selectedTrades.length > 1)
+  }, [selectedTrades])
 
   // Update store when local state changes
   const handleSortingChange: OnChangeFn<SortingState> = (updaterOrValue) => {
@@ -596,10 +605,18 @@ export function TradeTableReview() {
       ),
       size: 120,
       cell: ({ row }) => {
-        const instrument = row.original.instrument
+        const trade = row.original
+        const tradeIds = trade.trades.length > 0
+          ? trade.trades.map(t => t.id)
+          : [trade.id]
+        
         return (
-          <div className="text-right font-medium">
-            {instrument}
+          <div className="text-right">
+            <EditableInstrumentCell
+              value={trade.instrument}
+              tradeIds={tradeIds}
+              onUpdate={updateTrades}
+            />
           </div>
         )
       },
@@ -682,21 +699,43 @@ export function TradeTableReview() {
         <DataTableColumnHeader column={column} title={t('trade-table.entryTime')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
-        const dateStr = row.original.entryDate
-        return <div>{formatInTimeZone(new Date(dateStr), timezone, 'HH:mm:ss')}</div>
+        const trade = row.original
+        const tradeIds = trade.trades.length > 0
+          ? trade.trades.map(t => t.id)
+          : [trade.id]
+        
+        return (
+          <EditableTimeCell
+            value={trade.entryDate}
+            tradeIds={tradeIds}
+            fieldType="entryDate"
+            onUpdate={updateTrades}
+          />
+        )
       },
-      size: 100,
+      size: 120,
     },
     {
-      accessorKey: "closeDate",
+      accessorKey: "closeDate", 
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t('trade-table.exitTime')} tableId="trade-table" />
       ),
       cell: ({ row }) => {
-        const dateStr = row.original.closeDate
-        return <div>{formatInTimeZone(new Date(dateStr), timezone, 'HH:mm:ss')}</div>
+        const trade = row.original
+        const tradeIds = trade.trades.length > 0
+          ? trade.trades.map(t => t.id)
+          : [trade.id]
+        
+        return (
+          <EditableTimeCell
+            value={trade.closeDate}
+            tradeIds={tradeIds}
+            fieldType="closeDate"
+            onUpdate={updateTrades}
+          />
+        )
       },
-      size: 100,
+      size: 120,
     },
     {
       accessorKey: "pnl",
@@ -1004,14 +1043,14 @@ export function TradeTableReview() {
       </CardHeader>
       <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
         <div className="flex h-full flex-col overflow-hidden">
-          <Table className="w-full">
-            <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
+          <Table className="w-full border-separate border-spacing-0">
+            <TableHeader className="sticky top-0 z-10 bg-slate-50/90 backdrop-blur-sm shadow-sm border-b">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="whitespace-nowrap px-4 py-3 text-left text-sm"
+                      className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-slate-50/90 border-r border-slate-200 last:border-r-0 first:border-l"
                       style={{ width: header.getSize() }}
                     >
                       {header.isPlaceholder
@@ -1026,25 +1065,30 @@ export function TradeTableReview() {
               ))}
             </TableHeader>
 
-            <TableBody className="flex-1 overflow-auto">
+            <TableBody className="flex-1 overflow-auto bg-white">
               {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
+                table.getRowModel().rows.map((row, rowIndex) => (
                   <React.Fragment key={row.id}>
                     <TableRow
                       data-state={row.getIsSelected() && "selected"}
                       className={cn(
-                        "border-b transition-colors hover:bg-muted",
+                        "border-b border-slate-200 transition-all duration-75 hover:bg-blue-50/30 group",
+                        row.getIsSelected() && "bg-blue-50/50 hover:bg-blue-100/50",
                         row.getIsExpanded()
-                          ? "bg-muted"
+                          ? "bg-slate-50/80"
                           : row.getCanExpand()
-                            ? ""
-                            : "bg-muted/50"
+                            ? "bg-white"
+                            : "bg-slate-50/30",
+                        rowIndex % 2 === 1 && !row.getIsSelected() && "bg-slate-50/20"
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
-                          className="whitespace-nowrap px-4 py-2.5 text-sm"
+                          className={cn(
+                            "whitespace-nowrap px-3 py-2 text-sm border-r border-slate-100 last:border-r-0 first:border-l group-hover:border-slate-200",
+                            row.getIsSelected() && "border-blue-200"
+                          )}
                           style={{ width: cell.column.getSize() }}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -1121,6 +1165,14 @@ export function TradeTableReview() {
           </Button>
         </div>
       </CardFooter>
+      
+      {showBulkEdit && (
+        <BulkEditPanel
+          selectedTrades={selectedTrades}
+          onUpdate={updateTrades}
+          onClose={() => setShowBulkEdit(false)}
+        />
+      )}
     </Card>
   )
 }
