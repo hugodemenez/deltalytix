@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 export const orderSchema = z.object({
   rawSymbol: z.string().describe("Raw trading instrument symbol as found in statement (e.g., MNQM5, ESH5@CME)"),

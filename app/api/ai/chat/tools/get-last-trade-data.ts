@@ -1,7 +1,7 @@
 import { parsePositionTime } from "@/lib/utils";
 import { getTradesAction } from "@/server/database";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 
 
@@ -11,7 +11,7 @@ export const getLastTradesData = tool({
         This can be useful to understand which instrument he is currently trading or trading time,
         make sure to provide an accountNumber because trades are grouped by accountNumber
         `,
-    parameters: z.object({
+    inputSchema: z.object({
         number: z.number().describe('Number of trades to retrieve'),
         startDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z').optional(),
         endDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z').optional(),

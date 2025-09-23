@@ -1,6 +1,6 @@
-import { streamText } from "ai";
+import { streamText, stepCountIs } from "ai";
 import { NextRequest } from "next/server";
-import { z } from "zod";
+import { z } from 'zod/v3';
 import { openai } from "@ai-sdk/openai";
 
 // Global Analysis Tools
@@ -262,17 +262,23 @@ export async function POST(req: NextRequest) {
       model: openai("gpt-4o-mini"),
       system: getSystemPromptForSection(validatedData.section, validatedData.locale, validatedData.timezone),
       toolCallStreaming: true,
+
       messages: [
         {
           role: "user",
-          content: `Analyze my ${validatedData.section} trading performance and provide detailed insights in ${validatedData.locale} language.`
+
+          parts: [{
+            type: 'text',
+            text: `Analyze my ${validatedData.section} trading performance and provide detailed insights in ${validatedData.locale} language.`
+          }]
         }
       ],
-      maxSteps: 5,
-      tools: getToolsForSection(validatedData.section),
+
+      stopWhen: stepCountIs(5),
+      tools: getToolsForSection(validatedData.section)
     });
 
-    return result.toDataStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

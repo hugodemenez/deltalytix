@@ -19,6 +19,29 @@ export default {
         loading: {
             firstMessage: "Setting up your AI agent..."
         },
-        copy: "Copy"
+        copy: "Copy",
+        file: "File",
+        url: "URL",
+        writeMessage: "Write a message...",
+        aiThinking: "AI is thinking...",
+        chart: {
+            generating: "Generating equity chart...",
+            noData: "No data available for chart generation",
+            individualView: "Individual accounts view ({count} accounts)",
+            groupedView: "Grouped view (all accounts combined)",
+            tradeCount: "{count} trades"
+        },
+        equity: {
+            tooltip: {
+                date: "Date",
+                totalEquity: "Total Equity",
+                resets: "Account Resets",
+                accountReset: "Account {account} reset",
+                payouts: "Payouts"
+            }
+        },
+        greeting: {
+            message: "Hello! Please greet me and provide an overview of my current trading data for this week and today."
+        }
     },
 } as const;

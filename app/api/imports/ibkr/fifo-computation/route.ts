@@ -2,7 +2,7 @@ import { openai } from "@ai-sdk/openai"
 import { streamObject } from "ai"
 import { tradeSchema, orderSchema } from './schema'
 import { type FinancialInstrument } from '../extract-orders/schema'
-import { z } from "zod"
+import { z } from 'zod/v3';
 
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing
 
