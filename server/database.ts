@@ -223,7 +223,13 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
     }))
 }
 
-export async function updateTradesAction(tradesIds: string[], update: Partial<Trade>): Promise<number> {
+export async function updateTradesAction(tradesIds: string[], update: Partial<Trade> & {
+  entryDateOffset?: number
+  closeDateOffset?: number
+  instrumentTrim?: { fromStart: number; fromEnd: number }
+  instrumentPrefix?: string
+  instrumentSuffix?: string
+}): Promise<number> {
   try {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -232,14 +238,86 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
     return 0
   }
 
-  const result = await prisma.trade.updateMany({
-    where: { id: { in: tradesIds }, userId },
-    data: update
-  })
+  // Handle special offset operations
+  if (update.entryDateOffset !== undefined || update.closeDateOffset !== undefined) {
+    const trades = await prisma.trade.findMany({
+      where: { id: { in: tradesIds }, userId },
+      select: { id: true, entryDate: true, closeDate: true }
+    })
+
+    for (const trade of trades) {
+      const updateData: any = {}
+      
+      if (update.entryDateOffset !== undefined && update.entryDateOffset !== 0) {
+        const entryDate = new Date(trade.entryDate)
+        entryDate.setHours(entryDate.getHours() + update.entryDateOffset)
+        updateData.entryDate = entryDate
+      }
+      
+      if (update.closeDateOffset !== undefined && update.closeDateOffset !== 0) {
+        const closeDate = new Date(trade.closeDate)
+        closeDate.setHours(closeDate.getHours() + update.closeDateOffset)
+        updateData.closeDate = closeDate
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        await prisma.trade.update({
+          where: { id: trade.id },
+          data: updateData
+        })
+      }
+    }
+  }
+
+  // Handle instrument modifications
+  if (update.instrumentTrim || update.instrumentPrefix || update.instrumentSuffix) {
+    const trades = await prisma.trade.findMany({
+      where: { id: { in: tradesIds }, userId },
+      select: { id: true, instrument: true }
+    })
+
+    for (const trade of trades) {
+      let newInstrument = trade.instrument
+      
+      if (update.instrumentTrim) {
+        const { fromStart, fromEnd } = update.instrumentTrim
+        newInstrument = newInstrument.substring(fromStart, newInstrument.length - fromEnd)
+      }
+      
+      if (update.instrumentPrefix) {
+        newInstrument = update.instrumentPrefix + newInstrument
+      }
+      
+      if (update.instrumentSuffix) {
+        newInstrument = newInstrument + update.instrumentSuffix
+      }
+
+      await prisma.trade.update({
+        where: { id: trade.id },
+        data: { instrument: newInstrument }
+      })
+    }
+  }
+
+  // Handle normal updates (excluding special fields)
+  const normalUpdate = { ...update }
+  delete normalUpdate.entryDateOffset
+  delete normalUpdate.closeDateOffset
+  delete normalUpdate.instrumentTrim
+  delete normalUpdate.instrumentPrefix
+  delete normalUpdate.instrumentSuffix
+
+  let result = { count: 0 }
+  if (Object.keys(normalUpdate).length > 0) {
+    result = await prisma.trade.updateMany({
+      where: { id: { in: tradesIds }, userId },
+      data: normalUpdate
+    })
+  }
 
   revalidateTag(`trades-${userId}`)
 
-  return result.count
+  return tradesIds.length // Return the number of trades processed
   } catch (error) {
     console.error('[updateTrades] Database error:', error)
     return 0
