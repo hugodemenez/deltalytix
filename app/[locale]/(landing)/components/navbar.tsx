@@ -259,7 +259,7 @@ export default function Component() {
                                 </NavigationMenuContent>
                             </NavigationMenuItem>
                             <NavigationMenuItem>
-                                <Link href="/pricing" legacyBehavior passHref>
+                                <Link href="/pricing" passHref>
                                     <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
                                         {t('landing.navbar.pricing')}
                                     </NavigationMenuLink>

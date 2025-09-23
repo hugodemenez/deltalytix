@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { useChat, Message } from 'ai/react'
+import { useState, useEffect } from 'react'
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport } from 'ai'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,22 +18,63 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from '@/hooks/use-toast'
-import { supportChat } from '@/app/[locale]/(landing)/actions/support-chat'
 import { sendSupportEmail } from '@/app/[locale]/(landing)/actions/send-support-email'
 import { ContactForm } from '@/components/emails/contact-form'
 import { useI18n } from '@/locales/client'
+import { Streamdown } from "streamdown"
+import { ClipboardCheckIcon, type ClipboardCheckIconHandle } from "@/components/animated-icons/clipboard-check"
+import { toast } from "sonner"
+import { useRef } from "react"
+
+// FormattedMessage component for rich text rendering using Streamdown
+function FormattedMessage({ children, onCopy }: { children: string; onCopy?: () => void }) {
+  const clipboardRef = useRef<ClipboardCheckIconHandle>(null);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(children);
+    clipboardRef.current?.startAnimation();
+    toast.success("Message copied to clipboard");
+    onCopy?.();
+  };
+
+  return (
+    <div className="space-y-2">
+      <Streamdown 
+        className="prose prose-sm dark:prose-invert max-w-none"
+        parseIncompleteMarkdown={true}
+        controls={{ table: true, code: true, mermaid: true }}
+      >
+        {children}
+      </Streamdown>
+      {onCopy && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="self-start text-xs text-muted-foreground hover:text-foreground"
+          onClick={handleCopy}
+        >
+          <ClipboardCheckIcon ref={clipboardRef} size={14} className="mr-1" />
+          Copy message
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export default function SupportPage() {
   const t = useI18n()
-  const GREETING_MESSAGE: Message = {
-    id: 'greeting',
-    role: 'assistant',
-    content: t('support.greeting')
-  }
   
-  const { messages, append, setMessages, input, handleInputChange, isLoading, setInput } = useChat({
-    initialMessages: [GREETING_MESSAGE]
+  const [input, setInput] = useState('')
+  
+  const { messages, sendMessage, status } = useChat({
+    transport: new DefaultChatTransport({
+      api: '/api/ai/support',
+    }),
   })
+
+  // Track if we should show the initial greeting
+  const [showInitialGreeting, setShowInitialGreeting] = useState(true)
+  
   const [needsHumanHelp, setNeedsHumanHelp] = useState(false)
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [isContactFormOpen, setIsContactFormOpen] = useState(false)
@@ -43,6 +85,36 @@ export default function SupportPage() {
   useEffect(() => {
     if (lastMessageRef.current && window.innerWidth < 768) {
       lastMessageRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
+  // Parse AI responses for tool calls
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1]
+    if (lastMessage?.role === 'assistant') {
+      lastMessage.parts.forEach(part => {
+        if (part.type === 'tool-needsHumanHelp') {
+          switch (part.state) {
+            case 'output-available':
+              setNeedsHumanHelp(true)
+              break
+            case 'output-error':
+              console.error('Error in needsHumanHelp tool:', part.errorText)
+              break
+          }
+        }
+        
+        if (part.type === 'tool-readyForEmail') {
+          switch (part.state) {
+            case 'output-available':
+              setIsContactFormOpen(true)
+              break
+            case 'output-error':
+              console.error('Error in readyForEmail tool:', part.errorText)
+              break
+          }
+        }
+      })
     }
   }, [messages])
 
@@ -68,31 +140,20 @@ export default function SupportPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
+    if (!input.trim() || status !== 'ready') return
 
-    const userMessage: Message = { id: Date.now().toString(), role: 'user', content: input }
-    
-    setMessages(prevMessages => [...prevMessages, userMessage])
+    const currentInput = input
     setInput('')
+    
+    // Hide initial greeting when user sends first message
+    if (showInitialGreeting) {
+      setShowInitialGreeting(false)
+    }
 
     try {
-      const { response, needsHumanHelp: aiNeedsHumanHelp, readyForEmail } = await supportChat([...messages, userMessage])
-      
-      const assistantMessage: Message = { id: (Date.now() + 1).toString(), role: 'assistant', content: response }
-      setMessages(prevMessages => [...prevMessages, assistantMessage])
-      setNeedsHumanHelp(aiNeedsHumanHelp)
-
-      if (readyForEmail) {
-        setIsContactFormOpen(true)
-      }
+      await sendMessage({ text: currentInput })
     } catch (error) {
       console.error('Error in chat:', error)
-      const errorMessage: Message = { 
-        id: (Date.now() + 1).toString(), 
-        role: 'assistant', 
-        content: t('error') 
-      }
-      setMessages(prevMessages => [...prevMessages, errorMessage])
       setNeedsHumanHelp(true)
     }
   }
@@ -105,7 +166,10 @@ export default function SupportPage() {
 
     try {
       const result = await sendSupportEmail({
-        messages,
+        messages: messages.map(msg => ({
+          role: msg.role,
+          content: msg.parts.filter(part => part.type === 'text').map(part => part.text).join('')
+        })),
         contactInfo
       })
       if (result.success) {
@@ -114,14 +178,10 @@ export default function SupportPage() {
           description: t('support.emailSent'),
           duration: 5000,
         })
-        setMessages(prevMessages => [
-          ...prevMessages,
-          {
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: t('support.emailConfirmation', { name: contactInfo.name, email: contactInfo.email })
-          }
-        ])
+        // Add confirmation message using sendMessage
+        await sendMessage({ 
+          text: t('support.emailConfirmation', { name: contactInfo.name, email: contactInfo.email })
+        })
       } else {
         throw new Error(result.error)
       }
@@ -139,15 +199,34 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="md:container md:mx-auto md:p-4 md:py-8 fixed inset-0 md:static md:h-auto z-50 bg-background md:bg-transparent">
-      <Card className="w-full h-full md:h-auto md:max-w-2xl mx-auto flex flex-col">
+    <div className="fixed inset-0 z-50 bg-background">
+      <Card className="w-full h-full flex flex-col">
         <CardHeader className="p-4 sm:p-6 flex-shrink-0">
           <CardTitle className="text-xl sm:text-2xl">{t('dashboard.support')}</CardTitle>
           <CardDescription className="text-sm sm:text-base">{t('support.description')}</CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 flex-grow overflow-hidden">
-          <ScrollArea className="h-[calc(100vh-180px)] md:h-[400px] pr-4" ref={scrollAreaRef}>
+          <ScrollArea className="h-[calc(100vh-180px)] pr-4" ref={scrollAreaRef}>
             <AnimatePresence initial={false}>
+              {/* Show initial greeting message */}
+              {showInitialGreeting && messages.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex justify-start mb-4"
+                >
+                  <div className="flex items-start max-w-[80%] sm:max-w-[70%]">
+                    <Avatar className="w-6 h-6 sm:w-8 sm:h-8 mr-2">
+                      <AvatarFallback>AI</AvatarFallback>
+                    </Avatar>
+                    <div className="rounded-lg p-2 sm:p-3 text-base bg-muted">
+                      <FormattedMessage>{t('support.greeting')}</FormattedMessage>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
               {messages.map((message, index) => (
                 <motion.div
                   key={message.id}
@@ -163,13 +242,69 @@ export default function SupportPage() {
                       <AvatarFallback>{message.role === 'user' ? 'U' : 'AI'}</AvatarFallback>
                     </Avatar>
                     <div className={`rounded-lg p-2 sm:p-3 text-base ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                      {message.content}
+                      {message.parts.map((part, partIndex) => {
+                        if (part.type === 'text') {
+                          return message.role === 'assistant' ? (
+                            <FormattedMessage key={partIndex} onCopy={() => {}}>
+                              {part.text}
+                            </FormattedMessage>
+                          ) : (
+                            <span key={partIndex}>{part.text}</span>
+                          )
+                        }
+                        
+                        if (part.type === 'tool-needsHumanHelp') {
+                          switch (part.state) {
+                            case 'input-available':
+                              return (
+                                <div key={partIndex} className="flex items-center text-sm text-muted-foreground">
+                                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                                  {t('support.evaluatingSupport')}
+                                </div>
+                              )
+                            case 'output-available':
+                              return null // Handled by useEffect
+                            case 'output-error':
+                              return (
+                                <div key={partIndex} className="text-sm text-destructive">
+                                  {t('support.evaluationError')}
+                                </div>
+                              )
+                            default:
+                              return null
+                          }
+                        }
+                        
+                        if (part.type === 'tool-readyForEmail') {
+                          switch (part.state) {
+                            case 'input-available':
+                              return (
+                                <div key={partIndex} className="flex items-center text-sm text-muted-foreground">
+                                  <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                                  {t('support.preparingEmail')}
+                                </div>
+                              )
+                            case 'output-available':
+                              return null // Handled by useEffect
+                            case 'output-error':
+                              return (
+                                <div key={partIndex} className="text-sm text-destructive">
+                                  {t('support.emailPreparationError')}
+                                </div>
+                              )
+                            default:
+                              return null
+                          }
+                        }
+                        
+                        return null
+                      })}
                     </div>
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
-            {isLoading && (
+            {(status === 'submitted' || status === 'streaming') && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -200,14 +335,14 @@ export default function SupportPage() {
           <form onSubmit={handleSubmit} className="flex w-full space-x-2">
             <Input
               value={input}
-              onChange={handleInputChange}
+              onChange={(e) => setInput(e.target.value)}
               placeholder={t('chat.writeMessage')}
-              disabled={isLoading || isSendingEmail}
+              disabled={status !== 'ready' || isSendingEmail}
               aria-label={t('chat.writeMessage')}
               className="text-base"
             />
-            <Button type="submit" disabled={isLoading || isSendingEmail} size="sm" className="whitespace-nowrap text-base">
-              {isLoading ? (
+            <Button type="submit" disabled={status !== 'ready' || isSendingEmail} size="sm" className="whitespace-nowrap text-base">
+              {status === 'submitted' || status === 'streaming' ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   <span className="hidden sm:inline">{t('common.saving')}</span>

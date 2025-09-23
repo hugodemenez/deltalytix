@@ -35,7 +35,7 @@ import {
 import { orderSchema, tradeSchema } from '@/app/api/imports/ibkr/fifo-computation/schema'
 import { financialInstrumentSchema, type FinancialInstrument } from '@/app/api/imports/ibkr/extract-orders/schema'
 import { experimental_useObject as useObject } from '@ai-sdk/react'
-import { z } from 'zod'
+import { z } from 'zod/v3';
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { DataTableColumnHeader } from '../../tables/column-header'
 import { Trade as PrismaTrade } from '@prisma/client'

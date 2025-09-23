@@ -1351,7 +1351,11 @@ export default {
             'additionalInfoPlaceholder': 'Détails supplémentaires que vous souhaitez partager...',
             'submit': 'Envoyer',
             'cancel': 'Annuler'
-        }
+        },
+        'evaluatingSupport': 'Évaluation des besoins de support...',
+        'evaluationError': 'Erreur lors de l\'évaluation des besoins de support',
+        'preparingEmail': 'Préparation du support par email...',
+        'emailPreparationError': 'Erreur lors de la préparation du support par email'
     },
     'maintenance': {
         'title': 'Maintenance du Système',

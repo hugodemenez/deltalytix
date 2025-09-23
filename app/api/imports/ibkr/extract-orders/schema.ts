@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 export const financialInstrumentSchema = z.object({
   symbol: z.string().describe("The instrument symbol (e.g., MESM5, MNQM5)"),
