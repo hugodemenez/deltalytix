@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Loader2, Trash2, Plus, Edit2, RefreshCw, MoreVertical, History } from 'lucide-react'
 import { getAllRithmicData, clearRithmicData, RithmicCredentialSet, updateLastSyncTime } from '@/lib/rithmic-storage'
@@ -62,6 +62,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
     }
 
     try {
+      console.log('Starting sync for credential:', credential.id)
       setSyncingId(credential.id)
       console.error('performSyncForCredential', JSON.stringify(credential))
       const result = await performSyncForCredential(credential.id)
@@ -163,6 +164,8 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="1">1 min</SelectItem>
+                  <SelectItem value="5">5 min</SelectItem>
                   <SelectItem value="15">15 min</SelectItem>
                   <SelectItem value="30">30 min</SelectItem>
                   <SelectItem value="60">60 min</SelectItem>
@@ -204,7 +207,8 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                 <TableCell>
                   <SyncCountdown 
                     lastSyncTime={cred.lastSyncTime} 
-                    isAutoSyncing={isAutoSyncing && syncingId === id} 
+                    isAutoSyncing={isAutoSyncing && syncingId === id}
+                    credentialId={id}
                   />
                 </TableCell>
                 <TableCell>

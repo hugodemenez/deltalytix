@@ -585,6 +585,13 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       console.error('Authenticating and getting accounts', JSON.stringify(savedData))
       // Authenticate and get accounts
       const { http } = getProtocols()
+      const requestBody = {
+        ...savedData.credentials,
+        userId: user.id
+      }
+      console.log('Making fetch request to:', `${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`)
+      console.log('Request body:', requestBody)
+      
       const response = await Promise.race([
         fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
           method: 'POST',
@@ -598,6 +605,9 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
           setTimeout(() => reject(new Error('Auto-sync operation timed out')), 30000)
         )
       ]) as Response
+      
+      console.log('Response status:', response.status)
+      console.log('Response ok:', response.ok)
 
       // Handle rate limit error specifically
       if (response.status === 429) {
@@ -648,6 +658,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       }
 
       // Connect and start syncing
+      console.log('Connecting to WebSocket with:', { wsUrl, accountsToSync, startDate })
       connect(wsUrl, data.token, accountsToSync, startDate)
       updateLastSyncTime(credentialId)
 
@@ -656,6 +667,13 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         level: 'info',
         message: `Starting automatic background sync for ${savedData.name || savedData.credentials.username}`
       })
+      
+      console.log('Auto-sync completed successfully')
+      return {
+        success: true,
+        rateLimited: false,
+        message: 'Sync started successfully'
+      }
     } catch (error) {
       console.error('Auto-sync error:', error)
       handleMessage({
@@ -663,6 +681,12 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         level: 'error',
         message: `Auto-sync error for credential set ${credentialId}: ${error instanceof Error ? error.message : 'Unknown error'}`
       })
+      
+      return {
+        success: false,
+        rateLimited: false,
+        message: error instanceof Error ? error.message : 'Unknown error'
+      }
     } finally {
         setIsAutoSyncing(false)
     }
