@@ -83,6 +83,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
 
   const handleLoadMoreData = useCallback(async (credential: RithmicCredentialSet) => {
     if (syncingId === credential.id) {
+    if (syncingId === credential.id) {
       return
     }
 
@@ -128,6 +129,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
     } finally {
       setSyncingId(null)
     }
+  }, [syncingId, authenticateAndGetAccounts, connect, getWebSocketUrl, t, user?.id])
   }, [syncingId, authenticateAndGetAccounts, connect, getWebSocketUrl, t, user?.id])
 
 
@@ -217,6 +219,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                       size="sm"
                       onClick={() => handleSync(cred)}
                       disabled={isAutoSyncing}
+                      disabled={isAutoSyncing}
                     >
                       {syncingId === id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -241,6 +244,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                             size="sm"
                             className="justify-start"
                             onClick={() => handleLoadMoreData(cred)}
+                            disabled={isAutoSyncing}
                             disabled={isAutoSyncing}
                           >
                             {syncingId === id ? (
