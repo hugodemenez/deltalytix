@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Loader2, Trash2, Plus, Edit2, RefreshCw, MoreVertical, History } from 'lucide-react'
 import { getAllRithmicData, clearRithmicData, RithmicCredentialSet, updateLastSyncTime } from '@/lib/rithmic-storage'
@@ -50,37 +50,34 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null)
   const { isAutoSyncing, performAutoSyncForCredential, connect, getWebSocketUrl, authenticateAndGetAccounts } = useWebSocket()
   const [syncingId, setSyncingId] = useState<string | null>(null)
-  const [cooldownId, setCooldownId] = useState<string | null>(null)
-  const syncTimeoutsRef = useRef<Record<string, NodeJS.Timeout>>({})
   const t = useI18n()
   const user = useUserStore((state) => state.user)
   const { syncInterval, setSyncInterval } = useRithmicSyncStore()
 
   const handleSync = useCallback(async (credential: RithmicCredentialSet) => {
+    console.log('handleSync called for credential:', credential.id, credential.credentials.username)
+    
     // Prevent multiple syncs for the same credential
-    if (syncingId === credential.id || cooldownId === credential.id) {
+    if (syncingId === credential.id) {
+      console.log('Sync already in progress for credential:', credential.id)
       return
     }
 
     try {
+      console.log('Starting sync for credential:', credential.id)
       setSyncingId(credential.id)
       const result = await performAutoSyncForCredential(credential.id)
       
+      console.log('Sync result:', result)
+      
       if (result?.success) {
         updateLastSyncTime(credential.id)
+        toast.success(t('common.success'))
+      } else if (result?.rateLimited) {
+        toast.error(t('rithmic.error.rateLimit'))
+      } else {
+        toast.error(t('rithmic.error.syncError'))
       }
-      
-      // Clear any existing timeout for this credential
-      if (syncTimeoutsRef.current[credential.id]) {
-        clearTimeout(syncTimeoutsRef.current[credential.id])
-      }
-
-      // Set cooldown
-      setCooldownId(credential.id)
-      syncTimeoutsRef.current[credential.id] = setTimeout(() => {
-        setCooldownId(null)
-        delete syncTimeoutsRef.current[credential.id]
-      }, 5000)
 
     } catch (error) {
       toast.error(t('rithmic.error.syncError'))
@@ -88,10 +85,10 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
     } finally {
       setSyncingId(null)
     }
-  }, [syncingId, cooldownId, performAutoSyncForCredential, t])
+  }, [syncingId, performAutoSyncForCredential, t])
 
   const handleLoadMoreData = useCallback(async (credential: RithmicCredentialSet) => {
-    if (syncingId === credential.id || cooldownId === credential.id) {
+    if (syncingId === credential.id) {
       return
     }
 
@@ -130,30 +127,14 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
       // Update last sync time
       updateLastSyncTime(credential.id)
 
-      // Set cooldown
-      setCooldownId(credential.id)
-      syncTimeoutsRef.current[credential.id] = setTimeout(() => {
-        setCooldownId(null)
-        delete syncTimeoutsRef.current[credential.id]
-      }, 5000)
-
     } catch (error) {
       toast.error(t('rithmic.error.syncError'))
       console.error('Load more data error:', error)
     } finally {
       setSyncingId(null)
     }
-  }, [syncingId, cooldownId, authenticateAndGetAccounts, connect, getWebSocketUrl, t, user?.id])
+  }, [syncingId, authenticateAndGetAccounts, connect, getWebSocketUrl, t, user?.id])
 
-  // Cleanup timeouts on unmount
-  useEffect(() => {
-    // Capture current value to use in cleanup function
-    const timeouts = syncTimeoutsRef.current
-    
-    return () => {
-      Object.values(timeouts).forEach(timeout => clearTimeout(timeout))
-    }
-  }, [])
 
   function handleDelete(id: string) {
     clearRithmicData(id)
@@ -188,6 +169,8 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="1">1 min</SelectItem>
+                  <SelectItem value="5">5 min</SelectItem>
                   <SelectItem value="15">15 min</SelectItem>
                   <SelectItem value="30">30 min</SelectItem>
                   <SelectItem value="60">60 min</SelectItem>
@@ -229,7 +212,8 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                 <TableCell>
                   <SyncCountdown 
                     lastSyncTime={cred.lastSyncTime} 
-                    isAutoSyncing={isAutoSyncing && syncingId === id} 
+                    isAutoSyncing={isAutoSyncing && syncingId === id}
+                    credentialId={id}
                   />
                 </TableCell>
                 <TableCell>
@@ -238,12 +222,10 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                       variant="ghost" 
                       size="sm"
                       onClick={() => handleSync(cred)}
-                      disabled={isAutoSyncing || cooldownId === id}
+                      disabled={isAutoSyncing}
                     >
                       {syncingId === id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : cooldownId === id ? (
-                        <RefreshCw className="h-4 w-4 text-muted-foreground" />
                       ) : (
                         <RefreshCw className="h-4 w-4" />
                       )}
@@ -265,7 +247,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                             size="sm"
                             className="justify-start"
                             onClick={() => handleLoadMoreData(cred)}
-                            disabled={isAutoSyncing || cooldownId === id}
+                            disabled={isAutoSyncing}
                           >
                             {syncingId === id ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
