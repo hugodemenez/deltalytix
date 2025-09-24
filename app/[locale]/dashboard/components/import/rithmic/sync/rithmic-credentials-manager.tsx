@@ -164,7 +164,6 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">1 min</SelectItem>
                   <SelectItem value="5">5 min</SelectItem>
                   <SelectItem value="15">15 min</SelectItem>
                   <SelectItem value="30">30 min</SelectItem>
