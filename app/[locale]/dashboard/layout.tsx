@@ -4,8 +4,8 @@ import Modals from "@/components/modals";
 import { Toaster } from "@/components/ui/toaster";
 import { ReactElement } from "react";
 import Navbar from "./components/navbar";
-import { WebSocketProvider } from "@/context/rithmic-sync-context";
-import { WebSocketNotifications } from './components/import/rithmic/sync/rithmic-notifications'
+import { RithmicSyncContextProvider } from "@/context/rithmic-sync-context";
+import { RithmicSyncNotifications } from './components/import/rithmic/sync/rithmic-notifications'
 import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -18,8 +18,8 @@ export default async function RootLayout(props: { params: Promise<{ locale: stri
     <TooltipProvider>
       <ThemeProvider>
         <DataProvider>
-            <WebSocketProvider>
-              <WebSocketNotifications />
+            <RithmicSyncContextProvider>
+              <RithmicSyncNotifications />
               <div className="min-h-screen flex flex-col">
                     <SonnerToaster/>
                     <Toaster />
@@ -29,7 +29,7 @@ export default async function RootLayout(props: { params: Promise<{ locale: stri
                     </div>
                     <Modals />
               </div>
-            </WebSocketProvider>
+            </RithmicSyncContextProvider>
         </DataProvider>
       </ThemeProvider>
     </TooltipProvider>

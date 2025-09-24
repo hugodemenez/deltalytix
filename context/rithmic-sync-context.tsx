@@ -8,6 +8,8 @@ import { useI18n } from "@/locales/client"
 import { useRithmicSyncStore, SyncInterval } from '@/store/rithmic-sync-store'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
+import { getRithmicSynchronizations } from '@/app/[locale]/dashboard/components/import/rithmic/sync/actions'
+import { getUserId } from '@/server/auth'
 
 interface AccountProgress {
   ordersProcessed: number
@@ -26,7 +28,6 @@ interface AccountProgress {
 interface ProcessingStats {
   totalAccountsAvailable: number
   accountsProcessed: number
-  totalOrders: number
   isComplete: boolean
 }
 
@@ -45,187 +46,87 @@ function parseRateLimitMessage(detail: string) {
     : { max: 2, period: 15, wait: 12 }
 }
 
-interface WebSocketContextType {
+interface RithmicSyncContextType {
+  // Core connection management
   connect: (url: string, token: string, accounts: string[], startDate: string) => void
   disconnect: () => void
   isConnected: boolean
-  lastMessage: any
   connectionStatus: string
-  orders: any[]
+  
+  // Message handling
+  lastMessage: any
+  messageHistory: any[]
+  handleMessage: (message: any) => void
+  
+  // Progress tracking
   accountsProgress: Record<string, AccountProgress>
   currentAccount: string | null
   processingStats: ProcessingStats
-  dateRange: { start: string; end: string } | null
+  
+  // Account management
   selectedAccounts: string[]
   availableAccounts: { account_id: string; fcm_id: string }[]
   setSelectedAccounts: (accounts: string[]) => void
   setAvailableAccounts: (accounts: { account_id: string; fcm_id: string }[]) => void
+  
+  // State management
   resetProcessingState: () => void
-  feedbackMessages: string[]
-  messageHistory: any[]
-  handleMessage: (message: any) => void
-  clearAllState: () => void
-  lastSyncTime: Date | null
-  isAutoSyncing: boolean
-  activeCredentialIds: string[]
   step: 'credentials' | 'select-accounts' | 'processing'
   setStep: (step: 'credentials' | 'select-accounts' | 'processing') => void
-  performAutoSyncForCredential: (credentialId: string) => Promise<{ success: boolean; rateLimited: boolean; message: string } | undefined>
   showAccountComparisonDialog: boolean
   setShowAccountComparisonDialog: (show: boolean) => void
-  compareAccounts: (savedAccounts: string[], newAccounts: { account_id: string; fcm_id: string }[]) => boolean
-  reconnect: () => void
-  maxSyncDuration: number
-  setMaxSyncDuration: (duration: number) => void
-  serverConfigs: Record<string, string[]>
-  fetchServerConfigs: () => Promise<void>
+  
+  // Auto-sync functionality
+  isAutoSyncing: boolean
+  performSyncForCredential: (credentialId: string) => Promise<{ success: boolean; rateLimited: boolean; message: string } | undefined>
+  
+  // Utilities
+  calculateStartDate: (selectedAccounts: string[]) => string
   authenticateAndGetAccounts: (credentials: RithmicCredentials) => Promise<
     | { success: false; rateLimited: boolean; message: string }
     | { success: true; rateLimited: boolean; token: string; websocket_url: string; accounts: { account_id: string; fcm_id: string }[] }
   >
   getWebSocketUrl: (baseUrl: string) => string
-  wsUrl: string | null
-  token: string | null
-  setWsUrl: (url: string | null) => void
-  setToken: (token: string | null) => void
-  calculateStartDate: (selectedAccounts: string[]) => string
 }
 
-const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined)
+const RithmicSyncContext = createContext<RithmicSyncContextType | undefined>(undefined)
 
-export function WebSocketProvider({ children }: { children: ReactNode }) {
+export function RithmicSyncContextProvider({ children }: { children: ReactNode }) {
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState<any>(null)
   const [connectionStatus, setConnectionStatus] = useState<string>('')
-  const [orders, setOrders] = useState<any[]>([])
   const [accountsProgress, setAccountsProgress] = useState<Record<string, AccountProgress>>({})
   const [currentAccount, setCurrentAccount] = useState<string | null>(null)
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
   const [availableAccounts, setAvailableAccounts] = useState<{ account_id: string; fcm_id: string }[]>([])
-  const [feedbackMessages, setFeedbackMessages] = useState<string[]>([])
   const [messageHistory, setMessageHistory] = useState<any[]>([])
   const { refreshTrades } = useData()
   const [processingStats, setProcessingStats] = useState<ProcessingStats>({
     totalAccountsAvailable: 0,
     accountsProcessed: 0,
-    totalOrders: 0,
     isComplete: false
   })
-  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null)
-  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null)
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
-  const syncIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const [activeCredentialIds, setActiveCredentialIds] = useState<string[]>([])
-  const activityTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [showAccountComparisonDialog, setShowAccountComparisonDialog] = useState(false)
-  const [maxSyncDuration, setMaxSyncDuration] = useState(3600000) // 1 hour default
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const reconnectAttemptsRef = useRef(0)
-  const maxReconnectAttempts = 3
-  const reconnectDelayRef = useRef(1000) // Start with 1 second delay
-  const syncStartTimeRef = useRef<number | undefined>(undefined)
-  const syncTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const lastSyncAttemptRef = useRef<Record<string, number>>({})
-  const SYNC_COOLDOWN = 5000 // 5 seconds cooldown between syncs for each credential
-  const isInitialMountRef = useRef(true)
-  const activeSyncRequestsRef = useRef<Set<string>>(new Set())
-  const tabIdRef = useRef<string>(Math.random().toString(36).substring(7))
-  const SYNC_LOCK_KEY = 'rithmic_sync_lock'
-  const SYNC_LOCK_TIMEOUT = 5 * 60 * 1000 // 5 minutes lock timeout
-  const [serverConfigs, setServerConfigs] = useState<Record<string, string[]>>({})
-  const [wsUrl, setWsUrl] = useState<string | null>(null)
-  const [token, setToken] = useState<string | null>(null)
+  const [activityTimeout, setActivityTimeout] = useState<NodeJS.Timeout | null>(null)
+  const [syncCheckInterval, setSyncCheckInterval] = useState<NodeJS.Timeout | null>(null)
   const t = useI18n()
   const { syncInterval } = useRithmicSyncStore()
-  const user = useUserStore((state) => state.user)
   const trades = useTradesStore((state) => state.trades)
-
-  // Helper function to check if it's a weekday
-  const isWeekday = () => {
-    const day = new Date().getDay()
-    return day !== 0 && day !== 6 // 0 is Sunday, 6 is Saturday
-  }
-
-  // Function to acquire sync lock
-  const acquireSyncLock = useCallback(() => {
-    try {
-      const lockData = localStorage.getItem(SYNC_LOCK_KEY)
-      const now = Date.now()
-
-      if (!lockData) {
-        // No lock exists, create one
-        localStorage.setItem(SYNC_LOCK_KEY, JSON.stringify({
-          tabId: tabIdRef.current,
-          timestamp: now
-        }))
-        return true
-      }
-
-      const lock = JSON.parse(lockData)
-      const lockAge = now - lock.timestamp
-
-      // If lock is expired (older than 5 minutes), we can take it
-      if (lockAge > SYNC_LOCK_TIMEOUT) {
-        localStorage.setItem(SYNC_LOCK_KEY, JSON.stringify({
-          tabId: tabIdRef.current,
-          timestamp: now
-        }))
-        return true
-      }
-
-      // If lock is from this tab, we can keep it
-      if (lock.tabId === tabIdRef.current) {
-        return true
-      }
-
-      return false
-    } catch (error) {
-      console.error('Error acquiring sync lock:', error)
-      return false
-    }
-  }, [SYNC_LOCK_TIMEOUT])
-
-  // Function to release sync lock
-  const releaseSyncLock = useCallback(() => {
-    try {
-      const lockData = localStorage.getItem(SYNC_LOCK_KEY)
-      if (lockData) {
-        const lock = JSON.parse(lockData)
-        if (lock.tabId === tabIdRef.current) {
-          localStorage.removeItem(SYNC_LOCK_KEY)
-        }
-      }
-    } catch (error) {
-      console.error('Error releasing sync lock:', error)
-    }
-  }, [])
 
   const resetProcessingState = useCallback(() => {
     setProcessingStats({
       totalAccountsAvailable: 0,
       accountsProcessed: 0,
-      totalOrders: 0,
       isComplete: false
     })
-    setOrders([])
     setAccountsProgress({})
     setCurrentAccount(null)
-    setDateRange(null)
-    setFeedbackMessages([])
   }, [])
 
   const disconnect = useCallback(() => {
-    if (activityTimeoutRef.current) {
-      clearTimeout(activityTimeoutRef.current)
-    }
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current)
-    }
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current)
-    }
     if (ws) {
       console.log('Disconnecting WebSocket')
       ws.close()
@@ -234,7 +135,17 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       setConnectionStatus('Disconnected')
       resetProcessingState()
     }
-  }, [ws, resetProcessingState])
+    // Clear activity timeout when disconnecting
+    if (activityTimeout) {
+      clearTimeout(activityTimeout)
+      setActivityTimeout(null)
+    }
+    // Clear sync check interval when disconnecting
+    if (syncCheckInterval) {
+      clearInterval(syncCheckInterval)
+      setSyncCheckInterval(null)
+    }
+  }, [ws, resetProcessingState, activityTimeout, syncCheckInterval])
 
   const handleMessage = useCallback((message: any) => {
     if (!message) return
@@ -413,18 +324,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
                   currentDayNumber: prev[accountId]?.totalDays || 0
                 }
               }))
-              setProcessingStats(prev => ({
-                ...prev,
-                accountsProcessed: prev.accountsProcessed + 1,
-                totalOrders: prev.totalOrders + ordersCount
-              }))
             }
           }
         }
         break
 
       case 'order_update':
-        setOrders(prev => [...prev, message.order])
         if (message.account_id) {
           setAccountsProgress(prev => {
             const prevAccount = prev[message.account_id]
@@ -443,20 +348,10 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
       case 'processing_complete':
         refreshTrades()
-        setProcessingStats(prev => ({
-          ...prev,
-          isComplete: true,
-          totalOrders: message.total_orders || prev.totalOrders
-        }))
         break
 
       case 'status':
         if (message.all_complete) {
-          setProcessingStats(prev => ({
-            ...prev,
-            isComplete: true,
-            totalOrders: message.total_orders || prev.totalOrders
-          }))
         }
         break
 
@@ -511,67 +406,8 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         break
     }
 
-    // Add to feedback messages if needed
-    let messageType = 'log'
-    let shouldAddMessage = true
-    let messageContent = message.message || JSON.stringify(message)
-
-    // Handle connection status messages
-    if (message.type === 'connection_status') {
-      messageType = message.status.toLowerCase().includes('error') ? 'error' : 'status'
-      messageContent = message.status
-      shouldAddMessage = true
-    }
-
-    if (shouldAddMessage) {
-      const messageString = JSON.stringify({ type: messageType, message: messageContent })
-      setFeedbackMessages(prev => {
-        // Prevent duplicate messages
-        if (prev[prev.length - 1] === messageString) {
-          return prev
-        }
-        return [...prev, messageString]
-      })
-    }
   }, [currentAccount, setCurrentAccount, refreshTrades])
 
-  const resetActivityTimeout = useCallback(() => {
-    if (activityTimeoutRef.current) {
-      clearTimeout(activityTimeoutRef.current)
-    }
-
-    activityTimeoutRef.current = setTimeout(() => {
-      console.log('WebSocket inactive for 15 seconds, closing connection')
-      handleMessage({
-        type: 'log',
-        level: 'warning',
-        message: 'Connection timeout: No activity for 15 seconds'
-      })
-      disconnect()
-      setIsConnected(false)
-      setConnectionStatus('Disconnected: Timeout')
-      resetProcessingState()
-      setStep('credentials')
-    }, 15000)
-  }, [disconnect, resetProcessingState, handleMessage])
-
-  // Add heartbeat mechanism
-  const startHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current)
-    }
-
-    heartbeatIntervalRef.current = setInterval(() => {
-      if (ws?.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'heartbeat' }))
-      }
-    }, 10000) // Send heartbeat every 10 seconds
-  }, [ws])
-
-  const clearAllState = useCallback(() => {
-    resetProcessingState()
-    setMessageHistory([])
-  }, [resetProcessingState])
 
   const connect = useCallback((url: string, token: string, accounts: string[], startDate: string) => {
     console.log('WebSocket connect called with:', {
@@ -609,18 +445,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
     setAccountsProgress(initialProgress)
     setCurrentAccount(null)
-    setProcessingStats({
-      totalAccountsAvailable: accounts.length,
-      accountsProcessed: 0,
-      totalOrders: 0,
-      isComplete: false
-    })
 
     console.log('Creating WebSocket connection to:', url)
     const newWs = new WebSocket(url)
 
     // Add connection timeout
     const connectionTimeout = setTimeout(() => {
+      console.log('TIMEOUT CHECK', JSON.stringify(newWs))
       if (newWs.readyState !== WebSocket.OPEN) {
         console.log('WebSocket connection timeout')
         newWs.close()
@@ -631,16 +462,13 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           message: 'WebSocket connection timed out'
         })
       }
-    }, 10000) // 10 second timeout
+    }, 15) // 15 second timeout
 
     newWs.onopen = () => {
       console.log('WebSocket connection established')
       clearTimeout(connectionTimeout)
       setIsConnected(true)
       setConnectionStatus('Connected')
-
-      // Start activity timeout as soon as connection opens
-      resetActivityTimeout()
 
       handleMessage({
         type: 'connection_status',
@@ -656,13 +484,12 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         start_date: startDate
       }
       newWs.send(JSON.stringify(message))
+
     }
 
     newWs.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data)
-        // Reset timeout before processing message
-        resetActivityTimeout()
         handleMessage(message)
       } catch (error) {
         console.error('Error parsing WebSocket message:', error)
@@ -704,44 +531,15 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
       })
       // Reset auto sync state on close
       setIsAutoSyncing(false)
-      // Clear timeout on close
-      if (activityTimeoutRef.current) {
-        clearTimeout(activityTimeoutRef.current)
+      // Clear activity timeout on close
+      if (activityTimeout) {
+        clearTimeout(activityTimeout)
+        setActivityTimeout(null)
       }
     }
 
     setWs(newWs)
-
-    // Set sync start time
-    syncStartTimeRef.current = Date.now()
-
-    // Set maximum sync duration timeout
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current)
-    }
-
-    syncTimeoutRef.current = setTimeout(() => {
-      console.log('Maximum sync duration reached')
-      handleMessage({
-        type: 'log',
-        level: 'warning',
-        message: `Sync operation exceeded maximum duration of ${maxSyncDuration / 1000} seconds`
-      })
-      disconnect()
-    }, maxSyncDuration)
-
-    // Start heartbeat
-    startHeartbeat()
-  }, [ws, handleMessage, resetActivityTimeout, disconnect, resetProcessingState, startHeartbeat, maxSyncDuration])
-
-  // Function to compare account lists and return true if they differ
-  const compareAccounts = useCallback((savedAccounts: string[], newAccounts: { account_id: string; fcm_id: string }[]) => {
-    if (savedAccounts.length !== newAccounts.length) return true
-
-    const newAccountIds = newAccounts.map(acc => acc.account_id)
-    return savedAccounts.some(acc => !newAccountIds.includes(acc)) ||
-      newAccountIds.some(acc => !savedAccounts.includes(acc))
-  }, [])
+  }, [ws, handleMessage, disconnect, resetProcessingState])
 
   // Extract common protocol logic
   const getProtocols = useCallback(() => {
@@ -765,40 +563,27 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     return minutesSinceLastSync >= syncInterval
   }, [syncInterval])
 
-  // Modify performAutoSyncForCredential
-  const performAutoSyncForCredential = useCallback(async (credentialId: string) => {
+  // Run a sync for a credential
+  const performSyncForCredential = useCallback(async (credentialId: string) => {
 
-    if (!user?.id || isAutoSyncing) return
-
-    // Check if this credential is already being synced
-    if (activeSyncRequestsRef.current.has(credentialId)) {
-      console.log(`Skipping sync for credential ${credentialId} - already in progress`)
-      return
-    }
-
-    // Check if we're within the cooldown period for this credential
-    const now = Date.now()
-    const lastAttempt = lastSyncAttemptRef.current[credentialId] || 0
-    if (now - lastAttempt < SYNC_COOLDOWN) {
-      console.log(`Skipping sync for credential ${credentialId} due to cooldown`)
-      return
-    }
-
-    // Mark this credential as being synced
-    activeSyncRequestsRef.current.add(credentialId)
-
-    // Update last attempt time
-    lastSyncAttemptRef.current[credentialId] = now
+    const userId = await getUserId()
+    // Ensure we are not already syncing
+    // Prevent multiple syncs at the same time
+    console.log('Is auto syncing', isAutoSyncing)
+    console.log('User ID', userId)
+    if (!userId || isAutoSyncing) return
 
     const savedData = getRithmicData(credentialId)
-    if (!savedData) {
-      activeSyncRequestsRef.current.delete(credentialId)
-      return
-    }
+    
+    // If we do not find the credential, return
+    if (!savedData) return
 
+    // Set the auto sync flag
     setIsAutoSyncing(true)
 
     try {
+      console.error('Authenticating and getting accounts', JSON.stringify(savedData))
+      // Authenticate and get accounts
       const { http } = getProtocols()
       const response = await Promise.race([
         fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
@@ -806,7 +591,7 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             ...savedData.credentials,
-            userId: user.id
+            userId: userId
           })
         }),
         new Promise((_, reject) =>
@@ -837,15 +622,6 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
 
       // If allAccounts is true, use all available accounts
       const accountsToSync = savedData.allAccounts ? data.accounts.map((acc: any) => acc.account_id) : savedData.selectedAccounts
-
-      // Compare accounts and show dialog if they differ
-      const accountsDiffer = compareAccounts(accountsToSync, data.accounts)
-      if (accountsDiffer) {
-        setAvailableAccounts(data.accounts)
-        setSelectedAccounts(accountsToSync)
-        setShowAccountComparisonDialog(true)
-        return
-      }
 
       setAvailableAccounts(data.accounts)
       const wsUrl = getWebSocketUrl(data.websocket_url)
@@ -888,188 +664,9 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
         message: `Auto-sync error for credential set ${credentialId}: ${error instanceof Error ? error.message : 'Unknown error'}`
       })
     } finally {
-      if (typeof window !== 'undefined') {
         setIsAutoSyncing(false)
-        activeSyncRequestsRef.current.delete(credentialId)
-      }
     }
-  }, [isAutoSyncing, connect, handleMessage, compareAccounts, getProtocols, getWebSocketUrl, t])
-
-  // Function to check and sync all credentials
-  const performAutoSync = useCallback(async () => {
-    if (!isWeekday()) {
-      console.log('Skipping auto-sync during weekend')
-      return
-    }
-
-    // Try to acquire sync lock
-    if (!acquireSyncLock()) {
-      console.log('Another tab is currently syncing, skipping sync in this tab')
-      return
-    }
-
-    try {
-      const allData = getAllRithmicData()
-      const now = Date.now()
-
-      // Process credentials sequentially with a delay between each
-      for (const [id, data] of Object.entries(allData)) {
-        if (shouldSync(new Date(data.lastSyncTime).getTime())) {
-          await performAutoSyncForCredential(id)
-          // Add a delay between processing each credential
-          await new Promise(resolve => setTimeout(resolve, 5000))
-        }
-      }
-    } finally {
-      // Always release the lock when done
-      releaseSyncLock()
-    }
-  }, [performAutoSyncForCredential, shouldSync, acquireSyncLock, releaseSyncLock])
-
-  // Add mergeDuplicateCredentials function
-  const mergeDuplicateCredentials = useCallback(() => {
-    const allData = getAllRithmicData()
-    const usernames = new Map<string, RithmicCredentialSet[]>()
-
-    // Group credentials by username
-    Object.values(allData).forEach(cred => {
-      const existing = usernames.get(cred.credentials.username) || []
-      usernames.set(cred.credentials.username, [...existing, cred])
-    })
-
-    // Process each username group
-    usernames.forEach((credentials, username) => {
-      if (credentials.length > 1) {
-        // Merge all selected accounts and remove duplicates
-        const mergedSelectedAccounts = Array.from(new Set(
-          credentials.flatMap(cred => cred.selectedAccounts)
-        ))
-
-        // Use the most recent sync time
-        const mostRecentSync = Math.max(
-          ...credentials.map(cred => new Date(cred.lastSyncTime).getTime()),
-          Date.now()
-        )
-
-        // Use the most recent allAccounts setting
-        const mergedAllAccounts = credentials.some(cred => cred.allAccounts)
-
-        const dataToSave = {
-          id: credentials[0].id, // Use the ID of the first existing credential
-          credentials: credentials[0].credentials,
-          selectedAccounts: mergedSelectedAccounts,
-          lastSyncTime: new Date(mostRecentSync).toISOString(),
-          allAccounts: mergedAllAccounts
-        }
-
-        // Delete all other credentials with the same username
-        credentials.forEach(cred => {
-          if (cred.id !== dataToSave.id) {
-            clearRithmicData(cred.id)
-          }
-        })
-
-        // Save the merged credential
-        saveRithmicData(dataToSave)
-
-        // Show toast notification
-        toast({
-          title: t('rithmic.credentials.merged'),
-          description: t('rithmic.credentials.mergedDescription'),
-        })
-      }
-    })
-  }, [t])
-
-  // Update the interval setup in useEffect
-  useEffect(() => {
-    // Only perform initial check on mount if it's the first mount
-    if (isInitialMountRef.current) {
-      mergeDuplicateCredentials()
-      performAutoSync()
-      isInitialMountRef.current = false
-    }
-
-    // Set up interval for future checks using the store's interval
-    syncIntervalRef.current = setInterval(() => {
-      performAutoSync()
-    }, syncInterval * 60 * 1000) // Convert minutes to milliseconds
-
-    // Listen for storage events from other tabs
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === SYNC_LOCK_KEY && !e.newValue) {
-        // Another tab released the lock, we can try to sync
-        performAutoSync()
-      }
-    }
-
-    window.addEventListener('storage', handleStorageChange)
-
-    return () => {
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current)
-      }
-      window.removeEventListener('storage', handleStorageChange)
-      // Release lock when component unmounts
-      releaseSyncLock()
-    }
-  }, [performAutoSync, releaseSyncLock, mergeDuplicateCredentials, syncInterval])
-
-  // Clear interval and release lock when user changes
-  useEffect(() => {
-    const unsubscribeUser = useUserStore.subscribe((state) => state.user)
-    if (!user?.id) {
-      if (syncIntervalRef.current) {
-        clearInterval(syncIntervalRef.current)
-      }
-      releaseSyncLock()
-    }
-  }, [releaseSyncLock])
-
-  // Add reconnection logic
-  const reconnect = useCallback(() => {
-    if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-      console.log('Max reconnection attempts reached')
-      handleMessage({
-        type: 'log',
-        level: 'error',
-        message: 'Max reconnection attempts reached. Please try again later.'
-      })
-      return
-    }
-
-    const delay = reconnectDelayRef.current * Math.pow(2, reconnectAttemptsRef.current)
-    console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`)
-
-    setTimeout(() => {
-      reconnectAttemptsRef.current++
-      if (ws?.url) {
-        connect(ws.url, '', selectedAccounts, dateRange?.start || '')
-      }
-    }, delay)
-  }, [ws, connect, selectedAccounts, dateRange, handleMessage])
-
-  // Add fetchServerConfigs function
-  const fetchServerConfigs = useCallback(async () => {
-    try {
-      const { http } = getProtocols()
-      const response = await fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/servers`)
-      const data = await response.json()
-
-      if (data.success) {
-        setServerConfigs(data.servers)
-      } else {
-        throw new Error(data.message)
-      }
-    } catch (error) {
-      console.error('Failed to fetch server configurations:', error)
-      handleMessage({
-        type: 'log',
-        level: 'error',
-        message: 'Failed to fetch server configurations'
-      })
-    }
-  }, [getProtocols, handleMessage])
+  }, [isAutoSyncing, connect, handleMessage, getProtocols, getWebSocketUrl, t])
 
   // Update authenticateAndGetAccounts to return a rate limit response object
   const authenticateAndGetAccounts = useCallback(async (credentials: RithmicCredentials) => {
@@ -1155,75 +752,98 @@ export function WebSocketProvider({ children }: { children: ReactNode }) {
     const startDate = oldestRecentDate.toISOString().slice(0, 10).replace(/-/g, '')
     console.log('Calculated start date from trades:', startDate)
     return startDate
-  }, [])
+  }, [trades])
 
-  // Cleanup on unmount
+  // Auto-sync checking effect
   useEffect(() => {
-    return () => {
-      if (activityTimeoutRef.current) {
-        clearTimeout(activityTimeoutRef.current)
-      }
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current)
-      }
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current)
+    const checkAndPerformSyncs = async () => {
+      try {
+        // Get all rithmic synchronizations for the current user
+        const synchronizations = await getRithmicSynchronizations()
+        
+        for (const sync of synchronizations) {
+          if (!sync.lastSyncedAt) continue
+          
+          const lastSyncTime = new Date(sync.lastSyncedAt).getTime()
+          const now = Date.now()
+          const minutesSinceLastSync = (now - lastSyncTime) / (1000 * 60)
+          
+          // Check if enough time has passed since last sync
+          if (minutesSinceLastSync >= syncInterval) {
+            console.log(`Auto-sync triggered for credential ${sync.id}`)
+            await performSyncForCredential(sync.id)
+          }
+        }
+      } catch (error) {
+        console.error('Error during auto-sync check:', error)
       }
     }
-  }, [])
+
+    // Set up interval to check every minute
+    const interval = setInterval(checkAndPerformSyncs, 60000) // 60 seconds
+    setSyncCheckInterval(interval)
+
+    // Run initial check
+    checkAndPerformSyncs()
+
+    // Cleanup function
+    return () => {
+      if (interval) {
+        clearInterval(interval)
+        setSyncCheckInterval(null)
+      }
+    }
+  }, [syncInterval]) // Only depend on syncInterval, not the functions
 
   return (
-    <WebSocketContext.Provider value={{
+    <RithmicSyncContext.Provider value={{
+      // Core connection management
       connect,
       disconnect,
       isConnected,
-      lastMessage,
       connectionStatus,
-      orders,
+      
+      // Message handling
+      lastMessage,
+      messageHistory,
+      handleMessage,
+      
+      // Progress tracking
       accountsProgress,
       currentAccount,
       processingStats,
-      dateRange,
+      
+      // Account management
       selectedAccounts,
       availableAccounts,
       setSelectedAccounts,
       setAvailableAccounts,
+      
+      // State management
       resetProcessingState,
-      feedbackMessages,
-      messageHistory,
-      handleMessage,
-      clearAllState,
-      lastSyncTime,
-      isAutoSyncing,
-      activeCredentialIds,
       step,
       setStep,
-      performAutoSyncForCredential,
       showAccountComparisonDialog,
       setShowAccountComparisonDialog,
-      compareAccounts,
-      reconnect,
-      maxSyncDuration,
-      setMaxSyncDuration,
-      serverConfigs,
-      fetchServerConfigs,
+      
+      // Auto-sync functionality
+      isAutoSyncing,
+      performSyncForCredential,
+      
+      // Utilities
+      calculateStartDate,
       authenticateAndGetAccounts,
       getWebSocketUrl,
-      wsUrl,
-      token,
-      setWsUrl,
-      setToken,
-      calculateStartDate,
     }}>
       {children}
-    </WebSocketContext.Provider>
+    </RithmicSyncContext.Provider>
   )
 }
 
-export function useWebSocket() {
-  const context = useContext(WebSocketContext)
+export function useRithmicSyncContext() {
+  const context = useContext(RithmicSyncContext)
   if (context === undefined) {
-    throw new Error('useWebSocket must be used within a WebSocketProvider')
+    throw new Error('useRithmicSyncContext must be used within a RithmicSyncContextProvider')
   }
   return context
 } 

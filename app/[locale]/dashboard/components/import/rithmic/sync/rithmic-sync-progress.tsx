@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Loader2, CheckCircle2, AlertCircle, Calendar } from 'lucide-react'
-import { useWebSocket } from '@/context/rithmic-sync-context'
+import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 import { cn } from "@/lib/utils"
 import { useI18n } from '@/locales/client'
 
@@ -27,10 +27,9 @@ export function RithmicSyncFeedback({ totalAccounts }: RithmicSyncFeedbackProps)
     accountsProgress, 
     currentAccount, 
     processingStats, 
-    dateRange, 
     connectionStatus,
     messageHistory
-  } = useWebSocket()
+  } = useRithmicSyncContext()
   const t = useI18n()
 
   // Calculate progress for a specific account

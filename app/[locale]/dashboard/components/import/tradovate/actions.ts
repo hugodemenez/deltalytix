@@ -6,6 +6,7 @@ import { Trade, TickDetails } from '@prisma/client'
 import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 import { getTickDetails } from '@/server/tick-details'
+import { prisma } from '@/lib/prisma'
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -198,29 +199,66 @@ async function getContractById(accessToken: string, contractId: number): Promise
   }
 }
 
-// Helper function to fetch multiple fill fees by IDs in batch
+// Helper function to fetch multiple fill fees by IDs in batch with fallback
 async function getFillFeesByIds(accessToken: string, fillIds: number[]): Promise<TradovateFillFee[]> {
   try {
     if (fillIds.length === 0) return []
     
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    const params = new URLSearchParams({ ids: fillIds.join(',') }).toString()
-    const response = await fetch(`${apiBaseUrl}/v1/fillFee/items?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json'
-      }
-    })
+    const BATCH_SIZE = 50 // Limit batch size to avoid API limits
     
-    if (!response.ok) {
-      logger.warn(`Failed to fetch fill fees batch:`, { status: response.status, statusText: response.statusText })
-      return []
+    // Try batch request first for smaller batches
+    if (fillIds.length <= BATCH_SIZE) {
+      try {
+        // Use GET with comma-separated IDs as per Tradovate API docs
+        const idsParam = fillIds.join(',')
+        const response = await fetch(`${apiBaseUrl}/v1/fillFee/items?ids=${idsParam}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const fees = await response.json()
+          return Array.isArray(fees) ? fees : []
+        } else {
+          logger.warn(`Batch fill fees request failed (${response.status}), falling back to individual requests`)
+        }
+      } catch (batchError) {
+        logger.warn(`Batch fill fees request error, falling back to individual requests:`, batchError)
+      }
     }
     
-    const fees = await response.json()
-    return Array.isArray(fees) ? fees : []
+    // Fallback to individual requests
+    logger.info(`Fetching ${fillIds.length} fill fees individually (batch failed or too large)`)
+    const fees: TradovateFillFee[] = []
+    
+    // Process in smaller chunks to avoid overwhelming the API
+    for (let i = 0; i < fillIds.length; i += 10) {
+      const chunk = fillIds.slice(i, i + 10)
+      const chunkPromises = chunk.map(async (fillId) => {
+        try {
+          const fee = await getFillFeeById(accessToken, fillId)
+          return fee
+        } catch (error) {
+          logger.warn(`Failed to fetch fill fee ${fillId}:`, error)
+          return null
+        }
+      })
+      
+      const chunkResults = await Promise.all(chunkPromises)
+      fees.push(...chunkResults.filter(fee => fee !== null) as TradovateFillFee[])
+      
+      // Small delay between chunks to respect rate limits
+      if (i + 10 < fillIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
+    
+    return fees
   } catch (error) {
-    logger.warn(`Error fetching fill fees batch:`, error)
+    logger.warn(`Error fetching fill fees:`, error)
     return []
   }
 }
@@ -273,29 +311,66 @@ async function getFillPairs(accessToken: string): Promise<TradovateFillPair[]> {
   }
 }
 
-// Helper function to fetch multiple fills by IDs in batch
+// Helper function to fetch multiple fills by IDs in batch with fallback
 async function getFillsByIds(accessToken: string, fillIds: number[]): Promise<any[]> {
   try {
     if (fillIds.length === 0) return []
     
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    const params = new URLSearchParams({ ids: fillIds.join(',') }).toString()
-    const response = await fetch(`${apiBaseUrl}/v1/fill/items?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json'
-      }
-    })
+    const BATCH_SIZE = 50 // Limit batch size to avoid API limits
     
-    if (!response.ok) {
-      logger.warn(`Failed to fetch fills batch:`, { status: response.status, statusText: response.statusText })
-      return []
+    // Try batch request first for smaller batches
+    if (fillIds.length <= BATCH_SIZE) {
+      try {
+        // Use GET with comma-separated IDs as per Tradovate API docs
+        const idsParam = fillIds.join(',')
+        const response = await fetch(`${apiBaseUrl}/v1/fill/items?ids=${idsParam}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const fills = await response.json()
+          return Array.isArray(fills) ? fills : []
+        } else {
+          logger.warn(`Batch fills request failed (${response.status}), falling back to individual requests`)
+        }
+      } catch (batchError) {
+        logger.warn(`Batch fills request error, falling back to individual requests:`, batchError)
+      }
     }
     
-    const fills = await response.json()
-    return Array.isArray(fills) ? fills : []
+    // Fallback to individual requests
+    logger.info(`Fetching ${fillIds.length} fills individually (batch failed or too large)`)
+    const fills: any[] = []
+    
+    // Process in smaller chunks to avoid overwhelming the API
+    for (let i = 0; i < fillIds.length; i += 10) {
+      const chunk = fillIds.slice(i, i + 10)
+      const chunkPromises = chunk.map(async (fillId) => {
+        try {
+          const fill = await getFillById(accessToken, fillId)
+          return fill
+        } catch (error) {
+          logger.warn(`Failed to fetch fill ${fillId}:`, error)
+          return null
+        }
+      })
+      
+      const chunkResults = await Promise.all(chunkPromises)
+      fills.push(...chunkResults.filter(fill => fill !== null))
+      
+      // Small delay between chunks to respect rate limits
+      if (i + 10 < fillIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
+    
+    return fills
   } catch (error) {
-    logger.warn(`Error fetching fills batch:`, error)
+    logger.warn(`Error fetching fills:`, error)
     return []
   }
 }
@@ -324,29 +399,66 @@ async function getFillById(accessToken: string, fillId: number): Promise<any | n
   }
 }
 
-// Helper function to fetch multiple orders by IDs in batch
+// Helper function to fetch multiple orders by IDs in batch with fallback
 async function getOrdersByIds(accessToken: string, orderIds: number[]): Promise<any[]> {
   try {
     if (orderIds.length === 0) return []
     
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    const params = new URLSearchParams({ ids: orderIds.join(',') }).toString()
-    const response = await fetch(`${apiBaseUrl}/v1/order/items?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json'
-      }
-    })
+    const BATCH_SIZE = 50 // Limit batch size to avoid API limits
     
-    if (!response.ok) {
-      logger.warn(`Failed to fetch orders batch:`, { status: response.status, statusText: response.statusText })
-      return []
+    // Try batch request first for smaller batches
+    if (orderIds.length <= BATCH_SIZE) {
+      try {
+        // Use GET with comma-separated IDs as per Tradovate API docs
+        const idsParam = orderIds.join(',')
+        const response = await fetch(`${apiBaseUrl}/v1/order/items?ids=${idsParam}`, {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/json'
+          }
+        })
+        
+        if (response.ok) {
+          const orders = await response.json()
+          return Array.isArray(orders) ? orders : []
+        } else {
+          logger.warn(`Batch orders request failed (${response.status}), falling back to individual requests`)
+        }
+      } catch (batchError) {
+        logger.warn(`Batch orders request error, falling back to individual requests:`, batchError)
+      }
     }
     
-    const orders = await response.json()
-    return Array.isArray(orders) ? orders : []
+    // Fallback to individual requests
+    logger.info(`Fetching ${orderIds.length} orders individually (batch failed or too large)`)
+    const orders: any[] = []
+    
+    // Process in smaller chunks to avoid overwhelming the API
+    for (let i = 0; i < orderIds.length; i += 10) {
+      const chunk = orderIds.slice(i, i + 10)
+      const chunkPromises = chunk.map(async (orderId) => {
+        try {
+          const order = await getOrderById(accessToken, orderId)
+          return order
+        } catch (error) {
+          logger.warn(`Failed to fetch order ${orderId}:`, error)
+          return null
+        }
+      })
+      
+      const chunkResults = await Promise.all(chunkPromises)
+      orders.push(...chunkResults.filter(order => order !== null))
+      
+      // Small delay between chunks to respect rate limits
+      if (i + 10 < orderIds.length) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+    }
+    
+    return orders
   } catch (error) {
-    logger.warn(`Error fetching orders batch:`, error)
+    logger.warn(`Error fetching orders:`, error)
     return []
   }
 }
@@ -525,6 +637,13 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     // Calculate expiration time
     const expiresAt = formatDateForAPI(new Date(Date.now() + (tokens.expires_in * 1000)))
     
+    // Store token in database
+    const storeResult = await storeTradovateToken(tokens.access_token, expiresAt, 'demo')
+    if (storeResult.error) {
+      logger.warn('Failed to store token in database:', storeResult.error)
+      // Continue anyway - token is still valid for this session
+    }
+    
     return {
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
@@ -540,6 +659,59 @@ export async function handleTradovateCallback(code: string, state: string): Prom
   }
 }
 
+// New function using Tradovate's renewAccessToken endpoint
+export async function renewTradovateAccessToken(accessToken: string, environment: 'demo' | 'live' = 'demo'): Promise<TradovateOAuthResult> {
+  try {
+    const apiBaseUrl = environment === 'demo' ? TRADOVATE_ENVIRONMENTS.demo.api : 'https://live.tradovateapi.com'
+    
+    const renewal = await fetch(`${apiBaseUrl}/auth/renewAccessToken`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
+
+    if (!renewal.ok) {
+      const errorText = await renewal.text()
+      logger.error('Token renewal failed:', { status: renewal.status, errorText })
+      return { error: `Failed to renew token: ${renewal.status} ${renewal.statusText}` };
+    }
+
+    const renewalData = await renewal.json();
+    
+    if (renewalData.errorText) {
+      logger.error('Token renewal error:', renewalData.errorText);
+      return { error: `Token renewal failed: ${renewalData.errorText}` };
+    }
+
+    logger.info('Token renewed successfully', {
+      userStatus: renewalData.userStatus,
+      userId: renewalData.userId,
+      hasLive: renewalData.hasLive
+    });
+
+    // Update database with new token
+    const storeResult = await storeTradovateToken(renewalData.accessToken, renewalData.expirationTime, environment)
+    if (storeResult.error) {
+      logger.warn('Failed to update token in database:', storeResult.error)
+      // Continue anyway - token is still valid for this session
+    }
+
+    return {
+      accessToken: renewalData.accessToken,
+      expiresAt: renewalData.expirationTime,
+      // Note: renewAccessToken doesn't return a refresh token
+      // The access token is renewed in place
+    };
+  } catch (error) {
+    logger.error('Failed to renew Tradovate token:', error);
+    return { error: `Failed to renew token: ${error instanceof Error ? error.message : 'Unknown error'}` };
+  }
+}
+
+// Keep the old function for backward compatibility (OAuth refresh)
 export async function refreshTradovateToken(refreshToken: string): Promise<TradovateOAuthResult> {
   try {
     if (!TRADOVATE_CLIENT_ID || !TRADOVATE_CLIENT_SECRET) {
@@ -570,12 +742,7 @@ export async function refreshTradovateToken(refreshToken: string): Promise<Trado
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text()
-      console.error('Token refresh failed:', {
-        status: tokenResponse.status,
-        statusText: tokenResponse.statusText,
-        errorText,
-        url: tokenResponse.url
-      })
+      logger.error('Token refresh failed:', { status: tokenResponse.status, statusText: tokenResponse.statusText, errorText })
       return { error: `Failed to refresh token: ${tokenResponse.status} ${tokenResponse.statusText}` }
     }
 
@@ -583,18 +750,18 @@ export async function refreshTradovateToken(refreshToken: string): Promise<Trado
     try {
       tokens = await tokenResponse.json()
     } catch (parseError) {
-      console.error('Failed to parse refresh token response:', parseError)
+      logger.error('Failed to parse refresh token response:', parseError)
       return { error: 'Invalid response format from Tradovate' }
     }
 
     // Validate the token response structure
     if (!tokens || typeof tokens !== 'object') {
-      console.error('Invalid refresh token response structure:', tokens)
+      logger.error('Invalid refresh token response structure:', tokens)
       return { error: 'Invalid refresh token response structure from Tradovate' }
     }
 
     if (!tokens.access_token || !tokens.refresh_token || !tokens.expires_in) {
-      console.error('Missing required fields in refresh token response:', {
+      logger.error('Missing required fields in refresh token response:', {
         hasAccessToken: !!tokens.access_token,
         hasRefreshToken: !!tokens.refresh_token,
         hasExpiresIn: !!tokens.expires_in,
@@ -612,11 +779,7 @@ export async function refreshTradovateToken(refreshToken: string): Promise<Trado
       expiresAt
     }
   } catch (error) {
-    console.error('Failed to refresh Tradovate token:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      errorType: typeof error
-    })
+    logger.error('Failed to refresh Tradovate token:', error)
     return { error: `Failed to refresh token: ${error instanceof Error ? error.message : 'Unknown error'}` }
   }
 }
@@ -901,6 +1064,300 @@ async function buildTradesFromFillPairs(
   return trades
 }
 
+
+// Server actions for token management
+export async function storeTradovateToken(
+  accessToken: string,
+  expiresAt: string,
+  environment: 'demo' | 'live' = 'demo',
+  accountId: string = 'default'
+) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { error: 'User not authenticated' }
+    }
+
+    // Store token in Synchronization table
+    await prisma.synchronization.upsert({
+      where: {
+        userId_service_accountId: {
+          userId: user.id,
+          service: 'tradovate',
+          accountId: accountId
+        }
+      },
+      update: {
+        token: accessToken,
+        tokenExpiresAt: new Date(expiresAt),
+        lastSyncedAt: new Date(),
+        updatedAt: new Date()
+      },
+      create: {
+        userId: user.id,
+        service: 'tradovate',
+        accountId: accountId,
+        token: accessToken,
+        tokenExpiresAt: new Date(expiresAt),
+        lastSyncedAt: new Date()
+      }
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to store Tradovate token:', error)
+    return { error: 'Failed to store token' }
+  }
+}
+
+export async function getTradovateToken(accountId: string = 'default') {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { error: 'User not authenticated' }
+    }
+
+    const syncData = await prisma.synchronization.findUnique({
+      where: {
+        userId_service_accountId: {
+          userId: user.id,
+          service: 'tradovate',
+          accountId: accountId
+        }
+      }
+    })
+
+    if (!syncData?.token) {
+      return { error: 'No Tradovate token found' }
+    }
+
+    // Check if token is expired
+    const now = new Date()
+    const expiresAt = syncData.tokenExpiresAt
+    
+    if (expiresAt && expiresAt <= now) {
+      return { error: 'Token expired' }
+    }
+
+    return {
+      accessToken: syncData.token,
+      expiresAt: syncData.tokenExpiresAt?.toISOString() || '',
+      environment: 'demo', // Default to demo for now
+      accountId: syncData.accountId
+    }
+  } catch (error) {
+    console.error('Failed to get Tradovate token:', error)
+    return { error: 'Failed to get token' }
+  }
+}
+
+export async function removeTradovateToken(accountId?: string) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { error: 'User not authenticated' }
+    }
+
+    const whereClause: any = {
+      userId: user.id,
+      service: 'tradovate'
+    }
+
+    // If accountId is provided, only remove that specific account's token
+    if (accountId) {
+      whereClause.accountId = accountId
+    }
+
+    await prisma.synchronization.deleteMany({
+      where: whereClause
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to remove Tradovate token:', error)
+    return { error: 'Failed to remove token' }
+  }
+}
+
+export async function getTradovateSynchronizations() {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { error: 'User not authenticated' }
+    }
+
+    const synchronizations = await prisma.synchronization.findMany({
+      where: {
+        userId: user.id,
+        service: 'tradovate'
+      },
+      orderBy: {
+        lastSyncedAt: 'desc'
+      }
+    })
+
+    return { synchronizations }
+  } catch (error) {
+    console.error('Failed to get Tradovate synchronizations:', error)
+    return { error: 'Failed to get synchronizations' }
+  }
+}
+
+// Function to get all stored Tradovate tokens with their status
+export async function getAllTradovateTokens() {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { error: 'User not authenticated' }
+    }
+
+    const synchronizations = await prisma.synchronization.findMany({
+      where: {
+        userId: user.id,
+        service: 'tradovate'
+      },
+      select: {
+        id: true,
+        accountId: true,
+        token: true,
+        tokenExpiresAt: true,
+        lastSyncedAt: true,
+        createdAt: true,
+        updatedAt: true
+      },
+      orderBy: {
+        lastSyncedAt: 'desc'
+      }
+    })
+
+    // Add token status (valid/expired) to each synchronization
+    const now = new Date()
+    const tokensWithStatus = synchronizations.map(sync => ({
+      ...sync,
+      isExpired: sync.tokenExpiresAt ? sync.tokenExpiresAt <= now : true,
+      tokenPreview: sync.token ? `${sync.token.substring(0, 10)}...` : null
+    }))
+
+    return { tokens: tokensWithStatus }
+  } catch (error) {
+    console.error('Failed to get all Tradovate tokens:', error)
+    return { error: 'Failed to get tokens' }
+  }
+}
+
+// Function to manually set a custom access token
+export async function setCustomTradovateToken(
+  accessToken: string,
+  expiresAt: string,
+  accountId: string = 'custom',
+  environment: 'demo' | 'live' = 'demo'
+) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { error: 'User not authenticated' }
+    }
+
+    // Validate token format (basic check)
+    if (!accessToken || accessToken.length < 10) {
+      return { error: 'Invalid access token format' }
+    }
+
+    // Validate expiration date
+    const expirationDate = new Date(expiresAt)
+    if (isNaN(expirationDate.getTime())) {
+      return { error: 'Invalid expiration date format' }
+    }
+
+    // Store the custom token
+    const result = await storeTradovateToken(accessToken, expiresAt, environment, accountId)
+    
+    if (result.error) {
+      return result
+    }
+
+    logger.info(`Custom Tradovate token set for account ${accountId}`, {
+      accountId,
+      environment,
+      expiresAt: expirationDate.toISOString()
+    })
+
+    return { 
+      success: true, 
+      message: `Custom token set for account ${accountId}`,
+      accountId,
+      expiresAt: expirationDate.toISOString()
+    }
+  } catch (error) {
+    console.error('Failed to set custom Tradovate token:', error)
+    return { error: 'Failed to set custom token' }
+  }
+}
+
+// Function to test a custom access token without storing it
+export async function testCustomTradovateToken(
+  accessToken: string,
+  environment: 'demo' | 'live' = 'demo'
+) {
+  try {
+    // Validate token format (basic check)
+    if (!accessToken || accessToken.length < 10) {
+      return { error: 'Invalid access token format' }
+    }
+
+    // Test the token by making a simple API call
+    const apiBaseUrl = environment === 'demo' ? TRADOVATE_ENVIRONMENTS.demo.api : 'https://live.tradovateapi.com'
+    
+    const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json'
+      }
+    })
+
+    if (response.ok) {
+      const userData = await response.json()
+      logger.info('Custom token test successful', {
+        environment,
+        userData: Array.isArray(userData) ? `Found ${userData.length} users` : 'User data received'
+      })
+      
+      return { 
+        success: true, 
+        message: 'Token is valid and working',
+        environment,
+        userData: Array.isArray(userData) ? userData.length : 1
+      }
+    } else {
+      const errorText = await response.text()
+      logger.warn('Custom token test failed', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      })
+      
+      return { 
+        error: `Token test failed: ${response.status} ${response.statusText}`,
+        details: errorText
+      }
+    }
+  } catch (error) {
+    logger.error('Failed to test custom Tradovate token:', error)
+    return { error: `Failed to test token: ${error instanceof Error ? error.message : 'Unknown error'}` }
+  }
+}
 
 export async function getTradovateTrades(accessToken: string): Promise<TradovateTradesResult> {
   try {
