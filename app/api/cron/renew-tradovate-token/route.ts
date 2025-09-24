@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
 async function renewUserToken(synchronization: any) {
   try {
-    const apiBaseUrl = user.tradovateEnvironment === 'demo' 
+    const apiBaseUrl = synchronization.environment === 'demo' 
       ? 'https://demo.tradovateapi.com' 
       : 'https://live.tradovateapi.com';
     
