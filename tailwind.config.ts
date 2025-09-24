@@ -158,10 +158,10 @@ const config: Config = {
     			DEFAULT: {
     				css: {
     					'code::before': {
-    						content: '""'
+    						content: '"'
     					},
     					'code::after': {
-    						content: '""'
+    						content: '"'
     					},
     					table: {
     						width: '100%',
