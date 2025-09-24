@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type SyncInterval = 1 | 5 | 15 | 30 | 60
+export type SyncInterval = 5 | 15 | 30 | 60
 
 interface RithmicSyncState {
   syncInterval: SyncInterval
