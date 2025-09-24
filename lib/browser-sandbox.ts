@@ -25,7 +25,7 @@
 
 import { Sandbox } from "@vercel/sandbox";
 import { chromium } from 'playwright-core';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import ms from 'ms';
 
 export async function retryWithBackoff<T>(fn: () => Promise<T>, retries = 3) {

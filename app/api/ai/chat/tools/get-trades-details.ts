@@ -1,11 +1,11 @@
 import { getTradesAction } from "@/server/database";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 
 export const getTradesDetails = tool({
     description: 'Only use this tool if the user asks for trade details. Get trade details for a maximum of 10 trades with specific filters',
-    parameters: z.object({
+    inputSchema: z.object({
         instrument: z.string().describe('Instrument').optional(),
         startDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z').optional(),
         endDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z').optional(),

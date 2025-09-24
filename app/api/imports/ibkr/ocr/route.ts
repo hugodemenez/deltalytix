@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai"
+import { PDFParser } from 'pdf2json'
 
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing
 
@@ -7,7 +7,6 @@ async function extractTextFromPdf(pdfBuffer: Buffer): Promise<string> {
   return new Promise((resolve, reject) => {
     try {
       // Use pdf2json for more reliable PDF processing
-      const PDFParser = require('pdf2json')
       const pdfParser = new PDFParser()
 
       let extractedText = ''

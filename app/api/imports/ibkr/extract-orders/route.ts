@@ -1,7 +1,7 @@
 import { openai } from "@ai-sdk/openai"
 import { generateObject, streamObject } from "ai"
 import { orderSchema } from '../fifo-computation/schema'
-import { object, z } from "zod"
+import { object, z } from 'zod/v3';
 import { financialInstrumentSchema, type FinancialInstrument } from './schema'
 
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing

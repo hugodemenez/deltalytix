@@ -1,7 +1,7 @@
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 import { formatInTimeZone } from "date-fns-tz";
 
 interface TimePerformance {
@@ -251,7 +251,7 @@ function analyzeTimeOfDay(trades: Trade[], timezone: string = 'UTC'): TimeAnalys
 
 export const getTimeOfDayPerformance = tool({
   description: 'Get detailed time-based performance analysis including hourly, daily, and session-based trading patterns',
-  parameters: z.object({
+  inputSchema: z.object({
     startDate: z.string().optional().describe('Optional start date to filter trades (format: 2025-01-14T14:33:01.000Z)'),
     endDate: z.string().optional().describe('Optional end date to filter trades (format: 2025-01-14T14:33:01.000Z)'),
     timezone: z.string().optional().describe('Timezone for time analysis (e.g., UTC, EST, PST)')

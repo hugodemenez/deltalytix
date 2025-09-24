@@ -27,7 +27,7 @@ import {
 import React from "react";
 import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { tradeSchema } from '@/app/api/ai/format-trades/schema'
-import { z } from 'zod'
+import { z } from 'zod/v3';
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,

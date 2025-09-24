@@ -1,7 +1,7 @@
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 interface AccountMetrics {
   accountNumber: string;
@@ -316,7 +316,7 @@ function analyzeAccounts(trades: Trade[]): AccountAnalysis {
 
 export const getAccountPerformance = tool({
   description: 'Get detailed performance analysis and comparison across different trading accounts including risk distribution and portfolio optimization recommendations',
-  parameters: z.object({
+  inputSchema: z.object({
     startDate: z.string().optional().describe('Optional start date to filter trades (format: 2025-01-14T14:33:01.000Z)'),
     endDate: z.string().optional().describe('Optional end date to filter trades (format: 2025-01-14T14:33:01.000Z)'),
     minTrades: z.number().optional().describe('Minimum number of trades required to include an account in analysis')

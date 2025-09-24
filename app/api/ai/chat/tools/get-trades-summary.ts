@@ -2,7 +2,7 @@ import { groupBy } from "@/lib/utils";
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 interface TradeSummary {
     accountNumber: string;
@@ -39,7 +39,7 @@ interface TradeSummary {
 
 export const getTradesSummary = tool({
     description: 'Get trades between two dates',
-    parameters: z.object({
+    inputSchema: z.object({
       startDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z'),
       endDate: z.string().describe('Date string in format 2025-01-14T14:33:01.000Z')
     }),

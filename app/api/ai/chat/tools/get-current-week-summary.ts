@@ -2,7 +2,7 @@ import { groupBy } from "@/lib/utils";
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 import { startOfWeek, endOfWeek, format } from "date-fns";
 
 interface TradeSummary {
@@ -40,7 +40,7 @@ function generateTradeSummary(trades: Trade[]): TradeSummary[] {
 
 export const getCurrentWeekSummary = tool({
     description: 'Get trades summary for the current week (Monday to Sunday). This automatically calculates the current week boundaries.',
-    parameters: z.object({}),
+    inputSchema: z.object({}),
     execute: async () => {
         const now = new Date();
         const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 });

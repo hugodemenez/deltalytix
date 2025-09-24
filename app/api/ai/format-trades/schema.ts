@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 export const tradeSchema = z.object({
   quantity: z.number().describe("The number of units traded"),

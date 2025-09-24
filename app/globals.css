@@ -1,6 +1,9 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@source "../node_modules/streamdown/dist/index.js";
 
 :root {
   --foreground-rgb: 0, 0, 0;

@@ -1,6 +1,6 @@
-import { streamText } from "ai";
+import { streamText, stepCountIs, convertToModelMessages } from "ai";
 import { NextRequest } from "next/server";
-import { z } from "zod";
+import { z } from 'zod/v3';
 import { openai } from "@ai-sdk/openai";
 import { getFinancialNews } from "./tools/get-financial-news";
 import { getJournalEntries } from "./tools/get-journal-entries";
@@ -12,6 +12,7 @@ import { getCurrentWeekSummary } from "./tools/get-current-week-summary";
 import { getPreviousWeekSummary } from "./tools/get-previous-week-summary";
 import { getWeekSummaryForDate } from "./tools/get-week-summary-for-date";
 import { getPreviousConversation } from "./tools/get-previous-conversation";
+import { generateEquityChart } from "./tools/generate-equity-chart";
 import { startOfWeek, endOfWeek, subWeeks, format } from "date-fns";
 
 export const maxDuration = 30;
@@ -19,7 +20,6 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   try {
       const { messages, username, locale, timezone } = await req.json();
-
     // Calculate current week and previous week boundaries in user's timezone
     const now = new Date();
     const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday start
@@ -27,9 +27,11 @@ export async function POST(req: NextRequest) {
     const previousWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
     const previousWeekEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
 
+    const convertedMessages = convertToModelMessages(messages);
     const result = streamText({
-      model: openai("gpt-4o-mini"),
-      
+      model: openai("gpt-4o"),
+      messages: convertedMessages,
+
       system: `# ROLE & PERSONA
 You are a supportive trading psychology coach with expertise in behavioral finance and trader development. You create natural, engaging conversations that show genuine interest in the trader's journey and well-being.
 
@@ -97,6 +99,31 @@ TOOL USAGE RESTRICTIONS:
 - ALWAYS use specific weekly tools rather than manual date calculations
 - UPDATE data between messages to ensure latest information
 
+## IMAGE ANALYSIS CAPABILITIES
+
+When users share images (charts, screenshots, documents, etc.):
+- Analyze trading charts and provide technical insights
+- Identify patterns, support/resistance levels, and potential setups
+- Explain what you see in trading screenshots or journal entries
+- Help interpret trading platform interfaces or data visualizations
+- Provide context-aware analysis based on the trader's current performance data
+- Ask clarifying questions about the image content when needed
+
+## CHART GENERATION CAPABILITIES
+
+When users ask for charts, visualizations, or equity curves:
+- ALWAYS use the generateEquityChart tool - NEVER describe charts with text or images
+- The tool creates interactive equity charts that render directly in chat
+- Support both individual account view and grouped total view
+- Filter by specific accounts, date ranges, and timezones
+- After calling the tool, DO NOT generate additional text content - let the chart render
+- NEVER use markdown images or describe charts with text - always use the tool
+- DO NOT add text responses after calling generateEquityChart - the chart will render automatically
+
+MANDATORY: If user asks for "equity chart", "performance chart", "trading chart", or any visualization request, you MUST call generateEquityChart tool first and ONLY that tool.
+
+CRITICAL: After calling generateEquityChart, do NOT generate any additional text content. The chart will render automatically in the chat interface.
+
 ## CONVERSATION STYLE & APPROACH
 
 CORE OBJECTIVES:
@@ -130,9 +157,9 @@ Always structure responses with:
 - Encouraging closing statements
 
 Remember: Clarity and structure create better conversations. Use this formatting framework to ensure every response is easy to read and genuinely helpful.`,
-      toolCallStreaming: true,
-      messages: messages,
-      maxSteps: 10,
+
+      stopWhen: stepCountIs(10),
+
       tools: {
         // server-side tool with execute function
         getJournalEntries,
@@ -145,12 +172,13 @@ Remember: Clarity and structure create better conversations. Use this formatting
         getPreviousWeekSummary,
         getWeekSummaryForDate,
         getFinancialNews,
+        generateEquityChart,
         // client-side tool that is automatically executed on the client
         // askForConfirmation,
         // askForLocation,
-      },
+      }
     });
-    return result.toDataStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     if (error instanceof z.ZodError) {
       return new Response(JSON.stringify({ error: error.errors }), {

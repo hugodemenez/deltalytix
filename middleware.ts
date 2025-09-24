@@ -3,10 +3,6 @@ import { createI18nMiddleware } from "next-international/middleware"
 import { createServerClient } from "@supabase/ssr"
 import { geolocation } from "@vercel/functions"
 
-// Define protected and public routes
-const protectedRoutes = ["/dashboard", "/profile", "/settings"]
-const publicRoutes = ["/login", "/signup", "/"]
-
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
 

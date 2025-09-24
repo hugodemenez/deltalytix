@@ -8,7 +8,7 @@ import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { ImportType } from './import-type-selection'
 import { mappingSchema } from '@/app/api/ai/mappings/schema'
 import { cn } from '@/lib/utils'
-import { z } from 'zod'
+import { z } from 'zod/v3';
 
 type MappingObject = z.infer<typeof mappingSchema>
 type MappingKey = keyof MappingObject

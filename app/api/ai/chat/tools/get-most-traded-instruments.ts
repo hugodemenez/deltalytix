@@ -1,11 +1,11 @@
 import { getTradesAction } from "@/server/database";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 
 export const getMostTradedInstruments = tool({
     description: 'Get the most traded instruments',
-    parameters: z.object({}),
+    inputSchema: z.object({}),
     execute: async () => {
         let trades = await getTradesAction();
         let instruments = trades.map(trade => trade.instrument);

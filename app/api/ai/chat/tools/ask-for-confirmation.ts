@@ -1,9 +1,9 @@
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 export const askForConfirmation = tool({
     description: 'Ask the user for confirmation to perform specific actions explaining your thoughts.',
-    parameters: z.object({
+    inputSchema: z.object({
         message: z.string().describe('The message to ask for confirmation. Explaining what next actions are'),
     }),
     execute: async ({ message }: { message: string }) => {

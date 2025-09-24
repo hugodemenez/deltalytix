@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import * as z from 'zod'
+import * as z from 'zod/v3';
 import { toast } from 'sonner'
 import { ImagePlus, X } from 'lucide-react'
 import Image from 'next/image'
