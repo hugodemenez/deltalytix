@@ -8,6 +8,7 @@ import { getSubscriptionDetails } from './subscription'
 import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/context/data-provider'
+import { formatTimestamp } from '@/lib/date-utils'
 
 type TradeError = 
   | 'DUPLICATE_TRADES'
@@ -251,13 +252,13 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
       if (update.entryDateOffset !== undefined && update.entryDateOffset !== 0) {
         const entryDate = new Date(trade.entryDate)
         entryDate.setHours(entryDate.getHours() + update.entryDateOffset)
-        updateData.entryDate = entryDate
+        updateData.entryDate = formatTimestamp(entryDate.toISOString())
       }
       
       if (update.closeDateOffset !== undefined && update.closeDateOffset !== 0) {
         const closeDate = new Date(trade.closeDate)
         closeDate.setHours(closeDate.getHours() + update.closeDateOffset)
-        updateData.closeDate = closeDate
+        updateData.closeDate = formatTimestamp(closeDate.toISOString())
       }
 
       if (Object.keys(updateData).length > 0) {

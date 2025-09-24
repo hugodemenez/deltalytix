@@ -482,7 +482,7 @@ export function TradeTableReview() {
             setSelectedTrades(value ? allTradeIds : [])
           }}
           aria-label="Select all"
-          className="translate-y-[2px]"
+          className="translate-y-[2px] mr-2"
         />
       ),
       cell: ({ row }) => (
@@ -501,7 +501,7 @@ export function TradeTableReview() {
             )
           }}
           aria-label="Select row"
-          className="translate-y-[2px]"
+          className="translate-y-[2px] mr-2"
         />
       ),
       enableSorting: false,
@@ -552,7 +552,7 @@ export function TradeTableReview() {
               <Popover>
                 <PopoverTrigger asChild>
                   <div
-                    className="flex items-center justify-center w-fit min-w-6 px-2 h-6 rounded-full bg-primary/10 text-xs font-medium cursor-pointer hover:bg-primary/20 transition-colors"
+                    className="flex items-center justify-center w-fit min-w-6 px-2 h-6 rounded-full bg-gray-100 text-xs font-medium cursor-pointer hover:bg-gray-200 transition-colors"
                   >
                     {accounts.length === 1 ? `${accounts[0].slice(0, 2)}${accounts[0].slice(-2)}` : `+${accounts.length}`}
                   </div>
@@ -982,7 +982,7 @@ export function TradeTableReview() {
             {selectedTrades.length > 0 && (
               <Button
                 variant="destructive"
-                size="sm"
+                className="h-10 font-normal whitespace-nowrap"
                 onClick={handleDeleteTrades}
               >
                 <Trash className="mr-2 h-4 w-4" />
@@ -992,7 +992,7 @@ export function TradeTableReview() {
             {selectedTrades.length >= 2 && (
               <Button
                 variant="outline"
-                size="sm"
+                className="h-10 font-normal whitespace-nowrap"
                 onClick={handleGroupTrades}
               >
                 {t('trade-table.groupTrades')}
@@ -1001,7 +1001,7 @@ export function TradeTableReview() {
             {selectedTrades.length > 0 && (
               <Button
                 variant="outline"
-                size="sm"
+                className="h-10 font-normal whitespace-nowrap"
                 onClick={handleUngroupTrades}
               >
                 {t('trade-table.ungroupTrades')}
@@ -1011,13 +1011,13 @@ export function TradeTableReview() {
               value={groupingGranularity.toString()}
               onValueChange={(value) => handleGroupingGranularityChange(parseInt(value))}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="min-w-[180px] max-w-[250px]">
                 <div className="flex items-center w-full">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info 
-                          className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help mr-2" 
+                          className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help mr-2 flex-shrink-0" 
                           onClick={(e) => e.stopPropagation()}
                         />
                       </TooltipTrigger>
@@ -1026,7 +1026,7 @@ export function TradeTableReview() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  <SelectValue placeholder={t('trade-table.granularity.label')} />
+                  <SelectValue placeholder={t('trade-table.granularity.label')} className="truncate" />
                 </div>
               </SelectTrigger>
               <SelectContent>
@@ -1044,13 +1044,13 @@ export function TradeTableReview() {
       <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
         <div className="flex h-full flex-col overflow-hidden">
           <Table className="w-full border-separate border-spacing-0">
-            <TableHeader className="sticky top-0 z-10 bg-slate-50/90 backdrop-blur-sm shadow-sm border-b">
+            <TableHeader className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm shadow-sm border-b">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-slate-50/90 border-r border-slate-200 last:border-r-0 first:border-l"
+                      className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-gray-50/90 border-r border-gray-200 last:border-r-0 first:border-l"
                       style={{ width: header.getSize() }}
                     >
                       {header.isPlaceholder
@@ -1072,8 +1072,8 @@ export function TradeTableReview() {
                     <TableRow
                       data-state={row.getIsSelected() && "selected"}
                       className={cn(
-                        "border-b border-slate-200 transition-all duration-75 hover:bg-blue-50/30 group",
-                        row.getIsSelected() && "bg-blue-50/50 hover:bg-blue-100/50",
+                        "border-b border-slate-200 transition-all duration-75 hover:bg-slate-50/30 group",
+                        row.getIsSelected() && "bg-slate-50/50 hover:bg-slate-100/50",
                         row.getIsExpanded()
                           ? "bg-slate-50/80"
                           : row.getCanExpand()
@@ -1087,7 +1087,7 @@ export function TradeTableReview() {
                           key={cell.id}
                           className={cn(
                             "whitespace-nowrap px-3 py-2 text-sm border-r border-slate-100 last:border-r-0 first:border-l group-hover:border-slate-200",
-                            row.getIsSelected() && "border-blue-200"
+                            row.getIsSelected() && "border-slate-200"
                           )}
                           style={{ width: cell.column.getSize() }}
                         >
@@ -1170,6 +1170,7 @@ export function TradeTableReview() {
         <BulkEditPanel
           selectedTrades={selectedTrades}
           onUpdate={updateTrades}
+          onFinish={() => refreshTrades()}
           onClose={() => setShowBulkEdit(false)}
         />
       )}
