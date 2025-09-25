@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
+
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+
 import { Badge } from "@/components/ui/badge"
 import { Clock } from 'lucide-react'
 
@@ -15,7 +17,9 @@ interface SyncCountdownProps {
 export function SyncCountdown({ lastSyncTime, isAutoSyncing, credentialId }: SyncCountdownProps) {
   const [timeLeft, setTimeLeft] = useState<string>('')
   const { syncInterval } = useRithmicSyncStore()
+
   const { performSyncForCredential } = useRithmicSyncContext()
+
   const hasTriggeredSyncRef = useRef(false)
 
   useEffect(() => {
@@ -32,7 +36,9 @@ export function SyncCountdown({ lastSyncTime, isAutoSyncing, credentialId }: Syn
         if (!hasTriggeredSyncRef.current && credentialId && !isAutoSyncing) {
           hasTriggeredSyncRef.current = true
           console.log('Countdown reached Ready state, triggering immediate sync check for credential:', credentialId)
+
           performSyncForCredential(credentialId).catch(error => {
+
             console.error('Error triggering immediate sync:', error)
           })
         }
@@ -54,7 +60,9 @@ export function SyncCountdown({ lastSyncTime, isAutoSyncing, credentialId }: Syn
     const interval = setInterval(calculateTimeLeft, 1000)
 
     return () => clearInterval(interval)
+
   }, [lastSyncTime, syncInterval, credentialId, isAutoSyncing, performSyncForCredential])
+
 
   if (isAutoSyncing) {
     return <span className="text-primary">Syncing...</span>

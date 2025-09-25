@@ -55,6 +55,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   const { syncInterval, setSyncInterval } = useRithmicSyncStore()
 
   const handleSync = useCallback(async (credential: RithmicCredentialSet) => {
+
     console.error('handleSync', JSON.stringify(credential))
     // Prevent multiple syncs for the same credential
     if (syncingId === credential.id) {
@@ -67,11 +68,10 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
       console.error('performSyncForCredential', JSON.stringify(credential))
       const result = await performSyncForCredential(credential.id)
       
+      console.log('Sync result:', result)
+      
       if (result?.success) {
         updateLastSyncTime(credential.id)
-      }
-      
-
 
     } catch (error) {
       toast.error(t('rithmic.error.syncError'))
@@ -79,6 +79,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
     } finally {
       setSyncingId(null)
     }
+
   }, [syncingId, performSyncForCredential, t])
 
   const handleLoadMoreData = useCallback(async (credential: RithmicCredentialSet) => {
@@ -120,6 +121,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
 
       // Update last sync time
       updateLastSyncTime(credential.id)
+
 
 
     } catch (error) {

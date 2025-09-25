@@ -110,11 +110,14 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
   const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
   const [showAccountComparisonDialog, setShowAccountComparisonDialog] = useState(false)
+
   const [activityTimeout, setActivityTimeout] = useState<NodeJS.Timeout | null>(null)
   const [syncCheckInterval, setSyncCheckInterval] = useState<NodeJS.Timeout | null>(null)
+
   const t = useI18n()
   const { syncInterval } = useRithmicSyncStore()
   const trades = useTradesStore((state) => state.trades)
+
 
   const resetProcessingState = useCallback(() => {
     setProcessingStats({
@@ -563,6 +566,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     return minutesSinceLastSync >= syncInterval
   }, [syncInterval])
 
+
   // Run a sync for a credential
   const performSyncForCredential = useCallback(async (credentialId: string) => {
 
@@ -579,6 +583,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     if (!savedData) return
 
     // Set the auto sync flag
+
     setIsAutoSyncing(true)
 
     try {
@@ -587,7 +592,9 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       const { http } = getProtocols()
       const requestBody = {
         ...savedData.credentials,
+
         userId: userId
+
       }
       console.log('Making fetch request to:', `${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`)
       console.log('Request body:', requestBody)
@@ -596,10 +603,12 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+
           body: JSON.stringify({
             ...savedData.credentials,
             userId: userId
           })
+
         }),
         new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Auto-sync operation timed out')), 30000)
@@ -686,9 +695,11 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         success: false,
         rateLimited: false,
         message: error instanceof Error ? error.message : 'Unknown error'
+        
       }
     } finally {
         setIsAutoSyncing(false)
+
     }
   }, [isAutoSyncing, connect, handleMessage, getProtocols, getWebSocketUrl, t])
 
