@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { XCircle, CheckCircle2, Info, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -56,7 +57,8 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
   })
   const [isComplete, setIsComplete] = useState(false)
   const { isCollapsed, setIsCollapsed } = useNotificationStore()
-  const { lastMessage, isConnected, accountsProgress, currentAccount } = useRithmicSyncContext()
+  const { isConnected } = useRithmicSyncContext()
+  const { lastMessage, accountsProgress, currentAccount } = useRithmicSyncStore()
   const { refreshTrades } = useData()
   const refreshTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const mockIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)

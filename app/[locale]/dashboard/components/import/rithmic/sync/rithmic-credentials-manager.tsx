@@ -48,15 +48,14 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   const [credentials, setCredentials] = useState<Record<string, RithmicCredentialSet>>(getAllRithmicData())
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null)
-  const { isAutoSyncing, performSyncForCredential, connect, getWebSocketUrl, authenticateAndGetAccounts } = useRithmicSyncContext()
+  const { performSyncForCredential, connect, getWebSocketUrl, authenticateAndGetAccounts } = useRithmicSyncContext()
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const t = useI18n()
   const user = useUserStore((state) => state.user)
-  const { syncInterval, setSyncInterval } = useRithmicSyncStore()
+  const { syncInterval, setSyncInterval, isAutoSyncing } = useRithmicSyncStore()
 
   const handleSync = useCallback(async (credential: RithmicCredentialSet) => {
 
-    console.error('handleSync', JSON.stringify(credential))
     // Prevent multiple syncs for the same credential
     if (syncingId === credential.id) {
       return
@@ -65,7 +64,6 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
     try {
       console.log('Starting sync for credential:', credential.id)
       setSyncingId(credential.id)
-      console.error('performSyncForCredential', JSON.stringify(credential))
       const result = await performSyncForCredential(credential.id)
       
       console.log('Sync result:', result)

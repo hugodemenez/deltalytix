@@ -11,12 +11,11 @@ import { Switch } from "@/components/ui/switch"
 import { toast } from '@/hooks/use-toast'
 import { RithmicSyncFeedback } from './rithmic-sync-progress'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'
 import Image from 'next/image'
-import { useData } from '@/context/data-provider'
-import { useTradesStore } from '@/store/trades-store'
 import { useUserStore } from '@/store/user-store'
 import { setRithmicSynchronization } from './actions'
 
@@ -28,29 +27,31 @@ interface RithmicCredentials {
   userId: string
 }
 
-interface RithmicSyncCombinedProps {
-  onSync: (data: { credentials: RithmicCredentials, orders: Record<string, any>[] }) => Promise<void>
+interface RithmicSyncConnectionProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
-export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedProps) {
+export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps) {
   const user = useUserStore(state => state.user)
   const { 
     connect, 
     disconnect, 
     isConnected, 
+    handleMessage,
+    authenticateAndGetAccounts,
+    calculateStartDate
+  } = useRithmicSyncContext()
+  
+  const {
     selectedAccounts,
     setSelectedAccounts,
     availableAccounts,
     setAvailableAccounts,
     processingStats,
     resetProcessingState,
-    handleMessage,
     step,
-    setStep,
-    authenticateAndGetAccounts,
-    calculateStartDate
-  } = useRithmicSyncContext()
+    setStep
+  } = useRithmicSyncStore()
 
   const [isLoading, setIsLoading] = useState(false)
   const [shouldAutoConnect, setShouldAutoConnect] = useState(false)
@@ -371,7 +372,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     try {
       await setRithmicSynchronization({
         service: 'rithmic',
-        accountId: currentCredentialId || '',
+        accountId: credentials.username || '',
         token: token,
         tokenExpiresAt: null
       })
@@ -691,9 +692,8 @@ export function RithmicSyncWrapper({ setIsOpen }: RithmicSyncWrapperProps) {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
-      <RithmicSyncCombined 
+      <RithmicSyncConnection 
         setIsOpen={setIsOpen}
-        onSync={async () => {}} 
       />
       <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
         <div className="flex items-center gap-4 mb-2">

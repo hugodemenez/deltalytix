@@ -8,28 +8,9 @@ import { useI18n } from "@/locales/client"
 import { useRithmicSyncStore, SyncInterval } from '@/store/rithmic-sync-store'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
-import { getRithmicSynchronizations } from '@/app/[locale]/dashboard/components/import/rithmic/sync/actions'
+import { getRithmicSynchronizations, setRithmicSynchronization } from '@/app/[locale]/dashboard/components/import/rithmic/sync/actions'
 import { getUserId } from '@/server/auth'
 
-interface AccountProgress {
-  ordersProcessed: number
-  daysProcessed: number
-  totalDays: number
-  isComplete: boolean
-  error?: string
-  currentDate?: string
-  processedDates?: string[]
-  currentDayNumber?: number
-  lastProcessedDate?: string
-  current: number
-  total: number
-}
-
-interface ProcessingStats {
-  totalAccountsAvailable: number
-  accountsProcessed: number
-  isComplete: boolean
-}
 
 interface RithmicCredentials {
   username: string
@@ -52,34 +33,13 @@ interface RithmicSyncContextType {
   disconnect: () => void
   isConnected: boolean
   connectionStatus: string
-  
+
   // Message handling
-  lastMessage: any
-  messageHistory: any[]
   handleMessage: (message: any) => void
-  
-  // Progress tracking
-  accountsProgress: Record<string, AccountProgress>
-  currentAccount: string | null
-  processingStats: ProcessingStats
-  
-  // Account management
-  selectedAccounts: string[]
-  availableAccounts: { account_id: string; fcm_id: string }[]
-  setSelectedAccounts: (accounts: string[]) => void
-  setAvailableAccounts: (accounts: { account_id: string; fcm_id: string }[]) => void
-  
-  // State management
-  resetProcessingState: () => void
-  step: 'credentials' | 'select-accounts' | 'processing'
-  setStep: (step: 'credentials' | 'select-accounts' | 'processing') => void
-  showAccountComparisonDialog: boolean
-  setShowAccountComparisonDialog: (show: boolean) => void
-  
+
   // Auto-sync functionality
-  isAutoSyncing: boolean
   performSyncForCredential: (credentialId: string) => Promise<{ success: boolean; rateLimited: boolean; message: string } | undefined>
-  
+
   // Utilities
   calculateStartDate: (selectedAccounts: string[]) => string
   authenticateAndGetAccounts: (credentials: RithmicCredentials) => Promise<
@@ -94,40 +54,40 @@ const RithmicSyncContext = createContext<RithmicSyncContextType | undefined>(und
 export function RithmicSyncContextProvider({ children }: { children: ReactNode }) {
   const [ws, setWs] = useState<WebSocket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
-  const [lastMessage, setLastMessage] = useState<any>(null)
   const [connectionStatus, setConnectionStatus] = useState<string>('')
-  const [accountsProgress, setAccountsProgress] = useState<Record<string, AccountProgress>>({})
-  const [currentAccount, setCurrentAccount] = useState<string | null>(null)
-  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
-  const [availableAccounts, setAvailableAccounts] = useState<{ account_id: string; fcm_id: string }[]>([])
-  const [messageHistory, setMessageHistory] = useState<any[]>([])
-  const { refreshTrades } = useData()
-  const [processingStats, setProcessingStats] = useState<ProcessingStats>({
-    totalAccountsAvailable: 0,
-    accountsProcessed: 0,
-    isComplete: false
-  })
-  const [isAutoSyncing, setIsAutoSyncing] = useState(false)
-  const [step, setStep] = useState<'credentials' | 'select-accounts' | 'processing'>('credentials')
-  const [showAccountComparisonDialog, setShowAccountComparisonDialog] = useState(false)
-
-  const [activityTimeout, setActivityTimeout] = useState<NodeJS.Timeout | null>(null)
   const [syncCheckInterval, setSyncCheckInterval] = useState<NodeJS.Timeout | null>(null)
 
   const t = useI18n()
-  const { syncInterval } = useRithmicSyncStore()
+  const { refreshTrades } = useData()
   const trades = useTradesStore((state) => state.trades)
 
+  // Use store for state management
+  const {
+    syncInterval,
+    lastMessage,
+    messageHistory,
+    accountsProgress,
+    currentAccount,
+    processingStats,
+    selectedAccounts,
+    availableAccounts,
+    step,
+    isAutoSyncing,
+    setLastMessage,
+    addMessageToHistory,
+    clearMessageHistory,
+    setAccountsProgress,
+    updateAccountProgress,
+    setCurrentAccount,
+    setProcessingStats,
+    resetProcessingState,
+    setSelectedAccounts,
+    setAvailableAccounts,
+    setStep,
+    setIsAutoSyncing
+  } = useRithmicSyncStore()
 
-  const resetProcessingState = useCallback(() => {
-    setProcessingStats({
-      totalAccountsAvailable: 0,
-      accountsProcessed: 0,
-      isComplete: false
-    })
-    setAccountsProgress({})
-    setCurrentAccount(null)
-  }, [])
+
 
   const disconnect = useCallback(() => {
     if (ws) {
@@ -138,25 +98,18 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       setConnectionStatus('Disconnected')
       resetProcessingState()
     }
-    // Clear activity timeout when disconnecting
-    if (activityTimeout) {
-      clearTimeout(activityTimeout)
-      setActivityTimeout(null)
-    }
     // Clear sync check interval when disconnecting
     if (syncCheckInterval) {
       clearInterval(syncCheckInterval)
       setSyncCheckInterval(null)
     }
-  }, [ws, resetProcessingState, activityTimeout, syncCheckInterval])
+  }, [ws, resetProcessingState, syncCheckInterval])
 
   const handleMessage = useCallback((message: any) => {
     if (!message) return
 
     setLastMessage(message)
-
-    // Add message to history
-    setMessageHistory(prev => [...prev, message])
+    addMessageToHistory(message)
 
     switch (message.type) {
       case 'log':
@@ -168,33 +121,25 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
               const [, totalDays] = match
 
               // Look for the most recently added account that doesn't have totalDays set
-              setAccountsProgress(prev => {
-                const entries = Object.entries(prev)
-                const activeAccount = entries.find(([_, progress]) =>
-                  !progress.isComplete && progress.totalDays === 0
-                )
+              const entries = Object.entries(accountsProgress)
+              const activeAccount = entries.find(([_, progress]) =>
+                !progress.isComplete && progress.totalDays === 0
+              )
 
-                if (!activeAccount) {
-                  console.warn('No matching account found for setting total days:', {
-                    totalDays,
-                    message: message.message
-                  })
-                  return prev
-                }
-
+              if (activeAccount) {
                 const [accountId] = activeAccount
                 console.log('Setting total days:', { accountId, totalDays })
-
-                return {
-                  ...prev,
-                  [accountId]: {
-                    ...prev[accountId],
-                    totalDays: parseInt(totalDays),
-                    daysProcessed: 0,
-                    total: parseInt(totalDays) // Also update the total field
-                  }
-                }
-              })
+                updateAccountProgress(accountId, {
+                  totalDays: parseInt(totalDays),
+                  daysProcessed: 0,
+                  total: parseInt(totalDays)
+                })
+              } else {
+                console.warn('No matching account found for setting total days:', {
+                  totalDays,
+                  message: message.message
+                })
+              }
             }
           }
           // Handle day-by-day progress
@@ -216,24 +161,18 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
             }
 
             if (accountId && currentDay && totalDays) {
-              setAccountsProgress(prev => {
+              // Calculate the actual days processed based on the current day number
+              const daysProcessed = Math.max(parseInt(currentDay) - 1, 0)
+              const currentProgress = accountsProgress[accountId] || { processedDates: [] }
 
-                // Calculate the actual days processed based on the current day number
-                const daysProcessed = Math.max(parseInt(currentDay) - 1, 0)
-
-                return {
-                  ...prev,
-                  [accountId]: {
-                    ...prev[accountId],
-                    currentDayNumber: parseInt(currentDay),
-                    totalDays: parseInt(totalDays),
-                    currentDate: currentDate || '',
-                    daysProcessed: daysProcessed,
-                    processedDates: prev[accountId]?.processedDates || [],
-                    current: parseInt(currentDay),
-                    total: parseInt(totalDays)
-                  }
-                }
+              updateAccountProgress(accountId, {
+                currentDayNumber: parseInt(currentDay),
+                totalDays: parseInt(totalDays),
+                currentDate: currentDate || '',
+                daysProcessed: daysProcessed,
+                processedDates: currentProgress.processedDates || [],
+                current: parseInt(currentDay),
+                total: parseInt(totalDays)
               })
             }
           }
@@ -242,29 +181,23 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
             const date = message.message.match(/date (\d{8})/)?.[1]
             const accountId = currentAccount || message.account_id
             if (date && accountId) {
-              setAccountsProgress(prev => {
-                const currentProgress = prev[accountId] || {
-                  ordersProcessed: 0,
-                  daysProcessed: 0,
-                  totalDays: 0,
-                  isComplete: false,
-                  processedDates: [],
-                  currentDayNumber: 0,
-                  currentDate: '',
-                  lastProcessedDate: ''
-                }
+              const currentProgress = accountsProgress[accountId] || {
+                ordersProcessed: 0,
+                daysProcessed: 0,
+                totalDays: 0,
+                isComplete: false,
+                processedDates: [],
+                currentDayNumber: 0,
+                currentDate: '',
+                lastProcessedDate: ''
+              }
 
-                const newDaysProcessed = currentProgress.daysProcessed + 1
+              const newDaysProcessed = currentProgress.daysProcessed + 1
 
-                return {
-                  ...prev,
-                  [accountId]: {
-                    ...currentProgress,
-                    processedDates: [...(currentProgress.processedDates || []), date],
-                    lastProcessedDate: date,
-                    daysProcessed: newDaysProcessed
-                  }
-                }
+              updateAccountProgress(accountId, {
+                processedDates: [...(currentProgress.processedDates || []), date],
+                lastProcessedDate: date,
+                daysProcessed: newDaysProcessed
               })
             }
           }
@@ -272,21 +205,18 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
           else if (message.message.includes('Successfully added account')) {
             const accountId = message.message.match(/account ([^"]+)/)?.[1]
             if (accountId) {
-              setAccountsProgress(prev => ({
-                ...prev,
-                [accountId]: {
-                  ordersProcessed: 0,
-                  daysProcessed: 0,
-                  totalDays: 0,
-                  isComplete: false,
-                  processedDates: [],
-                  currentDayNumber: 0,
-                  currentDate: '',
-                  lastProcessedDate: '',
-                  current: 0,
-                  total: 0
-                }
-              }))
+              updateAccountProgress(accountId, {
+                ordersProcessed: 0,
+                daysProcessed: 0,
+                totalDays: 0,
+                isComplete: false,
+                processedDates: [],
+                currentDayNumber: 0,
+                currentDate: '',
+                lastProcessedDate: '',
+                current: 0,
+                total: 0
+              })
             }
           }
           // Handle account start
@@ -295,20 +225,15 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
             const accountId = accountMatch?.[1]
             if (accountId) {
               setCurrentAccount(accountId)
-
-              setAccountsProgress(prev => ({
-                ...prev,
-                [accountId]: {
-                  ...prev[accountId],
-                  ordersProcessed: 0,
-                  daysProcessed: 0,
-                  isComplete: false,
-                  processedDates: [],
-                  currentDayNumber: 0,
-                  currentDate: '',
-                  lastProcessedDate: ''
-                }
-              }))
+              updateAccountProgress(accountId, {
+                ordersProcessed: 0,
+                daysProcessed: 0,
+                isComplete: false,
+                processedDates: [],
+                currentDayNumber: 0,
+                currentDate: '',
+                lastProcessedDate: ''
+              })
             }
           }
           // Handle account completion
@@ -317,16 +242,13 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
             if (match) {
               const [, accountId, ordersStr] = match
               const ordersCount = parseInt(ordersStr, 10)
-              setAccountsProgress(prev => ({
-                ...prev,
-                [accountId]: {
-                  ...prev[accountId],
-                  ordersProcessed: ordersCount,
-                  isComplete: true,
-                  daysProcessed: prev[accountId]?.totalDays || 0,
-                  currentDayNumber: prev[accountId]?.totalDays || 0
-                }
-              }))
+              const currentProgress = accountsProgress[accountId]
+              updateAccountProgress(accountId, {
+                ordersProcessed: ordersCount,
+                isComplete: true,
+                daysProcessed: currentProgress?.totalDays || 0,
+                currentDayNumber: currentProgress?.totalDays || 0
+              })
             }
           }
         }
@@ -334,18 +256,12 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
 
       case 'order_update':
         if (message.account_id) {
-          setAccountsProgress(prev => {
-            const prevAccount = prev[message.account_id]
-            if (!prevAccount) return prev
-
-            return {
-              ...prev,
-              [message.account_id]: {
-                ...prevAccount,
-                ordersProcessed: prevAccount.ordersProcessed + 1
-              }
-            }
-          })
+          const prevAccount = accountsProgress[message.account_id]
+          if (prevAccount) {
+            updateAccountProgress(message.account_id, {
+              ordersProcessed: prevAccount.ordersProcessed + 1
+            })
+          }
         }
         break
 
@@ -362,44 +278,35 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         const progressMatch = message.message.match(/\[(.*?)\] Processing date (\d+)\/(\d+)(?:: (\d{8}))?/)
         if (progressMatch) {
           const [, accountId, currentDay, totalDays, currentDate] = progressMatch
+          const current = parseInt(currentDay)
+          const total = parseInt(totalDays)
+          const prevAccount = accountsProgress[accountId] || {
+            ordersProcessed: 0,
+            daysProcessed: 0,
+            totalDays: 0,
+            isComplete: false,
+            processedDates: [],
+            currentDayNumber: 0,
+            currentDate: '',
+            current: 0,
+            total: 0
+          }
 
-          setAccountsProgress(prev => {
-            const current = parseInt(currentDay)
-            const total = parseInt(totalDays)
-            const prevAccount = prev[accountId] || {
-              ordersProcessed: 0,
-              daysProcessed: 0,
-              totalDays: 0,
-              isComplete: false,
-              processedDates: [],
-              currentDayNumber: 0,
-              currentDate: '',
-              current: 0,
-              total: 0
-            }
+          // Only update if it's a newer progress
+          if (current > prevAccount.current || total !== prevAccount.total) {
+            const daysProcessed = Math.max(current - 1, 0)
 
-            // Only update if it's a newer progress
-            if (current > prevAccount.current || total !== prevAccount.total) {
-              const daysProcessed = Math.max(current - 1, 0)
-
-              return {
-                ...prev,
-                [accountId]: {
-                  ...prevAccount,
-                  currentDayNumber: current,
-                  totalDays: total,
-                  currentDate: currentDate || prevAccount.currentDate,
-                  daysProcessed,
-                  processedDates: [...new Set([...(prevAccount.processedDates || []), currentDate])].filter(Boolean),
-                  current,
-                  total,
-                  isComplete: current === total
-                }
-              }
-            }
-
-            return prev
-          })
+            updateAccountProgress(accountId, {
+              currentDayNumber: current,
+              totalDays: total,
+              currentDate: currentDate || prevAccount.currentDate,
+              daysProcessed,
+              processedDates: [...new Set([...(prevAccount.processedDates || []), currentDate])].filter(Boolean),
+              current,
+              total,
+              isComplete: current === total
+            })
+          }
 
           // Update current account if not set
           if (!currentAccount) {
@@ -409,7 +316,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         break
     }
 
-  }, [currentAccount, setCurrentAccount, refreshTrades])
+  }, [currentAccount, accountsProgress, setCurrentAccount, refreshTrades, setLastMessage, addMessageToHistory, updateAccountProgress])
 
 
   const connect = useCallback((url: string, token: string, accounts: string[], startDate: string) => {
@@ -425,8 +332,11 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       ws.close()
     }
 
-    // Only reset processing state, keep message history
+    // reset processing state, message history
     resetProcessingState()
+    clearMessageHistory()
+
+    // Save selected accounts in context
     setSelectedAccounts(accounts)
 
     // Initialize account progress
@@ -452,7 +362,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     console.log('Creating WebSocket connection to:', url)
     const newWs = new WebSocket(url)
 
-  
+
 
     newWs.onopen = () => {
       console.log('WebSocket connection established')
@@ -521,7 +431,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     }
 
     setWs(newWs)
-  }, [ws, handleMessage, disconnect, resetProcessingState])
+  }, [ws, handleMessage, disconnect, resetProcessingState, clearMessageHistory, setSelectedAccounts, setAccountsProgress, setCurrentAccount])
 
   // Extract common protocol logic
   const getProtocols = useCallback(() => {
@@ -548,6 +458,9 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
 
   // Run a sync for a credential
   const performSyncForCredential = useCallback(async (credentialId: string) => {
+    // Reset processing state, message history
+    resetProcessingState()
+    clearMessageHistory()
 
     const userId = await getUserId()
     // Ensure we are not already syncing
@@ -557,27 +470,18 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     if (!userId || isAutoSyncing) return
 
     const savedData = getRithmicData(credentialId)
-    
+
     // If we do not find the credential, return
     if (!savedData) return
 
     // Set the auto sync flag
-
     setIsAutoSyncing(true)
 
     try {
-      console.error('Authenticating and getting accounts', JSON.stringify(savedData))
       // Authenticate and get accounts
       const { http } = getProtocols()
-      const requestBody = {
-        ...savedData.credentials,
 
-        userId: userId
-
-      }
-      console.log('Making fetch request to:', `${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`)
-      console.log('Request body:', requestBody)
-      
+      // Make fetch request to get accounts
       const response = await Promise.race([
         fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`, {
           method: 'POST',
@@ -593,9 +497,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
           setTimeout(() => reject(new Error('Auto-sync operation timed out')), 30000)
         )
       ]) as Response
-      
-      console.log('Response status:', response.status)
-      console.log('Response ok:', response.ok)
+
 
       // Handle rate limit error specifically
       if (response.status === 429) {
@@ -618,8 +520,8 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       const data = await response.json()
       if (!data.success) throw new Error(data.message)
 
-      // If allAccounts is true, use all available accounts
-      const accountsToSync = savedData.allAccounts ? data.accounts.map((acc: any) => acc.account_id) : savedData.selectedAccounts
+      // If allAccounts is true, use all available accounts else use selected accounts (which exist in the data.accounts array)
+      const accountsToSync = savedData.allAccounts ? data.accounts.map((acc: any) => acc.account_id) : savedData.selectedAccounts.filter((account: string) => data.accounts.some((acc: any) => acc.account_id === account))
 
       setAvailableAccounts(data.accounts)
       const wsUrl = getWebSocketUrl(data.websocket_url)
@@ -655,7 +557,13 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         level: 'info',
         message: `Starting automatic background sync for ${savedData.name || savedData.credentials.username}`
       })
-      
+
+      // Update last sync time in the database
+      await setRithmicSynchronization({
+        accountId: credentialId,
+        lastSyncedAt: new Date()
+      })
+
       console.log('Auto-sync completed successfully')
       return {
         success: true,
@@ -669,18 +577,18 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         level: 'error',
         message: `Auto-sync error for credential set ${credentialId}: ${error instanceof Error ? error.message : 'Unknown error'}`
       })
-      
+
       return {
         success: false,
         rateLimited: false,
         message: error instanceof Error ? error.message : 'Unknown error'
-        
+
       }
     } finally {
-        setIsAutoSyncing(false)
+      setIsAutoSyncing(false)
 
     }
-  }, [isAutoSyncing, connect, handleMessage, getProtocols, getWebSocketUrl, t])
+  }, [isAutoSyncing, connect, handleMessage, getProtocols, getWebSocketUrl, t, resetProcessingState, clearMessageHistory, setAvailableAccounts, setIsAutoSyncing])
 
   // Update authenticateAndGetAccounts to return a rate limit response object
   const authenticateAndGetAccounts = useCallback(async (credentials: RithmicCredentials) => {
@@ -768,46 +676,42 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     return startDate
   }, [trades])
 
-  // Auto-sync checking effect
-  useEffect(() => {
-    const checkAndPerformSyncs = async () => {
-      try {
-        // Get all rithmic synchronizations for the current user
-        const synchronizations = await getRithmicSynchronizations()
-        
-        for (const sync of synchronizations) {
-          if (!sync.lastSyncedAt) continue
-          
-          const lastSyncTime = new Date(sync.lastSyncedAt).getTime()
-          const now = Date.now()
-          const minutesSinceLastSync = (now - lastSyncTime) / (1000 * 60)
-          
-          // Check if enough time has passed since last sync
-          if (minutesSinceLastSync >= syncInterval) {
-            console.log(`Auto-sync triggered for credential ${sync.id}`)
-            await performSyncForCredential(sync.id)
-          }
+  // Auto-sync checking
+  const checkAndPerformSyncs = useCallback(async () => {
+    try {
+      const synchronizations = await getRithmicSynchronizations()
+
+      for (const sync of synchronizations) {
+        if (!sync.lastSyncedAt) continue
+
+        const lastSyncTime = new Date(sync.lastSyncedAt).getTime()
+        const now = Date.now()
+        const minutesSinceLastSync = (now - lastSyncTime) / (1000 * 60)
+
+        if (minutesSinceLastSync >= syncInterval) {
+          console.log(`Auto-sync triggered for credential ${sync.accountId}`)
+          await performSyncForCredential(sync.accountId)
         }
-      } catch (error) {
-        console.error('Error during auto-sync check:', error)
       }
+    } catch (error) {
+      console.error('Error during auto-sync check:', error)
     }
+  }, [syncInterval, performSyncForCredential])
 
-    // Set up interval to check every minute
-    const interval = setInterval(checkAndPerformSyncs, 60000) // 60 seconds
-    setSyncCheckInterval(interval)
 
-    // Run initial check
-    checkAndPerformSyncs()
+  // Auto-sync checking interval
+  useEffect(() => {
+    const intervalMs = 1 * 60 * 1000  // 1 minute
 
-    // Cleanup function
+    const intervalId = setInterval(() => {
+      checkAndPerformSyncs()
+    }, intervalMs)
+
+    // Cleanup on unmount
     return () => {
-      if (interval) {
-        clearInterval(interval)
-        setSyncCheckInterval(null)
-      }
+      clearInterval(intervalId)
     }
-  }, [syncInterval]) // Only depend on syncInterval, not the functions
+  }, [syncInterval, checkAndPerformSyncs])
 
   return (
     <RithmicSyncContext.Provider value={{
@@ -816,34 +720,13 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       disconnect,
       isConnected,
       connectionStatus,
-      
+
       // Message handling
-      lastMessage,
-      messageHistory,
       handleMessage,
-      
-      // Progress tracking
-      accountsProgress,
-      currentAccount,
-      processingStats,
-      
-      // Account management
-      selectedAccounts,
-      availableAccounts,
-      setSelectedAccounts,
-      setAvailableAccounts,
-      
-      // State management
-      resetProcessingState,
-      step,
-      setStep,
-      showAccountComparisonDialog,
-      setShowAccountComparisonDialog,
-      
+
       // Auto-sync functionality
-      isAutoSyncing,
       performSyncForCredential,
-      
+
       // Utilities
       calculateStartDate,
       authenticateAndGetAccounts,

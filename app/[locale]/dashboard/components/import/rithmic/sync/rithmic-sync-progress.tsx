@@ -4,7 +4,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { cn } from "@/lib/utils"
 import { useI18n } from '@/locales/client'
 
@@ -18,7 +18,7 @@ export function RithmicSyncFeedback({ totalAccounts }: RithmicSyncFeedbackProps)
     currentAccount, 
     processingStats, 
     messageHistory
-  } = useRithmicSyncContext()
+  } = useRithmicSyncStore()
   const t = useI18n()
 
   // Calculate progress for a specific account
