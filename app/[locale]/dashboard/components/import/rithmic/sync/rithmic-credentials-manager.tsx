@@ -72,6 +72,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
       
       if (result?.success) {
         updateLastSyncTime(credential.id)
+      }
 
     } catch (error) {
       toast.error(t('rithmic.error.syncError'))
