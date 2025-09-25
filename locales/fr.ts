@@ -775,7 +775,9 @@ export default {
             invalidCredentials: "Identifiants invalides. Veuillez vérifier votre nom d'utilisateur et votre mot de passe.",
             rateLimit: "Limite d'essais atteinte. Veuillez patienter avant de réessayer.",
             syncError: "Une erreur est survenue lors de la synchronisation. Veuillez réessayer.",
-            authError: "Authentification échouée. Veuillez vérifier vos identifiants et réessayer."
+            authError: "Authentification échouée. Veuillez vérifier vos identifiants et réessayer.",
+            syncDataSaveFailed: "Échec de la Sauvegarde des Données de Sync",
+            syncDataSaveFailedDescription: "Impossible de sauvegarder les données de synchronisation dans la base de données. La synchronisation continuera mais ces données peuvent ne pas être conservées."
         },
         credentials: {
             updated: "Identifiants Mis à Jour",

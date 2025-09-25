@@ -452,24 +452,10 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     console.log('Creating WebSocket connection to:', url)
     const newWs = new WebSocket(url)
 
-    // Add connection timeout
-    const connectionTimeout = setTimeout(() => {
-      console.log('TIMEOUT CHECK', JSON.stringify(newWs))
-      if (newWs.readyState !== WebSocket.OPEN) {
-        console.log('WebSocket connection timeout')
-        newWs.close()
-        setIsAutoSyncing(false)
-        handleMessage({
-          type: 'connection_status',
-          status: 'Connection timeout',
-          message: 'WebSocket connection timed out'
-        })
-      }
-    }, 15) // 15 second timeout
+  
 
     newWs.onopen = () => {
       console.log('WebSocket connection established')
-      clearTimeout(connectionTimeout)
       setIsConnected(true)
       setConnectionStatus('Connected')
 
@@ -508,7 +494,6 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
 
     newWs.onerror = (error) => {
       console.error('WebSocket error:', error)
-      clearTimeout(connectionTimeout)
       setConnectionStatus('WebSocket error occurred')
       handleMessage({
         type: 'connection_status',
@@ -522,7 +507,6 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     }
 
     newWs.onclose = (event) => {
-      clearTimeout(connectionTimeout)
       setIsConnected(false)
       const closeMessage = event.reason || 'Connection closed'
       const status = `Disconnected: ${closeMessage}`
@@ -534,11 +518,6 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       })
       // Reset auto sync state on close
       setIsAutoSyncing(false)
-      // Clear activity timeout on close
-      if (activityTimeout) {
-        clearTimeout(activityTimeout)
-        setActivityTimeout(null)
-      }
     }
 
     setWs(newWs)

@@ -356,7 +356,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     }
   }, [isConnected, selectedAccounts, setStep])
 
-  function handleStartProcessing() {
+  const handleStartProcessing = useCallback(async () => {
     setIsLoading(true)
     setStep('processing')
 
@@ -367,24 +367,40 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
 
     // Save credentials and accounts locally
     saveCredentialsAndAccounts()
-    // Store synchronization data
-    setRithmicSynchronization({
-      id: currentCredentialId || '',
-      service: 'rithmic',
-      accountId: currentCredentialId || '',
-      lastSyncedAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      token: token,
-      tokenExpiresAt: null
-    })
+    // Store synchronization data in db
+    try {
+      await setRithmicSynchronization({
+        service: 'rithmic',
+        accountId: currentCredentialId || '',
+        token: token,
+        tokenExpiresAt: null
+      })
+    } catch (error) {
+      console.error('Failed to save synchronization data:', error)
+      toast({
+        title: t('rithmic.error.syncDataSaveFailed'),
+        description: t('rithmic.error.syncDataSaveFailedDescription'),
+        variant: "destructive"
+      })
+    }
 
     // Use all available accounts if allAccounts is true
     const accountsToSync = allAccounts ? availableAccounts.map(acc => acc.account_id) : selectedAccounts
     const startDate = calculateStartDate(accountsToSync)
     console.log('Connecting to WebSocket:', wsUrl)
     connect(wsUrl, token, accountsToSync, startDate)
-  }
+  }, [
+    token,
+    wsUrl,
+    currentCredentialId,
+    allAccounts,
+    availableAccounts,
+    selectedAccounts,
+    saveCredentialsAndAccounts,
+    calculateStartDate,
+    connect,
+    setStep
+  ])
 
   return (
     <div className="space-y-6">

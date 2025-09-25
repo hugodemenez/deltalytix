@@ -15,8 +15,11 @@ export async function setRithmicSynchronization(synchronization: Partial<Synchro
   const userId = await getUserId()
   await prisma.synchronization.upsert({
     where: { 
-      userId: userId,
-      id: synchronization.id 
+      userId_service_accountId: {
+        userId: userId,
+        service: synchronization.service || 'rithmic',
+        accountId: synchronization.accountId || ''
+      }
     },
     update: {
       ...synchronization,
@@ -24,7 +27,7 @@ export async function setRithmicSynchronization(synchronization: Partial<Synchro
     },
     create: {
       ...synchronization,
-      service: synchronization.service || '',
+      service: synchronization.service || 'rithmic',
       accountId: synchronization.accountId || '',
       lastSyncedAt: synchronization.lastSyncedAt || new Date(),
       userId: userId
