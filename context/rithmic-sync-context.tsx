@@ -587,7 +587,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       const { http } = getProtocols()
       const requestBody = {
         ...savedData.credentials,
-        userId: user.id
+        userId: userId
       }
       console.log('Making fetch request to:', `${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/accounts`)
       console.log('Request body:', requestBody)
