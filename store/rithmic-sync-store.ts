@@ -89,7 +89,7 @@ export const useRithmicSyncStore = create<RithmicSyncState>()(
         accountsProgress: {
           ...state.accountsProgress,
           [accountId]: {
-            ...state.accountsProgress[accountId],
+            ...(state.accountsProgress[accountId] ?? {}),
             ...progress
           }
         }
