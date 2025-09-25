@@ -307,7 +307,7 @@ export function TradovateSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => v
         'demo' // Default to demo environment
       )
 
-      if (result.error) {
+      if ('error' in result) {
         toast({
           title: "Save Failed",
           description: `Failed to save custom token: ${result.error}`,
