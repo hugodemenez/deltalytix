@@ -15,18 +15,10 @@ import {
 } from "@/components/ui/tooltip"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { useI18n } from "@/locales/client"
+import { translateWeekdayPnL } from "@/lib/translation-utils"
 import { Button } from "@/components/ui/button"
 
 const daysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // Sunday = 0, Saturday = 6
-
-type WeekdayTranslationKey =
-  | 'weekdayPnl.days.sunday'
-  | 'weekdayPnl.days.monday'
-  | 'weekdayPnl.days.tuesday'
-  | 'weekdayPnl.days.wednesday'
-  | 'weekdayPnl.days.thursday'
-  | 'weekdayPnl.days.friday'
-  | 'weekdayPnl.days.saturday';
 
 interface WeekdayPNLChartProps {
   size?: WidgetSize
@@ -34,19 +26,6 @@ interface WeekdayPNLChartProps {
 
 const formatCurrency = (value: number) =>
   value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
-
-const getDayTranslationKey = (day: number): WeekdayTranslationKey => {
-  const keys: WeekdayTranslationKey[] = [
-    'weekdayPnl.days.sunday',
-    'weekdayPnl.days.monday',
-    'weekdayPnl.days.tuesday',
-    'weekdayPnl.days.wednesday',
-    'weekdayPnl.days.thursday',
-    'weekdayPnl.days.friday',
-    'weekdayPnl.days.saturday'
-  ];
-  return keys[day];
-}
 
 const chartConfig = {
   pnl: {
@@ -136,7 +115,7 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
                 {t('weekdayPnl.tooltip.day')}
               </span>
               <span className="font-bold text-muted-foreground">
-                {t(getDayTranslationKey(data.day))}
+                {translateWeekdayPnL(t, data.day)}
               </span>
             </div>
             <div className="flex flex-col">
@@ -240,8 +219,8 @@ export default function WeekdayPNLChart({ size = 'medium' }: WeekdayPNLChartProp
                   fill: 'currentColor'
                 }}
                 tickFormatter={(value) => {
-                  const key = getDayTranslationKey(value);
-                  return size === 'small-long' ? t(key).slice(0, 3) : t(key)
+                  const dayName = translateWeekdayPnL(t, value)
+                  return size === 'small-long' ? dayName.slice(0, 3) : dayName
                 }}
               />
               <YAxis
