@@ -44,7 +44,16 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function renewUserToken(synchronization: any) {
+/**
+ * Attempts to renew the Tradovate access token for a given synchronization record.
+ * 
+ * - If the current token is valid and renewable, it calls the Tradovate API to renew the access token.
+ * - If the renewal is successful, updates the token and its expiration in the database.
+ * - If the renewal fails (e.g., token is invalid/expired), clears the token and expiration in the database.
+ * 
+ * @param synchronization The synchronization record containing user, environment, and token info.
+ */
+async function renewUserToken(synchronization: any): Promise<boolean> {
   try {
     const apiBaseUrl = synchronization.environment === 'demo' 
       ? 'https://demo.tradovateapi.com' 
