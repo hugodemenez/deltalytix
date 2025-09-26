@@ -6,4 +6,48 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+/* Custom animations for coin physics and interactions */
+@keyframes coinThrow {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(180deg);
+  }
+  100% {
+    transform: scale(1) rotate(360deg);
+  }
+}
+
+@keyframes coinBounce {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes coinExpand {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.05);
+  }
+}
+
+.coin-throw {
+  animation: coinThrow 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.coin-bounce {
+  animation: coinBounce 0.3s ease-in-out;
+}
+
+.coin-expand {
+  animation: coinExpand 0.2s ease-out forwards;
 } 
