@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { useWebSocket } from '@/context/rithmic-sync-context'
+import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { XCircle, CheckCircle2, Info, ChevronDown, ChevronUp, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -26,7 +27,7 @@ interface Notification {
   }
 }
 
-interface WebSocketNotificationsProps {
+interface RithmicSyncNotificationsProps {
   isMockMode?: boolean
 }
 
@@ -38,7 +39,7 @@ function formatYYYYMMDD(dateStr: string): string {
   return `${day}/${month}/${year}`
 }
 
-export function WebSocketNotifications({ isMockMode = false }: WebSocketNotificationsProps) {
+export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNotificationsProps) {
   const t = useI18n()
   const [notifications, setNotifications] = useState<Record<string, Notification>>({
     progress: {
@@ -56,7 +57,8 @@ export function WebSocketNotifications({ isMockMode = false }: WebSocketNotifica
   })
   const [isComplete, setIsComplete] = useState(false)
   const { isCollapsed, setIsCollapsed } = useNotificationStore()
-  const { lastMessage, isConnected, accountsProgress, currentAccount } = useWebSocket()
+  const { isConnected } = useRithmicSyncContext()
+  const { lastMessage, accountsProgress, currentAccount } = useRithmicSyncStore()
   const { refreshTrades } = useData()
   const refreshTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const mockIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)

@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/renewal-notice",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/renew-tradovate-token",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

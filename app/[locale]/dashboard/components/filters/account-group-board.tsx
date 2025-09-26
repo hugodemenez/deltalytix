@@ -154,7 +154,7 @@ export function AccountGroupBoard() {
         description: t("filters.errorMovingAccount", { account: account.number })
       })
     }
-  }, [groups, user?.id, saveGroup, moveAccountToGroup, t, existingAccounts])
+  }, [groups, user?.id, saveGroup, moveAccountToGroup, saveAccount, t, existingAccounts])
 
   const handleDeleteGroup = useCallback(async (groupId: string, groupName: string) => {
     try {

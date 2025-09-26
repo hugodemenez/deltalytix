@@ -1049,6 +1049,8 @@ export default {
             rateLimit: "Rate limit exceeded. Please wait before trying again.",
             syncError: "An error occurred during synchronization. Please try again.",
             authError: "Authentication failed. Please check your credentials and try again.",
+            syncDataSaveFailed: "Failed to Save Sync Data",
+            syncDataSaveFailedDescription: "Unable to save synchronization data to the database. The sync will continue but this data may not be preserved.",
         },
         editCredentials: "Edit Credentials",
         addNewCredentials: "Add New Credentials",

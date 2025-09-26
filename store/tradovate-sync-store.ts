@@ -41,6 +41,8 @@ interface TradovateSyncStore extends TradovateOAuthState {
   getValidToken: () => string | null
   setEnvironment: (environment: TradovateEnvironment) => void
   getApiBaseUrl: () => string
+  syncWithSessionStorage: () => void
+  loadFromSessionStorage: () => boolean
 }
 
 export const useTradovateSyncStore = create<TradovateSyncStore>()(
@@ -68,6 +70,10 @@ export const useTradovateSyncStore = create<TradovateSyncStore>()(
           refreshToken,
           expiresAt
         })
+        // Automatically sync with sessionStorage for web worker
+        sessionStorage.setItem('tradovate_access_token', accessToken)
+        sessionStorage.setItem('tradovate_token_expiration', expiresAt)
+        sessionStorage.setItem('tradovate_environment', get().environment)
       },
 
       setAccounts: (accounts: TradovateAccount[]) => {
@@ -102,7 +108,9 @@ export const useTradovateSyncStore = create<TradovateSyncStore>()(
       isTokenExpired: () => {
         const state = get()
         if (!state.expiresAt) return true
-        return Date.now() > new Date(state.expiresAt).getTime()
+        // Add 5-minute buffer to refresh before actual expiration
+        const bufferTime = 5 * 60 * 1000 // 5 minutes in milliseconds
+        return Date.now() > (new Date(state.expiresAt).getTime() - bufferTime)
       },
 
       getValidToken: () => {
@@ -132,6 +140,38 @@ export const useTradovateSyncStore = create<TradovateSyncStore>()(
         return state.environment === 'demo' 
           ? 'https://demo.tradovateapi.com' 
           : 'https://live.tradovateapi.com'
+      },
+
+      // Sync tokens with sessionStorage for web worker
+      syncWithSessionStorage: () => {
+        const state = get()
+        if (state.accessToken && state.expiresAt) {
+          sessionStorage.setItem('tradovate_access_token', state.accessToken)
+          sessionStorage.setItem('tradovate_token_expiration', state.expiresAt)
+          sessionStorage.setItem('tradovate_environment', state.environment)
+        } else {
+          sessionStorage.removeItem('tradovate_access_token')
+          sessionStorage.removeItem('tradovate_token_expiration')
+          sessionStorage.removeItem('tradovate_environment')
+        }
+      },
+
+      // Load tokens from sessionStorage
+      loadFromSessionStorage: () => {
+        const accessToken = sessionStorage.getItem('tradovate_access_token')
+        const expiresAt = sessionStorage.getItem('tradovate_token_expiration')
+        const environment = sessionStorage.getItem('tradovate_environment') as 'demo' | 'live' || 'demo'
+        
+        if (accessToken && expiresAt) {
+          set({
+            isAuthenticated: true,
+            accessToken,
+            expiresAt,
+            environment
+          })
+          return true
+        }
+        return false
       }
     }),
     {

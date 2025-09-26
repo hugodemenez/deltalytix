@@ -9,15 +9,15 @@ import { Loader2 } from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { toast } from '@/hooks/use-toast'
-import { RithmicSyncFeedback } from './rithmic-sync-feedback'
-import { useWebSocket } from '@/context/rithmic-sync-context'
+import { RithmicSyncFeedback } from './rithmic-sync-progress'
+import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
 import { useI18n } from '@/locales/client'
 import Image from 'next/image'
-import { useData } from '@/context/data-provider'
-import { useTradesStore } from '@/store/trades-store'
 import { useUserStore } from '@/store/user-store'
+import { setRithmicSynchronization } from './actions'
 
 interface RithmicCredentials {
   username: string
@@ -27,70 +27,56 @@ interface RithmicCredentials {
   userId: string
 }
 
-interface ServerConfigurations {
-  [key: string]: string[]
-}
-
-interface RithmicAccount {
-  account_id: string
-  fcm_id: string
-}
-
-interface RithmicOrder {
-  order_id: string
-  account_id: string
-  ticker: string
-  exchange: string
-  buy_sell_type: string
-  order_type: string
-  status: string
-  quantity: number
-  filled_quantity: number
-  price: number
-  commission: number
-  timestamp: number
-}
-
-interface RithmicSyncCombinedProps {
-  onSync: (data: { credentials: RithmicCredentials, orders: Record<string, any>[] }) => Promise<void>
+interface RithmicSyncConnectionProps {
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
 }
 
-export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedProps) {
+export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps) {
   const user = useUserStore(state => state.user)
   const { 
     connect, 
     disconnect, 
     isConnected, 
-    lastMessage, 
-    connectionStatus, 
-    orders: wsOrders,
+    handleMessage,
+    authenticateAndGetAccounts,
+    calculateStartDate
+  } = useRithmicSyncContext()
+  
+  const {
     selectedAccounts,
     setSelectedAccounts,
     availableAccounts,
     setAvailableAccounts,
     processingStats,
     resetProcessingState,
-    feedbackMessages,
-    messageHistory,
-    handleMessage,
     step,
-    setStep,
-    showAccountComparisonDialog,
-    setShowAccountComparisonDialog,
-    compareAccounts,
-    serverConfigs,
-    fetchServerConfigs,
-    authenticateAndGetAccounts,
-    wsUrl,
-    token,
-    setWsUrl,
-    setToken,
-    calculateStartDate
-  } = useWebSocket()
+    setStep
+  } = useRithmicSyncStore()
 
   const [isLoading, setIsLoading] = useState(false)
   const [shouldAutoConnect, setShouldAutoConnect] = useState(false)
+  const [wsUrl, setWsUrl] = useState<string | null>(null)
+  const [token, setToken] = useState<string | null>(null)
+  const [serverConfigs, setServerConfigs] = useState<Record<string, string[]>>({})
+  
+  // Local fetchServerConfigs function
+  const fetchServerConfigs = useCallback(async () => {
+    try {
+      const isLocalhost = process.env.NEXT_PUBLIC_RITHMIC_API_URL?.includes('localhost')
+      const http = isLocalhost ? window.location.protocol : 'https:'
+      const response = await fetch(`${http}//${process.env.NEXT_PUBLIC_RITHMIC_API_URL}/servers`)
+      const data = await response.json()
+
+      if (data.success) {
+        setServerConfigs(data.servers)
+      } else {
+        throw new Error(data.message)
+      }
+    } catch (error) {
+      console.error('Failed to fetch server configurations:', error)
+    }
+  }, [])
+  
   const [credentials, setCredentials] = useState<RithmicCredentials>({
     username: '',
     password: '',
@@ -371,7 +357,7 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
     }
   }, [isConnected, selectedAccounts, setStep])
 
-  function handleStartProcessing() {
+  const handleStartProcessing = useCallback(async () => {
     setIsLoading(true)
     setStep('processing')
 
@@ -380,13 +366,42 @@ export function RithmicSyncCombined({ onSync, setIsOpen }: RithmicSyncCombinedPr
       return
     }
 
+    // Save credentials and accounts locally
     saveCredentialsAndAccounts()
+    // Store synchronization data in db
+    try {
+      await setRithmicSynchronization({
+        service: 'rithmic',
+        accountId: credentials.username || '',
+        token: token,
+        tokenExpiresAt: null
+      })
+    } catch (error) {
+      console.error('Failed to save synchronization data:', error)
+      toast({
+        title: t('rithmic.error.syncDataSaveFailed'),
+        description: t('rithmic.error.syncDataSaveFailedDescription'),
+        variant: "destructive"
+      })
+    }
+
     // Use all available accounts if allAccounts is true
     const accountsToSync = allAccounts ? availableAccounts.map(acc => acc.account_id) : selectedAccounts
     const startDate = calculateStartDate(accountsToSync)
     console.log('Connecting to WebSocket:', wsUrl)
     connect(wsUrl, token, accountsToSync, startDate)
-  }
+  }, [
+    token,
+    wsUrl,
+    currentCredentialId,
+    allAccounts,
+    availableAccounts,
+    selectedAccounts,
+    saveCredentialsAndAccounts,
+    calculateStartDate,
+    connect,
+    setStep
+  ])
 
   return (
     <div className="space-y-6">
@@ -677,9 +692,8 @@ export function RithmicSyncWrapper({ setIsOpen }: RithmicSyncWrapperProps) {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">{t('import.type.rithmicLogin')}</h2>
-      <RithmicSyncCombined 
+      <RithmicSyncConnection 
         setIsOpen={setIsOpen}
-        onSync={async () => {}} 
       />
       <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
         <div className="flex items-center gap-4 mb-2">
