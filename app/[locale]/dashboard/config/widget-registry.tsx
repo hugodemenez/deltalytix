@@ -31,6 +31,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import { MindsetWidget } from '../components/mindset/mindset-widget'
 import ChatWidget from '../components/chat/chat'
 import { useI18n } from '@/locales/client'
+import { translateWeekday } from '@/lib/translation-utils'
 // import MarketChart from '../components/market/market-chart'
 
 export interface WidgetConfig {
@@ -246,7 +247,7 @@ function CreateCalendarPreview() {
         <div className="grid grid-cols-7 gap-1 mb-2">
           {weekdays.map((day) => (
             <div key={day} className="text-center text-xs font-medium text-muted-foreground p-1">
-              {t(day)}
+              {translateWeekday(t, day)}
             </div>
           ))}
         </div>

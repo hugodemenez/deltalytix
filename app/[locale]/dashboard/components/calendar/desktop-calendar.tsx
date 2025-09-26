@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { FinancialEvent } from "@prisma/client"
 import { CalendarModal } from "./daily-modal"
 import { useI18n, useCurrentLocale } from "@/locales/client"
+import { translateWeekday } from "@/lib/translation-utils"
 import { WeeklyModal } from "./weekly-modal"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
@@ -433,7 +434,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
             <div className="grid grid-cols-8 gap-x-[1px] mb-1">
               {WEEKDAYS.map((day) => (
                 <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
-                  {t(day)}
+                  {translateWeekday(t, day)}
                 </div>
               ))}
               <div className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
