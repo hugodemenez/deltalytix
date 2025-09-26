@@ -861,9 +861,6 @@ export const DataProvider: React.FC<{
     if (!supabaseUser?.id) return
 
     try {
-      // Get the correct user ID from server
-      const userId = await getUserId()
-      
       // Get the current account to preserve other properties
       const { accounts } = useUserStore.getState()
       const currentAccount = accounts.find(acc => acc.number === newAccount.number) as Account
@@ -871,6 +868,19 @@ export const DataProvider: React.FC<{
       if (!currentAccount) {
         const createdAccount = await setupAccountAction(newAccount)
         setAccounts([...accounts, createdAccount])
+        
+        // If the new account has a groupId, update the groups state to include it
+        if (createdAccount.groupId) {
+          setGroups(groups.map(group => {
+            if (group.id === createdAccount.groupId) {
+              return {
+                ...group,
+                accounts: [...group.accounts, createdAccount]
+              }
+            }
+            return group
+          }))
+        }
         return
       }
 
@@ -888,7 +898,7 @@ export const DataProvider: React.FC<{
       console.error('Error updating account:', error)
       throw error
     }
-  }, [supabaseUser?.id, accounts, setAccounts])
+  }, [supabaseUser?.id, accounts, setAccounts, groups, setGroups])
 
 
   // Add createGroup function
