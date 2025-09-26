@@ -1,31 +1,18 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Settings, Check, X, Trash2, EyeOff } from "lucide-react"
+import { Plus, EyeOff } from "lucide-react"
 import { useI18n } from "@/locales/client"
 import { toast } from "sonner"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { ensureAccountAndAssignGroup } from "@/app/[locale]/dashboard/actions/accounts"
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
-  AlertDialogTrigger 
-} from "@/components/ui/alert-dialog"
 import { useTradesStore } from "@/store/trades-store"
 import { useUserStore } from "@/store/user-store"
 import { useData } from "@/context/data-provider"
 import { Account, Group } from "@/context/data-provider"
+import { AccountGroup, type AccountGroup as AccountGroupType } from "./account-group"
+import { AccountCoin, type Account as AccountCoinType } from "./account-coin"
 
 
 const HIDDEN_GROUP_NAME = "Hidden Accounts"
@@ -43,9 +30,11 @@ export function AccountGroupBoard() {
   const { saveGroup, renameGroup, deleteGroup, moveAccountToGroup, saveAccount } = useData()
   const [newGroupName, setNewGroupName] = useState("")
   const [isCreating, setIsCreating] = useState(false)
-  const [editingGroupId, setEditingGroupId] = useState<string | null>(null)
-  const [editingGroupName, setEditingGroupName] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showNewGroupInput, setShowNewGroupInput] = useState(false)
+  const [draggedAccount, setDraggedAccount] = useState<AccountCoinType | null>(null)
+  const [draggedFromGroup, setDraggedFromGroup] = useState<string | null>(null)
+  const [dragOverGroup, setDragOverGroup] = useState<string | null>(null)
   const existingAccounts = useUserStore(state => state.accounts)
 
   const tradeAccountNumbers = useMemo(() => {
@@ -69,14 +58,25 @@ export function AccountGroupBoard() {
       !existingAccounts.some(acc => acc.number === number)
     )
 
-    // Create placeholder UngroupedAccount objects for accounts without records
-    const placeholderAccounts: UngroupedAccount[] = accountNumbersWithoutRecords.map(number => ({
+    // Create placeholder AccountCoin objects for accounts without records
+    const placeholderAccounts: AccountCoinType[] = accountNumbersWithoutRecords.map(number => ({
+      id: `placeholder-${number}`,
       number,
-      id: `placeholder-${number}` // Use a placeholder ID
+      initials: number.substring(0, 2).toUpperCase(),
+      color: `bg-blue-500`, // Default color
+    }))
+
+    // Convert existing accounts to AccountCoin format
+    const existingAccountCoins: AccountCoinType[] = existingUngroupedAccounts.map(account => ({
+      id: account.id,
+      number: account.number,
+      initials: account.number.substring(0, 2).toUpperCase(),
+      color: `bg-blue-500`, // Default color, could be enhanced
+      groupId: account.groupId,
     }))
 
     // Combine existing accounts with placeholder accounts
-    return [...existingUngroupedAccounts, ...placeholderAccounts]
+    return [...existingAccountCoins, ...placeholderAccounts]
   }, [existingAccounts, tradeAccountNumbers])
 
   const handleCreateGroup = useCallback(async () => {
@@ -85,6 +85,7 @@ export function AccountGroupBoard() {
       setIsCreating(true)
       await saveGroup(newGroupName.trim())
       setNewGroupName("")
+      setShowNewGroupInput(false)
       toast.success(t("common.success"), {
         description: t("filters.groupCreated", { name: newGroupName })
       })
@@ -98,11 +99,120 @@ export function AccountGroupBoard() {
     }
   }, [newGroupName, user?.id, saveGroup, t])
 
-  const handleUpdateGroup = useCallback(async (groupId: string, newName: string) => {
+  const handleDragStart = useCallback((e: React.DragEvent, account: AccountCoinType, fromGroupId?: string) => {
+    setDraggedAccount(account)
+    setDraggedFromGroup(fromGroupId || null)
+    e.dataTransfer.effectAllowed = "move"
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedAccount(null)
+    setDraggedFromGroup(null)
+    setDragOverGroup(null)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, groupId: string) => {
+    e.preventDefault()
+    setDragOverGroup(groupId)
+  }, [])
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverGroup(null)
+  }, [])
+
+  const handleDrop = useCallback(async (e: React.DragEvent, targetGroupId: string) => {
+    e.preventDefault()
+
+    if (!draggedAccount) return
+
+    try {
+      // If moving to hidden group, ensure it exists
+      if (targetGroupId === "hidden" && user?.id) {
+        const hiddenGroup = groups.find((g: Group) => g.name === HIDDEN_GROUP_NAME)
+        if (!hiddenGroup) {
+          // Create hidden group if it doesn't exist
+          const newHiddenGroup = await saveGroup(HIDDEN_GROUP_NAME)
+          if (newHiddenGroup) {
+            targetGroupId = newHiddenGroup.id
+          }
+        } else {
+          targetGroupId = hiddenGroup.id
+        }
+      }
+
+      // If this is a placeholder account (doesn't exist in database yet), create it first
+      if (draggedAccount.id.startsWith('placeholder-')) {
+        if (!user?.id) return
+        
+        // Create a minimal account object with default values and groupId if specified
+        const accountData = {
+          number: draggedAccount.number,
+          propfirm: '',
+          startingBalance: 0,
+          profitTarget: 0,
+          drawdownThreshold: 0,
+          consistencyPercentage: 30,
+          groupId: targetGroupId || null,
+        } as Account
+        
+        await saveAccount(accountData)
+        toast.success(t("common.success"), {
+          description: t("filters.accountMoved", { account: draggedAccount.number })
+        })
+        return
+      }
+
+      await moveAccountToGroup(draggedAccount.id, targetGroupId)
+      toast.success(t("common.success"), {
+        description: t("filters.accountMoved", { account: draggedAccount.number })
+      })
+    } catch (error) {
+      console.error("Error moving account:", error)
+      toast.error(t("common.error"), {
+        description: t("filters.errorMovingAccount", { account: draggedAccount.number })
+      })
+    } finally {
+      setDragOverGroup(null)
+    }
+  }, [draggedAccount, groups, user?.id, saveGroup, moveAccountToGroup, saveAccount, t])
+
+  const handleDropToUnassigned = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault()
+
+    if (!draggedAccount || !draggedFromGroup) return
+
+    try {
+      await moveAccountToGroup(draggedAccount.id, null)
+      toast.success(t("common.success"), {
+        description: t("filters.accountMoved", { account: draggedAccount.number })
+      })
+    } catch (error) {
+      console.error("Error moving account:", error)
+      toast.error(t("common.error"), {
+        description: t("filters.errorMovingAccount", { account: draggedAccount.number })
+      })
+    } finally {
+      setDragOverGroup(null)
+    }
+  }, [draggedAccount, draggedFromGroup, moveAccountToGroup, t])
+
+  const handleDragOverUnassigned = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    // Only allow drop if dragging from a group
+    if (draggedFromGroup) {
+      setDragOverGroup("unassigned")
+    }
+  }, [draggedFromGroup])
+
+  const handleDragLeaveUnassigned = useCallback(() => {
+    if (dragOverGroup === "unassigned") {
+      setDragOverGroup(null)
+    }
+  }, [dragOverGroup])
+
+  const handleRenameGroup = useCallback(async (groupId: string, newName: string) => {
     try {
       await renameGroup(groupId, newName)
-      setEditingGroupId(null)
-      setEditingGroupName("")
       toast.success(t("common.success"), {
         description: t("filters.groupUpdated", { name: newName })
       })
@@ -113,48 +223,6 @@ export function AccountGroupBoard() {
       })
     }
   }, [renameGroup, t])
-
-  const handleMoveAccount = useCallback(async (account: Account | UngroupedAccount, groupId: string | null) => {
-    try {
-      // If moving to hidden group, ensure it exists
-      if (groupId === "hidden" && user?.id) {
-        const hiddenGroup = groups.find((g: Group) => g.name === HIDDEN_GROUP_NAME)
-        if (!hiddenGroup) {
-          // Create hidden group if it doesn't exist
-          const newHiddenGroup = await saveGroup(HIDDEN_GROUP_NAME)
-          if (newHiddenGroup) {
-            groupId = newHiddenGroup.id
-          }
-        } else {
-          groupId = hiddenGroup.id
-        }
-      }
-      // If this is a placeholder account (doesn't exist in database yet), create it first
-      if (account.id.startsWith('placeholder-')) {
-        if (!user?.id) return
-        
-        // Create a minimal account object with default values and groupId if specified
-        const accountData = {
-          number: account.number,
-          propfirm: '',
-          startingBalance: 0,
-          profitTarget: 0,
-          drawdownThreshold: 0,
-          consistencyPercentage: 30,
-          groupId: groupId || null,
-        } as Account
-        
-        await saveAccount(accountData)
-        return
-      }
-      await moveAccountToGroup(account.id, groupId)
-    } catch (error) {
-      console.error("Error moving account:", error)
-      toast.error(t("common.error"), {
-        description: t("filters.errorMovingAccount", { account: account.number })
-      })
-    }
-  }, [groups, user?.id, saveGroup, moveAccountToGroup, saveAccount, t, existingAccounts])
 
   const handleDeleteGroup = useCallback(async (groupId: string, groupName: string) => {
     try {
@@ -173,33 +241,30 @@ export function AccountGroupBoard() {
     }
   }, [deleteGroup, t])
 
-  const anonymizeAccount = useCallback((account: string) => {
-    // This is a placeholder - use your actual anonymization function
-    return account
-  }, [])
+  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleCreateGroup()
+    } else if (e.key === "Escape") {
+      setNewGroupName("")
+      setShowNewGroupInput(false)
+    }
+  }, [handleCreateGroup])
 
-  const handleGroupNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setNewGroupName(e.target.value)
-  }, [])
 
-  const handleEditingGroupNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setEditingGroupName(e.target.value)
-  }, [])
-
-  const handleStartEditing = useCallback((groupId: string, groupName: string) => {
-    setEditingGroupId(groupId)
-    setEditingGroupName(groupName)
-  }, [])
-
-  const handleCancelEditing = useCallback(() => {
-    setEditingGroupId(null)
-    setEditingGroupName("")
-  }, [])
-
-  const handleSelectValueChange = useCallback(async (account: Account | UngroupedAccount, value: string) => {
-    const groupId = value === "none" ? null : value
-    await handleMoveAccount(account, groupId)
-  }, [handleMoveAccount])
+  // Convert groups to AccountGroupType format
+  const accountGroups = useMemo(() => {
+    return groups.map(group => ({
+      id: group.id,
+      name: group.name,
+      accounts: group.accounts.map(account => ({
+        id: account.id,
+        number: account.number,
+        initials: account.number.substring(0, 2).toUpperCase(),
+        color: `bg-blue-500`, // Default color, could be enhanced
+        groupId: account.groupId,
+      })),
+    }))
+  }, [groups])
 
   // Return early if no user
   if (!user) {
@@ -208,216 +273,119 @@ export function AccountGroupBoard() {
 
   const isHiddenGroup = (group: Group) => group.name === HIDDEN_GROUP_NAME
 
-  // Helper function to get display name for a group
-  const getGroupDisplayName = (group: Group) => {
-    return isHiddenGroup(group) ? t("filters.hiddenAccounts") : group.name
-  }
-
-  // Helper function to get visible groups (excluding hidden group)
-  const getVisibleGroups = (groups: Group[]) => {
-    return groups.filter(g => !isHiddenGroup(g))
-  }
-
-  // Helper function to render the "Move to Hidden" option
-  const renderMoveToHiddenOption = () => (
-    <SelectItem value="hidden" className="cursor-pointer">
-      <div className="flex items-center gap-2 text-destructive">
-        <EyeOff className="h-4 w-4" />
-        {t("filters.moveToHidden")}
-      </div>
-    </SelectItem>
-  )
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4">
-        <h3 className="text-lg font-medium">{t("filters.accountGroups")}</h3>
-        
-        {/* Create Group */}
-        <div className="flex items-center gap-2">
-          <Input
-            value={newGroupName}
-            onChange={handleGroupNameChange}
-            placeholder={t("filters.newGroup")}
-            className="w-[200px]"
-            disabled={isCreating}
-          />
-          <Button onClick={handleCreateGroup} disabled={!newGroupName.trim() || isCreating}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t("filters.createGroup")}
-          </Button>
+
+      {/* Unassigned Accounts */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">{t("filters.noGroup")}</h3>
+          <span className="text-sm text-muted-foreground">
+            {ungroupedAccounts.length} {ungroupedAccounts.length !== 1 ? t("filters.accounts") : t("filters.account")}
+          </span>
+        </div>
+
+        <div
+          onDrop={handleDropToUnassigned}
+          onDragOver={handleDragOverUnassigned}
+          onDragLeave={handleDragLeaveUnassigned}
+          className={cn(
+            "min-h-[80px] p-4 border-2 border-dashed border-border rounded-lg transition-all duration-200",
+            dragOverGroup === "unassigned" && "border-primary bg-primary/5 shadow-lg",
+            ungroupedAccounts.length === 0 && "flex items-center justify-center"
+          )}
+        >
+          {ungroupedAccounts.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center">
+              {t("filters.noAccounts")}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 flex-wrap">
+              {ungroupedAccounts.map((account, index) => (
+                <div
+                  key={account.id}
+                  className="flex-shrink-0 transition-transform duration-300 ease-out"
+                  style={{
+                    marginLeft: index === 0 ? "0" : "-8px",
+                  }}
+                >
+                  <AccountCoin
+                    account={account}
+                    onDragStart={(e, account) => handleDragStart(e, account)}
+                    onDragEnd={handleDragEnd}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {/* Ungrouped Accounts */}
-        <Card className="p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-sm font-medium">{t("filters.noGroup")} ({ungroupedAccounts.length})</h4>
-          </div>
-          <ScrollArea className="h-[200px]">
-            <div className="space-y-2">
-              {ungroupedAccounts.length === 0 ? (
-                <div className="text-sm text-muted-foreground text-center p-2">
-                  {t("filters.noAccounts")}
-                </div>
-              ) : (
-                ungroupedAccounts.map(account => (
-                  <div key={account.id} className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded-md">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">{anonymizeAccount(account.number)}</span>
-                      {account.id.startsWith('placeholder-') && (
-                        <span className="text-xs px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded">
-                          {t("filters.newAccount")}
-                        </span>
-                      )}
-                    </div>
-                    <Select
-                      onValueChange={async (value) => {
-                        await handleMoveAccount(account, value || null)
-                      }}
-                    >
-                      <SelectTrigger className="w-[140px] h-8">
-                        <SelectValue placeholder={t("filters.moveTo")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {renderMoveToHiddenOption()}
-                        {getVisibleGroups(groups).map(group => (
-                          <SelectItem key={group.id} value={group.id} className="cursor-pointer">
-                            {getGroupDisplayName(group)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))
-              )}
-            </div>
-            <ScrollBar orientation="vertical" />
-          </ScrollArea>
-        </Card>
+      {/* Groups */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">{t("filters.accountGroups")}</h3>
 
-        {/* Existing Groups */}
-        {groups.map(group => (
-          <Card key={group.id} className={cn("p-4", isHiddenGroup(group) && "border-destructive")}>
-            <div className="flex items-center justify-between mb-4">
-              {editingGroupId === group.id ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={editingGroupName}
-                    onChange={handleEditingGroupNameChange}
-                    className="h-8 w-[180px]"
-                    autoFocus
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => handleUpdateGroup(group.id, editingGroupName)}
-                    disabled={!editingGroupName.trim() || editingGroupName === group.name}
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={handleCancelEditing}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <h4 className="text-sm font-medium flex items-center gap-2">
-                    {isHiddenGroup(group) && <EyeOff className="h-4 w-4 text-destructive" />}
-                    {getGroupDisplayName(group)} ({group.accounts.length})
-                  </h4>
-                  <div className="flex items-center gap-1">
-                    {!isHiddenGroup(group) && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => {
-                          handleStartEditing(group.id, group.name)
-                        }}
-                      >
-                        <Settings className="h-3 w-3" />
-                      </Button>
-                    )}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive"
-                          disabled={isDeleting}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t("filters.deleteGroupTitle")}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t("filters.deleteGroupDescription", { name: getGroupDisplayName(group) })}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={() => handleDeleteGroup(group.id, group.name)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            {t("common.delete")}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </div>
-              )}
+          {showNewGroupInput ? (
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder={t("filters.newGroup")}
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                onKeyDown={handleKeyPress}
+                className="w-40"
+                autoFocus
+              />
+              <Button size="sm" onClick={handleCreateGroup} disabled={!newGroupName.trim() || isCreating}>
+                {t("common.create")}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setShowNewGroupInput(false)
+                  setNewGroupName("")
+                }}
+              >
+                {t("common.cancel")}
+              </Button>
             </div>
-            <ScrollArea className="h-[200px]">
-              <div className="space-y-2">
-                {group.accounts.length === 0 ? (
-                  <div className="text-sm text-muted-foreground text-center p-2">
-                    {t("filters.noAccounts")}
-                  </div>
-                ) : (
-                  group.accounts.map(account => (
-                    <div key={account.id} className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded-md">
-                      <span className="text-sm">{anonymizeAccount(account.number)}</span>
-                      <Select
-                        defaultValue={group.id}
-                        onValueChange={async (value) => {
-                          await handleSelectValueChange(account, value)
-                        }}
-                      >
-                        <SelectTrigger className="w-[140px] h-8">
-                          <SelectValue placeholder={t("filters.moveTo")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none" className="cursor-pointer">{t("filters.noGroup")}</SelectItem>
-                          {!isHiddenGroup(group) && renderMoveToHiddenOption()}
-                          {getVisibleGroups(groups)
-                            .filter(g => g.id !== group.id)
-                            .map(g => (
-                              <SelectItem key={g.id} value={g.id} className="cursor-pointer">
-                                {getGroupDisplayName(g)}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))
-                )}
-              </div>
-              <ScrollBar orientation="vertical" />
-            </ScrollArea>
-          </Card>
-        ))}
+          ) : (
+            <Button size="sm" onClick={() => setShowNewGroupInput(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              {t("filters.createGroup")}
+            </Button>
+          )}
+        </div>
+
+        {accountGroups.length === 0 ? (
+          <div className="flex items-center justify-center h-32 border-2 border-dashed border-border rounded-lg">
+            <p className="text-muted-foreground">{t("filters.noGroupsCreated")}</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {accountGroups.map((group) => (
+              <AccountGroup
+                key={group.id}
+                group={group}
+                onDrop={handleDrop}
+                onDragOver={(e) => handleDragOver(e, group.id)}
+                onDragLeave={handleDragLeave}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onRename={handleRenameGroup}
+                onDelete={(groupId) => {
+                  const groupToDelete = groups.find(g => g.id === groupId)
+                  if (groupToDelete) {
+                    handleDeleteGroup(groupId, groupToDelete.name)
+                  }
+                }}
+                isDragOver={dragOverGroup === group.id}
+                isHiddenGroup={isHiddenGroup(groups.find(g => g.id === group.id)!)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { useUserStore } from '@/store/user-store'
 import LoadingOverlay from '../app/[locale]/dashboard/components/loading-overlay'
@@ -57,15 +58,23 @@ export default function Modals() {
       {isLoading && <LoadingOverlay />}
       <OnboardingModal />
 
+      {/* Tooltip Portal for Sheet */}
+      <div id="sheet-tooltip-portal" className="fixed inset-0 pointer-events-none z-[100]" />
+      
       {/* Account Group Board */}
-      <Dialog open={accountGroupBoardOpen} onOpenChange={setAccountGroupBoardOpen}>
-        <DialogContent className="sm:max-w-[1200px] w-full max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('filters.manageAccounts')}</DialogTitle>
-          </DialogHeader>
-          <AccountGroupBoard/>
-        </DialogContent>
-      </Dialog>
+      <Sheet open={accountGroupBoardOpen} onOpenChange={setAccountGroupBoardOpen}>
+        <SheetContent side="right" className="w-[90vw] sm:w-[800px] sm:max-w-[800px] overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{t('filters.manageAccounts')}</SheetTitle>
+            <SheetDescription>
+              {t('filters.manageAccountsDescription')}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="mt-6">
+            <AccountGroupBoard/>
+          </div>
+        </SheetContent>
+      </Sheet>
       
 
       <Dialog open={isAlreadySubscribedOpen} onOpenChange={setIsAlreadySubscribedOpen}>
