@@ -1269,7 +1269,11 @@ export default {
             'additionalInfoPlaceholder': "Any additional details you'd like to share...",
             'submit': 'Submit',
             'cancel': 'Cancel'
-        }
+        },
+        'evaluatingSupport': 'Evaluating support needs...',
+        'evaluationError': 'Error evaluating support needs',
+        'preparingEmail': 'Preparing email support...',
+        'emailPreparationError': 'Error preparing email support'
     },
     'maintenance': {
         'title': 'System Maintenance',

@@ -1,7 +1,7 @@
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 interface PerformanceTrend {
   period: string;
@@ -178,7 +178,7 @@ function analyzeTrends(trades: Trade[]): TrendAnalysis {
 
 export const getPerformanceTrends = tool({
   description: 'Get performance trends and patterns over time including monthly, weekly, and daily breakdowns',
-  parameters: z.object({
+  inputSchema: z.object({
     startDate: z.string().optional().describe('Optional start date to filter trades (format: 2025-01-14T14:33:01.000Z)'),
     endDate: z.string().optional().describe('Optional end date to filter trades (format: 2025-01-14T14:33:01.000Z)')
   }),

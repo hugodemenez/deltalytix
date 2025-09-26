@@ -19,6 +19,29 @@ export default {
         loading: {
             firstMessage: "Configuration de votre agent IA..."
         },
-        copy: "Copier"
+        copy: "Copier",
+        file: "Fichier",
+        url: "URL",
+        writeMessage: "Écrivez un message...",
+        aiThinking: "L'IA réfléchit...",
+        chart: {
+            generating: "Génération du graphique d'équité...",
+            noData: "Aucune donnée disponible pour la génération du graphique",
+            individualView: "Vue individuelle des comptes ({count} comptes)",
+            groupedView: "Vue groupée (tous les comptes combinés)",
+            tradeCount: "{count} trades"
+        },
+        equity: {
+            tooltip: {
+                date: "Date",
+                totalEquity: "Équité Totale",
+                resets: "Réinitialisations de Comptes",
+                accountReset: "Compte {account} réinitialisé",
+                payouts: "Paiements"
+            }
+        },
+        greeting: {
+            message: "Bonjour ! Veuillez me saluer et me fournir un aperçu de mes données de trading actuelles pour cette semaine et aujourd'hui."
+        }
     },
 } as const;
