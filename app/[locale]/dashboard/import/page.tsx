@@ -109,14 +109,11 @@ export default function ImportCallbackPage() {
           return
         }
 
-        // Store tokens in Zustand
-        tradovateStore.setTokens(result.accessToken, result.refreshToken, result.expiresAt)
-        tradovateStore.setAuthenticated(true)
         tradovateStore.clearOAuthState()
         
         // Store tokens in database via server action
         try {
-          const storeResult = await storeTradovateToken(result.accessToken, result.expiresAt, tradovateStore.environment)
+          const storeResult = await storeTradovateToken(result.accessToken, result.expiresAt, tradovateStore.environment, result.accountId)
           if (storeResult.error) {
             console.warn('Failed to store token in database:', storeResult.error)
             // Continue anyway - token is still valid for this session

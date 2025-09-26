@@ -116,6 +116,7 @@ interface TradovateOAuthResult {
   error?: string
   authUrl?: string
   state?: string
+  accountId?: string
 }
 
 interface TradovateAccountsResult {
@@ -487,8 +488,58 @@ async function getOrderById(accessToken: string, orderId: number): Promise<any |
   }
 }
 
+// Tradovate API response types
+interface TradovateUser {
+  id: number
+  name: string
+  timestamp: string
+  email: string
+  status: string
+  professional: boolean
+  organizationId: number
+  introducingPartnerId: number
+}
 
-export async function initiateTradovateOAuth(): Promise<TradovateOAuthResult> {
+interface TradovateUserListResponse {
+  errorText?: string
+  data?: TradovateUser[]
+}
+
+export async function getTradovateUsername(accessToken: string): Promise<string> {
+  const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.auth
+  const response = await fetch(`${apiBaseUrl}/v1/user/list`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json'
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch user list: ${response.status} ${response.statusText}`)
+  }
+
+  const data: TradovateUserListResponse = await response.json()
+  
+  if (data.errorText) {
+    throw new Error(`Tradovate API error: ${data.errorText}`)
+  }
+
+  if (!data.data || data.data.length === 0) {
+    throw new Error('No user data found in response')
+  }
+
+  // Return the name of the first user (assuming single user account)
+  const user = data.data[0]
+  if (!user.name) {
+    throw new Error('User name not found in response')
+  }
+
+  console.log('getTradovateAccountId response:', data)
+  return user.name
+}
+
+
+export async function initiateTradovateOAuth(accountId: string = 'default'): Promise<TradovateOAuthResult> {
   try {
     console.log('Initiating Tradovate OAuth (demo only)...')
     console.log('Environment variables check:', {
@@ -545,6 +596,27 @@ export async function initiateTradovateOAuth(): Promise<TradovateOAuthResult> {
     })
     return { error: 'Failed to initiate OAuth flow' }
   }
+}
+
+export async function getPropfirmName(accessToken: string): Promise<string> {
+  const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
+  const response = await fetch(`${apiBaseUrl}/v1/organization/list`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json'
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch organization: ${response.status} ${response.statusText}`)
+  }
+
+  const organizations = await response.json() as { id: number; name: string }[]
+  console.log('organizations', organizations)
+  if (Array.isArray(organizations) && organizations.length > 0) {
+    return organizations[0].name
+  }
+  throw new Error('No organization found')
 }
 
 export async function handleTradovateCallback(code: string, state: string): Promise<TradovateOAuthResult> {
@@ -637,8 +709,11 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     // Calculate expiration time
     const expiresAt = formatDateForAPI(new Date(Date.now() + (tokens.expires_in * 1000)))
     
+    // Get account information from the token to determine accountId
+    // API provides an endpoint https://demo.tradovateapi.com/v1/auth/me
+    const propfirm = await getPropfirmName(tokens.access_token)
     // Store token in database
-    const storeResult = await storeTradovateToken(tokens.access_token, expiresAt, 'demo')
+    const storeResult = await storeTradovateToken(tokens.access_token, expiresAt, 'demo', propfirm)
     if (storeResult.error) {
       logger.warn('Failed to store token in database:', storeResult.error)
       // Continue anyway - token is still valid for this session
@@ -1156,6 +1231,7 @@ export async function getTradovateToken(accountId: string = 'default') {
 }
 
 export async function removeTradovateToken(accountId?: string) {
+  console.log('Removing Tradovate token for account:', accountId)
   try {
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
