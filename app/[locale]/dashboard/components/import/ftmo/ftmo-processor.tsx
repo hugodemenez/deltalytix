@@ -136,10 +136,6 @@ export default function FtmoProcessor({ headers, csvData, setProcessedTrades, ac
                 groupId: null
             }
 
-            // Add swap as a custom property for display purposes
-            ;(trade as any).swap = swap
-            ;(trade as any).commissionOnly = Math.abs(commission)
-
             // FTMO provides all cost information directly, no need for commission handling
 
             newTrades.push(trade)
