@@ -129,7 +129,7 @@ export function AccountGroup({
           ) : (
             <CardTitle className="text-lg flex items-center gap-2">
               {isHiddenGroup && <EyeOff className="h-4 w-4 text-destructive" />}
-              {group.name}
+              {isHiddenGroup ? t("filters.hiddenAccounts") : group.name}
             </CardTitle>
           )}
 
