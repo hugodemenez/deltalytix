@@ -9,12 +9,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
 import { sendNewsletter } from "@/app/[locale]/admin/actions/newsletter"
 import { useNewsletter } from "./newsletter-context"
-import { Loader2, Sparkles } from "lucide-react"
+import { Loader2, Sparkles, Upload } from "lucide-react"
 import { generateNewsletterContent } from "../../actions/generate-newsletter"
 import { generateTranscriptSummary } from "../../actions/youtube"
 import type { NewsletterContent } from "./newsletter-context"
 import { extractYouTubeId } from "../../utils/youtube"
 import { fetchTranscriptServer } from "../../actions/youtube"
+import { AudioExtractor } from "./newsletter-audio-extractor"
+import { AudioSplitter } from "./newsletter-audio-splitter"
 
 export function NewsletterEditor() {
   const [loading, setLoading] = useState(false)
@@ -126,25 +128,52 @@ export function NewsletterEditor() {
   }
 
   return (
-    <Card>
+    <Card className="bg-white dark:bg-black border-gray-200 dark:border-gray-800">
       <CardHeader>
-        <CardTitle>Composer une Newsletter</CardTitle>
+        <CardTitle className="text-gray-900 dark:text-white">Composer une Newsletter</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="youtubeUrl">URL de la vidéo YouTube</Label>
+            <Label htmlFor="youtubeUrl" className="text-gray-700 dark:text-gray-300">URL de la vidéo YouTube</Label>
             <Input
               id="youtubeUrl"
               value={youtubeUrl}
               onChange={e => setYoutubeUrl(e.target.value)}
               placeholder="ex: https://youtube.com/watch?v=dQw4w9WgXcQ"
               required
+              className="bg-white dark:bg-black border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
 
+          <AudioExtractor 
+            onAudioExtracted={(audioBuffer, fileName) => {
+              // Audio extracted, but no transcription here
+              toast.success(`Audio extracted from ${fileName}`)
+            }}
+          />
+
           <div className="space-y-2">
-            <Label htmlFor="description">
+            <Label className="text-gray-700 dark:text-gray-300">Audio Splitter (10-second segments)</Label>
+            <AudioSplitter 
+              onSegmentsCreated={(segments) => {
+                toast.success(`Created ${segments.length} audio segments`)
+                console.log('Audio segments created:', segments)
+              }}
+              onTranscriptionComplete={(transcriptions) => {
+                toast.success(`Transcription completed: ${transcriptions.length} segments`)
+                console.log('Transcriptions completed:', transcriptions)
+                // You can use these transcriptions to populate the description field
+                const fullText = transcriptions
+                  .sort((a, b) => a.segmentIndex - b.segmentIndex)
+                  .map(t => t.text)
+                  .join(' ')
+                setDescription(fullText)
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="description" className="text-gray-700 dark:text-gray-300">
               Sur quoi as-tu travaillé ?
               {isLoadingTranscript && " (Chargement de la transcription...)"}
             </Label>
@@ -154,7 +183,7 @@ export function NewsletterEditor() {
               onChange={e => setDescription(e.target.value)}
               placeholder="Décris ce sur quoi tu as travaillé dans cette vidéo. Par exemple: 'J'ai implémenté une nouvelle fonctionnalité de gestion des trades avec des graphiques interactifs...'"
               required
-              className="min-h-[100px]"
+              className="min-h-[100px] bg-white dark:bg-black border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               disabled={isLoadingTranscript}
             />
           </div>
@@ -162,7 +191,7 @@ export function NewsletterEditor() {
           <div className="flex gap-2">
             <Button
               type="button"
-              className="flex-1"
+              className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
               onClick={handleGenerate}
               disabled={generating || loading || !youtubeUrl || !description}
             >
@@ -182,7 +211,7 @@ export function NewsletterEditor() {
             <Button 
               type="button"
               variant="default"
-              className="flex-1"
+              className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700 text-white"
               onClick={handleSend}
               disabled={loading || generating || !content.subject}
             >

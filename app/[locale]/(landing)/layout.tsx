@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./components/navbar";
 import Footer from "./components/footer";
 import { ThemeProvider } from "@/context/theme-provider";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 
 import { Metadata } from 'next';
 
@@ -35,6 +36,7 @@ export default async function RootLayout(
   return (
     <ThemeProvider>
         <div className="px-2 sm:px-6 lg:px-32">
+          <SonnerToaster />
           <Toaster />
           <Navbar />
           <div className="mt-8 sm:mt-20 max-w-screen-xl mx-auto">

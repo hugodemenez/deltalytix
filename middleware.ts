@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { createI18nMiddleware } from "next-international/middleware"
 import { createServerClient } from "@supabase/ssr"
 import { geolocation } from "@vercel/functions"
+import { User } from "@supabase/supabase-js"
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
@@ -43,7 +44,7 @@ async function updateSession(request: NextRequest) {
     },
   )
 
-  let user: any = null
+  let user: User | null = null
   let error: unknown = null
 
   try {
@@ -130,7 +131,8 @@ export default async function middleware(req: NextRequest) {
       return NextResponse.redirect(authUrl)
     }
 
-    if (process.env.NODE_ENV !== "development") {
+    // Only allow access to admin in production
+    if (user.id !== process.env.ADMIN_USER_ID) {
       return NextResponse.redirect(new URL("/dashboard", req.url))
     }
   }

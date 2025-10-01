@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   pageExtensions: ['mdx', 'ts', 'tsx'],
   experimental: {
     mdxRs: true,
+    serverActions: {
+      bodySizeLimit: '555mb' // or '25mb' for larger files
+    },
   },
 }
 

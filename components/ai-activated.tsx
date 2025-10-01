@@ -2,7 +2,6 @@
 
 import { type ReactNode, useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
-import { CheckCircle } from "lucide-react"
 
 interface AIBorderProps {
   children: ReactNode
