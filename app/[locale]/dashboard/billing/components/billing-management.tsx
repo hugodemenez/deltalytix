@@ -477,6 +477,17 @@ export default function BillingManagement() {
         </Card>
       )}
 
+      {/* Available Plans */}
+      <Card className="border-none shadow-none bg-transparent">
+        <CardHeader className="px-0">
+          <CardTitle>{t('billing.availablePlans')}</CardTitle>
+          <CardDescription>{t('billing.choosePlan')}</CardDescription>
+        </CardHeader>
+        <CardContent className="px-0">
+          <PricingPlans currentSubscription={subscription} />
+        </CardContent>
+      </Card>
+
       {/* Payment History */}
       <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0">
@@ -553,17 +564,6 @@ export default function BillingManagement() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Available Plans */}
-      <Card className="border-none shadow-none bg-transparent">
-        <CardHeader className="px-0">
-          <CardTitle>{t('billing.availablePlans')}</CardTitle>
-          <CardDescription>{t('billing.choosePlan')}</CardDescription>
-        </CardHeader>
-        <CardContent className="px-0">
-          <PricingPlans currentSubscription={subscription} />
         </CardContent>
       </Card>
     </div>

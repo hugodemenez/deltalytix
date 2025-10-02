@@ -5,9 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { GitBranchIcon, UsersIcon, BookOpenIcon, StarIcon } from 'lucide-react'
-import { MdOutlineBrightness1, MdBalance, MdOutlineAdjust } from 'react-icons/md'
-import { LuGitFork } from 'react-icons/lu'
+import { GitBranchIcon, UsersIcon, BookOpenIcon, StarIcon, Circle, Scale, GitFork, Activity } from 'lucide-react'
 import { ChartSSR } from './chart-ssr'
 import Link from 'next/link'
 import { getGithubData } from '../actions/github-data'
@@ -219,11 +217,11 @@ export default function GitHubRepoCard() {
                   </div>
                   <div className="flex flex-wrap gap-3 md:gap-4 text-xs md:text-sm text-muted-foreground mb-4 md:mb-6">
                     <div className="flex items-center space-x-1">
-                      <MdOutlineBrightness1 className="w-3 h-3 md:w-4 md:h-4" />
+                      <Circle className="w-3 h-3 md:w-4 md:h-4" />
                       <span>{repoData?.language}</span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <MdBalance className="w-3 h-3 md:w-4 md:h-4" />
+                      <Scale className="w-3 h-3 md:w-4 md:h-4" />
                       <span>{repoData?.license?.spdx_id || 'N/A'}</span>
                     </div>
                     <div className="flex items-center space-x-1">
@@ -237,7 +235,7 @@ export default function GitHubRepoCard() {
                       </span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <LuGitFork className="w-3 h-3 md:w-4 md:h-4" />
+                      <GitFork className="w-3 h-3 md:w-4 md:h-4" />
                       <span>
                         {Intl.NumberFormat("en", {
                           notation: "compact",
@@ -247,7 +245,7 @@ export default function GitHubRepoCard() {
                       </span>
                     </div>
                     <div className="flex items-center space-x-1">
-                      <MdOutlineAdjust className="w-3 h-3 md:w-4 md:h-4" />
+                      <Activity className="w-3 h-3 md:w-4 md:h-4" />
                       <span>
                         {Intl.NumberFormat("en", {
                           notation: "compact",

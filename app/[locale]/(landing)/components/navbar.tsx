@@ -81,7 +81,7 @@ export default function Component() {
         const controlNavbar = () => {
             if (typeof window !== 'undefined') {
                 const scrollPercent = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100
-                
+
                 if (scrollPercent <= 25) {
                     setIsVisible(true)
                 } else if (window.scrollY > lastScrollY) {
@@ -259,11 +259,9 @@ export default function Component() {
                                 </NavigationMenuContent>
                             </NavigationMenuItem>
                             <NavigationMenuItem>
-                                <Link href="/pricing" legacyBehavior passHref>
-                                    <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')}>
-                                        {t('landing.navbar.pricing')}
-                                    </NavigationMenuLink>
-                                </Link>
+                                <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')} href="/pricing">
+                                    {t('landing.navbar.pricing')}
+                                </NavigationMenuLink>
                             </NavigationMenuItem>
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('updates')} onMouseLeave={() => setHoveredItem(null)}>
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.updates')}</NavigationMenuTrigger>

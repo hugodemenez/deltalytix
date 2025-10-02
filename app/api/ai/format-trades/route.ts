@@ -2,7 +2,7 @@ import { openai } from "@ai-sdk/openai";
 import { streamObject } from "ai";
 import { NextRequest } from "next/server";
 import { tradeSchema } from "./schema";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 export const maxDuration = 30;
 

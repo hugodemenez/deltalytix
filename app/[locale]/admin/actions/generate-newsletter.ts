@@ -1,8 +1,8 @@
 'use server'
 
 import { openai } from "@ai-sdk/openai"
-import { streamObject } from "ai"
-import { z } from "zod"
+import { generateObject } from "ai"
+import { z } from 'zod';
 
 const newsletterSchema = z.object({
   subject: z.string().describe("Un titre accrocheur en français de maximum 4 mots"),
@@ -19,8 +19,8 @@ interface GenerateNewsletterProps {
 
 export async function generateNewsletterContent({ youtubeUrl, description }: GenerateNewsletterProps) {
   try {
-    const { partialObjectStream } = await streamObject({
-      model: openai("gpt-4-turbo-preview"),
+    const { object } = await generateObject({
+      model: openai("gpt-4o-mini"),
       schema: newsletterSchema,
       prompt: `Bonjour, tu vas écrire la newsletter technique pour Deltalytix sur notre dernière mise à jour : ${description}.
 
@@ -52,21 +52,11 @@ Merci de respecter ces consignes.`,
       temperature: 0.7,
     })
 
-    let content: Partial<NewsletterContent> = {
-      subject: "",
-      introMessage: "",
-      features: [],
-    }
 
-    for await (const partialObject of partialObjectStream) {
-      if (partialObject.subject) content.subject = partialObject.subject
-      if (partialObject.introMessage) content.introMessage = partialObject.introMessage
-      if (partialObject.features) content.features = partialObject.features.filter((feature): feature is string => feature !== undefined)
-    }
-
+    console.log(object)
     return {
       success: true,
-      content: content as NewsletterContent
+      content: object
     }
   } catch (error) {
     console.error("Error generating newsletter content:", error)

@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/select'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import * as z from 'zod'
+import * as z from 'zod';
 import { toast } from 'sonner'
 import { ImagePlus, X } from 'lucide-react'
 import Image from 'next/image'
@@ -46,7 +46,7 @@ const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/web
 const formSchema = z.object({
   title: z.string().min(1).max(100),
   content: z.string().min(1).max(1000),
-  type: z.nativeEnum(PostType),
+  type: z.enum(PostType),
   screenshots: z.array(z.string()).max(3, 'Maximum 3 screenshots allowed'),
 })
 

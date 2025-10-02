@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./components/navbar";
 import Footer from "./components/footer";
 import { ThemeProvider } from "@/context/theme-provider";
+import { Toaster as SonnerToaster } from "@/components/ui/sonner";
 
 import { Metadata } from 'next';
 
@@ -25,16 +26,21 @@ export async function generateMetadata(props: { params: Promise<{ locale: Locale
 export default async function RootLayout(
   props: Readonly<{
     children: React.ReactNode;
-    params: { locale: string };
+    params: Promise<{ locale: string }>;
   }>
 ) {
   const {
-    children
+    children,
+    params
   } = props;
+  
+  // Await the params since it's now a Promise in Next.js 15
+  const { locale } = await params;
 
   return (
     <ThemeProvider>
         <div className="px-2 sm:px-6 lg:px-32">
+          <SonnerToaster />
           <Toaster />
           <Navbar />
           <div className="mt-8 sm:mt-20 max-w-screen-xl mx-auto">

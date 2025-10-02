@@ -1,7 +1,7 @@
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
 interface OverallMetrics {
   totalTrades: number;
@@ -135,7 +135,7 @@ function calculateOverallMetrics(trades: Trade[]): OverallMetrics {
 
 export const getOverallPerformanceMetrics = tool({
   description: 'Get comprehensive overall performance metrics including win rate, profit factor, risk metrics, and trading statistics',
-  parameters: z.object({
+  inputSchema: z.object({
     startDate: z.string().optional().describe('Optional start date to filter trades (format: 2025-01-14T14:33:01.000Z)'),
     endDate: z.string().optional().describe('Optional end date to filter trades (format: 2025-01-14T14:33:01.000Z)')
   }),

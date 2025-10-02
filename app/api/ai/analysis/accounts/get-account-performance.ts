@@ -1,51 +1,47 @@
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
-import { z } from "zod";
+import { z } from 'zod/v3';
 
-interface AccountMetrics {
-  accountNumber: string;
-  totalTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  winRate: number;
-  totalPnL: number;
-  totalCommission: number;
-  netPnL: number;
-  averageWin: number;
-  averageLoss: number;
-  profitFactor: number;
-  largestWin: number;
-  largestLoss: number;
-  averageTradeSize: number;
-  totalVolume: number;
-  maxDrawdown: number;
-  sharpeRatio: number;
-  instruments: string[];
-  mostTradedInstrument: string;
-  accountUtilization: number; // Percentage of total trading volume
-  riskLevel: 'low' | 'medium' | 'high';
-  consistency: number;
-  avgDailyVolume: number;
-  profitability: 'highly_profitable' | 'profitable' | 'break_even' | 'unprofitable';
-}
+// Define Zod schemas first
+const AccountMetricsSchema = z.object({
+  accountNumber: z.string(),
+  totalTrades: z.number(),
+  winningTrades: z.number(),
+  losingTrades: z.number(),
+  winRate: z.number(),
+  totalPnL: z.number(),
+  totalCommission: z.number(),
+  netPnL: z.number(),
+  averageWin: z.number(),
+  averageLoss: z.number(),
+  profitFactor: z.number(),
+  largestWin: z.number(),
+  largestLoss: z.number(),
+  averageTradeSize: z.number(),
+  totalVolume: z.number(),
+  maxDrawdown: z.number(),
+  sharpeRatio: z.number(),
+  instruments: z.array(z.string()),
+  mostTradedInstrument: z.string(),
+  accountUtilization: z.number(),
+  riskLevel: z.enum(['low', 'medium', 'high']),
+  consistency: z.number(),
+  avgDailyVolume: z.number(),
+  profitability: z.enum(['highly_profitable', 'profitable', 'break_even', 'unprofitable'])
+});
 
-interface AccountAnalysis {
-  accounts: AccountMetrics[];
-  bestPerformingAccount: AccountMetrics | null;
-  worstPerformingAccount: AccountMetrics | null;
-  largestAccount: AccountMetrics | null;
-  mostActiveAccount: AccountMetrics | null;
-  mostConsistentAccount: AccountMetrics | null;
-  riskDistribution: {
-    low: number;
-    medium: number;
-    high: number;
-  };
-  recommendations: string[];
-  totalPortfolioValue: number;
-  portfolioRisk: 'diversified' | 'concentrated' | 'high_risk';
-}
+const AccountAnalysisSchema = z.object({
+  accounts: z.array(AccountMetricsSchema),
+  totalPortfolioValue: z.number()
+});
+
+// Infer TypeScript types from Zod schemas
+export type AccountMetrics = z.infer<typeof AccountMetricsSchema>;
+export type AccountAnalysis = z.infer<typeof AccountAnalysisSchema>;
+
+// Export schemas for reuse
+export { AccountMetricsSchema, AccountAnalysisSchema };
 
 function calculateAccountMetrics(accountNumber: string, trades: Trade[], allTrades: Trade[]): AccountMetrics {
   const accountTrades = trades.filter(t => t.accountNumber === accountNumber);
@@ -212,15 +208,7 @@ function analyzeAccounts(trades: Trade[]): AccountAnalysis {
   if (!trades || trades.length === 0) {
     return {
       accounts: [],
-      bestPerformingAccount: null,
-      worstPerformingAccount: null,
-      largestAccount: null,
-      mostActiveAccount: null,
-      mostConsistentAccount: null,
-      riskDistribution: { low: 0, medium: 0, high: 0 },
-      recommendations: [],
-      totalPortfolioValue: 0,
-      portfolioRisk: 'diversified'
+      totalPortfolioValue: 0
     };
   }
   
@@ -229,94 +217,18 @@ function analyzeAccounts(trades: Trade[]): AccountAnalysis {
     calculateAccountMetrics(accountNumber, trades, trades)
   ).filter(account => account.totalTrades > 0);
   
-  // Find best and worst performing accounts
-  const bestPerformingAccount = accounts.length > 0 ? accounts.reduce((best, current) => 
-    current.netPnL > best.netPnL ? current : best
-  ) : null;
-  
-  const worstPerformingAccount = accounts.length > 0 ? accounts.reduce((worst, current) => 
-    current.netPnL < worst.netPnL ? current : worst
-  ) : null;
-  
-  const largestAccount = accounts.length > 0 ? accounts.reduce((largest, current) => 
-    current.totalVolume > largest.totalVolume ? current : largest
-  ) : null;
-  
-  const mostActiveAccount = accounts.length > 0 ? accounts.reduce((active, current) => 
-    current.totalTrades > active.totalTrades ? current : active
-  ) : null;
-  
-  const mostConsistentAccount = accounts.length > 0 ? accounts.reduce((consistent, current) => 
-    current.consistency > consistent.consistency ? current : consistent
-  ) : null;
-  
-  // Calculate risk distribution
-  const riskDistribution = accounts.reduce((dist, account) => {
-    dist[account.riskLevel]++;
-    return dist;
-  }, { low: 0, medium: 0, high: 0 });
-  
   // Calculate total portfolio value
   const totalPortfolioValue = accounts.reduce((sum, account) => sum + account.netPnL, 0);
   
-  // Determine portfolio risk level
-  let portfolioRisk: 'diversified' | 'concentrated' | 'high_risk';
-  const highRiskAccounts = riskDistribution.high;
-  const totalAccounts = accounts.length;
-  
-  if (highRiskAccounts / totalAccounts > 0.5) {
-    portfolioRisk = 'high_risk';
-  } else if (totalAccounts < 3 || accounts.some(a => a.accountUtilization > 60)) {
-    portfolioRisk = 'concentrated';
-  } else {
-    portfolioRisk = 'diversified';
-  }
-  
-  // Generate recommendations
-  const recommendations: string[] = [];
-  
-  if (bestPerformingAccount) {
-    recommendations.push(`Account ${bestPerformingAccount.accountNumber} is your best performer (${bestPerformingAccount.netPnL.toFixed(2)} net PnL) - consider increasing allocation`);
-  }
-  
-  if (worstPerformingAccount && worstPerformingAccount.netPnL < -500) {
-    recommendations.push(`Account ${worstPerformingAccount.accountNumber} shows poor performance (${worstPerformingAccount.netPnL.toFixed(2)} net PnL) - review strategy or reduce exposure`);
-  }
-  
-  if (portfolioRisk === 'high_risk') {
-    recommendations.push('High portfolio risk detected - consider reducing position sizes or implementing stricter risk management');
-  }
-  
-  if (portfolioRisk === 'concentrated') {
-    recommendations.push('Portfolio appears concentrated - consider diversifying across more accounts or instruments');
-  }
-  
-  if (mostConsistentAccount && mostConsistentAccount.consistency > 70) {
-    recommendations.push(`Account ${mostConsistentAccount.accountNumber} shows high consistency (${mostConsistentAccount.consistency.toFixed(1)}%) - consider it as core allocation`);
-  }
-  
-  const unprofitableAccounts = accounts.filter(a => a.netPnL < 0);
-  if (unprofitableAccounts.length > accounts.length / 2) {
-    recommendations.push('More than half of your accounts are unprofitable - consider consolidating or reviewing overall strategy');
-  }
-  
   return {
     accounts: accounts.sort((a, b) => b.netPnL - a.netPnL),
-    bestPerformingAccount,
-    worstPerformingAccount,
-    largestAccount,
-    mostActiveAccount,
-    mostConsistentAccount,
-    riskDistribution,
-    recommendations,
-    totalPortfolioValue: Math.round(totalPortfolioValue * 100) / 100,
-    portfolioRisk
+    totalPortfolioValue: Math.round(totalPortfolioValue * 100) / 100
   };
 }
 
 export const getAccountPerformance = tool({
-  description: 'Get detailed performance analysis and comparison across different trading accounts including risk distribution and portfolio optimization recommendations',
-  parameters: z.object({
+  description: 'Get account performance data and total portfolio value for AI analysis',
+  inputSchema: z.object({
     startDate: z.string().optional().describe('Optional start date to filter trades (format: 2025-01-14T14:33:01.000Z)'),
     endDate: z.string().optional().describe('Optional end date to filter trades (format: 2025-01-14T14:33:01.000Z)'),
     minTrades: z.number().optional().describe('Minimum number of trades required to include an account in analysis')

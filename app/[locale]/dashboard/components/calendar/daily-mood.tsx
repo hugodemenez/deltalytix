@@ -1,7 +1,7 @@
 "use client"
 
 import React from 'react'
-import { FaRegSadTear, FaRegMeh, FaRegSmileBeam } from "react-icons/fa"
+import { Frown, Meh, Smile } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -129,7 +129,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
                   onClick={() => handleMoodSelect('bad')}
                   disabled={isLoading !== null}
                 >
-                  <FaRegSadTear className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
+                  <Frown className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
                 </Button>
                 
                 <Button
@@ -139,7 +139,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
                   onClick={() => handleMoodSelect('okay')}
                   disabled={isLoading !== null}
                 >
-                  <FaRegMeh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
+                  <Meh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
                 </Button>
                 
                 <Button
@@ -149,7 +149,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
                   onClick={() => handleMoodSelect('great')}
                   disabled={isLoading !== null}
                 >
-                  <FaRegSmileBeam className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
+                  <Smile className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mt-4 text-center">
@@ -187,7 +187,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
                 onClick={() => handleMoodSelect('bad')}
                 disabled={isLoading !== null}
               >
-                <FaRegSadTear className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
+                <Frown className={`h-6 w-6 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
               </Button>
               
               <Button
@@ -197,7 +197,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
                 onClick={() => handleMoodSelect('okay')}
                 disabled={isLoading !== null}
               >
-                <FaRegMeh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
+                <Meh className={`h-6 w-6 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
               </Button>
               
               <Button
@@ -207,7 +207,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
                 onClick={() => handleMoodSelect('great')}
                 disabled={isLoading !== null}
               >
-                <FaRegSmileBeam className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
+                <Smile className={`h-6 w-6 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
               </Button>
             </div>
           </CardContent>

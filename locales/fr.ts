@@ -158,6 +158,27 @@ export default {
     'analysis.errorGeneric': 'Une erreur s\'est produite lors de la génération de l\'analyse',
     'analysis.regenerate': 'Régénérer l\'analyse',
     'analysis.rateLimit': 'Limité - veuillez patienter',
+    'analysis.accountPerformance': 'Performance des Comptes',
+    'analysis.totalPortfolioValue': 'Valeur Totale du Portefeuille',
+    'analysis.totalAccounts': 'Total des Comptes',
+    'analysis.portfolioRisk': 'Risque du Portefeuille',
+    'analysis.accountComparison': 'Comparaison des Comptes',
+    'analysis.account': 'Compte',
+    'analysis.netPnL': 'PnL Net',
+    'analysis.winRate': 'Taux de Réussite',
+    'analysis.totalTrades': 'Total des Trades',
+    'analysis.profitFactor': 'Facteur de Profit',
+    'analysis.riskLevel': 'Niveau de Risque',
+    'analysis.bestPerformingAccount': 'Meilleur Compte',
+    'analysis.worstPerformingAccount': 'Pire Compte',
+    'analysis.aiAnalysis': 'Analyse IA',
+    'analysis.bestAccount': 'Meilleur Compte',
+    'analysis.noAnalysisAvailable': 'Aucune analyse disponible',
+    'analysis.generatedAt': 'Généré le',
+    'analysis.model': 'Modèle',
+    'analysis.summary': 'Résumé',
+    'analysis.strengths': 'Points Forts',
+    'analysis.improvements': 'Points d\'Amélioration',
     'filters.showAccountNumbers': 'Afficher les numéros de compte',
     'filters.search': 'Rechercher...',
     'filters.noResults': 'Aucun résultat trouvé.',
@@ -740,6 +761,8 @@ export default {
         success: 'Succès',
         error: 'Erreur',
         create: 'Créer',
+        retry: 'Réessayer',
+        copy: 'Copier',
     },
     rithmic: {
         savedCredentials: "Identifiants Sauvegardés",
@@ -1159,6 +1182,8 @@ export default {
     'dataManagement.toast.instrumentRenamed': 'Instrument renommé avec succès',
     'dataManagement.toast.instrumentRenameError': 'Échec du renommage de l\'instrument',
     'dataManagement.renameAccount.warning': 'Ne renommez pas un compte synchronisé car cela créerait des doublons.',
+    'dataManagement.validate': 'Valider',
+    'dataManagement.validating': 'Validation...',
     timeRangePerformance: {
         title: 'Performance par Durée',
         description: 'Distribution du P&L moyen et du taux de réussite selon les durées de trades',
@@ -1321,21 +1346,44 @@ export default {
         }
     },
     'support': {
-        'greeting': "Bonjour ! Bienvenue sur le support Deltalytix. Comment puis-je vous aider avec votre journal de trading aujourd'hui ? Expliquez-moi votre problème ou votre question, et je ferai de mon mieux pour vous aider.",
-        'description': 'Comment pouvons-nous vous aider avec votre journal de trading ?',
+        'greeting': "Bienvenue dans l'Assistant Support Deltalytix ! Je suis là pour vous aider à rassembler tous les détails nécessaires concernant votre problème ou votre question. Mon objectif est de collecter le bon contexte pour que votre message puisse être transmis efficacement à notre équipe de support client, qui vous recontactera par email.",
+        'inputPlaceholder': 'Décrivez votre problème ou votre question ici...',
+        'search': 'Rechercher',
+        'retry': 'Réessayer',
+        'copied': 'Copié dans le presse-papiers',
+        'description': 'Faites-nous savoir quel problème vous rencontrez ou avec quoi vous avez besoin d\'aide dans votre journal de trading. Je vous aiderai à collecter les informations nécessaires pour notre équipe de support.',
         'requestHumanSupport': 'Demander une assistance humaine',
         'contactInformation': 'Informations de contact',
-        'contactInformationDescription': 'Veuillez fournir vos informations de contact pour que nous puissions vous recontacter.',
-        'emailSent': 'Notre équipe vous recontactera bientôt.',
-        'emailError': 'Veuillez réessayer plus tard.',
-        'emailConfirmation': "Merci, {name}. J'ai envoyé votre demande de support à notre équipe. Ils examineront votre cas et vous recontacteront à l'adresse {email} dès que possible. Y a-t-il autre chose dont vous avez besoin ?",
+        'contactInformationDescription': 'Veuillez fournir vos informations de contact pour que notre équipe de support puisse vous recontacter par email.',
+        'emailSent': 'Votre message a été envoyé à notre équipe de support. Ils vous recontacteront bientôt par email.',
+        'emailError': 'Il y a eu un problème lors de l\'envoi de votre demande. Veuillez réessayer plus tard.',
+        'emailConfirmation': "Merci, {name}. J'ai rassemblé vos informations et envoyé votre demande de support à notre équipe. Ils examineront votre cas et vous recontacteront à l'adresse {email} dès que possible. Y a-t-il autre chose avec quoi je peux vous aider ?",
         'form': {
             'name': 'Nom',
             'email': 'Email',
             'additionalInfo': 'Informations supplémentaires',
-            'additionalInfoPlaceholder': 'Détails supplémentaires que vous souhaitez partager...',
+            'additionalInfoPlaceholder': 'Ajoutez des détails supplémentaires qui pourraient aider notre équipe de support à comprendre votre problème...',
             'submit': 'Envoyer',
-            'cancel': 'Annuler'
+            'cancel': 'Annuler',
+            'summary': 'Résumé',
+            'sending': 'Envoi en cours...'
+        },
+        'evaluatingSupport': 'Examen de votre message pour déterminer la meilleure façon de vous aider...',
+        'evaluationError': 'Il y a eu une erreur lors de l\'évaluation de vos besoins de support.',
+        'preparingEmail': 'Préparation de votre demande de support pour notre équipe...',
+        'emailPreparationError': 'Il y a eu une erreur lors de la préparation de votre demande de support.',
+        'joinDiscord': 'Rejoindre la Communauté Discord',
+        'discordDescription': 'Obtenez une aide instantanée de notre communauté de traders et développeurs.',
+        'tool': {
+            'preparingRequest': 'Préparation de votre demande de support pour notre équipe...',
+            'requestError': 'Il y a eu une erreur lors de la préparation de votre demande de support.',
+            'requestErrorDetails': 'Détails de l\'erreur : {error}'
+        },
+        'errors': {
+            'rateLimit': 'Nous connaissons actuellement une forte demande. Veuillez réessayer dans quelques minutes ou contactez directement le support.',
+            'serviceUnavailable': 'Notre service IA est temporairement indisponible. Veuillez réessayer plus tard ou contactez directement le support.',
+            'internalError': 'Une erreur inattendue s\'est produite. Veuillez réessayer plus tard ou contacter le support.',
+            'generic': 'Désolé, quelque chose s\'est mal passé. Veuillez réessayer ou contacter le support si le problème persiste.'
         }
     },
     'maintenance': {
@@ -1347,6 +1395,18 @@ export default {
         'estimatedCompletion': 'Fin estimée',
         'contact': 'Contacter le Support',
         'contactDescription': 'Si vous avez besoin d\'une assistance immédiate, veuillez contacter notre équipe de support.',
+        'email': {
+            'preview': 'Nouvelle demande de support de Deltalytix',
+            'title': 'Nouvelle demande de support',
+            'summary': 'Résumé :',
+            'contactInformation': 'Informations de contact :',
+            'name': 'Nom :',
+            'email': 'Email :',
+            'additionalInfo': 'Informations supplémentaires :',
+            'conversationHistory': 'Historique de la conversation :',
+            'user': 'Utilisateur',
+            'assistant': 'Assistant'
+        },
         'updates': 'Mises à jour du statut',
         'lastUpdate': 'Dernière mise à jour : {time}',
         'nextUpdate': 'Prochaine mise à jour : {time}'
@@ -1361,6 +1421,22 @@ export default {
             'title': 'Préférences Newsletter',
             'description': 'Gérez vos préférences email et paramètres d\'abonnement',
             'comingSoon': 'Les fonctionnalités de gestion des préférences de la newsletter arrivent bientôt.'
+        },
+        'admin': {
+            'inferNames': 'Inférer les Noms',
+            'inferring': 'Inférence en cours...',
+            'inferNamesTooltip': 'Utiliser l\'IA pour inférer les noms à partir des adresses email',
+            'noName': 'Aucun nom',
+            'filter': {
+                'showAll': 'Afficher Tout',
+                'showTradersOnly': 'Afficher Traders Seulement',
+                'noTradersFound': 'Aucun abonné avec le nom \'trader\' trouvé.'
+            },
+            'nameInference': {
+                'success': 'Traité {processed} emails, mis à jour {updated} noms',
+                'error': 'Échec de l\'inférence des noms à partir des emails',
+                'checking': 'Vérification du nombre d\'abonnés nécessitant une inférence de nom...'
+            }
         }
     },
     'disclaimer.risk.title': 'Avertissement relatif aux risques',
