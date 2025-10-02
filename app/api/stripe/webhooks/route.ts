@@ -2,9 +2,33 @@
 
 import type { Stripe } from "stripe";
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/app/[locale]/(landing)/actions/stripe";
+import { stripe } from "@/actions/stripe";
 import { PrismaClient } from "@prisma/client";
 import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
+
+// Helper function to get current period end from subscription items
+function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
+  // In Stripe v19, current_period_end is available on subscription items
+  // We'll get it from the first subscription item
+  if (subscription.items && subscription.items.data && subscription.items.data.length > 0) {
+    return subscription.items.data[0].current_period_end;
+  }
+  
+  // Fallback to billing_cycle_anchor if no items available
+  return subscription.billing_cycle_anchor;
+}
+
+// Helper function to get current period end from webhook event data
+function getCurrentPeriodEndFromEventData(data: Stripe.Subscription): number {
+  // For webhook events, we need to check if current_period_end exists directly on the subscription
+  // or if we need to get it from subscription items
+  if ('current_period_end' in data && typeof data.current_period_end === 'number') {
+    return data.current_period_end;
+  }
+  
+  // Fallback to billing_cycle_anchor
+  return data.billing_cycle_anchor;
+}
 
 export async function GET(request: NextRequest) {
     return NextResponse.json({ message: 'Hello, world!' })
@@ -115,13 +139,15 @@ export async function POST(req: Request) {
               }
             }
 
+            const currentPeriodEnd = getCurrentPeriodEnd(subscription);
+            
             await prisma.subscription.upsert({
               where: {
                 email: data.customer_details?.email as string,
               },
               update: {
                 plan: subscriptionPlan,
-                endDate: new Date(subscription.current_period_end * 1000),
+                endDate: new Date(currentPeriodEnd * 1000),
                 status: 'ACTIVE',
                 trialEndsAt: null,
                 interval: interval,
@@ -130,7 +156,7 @@ export async function POST(req: Request) {
                 email: data.customer_details?.email as string,
                 plan: subscriptionPlan,
                 user: { connect: { id: user?.id } },
-                endDate: new Date(subscription.current_period_end * 1000),
+                endDate: new Date(currentPeriodEnd * 1000),
                 status: 'ACTIVE',
                 trialEndsAt: null,
                 interval: interval,
@@ -269,11 +295,13 @@ export async function POST(req: Request) {
 
             if (data.cancel_at_period_end) {
               // Update subscription status first
+              const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
+              
               await prisma.subscription.update({
                 where: { email: updatedCustomerData.email },
                 data: {
                   status: "SCHEDULED_CANCELLATION",
-                  endDate: new Date(data.current_period_end * 1000)
+                  endDate: new Date(currentPeriodEnd * 1000)
                 }
               });
 
@@ -295,6 +323,8 @@ export async function POST(req: Request) {
 
               console.log(`Subscription scheduled for cancellation: ${data.id}`);
             } else {
+              const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
+              
               await prisma.subscription.update({
                 where: { email: updatedCustomerData.email },
                 data: {
@@ -302,7 +332,7 @@ export async function POST(req: Request) {
                   plan: data.ended_at ? 'free' : updatedPlan,
                   endDate: data.ended_at 
                     ? new Date(data.ended_at * 1000)
-                    : new Date(data.current_period_end * 1000),
+                    : new Date(currentPeriodEnd * 1000),
                   trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
                 }
               });
@@ -339,12 +369,14 @@ export async function POST(req: Request) {
                 const productName = (price.product as Stripe.Product).name;
                 subscriptionPlan = productName.toUpperCase() || 'FREE';
               }
+              const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
+              
               await prisma.subscription.upsert({
                 where: { email: newCustomerData.email },
                 update: {
                   status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
                   plan: subscriptionPlan,
-                  endDate: new Date(data.current_period_end * 1000),
+                  endDate: new Date(currentPeriodEnd * 1000),
                   trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
                 },
                 create: {
@@ -352,7 +384,7 @@ export async function POST(req: Request) {
                   plan: subscriptionPlan,
                   user: { connect: { id: user.id } },
                   status: data.status === 'trialing' ? 'TRIAL' : 'ACTIVE',
-                  endDate: new Date(data.current_period_end * 1000),
+                  endDate: new Date(currentPeriodEnd * 1000),
                   trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
                 }
               });
