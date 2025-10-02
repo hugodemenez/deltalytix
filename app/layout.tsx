@@ -13,7 +13,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Deltalytix",
   description: "Next generation trading dashboard",
-  metadataBase: new URL('https://deltalytix.app'), 
+  metadataBase: new URL('https://deltalytix.app'),
   openGraph: {
     title: "Deltalytix",
     description: "Deltalytix is a next generation trading dashboard that provides real-time insights and analytics for traders.",
@@ -80,7 +80,7 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  other:{
+  other: {
     'google': 'notranslate',
   },
   authors: [{ name: 'Hugo DEMENEZ' }],
@@ -167,17 +167,17 @@ export default async function RootLayout({
           `}
         </Script>
 
-        <link 
-          rel="apple-touch-icon" 
-          sizes="180x180" 
-          href="/apple-touch-icon.png" 
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/apple-touch-icon.png"
         />
-        <link 
+        <link
           rel="apple-touch-icon-precomposed"
           sizes="180x180"
           href="/apple-touch-icon-precomposed.png"
         />
-          <style>
+        <style>
           {`
             /* Base layout */
             html {

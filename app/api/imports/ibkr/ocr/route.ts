@@ -1,4 +1,4 @@
-import { PDFParser } from 'pdf2json'
+import PDFParser from 'pdf2json'
 
 export const maxDuration = 60 // Allow up to 60 seconds for AI processing
 

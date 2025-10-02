@@ -1,10 +1,10 @@
 import { create } from 'zustand'
-import { Message } from '@ai-sdk/react'
+import { UIMessage } from 'ai'
 
 interface ChatState {
-  messages: Message[]
-  setMessages: (messages: Message[]) => void
-  addMessage: (message: Message) => void
+  messages: UIMessage[]
+  setMessages: (messages: UIMessage[]) => void
+  addMessage: (message: UIMessage) => void
   clearMessages: () => void
 }
 
