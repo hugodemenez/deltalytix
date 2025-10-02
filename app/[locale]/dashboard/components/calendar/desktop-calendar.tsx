@@ -25,6 +25,7 @@ import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useFinancialEventsStore } from "@/store/financial-events-store"
 import { useUserStore } from "@/store/user-store"
 import { Account } from "@/context/data-provider"
+import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
 
 
 const WEEKDAYS = [
@@ -159,6 +160,7 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
 }
 
 function RenewalBadge({ renewals }: { renewals: Account[] }) {
+  
   const t = useI18n()
 
   if (renewals.length === 0) return null
@@ -280,6 +282,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
 
 export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
   const accounts = useUserStore(state => state.accounts)
+  const groups = useUserStore(state => state.groups)
   const t = useI18n()
   const locale = useCurrentLocale()
   const timezone = useUserStore(state => state.timezone)
@@ -387,7 +390,14 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
   }, [monthEvents, timezone])
 
   const getRenewalsForDate = React.useCallback((date: Date) => {
+    // Get hidden group to filter out hidden accounts
+    const hiddenGroup = groups.find(g => g.name === HIDDEN_GROUP_NAME)
+    const hiddenAccountIds = hiddenGroup ? new Set(hiddenGroup.accounts.map(a => a.id)) : new Set()
+    
     return accounts.filter(account => {
+      // Skip hidden accounts
+      if (hiddenAccountIds.has(account.id)) return false;
+      
       if (!account.nextPaymentDate) return false;
       try {
         // Create new Date objects to avoid modifying the originals
@@ -408,7 +418,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
         return false
       }
     })
-  }, [accounts, timezone])
+  }, [accounts, timezone, groups])
 
   const calculateWeeklyTotal = React.useCallback((index: number, calendarDays: Date[], calendarData: CalendarData) => {
     const startOfWeekIndex = index - 6
