@@ -260,7 +260,11 @@ export default {
         renewal: {
             title: 'Account Renewals',
             frequency: 'renewal',
-            notification: 'Notifications enabled'
+            notification: 'Notifications enabled',
+            totalAccounts: 'Total accounts',
+            nextRenewal: 'Next renewal',
+            account: 'account',
+            accounts: 'accounts'
         },
         consistency: {
             title: 'Trading Consistency',
