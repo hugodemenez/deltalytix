@@ -26,12 +26,16 @@ export async function generateMetadata(props: { params: Promise<{ locale: Locale
 export default async function RootLayout(
   props: Readonly<{
     children: React.ReactNode;
-    params: { locale: string };
+    params: Promise<{ locale: string }>;
   }>
 ) {
   const {
-    children
+    children,
+    params
   } = props;
+  
+  // Await the params since it's now a Promise in Next.js 15
+  const { locale } = await params;
 
   return (
     <ThemeProvider>
