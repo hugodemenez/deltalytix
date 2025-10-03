@@ -1145,6 +1145,17 @@ export default {
             'applyInstrumentChanges': 'Appliquer les changements d\'instrument',
             'applying': 'Application...'
         },
+        'editableTimeCell': {
+            'currentTime': 'Heure actuelle',
+            'timezoneAdjustment': 'Ajustement de fuseau horaire',
+            'manualEdit': 'Modification manuelle',
+            'editTimeManually': 'Modifier l\'heure manuellement',
+            'newTime': 'Nouvelle heure',
+            'applyChanges': 'Appliquer les changements',
+            'saving': 'Enregistrement...',
+            'cancel': 'Annuler',
+            'invalidTimeFormat': 'Format d\'heure invalide'
+        },
     },
     'tickDistribution.title': 'Distribution des ticks',
     'tickDistribution.description': 'Visualisez la distribution de vos trades par ticks',

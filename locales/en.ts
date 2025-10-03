@@ -915,6 +915,17 @@ export default {
             'applyInstrumentChanges': 'Apply Instrument Changes',
             'applying': 'Applying...'
         },
+        'editableTimeCell': {
+            'currentTime': 'Current Time',
+            'timezoneAdjustment': 'Timezone Adjustment',
+            'manualEdit': 'Manual Edit',
+            'editTimeManually': 'Edit Time Manually',
+            'newTime': 'New time',
+            'applyChanges': 'Apply Changes',
+            'saving': 'Saving...',
+            'cancel': 'Cancel',
+            'invalidTimeFormat': 'Invalid time format'
+        },
     },
     'share.button': 'Share trades',
     'share.success': 'Trades shared successfully',

@@ -70,7 +70,7 @@ export function EditableTimeCell({
         // Parse the manual time input
         const [hours, minutes, seconds] = tempValue.split(':').map(Number)
         if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
-          throw new Error('Invalid time format')
+          throw new Error(t('trade-table.editableTimeCell.invalidTimeFormat'))
         }
 
         const originalDate = new Date(value)
@@ -168,14 +168,14 @@ export function EditableTimeCell({
 
           <div className="space-y-3">
             <div>
-              <Label className="text-xs text-muted-foreground">Current Time</Label>
+              <Label className="text-xs text-muted-foreground">{t('trade-table.editableTimeCell.currentTime')}</Label>
               <div className="text-sm font-mono bg-muted/50 rounded px-2 py-1">
                 {formattedDate} {formattedTime}
               </div>
             </div>
 
             <div>
-              <Label className="text-xs mb-2 block">Timezone Adjustment</Label>
+              <Label className="text-xs mb-2 block">{t('trade-table.editableTimeCell.timezoneAdjustment')}</Label>
               <div className="flex items-center gap-2">
                 <Button
                   size="sm"
@@ -199,13 +199,13 @@ export function EditableTimeCell({
               </div>
               {hourOffset !== 0 && (
                 <div className="text-xs text-muted-foreground mt-1">
-                  New time: {formatInTimeZone(new Date(new Date(value).getTime() + hourOffset * 60 * 60 * 1000), timezone, 'HH:mm:ss')}
+                  {t('trade-table.editableTimeCell.newTime')}: {formatInTimeZone(new Date(new Date(value).getTime() + hourOffset * 60 * 60 * 1000), timezone, 'HH:mm:ss')}
                 </div>
               )}
             </div>
 
             <div>
-              <Label className="text-xs mb-2 block">Manual Edit</Label>
+              <Label className="text-xs mb-2 block">{t('trade-table.editableTimeCell.manualEdit')}</Label>
               <Button
                 size="sm"
                 variant="outline"
@@ -215,7 +215,7 @@ export function EditableTimeCell({
                 }}
                 className="w-full text-xs"
               >
-                Edit Time Manually
+                {t('trade-table.editableTimeCell.editTimeManually')}
               </Button>
             </div>
           </div>
@@ -227,7 +227,7 @@ export function EditableTimeCell({
               disabled={hourOffset === 0 || isSaving}
               className="flex-1"
             >
-              {isSaving ? 'Saving...' : 'Apply Changes'}
+              {isSaving ? t('trade-table.editableTimeCell.saving') : t('trade-table.editableTimeCell.applyChanges')}
             </Button>
             <Button
               size="sm"
@@ -235,7 +235,7 @@ export function EditableTimeCell({
               onClick={() => setIsPopoverOpen(false)}
               className="flex-1"
             >
-              Cancel
+              {t('trade-table.editableTimeCell.cancel')}
             </Button>
           </div>
         </div>
