@@ -1,10 +1,10 @@
 {
   "name": "delatlytix",
-  "version": "0.1.0",
+  "version": "0.2",
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "build": "next build",
+    "build": "FORCE_COLOR=1 next build",
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",

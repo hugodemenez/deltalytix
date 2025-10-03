@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { format, differenceInDays } from "date-fns"
@@ -12,131 +11,111 @@ import {
 } from "@/components/ui/tooltip"
 import Link from "next/link"
 import { useI18n, useCurrentLocale } from "@/locales/client"
-import { getSubscriptionData, type SubscriptionWithPrice } from "../actions/billing"
+import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store"
 
 
 
-  export function SubscriptionBadge({ className }: { className?: string }) {
-    const t = useI18n()
+export function SubscriptionBadge({ className }: { className?: string }) {
+  const t = useI18n()
   const locale = useCurrentLocale()
-  const [stripeSubscription, setStripeSubscription] = useState<SubscriptionWithPrice | null>(null)
-  const [isLoading, setIsLoading] = useState<boolean>(true)
+  // Use store data
+  const stripeSubscription = useStripeSubscriptionStore(state => state.stripeSubscription)
+  const isLoading = useStripeSubscriptionStore(state => state.isLoading)
 
-  useEffect(() => {
-    let isMounted = true
-    ;(async () => {
-      try {
-        const data = await getSubscriptionData()
-        if (isMounted) setStripeSubscription(data)
-      } catch {
-        if (isMounted) setStripeSubscription(null)
-      } finally {
-        if (isMounted) setIsLoading(false)
-      }
-    })()
-    return () => { isMounted = false }
-  }, [])
+  // Compute values directly from subscription data
+  const formattedPlan = stripeSubscription?.plan?.name || 'Free'
+  const isLifetime = stripeSubscription?.plan?.interval === 'lifetime'
+  const isTrialing = stripeSubscription?.status === 'trialing'
+  const isActive = stripeSubscription?.status === 'active'
+  const isPastDue = stripeSubscription?.status === 'past_due'
+  const isIncomplete = stripeSubscription?.status === 'incomplete'
+  const isUnpaid = stripeSubscription?.status === 'unpaid'
+  const isCanceled = stripeSubscription?.cancel_at_period_end || stripeSubscription?.status === 'canceled'
+  
+  // Compute dates
+  const nextBillingDate = stripeSubscription?.current_period_end ? new Date(stripeSubscription.current_period_end * 1000) : null
+  const trialEndDate = stripeSubscription?.trial_end ? new Date(stripeSubscription.trial_end * 1000) : null
+  
+  // Compute days remaining
+  const trialDays = (() => {
+    if (!stripeSubscription?.trial_end) return null
+    const today = new Date()
+    const trialEnd = new Date(stripeSubscription.trial_end * 1000)
+    const diffTime = trialEnd.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays > 0 ? diffDays : 0
+  })()
+  
+  const subscriptionDays = (() => {
+    if (!stripeSubscription?.cancel_at_period_end || !stripeSubscription?.current_period_end) return null
+    const today = new Date()
+    const endDate = new Date(stripeSubscription.current_period_end * 1000)
+    const diffTime = endDate.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return diffDays > 0 ? diffDays : 0
+  })()
 
-  if (!stripeSubscription) {
+  // Show loading state if loading or no subscription data yet
+  if (isLoading || !stripeSubscription) {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link href="/dashboard/billing">
-              <Badge 
-                variant="secondary" 
-                className={cn(
-                  "px-2 py-0.5 text-xs whitespace-nowrap cursor-pointer",
-                  "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-                  className
-                )}
-              >
-                {t('pricing.free.name')}
-              </Badge>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>{t('pricing.subscribeToAccess')}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <Badge
+        variant="secondary"
+        className={cn(
+          "px-2 py-0.5 text-xs whitespace-nowrap",
+          "bg-secondary text-secondary-foreground",
+          className
+        )}
+      >
+        {t('pricing.loading')}
+      </Badge>
     )
   }
 
-  // Derive plan label from Stripe data
-  const formattedPlan = stripeSubscription.plan?.name
-    ? stripeSubscription.plan.name
-    : t('pricing.free.name')
-  
-  const getDaysRemaining = (date: Date | null) => {
-    if (!date) return null
-    const today = new Date()
-    const end = new Date(date)
-    return differenceInDays(end, today)
-  }
-
-  const trialDays = stripeSubscription.trial_end ? getDaysRemaining(new Date(stripeSubscription.trial_end * 1000)) : null
-  const subscriptionDays = stripeSubscription.cancel_at_period_end && stripeSubscription.current_period_end
-    ? getDaysRemaining(new Date(stripeSubscription.current_period_end * 1000))
-    : null
-
   // Get badge content based on status
-  const formatStripeDate = (timestamp?: number | null) => {
-    if (!timestamp) return null
-    const date = new Date(timestamp * 1000)
-    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' })
-  }
-
   const getBadgeContent = () => {
-    const status = (stripeSubscription.status || '').toLowerCase()
-    const isLifetime = stripeSubscription.plan?.interval === 'lifetime'
+    // At this point, we know we have subscription data (loading case is handled above)
 
     // Lifetime: simply show the plan name as active
     if (isLifetime) {
       return { text: formattedPlan, variant: 'active' as const, tooltip: undefined as string | undefined }
     }
 
-    if (status === 'trialing') {
+    if (isTrialing) {
       if (!trialDays) {
         return { text: `${formattedPlan} • ${t('billing.status.trialing')}`, variant: 'expired' as const, tooltip: t('billing.status.incomplete_expired') }
       }
-      const dateStr = formatStripeDate(stripeSubscription.trial_end)
+      const dateStr = trialEndDate ? format(trialEndDate, 'MMM d') : null
       return { text: `${formattedPlan} • ${trialDays}d ${t('calendar.charts.remaining')}`, variant: 'trial' as const, tooltip: dateStr ? t('billing.trialEndsIn', { date: dateStr }) : undefined }
     }
 
-    if (status === 'active') {
-      const next = formatStripeDate(stripeSubscription.current_period_end)
+    if (isActive) {
+      const next = nextBillingDate ? format(nextBillingDate, 'MMM d') : null
       return { text: `${formattedPlan}`, variant: 'active' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
     }
 
-    if (status === 'past_due') {
+    if (isPastDue) {
       return { text: `${formattedPlan} • ${t('billing.status.past_due')}`, variant: 'expired' as const, tooltip: t('billing.status.past_due') }
     }
 
-    if (status === 'incomplete') {
+    if (isIncomplete) {
       return { text: `${formattedPlan} • ${t('billing.status.incomplete')}`, variant: 'expiring' as const, tooltip: t('billing.status.incomplete') }
     }
 
-    if (status === 'unpaid') {
+    if (isUnpaid) {
       return { text: `${formattedPlan} • ${t('billing.status.unpaid')}`, variant: 'expired' as const, tooltip: t('billing.status.unpaid') }
     }
 
-    if (stripeSubscription.cancel_at_period_end) {
-      const next = formatStripeDate(stripeSubscription.current_period_end)
+    if (isCanceled) {
+      const next = nextBillingDate ? format(nextBillingDate, 'MMM d') : null
       if (!subscriptionDays || subscriptionDays <= 0) {
         return { text: `${formattedPlan} • ${t('billing.status.canceled')}`, variant: 'expired' as const, tooltip: t('billing.subscriptionCancelled') }
       }
       return { text: `${formattedPlan} • ${t('billing.scheduledToCancel')}`, variant: 'expiring' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
     }
 
-    const next = formatStripeDate(stripeSubscription.current_period_end)
-    if (!subscriptionDays || subscriptionDays <= 0) {
-      return { text: `${formattedPlan} • ${t('billing.status.incomplete_expired')}`, variant: 'expired' as const, tooltip: t('billing.status.incomplete_expired') }
-    }
-    if (subscriptionDays <= 5) {
-      return { text: `${formattedPlan} • ${subscriptionDays}d ${t('calendar.charts.remaining')}`, variant: 'expiring' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
-    }
-    return { text: `${formattedPlan} • ${next ? t('billing.dates.nextBilling', { date: next }) : t('billing.notApplicable')}`, variant: 'normal' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
+    // Handle unknown status - show the plan name with a generic status
+    const next = nextBillingDate ? format(nextBillingDate, 'MMM d') : null
+    return { text: `${formattedPlan}`, variant: 'normal' as const, tooltip: next ? t('billing.dates.nextBilling', { date: next }) : undefined }
   }
 
   const badge = getBadgeContent()
@@ -146,10 +125,10 @@ import { getSubscriptionData, type SubscriptionWithPrice } from "../actions/bill
       <Tooltip>
         <TooltipTrigger asChild>
           <Link href="/dashboard/billing">
-            <Badge 
-              variant="secondary" 
+            <Badge
+              variant="secondary"
               className={cn(
-                "px-2 py-0.5 text-xs whitespace-nowrap cursor-help transition-colors", 
+                "px-2 py-0.5 text-xs whitespace-nowrap cursor-help transition-colors",
                 badge.variant === 'active' && "bg-primary text-primary-foreground hover:bg-primary/90",
                 badge.variant === 'trial' && "bg-blue-500 text-white dark:bg-blue-400 hover:bg-blue-600 dark:hover:bg-blue-500",
                 badge.variant === 'expiring' && "bg-destructive text-destructive-foreground hover:bg-destructive/90",

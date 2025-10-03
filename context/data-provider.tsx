@@ -69,6 +69,8 @@ import { deleteTagAction } from '@/server/tags';
 import { useRouter } from 'next/navigation';
 import { useCurrentLocale } from '@/locales/client';
 import { useMoodStore } from '@/store/mood-store';
+import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store';
+import { getSubscriptionData } from '@/app/[locale]/dashboard/actions/billing';
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -476,6 +478,11 @@ export const DataProvider: React.FC<{
   const locale = useCurrentLocale()
   const isLoading = useUserStore(state => state.isLoading)
   const setIsLoading = useUserStore(state => state.setIsLoading)
+  
+  // Stripe subscription store
+  const setStripeSubscription = useStripeSubscriptionStore(state => state.setStripeSubscription);
+  const setStripeSubscriptionLoading = useStripeSubscriptionStore(state => state.setIsLoading);
+  const setStripeSubscriptionError = useStripeSubscriptionStore(state => state.setError);
 
   // Local states
   const [sharedParams, setSharedParams] = useState<SharedParams | null>(null);
@@ -624,6 +631,20 @@ export const DataProvider: React.FC<{
       setTickDetails(data.tickDetails);
       setIsFirstConnection(data.userData?.isFirstConnection || false)
 
+      // Load Stripe subscription data
+      try {
+        setStripeSubscriptionLoading(true);
+        const stripeSubscriptionData = await getSubscriptionData();
+        setStripeSubscription(stripeSubscriptionData);
+        setStripeSubscriptionError(null);
+      } catch (error) {
+        console.error('Error loading Stripe subscription:', error);
+        setStripeSubscriptionError(error instanceof Error ? error.message : 'Failed to load subscription');
+        setStripeSubscription(null);
+      } finally {
+        setStripeSubscriptionLoading(false);
+      }
+
 
       // Calculate balanceToDate for each account 
       const accountsWithBalance = (data.accounts || []).map(account => ({
@@ -690,6 +711,16 @@ export const DataProvider: React.FC<{
           balanceToDate: calculateAccountBalance(account, Array.isArray(trades) ? trades : [])
         }))
         setAccounts(accountsWithBalance)
+        
+        // Refresh Stripe subscription data
+        try {
+          const stripeSubscriptionData = await getSubscriptionData();
+          setStripeSubscription(stripeSubscriptionData);
+          setStripeSubscriptionError(null);
+        } catch (error) {
+          console.error('Error refreshing Stripe subscription:', error);
+          setStripeSubscriptionError(error instanceof Error ? error.message : 'Failed to refresh subscription');
+        }
       }
       
       console.log('[refreshTrades] Successfully refreshed trades and user data')
@@ -853,6 +884,14 @@ export const DataProvider: React.FC<{
   const calendarData = useMemo(() => formatCalendarData(formattedTrades, accounts), [formattedTrades, accounts]);
 
   const isPlusUser = () => {
+    // Use Stripe subscription store for more accurate subscription status
+    const stripeSubscription = useStripeSubscriptionStore.getState().stripeSubscription;
+    if (stripeSubscription) {
+      const planName = stripeSubscription.plan?.name?.toLowerCase() || '';
+      return planName.includes('plus') || planName.includes('pro');
+    }
+    
+    // Fallback to database subscription
     return Boolean(subscription?.status === 'active' && ['plus', 'pro'].includes(subscription?.plan?.split('_')[0].toLowerCase() || ''));
   };
 

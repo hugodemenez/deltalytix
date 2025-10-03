@@ -8,32 +8,11 @@ import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 import { getTickDetails } from '@/server/tick-details'
 import { prisma } from '@/lib/prisma'
 
+import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
+
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
-  return date.toISOString().replace('Z', '+00:00')
-}
-
-// Helper function to ensure timestamps are in the correct format
-function formatTimestamp(timestamp: string): string {
-  // If the timestamp already has the correct format, return it
-  if (timestamp.includes('+00:00')) {
-    return timestamp
-  }
-  // If it ends with 'Z', convert to +00:00 format
-  if (timestamp.endsWith('Z')) {
-    return timestamp.replace('Z', '+00:00')
-  }
-  // If it's a valid ISO string, convert it
-  try {
-    const date = new Date(timestamp)
-    if (!isNaN(date.getTime())) {
-      return formatDateForAPI(date)
-    }
-  } catch (error) {
-    console.warn('Failed to parse timestamp:', timestamp, error)
-  }
-  // Return as-is if we can't parse it
-  return timestamp
+  return formatDateToTimestamp(date)
 }
 
 // Helper function to format duration in a readable format (e.g., "1min 34sec")

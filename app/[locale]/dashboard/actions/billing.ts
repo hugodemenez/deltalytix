@@ -57,6 +57,7 @@ export type SubscriptionWithPrice = {
 }
 
 export async function getSubscriptionData() {
+  console.debug('getSubscriptionData')
   const supabase = await createClient()
 
   try {
@@ -287,7 +288,6 @@ export async function getSubscriptionData() {
             // Coupon is just an ID, fetch the full coupon data
             try {
               const fullCoupon = await stripe.coupons.retrieve(coupon);
-              console.log('FULL COUPON', JSON.stringify(fullCoupon, null, 2))
               return {
                 code: fullCoupon.id,
                 amount_off: fullCoupon.amount_off || 0,

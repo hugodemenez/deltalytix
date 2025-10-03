@@ -4,7 +4,7 @@ import * as React from "react"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps, ReferenceLine } from "recharts"
 import { format, parseISO, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Info, ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import {
@@ -29,12 +29,14 @@ import {
 
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Info } from "lucide-react"
 
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { useUserStore } from "@/store/user-store"
 import { useEquityChartStore } from "@/store/equity-chart-store"
 import { Payout as PrismaPayout } from '@prisma/client'
+import { AccountSelectionPopover } from "./account-selection-popover"
 
 interface EquityChartProps {
   size?: WidgetSize
@@ -77,24 +79,32 @@ interface ChartEvent {
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-// Reduced color array for better performance
-const ACCOUNT_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))", 
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
-  "hsl(var(--chart-8))",
-] as const
+// Generate consistent color based on accountNumber string
+function generateAccountColor(accountNumber: string): string {
+  // Simple hash function to convert string to number
+  let hash = 0
+  for (let i = 0; i < accountNumber.length; i++) {
+    const char = accountNumber.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32-bit integer
+  }
+  
+  // Use absolute value and modulo to get consistent hue
+  const hue = Math.abs(hash) % 360
+  
+  // Generate a vibrant color with good contrast
+  // Use different saturation and lightness values for variety
+  const saturation = 70 + (Math.abs(hash) % 30) // 70-100%
+  const lightness = 50 + (Math.abs(hash >> 8) % 20) // 50-70%
+  
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+}
 
-// Color map function
+// Color map function using randomized colors
 function createAccountColorMap(accountNumbers: string[]): Map<string, string> {
-  const sortedAccounts = [...accountNumbers].sort()
-  return new Map(sortedAccounts.map((accountNumber, index) => [
+  return new Map(accountNumbers.map(accountNumber => [
     accountNumber,
-    ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]
+    generateAccountColor(accountNumber)
   ]))
 }
 
@@ -495,7 +505,7 @@ const OptimizedTooltip = React.memo(({
                 <div key={account} className="flex items-center gap-2">
                   <div 
                     className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: accountColorMap.get(account) || ACCOUNT_COLORS[0] }}
+                    style={{ backgroundColor: accountColorMap.get(account) || generateAccountColor(account) }}
                   />
                   <span className="text-sm text-foreground">
                     {t('equity.tooltip.accountReset', { account })}
@@ -517,7 +527,7 @@ const OptimizedTooltip = React.memo(({
                 <div key={account} className="flex items-center gap-2">
                   <div 
                     className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: accountColorMap.get(account) || ACCOUNT_COLORS[0] }}
+                    style={{ backgroundColor: accountColorMap.get(account) || generateAccountColor(account) }}
                   />
                   <span className="text-sm text-foreground">
                     {account}: {formatCurrency(amount)}
@@ -549,6 +559,7 @@ const AccountsLegend = React.memo(({
   selectedAccounts,
   chartData,
   hoveredData,
+  onToggleAccount,
   t 
 }: {
   accountNumbers: string[]
@@ -556,6 +567,7 @@ const AccountsLegend = React.memo(({
   selectedAccounts: Set<string>
   chartData: ChartDataPoint[]
   hoveredData: ChartDataPoint | null
+  onToggleAccount: (accountNumber: string) => void
   t: any
 }) => {
   if (!accountNumbers.length || accountNumbers.length <= 1) return null
@@ -572,7 +584,7 @@ const AccountsLegend = React.memo(({
       accountNumber: acc,
       equity: displayData?.[`equity_${acc}` as keyof ChartDataPoint] as number || 0,
       latestEquity: latestData?.[`equity_${acc}` as keyof ChartDataPoint] as number || 0,
-      color: accountColorMap.get(acc) || ACCOUNT_COLORS[0],
+      color: accountColorMap.get(acc) || generateAccountColor(acc),
       hasPayout: displayData?.[`payout_${acc}` as keyof ChartDataPoint] as boolean || false,
       hasReset: displayData?.[`reset_${acc}` as keyof ChartDataPoint] as boolean || false,
       payoutStatus: displayData?.[`payoutStatus_${acc}` as keyof ChartDataPoint] as string || '',
@@ -582,18 +594,36 @@ const AccountsLegend = React.memo(({
 
   return (
     <div className="border-t pt-2 mt-2 h-[88px] flex flex-col">
-      <div className="flex items-center gap-2 mb-2 flex-shrink-0">
-        <span className="text-xs font-medium text-muted-foreground">
-          {t('equity.legend.title')}
-          {isHovered && displayData && (
-            <span className="ml-2 text-xs text-primary">
-              - {format(new Date(displayData.date), "MMM d, yyyy")}
-            </span>
-          )}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          ({accountsWithEquity.length} {t('equity.legend.accounts')})
-        </span>
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t('equity.legend.title')}
+            {isHovered && displayData && (
+              <span className="ml-2 text-xs text-primary">
+                - {format(new Date(displayData.date), "MMM d, yyyy")}
+              </span>
+            )}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            ({accountsWithEquity.length} {t('equity.legend.accounts')})
+          </span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="z-[9999] max-w-xs">
+                <p className="text-xs">{t('equity.legend.maxAccountsInfo')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <AccountSelectionPopover
+          accountNumbers={accountNumbers}
+          selectedAccounts={Array.from(selectedAccounts)}
+          onToggleAccount={onToggleAccount}
+          t={t}
+        />
       </div>
       <div className="flex gap-3 overflow-x-auto max-w-full flex-1 scrollbar-hide">
         <div className="flex gap-3 min-w-max">
@@ -637,11 +667,17 @@ const AccountsLegend = React.memo(({
 })
 AccountsLegend.displayName = "AccountsLegend"
 
+
 export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   const { formattedTrades: trades } = useData()
   const accounts = useUserStore(state => state.accounts)
   const timezone = useUserStore(state => state.timezone)
-  const { config, setShowIndividual } = useEquityChartStore()
+  const { 
+    config, 
+    setShowIndividual, 
+    setSelectedAccountsToDisplay,
+    toggleAccountSelection
+  } = useEquityChartStore()
   const showIndividual = config.showIndividual
   const [hoveredData, setHoveredData] = React.useState<ChartDataPoint | null>(null)
   
@@ -667,9 +703,21 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
     [trades]
   )
 
+  // Account selection handlers
+  const handleToggleAccount = React.useCallback((accountNumber: string) => {
+    toggleAccountSelection(accountNumber)
+  }, [toggleAccountSelection])
+
+  // Initialize selected accounts if empty
+  React.useEffect(() => {
+    if ((!config.selectedAccountsToDisplay || config.selectedAccountsToDisplay.length === 0) && accountNumbers.length > 0) {
+      setSelectedAccountsToDisplay(accountNumbers)
+    }
+  }, [config.selectedAccountsToDisplay, accountNumbers, setSelectedAccountsToDisplay])
+
   const selectedAccounts = React.useMemo(() => 
-    new Set(accountNumbers), 
-    [accountNumbers]
+    new Set(config.selectedAccountsToDisplay || []), 
+    [config.selectedAccountsToDisplay]
   )
 
   const accountColorMap = React.useMemo(() => 
@@ -685,7 +733,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
     allDates, 
     timezone, 
     showIndividual,
-    config.maxAccountsDisplayed,
+    10, // Hardcoded max accounts for performance
     config.dataSampling
   )
 
@@ -700,15 +748,16 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       } as ChartConfig
     }
     
-    const maxAccounts = config.maxAccountsDisplayed
-    return accountNumbers.slice(0, maxAccounts).reduce((acc, accountNumber) => {
+    const maxAccounts = 10 // Hardcoded for performance
+    const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts)
+    return accountsToShow.reduce((acc, accountNumber) => {
       acc[`equity_${accountNumber}`] = {
         label: `Account ${accountNumber}`,
-        color: accountColorMap.get(accountNumber) || ACCOUNT_COLORS[0],
+        color: accountColorMap.get(accountNumber) || generateAccountColor(accountNumber),
       }
       return acc
     }, {} as ChartConfig)
-  }, [accountNumbers, showIndividual, config.maxAccountsDisplayed, accountColorMap])
+  }, [selectedAccounts, showIndividual, accountColorMap])
 
   // Memoized chart lines with consistent color mapping
   const chartLines = React.useMemo(() => {
@@ -727,11 +776,11 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       )
     }
 
-    const maxAccounts = config.maxAccountsDisplayed
-    return accountNumbers.slice(0, maxAccounts).map((accountNumber) => {
-      if (!selectedAccounts.has(accountNumber)) return null
+    const maxAccounts = 10 // Hardcoded for performance
+    const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts)
+    return accountsToShow.map((accountNumber) => {
       // Use the same color mapping as legend to ensure consistency
-      const color = accountColorMap.get(accountNumber) || ACCOUNT_COLORS[0]
+      const color = accountColorMap.get(accountNumber) || generateAccountColor(accountNumber)
       return (
         <Line
           key={accountNumber}
@@ -745,8 +794,8 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
           connectNulls={false}
         />
       )
-    }).filter(Boolean)
-  }, [accountNumbers, selectedAccounts, showIndividual, config.maxAccountsDisplayed, accountColorMap])
+    })
+  }, [selectedAccounts, showIndividual, accountColorMap])
 
   return (
     <Card className="h-full flex flex-col">
@@ -876,6 +925,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
               selectedAccounts={selectedAccounts}
               chartData={chartData}
               hoveredData={hoveredData}
+              onToggleAccount={handleToggleAccount}
               t={t}
             />
           )}
