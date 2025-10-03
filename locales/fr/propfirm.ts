@@ -21,6 +21,12 @@ export default {
             tradingDays: 'Jours de Trading'
         },
         ungrouped: 'Non groupé',
+        dragAndDrop: {
+            dragToReorder: 'Glissez pour réorganiser les comptes',
+            reordering: 'Réorganisation des comptes...',
+            reorderSuccess: 'Comptes réorganisés avec succès',
+            reorderError: 'Échec de la réorganisation des comptes'
+        },
         tabs: {
             overview: 'Aperçu',
             consistency: 'Cohérence'

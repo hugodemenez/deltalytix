@@ -21,6 +21,12 @@ export default {
             tradingDays: 'Trading Days'
         },
         ungrouped: 'Ungrouped',
+        dragAndDrop: {
+            dragToReorder: 'Drag to reorder accounts',
+            reordering: 'Reordering accounts...',
+            reorderSuccess: 'Accounts reordered successfully',
+            reorderError: 'Failed to reorder accounts'
+        },
         tabs: {
             overview: 'Overview',
             consistency: 'Consistency'

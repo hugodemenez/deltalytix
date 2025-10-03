@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
+import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings, ChevronLeft, ChevronRight, Loader2, GripVertical } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn, calculateTradingDays } from "@/lib/utils"
@@ -34,7 +34,28 @@ import {
 import { Account } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
+import { useAccountOrderStore } from '@/store/account-order-store'
 import { savePayoutAction, removeAccountsFromTradesAction } from '@/server/accounts'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 
 interface DailyMetric {
   date: Date
@@ -77,6 +98,79 @@ interface PayoutDialogProps {
 const localeMap: { [key: string]: Locale } = {
   en: enUS,
   fr: fr
+}
+
+// Draggable Account Card Component
+interface DraggableAccountCardProps {
+  account: Account
+  trades: any[]
+  allTrades: any[]
+  metrics?: any
+  tradingDaysMetrics?: any
+  onClick: () => void
+  size: WidgetSize
+  isDragDisabled?: boolean
+}
+
+function DraggableAccountCard({ 
+  account, 
+  trades, 
+  allTrades, 
+  metrics, 
+  tradingDaysMetrics, 
+  onClick, 
+  size,
+  isDragDisabled = false 
+}: DraggableAccountCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: account.number,
+    disabled: isDragDisabled
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex-shrink-0",
+        isDragging && "z-50"
+      )}
+    >
+      <div className="relative group">
+        <AccountCard
+          account={account}
+          trades={trades}
+          allTrades={allTrades}
+          metrics={metrics}
+          tradingDaysMetrics={tradingDaysMetrics}
+          onClick={onClick}
+          size={size}
+        />
+        {!isDragDisabled && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded bg-background/80 backdrop-blur-sm border"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
 
 function PayoutDialog({
@@ -482,6 +576,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
   const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout, refreshTrades } = useData()
+  const { getOrderedAccounts, reorderAccounts } = useAccountOrderStore()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
@@ -500,6 +595,65 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [isSavingPayout, setIsSavingPayout] = useState(false)
   const [isDeletingPayout, setIsDeletingPayout] = useState(false)
   const shouldUpdateSelectedAccount = useRef(false)
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (active.id !== over?.id) {
+      // Find which group this account belongs to
+      const activeAccount = accounts.find(acc => acc.number === active.id)
+      if (!activeAccount) return
+
+      let groupId: string
+      let groupAccounts: Account[]
+
+      if (activeAccount.groupId) {
+        // Account belongs to a group
+        const group = groups.find(g => g.id === activeAccount.groupId)
+        if (!group) return
+        
+        groupId = group.id
+        groupAccounts = filteredAccounts.filter(account => {
+          return group.accounts.some(a => a.number === account.number);
+        })
+      } else {
+        // Account is ungrouped
+        const groupedAccountNumbers = new Set(
+          groups.flatMap(group => group.accounts.map(a => a.number))
+        )
+        
+        groupId = 'ungrouped'
+        groupAccounts = filteredAccounts.filter(
+          account => !groupedAccountNumbers.has(account.number ?? '')
+        )
+      }
+      
+      const orderedAccounts = getOrderedAccounts(groupId, groupAccounts)
+      const oldIndex = orderedAccounts.findIndex(account => account.number === active.id)
+      const newIndex = orderedAccounts.findIndex(account => account.number === over?.id)
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedAccounts = arrayMove(orderedAccounts, oldIndex, newIndex)
+        const accountNumbers = reorderedAccounts.map(acc => acc.number)
+        
+        reorderAccounts(groupId, accountNumbers)
+        
+        toast({
+          title: t('propFirm.dragAndDrop.reorderSuccess'),
+          variant: "default"
+        })
+      }
+    }
+  }
 
   // Enable delete button when an account is selected
   useEffect(() => {
@@ -989,6 +1143,9 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 // Skip groups with no accounts
                 if (groupAccounts.length === 0) return null;
 
+                // Get ordered accounts for this group
+                const orderedAccounts = getOrderedAccounts(group.id, groupAccounts) as Account[];
+
                 // Generate a consistent color for each group based on group index
                 const groupColors = [
                   'border-blue-200/50 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/20',
@@ -1024,32 +1181,42 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
 
                     {/* Cards container with optimized spacing */}
                     <div className="p-4 pt-3">
-                      <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
-                        {groupAccounts.map(account => {
-                          const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
-                          const tradingDays = tradingDaysMetrics.find(m => m.accountNumber === account.number)
-                          // Filter trades based on reset date if it exists (for metrics)
-                          const accountTrades = account.resetDate
-                            ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
-                            : trades.filter(t => t.accountNumber === account.number)
-                          // All trades for the chart
-                          const allAccountTrades = trades.filter(t => t.accountNumber === account.number)
-                          if (!account.number) return null;
-                          return (
-                            <div key={account.number} className="flex-shrink-0">
-                              <AccountCard
-                                account={account as Account}
-                                trades={accountTrades}
-                                allTrades={allAccountTrades}
-                                metrics={metrics}
-                                tradingDaysMetrics={tradingDays}
-                                onClick={() => setSelectedAccountForTable(account as Account)}
-                                size={size}
-                              />
-                            </div>
-                          )
-                        }).filter(Boolean)}
-                      </div>
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext
+                          items={orderedAccounts.map(acc => acc.number)}
+                          strategy={horizontalListSortingStrategy}
+                        >
+                          <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
+                            {orderedAccounts.map(account => {
+                              const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
+                              const tradingDays = tradingDaysMetrics.find(m => m.accountNumber === account.number)
+                              // Filter trades based on reset date if it exists (for metrics)
+                              const accountTrades = account.resetDate
+                                ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
+                                : trades.filter(t => t.accountNumber === account.number)
+                              // All trades for the chart
+                              const allAccountTrades = trades.filter(t => t.accountNumber === account.number)
+                              if (!account.number) return null;
+                              return (
+                                <DraggableAccountCard
+                                  key={account.number}
+                                  account={account as Account}
+                                  trades={accountTrades}
+                                  allTrades={allAccountTrades}
+                                  metrics={metrics}
+                                  tradingDaysMetrics={tradingDays}
+                                  onClick={() => setSelectedAccountForTable(account as Account)}
+                                  size={size}
+                                />
+                              )
+                            }).filter(Boolean)}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
                     </div>
                   </div>
                 );
@@ -1067,6 +1234,9 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 );
 
                 if (ungroupedAccounts.length === 0) return null;
+
+                // Get ordered accounts for ungrouped (using a special key)
+                const orderedUngroupedAccounts = getOrderedAccounts('ungrouped', ungroupedAccounts) as Account[];
 
                 return (
                   <div
@@ -1089,32 +1259,42 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
 
                     {/* Cards container */}
                     <div className="p-4 pt-3">
-                      <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
-                        {ungroupedAccounts.map(account => {
-                          const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
-                          const tradingDays = tradingDaysMetrics.find(m => m.accountNumber === account.number)
-                          // Filter trades based on reset date if it exists (for metrics)
-                          const accountTrades = account.resetDate
-                            ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
-                            : trades.filter(t => t.accountNumber === account.number)
-                          // All trades for the chart
-                          const allAccountTrades = trades.filter(t => t.accountNumber === account.number)
-                          if (!account.number) return null;
-                          return (
-                            <div key={account.number} className="flex-shrink-0">
-                              <AccountCard
-                                account={account as Account}
-                                trades={accountTrades}
-                                allTrades={allAccountTrades}
-                                metrics={metrics}
-                                tradingDaysMetrics={tradingDays}
-                                onClick={() => setSelectedAccountForTable(account as Account)}
-                                size={size}
-                              />
-                            </div>
-                          )
-                        }).filter(Boolean)}
-                      </div>
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext
+                          items={orderedUngroupedAccounts.map(acc => acc.number)}
+                          strategy={horizontalListSortingStrategy}
+                        >
+                          <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
+                            {orderedUngroupedAccounts.map(account => {
+                              const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
+                              const tradingDays = tradingDaysMetrics.find(m => m.accountNumber === account.number)
+                              // Filter trades based on reset date if it exists (for metrics)
+                              const accountTrades = account.resetDate
+                                ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
+                                : trades.filter(t => t.accountNumber === account.number)
+                              // All trades for the chart
+                              const allAccountTrades = trades.filter(t => t.accountNumber === account.number)
+                              if (!account.number) return null;
+                              return (
+                                <DraggableAccountCard
+                                  key={account.number}
+                                  account={account as Account}
+                                  trades={accountTrades}
+                                  allTrades={allAccountTrades}
+                                  metrics={metrics}
+                                  tradingDaysMetrics={tradingDays}
+                                  onClick={() => setSelectedAccountForTable(account as Account)}
+                                  size={size}
+                                />
+                              )
+                            }).filter(Boolean)}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
                     </div>
                   </div>
                 );
