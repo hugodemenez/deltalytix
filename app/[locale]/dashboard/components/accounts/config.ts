@@ -26,6 +26,7 @@ interface AccountSize {
   maxPayout: string;
   maxFundedAccounts: number;
   tradingNewsRules?: string;
+  minPnlToCountAsDay?: number;
 }
 
 interface PropFirm {

@@ -81,7 +81,8 @@ export function AccountConfigurator({
       activationFees: accountSize.activationFees ?? 0,
       isRecursively: accountSize.isRecursively ?? 'No',
       balanceRequired: accountSize.balanceRequired ?? 0,
-      minTradingDaysForPayout: accountSize.minTradingDaysForPayout ?? 0
+      minTradingDaysForPayout: accountSize.minTradingDaysForPayout ?? 0,
+      minPnlToCountAsDay: accountSize.minPnlToCountAsDay ?? 0
     }
 
     setPendingChanges(newChanges)
@@ -197,7 +198,8 @@ export function AccountConfigurator({
                 minTradingDaysForPayout: 0,
                 minPayout: 0,
                 maxPayout: "",
-                maxFundedAccounts: 0
+                maxFundedAccounts: 0,
+                minPnlToCountAsDay: 0
               }
               setPendingChanges(clearedChanges)
             }}
@@ -358,6 +360,27 @@ export function AccountConfigurator({
                     type="number"
                     value={pendingChanges?.dailyLoss ?? account.dailyLoss ?? ''}
                     onChange={(e) => handleInputChange('dailyLoss', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.minPnlToCountAsDay')}</Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm">
+                        <p>{t('propFirm.configurator.tooltips.minPnlToCountAsDay')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={pendingChanges?.minPnlToCountAsDay ?? account.minPnlToCountAsDay ?? ''}
+                    onChange={(e) => handleInputChange('minPnlToCountAsDay', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
                   />
                 </div>
 

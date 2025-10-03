@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label"
 import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
-import { cn } from "@/lib/utils"
+import { cn, calculateTradingDays } from "@/lib/utils"
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { AccountTable } from './account-table'
@@ -625,6 +625,24 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     })
   }, [trades, filteredAccounts])
 
+  const tradingDaysMetrics = useMemo(() => {
+    return filteredAccounts.map(account => {
+      // Filter trades based on reset date if it exists
+      const relevantTrades = account.resetDate
+        ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
+        : trades.filter(t => t.accountNumber === account.number)
+
+      const { totalTradingDays, validTradingDays } = calculateTradingDays(relevantTrades, account.minPnlToCountAsDay)
+
+      return {
+        accountNumber: account.number,
+        totalTradingDays,
+        validTradingDays,
+        minPnlToCountAsDay: account.minPnlToCountAsDay
+      }
+    })
+  }, [trades, filteredAccounts])
+
   const dailyMetrics = useMemo(() => {
     if (!selectedAccountForTable) return []
 
@@ -1009,6 +1027,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                       <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
                         {groupAccounts.map(account => {
                           const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
+                          const tradingDays = tradingDaysMetrics.find(m => m.accountNumber === account.number)
                           // Filter trades based on reset date if it exists (for metrics)
                           const accountTrades = account.resetDate
                             ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
@@ -1023,6 +1042,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                                 trades={accountTrades}
                                 allTrades={allAccountTrades}
                                 metrics={metrics}
+                                tradingDaysMetrics={tradingDays}
                                 onClick={() => setSelectedAccountForTable(account as Account)}
                                 size={size}
                               />
@@ -1072,6 +1092,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                       <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
                         {ungroupedAccounts.map(account => {
                           const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
+                          const tradingDays = tradingDaysMetrics.find(m => m.accountNumber === account.number)
                           // Filter trades based on reset date if it exists (for metrics)
                           const accountTrades = account.resetDate
                             ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
@@ -1086,6 +1107,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                                 trades={accountTrades}
                                 allTrades={allAccountTrades}
                                 metrics={metrics}
+                                tradingDaysMetrics={tradingDays}
                                 onClick={() => setSelectedAccountForTable(account as Account)}
                                 size={size}
                               />
