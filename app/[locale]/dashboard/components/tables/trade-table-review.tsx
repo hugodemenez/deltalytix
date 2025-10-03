@@ -274,7 +274,7 @@ export function TradeTableReview() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(tableConfig?.columnFilters || [])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(tableConfig?.columnVisibility || {})
   const [expanded, setExpanded] = useState<ExpandedState>({})
-  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 10)
+  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 20)
   const [groupingGranularity, setGroupingGranularity] = useState<number>(tableConfig?.groupingGranularity || 0)
   const [selectedTrades, setSelectedTrades] = useState<string[]>([])
   const [showPoints, setShowPoints] = useState(false)
@@ -552,7 +552,7 @@ export function TradeTableReview() {
               <Popover>
                 <PopoverTrigger asChild>
                   <div
-                    className="flex items-center justify-center w-fit min-w-6 px-2 h-6 rounded-full bg-gray-100 text-xs font-medium cursor-pointer hover:bg-gray-200 transition-colors"
+                    className="flex items-center justify-center w-fit min-w-6 px-2 h-6 rounded-full bg-muted text-xs font-medium cursor-pointer hover:bg-muted/80 transition-colors"
                   >
                     {accounts.length === 1 ? `${accounts[0].slice(0, 2)}${accounts[0].slice(-2)}` : `+${accounts.length}`}
                   </div>
@@ -1043,14 +1043,14 @@ export function TradeTableReview() {
       </CardHeader>
       <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
         <div className="flex h-full flex-col overflow-hidden">
-          <Table className="w-full border-separate border-spacing-0">
-            <TableHeader className="sticky top-0 z-10 bg-gray-50/90 backdrop-blur-sm shadow-sm border-b">
+          <Table className="w-full h-full border-separate border-spacing-0">
+            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm shadow-sm border-b">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
-                      className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-gray-50/90 border-r border-gray-200 last:border-r-0 first:border-l"
+                      className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l"
                       style={{ width: header.getSize() }}
                     >
                       {header.isPlaceholder
@@ -1065,29 +1065,29 @@ export function TradeTableReview() {
               ))}
             </TableHeader>
 
-            <TableBody className="flex-1 overflow-auto bg-white">
+            <TableBody className="flex-1 overflow-auto bg-background">
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row, rowIndex) => (
                   <React.Fragment key={row.id}>
                     <TableRow
                       data-state={row.getIsSelected() && "selected"}
                       className={cn(
-                        "border-b border-slate-200 transition-all duration-75 hover:bg-slate-50/30 group",
-                        row.getIsSelected() && "bg-slate-50/50 hover:bg-slate-100/50",
+                        "border-b border-border transition-all duration-75 hover:bg-muted/40 group",
+                        row.getIsSelected() && "bg-accent/50 hover:bg-accent",
                         row.getIsExpanded()
-                          ? "bg-slate-50/80"
+                          ? "bg-muted/60"
                           : row.getCanExpand()
-                            ? "bg-white"
-                            : "bg-slate-50/30",
-                        rowIndex % 2 === 1 && !row.getIsSelected() && "bg-slate-50/20"
+                            ? "bg-background"
+                            : "bg-muted/30",
+                        rowIndex % 2 === 1 && !row.getIsSelected() && "bg-muted/20"
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
                           className={cn(
-                            "whitespace-nowrap px-3 py-2 text-sm border-r border-slate-100 last:border-r-0 first:border-l group-hover:border-slate-200",
-                            row.getIsSelected() && "border-slate-200"
+                            "whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l group-hover:border-border",
+                            row.getIsSelected() && "border-border"
                           )}
                           style={{ width: cell.column.getSize() }}
                         >
