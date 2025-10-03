@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { RotateCcw, ChevronDown, MessageSquare, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
-import type { UIMessage } from "@ai-sdk/react"
+import type { UIMessage } from "ai"
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import { WidgetSize } from "../../types/dashboard"
@@ -18,8 +18,8 @@ import { EquityChartMessage } from "./equity-chart-message"
 import { useCurrentLocale } from "@/locales/client"
 import { useI18n } from "@/locales/client"
 import { loadChat, saveChat } from "./actions/chat"
-import { useUserStore } from "../../../../../store/user-store"
-import { useChatStore } from "../../../../../store/chat-store"
+import { useUserStore } from "@/store/user-store"
+import { useChatStore } from "@/store/chat-store"
 import { format } from "date-fns"
 import { DotStream } from 'ldrs/react'
 import 'ldrs/react/DotStream.css'
@@ -148,7 +148,6 @@ const FirstMessageLoading = () => {
 }
 
 const ToolCallMessage = ({ toolName, args, state, output }: { toolName: string; args: any; state: string; output?: any }) => {
-    console.log(`[ToolCallMessage] Rendering:`, { toolName, args, state, output })
     const isLoading = state === "call" || state === "partial-call"
     return (
         <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
@@ -194,12 +193,10 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     // Helper to extract plain text from a UI message
     const getMessageText = useCallback((message: UIMessage) => {
         const parts: any[] = (message as any).parts || []
-        console.log(`[Chat] getMessageText called for message:`, message.id, parts)
 
         // Check if this message contains tool results that should be rendered as components
         const toolParts = parts.filter((p: any) => p?.type?.startsWith('tool-'))
         if (toolParts.length > 0) {
-            console.log(`[Chat] Found tool parts in getMessageText:`, toolParts)
             // Don't extract text for tool messages - they should be handled by the parts renderer
             return ""
         }
@@ -254,10 +251,6 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const [input, setInput] = useState("")
     const [files, setFiles] = useState<{ type: 'file'; mediaType: string; url: string }[]>([])
 
-    // Debug: Log files state changes
-    useEffect(() => {
-        console.log('Files state updated:', files)
-    }, [files])
 
     const { messages, sendMessage, status, stop, setMessages, addToolResult, error } =
         useChat({
@@ -423,11 +416,8 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                             </UserMessage>
                                         )
                                     case "assistant":
-                                        console.log(`[Chat] Rendering assistant message:`, message.id, message.parts)
                                         if (message.parts) {
-                                            console.log(`[Chat] Message has parts, rendering individually:`, message.parts.length, 'parts')
                                             return message.parts.map((part: any, index: number) => {
-                                                console.log(`[Chat] Rendering part ${index}:`, part.type, part.state)
                                                 switch (part.type) {
                                                     case "step-start":
                                                         if (message.parts && message.parts.length > index) {
@@ -526,11 +516,9 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                                         case "result":
                                                         case "output-available":
                                                             const chartData = part.output
-                                                            console.log(`[Chat] generateEquityChart result:`, JSON.stringify(chartData, null, 2))
 
                                                             // Check if we have valid chart data
                                                             if (chartData && typeof chartData === 'object' && 'chartData' in chartData) {
-                                                                console.log(`[Chat] Valid chart data found, rendering EquityChartMessage:`, chartData)
                                                                 return (
                                                                     <div key={`${part.toolCallId}-result`}>
                                                                         <EquityChartMessage
@@ -544,7 +532,6 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                                                     </div>
                                                                 )
                                                             } else {
-                                                                console.log(`[Chat] Invalid chart data structure:`, chartData)
                                                                 return (
                                                                     <div key={`${part.toolCallId}-result`} className="p-3 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
                                                                         Error: Invalid chart data received - missing required properties
@@ -565,7 +552,6 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                                         // Handle other tool types generically
                                                         if (part.type.startsWith('tool-')) {
                                                             const toolName = part.type.replace('tool-', '')
-                                                            console.log(`[Chat] Handling generic tool:`, toolName, part.state, part.output)
                                                             return (
                                                                 <ToolCallMessage
                                                                     key={`${part.toolCallId}-${part.state}`}
@@ -576,14 +562,11 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                                                 />
                                                             )
                                                         }
-                                                        console.log(`[Chat] Unknown part type:`, part.type)
                                                         return null
                                                 }
                                             });
                                         }
-                                        console.log(`[Chat] No parts found, falling back to generic message rendering for:`, message.id)
                                         const messageText = getMessageText(message)
-                                        console.log(`[Chat] Generic message text:`, messageText)
                                         return (
                                             <BotMessage
                                                 status={status}

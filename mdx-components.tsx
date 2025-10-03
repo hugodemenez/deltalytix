@@ -32,7 +32,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       const { src, alt, width, height, ...rest } = props;
       return (
         <Image
-          src={src || ''}
+          src={typeof src === 'string' ? src : ''}
           alt={alt || ''}
           className="rounded-lg border border-neutral-200 dark:border-neutral-800"
           width={Number(width) || 800}

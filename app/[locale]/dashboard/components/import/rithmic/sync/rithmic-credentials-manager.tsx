@@ -26,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { SyncCountdown } from './sync-countdown'
-import { useWebSocket } from '@/context/rithmic-sync-context'
+import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 import { useI18n } from '@/locales/client'
 import { toast } from "sonner"
 import { useRithmicSyncStore, SyncInterval } from '@/store/rithmic-sync-store'
@@ -48,35 +48,28 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   const [credentials, setCredentials] = useState<Record<string, RithmicCredentialSet>>(getAllRithmicData())
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null)
-  const { isAutoSyncing, performAutoSyncForCredential, connect, getWebSocketUrl, authenticateAndGetAccounts } = useWebSocket()
+  const { performSyncForCredential, connect, getWebSocketUrl, authenticateAndGetAccounts } = useRithmicSyncContext()
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const t = useI18n()
   const user = useUserStore((state) => state.user)
-  const { syncInterval, setSyncInterval } = useRithmicSyncStore()
+  const { syncInterval, setSyncInterval, isAutoSyncing } = useRithmicSyncStore()
 
   const handleSync = useCallback(async (credential: RithmicCredentialSet) => {
-    console.log('handleSync called for credential:', credential.id, credential.credentials.username)
-    
+
     // Prevent multiple syncs for the same credential
     if (syncingId === credential.id) {
-      console.log('Sync already in progress for credential:', credential.id)
       return
     }
 
     try {
       console.log('Starting sync for credential:', credential.id)
       setSyncingId(credential.id)
-      const result = await performAutoSyncForCredential(credential.id)
+      const result = await performSyncForCredential(credential.id)
       
       console.log('Sync result:', result)
       
       if (result?.success) {
         updateLastSyncTime(credential.id)
-        toast.success(t('common.success'))
-      } else if (result?.rateLimited) {
-        toast.error(t('rithmic.error.rateLimit'))
-      } else {
-        toast.error(t('rithmic.error.syncError'))
       }
 
     } catch (error) {
@@ -85,7 +78,8 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
     } finally {
       setSyncingId(null)
     }
-  }, [syncingId, performAutoSyncForCredential, t])
+
+  }, [syncingId, performSyncForCredential, t])
 
   const handleLoadMoreData = useCallback(async (credential: RithmicCredentialSet) => {
     if (syncingId === credential.id) {
@@ -126,6 +120,8 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
 
       // Update last sync time
       updateLastSyncTime(credential.id)
+
+
 
     } catch (error) {
       toast.error(t('rithmic.error.syncError'))
@@ -226,7 +222,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
                       {syncingId === id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <RefreshCw className="h-4 w-4" />
+                        <RefreshCw className="h-4 w-4 text-muted-foreground" />
                       )}
                     </Button>
                     <Popover modal>

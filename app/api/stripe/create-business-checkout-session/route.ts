@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getWebsiteURL } from "@/server/auth";
-import { stripe } from "@/app/[locale]/(landing)/actions/stripe";
+import { stripe } from "@/actions/stripe";
 
 async function handleBusinessCheckoutSession(user: any, websiteURL: string, businessName?: string, currency: 'USD' | 'EUR' = 'USD') {
     // First, try to find existing customer

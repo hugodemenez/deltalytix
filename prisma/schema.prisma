@@ -5,8 +5,7 @@ datasource db {
   schemas   = ["public"]
 }
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  provider = "prisma-client-js"
 }
 
 model Trade {
@@ -96,8 +95,26 @@ model User {
   language        String           @default("en")
   orders          Order[]
   businesses      Business[]
-
+  synchronizations Synchronization[]
   @@index([email])
+  @@schema("public")
+}
+
+model Synchronization {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service     String
+  accountId  String
+  lastSyncedAt DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  token       String?
+  tokenExpiresAt   DateTime?
+
+  @@unique([userId, service, accountId])
+  @@index([userId])
+  @@index([service])
   @@schema("public")
 }
 

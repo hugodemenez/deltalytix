@@ -4,7 +4,7 @@ import { EtpSync } from '../etp/etp-sync'
 import { ThorSync } from '../thor/thor-sync'
 import { TradovateSync } from '../tradovate/tradovate-sync'
 import { ImportType } from '../import-type-selection'
-import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-new'
+import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-connection'
 import type { ComponentType } from 'react'
 import ImportTypeSelection from '../import-type-selection'
 import FileUpload from '../file-upload'
@@ -685,7 +685,7 @@ export const platforms: PlatformConfig[] = [
     name: 'import.type.tradovateSync.name',
     description: 'import.type.tradovateSync.description',
     category: 'Direct Account Sync',
-    isComingSoon: true,
+    // isComingSoon: true,
     videoUrl: process.env.NEXT_PUBLIC_TRADOVATE_SYNC_TUTORIAL_VIDEO || '',
     details: 'import.type.tradovateSync.details',
     logo: {

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
-import { handleTradovateCallback } from '../components/import/tradovate/actions'
+import { handleTradovateCallback, storeTradovateToken } from '../components/import/tradovate/actions'
 import { useI18n } from '@/locales/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -109,10 +109,21 @@ export default function ImportCallbackPage() {
           return
         }
 
-        // Store tokens in Zustand
-        tradovateStore.setTokens(result.accessToken, result.refreshToken, result.expiresAt)
-        tradovateStore.setAuthenticated(true)
         tradovateStore.clearOAuthState()
+        
+        // Store tokens in database via server action
+        try {
+          const storeResult = await storeTradovateToken(result.accessToken, result.expiresAt, tradovateStore.environment, result.accountId)
+          if (storeResult.error) {
+            console.warn('Failed to store token in database:', storeResult.error)
+            // Continue anyway - token is still valid for this session
+          } else {
+            console.log('Token stored in database successfully')
+          }
+        } catch (error) {
+          console.warn('Failed to store token in database:', error)
+          // Continue anyway - token is still valid for this session
+        }
         
         console.log('OAuth flow completed successfully')
         setStatus('success')

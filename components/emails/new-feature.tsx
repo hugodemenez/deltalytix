@@ -30,7 +30,8 @@ export default function NewsletterEmail({
   firstName,
   unsubscribeUrl,
 }: NewsletterEmailProps) {
-  const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+  const thumbnailUrl = `${baseUrl}/api/email/thumbnail/${youtubeId}/maxresdefault`;
   return (
     <Html>
       <Head />

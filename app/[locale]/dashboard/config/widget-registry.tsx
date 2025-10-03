@@ -1,3 +1,4 @@
+import React from 'react'
 import { WidgetType, WidgetSize } from '../types/dashboard'
 import EquityChart from '../components/charts/equity-chart'
 import TickDistributionChart from '../components/charts/tick-distribution'
@@ -31,6 +32,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts'
 import { MindsetWidget } from '../components/mindset/mindset-widget'
 import ChatWidget from '../components/chat/chat'
 import { useI18n } from '@/locales/client'
+import { translateWeekday } from '@/lib/translation-utils'
 // import MarketChart from '../components/market/market-chart'
 
 export interface WidgetConfig {
@@ -42,8 +44,8 @@ export interface WidgetConfig {
   minWidth?: number
   minHeight?: number
   previewHeight?: number
-  getComponent: (props: { size: WidgetSize }) => JSX.Element
-  getPreview: () => JSX.Element
+  getComponent: (props: { size: WidgetSize }) => React.JSX.Element
+  getPreview: () => React.JSX.Element
 }
 
 // Helper function to create table preview
@@ -246,7 +248,7 @@ function CreateCalendarPreview() {
         <div className="grid grid-cols-7 gap-1 mb-2">
           {weekdays.map((day) => (
             <div key={day} className="text-center text-xs font-medium text-muted-foreground p-1">
-              {t(day)}
+              {translateWeekday(t, day)}
             </div>
           ))}
         </div>
@@ -593,10 +595,10 @@ export function requiresFullWidth(type: WidgetType): boolean {
   return WIDGET_REGISTRY[type].requiresFullWidth ?? false
 }
 
-export function getWidgetComponent(type: WidgetType, size: WidgetSize): JSX.Element {
+export function getWidgetComponent(type: WidgetType, size: WidgetSize): React.JSX.Element {
   return WIDGET_REGISTRY[type].getComponent({ size })
 }
 
-export function getWidgetPreview(type: WidgetType): JSX.Element {
+export function getWidgetPreview(type: WidgetType): React.JSX.Element {
   return WIDGET_REGISTRY[type].getPreview()
 } 

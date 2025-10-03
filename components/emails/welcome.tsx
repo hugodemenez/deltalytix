@@ -22,7 +22,8 @@ interface WelcomeEmailProps {
 }
 
 export default function WelcomeEmail({ firstName = 'trader', email, language, youtubeId }: WelcomeEmailProps) {
-  const thumbnailUrl = `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+  const thumbnailUrl = `${baseUrl}/api/email/thumbnail/${youtubeId}/maxresdefault`;
   const unsubscribeUrl = email 
     ? `https://deltalytix.app/api/email/unsubscribe?email=${encodeURIComponent(email)}`
     : '#';
@@ -129,7 +130,7 @@ export default function WelcomeEmail({ firstName = 'trader', email, language, yo
                 <Link href={`https://youtu.be/${youtubeId}`}>
                   <Img
                     src={thumbnailUrl}
-                    alt="Dernière vidéo Deltalytix"
+                    alt="Latest Deltalytix video"
                     className="rounded-lg w-full mb-4 shadow-sm"
                   />
                 </Link>

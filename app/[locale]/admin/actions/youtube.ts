@@ -45,6 +45,7 @@ export async function fetchTranscriptServer(videoId: string): Promise<string | n
   
   try {
     const transcript = await YoutubeTranscript.fetchTranscript(videoId)
+    console.log(transcript)
     
     if (!transcript || transcript.length === 0) {
       return null
