@@ -35,7 +35,7 @@ export async function getGithubStats() {
       repository: {
         stargazers: { totalCount: repoData.data.stargazers_count },
         forks: { totalCount: repoData.data.forks_count },
-        commits: { history: { totalCount: repoData.data.size } }, // Using size as a proxy for commit count
+        commits: { history: { totalCount: repoData.data.size } }, // Note: This uses default branch only
       },
       stats,
     }

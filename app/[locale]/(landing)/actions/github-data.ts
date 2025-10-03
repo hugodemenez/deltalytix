@@ -42,56 +42,99 @@ interface GithubData {
 const getCachedGithubData = unstable_cache(
   async (): Promise<GithubData> => {
         try {
-      // Fetch repository data and recent commits to get the date range
-      const [repoResponse, latestCommitsResponse] = await Promise.all([
-        octokit.repos.get({
-          owner: REPO_OWNER,
-          repo: REPO_NAME,
-        }),
-        octokit.repos.listCommits({
-          owner: REPO_OWNER,
-          repo: REPO_NAME,
-          per_page: 1
-        })
-      ])
+      // Fetch repository data
+      const repoResponse = await octokit.repos.get({
+        owner: REPO_OWNER,
+        repo: REPO_NAME,
+      })
 
       const repoData = repoResponse.data
-      const latestCommit = latestCommitsResponse.data[0]
 
       // Get the repository creation date as the starting point
       const repoCreatedAt = new Date(repoData.created_at)
       const today = new Date()
       
-      // Get all commits to build daily activity chart
-      let allCommits: any[] = []
-      let page = 1
-      const perPage = 100
-      let hasMoreCommits = true
+      // Get all branches first
+      let allBranches: any[] = []
+      let branchPage = 1
+      const branchPerPage = 100
+      let hasMoreBranches = true
       
-      // Fetch all commits (but limit to avoid API rate limits)
-      while (hasMoreCommits && page <= 10) { // Limit to 1000 commits max
+      while (hasMoreBranches && branchPage <= 5) { // Limit to 500 branches max
         try {
-          const commitsResponse = await octokit.repos.listCommits({
+          const branchesResponse = await octokit.repos.listBranches({
             owner: REPO_OWNER,
             repo: REPO_NAME,
-            per_page: perPage,
-            page: page,
-            since: repoCreatedAt.toISOString()
+            per_page: branchPerPage,
+            page: branchPage,
           })
           
-          if (commitsResponse.data.length === 0) {
-            hasMoreCommits = false
+          if (branchesResponse.data.length === 0) {
+            hasMoreBranches = false
           } else {
-            allCommits = [...allCommits, ...commitsResponse.data]
-            page++
-            if (commitsResponse.data.length < perPage) {
-              hasMoreCommits = false
+            allBranches = [...allBranches, ...branchesResponse.data]
+            branchPage++
+            if (branchesResponse.data.length < branchPerPage) {
+              hasMoreBranches = false
             }
           }
         } catch (error) {
-          console.log(`Error fetching commits page ${page}:`, error)
-          hasMoreCommits = false
+          console.log(`Error fetching branches page ${branchPage}:`, error)
+          hasMoreBranches = false
         }
+      }
+
+      // Get all commits from all branches to build daily activity chart
+      let allCommits: any[] = []
+      const seenCommits = new Set<string>() // To avoid duplicate commits across branches
+      
+      // Fetch commits from each branch
+      for (const branch of allBranches) {
+        let page = 1
+        const perPage = 100
+        let hasMoreCommits = true
+        
+        while (hasMoreCommits && page <= 5) { // Limit to 500 commits per branch
+          try {
+            const commitsResponse = await octokit.repos.listCommits({
+              owner: REPO_OWNER,
+              repo: REPO_NAME,
+              per_page: perPage,
+              page: page,
+              since: repoCreatedAt.toISOString(),
+              sha: branch.name // Fetch commits from specific branch
+            })
+            
+            if (commitsResponse.data.length === 0) {
+              hasMoreCommits = false
+            } else {
+              // Add only unique commits (avoid duplicates across branches)
+              commitsResponse.data.forEach(commit => {
+                if (commit.sha && !seenCommits.has(commit.sha)) {
+                  seenCommits.add(commit.sha)
+                  allCommits.push(commit)
+                }
+              })
+              page++
+              if (commitsResponse.data.length < perPage) {
+                hasMoreCommits = false
+              }
+            }
+          } catch (error) {
+            console.log(`Error fetching commits from branch ${branch.name} page ${page}:`, error)
+            hasMoreCommits = false
+          }
+        }
+      }
+
+      // Find the most recent commit across all branches
+      let latestCommit: any = null
+      if (allCommits.length > 0) {
+        latestCommit = allCommits.reduce((latest, commit) => {
+          const commitDate = new Date(commit.commit.committer.date)
+          const latestDate = latest ? new Date(latest.commit.committer.date) : new Date(0)
+          return commitDate > latestDate ? commit : latest
+        })
       }
 
                     // Process commits into weekly activity data (like the original)
@@ -154,7 +197,7 @@ const getCachedGithubData = unstable_cache(
           repository: {
             stargazers: { totalCount: repoData.stargazers_count },
             forks: { totalCount: repoData.forks_count },
-            commits: { history: { totalCount: repoData.size } }, // Using size as proxy for total commits
+            commits: { history: { totalCount: allCommits.length } }, // Using actual commit count from all branches
           },
           stats,
         },
@@ -186,7 +229,7 @@ const getCachedGithubData = unstable_cache(
            repository: {
              stargazers: { totalCount: 0 },
              forks: { totalCount: 0 },
-             commits: { history: { totalCount: 0 } },
+             commits: { history: { totalCount: 0 } }, // All branches commit count
            },
                                    stats: (() => {
              const now = new Date()
