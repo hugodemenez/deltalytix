@@ -58,7 +58,7 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
   const [isComplete, setIsComplete] = useState(false)
   const { isCollapsed, setIsCollapsed } = useNotificationStore()
   const { isConnected } = useRithmicSyncContext()
-  const { lastMessage, accountsProgress, currentAccount } = useRithmicSyncStore()
+  const { lastMessage, accountsProgress, currentAccount, clearMessageHistory, selectedAccounts, processingStats } = useRithmicSyncStore()
   const { refreshTrades } = useData()
   const refreshTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const mockIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
@@ -291,6 +291,9 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
   useEffect(() => {
     if (lastMessage?.type === 'complete') {
       console.log('Last message:', lastMessage)
+      // CLEAR MESSAGE HISTORY
+      clearMessageHistory()
+
       // Clear any existing timeout
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current)
@@ -316,7 +319,19 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
   }
 
   const progress = notifications.progress.progress
-  const progressPercentage = progress ? (progress.current / progress.total) * 100 : 0
+  const totalAccountsToProcess = selectedAccounts.length || processingStats.totalAccountsAvailable || 1
+  const currentAccountIndex = currentAccount ? selectedAccounts.indexOf(currentAccount) + 1 : 0
+  
+  // Calculate progress from completed accounts (previous accounts)
+  const completedAccountsProgress = Math.max(0, currentAccountIndex - 1) * 100
+  
+  // Calculate current account progress
+  const currentAccountProgress = progress ? (progress.current / progress.total) * 100 : 0
+  
+  // Total progress = completed accounts + current account progress, all divided by total accounts
+  const progressPercentage = totalAccountsToProcess > 0 
+    ? (completedAccountsProgress + currentAccountProgress) / totalAccountsToProcess 
+    : 0
 
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-md w-full">
@@ -390,6 +405,7 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
                       />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>{t('notification.days')}: {progress.current} / {progress.total}</span>
+                        <span>{t('notification.account')}: {currentAccountIndex} / {totalAccountsToProcess}</span>
                       </div>
                     </div>
                   )}

@@ -689,6 +689,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         const minutesSinceLastSync = (now - lastSyncTime) / (1000 * 60)
 
         if (minutesSinceLastSync >= syncInterval) {
+          console.log(lastSyncTime, now, minutesSinceLastSync)
           console.log(`Auto-sync triggered for credential ${sync.accountId}`)
           await performSyncForCredential(sync.accountId)
         }

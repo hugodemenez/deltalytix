@@ -668,14 +668,14 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
               </div>
             </div>
           )}
-
+{/* 
           {step === 'processing' && (
             <div className="space-y-4">
               <RithmicSyncFeedback 
                 totalAccounts={allAccounts ? availableAccounts.length : selectedAccounts.length}
               />
             </div>
-          )}
+          )} */}
         </>
       )}
     </div>

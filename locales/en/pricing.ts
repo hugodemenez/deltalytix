@@ -2,6 +2,7 @@ export default {
     pricing: {
         heading: 'Pricing',
         subheading: 'Store, explore and improve your trading data with the right plan for your needs.',
+        loading: 'Loading...',
         yearly: 'Yearly',
         monthly: 'Monthly',
         quarterly: 'Quarterly',
