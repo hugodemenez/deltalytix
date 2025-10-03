@@ -1188,7 +1188,8 @@ export default {
             updatedDescription: "Your existing credentials have been updated with the new information.",
             merged: "Credentials Merged",
             mergedDescription: "Your duplicate credentials have been merged into a single set."
-        }
+        },
+        processingBanner: "Processing your Rithmic data..."
     },
     timeRangePerformance: {
         title: 'Time Range Performance',

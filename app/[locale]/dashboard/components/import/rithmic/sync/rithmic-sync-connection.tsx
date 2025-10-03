@@ -405,7 +405,16 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
 
   return (
     <div className="space-y-6">
-      {showCredentialsManager ? (
+      {step === 'processing' && (
+        <div className="flex items-center gap-2 p-3 mb-2 rounded-md bg-muted/60 border border-primary/20">
+          <Loader2 className="animate-spin h-5 w-5 text-primary" />
+          <span className="text-sm font-medium text-primary">
+            {t('rithmic.processingBanner')}
+          </span>
+        </div>
+      )}
+      {(showCredentialsManager && (step === 'credentials' || step === 'processing')) ? (
+
         <RithmicCredentialsManager
           onSelectCredential={handleSelectCredential}
           onAddNew={() => {

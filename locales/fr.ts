@@ -830,6 +830,7 @@ export default {
             merged: "Identifiants Fusionnés",
             mergedDescription: "Vos identifiants en double ont été fusionnés en un seul ensemble."
         },
+        processingBanner: "Traitement de vos données Rithmic...",
         editCredentials: "Modifier les Identifiants",
         addNewCredentials: "Ajouter de Nouveaux Identifiants",
         backToList: "Retour à la Liste",
