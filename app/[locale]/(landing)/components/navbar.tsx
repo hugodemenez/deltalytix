@@ -7,7 +7,7 @@ import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Logo } from "@/components/logo"
 import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop } from "lucide-react"
-import { motion } from "motion/react"
+import { motion, AnimatePresence } from "motion/react"
 import {
     NavigationMenu,
     NavigationMenuContent,
@@ -68,7 +68,8 @@ const listVariant = {
     show: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.03,
+            staggerChildren: 0.08,
+            delayChildren: 0.1,
         },
     },
     hidden: {
@@ -77,8 +78,14 @@ const listVariant = {
 }
 
 const itemVariant = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1 },
+    hidden: { 
+        opacity: 0, 
+        y: 20
+    },
+    show: { 
+        opacity: 1, 
+        y: 0
+    },
 }
 
 export default function Component() {
@@ -94,18 +101,39 @@ export default function Component() {
 
     const toggleMenu = () => {
         setIsOpen(!isOpen)
-        // Lock/unlock body scroll when mobile menu is open
-        if (typeof window !== 'undefined') {
-            document.body.style.overflow = !isOpen ? 'hidden' : ''
-        }
     }
+
     const closeMenu = () => {
         setIsOpen(false)
-        // Unlock body scroll when closing menu
-        if (typeof window !== 'undefined') {
-            document.body.style.overflow = ''
-        }
     }
+
+    // Add/remove data attribute when mobile menu visibility changes
+    useEffect(() => {
+        if (isOpen) {
+            document.body.setAttribute('data-mobile-navbar', 'open')
+        } else {
+            document.body.removeAttribute('data-mobile-navbar')
+        }
+        
+        // Cleanup on unmount
+        return () => {
+            document.body.removeAttribute('data-mobile-navbar')
+        }
+    }, [isOpen])
+
+    // Lock/unlock body scroll when mobile menu is open
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            document.body.style.overflow = isOpen ? 'hidden' : ''
+        }
+        
+        // Cleanup on unmount
+        return () => {
+            if (typeof window !== 'undefined') {
+                document.body.style.overflow = ''
+            }
+        }
+    }, [isOpen])
 
     useEffect(() => {
         const controlNavbar = () => {
@@ -133,14 +161,6 @@ export default function Component() {
         }
     }, [lastScrollY])
 
-    // Cleanup effect to restore body scroll when component unmounts
-    useEffect(() => {
-        return () => {
-            if (typeof window !== 'undefined') {
-                document.body.style.overflow = ''
-            }
-        }
-    }, [])
 
     const languages = [
         { value: 'en', label: 'English' },
@@ -405,19 +425,42 @@ export default function Component() {
             {isOpen && (
                 <motion.div
                     className="fixed bg-background -top-[2px] right-0 left-0 bottom-0 h-screen z-50 px-2"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    transition={{ 
+                        duration: 0.3,
+                        ease: "easeOut"
+                    }}
                 >
-                    <div className="mt-4 flex justify-between p-3 px-4 relative ml-[1px]">
-                        <button type="button" onClick={closeMenu}>
+                    <motion.div 
+                        className="mt-4 flex justify-between p-3 px-4 relative ml-[1px]"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ 
+                            duration: 0.3,
+                            ease: "easeOut",
+                            delay: 0.1
+                        }}
+                    >
+                        <motion.button 
+                            type="button" 
+                            onClick={closeMenu}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ duration: 0.1 }}
+                        >
                             <span className="sr-only">Deltalytix Logo</span>
                             <Logo className='w-6 h-6 fill-black dark:fill-white' />
-                        </button>
+                        </motion.button>
 
-                        <button
+                        <motion.button
                             type="button"
                             className="ml-auto lg:hidden p-2 absolute right-[10px] top-2"
                             onClick={closeMenu}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            transition={{ duration: 0.1 }}
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -428,8 +471,8 @@ export default function Component() {
                                 <path fill="none" d="M0 0h24v24H0V0z" />
                                 <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
                             </svg>
-                        </button>
-                    </div>
+                        </motion.button>
+                    </motion.div>
 
                     <div className="h-screen pb-[150px] overflow-auto">
                         <motion.ul
@@ -444,13 +487,18 @@ export default function Component() {
                                 if (path) {
                                     return (
                                         <motion.li variants={itemVariant} key={path}>
-                                            <Link
-                                                href={path}
-                                                className={cn(isActive && "text-primary")}
-                                                onClick={closeMenu}
+                                            <motion.div
+                                                whileHover={{ x: 4 }}
+                                                transition={{ duration: 0.2 }}
                                             >
-                                                {title}
-                                            </Link>
+                                                <Link
+                                                    href={path}
+                                                    className={cn(isActive && "text-primary", "block")}
+                                                    onClick={closeMenu}
+                                                >
+                                                    {title}
+                                                </Link>
+                                            </motion.div>
                                         </motion.li>
                                     );
                                 }
@@ -465,22 +513,40 @@ export default function Component() {
 
                                                 {children && (
                                                     <AccordionContent className="text-xl">
-                                                        <ul className="space-y-8 ml-4 mt-6">
-                                                            {children.map((child) => {
+                                                        <motion.ul 
+                                                            className="space-y-8 ml-4 mt-6"
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            transition={{ duration: 0.2 }}
+                                                        >
+                                                            {children.map((child, childIndex) => {
                                                                 return (
-                                                                    <li key={child.path}>
-                                                                        <Link
-                                                                            onClick={closeMenu}
-                                                                            href={child.path}
-                                                                            className="text-[#878787] flex items-center space-x-2"
+                                                                    <motion.li 
+                                                                        key={child.path}
+                                                                        initial={{ opacity: 0, x: -10 }}
+                                                                        animate={{ opacity: 1, x: 0 }}
+                                                                        transition={{ 
+                                                                            duration: 0.2,
+                                                                            delay: childIndex * 0.05
+                                                                        }}
+                                                                    >
+                                                                        <motion.div
+                                                                            whileHover={{ x: 4 }}
+                                                                            transition={{ duration: 0.2 }}
                                                                         >
-                                                                            <span>{child.icon}</span>
-                                                                            <span>{child.title}</span>
-                                                                        </Link>
-                                                                    </li>
+                                                                            <Link
+                                                                                onClick={closeMenu}
+                                                                                href={child.path}
+                                                                                className="text-[#878787] flex items-center space-x-2"
+                                                                            >
+                                                                                <span>{child.icon}</span>
+                                                                                <span>{child.title}</span>
+                                                                            </Link>
+                                                                        </motion.div>
+                                                                    </motion.li>
                                                                 );
                                                             })}
-                                                        </ul>
+                                                        </motion.ul>
                                                     </AccordionContent>
                                                 )}
                                             </AccordionItem>
@@ -503,40 +569,157 @@ export default function Component() {
                             </motion.li>
 
                             <motion.li variants={itemVariant}>
-                                <div className="py-4 border-t space-y-4">
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <button className="flex items-center space-x-2 text-[#878787] hover:text-primary transition-colors w-full text-left">
-                                                {getThemeIcon()}
-                                                <span>{t('landing.navbar.changeTheme')}</span>
-                                            </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-[200px] p-0" align="start">
-                                            <Command>
-                                                <CommandList>
-                                                    <CommandGroup>
-                                                        <CommandItem onSelect={() => handleThemeChange("light")}>
-                                                            <Sun className="mr-2 h-4 w-4" />
-                                                            <span>{t('landing.navbar.lightMode')}</span>
-                                                        </CommandItem>
-                                                        <CommandItem onSelect={() => handleThemeChange("dark")}>
-                                                            <Moon className="mr-2 h-4 w-4" />
-                                                            <span>{t('landing.navbar.darkMode')}</span>
-                                                        </CommandItem>
-                                                        <CommandItem onSelect={() => handleThemeChange("system")}>
-                                                            <Laptop className="mr-2 h-4 w-4" />
-                                                            <span>{t('landing.navbar.systemTheme')}</span>
-                                                        </CommandItem>
-                                                    </CommandGroup>
-                                                </CommandList>
-                                            </Command>
-                                        </PopoverContent>
-                                    </Popover>
-                                </div>
+                                <motion.div 
+                                    className="py-4 border-t"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ 
+                                        duration: 0.3,
+                                        ease: "easeOut",
+                                        delay: 0.2
+                                    }}
+                                >
+                                    <Accordion collapsible type="single">
+                                        <AccordionItem value="theme" className="border-none">
+                                            <AccordionTrigger className="flex items-center justify-between w-full font-normal p-0 hover:no-underline">
+                                                <span className="text-[#878787] flex items-center space-x-2">
+                                                    <div className="flex items-center justify-center w-5 h-5">
+                                                        <AnimatePresence mode="wait">
+                                                            <motion.div
+                                                                key={theme}
+                                                                initial={{ opacity: 0, scale: 0.8, rotate: -90 }}
+                                                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                                                exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
+                                                                transition={{ 
+                                                                    duration: 0.4,
+                                                                    ease: "easeInOut"
+                                                                }}
+                                                                className="flex items-center justify-center"
+                                                            >
+                                                                {getThemeIcon()}
+                                                            </motion.div>
+                                                        </AnimatePresence>
+                                                    </div>
+                                                    <span>{t('landing.navbar.changeTheme')}</span>
+                                                </span>
+                                            </AccordionTrigger>
+                                            <AccordionContent className="text-xl">
+                                                <motion.ul 
+                                                    className="space-y-8 ml-4 mt-6"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ duration: 0.2 }}
+                                                >
+                                                    <motion.li 
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ duration: 0.2, delay: 0.05 }}
+                                                    >
+                                                        <motion.div
+                                                            whileHover={{ x: 4 }}
+                                                            transition={{ duration: 0.2 }}
+                                                        >
+                                                            <button
+                                                                onClick={() => handleThemeChange("light")}
+                                                                className={`flex items-center space-x-2 w-full text-left ${
+                                                                    theme === 'light' ? 'text-primary' : 'text-[#878787]'
+                                                                }`}
+                                                            >
+                                                                <Sun className="h-4 w-4" />
+                                                                <span>{t('landing.navbar.lightMode')}</span>
+                                                                {theme === 'light' && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0 }}
+                                                                        animate={{ opacity: 1, scale: 1 }}
+                                                                        transition={{ duration: 0.2 }}
+                                                                        className="ml-auto"
+                                                                    >
+                                                                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                        </svg>
+                                                                    </motion.div>
+                                                                )}
+                                                            </button>
+                                                        </motion.div>
+                                                    </motion.li>
+                                                    <motion.li 
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ duration: 0.2, delay: 0.1 }}
+                                                    >
+                                                        <motion.div
+                                                            whileHover={{ x: 4 }}
+                                                            transition={{ duration: 0.2 }}
+                                                        >
+                                                            <button
+                                                                onClick={() => handleThemeChange("dark")}
+                                                                className={`flex items-center space-x-2 w-full text-left ${
+                                                                    theme === 'dark' ? 'text-primary' : 'text-[#878787]'
+                                                                }`}
+                                                            >
+                                                                <Moon className="h-4 w-4" />
+                                                                <span>{t('landing.navbar.darkMode')}</span>
+                                                                {theme === 'dark' && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0 }}
+                                                                        animate={{ opacity: 1, scale: 1 }}
+                                                                        transition={{ duration: 0.2 }}
+                                                                        className="ml-auto"
+                                                                    >
+                                                                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                        </svg>
+                                                                    </motion.div>
+                                                                )}
+                                                            </button>
+                                                        </motion.div>
+                                                    </motion.li>
+                                                    <motion.li 
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ duration: 0.2, delay: 0.15 }}
+                                                    >
+                                                        <motion.div
+                                                            whileHover={{ x: 4 }}
+                                                            transition={{ duration: 0.2 }}
+                                                        >
+                                                            <button
+                                                                onClick={() => handleThemeChange("system")}
+                                                                className={`flex items-center space-x-2 w-full text-left ${
+                                                                    theme === 'system' ? 'text-primary' : 'text-[#878787]'
+                                                                }`}
+                                                            >
+                                                                <Laptop className="h-4 w-4" />
+                                                                <span>{t('landing.navbar.systemTheme')}</span>
+                                                                {theme === 'system' && (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, scale: 0 }}
+                                                                        animate={{ opacity: 1, scale: 1 }}
+                                                                        transition={{ duration: 0.2 }}
+                                                                        className="ml-auto"
+                                                                    >
+                                                                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                                        </svg>
+                                                                    </motion.div>
+                                                                )}
+                                                            </button>
+                                                        </motion.div>
+                                                    </motion.li>
+                                                </motion.ul>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
+                                </motion.div>
                             </motion.li>
                         </motion.ul>
                     </div>
                 </motion.div>
+            )}
+
+            {/* Mobile navbar overlay */}
+            {isOpen && (
+                <div className="fixed inset-0 bg-background z-40" />
             )}
         </>
     )

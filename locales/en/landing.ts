@@ -14,7 +14,7 @@ export default {
             'data-import': {
                 title: 'Data Import',
                 description: 'Import data from various providers. Our platform supports automatic imports with Rithmic via a sync or .CSV imports, allowing you to centralize all your trading information in one place.',
-                stat: 'CSV Mappings from many providers',
+                stat: 'Sync & CSV imports',
             },
             'performance-visualization': {
                 title: 'Performance Visualization',

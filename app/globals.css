@@ -297,3 +297,19 @@ code > [data-line]::before {
     }
   }
 }
+
+/* Mobile navbar overlay styles */
+body[data-mobile-navbar="open"] .max-w-screen-xl {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+body[data-mobile-navbar="open"] .max-w-screen-xl > * {
+  pointer-events: none;
+}
+
+/* Hide accordion arrow for theme selector */
+[data-accordion-trigger] [data-accordion-icon] {
+  display: none;
+}
