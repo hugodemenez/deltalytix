@@ -85,6 +85,13 @@ export function TradovateCredentialsManager() {
       setSyncingId(account.accountId)
       
       const result = await getTradovateTrades(account.token)
+
+      // Handle duplicate trades (already imported)
+      if (result.error === "DUPLICATE_TRADES") {
+        toast.error(t('tradovateSync.multiAccount.alreadyImportedTrades'))
+        await refreshTrades()
+        return
+      }
       
       if (result.error) {
         toast.error(t('tradovateSync.multiAccount.syncErrorForAccount', { 

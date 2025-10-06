@@ -1581,6 +1581,7 @@ export default {
             'tokenNotFound': 'Token Not Found',
             'tokenNotFoundDescription': 'No valid token found for account: {accountId}',
             'syncCompleteForAccount': 'Successfully synced {savedCount} trades from {ordersCount} orders for {accountId}.',
+            'alreadyImportedTrades': 'Trades already imported',
             'syncCompleteNoNewTradesForAccount': 'Processed {ordersCount} orders for {accountId} but no new trades were found.',
             'syncCompleteNoOrdersForAccount': 'No orders found for {accountId}.',
             'syncErrorForAccount': 'Failed to sync trades for {accountId}: {error}',
