@@ -1220,6 +1220,7 @@ export default {
     'calendar.events.viewSource': 'View Source',
     'calendar.modal.weeklyDetails': 'Trade details and performance analysis for this week.',
     'calendar.modal.analysis': 'Analysis',
+    'calendar.modal.comment': 'Comment',
     'calendar.charts.weeklyPnlAfterComm': 'Weekly P&L (after comm.)',
     'calendar.charts.weeklyAvgTimeInPosition': 'Weekly Avg Time in Position',
     'calendar.charts.weeklyMood': 'Weekly Trading Mood',
