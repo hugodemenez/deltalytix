@@ -111,7 +111,6 @@ export function Journaling({
 
       <div className="flex-1 min-h-0 mt-6">
         <h3 className="text-sm font-medium mb-2">{t('mindset.journaling.title')}</h3>
-        <div className="h-[200px]">
           <TiptapEditor
             content={content}
             onChange={onChange}
@@ -119,7 +118,6 @@ export function Journaling({
             placeholder={t('mindset.journaling.placeholder')}
             width="100%"
           />
-        </div>
       </div>
 
       <div className="flex-none flex gap-4 mt-6">
