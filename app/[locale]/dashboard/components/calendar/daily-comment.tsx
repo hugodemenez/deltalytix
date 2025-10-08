@@ -9,12 +9,12 @@ import { useI18n } from "@/locales/client"
 import { useToast } from "@/hooks/use-toast"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
 import { saveJournal, getMoodForDay } from '@/server/journal'
-import { TiptapEditor } from "@/components/tiptap-editor"
 import { format } from 'date-fns'
 import { useUserStore } from '../../../../../store/user-store'
 import { useMoodStore } from '@/store/mood-store'
 
 import { Skeleton } from "@/components/ui/skeleton"
+import { TiptapEditor } from '@/components/tiptap-editor'
 
 interface DailyCommentProps {
   dayData: CalendarEntry | undefined

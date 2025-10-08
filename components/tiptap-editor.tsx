@@ -1,9 +1,12 @@
 "use client"
 
-import { useEditor, EditorContent, BubbleMenu, FloatingMenu } from '@tiptap/react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import { BubbleMenu, FloatingMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import Link from '@tiptap/extension-link'
+import { BubbleMenu as BubbleMenuExtension } from '@tiptap/extension-bubble-menu'
+import { FloatingMenu as FloatingMenuExtension } from '@tiptap/extension-floating-menu'
 import { TextAlign } from '@tiptap/extension-text-align'
 import { TextStyle } from '@tiptap/extension-text-style'
 import { Color } from '@tiptap/extension-color'
@@ -107,8 +110,11 @@ export function TiptapEditor({
   }, [user?.id, generatedId, t])
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
+      BubbleMenuExtension,
+      FloatingMenuExtension,
       UnderlineExtension,
       Placeholder.configure({
         placeholder: placeholder,
@@ -195,7 +201,7 @@ export function TiptapEditor({
   // Update editor content when content prop changes
   useEffect(() => {
     if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content, false)
+      editor.commands.setContent(content)
     }
   }, [editor, content])
 
@@ -228,7 +234,6 @@ export function TiptapEditor({
         {/* Bubble Menu - appears when text is selected */}
         <BubbleMenu 
           editor={editor} 
-          tippyOptions={{ duration: 100 }}
           className="flex items-center flex-wrap gap-1 p-2 bg-background border rounded-lg shadow-lg max-w-[90vw] overflow-hidden"
         >
           <Button
@@ -290,7 +295,6 @@ export function TiptapEditor({
         {/* Floating Menu - appears on empty lines */}
         <FloatingMenu 
           editor={editor} 
-          tippyOptions={{ duration: 100 }}
           className="flex items-center flex-wrap gap-1 p-2 bg-background border rounded-lg shadow-lg max-w-[90vw] overflow-hidden"
         >
           <Button

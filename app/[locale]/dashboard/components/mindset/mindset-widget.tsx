@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel"
-import { NewsImpact } from "./news-impact"
 import { Journaling } from "./journaling"
 import { Timeline } from "./timeline"
 import { MindsetSummary } from "./mindset-summary"
@@ -23,6 +22,9 @@ import { toast } from "@/hooks/use-toast"
 import { saveMindset, deleteMindset } from "@/server/journal"
 import { isToday, format } from "date-fns"
 import { useMoodStore } from "@/store/mood-store"
+import { useFinancialEventsStore } from "@/store/financial-events-store"
+import { useCurrentLocale } from "@/locales/client"
+import { FinancialEvent } from "@prisma/client"
 
 interface MindsetWidgetProps {
   size: WidgetSize
@@ -38,6 +40,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [isEditing, setIsEditing] = useState(true)
   const moods = useMoodStore(state => state.moods)
   const setMoods = useMoodStore(state => state.setMoods)
+  const financialEvents = useFinancialEventsStore(state => state.events)
+  const locale = useCurrentLocale()
   const t = useI18n()
 
   // Consolidated effect for carousel and mood data handling
@@ -72,7 +76,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         setSelectedNews(mood?.selectedNews ?? [])
         setJournalContent(mood?.journalContent ?? "")
         setIsEditing(true)
-        api.scrollTo(2)
+        api.scrollTo(1) // Summary is now index 1
         return
       }
 
@@ -80,7 +84,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         setEmotionValue(mood.emotionValue ?? 50)
         setSelectedNews(mood.selectedNews ?? [])
         setJournalContent(mood.journalContent ?? "")
-        api.scrollTo(2)
+        api.scrollTo(1) // Summary is now index 1
       } else {
         // Reset all values if no mood data exists for the selected date
         setEmotionValue(50)
@@ -104,7 +108,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
 
   const handleSave = async () => {
     // Scroll to summary view after saving
-    api?.scrollTo(2)
+    api?.scrollTo(1)
     try {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
       const savedMood = await saveMindset({
@@ -179,15 +183,34 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       setSelectedNews(moodForDate.selectedNews ?? [])
       setJournalContent(moodForDate.journalContent ?? "")
       setIsEditing(true)
-      api?.scrollTo(2)
+      api?.scrollTo(1) // Summary is now index 1
     } else {
       // If no data exists, reset the form
       setEmotionValue(50)
       setSelectedNews([])
       setJournalContent("")
       setIsEditing(true)
-      api?.scrollTo(0)
+      api?.scrollTo(0) // Journaling is index 0
     }
+  }
+
+  const getEventsForDate = (date: Date): FinancialEvent[] => {
+    return financialEvents.filter(event => {
+      if (!event.date) return false;
+      try {
+        const eventDate = new Date(event.date)
+        const compareDate = new Date(date)
+        
+        // Set hours to start of day for comparison
+        eventDate.setHours(0, 0, 0, 0)
+        compareDate.setHours(0, 0, 0, 0)
+        
+        return eventDate.getTime() === compareDate.getTime() && event.lang === locale
+      } catch (error) {
+        console.error('Error parsing event date:', error)
+        return false
+      }
+    })
   }
 
   const handleEdit = (section?: 'emotion' | 'journal' | 'news') => {
@@ -196,13 +219,13 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     // Navigate to the appropriate section
     switch (section) {
       case 'news':
-        api?.scrollTo(0)
+        api?.scrollTo(0) // News is now part of journaling
         break
       case 'journal':
-        api?.scrollTo(1)
+        api?.scrollTo(0)
         break
       case 'emotion':
-        api?.scrollTo(1)
+        api?.scrollTo(0)
         break
       default:
         api?.scrollTo(0)
@@ -211,24 +234,17 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
 
   const steps = [
     {
-      title: t('mindset.newsImpact.title'),
-      component: <NewsImpact 
-        onNext={() => api?.scrollNext()} 
-        onBack={() => api?.scrollPrev()} 
-        selectedNews={selectedNews}
-        onNewsSelection={handleNewsSelection}
-        date={selectedDate}
-      />
-    },
-    {
       title: t('mindset.journaling.title'),
       component: <Journaling 
-        onBack={() => api?.scrollPrev()} 
         content={journalContent}
         onChange={handleJournalChange}
         onSave={handleSave}
         emotionValue={emotionValue}
         onEmotionChange={handleEmotionChange}
+        date={selectedDate}
+        events={getEventsForDate(selectedDate)}
+        selectedNews={selectedNews}
+        onNewsSelection={handleNewsSelection}
       />
     },
     {
