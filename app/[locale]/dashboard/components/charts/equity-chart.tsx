@@ -79,28 +79,34 @@ interface ChartEvent {
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-// Generate consistent color based on accountNumber string
+// Map account numbers to theme-aware chart colors defined in globals.css
+function getChartColorByIndex(index: number): string {
+  const paletteVars = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+    'hsl(var(--chart-6))',
+    'hsl(var(--chart-7))',
+    'hsl(var(--chart-8))',
+  ]
+  return paletteVars[index % paletteVars.length]
+}
+
+// Generate consistent theme-aware color based on accountNumber string
 function generateAccountColor(accountNumber: string): string {
-  // Simple hash function to convert string to number
   let hash = 0
   for (let i = 0; i < accountNumber.length; i++) {
     const char = accountNumber.charCodeAt(i)
     hash = ((hash << 5) - hash) + char
-    hash = hash & hash // Convert to 32-bit integer
+    hash = hash & hash
   }
-  
-  // Use absolute value and modulo to get consistent hue
-  const hue = Math.abs(hash) % 360
-  
-  // Generate a vibrant color with good contrast
-  // Use different saturation and lightness values for variety
-  const saturation = 70 + (Math.abs(hash) % 30) // 70-100%
-  const lightness = 50 + (Math.abs(hash >> 8) % 20) // 50-70%
-  
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`
+  const index = Math.abs(hash) % 8
+  return getChartColorByIndex(index)
 }
 
-// Color map function using randomized colors
+// Color map function using theme-aware chart palette
 function createAccountColorMap(accountNumbers: string[]): Map<string, string> {
   return new Map(accountNumbers.map(accountNumber => [
     accountNumber,
@@ -108,14 +114,19 @@ function createAccountColorMap(accountNumbers: string[]): Map<string, string> {
   ]))
 }
 
-// Get payout color based on status
-const getPayoutColor = (status: string) => {
+// Get payout colors (foreground and subtle background) based on status using theme tokens
+const getPayoutColors = (status: string) => {
   switch (status) {
-    case 'PENDING': return '#9CA3AF'
-    case 'VALIDATED': return '#F97316'
-    case 'REFUSED': return '#DC2626'
-    case 'PAID': return '#16A34A'
-    default: return '#9CA3AF'
+    case 'PENDING':
+      return { fg: 'hsl(var(--muted-foreground))', bg: 'hsl(var(--muted-foreground) / 0.15)' }
+    case 'VALIDATED':
+      return { fg: 'hsl(var(--chart-4))', bg: 'hsl(var(--chart-4) / 0.15)' }
+    case 'REFUSED':
+      return { fg: 'hsl(var(--destructive))', bg: 'hsl(var(--destructive) / 0.15)' }
+    case 'PAID':
+      return { fg: 'hsl(var(--success))', bg: 'hsl(var(--success) / 0.15)' }
+    default:
+      return { fg: 'hsl(var(--muted-foreground))', bg: 'hsl(var(--muted-foreground) / 0.15)' }
   }
 }
 
@@ -374,13 +385,14 @@ const renderDot = (props: any) => {
     if (payoutAccounts.length > 0) {
       const accountNumber = payoutAccounts[0].replace('payout_', '')
       const status = payload[`payoutStatus_${accountNumber}`] || ''
+      const { fg } = getPayoutColors(status)
       return (
         <circle
           key={`dot-${index}-payout`}
           cx={cx}
           cy={cy}
           r={4}
-          fill={getPayoutColor(status)}
+          fill={fg}
           stroke="white"
           strokeWidth={1}
         />
@@ -398,7 +410,7 @@ const renderDot = (props: any) => {
           cx={cx}
           cy={cy}
           r={5}
-          fill="#ff6b6b"
+          fill="hsl(var(--destructive))"
           stroke="white"
           strokeWidth={2}
         />
@@ -407,13 +419,14 @@ const renderDot = (props: any) => {
     
     if (hasPayout) {
       const status = payload[`payoutStatus_${accountNumber}`] || ''
+      const { fg } = getPayoutColors(status)
       return (
         <circle
           key={`dot-${index}-payout-${accountNumber}`}
           cx={cx}
           cy={cy}
           r={4}
-          fill={getPayoutColor(status)}
+          fill={fg}
           stroke="white"
           strokeWidth={1}
         />
@@ -535,8 +548,8 @@ const OptimizedTooltip = React.memo(({
                   <span 
                     className="text-xs px-1 py-0.5 rounded"
                     style={{ 
-                      backgroundColor: getPayoutColor(status) + '20',
-                      color: getPayoutColor(status)
+                      backgroundColor: getPayoutColors(status).bg,
+                      color: getPayoutColors(status).fg
                     }}
                   >
                     {status.toLowerCase()}
@@ -642,12 +655,12 @@ const AccountsLegend = React.memo(({
                 </span>
                 <div className="min-h-[14px] flex flex-col">
                   {hasPayout && (
-                    <span className="text-xs leading-tight" style={{ color: getPayoutColor(payoutStatus) }}>
+                    <span className="text-xs leading-tight" style={{ color: getPayoutColors(payoutStatus).fg }}>
                       {t('equity.legend.payout')}: {formatCurrency(payoutAmount)}
                     </span>
                   )}
                   {hasReset && (
-                    <span className="text-xs text-red-500 leading-tight">
+                    <span className="text-xs leading-tight" style={{ color: 'hsl(var(--destructive))' }}>
                       {t('equity.legend.reset')}
                     </span>
                   )}
@@ -733,7 +746,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
     allDates, 
     timezone, 
     showIndividual,
-    10, // Hardcoded max accounts for performance
+    8, // Hardcoded max accounts aligned with 8-color palette
     config.dataSampling
   )
 
@@ -748,7 +761,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       } as ChartConfig
     }
     
-    const maxAccounts = 10 // Hardcoded for performance
+    const maxAccounts = 8 // Aligned with 8-color palette
     const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts)
     return accountsToShow.reduce((acc, accountNumber) => {
       acc[`equity_${accountNumber}`] = {
@@ -776,7 +789,7 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       )
     }
 
-    const maxAccounts = 10 // Hardcoded for performance
+    const maxAccounts = 8 // Aligned with 8-color palette
     const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts)
     return accountsToShow.map((accountNumber) => {
       // Use the same color mapping as legend to ensure consistency
