@@ -653,6 +653,7 @@ export default {
     'equity': {
         title: 'Equity',
         description: 'Track your equity over time',
+        loading: 'Loading chart data...',
         toggle: {
             individual: 'Individual',
             grouped: 'Grouped',

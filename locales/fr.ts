@@ -615,6 +615,7 @@ export default {
     'equity': {
         title: 'Profits',
         description: 'Suivez l\'évolution de vos profits dans le temps',
+        loading: 'Chargement des données du graphique...',
         toggle: {
             individual: 'Individuel',
             grouped: 'Groupé',

@@ -4,6 +4,7 @@ import * as React from "react"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps, ReferenceLine } from "recharts"
 import { format, parseISO, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
+import { fr, enUS } from 'date-fns/locale'
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
@@ -33,10 +34,12 @@ import { Info } from "lucide-react"
 
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
+import { useCurrentLocale } from "@/locales/client"
 import { useUserStore } from "@/store/user-store"
 import { useEquityChartStore } from "@/store/equity-chart-store"
 import { Payout as PrismaPayout } from '@prisma/client'
 import { AccountSelectionPopover } from "./account-selection-popover"
+import { getEquityChartDataAction } from "@/server/equity-chart"
 
 interface EquityChartProps {
   size?: WidgetSize
@@ -130,227 +133,6 @@ const getPayoutColors = (status: string) => {
   }
 }
 
-// Optimized date boundary calculation - daily only
-function useDateBoundaries(trades: any[], timezone: string) {
-  return React.useMemo(() => {
-    if (!trades.length) return { startDate: null, endDate: null, allDates: [] }
-
-    const dates = trades.map(t => formatInTimeZone(new Date(t.entryDate), timezone, 'yyyy-MM-dd'))
-    const startDate = dates.reduce((min, date) => date < min ? date : min)
-    const endDate = dates.reduce((max, date) => date > max ? date : max)
-    
-    const start = parseISO(startDate)
-    const end = parseISO(endDate)
-    end.setDate(end.getDate() + 1)
-    
-    return {
-      startDate,
-      endDate,
-      allDates: eachDayOfInterval({ start, end })
-    }
-  }, [trades, timezone])
-}
-
-// High-performance chart data calculation with payouts and resets
-function useChartData(
-  trades: any[], 
-  accounts: any[],
-  accountNumbers: string[], 
-  selectedAccounts: Set<string>,
-  allDates: Date[],
-  timezone: string,
-  showIndividual: boolean,
-  maxAccounts: number,
-  dataSampling: 'all' | 'sample'
-) {
-  return React.useMemo(() => {
-    if (!trades.length || !allDates.length) return []
-
-    // Limit accounts for performance
-    const limitedAccountNumbers = showIndividual 
-      ? accountNumbers.slice(0, maxAccounts)
-      : accountNumbers
-
-    // Create account map for quick lookup
-    const accountMap = new Map(accounts.map(acc => [acc.number, acc]))
-
-    // Filter trades based on reset dates and selected accounts
-    const filteredTrades = trades.filter(trade => {
-      if (!selectedAccounts.has(trade.accountNumber) || 
-          !limitedAccountNumbers.includes(trade.accountNumber)) {
-        return false
-      }
-      
-      const account = accountMap.get(trade.accountNumber)
-      if (!account) return true // Include if account not found
-      
-      // Filter based on reset date if it exists
-      if (account.resetDate) {
-        return new Date(trade.entryDate) >= new Date(account.resetDate)
-      }
-      
-      return true
-    })
-    
-    // Data sampling for very large datasets
-    const datesToProcess = dataSampling === 'sample' && allDates.length > 100
-      ? allDates.filter((_, index) => index % 2 === 0) // Sample every other point
-      : allDates
-
-    // Pre-process trades by date for faster lookup
-    const tradesMap = new Map<string, any[]>()
-    
-    filteredTrades.forEach(trade => {
-      const dateKey = formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
-      if (!tradesMap.has(dateKey)) {
-        tradesMap.set(dateKey, [])
-      }
-      tradesMap.get(dateKey)!.push(trade)
-    })
-
-    // Create combined events array with trades, payouts, and resets
-    const allEvents: ChartEvent[] = []
-    
-    // Add trades
-    filteredTrades.forEach(trade => {
-      allEvents.push({
-        date: new Date(trade.entryDate),
-        amount: trade.pnl - (trade.commission || 0),
-        isPayout: false,
-        isReset: false,
-        accountNumber: trade.accountNumber
-      })
-    })
-    
-    // Add payouts and resets
-    limitedAccountNumbers.forEach(accountNumber => {
-      const account = accountMap.get(accountNumber)
-      if (!account) return
-      
-             // Add payouts
-       account.payouts?.forEach((payout: PrismaPayout) => {
-         allEvents.push({
-           date: new Date(payout.date),
-           amount: ['PENDING', 'VALIDATED', 'PAID'].includes(payout.status) ? -payout.amount : 0,
-           isPayout: true,
-           isReset: false,
-           payoutStatus: payout.status,
-           accountNumber: accountNumber
-         })
-       })
-      
-      // Add reset if exists
-      if (account.resetDate) {
-        allEvents.push({
-          date: new Date(account.resetDate),
-          amount: 0, // Reset doesn't change balance directly
-          isPayout: false,
-          isReset: true,
-          accountNumber: accountNumber
-        })
-      }
-    })
-    
-    // Sort events by date
-    allEvents.sort((a, b) => a.date.getTime() - b.date.getTime())
-
-    // Use arrays instead of Maps for better performance with small datasets
-    const accountEquities: Record<string, number> = {}
-    const accountStartingBalances: Record<string, number> = {}
-    const accountFirstActivity: Record<string, string | null> = {}
-    
-    limitedAccountNumbers.forEach(acc => {
-      const account = accountMap.get(acc)
-      accountEquities[acc] = 0
-      accountStartingBalances[acc] = account?.startingBalance || 0
-      accountFirstActivity[acc] = null
-    })
-
-    const chartData: ChartDataPoint[] = []
-
-    datesToProcess.forEach(date => {
-      const dateKey = formatInTimeZone(date, timezone, 'yyyy-MM-dd')
-      const relevantTrades = tradesMap.get(dateKey) || []
-      
-      let totalEquity = 0
-      const point: ChartDataPoint = { 
-        date: dateKey,
-        equity: 0 
-      }
-
-      if (showIndividual) {
-        limitedAccountNumbers.forEach(acc => {
-          point[`equity_${acc}`] = undefined
-          point[`payout_${acc}`] = false
-          point[`reset_${acc}`] = false
-          point[`payoutStatus_${acc}`] = ''
-          point[`payoutAmount_${acc}`] = 0
-        })
-      }
-
-      // Process events for this date
-      const dateEvents = allEvents.filter(event => 
-        formatInTimeZone(event.date, timezone, 'yyyy-MM-dd') === dateKey
-      )
-
-      // Process each account
-      for (const accountNumber of limitedAccountNumbers) {
-        if (!selectedAccounts.has(accountNumber)) continue
-
-        const account = accountMap.get(accountNumber)
-        const accountEvents = dateEvents.filter(event => event.accountNumber === accountNumber)
-        
-                         // Process account events
-        accountEvents.forEach(event => {
-          if (event.isReset) {
-            // Reset the balance to 0
-            accountEquities[accountNumber] = 0
-            point[`reset_${accountNumber}`] = true
-            // Mark first activity if not already set
-            if (!accountFirstActivity[accountNumber]) {
-              accountFirstActivity[accountNumber] = dateKey
-            }
-          } else {
-            // Add the event amount to equity
-            accountEquities[accountNumber] += event.amount
-            
-            // Mark first activity if not already set
-            if (!accountFirstActivity[accountNumber]) {
-              accountFirstActivity[accountNumber] = dateKey
-            }
-            
-            if (event.isPayout) {
-              point[`payout_${accountNumber}`] = true
-              point[`payoutStatus_${accountNumber}`] = event.payoutStatus || ''
-              point[`payoutAmount_${accountNumber}`] = -event.amount
-            }
-          }
-        })
-
-        // Note: Trades are already processed in the events above, so we don't need to process them again here
-
-        if (showIndividual) {
-          // Only show equity if account has had activity
-          if (accountFirstActivity[accountNumber] && accountFirstActivity[accountNumber] <= dateKey) {
-            point[`equity_${accountNumber}`] = accountEquities[accountNumber]
-          } else {
-            // Set to undefined to not show the line
-            point[`equity_${accountNumber}`] = undefined
-          }
-        }
-        totalEquity += accountEquities[accountNumber]
-      }
-
-      if (!showIndividual) {
-        point.equity = totalEquity
-      }
-
-      chartData.push(point)
-    })
-
-    return chartData
-  }, [trades, accounts, accountNumbers, selectedAccounts, allDates, timezone, showIndividual, maxAccounts, dataSampling])
-}
 
 // Custom dot renderer for payouts and resets
 const renderDot = (props: any) => {
@@ -446,7 +228,8 @@ const OptimizedTooltip = React.memo(({
   size,
   accountColorMap,
   t,
-  onHover
+  onHover,
+  dateLocale
 }: {
   active?: boolean
   payload?: any[]
@@ -456,6 +239,7 @@ const OptimizedTooltip = React.memo(({
   accountColorMap: Map<string, string>
   t: any
   onHover?: (data: ChartDataPoint | null) => void
+  dateLocale: any
 }) => {
   // Only update hovered data for legend in individual mode
   React.useEffect(() => {
@@ -495,7 +279,7 @@ const OptimizedTooltip = React.memo(({
             {t('equity.tooltip.date')}
           </span>
           <span className="font-bold text-muted-foreground">
-            {format(new Date(data.date), "MMM d, yyyy")}
+            {format(new Date(data.date), "MMM d, yyyy", { locale: dateLocale })}
           </span>
         </div>
         <div className="flex flex-col">
@@ -573,7 +357,8 @@ const AccountsLegend = React.memo(({
   chartData,
   hoveredData,
   onToggleAccount,
-  t 
+  t,
+  dateLocale
 }: {
   accountNumbers: string[]
   accountColorMap: Map<string, string>
@@ -582,6 +367,7 @@ const AccountsLegend = React.memo(({
   hoveredData: ChartDataPoint | null
   onToggleAccount: (accountNumber: string) => void
   t: any
+  dateLocale: any
 }) => {
   if (!accountNumbers.length || accountNumbers.length <= 1) return null
 
@@ -613,7 +399,7 @@ const AccountsLegend = React.memo(({
             {t('equity.legend.title')}
             {isHovered && displayData && (
               <span className="ml-2 text-xs text-primary">
-                - {format(new Date(displayData.date), "MMM d, yyyy")}
+                - {format(new Date(displayData.date), "MMM d, yyyy", { locale: dateLocale })}
               </span>
             )}
           </span>
@@ -682,7 +468,18 @@ AccountsLegend.displayName = "AccountsLegend"
 
 
 export default function EquityChart({ size = 'medium' }: EquityChartProps) {
-  const { formattedTrades: trades } = useData()
+  const { 
+    instruments,
+    accountNumbers,
+    dateRange,
+    pnlRange,
+    tickRange,
+    timeRange,
+    tickFilter,
+    weekdayFilter,
+    hourFilter,
+    tagFilter
+  } = useData()
   const accounts = useUserStore(state => state.accounts)
   const timezone = useUserStore(state => state.timezone)
   const { 
@@ -693,6 +490,9 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   } = useEquityChartStore()
   const showIndividual = config.showIndividual
   const [hoveredData, setHoveredData] = React.useState<ChartDataPoint | null>(null)
+  const [chartData, setChartData] = React.useState<ChartDataPoint[]>([])
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [availableAccountNumbers, setAvailableAccountNumbers] = React.useState<string[]>([])
   
   // Throttled hover handler for better performance
   const throttledSetHoveredData = React.useCallback(
@@ -707,14 +507,8 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   )
   const yAxisRef = React.useRef<any>(null)
   const t = useI18n()
-
-  // Use optimized hooks
-  const { allDates } = useDateBoundaries(trades, timezone)
-  
-  const accountNumbers = React.useMemo(() => 
-    Array.from(new Set(trades.map(trade => trade.accountNumber))),
-    [trades]
-  )
+  const locale = useCurrentLocale()
+  const dateLocale = locale === 'fr' ? fr : enUS
 
   // Account selection handlers
   const handleToggleAccount = React.useCallback((accountNumber: string) => {
@@ -723,10 +517,10 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
 
   // Initialize selected accounts if empty
   React.useEffect(() => {
-    if ((!config.selectedAccountsToDisplay || config.selectedAccountsToDisplay.length === 0) && accountNumbers.length > 0) {
-      setSelectedAccountsToDisplay(accountNumbers)
+    if ((!config.selectedAccountsToDisplay || config.selectedAccountsToDisplay.length === 0) && availableAccountNumbers.length > 0) {
+      setSelectedAccountsToDisplay(availableAccountNumbers)
     }
-  }, [config.selectedAccountsToDisplay, accountNumbers, setSelectedAccountsToDisplay])
+  }, [config.selectedAccountsToDisplay, availableAccountNumbers, setSelectedAccountsToDisplay])
 
   const selectedAccounts = React.useMemo(() => 
     new Set(config.selectedAccountsToDisplay || []), 
@@ -734,21 +528,63 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   )
 
   const accountColorMap = React.useMemo(() => 
-    createAccountColorMap(accountNumbers),
-    [accountNumbers]
+    createAccountColorMap(availableAccountNumbers),
+    [availableAccountNumbers]
   )
 
-  const chartData = useChartData(
-    trades, 
+  // Fetch chart data when filters or config change
+  React.useEffect(() => {
+    const fetchChartData = async () => {
+      setIsLoading(true)
+      try {
+        const result = await getEquityChartDataAction({
+          instruments,
+          accountNumbers,
+          dateRange: dateRange ? {
+            from: dateRange.from.toISOString(),
+            to: dateRange.to.toISOString()
+          } : undefined,
+          pnlRange,
+          tickRange,
+          timeRange,
+          tickFilter,
+          weekdayFilter,
+          hourFilter,
+          tagFilter,
+          timezone,
+          showIndividual,
+          maxAccounts: 8,
+          dataSampling: config.dataSampling,
+          selectedAccounts: Array.from(selectedAccounts)
+        })
+        setChartData(result.chartData)
+        setAvailableAccountNumbers(result.accountNumbers)
+      } catch (error) {
+        console.error('Failed to fetch equity chart data:', error)
+        setChartData([])
+        setAvailableAccountNumbers([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchChartData()
+  }, [
+    instruments,
+    accountNumbers,
+    dateRange,
     accounts,
-    accountNumbers, 
-    selectedAccounts, 
-    allDates, 
-    timezone, 
+    pnlRange,
+    tickRange,
+    timeRange,
+    tickFilter,
+    weekdayFilter,
+    hourFilter,
+    tagFilter,
+    timezone,
     showIndividual,
-    8, // Hardcoded max accounts aligned with 8-color palette
-    config.dataSampling
-  )
+    config.dataSampling,
+    selectedAccounts
+  ])
 
   // Optimized chart config with consistent color mapping
   const chartConfig = React.useMemo(() => {
@@ -866,80 +702,90 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       >
         <div className="w-full h-full flex flex-col">
           <div className="flex-1 min-h-0">
-            <ChartContainer config={chartConfig} className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={chartData}
-                  margin={
-                    size === 'small'
-                      ? { left: 10, right: 4, top: 4, bottom: 20 }
-                      : { left: 10, right: 8, top: 8, bottom: 24 }
-                  }
-                  onMouseLeave={() => setHoveredData(null)}
-                >
-                  <CartesianGrid 
-                    strokeDasharray="3 3" 
-                    className="text-border dark:opacity-[0.12] opacity-[0.2]"
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tickLine={false}
-                    axisLine={false}
-                    height={size === 'small' ? 20 : 24}
-                    tickMargin={size === 'small' ? 4 : 8}
-                    tick={{ 
-                      fontSize: size === 'small' ? 9 : 11,
-                      fill: 'currentColor'
-                    }}
-                    tickFormatter={(value) => format(new Date(value), "MMM d")}
-                  />
-                  <YAxis
-                    ref={yAxisRef}
-                    tickLine={false}
-                    axisLine={false}
-                    width={60}
-                    tickMargin={4}
-                    tick={{ 
-                      fontSize: size === 'small' ? 9 : 11,
-                      fill: 'currentColor'
-                    }}
-                    tickFormatter={formatCurrency}
-                  />
-                  <ReferenceLine
-                    y={0}
-                    stroke="hsl(var(--muted-foreground))"
-                    strokeDasharray="3 3"
-                    strokeOpacity={0.5}
-                  />
-                  <ChartTooltip
-                    content={({ active, payload }: TooltipProps<number, string>) => (
-                      <OptimizedTooltip
-                        active={active}
-                        payload={payload}
-                        data={payload?.[0]?.payload as ChartDataPoint}
-                        showIndividual={showIndividual}
-                        size={size}
-                        accountColorMap={accountColorMap}
-                        t={t}
-                        onHover={throttledSetHoveredData}
-                      />
-                    )}
-                  />
-                  {chartLines}
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            {isLoading ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-muted-foreground text-sm">
+                  {t('equity.loading')}
+                </div>
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={chartData}
+                    margin={
+                      size === 'small'
+                        ? { left: 10, right: 4, top: 4, bottom: 20 }
+                        : { left: 10, right: 8, top: 8, bottom: 24 }
+                    }
+                    onMouseLeave={() => setHoveredData(null)}
+                  >
+                    <CartesianGrid 
+                      strokeDasharray="3 3" 
+                      className="text-border dark:opacity-[0.12] opacity-[0.2]"
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      height={size === 'small' ? 20 : 24}
+                      tickMargin={size === 'small' ? 4 : 8}
+                      tick={{ 
+                        fontSize: size === 'small' ? 9 : 11,
+                        fill: 'currentColor'
+                      }}
+                      tickFormatter={(value) => format(new Date(value), "MMM d", { locale: dateLocale })}
+                    />
+                    <YAxis
+                      ref={yAxisRef}
+                      tickLine={false}
+                      axisLine={false}
+                      width={60}
+                      tickMargin={4}
+                      tick={{ 
+                        fontSize: size === 'small' ? 9 : 11,
+                        fill: 'currentColor'
+                      }}
+                      tickFormatter={formatCurrency}
+                    />
+                    <ReferenceLine
+                      y={0}
+                      stroke="hsl(var(--muted-foreground))"
+                      strokeDasharray="3 3"
+                      strokeOpacity={0.5}
+                    />
+                    <ChartTooltip
+                      content={({ active, payload }: TooltipProps<number, string>) => (
+                        <OptimizedTooltip
+                          active={active}
+                          payload={payload}
+                          data={payload?.[0]?.payload as ChartDataPoint}
+                          showIndividual={showIndividual}
+                          size={size}
+                          accountColorMap={accountColorMap}
+                          t={t}
+                          onHover={throttledSetHoveredData}
+                          dateLocale={dateLocale}
+                        />
+                      )}
+                    />
+                    {chartLines}
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
           </div>
           
-          {showIndividual && accountNumbers.length > 1 && size !== 'small' && (
+          {showIndividual && availableAccountNumbers.length > 1 && size !== 'small' && (
             <AccountsLegend
-              accountNumbers={accountNumbers}
+              accountNumbers={availableAccountNumbers}
               accountColorMap={accountColorMap}
               selectedAccounts={selectedAccounts}
               chartData={chartData}
               hoveredData={hoveredData}
               onToggleAccount={handleToggleAccount}
               t={t}
+              dateLocale={dateLocale}
             />
           )}
         </div>
