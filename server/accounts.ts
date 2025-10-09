@@ -431,3 +431,49 @@ export async function createAccountAction(accountNumber: string) {
     throw error
   }
 }
+
+/**
+ * Calculate account balance for multiple accounts
+ * @param accounts Array of accounts to calculate balance for
+ * @param trades Array of trades to use for calculation
+ * @returns Array of accounts with calculated balanceToDate
+ */
+export async function calculateAccountBalanceAction(
+  accounts: Account[],
+  trades: Trade[]
+): Promise<Account[]> {
+  // Pre-group trades by account number for O(1) lookup
+  const tradesByAccount = trades.reduce((acc, trade) => {
+    if (!acc[trade.accountNumber]) {
+      acc[trade.accountNumber] = [];
+    }
+    acc[trade.accountNumber].push(trade);
+    return acc;
+  }, {} as Record<string, Trade[]>);
+
+  // Compute balances efficiently
+  return accounts.map(account => ({
+    ...account,
+    balanceToDate: calculateAccountBalance(
+      account,
+      tradesByAccount[account.number] || []
+    ),
+  }));
+}
+
+/**
+ * Calculate balance for a single account
+ * @param account The account to calculate balance for
+ * @param trades Array of trades to use for calculation
+ * @returns The calculated balance
+ */
+function calculateAccountBalance(account: Account, trades: Trade[]): number {
+  let balance = account.startingBalance || 0;
+  const accountTrades = trades.filter(trade => trade.accountNumber === account.number);
+  const tradesPnL = accountTrades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0);
+  balance += tradesPnL;
+  const payouts = account.payouts || [];
+  const payoutsSum = payouts.reduce((sum, payout) => sum + payout.amount, 0);
+  balance += payoutsSum;
+  return balance;
+}

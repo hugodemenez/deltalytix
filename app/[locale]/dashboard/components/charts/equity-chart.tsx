@@ -534,6 +534,11 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
 
   // Fetch chart data when filters or config change
   React.useEffect(() => {
+    // Don't fetch if we don't have accounts data yet
+    if (!accounts || accounts.length === 0) {
+      return
+    }
+
     const fetchChartData = async () => {
       setIsLoading(true)
       try {

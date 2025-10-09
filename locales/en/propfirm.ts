@@ -84,7 +84,7 @@ export default {
                 renewalNoticeInfo: 'You will receive notifications 3 days before renewal',
                 renewalNotice: 'Renewal Notice Days',
                 autoAdvanceInfo: '💡 This date will automatically advance based on your {frequency} frequency after each renewal notice.',
-                customFrequencyWarning: '⚠️ Custom frequency requires manual date updates'
+                customFrequencyWarning: 'If you choose a unique frequency, the payment date will be fixed and not updated automatically.'
             },
             trailingTypes: {
                 static: 'Static',
@@ -101,7 +101,7 @@ export default {
                 quarterly: 'Quarterly',
                 biannual: 'Bi-annual',
                 annual: 'Annual',
-                custom: 'Custom'
+                custom: 'Once'
             },
             tooltips: {
                 trailingDrawdown: 'Trailing drawdown follows your profits upward but never moves down when you lose money. When enabled with a trailing stop, it stops following profits once you reach the specified profit amount. The calculation can be done intraday (real-time) or end-of-day (computed once daily based on total daily profit/loss).',

@@ -56,7 +56,7 @@ interface EquityChartResult {
 }
 
 export async function getEquityChartDataAction(params: EquityChartParams): Promise<EquityChartResult> {
-  console.log('getEquityChartDataAction', JSON.stringify(params, null, 2))
+  console.log('getEquityChartDataAction')
   const supabase = await createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
 

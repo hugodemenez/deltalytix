@@ -274,7 +274,7 @@ export function TradeTableReview() {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(tableConfig?.columnFilters || [])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(tableConfig?.columnVisibility || {})
   const [expanded, setExpanded] = useState<ExpandedState>({})
-  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 20)
+  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 10)
   const [groupingGranularity, setGroupingGranularity] = useState<number>(tableConfig?.groupingGranularity || 0)
   const [selectedTrades, setSelectedTrades] = useState<string[]>([])
   const [showPoints, setShowPoints] = useState(false)
