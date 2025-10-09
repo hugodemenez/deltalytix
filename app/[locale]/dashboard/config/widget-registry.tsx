@@ -8,6 +8,7 @@ import TimeInPositionChart from '../components/charts/time-in-position'
 import TimeRangePerformanceChart from '../components/charts/time-range-performance'
 import WeekdayPNLChart from '../components/charts/weekday-pnl'
 import PnLBySideChart from '../components/charts/pnl-by-side'
+import PnLPerContractChart from '../components/charts/pnl-per-contract'
 import AveragePositionTimeCard from '../components/statistics/average-position-time-card'
 import CumulativePnlCard from '../components/statistics/cumulative-pnl-card'
 import LongShortPerformanceCard from '../components/statistics/long-short-card'
@@ -395,6 +396,15 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     previewHeight: 300,
     getComponent: ({ size }) => <PnLBySideChart size={size} />,
     getPreview: () => <PnLBySideChart size="small" />
+  },
+  pnlPerContractChart: {
+    type: 'pnlPerContractChart',
+    defaultSize: 'medium',
+    allowedSizes: ['small', 'small-long', 'medium', 'large'],
+    category: 'charts',
+    previewHeight: 300,
+    getComponent: ({ size }) => <PnLPerContractChart size={size} />,
+    getPreview: () => <PnLPerContractChart size="small" />
   },
   tickDistribution: {
     type: 'tickDistribution',
