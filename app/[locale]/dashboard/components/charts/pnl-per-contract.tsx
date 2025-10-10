@@ -39,14 +39,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t('pnlPerContract.tooltip.instrument')}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {data.instrument}
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
               {t('pnlPerContract.tooltip.averagePnl')}
             </span>
             <span className="font-bold">
@@ -63,18 +55,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           </div>
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
-              {t('pnlPerContract.tooltip.winRate')}
-            </span>
-            <span className="font-bold text-muted-foreground">
-              {((data.winCount / data.tradeCount) * 100).toFixed(1)}%
-            </span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[0.70rem] uppercase text-muted-foreground">
               {t('pnlPerContract.tooltip.trades')}
             </span>
             <span className="font-bold text-muted-foreground">
-              {data.tradeCount} {t('pnlPerContract.tooltip.trades')} ({data.winCount} {data.winCount === 1 ? t('pnlPerContract.tooltip.wins') : t('pnlPerContract.tooltip.wins_plural')})
+              {data.tradeCount} {t('pnlPerContract.tooltip.trades')} ({(data.winCount / data.tradeCount * 100).toFixed(1)}% {t('pnlPerContract.tooltip.winRate')})
             </span>
           </div>
           <div className="flex flex-col">
@@ -211,7 +195,6 @@ export default function PnLPerContractChart({ size = 'medium' }: PnLPerContractC
                 }}
                 angle={size === 'small-long' ? -45 : -45}
                 textAnchor="end"
-                height={size === 'small-long' ? 40 : 50}
               />
               <YAxis
                 tickLine={false}
