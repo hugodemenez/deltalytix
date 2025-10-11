@@ -110,8 +110,8 @@ const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
         onClick={onClick}
       >
         {!isMobile && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center z-50 rounded-md border">
-            <p className="text-foreground font-medium">{t('widgets.clickToAdd')}</p>
+          <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 shadow-sm">
+            {t('widgets.clickToAdd')}
           </div>
         )}
         {children}

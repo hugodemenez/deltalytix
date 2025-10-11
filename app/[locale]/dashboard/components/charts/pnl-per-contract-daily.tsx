@@ -18,7 +18,9 @@ import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { useI18n } from "@/locales/client"
 import { usePnLPerContractDailyStore } from "@/store/pnl-per-contract-daily-store"
 import { formatInTimeZone } from 'date-fns-tz'
+import { fr, enUS } from 'date-fns/locale'
 import { useUserStore } from '@/store/user-store'
+import { useCurrentLocale } from '@/locales/client'
 
 interface PnLPerContractDailyChartProps {
   size?: WidgetSize
@@ -93,6 +95,8 @@ export default function PnLPerContractDailyChart({ size = 'medium' }: PnLPerCont
   const { timezone } = useUserStore()
   const { config, setSelectedInstrument } = usePnLPerContractDailyStore()
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const dateLocale = locale === 'fr' ? fr : enUS
 
   // Get unique instruments from trades
   const availableInstruments = React.useMemo(() => {
@@ -267,11 +271,7 @@ export default function PnLPerContractDailyChart({ size = 'medium' }: PnLPerCont
                   minTickGap={size === 'small-long' ? 30 : 50}
                   tickFormatter={(value) => {
                     const date = new Date(value)
-                    return date.toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      timeZone: timezone
-                    })
+                    return formatInTimeZone(date, timezone, 'MMM d', { locale: dateLocale })
                   }}
                 />
                 <YAxis
