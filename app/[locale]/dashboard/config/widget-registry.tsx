@@ -1,3 +1,4 @@
+import React from 'react'
 import { WidgetType, WidgetSize } from '../types/dashboard'
 import EquityChart from '../components/charts/equity-chart'
 import TickDistributionChart from '../components/charts/tick-distribution'
@@ -7,6 +8,8 @@ import TimeInPositionChart from '../components/charts/time-in-position'
 import TimeRangePerformanceChart from '../components/charts/time-range-performance'
 import WeekdayPNLChart from '../components/charts/weekday-pnl'
 import PnLBySideChart from '../components/charts/pnl-by-side'
+import PnLPerContractChart from '../components/charts/pnl-per-contract'
+import PnLPerContractDailyChart from '../components/charts/pnl-per-contract-daily'
 import AveragePositionTimeCard from '../components/statistics/average-position-time-card'
 import CumulativePnlCard from '../components/statistics/cumulative-pnl-card'
 import LongShortPerformanceCard from '../components/statistics/long-short-card'
@@ -43,8 +46,8 @@ export interface WidgetConfig {
   minWidth?: number
   minHeight?: number
   previewHeight?: number
-  getComponent: (props: { size: WidgetSize }) => JSX.Element
-  getPreview: () => JSX.Element
+  getComponent: (props: { size: WidgetSize }) => React.JSX.Element
+  getPreview: () => React.JSX.Element
 }
 
 // Helper function to create table preview
@@ -395,6 +398,24 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetConfig> = {
     getComponent: ({ size }) => <PnLBySideChart size={size} />,
     getPreview: () => <PnLBySideChart size="small" />
   },
+  pnlPerContractChart: {
+    type: 'pnlPerContractChart',
+    defaultSize: 'medium',
+    allowedSizes: ['small', 'small-long', 'medium', 'large'],
+    category: 'charts',
+    previewHeight: 300,
+    getComponent: ({ size }) => <PnLPerContractChart size={size} />,
+    getPreview: () => <PnLPerContractChart size="small" />
+  },
+  pnlPerContractDailyChart: {
+    type: 'pnlPerContractDailyChart',
+    defaultSize: 'medium',
+    allowedSizes: ['small', 'small-long', 'medium', 'large'],
+    category: 'charts',
+    previewHeight: 300,
+    getComponent: ({ size }) => <PnLPerContractDailyChart size={size} />,
+    getPreview: () => <PnLPerContractDailyChart size="small" />
+  },
   tickDistribution: {
     type: 'tickDistribution',
     defaultSize: 'medium',
@@ -594,10 +615,10 @@ export function requiresFullWidth(type: WidgetType): boolean {
   return WIDGET_REGISTRY[type].requiresFullWidth ?? false
 }
 
-export function getWidgetComponent(type: WidgetType, size: WidgetSize): JSX.Element {
+export function getWidgetComponent(type: WidgetType, size: WidgetSize): React.JSX.Element {
   return WIDGET_REGISTRY[type].getComponent({ size })
 }
 
-export function getWidgetPreview(type: WidgetType): JSX.Element {
+export function getWidgetPreview(type: WidgetType): React.JSX.Element {
   return WIDGET_REGISTRY[type].getPreview()
 } 

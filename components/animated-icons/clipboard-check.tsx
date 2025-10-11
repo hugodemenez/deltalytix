@@ -36,7 +36,7 @@ const checkVariants: Variants = {
 const ClipboardCheckIcon = forwardRef<
   ClipboardCheckIconHandle,
   ClipboardCheckIconProps
->(({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {
+>(({ onClick, className, size = 28, ...props }, ref) => {
   const controls = useAnimation();
   const isControlledRef = useRef(false);
 
@@ -49,33 +49,24 @@ const ClipboardCheckIcon = forwardRef<
     };
   });
 
-  const handleMouseEnter = useCallback(
+  const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (!isControlledRef.current) {
         controls.start('animate');
-      } else {
-        onMouseEnter?.(e);
+        // Auto-reset after animation completes
+        setTimeout(() => {
+          controls.start('normal');
+        }, 800); // Duration of animation + buffer
       }
+      onClick?.(e);
     },
-    [controls, onMouseEnter]
-  );
-
-  const handleMouseLeave = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!isControlledRef.current) {
-        controls.start('normal');
-      } else {
-        onMouseLeave?.(e);
-      }
-    },
-    [controls, onMouseLeave]
+    [controls, onClick]
   );
 
   return (
     <div
-      className={cn(className)}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      className={cn(className, "cursor-pointer")}
+      onClick={handleClick}
       {...props}
     >
       <svg

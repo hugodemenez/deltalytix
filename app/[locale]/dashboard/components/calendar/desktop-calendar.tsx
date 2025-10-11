@@ -25,6 +25,7 @@ import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useFinancialEventsStore } from "@/store/financial-events-store"
 import { useUserStore } from "@/store/user-store"
 import { Account } from "@/context/data-provider"
+import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
 
 
 const WEEKDAYS = [
@@ -62,6 +63,24 @@ const formatCurrency = (value: number, options?: { minimumFractionDigits?: numbe
     maximumFractionDigits: options?.maximumFractionDigits ?? 0
   })
   return formatted
+}
+
+const truncateAccountNumber = (accountNumber: string, maxLength: number = 15): string => {
+  if (accountNumber.length <= maxLength) {
+    return accountNumber
+  }
+  
+  // Always show last 3 digits
+  const lastThree = accountNumber.slice(-3)
+  const remainingLength = maxLength - 3 - 1 // -1 for the ellipsis
+  
+  if (remainingLength <= 0) {
+    return `...${lastThree}`
+  }
+  
+  // Show beginning + ellipsis + last 3 digits
+  const beginning = accountNumber.slice(0, remainingLength)
+  return `${beginning}...${lastThree}`
 }
 
 interface CalendarPnlProps {
@@ -141,6 +160,7 @@ function EventBadge({ events, impactLevels }: { events: FinancialEvent[], impact
 }
 
 function RenewalBadge({ renewals }: { renewals: Account[] }) {
+  
   const t = useI18n()
 
   if (renewals.length === 0) return null
@@ -164,38 +184,96 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
         </Badge>
       </PopoverTrigger>
       <PopoverContent
-        className="w-[350px] p-4 z-50"
+        className="w-[320px] sm:w-[380px] md:w-[420px] max-w-[90vw] p-0 z-50 border shadow-lg bg-card"
         align="start"
         side="right"
-        sideOffset={5}
+        sideOffset={8}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="space-y-4">
-          <div className="font-semibold text-sm">{t('propFirm.renewal.title')}</div>
-          {renewals.map((account, index) => (
-            <div key={account.id} className="border-b last:border-b-0 pb-3 last:pb-0">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <div className="font-medium text-sm">
-                    {account.propfirm || account.number}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {account.paymentFrequency?.toLowerCase()} {t('propFirm.renewal.frequency')}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-semibold text-sm text-blue-600 dark:text-blue-400">
-                    {account.price != null && formatCurrency(account.price, { maximumFractionDigits: 2 })}
-                  </div>
-                  {account.autoRenewal && (
-                    <div className="text-xs text-muted-foreground">
-                      {t('propFirm.renewal.notification')}
+        <div className="p-4 sm:p-6">
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-4 sm:mb-6">
+            <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900">
+              <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">{t('propFirm.renewal.title')}</h3>
+              <p className="text-xs text-muted-foreground">{renewals.length} {renewals.length === 1 ? t('propFirm.renewal.account') : t('propFirm.renewal.accounts')}</p>
+            </div>
+          </div>
+
+          {/* Account List with max height and scrolling */}
+          <div className="space-y-2 sm:space-y-3 max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+            {renewals.map((account, index) => (
+              <div 
+                key={account.id} 
+                className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-all duration-200 hover:shadow-sm"
+              >
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
+                  {/* Account Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
+                      {account.propfirm ? (
+                        <>
+                          <div className="font-semibold text-sm text-foreground truncate">
+                            {account.propfirm}
+                          </div>
+                          <div className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full inline-block w-fit">
+                            <span className="block" title={account.number}>
+                              {truncateAccountNumber(account.number, 12)}
+                            </span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="font-semibold text-sm text-foreground">
+                          <span className="block" title={account.number}>
+                            {truncateAccountNumber(account.number, 18)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                    
+                    <div className="flex flex-wrap items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
+                      <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-md font-medium whitespace-nowrap">
+                        {account.paymentFrequency?.toLowerCase()} {t('propFirm.renewal.frequency')}
+                      </div>
+                      {account.autoRenewal && (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-md whitespace-nowrap">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                          <span className="text-xs font-medium">{t('propFirm.renewal.notification')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Price */}
+                  <div className="text-left sm:text-right flex-shrink-0">
+                    <div className="font-bold text-base sm:text-lg text-blue-600 dark:text-blue-400 mb-1">
+                      {account.price != null && formatCurrency(account.price, { maximumFractionDigits: 2 })}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {account.paymentFrequency?.toLowerCase()}
+                    </div>
+                  </div>
                 </div>
+
+                {/* Subtle hover effect line */}
+                <div className="absolute bottom-0 left-3 right-3 sm:left-4 sm:right-4 h-0.5 bg-gradient-to-r from-blue-500/0 via-blue-500/50 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          {renewals.length > 0 && (
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0 text-xs text-muted-foreground">
+                <span>{t('propFirm.renewal.totalAccounts')}: {renewals.length}</span>
+                <span className="truncate">
+                  {t('propFirm.renewal.nextRenewal')}: {renewals[0]?.nextPaymentDate ? format(new Date(renewals[0].nextPaymentDate), 'MMM dd, yyyy') : 'N/A'}
+                </span>
               </div>
             </div>
-          ))}
+          )}
         </div>
       </PopoverContent>
     </Popover>
@@ -204,6 +282,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
 
 export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
   const accounts = useUserStore(state => state.accounts)
+  const groups = useUserStore(state => state.groups)
   const t = useI18n()
   const locale = useCurrentLocale()
   const timezone = useUserStore(state => state.timezone)
@@ -311,7 +390,14 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
   }, [monthEvents, timezone])
 
   const getRenewalsForDate = React.useCallback((date: Date) => {
+    // Get hidden group to filter out hidden accounts
+    const hiddenGroup = groups.find(g => g.name === HIDDEN_GROUP_NAME)
+    const hiddenAccountIds = hiddenGroup ? new Set(hiddenGroup.accounts.map(a => a.id)) : new Set()
+    
     return accounts.filter(account => {
+      // Skip hidden accounts
+      if (hiddenAccountIds.has(account.id)) return false;
+      
       if (!account.nextPaymentDate) return false;
       try {
         // Create new Date objects to avoid modifying the originals
@@ -332,7 +418,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
         return false
       }
     })
-  }, [accounts, timezone])
+  }, [accounts, timezone, groups])
 
   const calculateWeeklyTotal = React.useCallback((index: number, calendarDays: Date[], calendarData: CalendarData) => {
     const startOfWeekIndex = index - 6

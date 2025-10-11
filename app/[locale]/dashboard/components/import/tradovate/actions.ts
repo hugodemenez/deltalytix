@@ -8,32 +8,11 @@ import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 import { getTickDetails } from '@/server/tick-details'
 import { prisma } from '@/lib/prisma'
 
+import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
+
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
-  return date.toISOString().replace('Z', '+00:00')
-}
-
-// Helper function to ensure timestamps are in the correct format
-function formatTimestamp(timestamp: string): string {
-  // If the timestamp already has the correct format, return it
-  if (timestamp.includes('+00:00')) {
-    return timestamp
-  }
-  // If it ends with 'Z', convert to +00:00 format
-  if (timestamp.endsWith('Z')) {
-    return timestamp.replace('Z', '+00:00')
-  }
-  // If it's a valid ISO string, convert it
-  try {
-    const date = new Date(timestamp)
-    if (!isNaN(date.getTime())) {
-      return formatDateForAPI(date)
-    }
-  } catch (error) {
-    console.warn('Failed to parse timestamp:', timestamp, error)
-  }
-  // Return as-is if we can't parse it
-  return timestamp
+  return formatDateToTimestamp(date)
 }
 
 // Helper function to format duration in a readable format (e.g., "1min 34sec")
@@ -206,13 +185,17 @@ async function getFillFeesByIds(accessToken: string, fillIds: number[]): Promise
     if (fillIds.length === 0) return []
     
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    const BATCH_SIZE = 50 // Limit batch size to avoid API limits
+    const BATCH_SIZE = 5 // Limit batch size to 5 IDs at a time
     
-    // Try batch request first for smaller batches
-    if (fillIds.length <= BATCH_SIZE) {
+    const fees: TradovateFillFee[] = []
+    
+    // Process in batches of 5 IDs
+    for (let i = 0; i < fillIds.length; i += BATCH_SIZE) {
+      const batch = fillIds.slice(i, i + BATCH_SIZE)
+      
       try {
         // Use GET with comma-separated IDs as per Tradovate API docs
-        const idsParam = fillIds.join(',')
+        const idsParam = batch.join(',')
         const response = await fetch(`${apiBaseUrl}/v1/fillFee/items?ids=${idsParam}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -221,38 +204,45 @@ async function getFillFeesByIds(accessToken: string, fillIds: number[]): Promise
         })
         
         if (response.ok) {
-          const fees = await response.json()
-          return Array.isArray(fees) ? fees : []
+          const batchFees = await response.json()
+          if (Array.isArray(batchFees)) {
+            fees.push(...batchFees)
+          }
         } else {
-          logger.warn(`Batch fill fees request failed (${response.status}), falling back to individual requests`)
+          logger.warn(`Batch fill fees request failed (${response.status}), falling back to individual requests for batch`)
+          // Fallback to individual requests for this batch
+          const batchPromises = batch.map(async (fillId) => {
+            try {
+              const fee = await getFillFeeById(accessToken, fillId)
+              return fee
+            } catch (error) {
+              logger.warn(`Failed to fetch fill fee ${fillId}:`, error)
+              return null
+            }
+          })
+          
+          const batchResults = await Promise.all(batchPromises)
+          fees.push(...batchResults.filter(fee => fee !== null) as TradovateFillFee[])
         }
       } catch (batchError) {
-        logger.warn(`Batch fill fees request error, falling back to individual requests:`, batchError)
+        logger.warn(`Batch fill fees request error, falling back to individual requests for batch:`, batchError)
+        // Fallback to individual requests for this batch
+        const batchPromises = batch.map(async (fillId) => {
+          try {
+            const fee = await getFillFeeById(accessToken, fillId)
+            return fee
+          } catch (error) {
+            logger.warn(`Failed to fetch fill fee ${fillId}:`, error)
+            return null
+          }
+        })
+        
+        const batchResults = await Promise.all(batchPromises)
+        fees.push(...batchResults.filter(fee => fee !== null) as TradovateFillFee[])
       }
-    }
-    
-    // Fallback to individual requests
-    logger.info(`Fetching ${fillIds.length} fill fees individually (batch failed or too large)`)
-    const fees: TradovateFillFee[] = []
-    
-    // Process in smaller chunks to avoid overwhelming the API
-    for (let i = 0; i < fillIds.length; i += 10) {
-      const chunk = fillIds.slice(i, i + 10)
-      const chunkPromises = chunk.map(async (fillId) => {
-        try {
-          const fee = await getFillFeeById(accessToken, fillId)
-          return fee
-        } catch (error) {
-          logger.warn(`Failed to fetch fill fee ${fillId}:`, error)
-          return null
-        }
-      })
       
-      const chunkResults = await Promise.all(chunkPromises)
-      fees.push(...chunkResults.filter(fee => fee !== null) as TradovateFillFee[])
-      
-      // Small delay between chunks to respect rate limits
-      if (i + 10 < fillIds.length) {
+      // Small delay between batches to respect rate limits
+      if (i + BATCH_SIZE < fillIds.length) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
     }
@@ -314,17 +304,23 @@ async function getFillPairs(accessToken: string): Promise<TradovateFillPair[]> {
 
 // Helper function to fetch multiple fills by IDs in batch with fallback
 async function getFillsByIds(accessToken: string, fillIds: number[]): Promise<any[]> {
+  console.warn('getFillsByIds')
   try {
     if (fillIds.length === 0) return []
     
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    const BATCH_SIZE = 50 // Limit batch size to avoid API limits
+    const BATCH_SIZE = 5 // Limit batch size to 5 IDs at a time
     
-    // Try batch request first for smaller batches
-    if (fillIds.length <= BATCH_SIZE) {
+    const fills: any[] = []
+    
+    // Process in batches of 5 IDs
+    for (let i = 0; i < fillIds.length; i += BATCH_SIZE) {
+      const batch = fillIds.slice(i, i + BATCH_SIZE)
+      
+      console.warn('batch', JSON.stringify(batch))
       try {
         // Use GET with comma-separated IDs as per Tradovate API docs
-        const idsParam = fillIds.join(',')
+        const idsParam = batch.join(',')
         const response = await fetch(`${apiBaseUrl}/v1/fill/items?ids=${idsParam}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -333,38 +329,46 @@ async function getFillsByIds(accessToken: string, fillIds: number[]): Promise<an
         })
         
         if (response.ok) {
-          const fills = await response.json()
-          return Array.isArray(fills) ? fills : []
+          const batchFills = await response.json()
+          if (Array.isArray(batchFills)) {
+            fills.push(...batchFills)
+          }
         } else {
-          logger.warn(`Batch fills request failed (${response.status}), falling back to individual requests`)
+          logger.warn(`Batch fills request failed (${response.status}), falling back to individual requests for batch`)
+          // Fallback to individual requests for this batch
+          const batchPromises = batch.map(async (fillId) => {
+            try {
+              const fill = await getFillById(accessToken, fillId)
+              return fill
+            } catch (error) {
+              logger.warn(`Failed to fetch fill ${fillId}:`, error)
+              return null
+            }
+          })
+          
+          const batchResults = await Promise.all(batchPromises)
+          fills.push(...batchResults.filter(fill => fill !== null))
         }
       } catch (batchError) {
-        logger.warn(`Batch fills request error, falling back to individual requests:`, batchError)
+        logger.warn(`Batch fills request error, falling back to individual requests for batch:`, batchError)
+        // Fallback to individual requests for this batch
+        const batchPromises = batch.map(async (fillId) => {
+          try {
+            // This is going to spam API calls so we don't do it
+            // const fill = await getFillById(accessToken, fillId)
+            return null
+          } catch (error) {
+            logger.warn(`Failed to fetch fill ${fillId}:`, error)
+            return null
+          }
+        })
+        
+        const batchResults = await Promise.all(batchPromises)
+        fills.push(...batchResults.filter(fill => fill !== null))
       }
-    }
-    
-    // Fallback to individual requests
-    logger.info(`Fetching ${fillIds.length} fills individually (batch failed or too large)`)
-    const fills: any[] = []
-    
-    // Process in smaller chunks to avoid overwhelming the API
-    for (let i = 0; i < fillIds.length; i += 10) {
-      const chunk = fillIds.slice(i, i + 10)
-      const chunkPromises = chunk.map(async (fillId) => {
-        try {
-          const fill = await getFillById(accessToken, fillId)
-          return fill
-        } catch (error) {
-          logger.warn(`Failed to fetch fill ${fillId}:`, error)
-          return null
-        }
-      })
       
-      const chunkResults = await Promise.all(chunkPromises)
-      fills.push(...chunkResults.filter(fill => fill !== null))
-      
-      // Small delay between chunks to respect rate limits
-      if (i + 10 < fillIds.length) {
+      // Small delay between batches to respect rate limits
+      if (i + BATCH_SIZE < fillIds.length) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
     }
@@ -406,13 +410,19 @@ async function getOrdersByIds(accessToken: string, orderIds: number[]): Promise<
     if (orderIds.length === 0) return []
     
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
-    const BATCH_SIZE = 50 // Limit batch size to avoid API limits
+    console.warn('getOrdersByIds', JSON.stringify(orderIds))
+    const BATCH_SIZE = 5 // Limit batch size to 5 IDs at a time
     
-    // Try batch request first for smaller batches
-    if (orderIds.length <= BATCH_SIZE) {
+    const orders: any[] = []
+    
+    // Process in batches of 5 IDs
+    for (let i = 0; i < orderIds.length; i += BATCH_SIZE) {
+      const batch = orderIds.slice(i, i + BATCH_SIZE)
+      console.warn('batch orders', JSON.stringify(batch))
+      
       try {
         // Use GET with comma-separated IDs as per Tradovate API docs
-        const idsParam = orderIds.join(',')
+        const idsParam = batch.join(',')
         const response = await fetch(`${apiBaseUrl}/v1/order/items?ids=${idsParam}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -421,38 +431,46 @@ async function getOrdersByIds(accessToken: string, orderIds: number[]): Promise<
         })
         
         if (response.ok) {
-          const orders = await response.json()
-          return Array.isArray(orders) ? orders : []
+          const batchOrders = await response.json()
+          if (Array.isArray(batchOrders)) {
+            orders.push(...batchOrders)
+          }
         } else {
-          logger.warn(`Batch orders request failed (${response.status}), falling back to individual requests`)
+          logger.warn(`Batch orders request failed (${response.status}), falling back to individual requests for batch`)
+          // Fallback to individual requests for this batch
+          const batchPromises = batch.map(async (orderId) => {
+            try {
+              // This is going to spam API calls so we don't do it
+              // const order = await getOrderById(accessToken, orderId)
+              return null
+            } catch (error) {
+              logger.warn(`Failed to fetch order ${orderId}:`, error)
+              return null
+            }
+          })
+          
+          const batchResults = await Promise.all(batchPromises)
+          orders.push(...batchResults.filter(order => order !== null))
         }
       } catch (batchError) {
-        logger.warn(`Batch orders request error, falling back to individual requests:`, batchError)
+        logger.warn(`Batch orders request error, falling back to individual requests for batch:`, batchError)
+        // Fallback to individual requests for this batch
+        const batchPromises = batch.map(async (orderId) => {
+          try {
+            const order = await getOrderById(accessToken, orderId)
+            return order
+          } catch (error) {
+            logger.warn(`Failed to fetch order ${orderId}:`, error)
+            return null
+          }
+        })
+        
+        const batchResults = await Promise.all(batchPromises)
+        orders.push(...batchResults.filter(order => order !== null))
       }
-    }
-    
-    // Fallback to individual requests
-    logger.info(`Fetching ${orderIds.length} orders individually (batch failed or too large)`)
-    const orders: any[] = []
-    
-    // Process in smaller chunks to avoid overwhelming the API
-    for (let i = 0; i < orderIds.length; i += 10) {
-      const chunk = orderIds.slice(i, i + 10)
-      const chunkPromises = chunk.map(async (orderId) => {
-        try {
-          const order = await getOrderById(accessToken, orderId)
-          return order
-        } catch (error) {
-          logger.warn(`Failed to fetch order ${orderId}:`, error)
-          return null
-        }
-      })
       
-      const chunkResults = await Promise.all(chunkPromises)
-      orders.push(...chunkResults.filter(order => order !== null))
-      
-      // Small delay between chunks to respect rate limits
-      if (i + 10 < orderIds.length) {
+      // Small delay between batches to respect rate limits
+      if (i + BATCH_SIZE < orderIds.length) {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
     }
@@ -1435,6 +1453,22 @@ export async function testCustomTradovateToken(
   }
 }
 
+async function updateLastSyncedAt(userId: string, accessToken: string) {
+    // Update last synced at
+    const updateResult = await prisma.synchronization.updateMany({
+      where: {
+        userId: userId,
+        service: 'tradovate',
+        token: accessToken,
+      },
+      data: {
+        lastSyncedAt: new Date()
+      }
+    })
+
+    return updateResult
+}
+
 export async function getTradovateTrades(accessToken: string): Promise<TradovateTradesResult> {
   try {
     logger.info('Fetching Tradovate fill pairs for improved trade building (demo only)')
@@ -1457,6 +1491,7 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     // Means there are no trades to import
     if (fillPairs.length === 0) {
       logger.info('No fill pairs returned from Tradovate')
+      await updateLastSyncedAt(user.id, accessToken)
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
@@ -1557,6 +1592,8 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     // Build trades using fill pairs with account resolution
     const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, ordersById, accountsById, user.id, tickDetails)
     
+    await updateLastSyncedAt(user.id, accessToken)
+
     if (processedTrades.length === 0) {
       logger.info('No trades could be created from fill pairs')
       return { processedTrades: [], savedCount: 0 }
@@ -1567,6 +1604,14 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     const saveResult = await saveTradesAction(processedTrades)
     
     if (saveResult.error) {
+      if (saveResult.error === "DUPLICATE_TRADES") {
+        logger.error('Failed to save trades:', { error: saveResult.error, details: saveResult.details })
+        return { 
+          error: "DUPLICATE_TRADES",
+          processedTrades: processedTrades,
+          ordersCount: fillPairs.length * 2
+        }
+      }
       logger.error('Failed to save trades:', { error: saveResult.error, details: saveResult.details })
       return { 
         error: `Failed to save trades: ${saveResult.error}`,
@@ -1576,6 +1621,7 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     }
 
     logger.info(`Successfully saved ${saveResult.numberOfTradesAdded} fill pair trades`)
+    
     
     return { 
       processedTrades: processedTrades,

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,7 +12,6 @@ import {
   renameAccountAction,
   renameInstrumentAction 
 } from "@/server/accounts"
-import debounce from 'lodash/debounce'
 import { useData } from '@/context/data-provider'
 import { toast } from '@/hooks/use-toast'
 import { User } from '@supabase/supabase-js'
@@ -21,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Trade } from '@prisma/client'
 import ExportButton from '@/components/export-button'
 import { useI18n } from "@/locales/client"
@@ -125,31 +125,65 @@ export function DataManagementCard() {
     }
   }, [user, refreshTrades, t])
 
-  const debouncedUpdateCommission = useMemo(
-    () => debounce(async (accountNumber: string, instrumentGroup: string, newCommission: number) => {
-      try {
-        await updateCommissionForGroupAction(accountNumber, instrumentGroup, newCommission)
-        await refreshTrades()
-        toast({
-          title: t('dataManagement.toast.commissionUpdated'),
-          variant: 'default',
-        })
-      } catch (error) {
-        console.error("Failed to update commission:", error)
-        setError(error instanceof Error ? error : new Error('Failed to update commission'))
-        toast({
-          title: t('dataManagement.toast.commissionError'),
-          description: t('dataManagement.toast.deleteErrorDesc'),
-          variant: 'destructive',
-        })
-      }
-    }, 1000),
-    [refreshTrades, t]
-  )
+  const [commissionLoading, setCommissionLoading] = useState<Record<string, boolean>>({})
+  const [pendingCommissionUpdates, setPendingCommissionUpdates] = useState<Record<string, { accountNumber: string; instrumentGroup: string; newCommission: number }>>({})
 
-  const handleUpdateCommission = useCallback((accountNumber: string, instrumentGroup: string, newCommission: number) => {
-    debouncedUpdateCommission(accountNumber, instrumentGroup, newCommission)
-  }, [debouncedUpdateCommission])
+  const handleUpdateCommission = useCallback(async (accountNumber: string, instrumentGroup: string, newCommission: number) => {
+    const updateKey = `${accountNumber}-${instrumentGroup}`
+    
+    // Find the original commission value for this instrument group
+    const originalCommission = groupedTrades[accountNumber]?.[instrumentGroup]?.[0]?.commission / groupedTrades[accountNumber]?.[instrumentGroup]?.[0]?.quantity
+    
+    // Only set as pending if the value is different from the original and is a valid number
+    if (originalCommission !== undefined && !isNaN(newCommission) && newCommission !== originalCommission) {
+      setPendingCommissionUpdates(prev => ({
+        ...prev,
+        [updateKey]: { accountNumber, instrumentGroup, newCommission }
+      }))
+    } else {
+      // If the value is the same as original or invalid, remove any pending update
+      setPendingCommissionUpdates(prev => {
+        const newState = { ...prev }
+        delete newState[updateKey]
+        return newState
+      })
+    }
+  }, [groupedTrades])
+
+  const handleValidateCommission = useCallback(async (accountNumber: string, instrumentGroup: string) => {
+    const updateKey = `${accountNumber}-${instrumentGroup}`
+    const pendingUpdate = pendingCommissionUpdates[updateKey]
+    
+    if (!pendingUpdate) return
+
+    try {
+      setCommissionLoading(prev => ({ ...prev, [updateKey]: true }))
+      await updateCommissionForGroupAction(accountNumber, instrumentGroup, pendingUpdate.newCommission)
+      await refreshTrades()
+      
+      // Clear pending update
+      setPendingCommissionUpdates(prev => {
+        const newState = { ...prev }
+        delete newState[updateKey]
+        return newState
+      })
+      
+      toast({
+        title: t('dataManagement.toast.commissionUpdated'),
+        variant: 'default',
+      })
+    } catch (error) {
+      console.error("Failed to update commission:", error)
+      setError(error instanceof Error ? error : new Error('Failed to update commission'))
+      toast({
+        title: t('dataManagement.toast.commissionError'),
+        description: t('dataManagement.toast.deleteErrorDesc'),
+        variant: 'destructive',
+      })
+    } finally {
+      setCommissionLoading(prev => ({ ...prev, [updateKey]: false }))
+    }
+  }, [pendingCommissionUpdates, refreshTrades, t])
 
   const toggleAccountExpansion = useCallback((accountNumber: string) => {
     setExpandedAccounts(prev => ({
@@ -416,14 +450,51 @@ export function DataManagementCard() {
                         </div>
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                           <div className="relative w-full sm:w-32">
-                            <Input
-                              type="number"
-                              placeholder="Commission"
-                              defaultValue={trades[0].commission / trades[0].quantity}
-                              className="w-full"
-                              onChange={(e) => handleUpdateCommission(accountNumber, instrumentGroup, parseFloat(e.target.value))}
-                              aria-label={`Update commission for ${instrumentGroup}`}
-                            />
+                              <Input
+                                type="number"
+                                placeholder="Commission"
+                                defaultValue={trades[0].commission / trades[0].quantity}
+                                className={`w-full ${pendingCommissionUpdates[`${accountNumber}-${instrumentGroup}`] ? 'pr-8' : ''}`}
+                                onChange={(e) => {
+                                  const value = parseFloat(e.target.value)
+                                  if (!isNaN(value)) {
+                                    handleUpdateCommission(accountNumber, instrumentGroup, value)
+                                  } else {
+                                    // If invalid input, clear any pending updates
+                                    const updateKey = `${accountNumber}-${instrumentGroup}`
+                                    setPendingCommissionUpdates(prev => {
+                                      const newState = { ...prev }
+                                      delete newState[updateKey]
+                                      return newState
+                                    })
+                                  }
+                                }}
+                                aria-label={`Update commission for ${instrumentGroup}`}
+                              />
+                            {pendingCommissionUpdates[`${accountNumber}-${instrumentGroup}`] && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="absolute right-1 top-1/2 -translate-y-1/2 h-6 px-2 text-xs"
+                                      onClick={() => handleValidateCommission(accountNumber, instrumentGroup)}
+                                      disabled={commissionLoading[`${accountNumber}-${instrumentGroup}`]}
+                                    >
+                                      {commissionLoading[`${accountNumber}-${instrumentGroup}`] ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                      ) : (
+                                        '✓'
+                                      )}
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{t('dataManagement.validate')}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>

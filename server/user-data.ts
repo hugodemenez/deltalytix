@@ -68,10 +68,12 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
 
   // If forceRefresh is true, bypass cache and fetch directly
   if (forceRefresh) {
+    const start = performance.now();
     console.log(`[getUserData] Force refresh - bypassing cache for user ${userId}`)
     revalidateTag(`user-data-${userId}`)
     
-    const [userData, subscription, tickDetails, accounts, groups] = await Promise.all([
+    // Fetch all data in a single transaction
+    const [userData, subscription, tickDetails, accounts, groups, tags, financialEvents, moodHistory] = await prisma.$transaction([
       prisma.user.findUnique({
         where: { id: userId }
       }),
@@ -89,13 +91,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
       prisma.group.findMany({
         where: { userId: userId },
         include: { accounts: true }
-      })
-    ])
-
-    const core = { userData, subscription, tickDetails, accounts, groups }
-    
-    // Fetch non-cached, potentially large/volatile datasets
-    const [tags, financialEvents, moodHistory] = await Promise.all([
+      }),
       prisma.tag.findMany({
         where: { userId: userId }
       }),
@@ -107,13 +103,15 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
       })
     ])
 
+    console.log(`[getUserData] Force refresh completed in ${(performance.now() - start).toFixed(2)}ms`)
+
     return {
-      userData: core.userData,
-      subscription: core.subscription,
-      tickDetails: core.tickDetails,
+      userData,
+      subscription,
+      tickDetails,
       tags,
-      accounts: core.accounts,
-      groups: core.groups,
+      accounts,
+      groups,
       financialEvents,
       moodHistory
     }
@@ -122,30 +120,22 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
   // Cache only lightweight, stable core data. Heavy/volatile data is fetched outside cache.
   const getCachedCoreUserData = unstable_cache(
     async () => {
+      const start = performance.now();
       console.log(`[Cache MISS] Fetching core user data for user ${userId}`)
 
-      const [userData, subscription, tickDetails, accounts, groups] = await Promise.all([
+      // Cache only lightweight, stable data
+      const [userData, subscription, tickDetails] = await Promise.all([
         prisma.user.findUnique({
           where: { id: userId }
         }),
         prisma.subscription.findUnique({
           where: { userId: userId }
         }),
-        prisma.tickDetails.findMany(),
-        prisma.account.findMany({
-          where: { userId: userId },
-          include: {
-            payouts: true,
-            group: true
-          }
-        }),
-        prisma.group.findMany({
-          where: { userId: userId },
-          include: { accounts: true }
-        })
+        prisma.tickDetails.findMany()
       ])
 
-      return { userData, subscription, tickDetails, accounts, groups }
+      console.log(`[getUserData] Core data fetch completed in ${(performance.now() - start).toFixed(2)}ms`)
+      return { userData, subscription, tickDetails }
     },
     [`user-data-${userId}-${locale}`],
     {
@@ -156,8 +146,19 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
 
   const core = await getCachedCoreUserData()
 
-  // Fetch non-cached, potentially large/volatile datasets
-  const [tags, financialEvents, moodHistory] = await Promise.all([
+  // Fetch large/volatile data in a single transaction (not cached)
+  const [accounts, groups, tags, financialEvents, moodHistory] = await prisma.$transaction([
+    prisma.account.findMany({
+      where: { userId: userId },
+      include: {
+        payouts: true,
+        group: true
+      }
+    }),
+    prisma.group.findMany({
+      where: { userId: userId },
+      include: { accounts: true }
+    }),
     prisma.tag.findMany({
       where: { userId: userId }
     }),
@@ -174,8 +175,8 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
     subscription: core.subscription,
     tickDetails: core.tickDetails,
     tags,
-    accounts: core.accounts,
-    groups: core.groups,
+    accounts,
+    groups,
     financialEvents,
     moodHistory
   }

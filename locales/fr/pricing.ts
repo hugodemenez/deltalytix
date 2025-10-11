@@ -2,6 +2,7 @@ export default {
     pricing: {
         heading: 'Tarification',
         subheading: 'Stockez, explorez et améliorez vos données de trading avec le plan adapté à vos besoins.',
+        loading: 'Chargement...',
         yearly: 'annuel',
         monthly: 'mensuel',
         quarterly: 'trimestriel',

@@ -14,7 +14,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useI18n } from "@/locales/client"
+import { useI18n, useCurrentLocale } from "@/locales/client"
+import { formatInTimeZone } from 'date-fns-tz'
+import { fr, enUS } from 'date-fns/locale'
+import { useUserStore } from '@/store/user-store'
 
 interface PNLChartProps {
   size?: WidgetSize
@@ -58,18 +61,17 @@ const negativeColor = "hsl(var(--chart-1))" // Orangish color
 
 const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const { timezone } = useUserStore()
+  const dateLocale = locale === 'fr' ? fr : enUS
+  
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const date = new Date(data.date + 'T00:00:00Z');
     return (
       <div className="bg-background p-2 border rounded shadow-sm">
         <p className="font-semibold">
-          {date.toLocaleDateString("en-US", { 
-            month: "short", 
-            day: "numeric", 
-            year: "numeric",
-            timeZone: 'UTC'
-          })}
+          {formatInTimeZone(date, timezone, 'MMM d, yyyy', { locale: dateLocale })}
         </p>
         <p className={`font-bold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
           {t('pnl.tooltip.pnl')}: {formatCurrency(data.pnl)}
@@ -85,6 +87,9 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 export default function PNLChart({ size = 'medium' }: PNLChartProps) {
   const { calendarData } = useData()
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const { timezone } = useUserStore()
+  const dateLocale = locale === 'fr' ? fr : enUS
 
   const chartData = React.useMemo(() => 
     Object.entries(calendarData)
@@ -192,11 +197,7 @@ export default function PNLChart({ size = 'medium' }: PNLChartProps) {
                 minTickGap={size === 'small-long' ? 30 : 50}
                 tickFormatter={(value) => {
                   const date = new Date(value + 'T00:00:00Z')
-                  return date.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    timeZone: 'UTC'
-                  })
+                  return formatInTimeZone(date, timezone, 'MMM d', { locale: dateLocale })
                 }}
               />
               <YAxis

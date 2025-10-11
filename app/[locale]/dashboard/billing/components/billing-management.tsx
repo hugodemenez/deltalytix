@@ -8,11 +8,12 @@ import { Check, AlertCircle, CheckCircle2, CalendarDays, Clock, CreditCard, Hist
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getSubscriptionData, updateSubscription, collectSubscriptionFeedback, type SubscriptionWithPrice } from "../../actions/billing"
+import { updateSubscription, collectSubscriptionFeedback, type SubscriptionWithPrice } from "../../actions/billing"
 import { useToast } from "@/hooks/use-toast"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import PricingPlans from "@/components/pricing-plans"
 import Link from "next/link"
+import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store"
 
 
 type SubscriptionStatus = 
@@ -44,14 +45,17 @@ type Plans = {
 }
 
 export default function BillingManagement() {
-  const [subscription, setSubscription] = useState<SubscriptionWithPrice | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
   const [feedback, setFeedback] = useState("")
   const { toast } = useToast()
   const t = useI18n()
   const locale = useCurrentLocale()
+  
+  // Use store instead of local state
+  const subscription = useStripeSubscriptionStore(state => state.stripeSubscription)
+  const isLoading = useStripeSubscriptionStore(state => state.isLoading)
+  const refreshSubscription = useStripeSubscriptionStore(state => state.refreshSubscription)
 
   // Add helper function for safe date formatting
   function formatStripeDate(
@@ -68,14 +72,7 @@ export default function BillingManagement() {
     return date.toLocaleDateString(locale, options)
   }
 
-  useEffect(() => {
-    async function loadSubscription() {
-      const data = await getSubscriptionData()
-      setSubscription(data)
-      setIsLoading(false)
-    }
-    loadSubscription()
-  }, [])
+  // Subscription data is now loaded by DataProvider
 
   const handleSubscriptionAction = async (action: 'pause' | 'resume' | 'cancel') => {
     if (!subscription?.id) return
@@ -94,8 +91,7 @@ export default function BillingManagement() {
         }
 
         // Refresh subscription data
-        const updatedData = await getSubscriptionData()
-        setSubscription(updatedData)
+        await refreshSubscription()
         
         toast({
           title: "Success",
@@ -477,6 +473,17 @@ export default function BillingManagement() {
         </Card>
       )}
 
+      {/* Available Plans */}
+      <Card className="border-none shadow-none bg-transparent">
+        <CardHeader className="px-0">
+          <CardTitle>{t('billing.availablePlans')}</CardTitle>
+          <CardDescription>{t('billing.choosePlan')}</CardDescription>
+        </CardHeader>
+        <CardContent className="px-0">
+          <PricingPlans currentSubscription={subscription} />
+        </CardContent>
+      </Card>
+
       {/* Payment History */}
       <Card className="border-none shadow-none bg-transparent">
         <CardHeader className="px-0">
@@ -553,17 +560,6 @@ export default function BillingManagement() {
               </div>
             )}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Available Plans */}
-      <Card className="border-none shadow-none bg-transparent">
-        <CardHeader className="px-0">
-          <CardTitle>{t('billing.availablePlans')}</CardTitle>
-          <CardDescription>{t('billing.choosePlan')}</CardDescription>
-        </CardHeader>
-        <CardContent className="px-0">
-          <PricingPlans currentSubscription={subscription} />
         </CardContent>
       </Card>
     </div>

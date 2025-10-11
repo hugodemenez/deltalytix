@@ -114,7 +114,7 @@ export default function Home() {
           
           <TabsContent 
             value="table" 
-            className="flex-1 -mt-16"
+            className="flex-1 flex-grow-0"
           >
             <TradeTableReview />
           </TabsContent>

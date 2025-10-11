@@ -15,7 +15,7 @@ import { AccountGroup, type AccountGroup as AccountGroupType } from "./account-g
 import { AccountCoin, type Account as AccountCoinType } from "./account-coin"
 
 
-const HIDDEN_GROUP_NAME = "Hidden Accounts"
+export const HIDDEN_GROUP_NAME = "Hidden Accounts"
 
 interface UngroupedAccount {
   number: string

@@ -1,6 +1,9 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@source "../node_modules/streamdown/dist/index.js";
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -19,6 +22,28 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+  
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
@@ -271,4 +296,20 @@ code > [data-line]::before {
       -webkit-overflow-scrolling: touch;
     }
   }
+}
+
+/* Mobile navbar overlay styles */
+body[data-mobile-navbar="open"] .max-w-screen-xl {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+body[data-mobile-navbar="open"] .max-w-screen-xl > * {
+  pointer-events: none;
+}
+
+/* Hide accordion arrow for theme selector */
+[data-accordion-trigger] [data-accordion-icon] {
+  display: none;
 }

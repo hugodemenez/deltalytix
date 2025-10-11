@@ -9,10 +9,12 @@ import { useI18n } from "@/locales/client"
 import { useToast } from "@/hooks/use-toast"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
 import { saveJournal, getMoodForDay } from '@/server/journal'
-import { NoteEditor } from "@/app/[locale]/dashboard/components/mindset/note-editor"
 import { format } from 'date-fns'
 import { useUserStore } from '../../../../../store/user-store'
 import { useMoodStore } from '@/store/mood-store'
+
+import { Skeleton } from "@/components/ui/skeleton"
+import { TiptapEditor } from '@/components/tiptap-editor'
 
 interface DailyCommentProps {
   dayData: CalendarEntry | undefined
@@ -41,13 +43,18 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   const [comment, setComment] = React.useState<string>("")
   const [isSavingComment, setIsSavingComment] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
+  const [isLoading, setIsLoading] = React.useState(true)
 
   // Load comment from moodHistory or server on mount
   React.useEffect(() => {
     const loadComment = async () => {
-      if (!user?.id) return
+      if (!user?.id) {
+        setIsLoading(false)
+        return
+      }
 
       try {
+        setIsLoading(true)
         const dateKey = format(selectedDate, 'yyyy-MM-dd')
 
         // First check moodHistory
@@ -59,6 +66,7 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
 
         if (moodForDate?.journalContent) {
           setComment(moodForDate.journalContent)
+          setIsLoading(false)
           return
         }
 
@@ -70,6 +78,8 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
         }
       } catch (error) {
         console.error('Error loading comment:', error)
+      } finally {
+        setIsLoading(false)
       }
     }
 
@@ -88,10 +98,10 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
 
     setIsSavingComment(true)
     setSaveError(null)
-    
+
     try {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
-      
+
       // Save to server
       const savedMood = await saveJournal(comment, dateKey)
 
@@ -122,51 +132,46 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   }
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="text-base md:text-lg">
-          {t('calendar.charts.dailyComment')}
-        </CardTitle>
-        <CardDescription className="text-xs md:text-sm">
-          {t('calendar.charts.addComment')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          <div className={cn(
-            "min-h-[200px]",
-            isSavingComment && "opacity-50",
-            saveError && "border-destructive"
-          )}>
-            <NoteEditor
-              initialContent={comment}
-              onChange={setComment}
-              height="200px"
-              width="100%"
-            />
+    <div>
+      <div className={cn(
+        "min-h-[200px]",
+        isSavingComment && "opacity-50",
+        saveError && "border-destructive"
+      )}>
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-[400px] w-full" />
           </div>
-          <div className="flex items-center justify-between">
-            {isSavingComment && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                {t('calendar.charts.saving')}
-              </div>
-            )}
-            {saveError && (
-              <p className="text-sm text-destructive">
-                {saveError}
-              </p>
-            )}
-            <Button
-              onClick={handleSaveComment}
-              disabled={isSavingComment || !comment.trim()}
-              size="sm"
-            >
-              {t('calendar.charts.saveComment')}
-            </Button>
+        ) : (
+          <TiptapEditor
+            content={comment==="" ? undefined : comment}
+            onChange={setComment}
+            height="100%"
+            width="100%"
+            placeholder={t('calendar.charts.addComment')}
+          />
+        )}
+      </div>
+      <div className="flex items-center justify-between">
+        {isSavingComment && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {t('calendar.charts.saving')}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        )}
+        {saveError && (
+          <p className="text-sm text-destructive">
+            {saveError}
+          </p>
+        )}
+        <Button
+          onClick={handleSaveComment}
+          disabled={isLoading || isSavingComment || !comment.trim()}
+          size="sm"
+        >
+          {t('calendar.charts.saveComment')}
+        </Button>
+      </div>
+    </div>
   )
 } 

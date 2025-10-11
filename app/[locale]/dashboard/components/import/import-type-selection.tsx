@@ -16,6 +16,7 @@ import { platforms, PlatformConfig, PlatformType } from './config/platforms'
 import { PlatformItem } from './components/platform-item'
 import { PlatformTutorial } from './components/platform-tutorial'
 import { cn } from '@/lib/utils'
+import { useImportTypePreferenceStore } from '@/store/import-type-preference-store'
 
 export type ImportType = PlatformType
 
@@ -43,11 +44,12 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
   const [searchQuery, setSearchQuery] = useState('')
   const [hoveredCategory, setHoveredCategory] = useState<PlatformConfig['category'] | null>(null)
   const t = useI18n()
+  const { lastSelectedType, setLastSelectedType } = useImportTypePreferenceStore()
   
-  // Set default selection to Rithmic sync
+  // Set default selection from store preference
   useEffect(() => {
-    setSelectedType('rithmic-sync')
-  }, [setSelectedType])
+    setSelectedType(lastSelectedType)
+  }, [setSelectedType, lastSelectedType])
 
   const getTranslatedCategory = (category: PlatformConfig['category']) => {
     switch (category) {
@@ -84,7 +86,7 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                 onValueChange={setSearchQuery}
               />
               <ScrollArea className="h-[calc(100%-45px)]">
-                <CommandList className="h-full">
+                <CommandList className="h-full" defaultChecked={false} defaultValue={lastSelectedType}>
                   <CommandEmpty>{t('import.type.noResults')}</CommandEmpty>
                   {categories.map(category => {
                     const categoryPlatforms = filteredPlatforms.filter(platform => platform.category === category)
@@ -105,7 +107,10 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
                             key={platform.type}
                             platform={platform}
                             isSelected={selectedType === platform.type}
-                            onSelect={(type) => setSelectedType(type as ImportType)}
+                            onSelect={(type) => {
+                              setSelectedType(type as ImportType)
+                              setLastSelectedType(type as ImportType)
+                            }}
                             onHover={(category) => setHoveredCategory(category as PlatformConfig['category'])}
                             onLeave={() => setHoveredCategory(null)}
                             isWeekend={isWeekend()}

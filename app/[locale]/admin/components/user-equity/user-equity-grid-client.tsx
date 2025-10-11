@@ -13,11 +13,12 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Filter, X } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Popover, PopoverTrigger, PopoverContent } from '@radix-ui/react-popover'
 
 interface UserEquityData {
   userId: string
   email: string
-  createdAt: string
   trades: any[]
   equityCurve: {
     date: string
@@ -38,11 +39,6 @@ interface UserEquityData {
   }
 }
 
-interface UserEquityGridClientProps {
-  initialUserCards: React.ReactNode[]
-  totalUsers: number
-  hasMore: boolean
-}
 
 interface Filters {
   minTrades: number
@@ -50,11 +46,11 @@ interface Filters {
   equityFilter: 'all' | 'positive' | 'negative'
 }
 
-export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: initialHasMore }: UserEquityGridClientProps) {
-  const [userCards, setUserCards] = useState<React.ReactNode[]>(initialUserCards)
+export function UserEquityGridClient() {
+  const [userCards, setUserCards] = useState<React.ReactNode[]>([])
   const [additionalUsers, setAdditionalUsers] = useState<UserEquityData[]>([])
   const [currentPage, setCurrentPage] = useState(1)
-  const [hasMore, setHasMore] = useState(initialHasMore)
+  const [hasMore, setHasMore] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [showDailyView, setShowDailyView] = useState(true)
@@ -64,7 +60,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
     minTradedDays: 0,
     equityFilter: 'all'
   })
-  
+
   const observerRef = useRef<IntersectionObserver>(null)
   const loadingRef = useRef<HTMLDivElement>(null)
 
@@ -77,17 +73,17 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
   // Filter users based on criteria
   const filteredUsers = useMemo(() => additionalUsers.filter(user => {
     const tradedDays = getTradedDays(user.equityCurve)
-    
+
     // Check minimum trades
     if (user.statistics.totalTrades < filters.minTrades) return false
-    
+
     // Check minimum traded days
     if (tradedDays < filters.minTradedDays) return false
-    
+
     // Check equity filter
     if (filters.equityFilter === 'positive' && user.statistics.totalPnL <= 0) return false
     if (filters.equityFilter === 'negative' && user.statistics.totalPnL >= 0) return false
-    
+
     return true
   }), [additionalUsers, filters])
 
@@ -98,7 +94,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
     setLoadError(null)
     try {
       const data = await getUserEquityData(currentPage, 10)
-      
+
       // Store the user data for rendering
       setAdditionalUsers(prev => [...prev, ...data.users])
       setHasMore(data.hasMore)
@@ -164,7 +160,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
               {showDailyView ? 'Grouped by day' : 'Individual trades'}
             </span>
           </div>
-          
+
           <Button
             variant="outline"
             size="sm"
@@ -196,7 +192,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                 </Button>
               )}
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Minimum Trades */}
               <div className="space-y-2">
@@ -231,7 +227,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                 <Label htmlFor="equity-filter" className="text-xs">Equity</Label>
                 <Select
                   value={filters.equityFilter}
-                  onValueChange={(value: 'all' | 'positive' | 'negative') => 
+                  onValueChange={(value: 'all' | 'positive' | 'negative') =>
                     setFilters(prev => ({ ...prev, equityFilter: value }))
                   }
                 >
@@ -257,40 +253,41 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {userCards}
-        
-        {/* Render additional users with proper charts */}
         {filteredUsers
           .filter(user => user.statistics.totalTrades > 0) // Only show users with trades
           .map((user, index) => {
             // Calculate trader number based on initial cards + current index
-            const traderNumber = (initialUserCards?.length || 0) + index + 1
+            const traderNumber = (userCards?.length || 0) + index + 1
             const tradedDays = getTradedDays(user.equityCurve)
-            
+
             return (
               <Card key={user.userId} className="p-4 space-y-4">
                 {/* User Header */}
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-sm">
-                      Trader #{traderNumber}
-                    </h3>
+                    <Popover>
+                      <PopoverTrigger >
+                          Trader #{traderNumber}
+                        </PopoverTrigger>
+                      <PopoverContent className="w-fit p-0 bg-background">
+                        {user.email}
+                      </PopoverContent>
+                    </Popover>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(user.createdAt).toLocaleDateString()}
+                      First trade: {new Date(user.equityCurve[0].date).toLocaleDateString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {tradedDays} days, {user.statistics.totalTrades} trades
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className={`px-2 py-1 rounded text-xs font-medium ${
-                      user.statistics.totalPnL >= 0 
-                        ? 'bg-green-100 text-green-800' 
+                    <div className={`px-2 py-1 rounded text-xs font-medium ${user.statistics.totalPnL >= 0
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
-                    }`}>
+                      }`}>
                       {user.statistics.totalPnL >= 0 ? '+' : ''}{user.statistics.totalPnL.toFixed(2)}
                     </div>
-                    <Link 
+                    <Link
                       href={`/admin/dashboard/${user.userId}`}
                       className="p-1 hover:bg-gray-100 rounded transition-colors"
                       title="View trader details"
@@ -301,7 +298,7 @@ export function UserEquityGridClient({ initialUserCards, totalUsers, hasMore: in
                 </div>
 
                 {/* Chart */}
-                <UserEquityChart 
+                <UserEquityChart
                   equityCurve={user.equityCurve}
                   userId={user.userId}
                   totalPnL={user.statistics.totalPnL}

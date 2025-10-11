@@ -24,7 +24,8 @@ export async function getSubscribers() {
       select: {
         email: true,
         isActive: true,
-        firstName: true
+        firstName: true,
+        lastName: true
       },
     })
     return { subscribers }
@@ -143,6 +144,7 @@ export async function sendNewsletter({
             to: [email],
             subject,
             reply_to: 'hugo.demenez@deltalytix.app',
+            scheduledAt: 'tomorrow at 9am paris time',
             react: NewsletterEmail({ 
               youtubeId, 
               introMessage, 

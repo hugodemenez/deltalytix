@@ -199,6 +199,50 @@ export function groupBy<T>(array: T[], key: keyof T): { [key: string]: T[] } {
   }, {} as { [key: string]: T[] });
 }
 
+export function calculateTradingDays(trades: Trade[], minPnlToCountAsDay?: number | null): {
+  totalTradingDays: number;
+  validTradingDays: number;
+  dailyPnL: { [date: string]: number };
+} {
+  if (!trades.length) {
+    return {
+      totalTradingDays: 0,
+      validTradingDays: 0,
+      dailyPnL: {}
+    };
+  }
+
+  // Group trades by date and calculate daily PnL
+  const dailyPnL: { [date: string]: number } = {};
+  
+  trades.forEach(trade => {
+    const tradeDate = new Date(trade.entryDate);
+    const dateKey = tradeDate.toISOString().split('T')[0];
+    
+    if (!dailyPnL[dateKey]) {
+      dailyPnL[dateKey] = 0;
+    }
+    
+    // Calculate net PnL (including commission)
+    dailyPnL[dateKey] += trade.pnl - (trade.commission || 0);
+  });
+
+  const totalTradingDays = Object.keys(dailyPnL).length;
+  
+  // Count valid trading days based on threshold
+  let validTradingDays = totalTradingDays;
+  
+  if (minPnlToCountAsDay !== null && minPnlToCountAsDay !== undefined && minPnlToCountAsDay > 0) {
+    validTradingDays = Object.values(dailyPnL).filter(dailyPnl => dailyPnl >= minPnlToCountAsDay).length;
+  }
+
+  return {
+    totalTradingDays,
+    validTradingDays,
+    dailyPnL
+  };
+}
+
 export function generateTradeHash(trade: Partial<Trade>): string {
   // Handle undefined values by converting them to empty strings or default values
   const hashString = `${trade.userId || ''}-${trade.accountNumber || ''}-${trade.instrument || ''}-${trade.entryDate || ''}-${trade.closeDate || ''}-${trade.quantity || 0}-${trade.entryId || ''}-${trade.closeId || ''}-${trade.timeInPosition || 0}`

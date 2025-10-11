@@ -17,9 +17,16 @@ export default {
             highestDailyProfit: 'Plus haut profit journalier',
             maxAllowedDailyProfit: 'Profit journalier maximum autorisé',
             totalPnL: 'P&L Total',
-            totalTrades: 'Total Trades'
+            totalTrades: 'Total Trades',
+            tradingDays: 'Jours de Trading'
         },
         ungrouped: 'Non groupé',
+        dragAndDrop: {
+            dragToReorder: 'Glissez pour réorganiser les comptes',
+            reordering: 'Réorganisation des comptes...',
+            reorderSuccess: 'Comptes réorganisés avec succès',
+            reorderError: 'Échec de la réorganisation des comptes'
+        },
         tabs: {
             overview: 'Aperçu',
             consistency: 'Cohérence'
@@ -67,6 +74,7 @@ export default {
                 activationFees: 'Frais d\'Activation',
                 balanceRequired: 'Solde Requis',
                 minTradingDays: 'Jours de Trading Minimum pour Paiement',
+                minPnlToCountAsDay: 'P&L Minimum pour Compter comme Jour',
                 propfirmName: 'Nom de la Prop Firm',
                 nextPaymentDate: 'Prochaine Date de Paiement',
                 paymentFrequency: 'Fréquence de Paiement',
@@ -76,7 +84,7 @@ export default {
                 renewalNoticeInfo: 'Vous recevrez des notifications 3 jours avant le renouvellement',
                 renewalNotice: 'Jours de Préavis de Renouvellement',
                 autoAdvanceInfo: '💡 Cette date avancera automatiquement en fonction de votre fréquence {frequency} après chaque avis de renouvellement.',
-                customFrequencyWarning: '⚠️ La fréquence personnalisée nécessite des mises à jour manuelles de la date'
+                customFrequencyWarning: 'Si vous choisissez une fréquence unique, la date de paiement sera fixe et ne sera pas mise à jour automatiquement.'
             },
             trailingTypes: {
                 static: 'Statique',
@@ -93,11 +101,12 @@ export default {
                 quarterly: 'Trimestriel',
                 biannual: 'Semestriel',
                 annual: 'Annuel',
-                custom: 'Personnalisé'
+                custom: 'Unique'
             },
             tooltips: {
                 trailingDrawdown: 'Le drawdown trailing suit vos profits à la hausse mais ne descend jamais quand vous perdez de l\'argent. Lorsqu\'il est activé avec un stop trailing, il arrête de suivre les profits une fois que vous atteignez le montant de profit spécifié. Le calcul peut être fait en intraday (temps réel) ou en fin de journée (calculé une fois par jour basé sur le profit/perte total quotidien).',
-                trailingStopProfit: 'Exemple : Si vous définissez 3 000$, une fois que vous atteignez 3 000$ de profits, le drawdown trailing s\'arrêtera d\'augmenter et se verrouillera à ce niveau. Cela signifie que votre stop loss ne suivra plus vos profits à la hausse au-delà de ce point.'
+                trailingStopProfit: 'Exemple : Si vous définissez 3 000$, une fois que vous atteignez 3 000$ de profits, le drawdown trailing s\'arrêtera d\'augmenter et se verrouillera à ce niveau. Cela signifie que votre stop loss ne suivra plus vos profits à la hausse au-delà de ce point.',
+                minPnlToCountAsDay: 'P&L minimum requis pour qu\'une journée soit comptée comme jour de trading. Les journées avec un P&L en dessous de ce seuil ne compteront pas dans les exigences de jours de trading minimum.'
             },
             placeholders: {
                 enterPrice: 'Entrez le prix',
@@ -260,7 +269,11 @@ export default {
         renewal: {
             title: 'Renouvellements de compte',
             frequency: 'renouvellement',
-            notification: 'Notifications activées'
+            notification: 'Notifications activées',
+            totalAccounts: 'Total des comptes',
+            nextRenewal: 'Prochain renouvellement',
+            account: 'compte',
+            accounts: 'comptes'
         },
         consistency: {
             title: 'Cohérence du Trading',

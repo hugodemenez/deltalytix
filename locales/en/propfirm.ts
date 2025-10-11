@@ -17,9 +17,16 @@ export default {
             highestDailyProfit: 'Highest Daily Profit',
             maxAllowedDailyProfit: 'Max Allowed Daily Profit',
             totalPnL: 'Total P&L',
-            totalTrades: 'Total Trades'
+            totalTrades: 'Total Trades',
+            tradingDays: 'Trading Days'
         },
         ungrouped: 'Ungrouped',
+        dragAndDrop: {
+            dragToReorder: 'Drag to reorder accounts',
+            reordering: 'Reordering accounts...',
+            reorderSuccess: 'Accounts reordered successfully',
+            reorderError: 'Failed to reorder accounts'
+        },
         tabs: {
             overview: 'Overview',
             consistency: 'Consistency'
@@ -67,6 +74,7 @@ export default {
                 activationFees: 'Activation Fees',
                 balanceRequired: 'Balance Required',
                 minTradingDays: 'Min Trading Days for Payout',
+                minPnlToCountAsDay: 'Min PnL to Count as Day',
                 propfirmName: 'Prop Firm Name',
                 nextPaymentDate: 'Next Payment Date',
                 paymentFrequency: 'Payment Frequency',
@@ -76,7 +84,7 @@ export default {
                 renewalNoticeInfo: 'You will receive notifications 3 days before renewal',
                 renewalNotice: 'Renewal Notice Days',
                 autoAdvanceInfo: '💡 This date will automatically advance based on your {frequency} frequency after each renewal notice.',
-                customFrequencyWarning: '⚠️ Custom frequency requires manual date updates'
+                customFrequencyWarning: 'If you choose a unique frequency, the payment date will be fixed and not updated automatically.'
             },
             trailingTypes: {
                 static: 'Static',
@@ -93,11 +101,12 @@ export default {
                 quarterly: 'Quarterly',
                 biannual: 'Bi-annual',
                 annual: 'Annual',
-                custom: 'Custom'
+                custom: 'Once'
             },
             tooltips: {
                 trailingDrawdown: 'Trailing drawdown follows your profits upward but never moves down when you lose money. When enabled with a trailing stop, it stops following profits once you reach the specified profit amount. The calculation can be done intraday (real-time) or end-of-day (computed once daily based on total daily profit/loss).',
-                trailingStopProfit: 'Example: If you set $3,000, once you reach $3,000 in profits, the trailing drawdown will stop increasing and lock at that level. This means your stop loss will no longer follow your profits upward beyond this point.'
+                trailingStopProfit: 'Example: If you set $3,000, once you reach $3,000 in profits, the trailing drawdown will stop increasing and lock at that level. This means your stop loss will no longer follow your profits upward beyond this point.',
+                minPnlToCountAsDay: 'Minimum PnL required for a day to be counted as a trading day. Days with PnL below this threshold will not count towards minimum trading day requirements.'
             },
             placeholders: {
                 enterPrice: 'Enter price',
@@ -260,7 +269,11 @@ export default {
         renewal: {
             title: 'Account Renewals',
             frequency: 'renewal',
-            notification: 'Notifications enabled'
+            notification: 'Notifications enabled',
+            totalAccounts: 'Total accounts',
+            nextRenewal: 'Next renewal',
+            account: 'account',
+            accounts: 'accounts'
         },
         consistency: {
             title: 'Trading Consistency',

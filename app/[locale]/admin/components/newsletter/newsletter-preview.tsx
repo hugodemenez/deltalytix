@@ -25,7 +25,7 @@ export function NewsletterPreview() {
       const result = await renderEmailPreview({
         youtubeId: debouncedContent.youtubeId || 'p2pYl6GMGbk',
         introMessage: debouncedContent.introMessage || '*Pas encore de contenu*',
-        features: debouncedContent.features.filter(f => f.trim()),
+        features: debouncedContent.features.filter(f => typeof f === 'string' && f.trim()),
         firstName: debouncedContent.firstName,
         subject: debouncedContent.subject
       })

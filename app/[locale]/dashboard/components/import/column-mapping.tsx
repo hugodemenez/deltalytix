@@ -8,7 +8,7 @@ import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { ImportType } from './import-type-selection'
 import { mappingSchema } from '@/app/api/ai/mappings/schema'
 import { cn } from '@/lib/utils'
-import { z } from 'zod'
+import { z } from 'zod/v3';
 
 type MappingObject = z.infer<typeof mappingSchema>
 type MappingKey = keyof MappingObject
@@ -58,7 +58,7 @@ const getColumnDisplayName = (header: string, index: number, headers: string[]) 
 
 export default function ColumnMapping({ headers, csvData, mappings, setMappings, error, importType }: ColumnMappingProps) {
 
-  const { object, submit, isLoading } = useObject<MappingObject>({
+  const { object, submit, isLoading } = useObject({
     api: '/api/ai/mappings',
     schema: mappingSchema,
     onError(error) {

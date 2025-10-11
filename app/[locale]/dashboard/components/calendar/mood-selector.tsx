@@ -3,7 +3,7 @@
 import React from 'react'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { FaRegSadTear, FaRegMeh, FaRegSmileBeam } from "react-icons/fa"
+import { Frown, Meh, Smile } from "lucide-react"
 import { useI18n } from '@/locales/client'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { saveMood, getMoodForDay } from '@/server/journal'
@@ -131,7 +131,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
                   onClick={() => handleMoodSelect('bad')}
                   disabled={isLoading !== null}
                 >
-                  <FaRegSadTear className={`h-3 w-3 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
+                  <Frown className={`h-3 w-3 ${isLoading === 'bad' ? 'animate-pulse' : ''}`} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -150,7 +150,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
                   onClick={() => handleMoodSelect('okay')}
                   disabled={isLoading !== null}
                 >
-                  <FaRegMeh className={`h-3 w-3 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
+                  <Meh className={`h-3 w-3 ${isLoading === 'okay' ? 'animate-pulse' : ''}`} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -169,7 +169,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
                   onClick={() => handleMoodSelect('great')}
                   disabled={isLoading !== null}
                 >
-                  <FaRegSmileBeam className={`h-3 w-3 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
+                  <Smile className={`h-3 w-3 ${isLoading === 'great' ? 'animate-pulse' : ''}`} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>

@@ -157,6 +157,7 @@ export async function getFreeUsers(){
 }
 
 export async function getUserEquityData(page: number = 1, limit: number = 10) {
+  'use cache'
   console.log('Starting getUserEquityData function')
 
   // First, get all unique user IDs that have trades, with pagination
@@ -188,16 +189,19 @@ export async function getUserEquityData(page: number = 1, limit: number = 10) {
 
   // Get user data from Supabase for these specific users
   console.log('Fetching user data from Supabase...')
-  const userPromises = userIds.map(userId => 
-    supabase.auth.admin.getUserById(userId)
-  )
+  const users = await prisma.user.findMany({
+    where: {
+      id: {
+        in: userIds
+      }
+    },
+    select: {
+      id: true,
+      email: true,
+    }
+  })
   
-  const userResults = await Promise.all(userPromises)
-  const users = userResults
-    .map(result => result.data?.user)
-    .filter(user => user !== null) as User[]
-
-  console.log(`Retrieved ${users.length} users from Supabase`)
+  
 
   // Get all trades for these users
   console.log('Fetching trades for users...')
@@ -238,8 +242,8 @@ export async function getUserEquityData(page: number = 1, limit: number = 10) {
   }, {} as Record<string, typeof trades>)
 
   // Calculate equity curve for each user
-  const userEquityData = users.map((user) => {
-    const userTrades = userTradesMap[user.id] || []
+  const userEquityData = userIds.map((userId) => {
+    const userTrades = userTradesMap[userId] || []
     
     // Sort trades by creation date
     const sortedTrades = userTrades.sort((a, b) => 
@@ -270,9 +274,8 @@ export async function getUserEquityData(page: number = 1, limit: number = 10) {
     const profitFactor = Math.abs(averageLoss) > 0 ? Math.abs(averageWin) / Math.abs(averageLoss) : 0
 
     return {
-      userId: user.id,
-      email: user.email || 'Unknown',
-      createdAt: user.created_at || '',
+      userId: userId,
+      email: users.find(user => user.id === userId)?.email || 'Unknown',
       trades: userTrades,
       equityCurve,
       statistics: {

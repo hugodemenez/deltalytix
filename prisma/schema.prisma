@@ -222,6 +222,7 @@ model Account {
   minPayout         Float?    // Minimum payout amount
   maxPayout         String?   // Maximum payout policy
   maxFundedAccounts Int?      // Maximum number of funded accounts
+  minPnlToCountAsDay Float?   // Minimum PnL required to count as a trading day
   
   // Promotional pricing fields
   promoType         PromoType? // Type of promotional pricing

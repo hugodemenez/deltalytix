@@ -26,11 +26,16 @@ interface AccountCardProps {
     highestProfitDay?: number
     maxAllowedDailyProfit?: number | null
   }
+  tradingDaysMetrics?: {
+    totalTradingDays: number
+    validTradingDays: number
+    minPnlToCountAsDay?: number | null
+  }
   onClick?: () => void
   size?: WidgetSize
 }
 
-export function AccountCard({ account, trades, allTrades, metrics, onClick, size = 'large' }: AccountCardProps) {
+export function AccountCard({ account, trades, allTrades, metrics, tradingDaysMetrics, onClick, size = 'large' }: AccountCardProps) {
   const t = useI18n()
 
   // Use allTrades for the chart if provided, otherwise fall back to filtered trades
@@ -264,6 +269,24 @@ export function AccountCard({ account, trades, allTrades, metrics, onClick, size
                   <span>{t('propFirm.card.highestDailyProfit')}</span>
                   <span>${metrics.highestProfitDay?.toFixed(2) || '-'}</span>
                 </div>
+                
+                {/* Trading Days Section */}
+                {tradingDaysMetrics && (
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{t('propFirm.card.tradingDays')}</span>
+                    <span className={cn(
+                      "font-medium",
+                      tradingDaysMetrics.validTradingDays === tradingDaysMetrics.totalTradingDays ? "text-success" : "text-warning"
+                    )}>
+                      {tradingDaysMetrics.validTradingDays}/{tradingDaysMetrics.totalTradingDays}
+                      {tradingDaysMetrics.minPnlToCountAsDay && tradingDaysMetrics.minPnlToCountAsDay > 0 && (
+                        <span className="ml-1 text-xs opacity-75">
+                          (≥${tradingDaysMetrics.minPnlToCountAsDay})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -28,6 +28,7 @@ import { toast } from "sonner"
 import { getAllTradovateTokens, storeTradovateToken, getTradovateTrades, initiateTradovateOAuth, removeTradovateToken } from './actions'
 import { useTradovateSyncStore } from '@/store/tradovate-sync-store'
 import { useData } from '@/context/data-provider'
+import { useTradovateSyncContext } from '@/context/tradovate-sync-context'
 
 interface TradovateAccount {
   accountId: string
@@ -39,106 +40,21 @@ interface TradovateAccount {
 }
 
 export function TradovateCredentialsManager() {
-  const [accounts, setAccounts] = useState<TradovateAccount[]>([])
+  const { performSyncForAccount, performSyncForAllAccounts, accounts, deleteAccount } = useTradovateSyncContext()
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const t = useI18n()
   const tradovateStore = useTradovateSyncStore()
-  const { refreshTrades } = useData()
 
-  // Load accounts from database
-  const loadAccounts = useCallback(async () => {
-    try {
-      const result = await getAllTradovateTokens()
-      if (!result.error && result.tokens) {
-        const accountsData = result.tokens
-          .filter(token => token.token) // Only include tokens that have a valid token
-          .map(token => ({
-            accountId: token.accountId,
-            token: token.token!,
-            tokenExpiresAt: token.tokenExpiresAt?.toISOString() || new Date().toISOString(),
-            lastSyncedAt: token.lastSyncedAt?.toISOString() || new Date().toISOString(),
-            isExpired: token.isExpired || false,
-            environment: 'demo' as 'demo' | 'live' // Default to demo since we don't store environment in the current schema
-          }))
-        setAccounts(accountsData)
-      }
-    } catch (error) {
-      console.warn('Failed to load Tradovate accounts:', error)
-    }
-  }, [])
 
-  useEffect(() => {
-    loadAccounts()
-  }, [loadAccounts])
-
-  const handleSync = useCallback(async (account: TradovateAccount) => {
-    // Prevent multiple syncs for the same account
-    if (syncingId === account.accountId) {
-      return
-    }
-
-    try {
-      console.log('Starting sync for account:', account.accountId)
-      setSyncingId(account.accountId)
-      
-      const result = await getTradovateTrades(account.token)
-      
-      if (result.error) {
-        toast.error(t('tradovateSync.multiAccount.syncErrorForAccount', { 
-          accountId: account.accountId, 
-          error: result.error 
-        }))
-        return
-      }
-
-      // Track progress
-      const savedCount = result.savedCount || 0
-      const ordersCount = result.ordersCount || 0
-      
-      console.log(`Sync complete for ${account.accountId}: ${savedCount} trades saved, ${ordersCount} orders processed`)
-
-      // Show success message
-      if (savedCount > 0) {
-        toast.success(t('tradovateSync.multiAccount.syncCompleteForAccount', { 
-          savedCount, 
-          ordersCount, 
-          accountId: account.accountId 
-        }))
-      } else if (ordersCount > 0) {
-        toast.info(t('tradovateSync.multiAccount.syncCompleteNoNewTradesForAccount', { 
-          ordersCount, 
-          accountId: account.accountId 
-        }))
-      } else {
-        toast.info(t('tradovateSync.multiAccount.syncCompleteNoOrdersForAccount', { 
-          accountId: account.accountId 
-        }))
-      }
-
-      // Refresh the accounts list to update last sync time
-      await loadAccounts()
-      await refreshTrades()
-
-    } catch (error) {
-      toast.error(t('tradovateSync.multiAccount.syncErrorForAccount', { 
-        accountId: account.accountId, 
-        error: error instanceof Error ? error.message : t('tradovateSync.sync.unknownError')
-      }))
-      console.error('Sync error:', error)
-    } finally {
-      setSyncingId(null)
-    }
-  }, [syncingId, t, loadAccounts, refreshTrades])
 
   const handleDelete = useCallback(async (accountId: string) => {
     try {
       // For now, we'll just remove from local state
       // In the future, we might want to add a deleteTradovateToken server action
-      setAccounts(prev => prev.filter(acc => acc.accountId !== accountId))
-      await removeTradovateToken(accountId)
+      await deleteAccount(accountId)
       setIsDeleteDialogOpen(false)
       toast.success(t('tradovateSync.multiAccount.accountDeleted', { accountId }))
     } catch (error) {
@@ -176,10 +92,6 @@ export function TradovateCredentialsManager() {
     return new Date(dateString).toLocaleString()
   }
 
-  function getNextSyncTime(lastSyncTime: string): string {
-    // For now, return a placeholder - in the future we could implement auto-sync intervals
-    return t('tradovateSync.multiAccount.manualSync')
-  }
 
   return (
     <div className="space-y-4">
@@ -188,8 +100,8 @@ export function TradovateCredentialsManager() {
           <h2 className="text-lg font-semibold">{t('tradovateSync.multiAccount.savedAccounts')}</h2>
           <div className="flex gap-2 items-center">
             <Button 
-              onClick={() => {
-                accounts.forEach(account => handleSync(account))
+              onClick={async () => {
+              await performSyncForAllAccounts()
               }} 
               size="sm"
               variant="outline"
@@ -255,7 +167,9 @@ export function TradovateCredentialsManager() {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => handleSync(account)}
+                      onClick={async () => {
+                        await performSyncForAccount(account.accountId)
+                      }}
                       disabled={syncingId !== null || account.isExpired}
                     >
                       {syncingId === account.accountId ? (

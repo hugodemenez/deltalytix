@@ -41,6 +41,7 @@ import {
   deleteAccountAction,
   setupAccountAction,
   savePayoutAction,
+  calculateAccountBalanceAction,
 } from '@/server/accounts';
 import {
   saveGroupAction,
@@ -69,6 +70,8 @@ import { deleteTagAction } from '@/server/tags';
 import { useRouter } from 'next/navigation';
 import { useCurrentLocale } from '@/locales/client';
 import { useMoodStore } from '@/store/mood-store';
+import { useStripeSubscriptionStore } from '@/store/stripe-subscription-store';
+import { getSubscriptionData } from '@/app/[locale]/dashboard/actions/billing';
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -427,17 +430,6 @@ function useIsMobileDetection() {
   return isMobile;
 }
 
-// Add this function before the UserDataProvider component
-function calculateAccountBalance(account: Account, trades: PrismaTrade[]): number {
-  let balance = account.startingBalance || 0;
-  const accountTrades = trades.filter(trade => trade.accountNumber === account.number);
-  const tradesPnL = accountTrades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0);
-  balance += tradesPnL;
-  const payouts = account.payouts || [];
-  const payoutsSum = payouts.reduce((sum, payout) => sum + payout.amount, 0);
-  balance += payoutsSum;
-  return balance;
-}
 
 const supabase = createClient()
 
@@ -476,6 +468,11 @@ export const DataProvider: React.FC<{
   const locale = useCurrentLocale()
   const isLoading = useUserStore(state => state.isLoading)
   const setIsLoading = useUserStore(state => state.setIsLoading)
+  
+  // Stripe subscription store
+  const setStripeSubscription = useStripeSubscriptionStore(state => state.setStripeSubscription);
+  const setStripeSubscriptionLoading = useStripeSubscriptionStore(state => state.setIsLoading);
+  const setStripeSubscriptionError = useStripeSubscriptionStore(state => state.setError);
 
   // Local states
   const [sharedParams, setSharedParams] = useState<SharedParams | null>(null);
@@ -508,7 +505,7 @@ export const DataProvider: React.FC<{
           }));
 
           // Batch state updates
-          const updates = () => {
+          const updates = async () => {
             setTrades(processedSharedTrades);
             setSharedParams(sharedData.params);
 
@@ -527,17 +524,15 @@ export const DataProvider: React.FC<{
               setTickDetails(sharedData.params.tickDetails);
             }
 
-            const accountsWithBalance = sharedData.groups?.flatMap(group =>
-              group.accounts.map(account => ({
-                ...account,
-                balanceToDate: calculateAccountBalance(account, processedSharedTrades)
-              }))
-            ) || [];
+            const accountsWithBalance = await calculateAccountBalanceAction(
+              sharedData.groups?.flatMap(group => group.accounts) || [],
+              processedSharedTrades
+            );
             setGroups(sharedData.groups || []);
             setAccounts(accountsWithBalance);
           };
 
-          updates();
+          await updates();
         }
         setIsLoading(false)
         return;
@@ -613,6 +608,12 @@ export const DataProvider: React.FC<{
         return;
       }
 
+      // Calculate balanceToDate for each account 
+      const accountsWithBalance = await calculateAccountBalanceAction(
+        data.accounts || [],
+        Array.isArray(trades) ? trades : []
+      );
+      setAccounts(accountsWithBalance);
       
 
       setUser(await ensureUserInDatabase(user, locale));
@@ -624,13 +625,6 @@ export const DataProvider: React.FC<{
       setTickDetails(data.tickDetails);
       setIsFirstConnection(data.userData?.isFirstConnection || false)
 
-
-      // Calculate balanceToDate for each account 
-      const accountsWithBalance = (data.accounts || []).map(account => ({
-        ...account,
-        balanceToDate: calculateAccountBalance(account, Array.isArray(trades) ? trades : [])
-      }));
-      setAccounts(accountsWithBalance);
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -650,6 +644,19 @@ export const DataProvider: React.FC<{
     const loadDataIfMounted = async () => {
       if (!mounted) return;
       await loadData();
+      // Load Stripe subscription data
+      try {
+        setStripeSubscriptionLoading(true);
+        const stripeSubscriptionData = await getSubscriptionData();
+        setStripeSubscription(stripeSubscriptionData);
+        setStripeSubscriptionError(null);
+      } catch (error) {
+        console.error('Error loading Stripe subscription:', error);
+        setStripeSubscriptionError(error instanceof Error ? error.message : 'Failed to load subscription');
+        setStripeSubscription(null);
+      } finally {
+        setStripeSubscriptionLoading(false);
+      }
     };
 
     loadDataIfMounted();
@@ -685,11 +692,21 @@ export const DataProvider: React.FC<{
         setEvents(data.financialEvents)
         setTickDetails(data.tickDetails)
         
-        const accountsWithBalance = (data.accounts || []).map(account => ({
-          ...account,
-          balanceToDate: calculateAccountBalance(account, Array.isArray(trades) ? trades : [])
-        }))
+        const accountsWithBalance = await calculateAccountBalanceAction(
+          data.accounts || [],
+          Array.isArray(trades) ? trades : []
+        )
         setAccounts(accountsWithBalance)
+        
+        // Refresh Stripe subscription data
+        try {
+          const stripeSubscriptionData = await getSubscriptionData();
+          setStripeSubscription(stripeSubscriptionData);
+          setStripeSubscriptionError(null);
+        } catch (error) {
+          console.error('Error refreshing Stripe subscription:', error);
+          setStripeSubscriptionError(error instanceof Error ? error.message : 'Failed to refresh subscription');
+        }
       }
       
       console.log('[refreshTrades] Successfully refreshed trades and user data')
@@ -702,7 +719,7 @@ export const DataProvider: React.FC<{
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
-    if (!trades || !Array.isArray(trades) || trades.length === 0) return [];
+    if (isLoading || !trades || !Array.isArray(trades) || trades.length === 0) return [];
 
     // Get hidden accounts for filtering
     const hiddenGroup = groups.find(g => g.name === "Hidden Accounts");
@@ -853,6 +870,14 @@ export const DataProvider: React.FC<{
   const calendarData = useMemo(() => formatCalendarData(formattedTrades, accounts), [formattedTrades, accounts]);
 
   const isPlusUser = () => {
+    // Use Stripe subscription store for more accurate subscription status
+    const stripeSubscription = useStripeSubscriptionStore.getState().stripeSubscription;
+    if (stripeSubscription) {
+      const planName = stripeSubscription.plan?.name?.toLowerCase() || '';
+      return planName.includes('plus') || planName.includes('pro');
+    }
+    
+    // Fallback to database subscription
     return Boolean(subscription?.status === 'active' && ['plus', 'pro'].includes(subscription?.plan?.split('_')[0].toLowerCase() || ''));
   };
 

@@ -50,7 +50,7 @@ export function CalendarModal({
   const locale = useCurrentLocale()
   const timezone = useUserStore(state => state.timezone)
   const dateLocale = locale === 'fr' ? fr : enUS
-  const [activeTab, setActiveTab] = useState("analysis")
+  const [activeTab, setActiveTab] = useState("comment")
   const [formattedDate, setFormattedDate] = useState<string>("")
 
   React.useEffect(() => {
@@ -63,7 +63,7 @@ export function CalendarModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[100dvh] sm:h-[90vh] p-0 flex flex-col">
+      <DialogContent className="max-w-4xl w-full h-[100dvh] sm:h-[80vh] p-0 flex flex-col">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>{formattedDate}</DialogTitle>
           <DialogDescription>
@@ -72,9 +72,13 @@ export function CalendarModal({
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
           <TabsList className="px-6">
+            <TabsTrigger value="comment">{t('calendar.modal.comment')}</TabsTrigger>
             <TabsTrigger value="table">{t('calendar.modal.table')}</TabsTrigger>
             <TabsTrigger value="analysis">{t('calendar.modal.analysis')}</TabsTrigger>
           </TabsList>
+          <TabsContent value="comment" className="flex-grow overflow-auto p-6 pt-2">
+            <DailyComment dayData={dayData} selectedDate={selectedDate} />
+          </TabsContent>
           <TabsContent value="table" className="flex-grow overflow-auto p-6 pt-2">
             <ScrollArea className="h-full">
               {dayData && dayData.trades?.length > 0 ? (
@@ -141,7 +145,6 @@ export function CalendarModal({
           <TabsContent value="analysis" className="flex-grow overflow-auto p-6 pt-2 space-y-4">
             <DailyStats dayData={dayData} isWeekly={false} />
             {/* <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} /> */}
-            <DailyComment dayData={dayData} selectedDate={selectedDate} />
             <Charts dayData={dayData} />
           </TabsContent>
         </Tabs>

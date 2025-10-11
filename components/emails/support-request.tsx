@@ -12,7 +12,9 @@ import {
 import * as React from 'react';
 
 interface SupportRequestEmailProps {
+  locale: string;
   messages: { role: string; content: string }[];
+  summary: string;
   contactInfo: {
     name: string;
     email: string;
@@ -20,31 +22,69 @@ interface SupportRequestEmailProps {
   };
 }
 
-export const SupportRequestEmail: React.FC<SupportRequestEmailProps> = ({ messages, contactInfo }) => (
-  <Html>
-    <Head />
-    <Preview>New Support Request from Deltalytix</Preview>
-    <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>New Support Request</Heading>
-        <Section style={section}>
-          <Text style={sectionTitle}>Contact Information:</Text>
-          <Text style={text}>Name: {contactInfo.name}</Text>
-          <Text style={text}>Email: {contactInfo.email}</Text>
-          <Text style={text}>Additional Info: {contactInfo.additionalInfo}</Text>
-        </Section>
-        <Section style={section}>
-          <Text style={sectionTitle}>Conversation History:</Text>
-          {messages.map((message, index) => (
-            <Text key={index} style={message.role === 'user' ? userMessage : assistantMessage}>
-              <strong>{message.role === 'user' ? 'User' : 'Assistant'}:</strong> {message.content}
-            </Text>
-          ))}
-        </Section>
-      </Container>
-    </Body>
-  </Html>
-);
+export const SupportRequestEmail: React.FC<SupportRequestEmailProps> = ({ locale, messages, contactInfo, summary }) => {
+  if (locale === 'fr') {
+    return (
+      <Html>
+        <Head />
+        <Preview>Nouvelle demande de support reçue</Preview>
+        <Body style={main}>
+          <Container style={container}>
+            <Heading style={h1}>Nouvelle demande de support</Heading>
+            <Section style={section}>
+              <Text style={sectionTitle}>Résumé</Text>
+              <Text style={text}>{summary}</Text>
+            </Section>
+            <Section style={section}>
+              <Text style={sectionTitle}>Informations de contact</Text>
+              <Text style={text}>Nom: {contactInfo.name}</Text>
+              <Text style={text}>Email: {contactInfo.email}</Text>
+              <Text style={text}>Informations supplémentaires: {contactInfo.additionalInfo}</Text>
+            </Section>
+            <Section style={section}>
+              <Text style={sectionTitle}>Historique de la conversation</Text>
+              {messages.map((message, index) => (
+                <Text key={index} style={message.role === 'user' ? userMessage : assistantMessage}>
+                  <strong>{message.role === 'user' ? 'Utilisateur' : 'Assistant'}:</strong> {message.content}
+                </Text>
+              ))}
+            </Section>
+          </Container>
+        </Body>
+      </Html>
+    );
+  } else {
+    return (
+      <Html>
+        <Head />
+        <Preview>New support request received</Preview>
+        <Body style={main}>
+          <Container style={container}>
+            <Heading style={h1}>New Support Request</Heading>
+            <Section style={section}>
+              <Text style={sectionTitle}>Summary</Text>
+              <Text style={text}>{summary}</Text>
+            </Section>
+            <Section style={section}>
+              <Text style={sectionTitle}>Contact Information</Text>
+              <Text style={text}>Name: {contactInfo.name}</Text>
+              <Text style={text}>Email: {contactInfo.email}</Text>
+              <Text style={text}>Additional Info: {contactInfo.additionalInfo}</Text>
+            </Section>
+            <Section style={section}>
+              <Text style={sectionTitle}>Conversation History</Text>
+              {messages.map((message, index) => (
+                <Text key={index} style={message.role === 'user' ? userMessage : assistantMessage}>
+                  <strong>{message.role === 'user' ? 'User' : 'Assistant'}:</strong> {message.content}
+                </Text>
+              ))}
+            </Section>
+          </Container>
+        </Body>
+      </Html>
+    );
+  }
+};
 
 export default SupportRequestEmail;
 

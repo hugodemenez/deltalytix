@@ -4,7 +4,8 @@ import * as React from "react"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps, ReferenceLine } from "recharts"
 import { format, parseISO, eachDayOfInterval, startOfDay, endOfDay } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
-import { Info, ChevronDown, ChevronUp } from "lucide-react"
+import { fr, enUS } from 'date-fns/locale'
+import { ChevronDown, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import {
@@ -29,12 +30,16 @@ import {
 
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
+import { Info } from "lucide-react"
 
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
+import { useCurrentLocale } from "@/locales/client"
 import { useUserStore } from "@/store/user-store"
 import { useEquityChartStore } from "@/store/equity-chart-store"
 import { Payout as PrismaPayout } from '@prisma/client'
+import { AccountSelectionPopover } from "./account-selection-popover"
+import { getEquityChartDataAction } from "@/server/equity-chart"
 
 interface EquityChartProps {
   size?: WidgetSize
@@ -77,259 +82,57 @@ interface ChartEvent {
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
-// Reduced color array for better performance
-const ACCOUNT_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))", 
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
-  "hsl(var(--chart-8))",
-] as const
+// Map account numbers to theme-aware chart colors defined in globals.css
+function getChartColorByIndex(index: number): string {
+  const paletteVars = [
+    'hsl(var(--chart-1))',
+    'hsl(var(--chart-2))',
+    'hsl(var(--chart-3))',
+    'hsl(var(--chart-4))',
+    'hsl(var(--chart-5))',
+    'hsl(var(--chart-6))',
+    'hsl(var(--chart-7))',
+    'hsl(var(--chart-8))',
+  ]
+  return paletteVars[index % paletteVars.length]
+}
 
-// Color map function
+// Generate consistent theme-aware color based on accountNumber string
+function generateAccountColor(accountNumber: string): string {
+  let hash = 0
+  for (let i = 0; i < accountNumber.length; i++) {
+    const char = accountNumber.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+  const index = Math.abs(hash) % 8
+  return getChartColorByIndex(index)
+}
+
+// Color map function using theme-aware chart palette
 function createAccountColorMap(accountNumbers: string[]): Map<string, string> {
-  const sortedAccounts = [...accountNumbers].sort()
-  return new Map(sortedAccounts.map((accountNumber, index) => [
+  return new Map(accountNumbers.map(accountNumber => [
     accountNumber,
-    ACCOUNT_COLORS[index % ACCOUNT_COLORS.length]
+    generateAccountColor(accountNumber)
   ]))
 }
 
-// Get payout color based on status
-const getPayoutColor = (status: string) => {
+// Get payout colors (foreground and subtle background) based on status using theme tokens
+const getPayoutColors = (status: string) => {
   switch (status) {
-    case 'PENDING': return '#9CA3AF'
-    case 'VALIDATED': return '#F97316'
-    case 'REFUSED': return '#DC2626'
-    case 'PAID': return '#16A34A'
-    default: return '#9CA3AF'
+    case 'PENDING':
+      return { fg: 'hsl(var(--muted-foreground))', bg: 'hsl(var(--muted-foreground) / 0.15)' }
+    case 'VALIDATED':
+      return { fg: 'hsl(var(--chart-4))', bg: 'hsl(var(--chart-4) / 0.15)' }
+    case 'REFUSED':
+      return { fg: 'hsl(var(--destructive))', bg: 'hsl(var(--destructive) / 0.15)' }
+    case 'PAID':
+      return { fg: 'hsl(var(--success))', bg: 'hsl(var(--success) / 0.15)' }
+    default:
+      return { fg: 'hsl(var(--muted-foreground))', bg: 'hsl(var(--muted-foreground) / 0.15)' }
   }
 }
 
-// Optimized date boundary calculation - daily only
-function useDateBoundaries(trades: any[], timezone: string) {
-  return React.useMemo(() => {
-    if (!trades.length) return { startDate: null, endDate: null, allDates: [] }
-
-    const dates = trades.map(t => formatInTimeZone(new Date(t.entryDate), timezone, 'yyyy-MM-dd'))
-    const startDate = dates.reduce((min, date) => date < min ? date : min)
-    const endDate = dates.reduce((max, date) => date > max ? date : max)
-    
-    const start = parseISO(startDate)
-    const end = parseISO(endDate)
-    end.setDate(end.getDate() + 1)
-    
-    return {
-      startDate,
-      endDate,
-      allDates: eachDayOfInterval({ start, end })
-    }
-  }, [trades, timezone])
-}
-
-// High-performance chart data calculation with payouts and resets
-function useChartData(
-  trades: any[], 
-  accounts: any[],
-  accountNumbers: string[], 
-  selectedAccounts: Set<string>,
-  allDates: Date[],
-  timezone: string,
-  showIndividual: boolean,
-  maxAccounts: number,
-  dataSampling: 'all' | 'sample'
-) {
-  return React.useMemo(() => {
-    if (!trades.length || !allDates.length) return []
-
-    // Limit accounts for performance
-    const limitedAccountNumbers = showIndividual 
-      ? accountNumbers.slice(0, maxAccounts)
-      : accountNumbers
-
-    // Create account map for quick lookup
-    const accountMap = new Map(accounts.map(acc => [acc.number, acc]))
-
-    // Filter trades based on reset dates and selected accounts
-    const filteredTrades = trades.filter(trade => {
-      if (!selectedAccounts.has(trade.accountNumber) || 
-          !limitedAccountNumbers.includes(trade.accountNumber)) {
-        return false
-      }
-      
-      const account = accountMap.get(trade.accountNumber)
-      if (!account) return true // Include if account not found
-      
-      // Filter based on reset date if it exists
-      if (account.resetDate) {
-        return new Date(trade.entryDate) >= new Date(account.resetDate)
-      }
-      
-      return true
-    })
-    
-    // Data sampling for very large datasets
-    const datesToProcess = dataSampling === 'sample' && allDates.length > 100
-      ? allDates.filter((_, index) => index % 2 === 0) // Sample every other point
-      : allDates
-
-    // Pre-process trades by date for faster lookup
-    const tradesMap = new Map<string, any[]>()
-    
-    filteredTrades.forEach(trade => {
-      const dateKey = formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd')
-      if (!tradesMap.has(dateKey)) {
-        tradesMap.set(dateKey, [])
-      }
-      tradesMap.get(dateKey)!.push(trade)
-    })
-
-    // Create combined events array with trades, payouts, and resets
-    const allEvents: ChartEvent[] = []
-    
-    // Add trades
-    filteredTrades.forEach(trade => {
-      allEvents.push({
-        date: new Date(trade.entryDate),
-        amount: trade.pnl - (trade.commission || 0),
-        isPayout: false,
-        isReset: false,
-        accountNumber: trade.accountNumber
-      })
-    })
-    
-    // Add payouts and resets
-    limitedAccountNumbers.forEach(accountNumber => {
-      const account = accountMap.get(accountNumber)
-      if (!account) return
-      
-             // Add payouts
-       account.payouts?.forEach((payout: PrismaPayout) => {
-         allEvents.push({
-           date: new Date(payout.date),
-           amount: ['PENDING', 'VALIDATED', 'PAID'].includes(payout.status) ? -payout.amount : 0,
-           isPayout: true,
-           isReset: false,
-           payoutStatus: payout.status,
-           accountNumber: accountNumber
-         })
-       })
-      
-      // Add reset if exists
-      if (account.resetDate) {
-        allEvents.push({
-          date: new Date(account.resetDate),
-          amount: 0, // Reset doesn't change balance directly
-          isPayout: false,
-          isReset: true,
-          accountNumber: accountNumber
-        })
-      }
-    })
-    
-    // Sort events by date
-    allEvents.sort((a, b) => a.date.getTime() - b.date.getTime())
-
-    // Use arrays instead of Maps for better performance with small datasets
-    const accountEquities: Record<string, number> = {}
-    const accountStartingBalances: Record<string, number> = {}
-    const accountFirstActivity: Record<string, string | null> = {}
-    
-    limitedAccountNumbers.forEach(acc => {
-      const account = accountMap.get(acc)
-      accountEquities[acc] = 0
-      accountStartingBalances[acc] = account?.startingBalance || 0
-      accountFirstActivity[acc] = null
-    })
-
-    const chartData: ChartDataPoint[] = []
-
-    datesToProcess.forEach(date => {
-      const dateKey = formatInTimeZone(date, timezone, 'yyyy-MM-dd')
-      const relevantTrades = tradesMap.get(dateKey) || []
-      
-      let totalEquity = 0
-      const point: ChartDataPoint = { 
-        date: dateKey,
-        equity: 0 
-      }
-
-      if (showIndividual) {
-        limitedAccountNumbers.forEach(acc => {
-          point[`equity_${acc}`] = undefined
-          point[`payout_${acc}`] = false
-          point[`reset_${acc}`] = false
-          point[`payoutStatus_${acc}`] = ''
-          point[`payoutAmount_${acc}`] = 0
-        })
-      }
-
-      // Process events for this date
-      const dateEvents = allEvents.filter(event => 
-        formatInTimeZone(event.date, timezone, 'yyyy-MM-dd') === dateKey
-      )
-
-      // Process each account
-      for (const accountNumber of limitedAccountNumbers) {
-        if (!selectedAccounts.has(accountNumber)) continue
-
-        const account = accountMap.get(accountNumber)
-        const accountEvents = dateEvents.filter(event => event.accountNumber === accountNumber)
-        
-                         // Process account events
-        accountEvents.forEach(event => {
-          if (event.isReset) {
-            // Reset the balance to 0
-            accountEquities[accountNumber] = 0
-            point[`reset_${accountNumber}`] = true
-            // Mark first activity if not already set
-            if (!accountFirstActivity[accountNumber]) {
-              accountFirstActivity[accountNumber] = dateKey
-            }
-          } else {
-            // Add the event amount to equity
-            accountEquities[accountNumber] += event.amount
-            
-            // Mark first activity if not already set
-            if (!accountFirstActivity[accountNumber]) {
-              accountFirstActivity[accountNumber] = dateKey
-            }
-            
-            if (event.isPayout) {
-              point[`payout_${accountNumber}`] = true
-              point[`payoutStatus_${accountNumber}`] = event.payoutStatus || ''
-              point[`payoutAmount_${accountNumber}`] = -event.amount
-            }
-          }
-        })
-
-        // Note: Trades are already processed in the events above, so we don't need to process them again here
-
-        if (showIndividual) {
-          // Only show equity if account has had activity
-          if (accountFirstActivity[accountNumber] && accountFirstActivity[accountNumber] <= dateKey) {
-            point[`equity_${accountNumber}`] = accountEquities[accountNumber]
-          } else {
-            // Set to undefined to not show the line
-            point[`equity_${accountNumber}`] = undefined
-          }
-        }
-        totalEquity += accountEquities[accountNumber]
-      }
-
-      if (!showIndividual) {
-        point.equity = totalEquity
-      }
-
-      chartData.push(point)
-    })
-
-    return chartData
-  }, [trades, accounts, accountNumbers, selectedAccounts, allDates, timezone, showIndividual, maxAccounts, dataSampling])
-}
 
 // Custom dot renderer for payouts and resets
 const renderDot = (props: any) => {
@@ -364,13 +167,14 @@ const renderDot = (props: any) => {
     if (payoutAccounts.length > 0) {
       const accountNumber = payoutAccounts[0].replace('payout_', '')
       const status = payload[`payoutStatus_${accountNumber}`] || ''
+      const { fg } = getPayoutColors(status)
       return (
         <circle
           key={`dot-${index}-payout`}
           cx={cx}
           cy={cy}
           r={4}
-          fill={getPayoutColor(status)}
+          fill={fg}
           stroke="white"
           strokeWidth={1}
         />
@@ -388,7 +192,7 @@ const renderDot = (props: any) => {
           cx={cx}
           cy={cy}
           r={5}
-          fill="#ff6b6b"
+          fill="hsl(var(--destructive))"
           stroke="white"
           strokeWidth={2}
         />
@@ -397,13 +201,14 @@ const renderDot = (props: any) => {
     
     if (hasPayout) {
       const status = payload[`payoutStatus_${accountNumber}`] || ''
+      const { fg } = getPayoutColors(status)
       return (
         <circle
           key={`dot-${index}-payout-${accountNumber}`}
           cx={cx}
           cy={cy}
           r={4}
-          fill={getPayoutColor(status)}
+          fill={fg}
           stroke="white"
           strokeWidth={1}
         />
@@ -423,7 +228,8 @@ const OptimizedTooltip = React.memo(({
   size,
   accountColorMap,
   t,
-  onHover
+  onHover,
+  dateLocale
 }: {
   active?: boolean
   payload?: any[]
@@ -433,6 +239,7 @@ const OptimizedTooltip = React.memo(({
   accountColorMap: Map<string, string>
   t: any
   onHover?: (data: ChartDataPoint | null) => void
+  dateLocale: any
 }) => {
   // Only update hovered data for legend in individual mode
   React.useEffect(() => {
@@ -472,7 +279,7 @@ const OptimizedTooltip = React.memo(({
             {t('equity.tooltip.date')}
           </span>
           <span className="font-bold text-muted-foreground">
-            {format(new Date(data.date), "MMM d, yyyy")}
+            {format(new Date(data.date), "MMM d, yyyy", { locale: dateLocale })}
           </span>
         </div>
         <div className="flex flex-col">
@@ -495,7 +302,7 @@ const OptimizedTooltip = React.memo(({
                 <div key={account} className="flex items-center gap-2">
                   <div 
                     className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: accountColorMap.get(account) || ACCOUNT_COLORS[0] }}
+                    style={{ backgroundColor: accountColorMap.get(account) || generateAccountColor(account) }}
                   />
                   <span className="text-sm text-foreground">
                     {t('equity.tooltip.accountReset', { account })}
@@ -517,7 +324,7 @@ const OptimizedTooltip = React.memo(({
                 <div key={account} className="flex items-center gap-2">
                   <div 
                     className="w-2 h-2 rounded-full" 
-                    style={{ backgroundColor: accountColorMap.get(account) || ACCOUNT_COLORS[0] }}
+                    style={{ backgroundColor: accountColorMap.get(account) || generateAccountColor(account) }}
                   />
                   <span className="text-sm text-foreground">
                     {account}: {formatCurrency(amount)}
@@ -525,8 +332,8 @@ const OptimizedTooltip = React.memo(({
                   <span 
                     className="text-xs px-1 py-0.5 rounded"
                     style={{ 
-                      backgroundColor: getPayoutColor(status) + '20',
-                      color: getPayoutColor(status)
+                      backgroundColor: getPayoutColors(status).bg,
+                      color: getPayoutColors(status).fg
                     }}
                   >
                     {status.toLowerCase()}
@@ -549,14 +356,18 @@ const AccountsLegend = React.memo(({
   selectedAccounts,
   chartData,
   hoveredData,
-  t 
+  onToggleAccount,
+  t,
+  dateLocale
 }: {
   accountNumbers: string[]
   accountColorMap: Map<string, string>
   selectedAccounts: Set<string>
   chartData: ChartDataPoint[]
   hoveredData: ChartDataPoint | null
+  onToggleAccount: (accountNumber: string) => void
   t: any
+  dateLocale: any
 }) => {
   if (!accountNumbers.length || accountNumbers.length <= 1) return null
 
@@ -572,7 +383,7 @@ const AccountsLegend = React.memo(({
       accountNumber: acc,
       equity: displayData?.[`equity_${acc}` as keyof ChartDataPoint] as number || 0,
       latestEquity: latestData?.[`equity_${acc}` as keyof ChartDataPoint] as number || 0,
-      color: accountColorMap.get(acc) || ACCOUNT_COLORS[0],
+      color: accountColorMap.get(acc) || generateAccountColor(acc),
       hasPayout: displayData?.[`payout_${acc}` as keyof ChartDataPoint] as boolean || false,
       hasReset: displayData?.[`reset_${acc}` as keyof ChartDataPoint] as boolean || false,
       payoutStatus: displayData?.[`payoutStatus_${acc}` as keyof ChartDataPoint] as string || '',
@@ -582,18 +393,36 @@ const AccountsLegend = React.memo(({
 
   return (
     <div className="border-t pt-2 mt-2 h-[88px] flex flex-col">
-      <div className="flex items-center gap-2 mb-2 flex-shrink-0">
-        <span className="text-xs font-medium text-muted-foreground">
-          {t('equity.legend.title')}
-          {isHovered && displayData && (
-            <span className="ml-2 text-xs text-primary">
-              - {format(new Date(displayData.date), "MMM d, yyyy")}
-            </span>
-          )}
-        </span>
-        <span className="text-xs text-muted-foreground">
-          ({accountsWithEquity.length} {t('equity.legend.accounts')})
-        </span>
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">
+            {t('equity.legend.title')}
+            {isHovered && displayData && (
+              <span className="ml-2 text-xs text-primary">
+                - {format(new Date(displayData.date), "MMM d, yyyy", { locale: dateLocale })}
+              </span>
+            )}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            ({accountsWithEquity.length} {t('equity.legend.accounts')})
+          </span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent side="top" className="z-[9999] max-w-xs">
+                <p className="text-xs">{t('equity.legend.maxAccountsInfo')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        <AccountSelectionPopover
+          accountNumbers={accountNumbers}
+          selectedAccounts={Array.from(selectedAccounts)}
+          onToggleAccount={onToggleAccount}
+          t={t}
+        />
       </div>
       <div className="flex gap-3 overflow-x-auto max-w-full flex-1 scrollbar-hide">
         <div className="flex gap-3 min-w-max">
@@ -612,12 +441,12 @@ const AccountsLegend = React.memo(({
                 </span>
                 <div className="min-h-[14px] flex flex-col">
                   {hasPayout && (
-                    <span className="text-xs leading-tight" style={{ color: getPayoutColor(payoutStatus) }}>
+                    <span className="text-xs leading-tight" style={{ color: getPayoutColors(payoutStatus).fg }}>
                       {t('equity.legend.payout')}: {formatCurrency(payoutAmount)}
                     </span>
                   )}
                   {hasReset && (
-                    <span className="text-xs text-red-500 leading-tight">
+                    <span className="text-xs leading-tight" style={{ color: 'hsl(var(--destructive))' }}>
                       {t('equity.legend.reset')}
                     </span>
                   )}
@@ -637,13 +466,33 @@ const AccountsLegend = React.memo(({
 })
 AccountsLegend.displayName = "AccountsLegend"
 
+
 export default function EquityChart({ size = 'medium' }: EquityChartProps) {
-  const { formattedTrades: trades } = useData()
+  const { 
+    instruments,
+    accountNumbers,
+    dateRange,
+    pnlRange,
+    tickRange,
+    timeRange,
+    tickFilter,
+    weekdayFilter,
+    hourFilter,
+    tagFilter
+  } = useData()
   const accounts = useUserStore(state => state.accounts)
   const timezone = useUserStore(state => state.timezone)
-  const { config, setShowIndividual } = useEquityChartStore()
+  const { 
+    config, 
+    setShowIndividual, 
+    setSelectedAccountsToDisplay,
+    toggleAccountSelection
+  } = useEquityChartStore()
   const showIndividual = config.showIndividual
   const [hoveredData, setHoveredData] = React.useState<ChartDataPoint | null>(null)
+  const [chartData, setChartData] = React.useState<ChartDataPoint[]>([])
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [availableAccountNumbers, setAvailableAccountNumbers] = React.useState<string[]>([])
   
   // Throttled hover handler for better performance
   const throttledSetHoveredData = React.useCallback(
@@ -658,36 +507,89 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
   )
   const yAxisRef = React.useRef<any>(null)
   const t = useI18n()
+  const locale = useCurrentLocale()
+  const dateLocale = locale === 'fr' ? fr : enUS
 
-  // Use optimized hooks
-  const { allDates } = useDateBoundaries(trades, timezone)
-  
-  const accountNumbers = React.useMemo(() => 
-    Array.from(new Set(trades.map(trade => trade.accountNumber))),
-    [trades]
-  )
+  // Account selection handlers
+  const handleToggleAccount = React.useCallback((accountNumber: string) => {
+    toggleAccountSelection(accountNumber)
+  }, [toggleAccountSelection])
+
+  // Initialize selected accounts if empty
+  React.useEffect(() => {
+    if ((!config.selectedAccountsToDisplay || config.selectedAccountsToDisplay.length === 0) && availableAccountNumbers.length > 0) {
+      setSelectedAccountsToDisplay(availableAccountNumbers)
+    }
+  }, [config.selectedAccountsToDisplay, availableAccountNumbers, setSelectedAccountsToDisplay])
 
   const selectedAccounts = React.useMemo(() => 
-    new Set(accountNumbers), 
-    [accountNumbers]
+    new Set(config.selectedAccountsToDisplay || []), 
+    [config.selectedAccountsToDisplay]
   )
 
   const accountColorMap = React.useMemo(() => 
-    createAccountColorMap(accountNumbers),
-    [accountNumbers]
+    createAccountColorMap(availableAccountNumbers),
+    [availableAccountNumbers]
   )
 
-  const chartData = useChartData(
-    trades, 
+  // Fetch chart data when filters or config change
+  React.useEffect(() => {
+    // Don't fetch if we don't have accounts data yet
+    if (!accounts || accounts.length === 0) {
+      return
+    }
+
+    const fetchChartData = async () => {
+      setIsLoading(true)
+      try {
+        const result = await getEquityChartDataAction({
+          instruments,
+          accountNumbers,
+          dateRange: dateRange ? {
+            from: dateRange.from.toISOString(),
+            to: dateRange.to.toISOString()
+          } : undefined,
+          pnlRange,
+          tickRange,
+          timeRange,
+          tickFilter,
+          weekdayFilter,
+          hourFilter,
+          tagFilter,
+          timezone,
+          showIndividual,
+          maxAccounts: 8,
+          dataSampling: config.dataSampling,
+          selectedAccounts: Array.from(selectedAccounts)
+        })
+        setChartData(result.chartData)
+        setAvailableAccountNumbers(result.accountNumbers)
+      } catch (error) {
+        console.error('Failed to fetch equity chart data:', error)
+        setChartData([])
+        setAvailableAccountNumbers([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    fetchChartData()
+  }, [
+    instruments,
+    accountNumbers,
+    dateRange,
     accounts,
-    accountNumbers, 
-    selectedAccounts, 
-    allDates, 
-    timezone, 
+    pnlRange,
+    tickRange,
+    timeRange,
+    tickFilter,
+    weekdayFilter,
+    hourFilter,
+    tagFilter,
+    timezone,
     showIndividual,
-    config.maxAccountsDisplayed,
-    config.dataSampling
-  )
+    config.dataSampling,
+    selectedAccounts
+  ])
 
   // Optimized chart config with consistent color mapping
   const chartConfig = React.useMemo(() => {
@@ -700,15 +602,16 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       } as ChartConfig
     }
     
-    const maxAccounts = config.maxAccountsDisplayed
-    return accountNumbers.slice(0, maxAccounts).reduce((acc, accountNumber) => {
+    const maxAccounts = 8 // Aligned with 8-color palette
+    const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts)
+    return accountsToShow.reduce((acc, accountNumber) => {
       acc[`equity_${accountNumber}`] = {
         label: `Account ${accountNumber}`,
-        color: accountColorMap.get(accountNumber) || ACCOUNT_COLORS[0],
+        color: accountColorMap.get(accountNumber) || generateAccountColor(accountNumber),
       }
       return acc
     }, {} as ChartConfig)
-  }, [accountNumbers, showIndividual, config.maxAccountsDisplayed, accountColorMap])
+  }, [selectedAccounts, showIndividual, accountColorMap])
 
   // Memoized chart lines with consistent color mapping
   const chartLines = React.useMemo(() => {
@@ -727,11 +630,11 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       )
     }
 
-    const maxAccounts = config.maxAccountsDisplayed
-    return accountNumbers.slice(0, maxAccounts).map((accountNumber) => {
-      if (!selectedAccounts.has(accountNumber)) return null
+    const maxAccounts = 8 // Aligned with 8-color palette
+    const accountsToShow = Array.from(selectedAccounts).slice(0, maxAccounts)
+    return accountsToShow.map((accountNumber) => {
       // Use the same color mapping as legend to ensure consistency
-      const color = accountColorMap.get(accountNumber) || ACCOUNT_COLORS[0]
+      const color = accountColorMap.get(accountNumber) || generateAccountColor(accountNumber)
       return (
         <Line
           key={accountNumber}
@@ -745,8 +648,8 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
           connectNulls={false}
         />
       )
-    }).filter(Boolean)
-  }, [accountNumbers, selectedAccounts, showIndividual, config.maxAccountsDisplayed, accountColorMap])
+    })
+  }, [selectedAccounts, showIndividual, accountColorMap])
 
   return (
     <Card className="h-full flex flex-col">
@@ -804,79 +707,90 @@ export default function EquityChart({ size = 'medium' }: EquityChartProps) {
       >
         <div className="w-full h-full flex flex-col">
           <div className="flex-1 min-h-0">
-            <ChartContainer config={chartConfig} className="w-full h-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={chartData}
-                  margin={
-                    size === 'small'
-                      ? { left: 10, right: 4, top: 4, bottom: 20 }
-                      : { left: 10, right: 8, top: 8, bottom: 24 }
-                  }
-                  onMouseLeave={() => setHoveredData(null)}
-                >
-                  <CartesianGrid 
-                    strokeDasharray="3 3" 
-                    className="text-border dark:opacity-[0.12] opacity-[0.2]"
-                  />
-                  <XAxis
-                    dataKey="date"
-                    tickLine={false}
-                    axisLine={false}
-                    height={size === 'small' ? 20 : 24}
-                    tickMargin={size === 'small' ? 4 : 8}
-                    tick={{ 
-                      fontSize: size === 'small' ? 9 : 11,
-                      fill: 'currentColor'
-                    }}
-                    tickFormatter={(value) => format(new Date(value), "MMM d")}
-                  />
-                  <YAxis
-                    ref={yAxisRef}
-                    tickLine={false}
-                    axisLine={false}
-                    width={60}
-                    tickMargin={4}
-                    tick={{ 
-                      fontSize: size === 'small' ? 9 : 11,
-                      fill: 'currentColor'
-                    }}
-                    tickFormatter={formatCurrency}
-                  />
-                  <ReferenceLine
-                    y={0}
-                    stroke="hsl(var(--muted-foreground))"
-                    strokeDasharray="3 3"
-                    strokeOpacity={0.5}
-                  />
-                  <ChartTooltip
-                    content={({ active, payload }: TooltipProps<number, string>) => (
-                      <OptimizedTooltip
-                        active={active}
-                        payload={payload}
-                        data={payload?.[0]?.payload as ChartDataPoint}
-                        showIndividual={showIndividual}
-                        size={size}
-                        accountColorMap={accountColorMap}
-                        t={t}
-                        onHover={throttledSetHoveredData}
-                      />
-                    )}
-                  />
-                  {chartLines}
-                </LineChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            {isLoading ? (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="text-muted-foreground text-sm">
+                  {t('equity.loading')}
+                </div>
+              </div>
+            ) : (
+              <ChartContainer config={chartConfig} className="w-full h-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={chartData}
+                    margin={
+                      size === 'small'
+                        ? { left: 10, right: 4, top: 4, bottom: 20 }
+                        : { left: 10, right: 8, top: 8, bottom: 24 }
+                    }
+                    onMouseLeave={() => setHoveredData(null)}
+                  >
+                    <CartesianGrid 
+                      strokeDasharray="3 3" 
+                      className="text-border dark:opacity-[0.12] opacity-[0.2]"
+                    />
+                    <XAxis
+                      dataKey="date"
+                      tickLine={false}
+                      axisLine={false}
+                      height={size === 'small' ? 20 : 24}
+                      tickMargin={size === 'small' ? 4 : 8}
+                      tick={{ 
+                        fontSize: size === 'small' ? 9 : 11,
+                        fill: 'currentColor'
+                      }}
+                      tickFormatter={(value) => format(new Date(value), "MMM d", { locale: dateLocale })}
+                    />
+                    <YAxis
+                      ref={yAxisRef}
+                      tickLine={false}
+                      axisLine={false}
+                      width={60}
+                      tickMargin={4}
+                      tick={{ 
+                        fontSize: size === 'small' ? 9 : 11,
+                        fill: 'currentColor'
+                      }}
+                      tickFormatter={formatCurrency}
+                    />
+                    <ReferenceLine
+                      y={0}
+                      stroke="hsl(var(--muted-foreground))"
+                      strokeDasharray="3 3"
+                      strokeOpacity={0.5}
+                    />
+                    <ChartTooltip
+                      content={({ active, payload }: TooltipProps<number, string>) => (
+                        <OptimizedTooltip
+                          active={active}
+                          payload={payload}
+                          data={payload?.[0]?.payload as ChartDataPoint}
+                          showIndividual={showIndividual}
+                          size={size}
+                          accountColorMap={accountColorMap}
+                          t={t}
+                          onHover={throttledSetHoveredData}
+                          dateLocale={dateLocale}
+                        />
+                      )}
+                    />
+                    {chartLines}
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            )}
           </div>
           
-          {showIndividual && accountNumbers.length > 1 && size !== 'small' && (
+          {showIndividual && availableAccountNumbers.length > 1 && size !== 'small' && (
             <AccountsLegend
-              accountNumbers={accountNumbers}
+              accountNumbers={availableAccountNumbers}
               accountColorMap={accountColorMap}
               selectedAccounts={selectedAccounts}
               chartData={chartData}
               hoveredData={hoveredData}
+              onToggleAccount={handleToggleAccount}
               t={t}
+              dateLocale={dateLocale}
             />
           )}
         </div>
