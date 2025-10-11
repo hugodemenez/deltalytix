@@ -225,7 +225,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
         )}
 
         {/* Display all tool calls */}
-        {renderToolCalls()}
+        {/* {renderToolCalls()} */}
 
         {/* Simple Account Performance Display */}
         {accountPerformanceData && (
