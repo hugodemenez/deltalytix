@@ -1453,6 +1453,22 @@ export async function testCustomTradovateToken(
   }
 }
 
+async function updateLastSyncedAt(userId: string, accessToken: string) {
+    // Update last synced at
+    const updateResult = await prisma.synchronization.updateMany({
+      where: {
+        userId: userId,
+        service: 'tradovate',
+        token: accessToken,
+      },
+      data: {
+        lastSyncedAt: new Date()
+      }
+    })
+
+    return updateResult
+}
+
 export async function getTradovateTrades(accessToken: string): Promise<TradovateTradesResult> {
   try {
     logger.info('Fetching Tradovate fill pairs for improved trade building (demo only)')
@@ -1475,6 +1491,7 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     // Means there are no trades to import
     if (fillPairs.length === 0) {
       logger.info('No fill pairs returned from Tradovate')
+      await updateLastSyncedAt(user.id, accessToken)
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
@@ -1575,6 +1592,8 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     // Build trades using fill pairs with account resolution
     const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, ordersById, accountsById, user.id, tickDetails)
     
+    await updateLastSyncedAt(user.id, accessToken)
+
     if (processedTrades.length === 0) {
       logger.info('No trades could be created from fill pairs')
       return { processedTrades: [], savedCount: 0 }
@@ -1602,6 +1621,7 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     }
 
     logger.info(`Successfully saved ${saveResult.numberOfTradesAdded} fill pair trades`)
+    
     
     return { 
       processedTrades: processedTrades,

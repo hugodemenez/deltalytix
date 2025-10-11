@@ -1650,6 +1650,7 @@ export default {
             'syncFailed': 'Échec de la synchronisation des trades : {error}',
             'unknownError': 'Erreur inconnue',
             'debugInfo': 'Informations de débogage :',
+            'inProgress': 'Synchronisation tradovate en cours pour le compte {accountId}',
             'authenticated': 'Authentifié : ✅',
             'organization': 'Organisation : ApexTraderFunding (Prop Firm)',
             'environment': 'Environnement : {environment} (comptes), live (auth)',
@@ -1699,6 +1700,30 @@ export default {
             'manageAccountsDescription': 'Visualisez et gérez tous vos comptes Tradovate connectés. Vous pouvez synchroniser les trades, modifier les paramètres ou supprimer des comptes.',
             'viewAllAccounts': 'Voir Tous les Comptes',
             'accountNameRequired': 'Le nom du compte est requis'
+        },
+        'tabs': {
+            'accounts': 'Comptes',
+            'notifications': 'Notifications'
+        },
+        'notifications': {
+            'title': 'Notifications de Synchronisation',
+            'description': 'Surveillez votre activité de synchronisation Tradovate et les mises à jour de statut.',
+            'clearHistory': 'Effacer l\'Historique',
+            'clearProgress': 'Effacer le Progrès',
+            'autoSyncInProgress': 'Auto-sync en cours...',
+            'activeSyncs': 'Syncs Actives',
+            'completedSyncs': 'Syncs Terminées',
+            'failedSyncs': 'Syncs Échouées',
+            'recentActivity': 'Activité Récente',
+            'noActivity': 'Aucune activité de sync pour le moment',
+            'syncing': 'Synchronisation',
+            'completed': 'Terminé',
+            'failed': 'Échoué',
+            'ordersProcessed': '{count} ordres traités',
+            'tradesSaved': '{count} trades sauvegardés',
+            'duration': 'Durée : {duration}s',
+            'syncStarted': 'Sync démarrée pour le compte {accountId}',
+            'syncCompleted': 'Sync terminée pour le compte {accountId}'
         }
     },
     'import.type.thorSync.name': 'Thor',

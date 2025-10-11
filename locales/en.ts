@@ -1586,6 +1586,7 @@ export default {
             'syncFailed': 'Trade sync failed: {error}',
             'unknownError': 'Unknown error',
             'debugInfo': 'Debug Info:',
+            'inProgress': 'Tradovate sync in progress for account {accountId}',
             'authenticated': 'Authenticated: ✅',
             'organization': 'Organization: ApexTraderFunding (Prop Firm)',
             'environment': 'Environment: {environment} (accounts), live (auth)',
@@ -1635,6 +1636,30 @@ export default {
             'manageAccountsDescription': 'View and manage all your connected Tradovate accounts. You can sync trades, edit settings, or delete accounts.',
             'viewAllAccounts': 'View All Accounts',
             'accountNameRequired': 'Account name is required'
+        },
+        'tabs': {
+            'accounts': 'Accounts',
+            'notifications': 'Notifications'
+        },
+        'notifications': {
+            'title': 'Sync Notifications',
+            'description': 'Monitor your Tradovate sync activity and status updates.',
+            'clearHistory': 'Clear History',
+            'clearProgress': 'Clear Progress',
+            'autoSyncInProgress': 'Auto-sync in progress...',
+            'activeSyncs': 'Active Syncs',
+            'completedSyncs': 'Completed Syncs',
+            'failedSyncs': 'Failed Syncs',
+            'recentActivity': 'Recent Activity',
+            'noActivity': 'No sync activity yet',
+            'syncing': 'Syncing',
+            'completed': 'Completed',
+            'failed': 'Failed',
+            'ordersProcessed': '{count} orders processed',
+            'tradesSaved': '{count} trades saved',
+            'duration': 'Duration: {duration}s',
+            'syncStarted': 'Sync started for account {accountId}',
+            'syncCompleted': 'Sync completed for account {accountId}'
         }
     },
     'import.type.thorSync.name': 'Thor',
