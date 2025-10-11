@@ -783,6 +783,7 @@ export default {
         create: 'Créer',
         retry: 'Réessayer',
         copy: 'Copier',
+        loading: 'Chargement',
     },
     rithmic: {
         savedCredentials: "Identifiants Sauvegardés",

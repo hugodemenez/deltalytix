@@ -428,6 +428,7 @@ export default {
         create: 'Create',
         retry: 'Retry',
         copy: 'Copy',
+        loading: 'Loading',
     },
     'import.error.accountExists': 'Account already exists',
     'import.upload.dragAndDrop': 'Drag and drop your files here',

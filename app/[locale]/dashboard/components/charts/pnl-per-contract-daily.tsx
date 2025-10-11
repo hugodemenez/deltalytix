@@ -89,7 +89,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export default function PnLPerContractDailyChart({ size = 'medium' }: PnLPerContractDailyChartProps) {
-  const { formattedTrades: trades } = useData()
+  const { formattedTrades: trades, isLoading } = useData()
   const { timezone } = useUserStore()
   const { config, setSelectedInstrument } = usePnLPerContractDailyStore()
   const t = useI18n()
@@ -225,7 +225,22 @@ export default function PnLPerContractDailyChart({ size = 'medium' }: PnLPerCont
         <div className={cn(
           "w-full h-full"
         )}>
-          {chartData.length > 0 ? (
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center gap-2">
+                <div className={cn(
+                  "animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground",
+                  size === 'small-long' ? "h-6 w-6" : "h-8 w-8"
+                )} />
+                <span className={cn(
+                  "text-muted-foreground",
+                  size === 'small-long' ? "text-xs" : "text-sm"
+                )}>
+                  {t('common.loading')}
+                </span>
+              </div>
+            </div>
+          ) : chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}
