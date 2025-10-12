@@ -561,9 +561,6 @@ export const DataProvider: React.FC<{
         });
         return;
       }
-      if(adminView) {
-        console.error('Admin view but reaching this code', adminView)
-      }
 
       // Step 1: Get Supabase user
       const { data: { user } } = await supabase.auth.getUser();
@@ -611,7 +608,6 @@ export const DataProvider: React.FC<{
       // Calculate balanceToDate for each account 
       const accountsWithBalance = await calculateAccountBalanceAction(
         data.accounts || [],
-        Array.isArray(trades) ? trades : []
       );
       setAccounts(accountsWithBalance);
       
@@ -694,7 +690,6 @@ export const DataProvider: React.FC<{
         
         const accountsWithBalance = await calculateAccountBalanceAction(
           data.accounts || [],
-          Array.isArray(trades) ? trades : []
         )
         setAccounts(accountsWithBalance)
         

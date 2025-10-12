@@ -435,45 +435,88 @@ export async function createAccountAction(accountNumber: string) {
 /**
  * Calculate account balance for multiple accounts
  * @param accounts Array of accounts to calculate balance for
- * @param trades Array of trades to use for calculation
  * @returns Array of accounts with calculated balanceToDate
  */
 export async function calculateAccountBalanceAction(
   accounts: Account[],
-  trades: Trade[]
+  processedTrades?: Trade[]
 ): Promise<Account[]> {
-  // Pre-group trades by account number for O(1) lookup
+  if (processedTrades?.length) {
+    const tradesByAccount = processedTrades.reduce((acc, trade) => {
+      (acc[trade.accountNumber] ||= []).push(trade);
+      return acc;
+    }, {} as Record<string, Trade[]>);
+    return accounts.map(account => {
+      const accountTrades = tradesByAccount[account.number] ?? [];
+      return {
+        ...account,
+        balanceToDate: calculateAccountBalance(account, accountTrades),
+      };
+    });
+  }
+  const userId = await getUserId()
+  
+  // Early return if no accounts
+  if (accounts.length === 0) {
+    return [];
+  }
+  
+  // Collect all account numbers needed
+  const accountNumbers = accounts.map(account => account.number);
+  
+  // Fetch only required fields for better performance
+  const trades = await prisma.trade.findMany({
+    where: {
+      accountNumber: {
+        in: accountNumbers,
+      },
+      userId: userId
+    },
+    select: {
+      accountNumber: true,
+      pnl: true,
+      commission: true,
+    },
+  });
+
+  // Group trades by account number in a single pass for O(n) performance
   const tradesByAccount = trades.reduce((acc, trade) => {
     if (!acc[trade.accountNumber]) {
       acc[trade.accountNumber] = [];
     }
     acc[trade.accountNumber].push(trade);
     return acc;
-  }, {} as Record<string, Trade[]>);
+  }, {} as Record<string, Array<{ accountNumber: string; pnl: number; commission: number }>>);
 
-  // Compute balances efficiently
-  return accounts.map(account => ({
-    ...account,
-    balanceToDate: calculateAccountBalance(
-      account,
-      tradesByAccount[account.number] || []
-    ),
-  }));
+  return accounts.map(account => {
+    const accountTrades = tradesByAccount[account.number] || [];
+    return {
+      ...account,
+      balanceToDate: calculateAccountBalance(account, accountTrades),
+    };
+  });
 }
 
 /**
  * Calculate balance for a single account
  * @param account The account to calculate balance for
- * @param trades Array of trades to use for calculation
+ * @param trades Array of trades for this specific account (already filtered)
  * @returns The calculated balance
  */
-function calculateAccountBalance(account: Account, trades: Trade[]): number {
+function calculateAccountBalance(
+  account: Account, 
+  trades: Array<{ accountNumber: string; pnl: number; commission: number }>
+): number {
   let balance = account.startingBalance || 0;
-  const accountTrades = trades.filter(trade => trade.accountNumber === account.number);
-  const tradesPnL = accountTrades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0);
+  
+  // Calculate PnL from trades (trades are already filtered by account)
+  const tradesPnL = trades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0);
   balance += tradesPnL;
+  
+  // Add payouts
   const payouts = account.payouts || [];
   const payoutsSum = payouts.reduce((sum, payout) => sum + payout.amount, 0);
   balance += payoutsSum;
+  
   return balance;
 }
