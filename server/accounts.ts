@@ -439,11 +439,15 @@ export async function createAccountAction(accountNumber: string) {
  */
 export async function calculateAccountBalanceAction(
   accounts: Account[],
-  ProcessedTrades?: Trade[]
+  processedTrades?: Trade[]
 ): Promise<Account[]> {
-  if (ProcessedTrades) {
+  if (processedTrades?.length) {
+    const tradesByAccount = processedTrades.reduce((acc, trade) => {
+      (acc[trade.accountNumber] ||= []).push(trade);
+      return acc;
+    }, {} as Record<string, Trade[]>);
     return accounts.map(account => {
-      const accountTrades = ProcessedTrades.filter(trade => trade.accountNumber === account.number);
+      const accountTrades = tradesByAccount[account.number] ?? [];
       return {
         ...account,
         balanceToDate: calculateAccountBalance(account, accountTrades),
