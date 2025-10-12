@@ -313,3 +313,21 @@ body[data-mobile-navbar="open"] .max-w-screen-xl > * {
 [data-accordion-trigger] [data-accordion-icon] {
   display: none;
 }
+
+@utility touch-hitbox {
+  position: relative;
+ 
+  &::before {
+    content: "";
+    position: absolute;
+    display: block;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    height: 100%;
+    min-height: 44px;
+    min-width: 44px;
+    z-index: 9999;
+  }
+}

@@ -1,7 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Cursor AI rules file
+# AI rules file
 .cursorrules
+.cursor
+WARP.md
 
 # dependencies
 /node_modules
