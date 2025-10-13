@@ -1,6 +1,14 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @config '../tailwind.config.ts';
+
+@plugin "@tailwindcss/typography";
+@import "tw-animate-css";
+
+@source "../app/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../components/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../pages/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../src/**/*.{ts,tsx}";
 
 @source "../node_modules/streamdown/dist/index.js";
 

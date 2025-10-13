@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Logo } from "@/components/logo"
-import { Moon, Sun, Github, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop } from "lucide-react"
+import { Moon, Sun, FileText, Cpu, Users, Layers, BarChart3, Calendar, BookOpen, Database, LineChart, Menu, Globe, Laptop, Crown, Github } from "lucide-react"
+import { SiGithub } from "react-icons/si";
 import { motion, AnimatePresence } from "motion/react"
 import {
     NavigationMenu,
@@ -27,7 +28,7 @@ import { useCurrentLocale } from '@/locales/client'
 import { LanguageSelector } from "@/components/ui/language-selector"
 
 const ListItem = React.forwardRef<
-    React.ElementRef<"a">,
+    React.ComponentRef<"a">,
     React.ComponentPropsWithoutRef<"a"> & {
         title: string;
         icon?: React.ReactNode;
@@ -95,9 +96,7 @@ export default function Component() {
     const [isVisible, setIsVisible] = useState(true)
     const [lastScrollY, setLastScrollY] = useState(0)
     const t = useI18n()
-    const router = useRouter()
     const pathname = usePathname()
-    const currentLocale = useCurrentLocale()
 
     const toggleMenu = () => {
         setIsOpen(!isOpen)
@@ -244,7 +243,7 @@ export default function Component() {
                 {
                     path: "https://github.com/hugodemenez/deltalytix",
                     title: t('landing.navbar.openSource'),
-                    icon: <Github className="h-4 w-4" />,
+                    icon: <SiGithub className="h-4 w-4" />,
                 },
                 {
                     path: "https://www.youtube.com/@hugodemenez",
@@ -286,8 +285,8 @@ export default function Component() {
                         <NavigationMenuList className="list-none">
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('features')} onMouseLeave={() => setHoveredItem(null)}>
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.features')}</NavigationMenuTrigger>
-                                <NavigationMenuContent>
-                                    <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr] list-none">
+                                <NavigationMenuContent onMouseEnter={() => setHoveredItem('features')} onMouseLeave={() => setHoveredItem(null)}>
+                                    <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] lg:grid-cols-[.75fr_1fr] list-none">
                                         <li className="row-span-3">
                                             <NavigationMenuLink asChild>
                                                 <Link className="flex h-full w-full select-none flex-col justify-end rounded-md bg-linear-to-b from-muted/50 to-muted p-6 no-underline outline-hidden focus:shadow-md" href="/">
@@ -318,15 +317,23 @@ export default function Component() {
                                     </ul>
                                 </NavigationMenuContent>
                             </NavigationMenuItem>
-                            <NavigationMenuItem>
-                                <NavigationMenuLink className={cn(navigationMenuTriggerStyle(), 'bg-transparent')} href="/pricing">
-                                    {t('landing.navbar.pricing')}
-                                </NavigationMenuLink>
+                            <NavigationMenuItem onMouseEnter={() => setHoveredItem('pricing')} onMouseLeave={() => setHoveredItem(null)}>
+                                <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.pricing')}</NavigationMenuTrigger>
+                                <NavigationMenuContent onMouseEnter={() => setHoveredItem('pricing')} onMouseLeave={() => setHoveredItem(null)}>
+                                    <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] list-none">
+                                        <ListItem href="/authentication" title={t('pricing.basic.name')} icon={<Sun className="h-4 w-4" />}>
+                                            {t('pricing.basic.description')}
+                                        </ListItem>
+                                        <ListItem href="/pricing" title={t('pricing.plus.name')} icon={<Crown className="h-4 w-4" />}>
+                                                {t('pricing.plus.description')}
+                                        </ListItem>
+                                    </ul>
+                                </NavigationMenuContent>
                             </NavigationMenuItem>
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('updates')} onMouseLeave={() => setHoveredItem(null)}>
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.updates')}</NavigationMenuTrigger>
-                                <NavigationMenuContent>
-                                    <ul className="grid gap-3 p-4 w-[400px] list-none">
+                                <NavigationMenuContent onMouseEnter={() => setHoveredItem('updates')} onMouseLeave={() => setHoveredItem(null)}>
+                                    <ul className="grid gap-3 p-4 md:w-[500px] lg:w-[600px] list-none">
                                         <ListItem href="/updates" title={t('landing.navbar.productUpdates')} icon={<BarChart3 className="h-4 w-4" />}>
                                             {t('landing.navbar.productUpdatesDescription')}
                                         </ListItem>
@@ -338,9 +345,9 @@ export default function Component() {
                             </NavigationMenuItem>
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('developers')} onMouseLeave={() => setHoveredItem(null)}>
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.developers')}</NavigationMenuTrigger>
-                                <NavigationMenuContent>
+                                <NavigationMenuContent onMouseEnter={() => setHoveredItem('developers')} onMouseLeave={() => setHoveredItem(null)}>
                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] list-none">
-                                        <ListItem href="https://github.com/hugodemenez/deltalytix" title={t('landing.navbar.openSource')} icon={<Github className="h-4 w-4" />}>
+                                        <ListItem href="https://github.com/hugodemenez/deltalytix" title={t('landing.navbar.openSource')} icon={<SiGithub className="h-4 w-4" />}>
                                             {t('landing.navbar.openSourceDescription')}
                                         </ListItem>
                                         <ListItem href="https://www.youtube.com/@hugodemenez" title="YouTube" icon={<FileText className="h-4 w-4" />}>
@@ -349,18 +356,6 @@ export default function Component() {
                                         <ListItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} title={t('landing.navbar.joinCommunity')} icon={<Users className="h-4 w-4" />}>
                                             {t('landing.navbar.joinCommunityDescription')}
                                         </ListItem>
-                                        <li className="row-span-3 md:col-span-2">
-                                            <NavigationMenuLink asChild>
-                                                <a className="flex h-full w-full select-none flex-col justify-end rounded-md bg-linear-to-b from-muted/50 to-muted p-6 no-underline outline-hidden focus:shadow-md" href="#api">
-                                                    <div className="mb-2 mt-4 text-lg font-medium">
-                                                        {t('landing.navbar.oneApi')}
-                                                    </div>
-                                                    <p className="text-sm leading-tight text-muted-foreground">
-                                                        {t('landing.navbar.oneApiDescription')}
-                                                    </p>
-                                                </a>
-                                            </NavigationMenuLink>
-                                        </li>
                                     </ul>
                                 </NavigationMenuContent>
                             </NavigationMenuItem>

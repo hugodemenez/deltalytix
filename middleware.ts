@@ -85,6 +85,7 @@ export default async function middleware(req: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
     pathname.includes(".") ||
+    pathname.includes("/videos/") ||
     pathname === "/favicon.ico" ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
