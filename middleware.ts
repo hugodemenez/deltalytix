@@ -113,10 +113,10 @@ export default async function middleware(req: NextRequest) {
       // More permissive CSP for development
       response.headers.set('Content-Security-Policy', 
         "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:*; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob:; " +
-        "connect-src 'self' ws: wss:;"
+        "connect-src 'self' ws: wss: https://vercel.live;"
       );
     } else {
       // Production CSP - more restrictive
@@ -130,10 +130,10 @@ export default async function middleware(req: NextRequest) {
       
       response.headers.set('Content-Security-Policy', 
         `frame-ancestors ${allowedOrigins}; ` +
-        "script-src 'self'; " +
+        "script-src 'self' https://vercel.live; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data:; " +
-        "connect-src 'self';"
+        "connect-src 'self' https://vercel.live;"
       );
     }
     
