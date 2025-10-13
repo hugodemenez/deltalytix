@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
 import { saveJournal, getMoodForDay } from '@/server/journal'
 import { format } from 'date-fns'
@@ -39,7 +39,6 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   const user = useUserStore(state => state.user)
   const moodHistory = useMoodStore(state => state.moods)
   const setMoodHistory = useMoodStore(state => state.setMoods)
-  const { toast } = useToast()
   const [comment, setComment] = React.useState<string>("")
   const [isSavingComment, setIsSavingComment] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
@@ -88,11 +87,7 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
 
   const handleSaveComment = async () => {
     if (!user?.id) {
-      toast({
-        title: t('error'),
-        description: t('auth.required'),
-        variant: "destructive",
-      })
+      toast.error(t('auth.required'))
       return
     }
 
@@ -114,18 +109,11 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
       }) || []
       setMoodHistory([...updatedMoodHistory, savedMood])
 
-      toast({
-        title: t('success'),
-        description: t('calendar.charts.commentSaved'),
-      })
+      toast.success(t('calendar.charts.commentSaved'))
     } catch (error) {
       console.error('Error saving comment:', error)
       setSaveError(t('calendar.charts.commentError'))
-      toast({
-        title: t('error'),
-        description: t('calendar.charts.commentError'),
-        variant: "destructive",
-      })
+      toast.error(t('calendar.charts.commentError'))
     } finally {
       setIsSavingComment(false)
     }

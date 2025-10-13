@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { toast } from '@/hooks/use-toast'
+import { toast } from "sonner"
 import { TickDetails, Trade } from '@prisma/client'
 import { getTickDetails } from '@/server/tick-details'
 
@@ -325,10 +325,8 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     setIncompleteTrades(incompleteTradesArray);
 
     if (incompleteTradesArray.length > 0) {
-      toast({
-        title: "Incomplete Trades Detected",
+      toast.error("Incomplete Trades Detected", {
         description: `${incompleteTradesArray.length} trade(s) were not completed and have been removed from the analysis.`,
-        variant: "default",
       });
     }
   }, [csvData, headers, setProcessedTrades, tickDetails, getHeaderIndex]);
@@ -463,11 +461,6 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
                 <Button
                   key={symbol}
                   variant="outline"
-                  onClick={() => toast({
-                    title: "Instrument Information",
-                    description: `You traded ${symbol}. For more details,
- please check the trades table.`
-                  })}
                 >
                   {symbol}
                 </Button>

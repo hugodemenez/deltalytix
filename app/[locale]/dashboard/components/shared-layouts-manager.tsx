@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/client"
 import { getUserShared, deleteShared } from "@/server/shared"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { format } from "date-fns"
 import { Trash2, Link, Calendar, Users, ArrowLeft, ExternalLink } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -75,7 +75,6 @@ function SkeletonCard() {
 
 export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
   const t = useI18n()
-  const { toast } = useToast()
   const user = useUserStore(state => state.user)
   const [sharedLayouts, setSharedLayouts] = useState<SharedLayout[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -92,10 +91,8 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
       setSharedLayouts(transformedLayouts)
     } catch (error) {
       console.error('Error loading shared layouts:', error)
-      toast({
-        title: t('share.error'),
+      toast.error(t('share.error'), {
         description: t('share.error.loadFailed'),
-        variant: "destructive",
       })
     } finally {
       setIsLoading(false)
@@ -118,15 +115,11 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
     try {
       await deleteShared(layoutToDelete.slug, user!.id)
       setSharedLayouts(prev => prev.filter(layout => layout.slug !== layoutToDelete.slug))
-      toast({
-        title: t('share.deleteSuccess'),
-      })
+      toast.success(t('share.deleteSuccess'))
     } catch (error) {
       console.error('Error deleting shared layout:', error)
-      toast({
-        title: t('share.error'),
+      toast.error(t('share.error'), {
         description: t('share.error.deleteFailed'),
-        variant: "destructive",
       })
       // Don't need to reopen dialog on error, as the item still exists in the list
     }
@@ -136,9 +129,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
     const url = `${window.location.origin}/shared/${slug}`
     try {
       await navigator.clipboard.writeText(url)
-      toast({
-        title: t('share.urlCopied'),
-      })
+      toast.success(t('share.urlCopied'))
     } catch (error) {
       console.error('Error copying URL:', error)
     }
@@ -151,7 +142,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+        <div className="shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-b bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60 sticky top-0 z-10">
           <div className="flex items-center justify-between w-full">
             <Skeleton className="h-9 w-32" />
           </div>
@@ -171,7 +162,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-10">
+      <div className="shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-b bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60 sticky top-0 z-10">
         <div className="flex items-center justify-between w-full">
           <Button
             variant="ghost"

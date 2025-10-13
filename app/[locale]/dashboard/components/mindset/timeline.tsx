@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { useState } from "react"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 interface TimelineProps {
   onSelectDate: (date: Date) => void
@@ -69,15 +69,12 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
 
     try {
       await onDeleteEntry(entryToDelete)
-      toast({
-        title: t('mindset.deleteSuccess'),
+      toast.success(t('mindset.deleteSuccess'), {
         description: t('mindset.deleteSuccessDescription'),
       })
     } catch (error) {
-      toast({
-        title: t('mindset.deleteError'),
+      toast.error(t('mindset.deleteError'), {
         description: t('mindset.deleteErrorDescription'),
-        variant: "destructive",
       })
     } finally {
       setDeleteDialogOpen(false)
@@ -206,7 +203,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                 className="w-full justify-start gap-2 text-xs"
                 size="sm"
               >
-                <Plus className="h-4 w-4 flex-shrink-0" />
+                <Plus className="h-4 w-4 shrink-0" />
                 {t('mindset.addEntry')}
               </Button>
             </PopoverTrigger>

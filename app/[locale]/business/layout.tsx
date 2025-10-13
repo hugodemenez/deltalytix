@@ -1,4 +1,4 @@
-import { Toaster } from "@/components/ui/toaster";
+
 import BusinessNavbar from "./components/business-navbar";
 import { ThemeProvider } from "@/context/theme-provider";
 import { Metadata } from 'next';
@@ -36,9 +36,8 @@ export default async function BusinessLayout(
   return (
     <ThemeProvider>
         <div className="px-2 sm:px-6 lg:px-32">
-          <Toaster />
           <BusinessNavbar />
-          <div className="mt-8 sm:mt-20 max-w-screen-xl mx-auto">
+          <div className="mt-8 sm:mt-20 max-w-(--breakpoint-xl) mx-auto">
             {children}
           </div>
         </div>

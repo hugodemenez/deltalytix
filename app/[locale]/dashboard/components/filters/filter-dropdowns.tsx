@@ -91,7 +91,7 @@ function FilterDropdown({
                   >
                     <Checkbox
                       checked={isItemSelected(item)}
-                      className="h-4 w-4 flex-shrink-0"
+                      className="h-4 w-4 shrink-0"
                       disabled={isItemDisabled(item)}
                     />
                     <span className="text-sm break-all pr-2">

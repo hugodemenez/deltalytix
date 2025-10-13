@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "@/hooks/use-toast";
-
+import { toast } from "sonner";
 interface AuthenticationLayoutProps {
   children: React.ReactNode;
 }
@@ -26,10 +25,8 @@ export default function AuthenticationLayout({
 
     if (params.get('error')) {
       const errorDescription = params.get('error_description');
-      toast({
-        title: "Authentication Error",
+      toast.error("Authentication Error", {
         description: errorDescription?.replace(/\+/g, ' ') || "An error occurred during authentication",
-        variant: "destructive",
       });
 
       // Clear the hash after showing the toast

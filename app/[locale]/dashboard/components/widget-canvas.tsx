@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
 import { useUserStore } from '../../../../store/user-store'
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { defaultLayouts } from "@/context/data-provider"
 
 
@@ -370,7 +370,6 @@ export default function WidgetCanvas() {
   const { saveDashboardLayout } = useData()
   const [isCustomizing, setIsCustomizing] = useState(false)
   const [isUserAction, setIsUserAction] = useState(false)
-  const { toast } = useToast()
   const t = useI18n()
 
   // Add this state to track if the layout change is from user interaction
@@ -484,10 +483,8 @@ export default function WidgetCanvas() {
 
     // Prevent adding duplicate widget types
     if (currentLayout.some(widget => widget.type === type)) {
-      toast({
-        title: t('widgets.duplicate.title'),
+      toast.error(t('widgets.duplicate.title'), {
         description: t('widgets.duplicate.description'),
-        variant: "destructive"
       })
       return
     }
@@ -571,8 +568,7 @@ export default function WidgetCanvas() {
             }
             
             setLayouts(newLayouts)
-            toast({
-              title: t('widgets.widgetAdded'),
+            toast.success(t('widgets.widgetAdded'), {
               description: t('widgets.widgetAddedDescription'),
             })
             await saveDashboardLayout(newLayouts)
@@ -603,8 +599,7 @@ export default function WidgetCanvas() {
     
     setLayouts(newLayouts)
     
-    toast({
-      title: t('widgets.widgetAdded'),
+    toast.success(t('widgets.widgetAdded'), {
       description: t('widgets.widgetAddedDescription'),
     })
     await saveDashboardLayout(newLayouts)
@@ -692,8 +687,7 @@ export default function WidgetCanvas() {
     }
     setLayouts(newLayouts)
     await saveDashboardLayout(newLayouts)
-    toast({
-      title: t('widgets.restoredDefaultsTitle'),
+    toast.success(t('widgets.restoredDefaultsTitle'), {
       description: t('widgets.restoredDefaultsDescription')
     })
   }, [user?.id, layouts, setLayouts, saveDashboardLayout, t, toast])
@@ -752,7 +746,7 @@ export default function WidgetCanvas() {
       />
       {layouts && (
         <div className="relative">
-          <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-[9999]" />
+          <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
           <ResponsiveGridLayout
             layouts={responsiveLayout}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}

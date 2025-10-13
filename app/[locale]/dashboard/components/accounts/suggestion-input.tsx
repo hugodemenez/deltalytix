@@ -244,7 +244,7 @@ export default function EnhancedInput({
           aria-invalid={isValid === false}
           aria-describedby={isValid === false ? "validation-message" : undefined}
           className={cn(
-            "w-full rounded-md border-0 bg-transparent px-3 py-2 text-sm outline-none ring-0 focus:ring-0 pr-14",
+            "w-full rounded-md border-0 bg-transparent px-3 py-2 text-sm outline-hidden ring-0 focus:ring-0 pr-14",
             "text-foreground",
             "placeholder:text-muted-foreground",
             isValid === false ? "text-destructive" : "",

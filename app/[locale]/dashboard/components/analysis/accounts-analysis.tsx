@@ -432,7 +432,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                           <ul className="space-y-2">
                             {analysisResult.structuredAnalysis.strengths.map((strength, index) => (
                               <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
                                 {strength}
                               </li>
                             ))}
@@ -446,7 +446,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                           <ul className="space-y-2">
                             {analysisResult.structuredAnalysis.improvements.map((improvement, index) => (
                               <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                                <AlertCircle className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                                <AlertCircle className="h-4 w-4 text-orange-500 mt-0.5 shrink-0" />
                                 {improvement}
                               </li>
                             ))}
@@ -462,7 +462,7 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
                         <ul className="space-y-2">
                           {analysisResult.structuredAnalysis.recommendations.map((recommendation, index) => (
                             <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                              <Play className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                              <Play className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
                               {recommendation}
                             </li>
                           ))}

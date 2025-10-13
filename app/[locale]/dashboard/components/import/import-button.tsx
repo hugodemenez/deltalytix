@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { UploadIcon, type UploadIconHandle } from '@/components/animated-icons/upload'
 import { Trade } from '@prisma/client'
 import { saveTradesAction } from '@/server/database'
@@ -78,7 +78,6 @@ export default function ImportButton() {
   const uploadIconRef = useRef<UploadIconHandle>(null)
   const [text, setText] = useState<string>('')
 
-  const { toast } = useToast()
   const user = useUserStore(state => state.user)
   const supabaseUser = useUserStore(state => state.supabaseUser)
   const trades = useTradesStore(state => state.trades)
@@ -88,10 +87,8 @@ export default function ImportButton() {
 
   const handleSave = async () => {
     if (!user || !supabaseUser) {
-      toast({
-        title: t('import.error.auth'),
+      toast.error(t('import.error.auth'), {
         description: t('import.error.authDescription'),
-        variant: "destructive",
       })
       return
     }
@@ -155,22 +152,16 @@ export default function ImportButton() {
       const result = await saveTradesAction(newTrades)
       if(result.error){
         if (result.error === "DUPLICATE_TRADES") {
-          toast({
-            title: t('import.error.duplicateTrades'),
+          toast.error(t('import.error.duplicateTrades'), {
             description: t('import.error.duplicateTradesDescription'),
-            variant: "destructive",
           })
         } else if (result.error === "NO_TRADES_ADDED") {
-          toast({
-            title: t('import.error.noTradesAdded'),
+          toast.error(t('import.error.noTradesAdded'), {
             description: t('import.error.noTradesAddedDescription'),
-            variant: "destructive",
           })
         } else {
-          toast({
-            title: t('import.error.failed'),
+          toast.error(t('import.error.failed'), {
             description: t('import.error.failedDescription'),
-            variant: "destructive",
           })
         }
         return
@@ -178,8 +169,7 @@ export default function ImportButton() {
       // Update the trades
       await refreshTrades()
       setIsOpen(false)
-      toast({
-        title: t('import.success'),
+      toast.success(t('import.success'), {
         description: t('import.successDescription', { numberOfTradesAdded: result.numberOfTradesAdded }),
       })
       // Reset the import process
@@ -187,10 +177,8 @@ export default function ImportButton() {
 
     } catch (error) {
       console.error('Error saving trades:', error)
-      toast({
-        title: t('import.error.failed'),
+      toast.error(t('import.error.failed'), {
         description: t('import.error.failedDescription'),
-        variant: "destructive",
       })
     } finally {
       setIsSaving(false)

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2 } from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { RithmicSyncFeedback } from './rithmic-sync-progress'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
@@ -116,14 +116,12 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
       if (!result.success) {
         // Handle rate limit error without showing console error
         if (result.rateLimited) {
-          toast({
-            title: t('rithmic.rateLimit.title'),
+          toast.error(t('rithmic.rateLimit.title'), {
             description: t('rithmic.rateLimit.description', {
               max: 2,
               period: 15,
               wait: 8
-            }),
-            variant: "destructive",
+            })
           })
           return
         }
@@ -152,12 +150,10 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       
       // Show error toast
-      toast({
-        title: t('rithmic.error.connectionFailed'),
+      toast.error(t('rithmic.error.connectionFailed'), {
         description: error instanceof DOMException && error.name === 'AbortError' 
           ? t('rithmic.error.timeout')
           : errorMessage,
-        variant: "destructive"
       })
 
       // Reset form if it's a timeout or invalid credentials
@@ -283,8 +279,7 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
         setCurrentCredentialId(dataToSave.id)
 
         // Show toast notification
-        toast({
-          title: t('rithmic.credentials.merged'),
+        toast.success(t('rithmic.credentials.merged'), {
           description: t('rithmic.credentials.mergedDescription'),
         })
       } else {
@@ -378,10 +373,8 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
       })
     } catch (error) {
       console.error('Failed to save synchronization data:', error)
-      toast({
-        title: t('rithmic.error.syncDataSaveFailed'),
+      toast.error(t('rithmic.error.syncDataSaveFailed'), {
         description: t('rithmic.error.syncDataSaveFailedDescription'),
-        variant: "destructive"
       })
     }
 

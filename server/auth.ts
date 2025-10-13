@@ -76,28 +76,6 @@ export async function signInWithGoogle(next: string | null = null) {
   }
 }
 
-// export async function getUserId() {
-//   const supabase = await createClient()
-//   const { data: { user }, error } = await supabase.auth.getUser()
-//   if (!user) {
-//     toast({
-//       title: 'Error',
-//       description: 'User not found',
-//     })
-//     return ''
-//   }
-//   if (error) {
-//     toast({
-//       title: 'Error',
-//       description: error.message,
-//     })
-//     return ''
-//   }
-//   // Ensure user is in Prisma database
-//   await ensureUserInDatabase(user)
-//   return user.id
-// }
-
 export async function signOut() {
   const supabase = await createClient()
   await supabase.auth.signOut()

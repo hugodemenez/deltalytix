@@ -16,5 +16,11 @@
       "path": "/api/cron/renew-tradovate-token",
       "schedule": "*/10 * * * *"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/videos/:path*",
+      "destination": "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/:path*"
+    }
   ]
 }

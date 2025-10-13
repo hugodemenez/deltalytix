@@ -1,12 +1,11 @@
 import { ThemeProvider } from "@/context/theme-provider";
 import { DataProvider } from "@/context/data-provider";
 import Modals from "@/components/modals";
-import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./components/navbar";
 import { RithmicSyncContextProvider } from "@/context/rithmic-sync-context";
 import { RithmicSyncNotifications } from './components/import/rithmic/sync/rithmic-notifications'
 import { TradovateSyncContextProvider } from "@/context/tradovate-sync-context";
-import { Toaster as SonnerToaster } from "@/components/ui/sonner";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default async function RootLayout({
@@ -22,7 +21,6 @@ export default async function RootLayout({
               <TradovateSyncContextProvider>
                 <RithmicSyncNotifications />
                 <div className="min-h-screen flex flex-col">
-                      <SonnerToaster/>
                       <Toaster />
                       <Navbar />
                       <div className="flex flex-1 px-2 sm:px-8">

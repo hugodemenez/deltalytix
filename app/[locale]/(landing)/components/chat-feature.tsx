@@ -258,7 +258,7 @@ export default function TradingChatAssistant({ className = "", maxMessages = 3 }
     >
       <div className="w-full h-full border border-muted bg-white dark:bg-black shadow-lg dark:shadow-gray-900/50 transition-all duration-500 rounded-lg overflow-hidden">
         <div className="p-4 h-full flex flex-col min-h-0">
-          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-muted transition-colors duration-300 flex-shrink-0">
+          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-muted transition-colors duration-300 shrink-0">
             <Bot className="h-4 w-4 text-black dark:text-white transition-colors duration-300" />
             <span className="text-sm font-medium text-black dark:text-white transition-colors duration-300">
               {t('landing.features.chat-feature.title')}
@@ -279,7 +279,7 @@ export default function TradingChatAssistant({ className = "", maxMessages = 3 }
                     className={`flex items-start gap-2 max-w-[85%] ${message.role === "user" ? "flex-row-reverse" : ""}`}
                   >
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                      className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 transition-all duration-300 ${
                         message.role === "user" ? "bg-black dark:bg-white" : "bg-muted"
                       }`}
                     >

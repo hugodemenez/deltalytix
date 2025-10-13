@@ -17,7 +17,7 @@ import { cn, calculateTradingDays } from "@/lib/utils"
 import { useData } from "@/context/data-provider"
 import { useI18n } from "@/locales/client"
 import { AccountTable } from './account-table'
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { WidgetSize } from '../../types/dashboard'
 import { enUS, fr } from 'date-fns/locale'
 import { useParams } from 'next/navigation'
@@ -145,7 +145,7 @@ function DraggableAccountCard({
       ref={setNodeRef}
       style={style}
       className={cn(
-        "flex-shrink-0",
+        "shrink-0",
         isDragging && "z-50"
       )}
     >
@@ -163,7 +163,7 @@ function DraggableAccountCard({
           <div
             {...attributes}
             {...listeners}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded bg-background/80 backdrop-blur-sm border"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing p-1 rounded bg-background/80 backdrop-blur-xs border"
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </div>
@@ -255,7 +255,7 @@ function PayoutDialog({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[400px] sm:w-[540px] flex flex-col h-full max-h-screen">
-        <SheetHeader className="flex-shrink-0">
+        <SheetHeader className="shrink-0">
           <SheetTitle>{existingPayout ? t('propFirm.payout.edit') : t('propFirm.payout.add')}</SheetTitle>
           <SheetDescription>
             {existingPayout ? t('propFirm.payout.editDescription') : t('propFirm.payout.addDescription')} {accountNumber}
@@ -348,7 +348,7 @@ function PayoutDialog({
             {/* Inline Calendar with Custom Header */}
             <div className="border rounded-md bg-background max-h-[400px] flex flex-col">
               {/* Custom Month/Year Header */}
-              <div className="p-3 border-b bg-muted/20 flex-shrink-0">
+              <div className="p-3 border-b bg-muted/20 shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Button
@@ -405,7 +405,7 @@ function PayoutDialog({
                     >
                       <ChevronLeft className="h-3 w-3" />
                     </Button>
-                    <span className="text-base font-semibold min-w-[3rem] text-center">
+                    <span className="text-base font-semibold min-w-12 text-center">
                       {date.getFullYear()}
                     </span>
                     <Button
@@ -488,7 +488,7 @@ function PayoutDialog({
           </div>
         </div>
 
-        <SheetFooter className="flex-shrink-0 flex-col-reverse sm:flex-row gap-2 pt-4 border-t mt-auto">
+        <SheetFooter className="shrink-0 flex-col-reverse sm:flex-row gap-2 pt-4 border-t mt-auto">
           {existingPayout && onDelete && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -647,10 +647,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         
         reorderAccounts(groupId, accountNumbers)
         
-        toast({
-          title: t('propFirm.dragAndDrop.reorderSuccess'),
-          variant: "default"
-        })
+        toast.success(t('propFirm.dragAndDrop.reorderSuccess'))
       }
     }
   }
@@ -903,17 +900,13 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       setPayoutDialogOpen(false)
       setSelectedPayout(undefined)
 
-      toast({
-        title: selectedPayout ? t('propFirm.payout.updateSuccess') : t('propFirm.payout.success'),
+      toast.success(selectedPayout ? t('propFirm.payout.updateSuccess') : t('propFirm.payout.success'), {
         description: selectedPayout ? t('propFirm.payout.updateSuccessDescription') : t('propFirm.payout.successDescription'),
-        variant: "default"
       })
     } catch (error) {
       console.error('Failed to handle payout:', error)
-      toast({
-        title: t('propFirm.payout.error'),
+      toast.error(t('propFirm.payout.error'), {
         description: t('propFirm.payout.errorDescription'),
-        variant: "destructive"
       })
     } finally {
       setIsSavingPayout(false)
@@ -936,17 +929,13 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       setPayoutDialogOpen(false)
       setSelectedPayout(undefined)
 
-      toast({
-        title: t('propFirm.payout.deleteSuccess'),
+      toast.success(t('propFirm.payout.deleteSuccess'), {
         description: t('propFirm.payout.deleteSuccessDescription'),
-        variant: "default"
       })
     } catch (error) {
       console.error('Failed to delete payout:', error)
-      toast({
-        title: t('propFirm.payout.deleteError'),
+      toast.error(t('propFirm.payout.deleteError'), {
         description: t('propFirm.payout.deleteErrorDescription'),
-        variant: "destructive"
       })
     } finally {
       setIsDeletingPayout(false)
@@ -964,17 +953,13 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       await refreshTrades()
       setSelectedAccountForTable(null)
 
-      toast({
-        title: t('propFirm.toast.deleteSuccess'),
+      toast.success(t('propFirm.toast.deleteSuccess'), {
         description: t('propFirm.toast.deleteSuccessDescription'),
-        variant: "default"
       })
     } catch (error) {
       console.error('Failed to delete account:', error)
-      toast({
-        title: t('propFirm.toast.deleteError'),
+      toast.error(t('propFirm.toast.deleteError'), {
         description: t('propFirm.toast.deleteErrorDescription'),
-        variant: "destructive"
       })
     } finally {
       setIsDeleting(false)
@@ -1020,17 +1005,13 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
 
       setPendingChanges(null)
 
-      toast({
-        title: t('propFirm.toast.setupSuccess'),
+      toast.success(t('propFirm.toast.setupSuccess'), {
         description: t('propFirm.toast.setupSuccessDescription'),
-        variant: "default"
       })
     } catch (error) {
       console.error('Failed to setup account:', error)
-      toast({
-        title: t('propFirm.toast.setupError'),
+      toast.error(t('propFirm.toast.setupError'), {
         description: t('propFirm.toast.setupErrorDescription'),
-        variant: "destructive"
       })
     } finally {
       setIsSaving(false)
@@ -1394,17 +1375,13 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                             payouts: (selectedAccountForTable.payouts || []).filter(p => p.id !== payoutId)
                           })
 
-                          toast({
-                            title: t('propFirm.payout.deleteSuccess'),
+                          toast.success(t('propFirm.payout.deleteSuccess'), {
                             description: t('propFirm.payout.deleteSuccessDescription'),
-                            variant: "default"
                           })
                         } catch (error) {
                           console.error('Failed to delete payout:', error)
-                          toast({
-                            title: t('propFirm.payout.deleteError'),
+                          toast.error(t('propFirm.payout.deleteError'), {
                             description: t('propFirm.payout.deleteErrorDescription'),
-                            variant: "destructive"
                           })
                         }
                       }}

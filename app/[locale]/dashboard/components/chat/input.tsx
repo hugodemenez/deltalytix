@@ -258,7 +258,7 @@ export function ChatInput({
   return (
     <div 
       className={cn(
-        "relative p-4 border-t bg-background/95 backdrop-blur-sm transition-colors",
+        "relative p-4 border-t bg-background/95 backdrop-blur-xs transition-colors",
         isDragOver && "bg-primary/10 border-primary/50"
       )}
       onDragOver={handleDragOver}
@@ -284,7 +284,7 @@ export function ChatInput({
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               placeholder="Paste image URL here..."
-              className="flex-grow"
+              className="grow"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -394,7 +394,7 @@ export function ChatInput({
           value={input}
           onChange={handleInputChangeWithUrlDetection}
           placeholder={status === 'streaming' ? t('chat.aiThinking') : t('chat.writeMessage')}
-          className="flex-grow bg-background/50"
+          className="grow bg-background/50"
           disabled={status === "streaming"}
         />
         <Button type="submit" size="icon" className="shrink-0" disabled={status === "streaming" || (!input.trim() && files.length === 0)}>

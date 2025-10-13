@@ -175,7 +175,7 @@ export default function BusinessPage() {
   ]
 
   return (
-    <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
+    <div className="flex flex-col min-h-dvh text-gray-900 dark:text-white transition-colors duration-300">
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative isolate overflow-hidden">

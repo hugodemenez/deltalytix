@@ -110,7 +110,7 @@ const PreviewCard = forwardRef<HTMLDivElement, PreviewCardProps>(
         onClick={onClick}
       >
         {!isMobile && (
-          <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 shadow-sm">
+          <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 shadow-xs">
             {t('widgets.clickToAdd')}
           </div>
         )}
@@ -222,7 +222,7 @@ export const AddWidgetSheet = forwardRef<HTMLButtonElement, AddWidgetSheetProps>
             )}
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-[100dvh] overflow-hidden">
+        <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-dvh overflow-hidden">
           <SheetHeader>
             <SheetTitle>{t('widgets.addWidget')}</SheetTitle>
           </SheetHeader>

@@ -7,7 +7,7 @@ import { Frown, Meh, Smile } from "lucide-react"
 import { useI18n } from '@/locales/client'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { saveMood, getMoodForDay } from '@/server/journal'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from "sonner"
 import { format } from 'date-fns'
 import { useUserStore } from '../../../../../store/user-store'
 
@@ -24,7 +24,6 @@ type StoredMood = {
 
 export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
   const t = useI18n()
-  const { toast } = useToast()
   const user = useUserStore(state => state.user)
   const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
   const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
@@ -68,11 +67,7 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
 
   const handleMoodSelect = async (mood: 'bad' | 'okay' | 'great') => {
     if (!user?.id) {
-      toast({
-        title: t('error'),
-        description: t('auth.required'),
-        variant: "destructive",
-      })
+      toast.error(t('auth.required'))
       return
     }
 
@@ -89,17 +84,10 @@ export function MoodSelector({ onMoodSelect }: MoodSelectorProps) {
         date: today
       }))
 
-      toast({
-        title: t('success'),
-        description: t('mood.saved'),
-      })
+      toast.success(t('mood.saved'))
     } catch (error) {
       console.error('Error saving mood:', error)
-      toast({
-        title: t('error'),
-        description: t('mood.error'),
-        variant: "destructive",
-      })
+      toast.error(t('mood.error'))
     } finally {
       setIsLoading(null)
     }

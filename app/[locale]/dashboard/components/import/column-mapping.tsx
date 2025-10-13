@@ -175,7 +175,7 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <SparklesIcon className="h-6 w-6 text-yellow-500 dark:text-yellow-400 animate-pulse" />
-                  <div className="absolute -inset-1 bg-yellow-200 dark:bg-yellow-800 rounded-full blur-sm opacity-50 animate-ping" />
+                  <div className="absolute -inset-1 bg-yellow-200 dark:bg-yellow-800 rounded-full blur-xs opacity-50 animate-ping" />
                 </div>
                 <div>
                   <p className="font-bold">Unmapped Fields</p>

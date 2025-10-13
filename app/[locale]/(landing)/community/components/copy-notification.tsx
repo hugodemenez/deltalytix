@@ -13,7 +13,7 @@ export function CopyNotification({ show, message }: CopyNotificationProps) {
       show ? 'opacity-100' : 'opacity-0 pointer-events-none'
     )}>
       <div className={cn(
-        'bg-zinc-800/90 backdrop-blur-sm text-white px-6 py-4 rounded-xl shadow-lg transform transition-all duration-200 flex flex-col items-center gap-2',
+        'bg-zinc-800/90 backdrop-blur-xs text-white px-6 py-4 rounded-xl shadow-lg transform transition-all duration-200 flex flex-col items-center gap-2',
         show ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
       )}>
         <div className="bg-white/10 rounded-full p-2">

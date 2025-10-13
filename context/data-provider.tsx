@@ -468,7 +468,7 @@ export const DataProvider: React.FC<{
   const locale = useCurrentLocale()
   const isLoading = useUserStore(state => state.isLoading)
   const setIsLoading = useUserStore(state => state.setIsLoading)
-  
+
   // Stripe subscription store
   const setStripeSubscription = useStripeSubscriptionStore(state => state.setStripeSubscription);
   const setStripeSubscriptionLoading = useStripeSubscriptionStore(state => state.setIsLoading);
@@ -584,7 +584,7 @@ export const DataProvider: React.FC<{
         }
         else {
           // If no layout exists in database, use default layout
-            setDashboardLayout(defaultLayouts)
+          setDashboardLayout(defaultLayouts)
         }
       }
 
@@ -610,7 +610,7 @@ export const DataProvider: React.FC<{
         data.accounts || [],
       );
       setAccounts(accountsWithBalance);
-      
+
 
       setUser(await ensureUserInDatabase(user, locale));
       setSubscription(data.subscription as PrismaSubscription | null);
@@ -664,51 +664,61 @@ export const DataProvider: React.FC<{
 
   const refreshTrades = useCallback(async () => {
     if (!supabaseUser?.id) return
-    
+
     setIsLoading(true)
-    
+
     try {
-      console.log('[refreshTrades] Force refreshing trades - bypassing cache')
-      
       // Get the correct user ID from server
       const userId = await getUserId()
-      
+
       // Force refresh by calling getTradesAction with forceRefresh: true
       const trades = await getTradesAction(userId, true)
       setTrades(Array.isArray(trades) ? trades : [])
-      
+
       // Also refresh other data with forceRefresh: true
       const data = await getUserData(true)
-      if (data && supabaseUser) {
-        setUser(await ensureUserInDatabase(supabaseUser, locale))
-        setSubscription(data.subscription as PrismaSubscription | null)
-        setTags(data.tags)
-        setGroups(data.groups)
-        setMoods(data.moodHistory)
-        setEvents(data.financialEvents)
-        setTickDetails(data.tickDetails)
-        
-        const accountsWithBalance = await calculateAccountBalanceAction(
-          data.accounts || [],
-        )
-        setAccounts(accountsWithBalance)
-        
-        // Refresh Stripe subscription data
-        try {
-          const stripeSubscriptionData = await getSubscriptionData();
-          setStripeSubscription(stripeSubscriptionData);
-          setStripeSubscriptionError(null);
-        } catch (error) {
-          console.error('Error refreshing Stripe subscription:', error);
-          setStripeSubscriptionError(error instanceof Error ? error.message : 'Failed to refresh subscription');
-        }
+
+      if (!data) {
+        await signOut();
+        setIsLoading(false)
+        return;
       }
-      
+
+      // Calculate balanceToDate for each account 
+      const accountsWithBalance = await calculateAccountBalanceAction(
+        data.accounts || [],
+      );
+      setAccounts(accountsWithBalance);
+
+
+      setUser(await ensureUserInDatabase(supabaseUser, locale));
+      setSubscription(data.subscription as PrismaSubscription | null);
+      setTags(data.tags);
+      setGroups(data.groups);
+      setMoods(data.moodHistory);
+      setEvents(data.financialEvents);
+      setTickDetails(data.tickDetails);
+      setIsFirstConnection(data.userData?.isFirstConnection || false)
+
+
       console.log('[refreshTrades] Successfully refreshed trades and user data')
     } catch (error) {
       console.error('Error refreshing trades:', error)
     } finally {
       setIsLoading(false)
+      // Load Stripe subscription data
+      try {
+        setStripeSubscriptionLoading(true);
+        const stripeSubscriptionData = await getSubscriptionData();
+        setStripeSubscription(stripeSubscriptionData);
+        setStripeSubscriptionError(null);
+      } catch (error) {
+        console.error('Error loading Stripe subscription:', error);
+        setStripeSubscriptionError(error instanceof Error ? error.message : 'Failed to load subscription');
+        setStripeSubscription(null);
+      } finally {
+        setStripeSubscriptionLoading(false);
+      }
     }
   }, [supabaseUser?.id, supabaseUser, locale, setTrades, setUser, setSubscription, setTags, setGroups, setMoods, setEvents, setTickDetails, setAccounts])
 
@@ -871,7 +881,7 @@ export const DataProvider: React.FC<{
       const planName = stripeSubscription.plan?.name?.toLowerCase() || '';
       return planName.includes('plus') || planName.includes('pro');
     }
-    
+
     // Fallback to database subscription
     return Boolean(subscription?.status === 'active' && ['plus', 'pro'].includes(subscription?.plan?.split('_')[0].toLowerCase() || ''));
   };
@@ -888,7 +898,7 @@ export const DataProvider: React.FC<{
       if (!currentAccount) {
         const createdAccount = await setupAccountAction(newAccount)
         setAccounts([...accounts, createdAccount])
-        
+
         // If the new account has a groupId, update the groups state to include it
         if (createdAccount.groupId) {
           setGroups(groups.map(group => {
@@ -1018,7 +1028,7 @@ export const DataProvider: React.FC<{
         if (account.number === payout.accountNumber) {
           const existingPayouts = account.payouts || [];
           const isUpdate = payout.id && existingPayouts.some(p => p.id === payout.id);
-          
+
           if (isUpdate) {
             // Update existing payout
             return {
@@ -1118,11 +1128,11 @@ export const DataProvider: React.FC<{
 
   const saveDashboardLayout = useCallback(async (layout: PrismaDashboardLayout) => {
     if (!supabaseUser?.id) return
-    
+
     try {
       // Get the correct user ID from server
       const userId = await getUserId()
-      
+
       setDashboardLayout(layout)
       await saveDashboardLayoutAction(layout)
     } catch (error) {

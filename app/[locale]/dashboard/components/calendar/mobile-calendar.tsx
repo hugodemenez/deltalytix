@@ -149,14 +149,14 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
         </div>
       </div>
       <div className="flex-1 min-h-0 p-1.5 sm:p-4">
-        <div className="grid grid-cols-7 gap-x-[1px] mb-1">
+        <div className="grid grid-cols-7 gap-x-px mb-1">
           {weekdayHeaders.map((day) => (
             <div key={day.key} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
               {day.label}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 auto-rows-fr gap-[1px] h-[calc(100%-20px)]">
+        <div className="grid grid-cols-7 auto-rows-fr gap-px h-[calc(100%-20px)]">
           {calendarDayStrings.map((dateString) => { // Iterate over date strings
             const dayData = calendarData[dateString] // Direct lookup using the string key
 

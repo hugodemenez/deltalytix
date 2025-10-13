@@ -129,7 +129,7 @@ export function UserEquityChart({ equityCurve, userId, totalPnL, showDailyView =
         })
         
         return (
-          <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="rounded-lg border bg-background p-2 shadow-xs">
             <div className="grid gap-2">
               <div className="flex flex-col">
                 <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -172,7 +172,7 @@ export function UserEquityChart({ equityCurve, userId, totalPnL, showDailyView =
         const cumulativeValue = payload[0]?.payload?.cumulativePnL || 0
         
         return (
-          <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="rounded-lg border bg-background p-2 shadow-xs">
             <div className="grid gap-2">
               <div className="flex flex-col">
                 <span className="text-[0.70rem] uppercase text-muted-foreground">

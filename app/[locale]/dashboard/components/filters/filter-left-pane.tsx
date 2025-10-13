@@ -69,7 +69,7 @@ export default function FilterLeftPane() {
               <Filter className="h-4 w-4" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-[100dvh] overflow-hidden">
+          <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-dvh overflow-hidden">
             <SheetHeader>
               <SheetTitle>{t('filters.title')}</SheetTitle>
             </SheetHeader>

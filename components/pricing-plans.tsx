@@ -15,7 +15,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from 'sonner'
 
 // Currency detection hook
 // Handles special case for French overseas territories (DOM/TOM) that use EUR currency
@@ -132,7 +132,6 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
   const [pendingLookupKey, setPendingLookupKey] = useState<string>('')
   const t = useI18n()
   const { currency, symbol } = useCurrency()
-  const { toast } = useToast()
 
   // Function to check if current plan matches lookup key
   const isCurrentPlan = (lookupKey: string) => {
@@ -209,30 +208,24 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
 
     // Check if trying to switch to the same plan
     if (isCurrentPlan(lookupKey)) {
-      toast({
-        title: t('billing.error'),
+      toast.error(t('billing.error'), {
         description: t('billing.alreadyOnPlan'),
-        variant: "default"
       })
       return
     }
 
     // Check if user has lifetime and is trying to switch to recurring plan
     if (isBlockedFromRecurring(lookupKey)) {
-      toast({
-        title: t('billing.error'),
+      toast.error(t('billing.error'), {
         description: t('billing.lifetimeNoDowngrade'),
-        variant: "default"
       })
       return
     }
 
     // Check if user already has lifetime and is trying to purchase lifetime again
     if (isBlockedFromLifetime(lookupKey)) {
-      toast({
-        title: t('billing.error'),
+      toast.error(t('billing.error'), {
         description: t('billing.lifetimeAlreadyOwned'),
-        variant: "default"
       })
       return
     }
@@ -256,10 +249,8 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
       const result = await switchSubscriptionPlan(lookupKey)
       
       if (result.success) {
-        toast({
-          title: t('billing.planSwitched'),
+        toast.success(t('billing.planSwitched'), {
           description: t('billing.planSwitchedDescription'),
-          variant: "default"
         })
         
         // Refresh the page to update subscription data
@@ -279,17 +270,13 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
         document.body.appendChild(form)
         form.submit()
       } else {
-        toast({
-          title: t('billing.error'),
+        toast.error(t('billing.error'), {
           description: result.error,
-          variant: "destructive"
         })
       }
     } catch (error) {
-      toast({
-        title: t('billing.error'),
+      toast.error(t('billing.error'), {
         description: t('billing.planSwitchError'),
-        variant: "destructive"
       })
     } finally {
       setIsLoading(false)
@@ -534,7 +521,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                         format={{ minimumIntegerDigits: 2 }}
                       />
                       <div className="absolute inset-0 flex items-center">
-                        <div className="w-full h-[1px] bg-current"></div>
+                        <div className="w-full h-px bg-current"></div>
                       </div>
                     </div>
 

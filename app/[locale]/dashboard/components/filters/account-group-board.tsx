@@ -304,7 +304,7 @@ export function AccountGroupBoard() {
               {ungroupedAccounts.map((account, index) => (
                 <div
                   key={account.id}
-                  className="flex-shrink-0 transition-transform duration-300 ease-out"
+                  className="shrink-0 transition-transform duration-300 ease-out"
                   style={{
                     marginLeft: index === 0 ? "0" : "-8px",
                   }}

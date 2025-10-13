@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Trade } from '@prisma/client'
 import { useI18n } from '@/locales/client'
 import { useTradesStore } from '@/store/trades-store'
@@ -234,8 +234,7 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
         setTrades(updatedTrades);
         setProcessedTrades(updatedTrades);
         setShowCommissionPrompt(false);
-        toast({
-            title: t('import.commission.success.title'),
+        toast.success(t('import.commission.success.title'), {
             description: t('import.commission.success.description')
         });
     };
@@ -342,10 +341,6 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
                                 <Button
                                     key={instrument}
                                     variant="outline"
-                                    onClick={() => toast({
-                                        title: "Instrument Information",
-                                        description: `You traded ${instrument}. For more details, please check the trades table.`
-                                    })}
                                 >
                                     {instrument}
                                 </Button>

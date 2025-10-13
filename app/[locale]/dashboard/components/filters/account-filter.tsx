@@ -207,7 +207,7 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
                     >
                       <Checkbox
                         checked={isItemSelected(account)}
-                        className="h-4 w-4 flex-shrink-0"
+                        className="h-4 w-4 shrink-0"
                         disabled={isItemDisabled(account)}
                       />
                       <span className="text-sm break-all pr-2">
@@ -241,7 +241,7 @@ export function AccountFilter({ showAccountNumbers, className }: AccountFilterPr
                     >
                       <Checkbox
                         checked={isItemSelected(account)}
-                        className="h-4 w-4 flex-shrink-0"
+                        className="h-4 w-4 shrink-0"
                         disabled={isItemDisabled(account)}
                       />
                       <span className="text-sm break-all pr-2">

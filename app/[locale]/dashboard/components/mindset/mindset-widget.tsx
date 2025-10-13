@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 import type { EmblaCarouselType as CarouselApi } from "embla-carousel"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { saveMindset, deleteMindset } from "@/server/journal"
 import { isToday, format } from "date-fns"
 import { useMoodStore } from "@/store/mood-store"
@@ -127,16 +127,13 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       }) || []
       setMoods([...updatedMoodHistory, savedMood])
 
-      toast({
-        title: t('mindset.saveSuccess'),
+      toast.success(t('mindset.saveSuccess'), {
         description: t('mindset.saveSuccessDescription'),
       })
 
     } catch (error) {
-      toast({
-        title: t('mindset.saveError'),
+      toast.error(t('mindset.saveError'), {
         description: t('mindset.saveErrorDescription'),
-        variant: "destructive",
       })
     }
   }
@@ -330,7 +327,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       </CardHeader>
       <CardContent className="flex-1 overflow-hidden p-0 flex flex-row gap-4">
         <Timeline 
-          className="flex-shrink-0"
+          className="shrink-0"
           selectedDate={selectedDate}
           onSelectDate={handleDateSelect}
           moodHistory={moods}

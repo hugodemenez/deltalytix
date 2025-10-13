@@ -27,7 +27,7 @@ export default async function NewsletterPage(
             <Card className="border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/50">
               <CardHeader className="space-y-3 sm:space-y-4">
                 <div className="flex items-center space-x-2.5">
-                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 shrink-0" />
                   <CardTitle className="text-lg sm:text-xl">{t("unsubscribed.title")}</CardTitle>
                 </div>
                 <CardDescription className="text-green-700 dark:text-green-300 text-sm sm:text-base">
@@ -42,7 +42,7 @@ export default async function NewsletterPage(
             </Card>
           )}
 
-          <Card className="shadow-sm">
+          <Card className="shadow-xs">
             <CardHeader className="space-y-3 sm:space-y-4">
               <CardTitle className="text-lg sm:text-xl">{t("preferences.title")}</CardTitle>
               <CardDescription className="text-sm sm:text-base">{t("preferences.description")}</CardDescription>

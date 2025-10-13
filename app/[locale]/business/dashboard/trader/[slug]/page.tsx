@@ -1,8 +1,7 @@
 import { ThemeProvider } from "@/context/theme-provider";
 import { DataProvider } from "@/context/data-provider";
-import { Toaster } from "@/components/ui/toaster";
 import WidgetCanvas from "@/app/[locale]/dashboard/components/widget-canvas";
-import Navbar from "@/app/[locale]/dashboard/components/navbar";
+import { Toaster } from "@/components/ui/sonner";
 
 export default async function AdminDashboardPage(props: { params: Promise<{ slug: string }> }) {
   const params = await props.params;

@@ -116,7 +116,7 @@ function TopBanner({ t }: { t: any }) {
   ]
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b shadow-sm">
+    <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b shadow-xs">
       <div className="w-full mx-auto py-3 px-4 md:px-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-x-4">

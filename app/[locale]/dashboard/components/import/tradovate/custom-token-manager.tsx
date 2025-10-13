@@ -48,7 +48,7 @@ import {
   XIcon,
   RefreshCwIcon
 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { useI18n } from "@/locales/client"
 import { 
   setCustomTradovateToken, 
@@ -97,7 +97,6 @@ export function CustomTokenManager() {
     }))
   }, [])
   
-  const { toast } = useToast()
   const t = useI18n()
 
   // Helper function to format date for datetime-local input
@@ -122,11 +121,7 @@ export function CustomTokenManager() {
       if (result.tokens) {
         setTokens(result.tokens)
       } else if (result.error) {
-        toast({
-          title: "Error",
-          description: result.error,
-          variant: "destructive",
-        })
+        toast.error(result.error)
       }
     } catch (error) {
       console.error('Failed to load tokens:', error)
@@ -141,22 +136,17 @@ export function CustomTokenManager() {
       const result = await testCustomTradovateToken(token, environment)
       
       if (result.success) {
-        toast({
-          title: "Token Test Successful",
+        toast.success("Token Test Successful", {
           description: result.message,
         })
       } else {
-        toast({
-          title: "Token Test Failed",
+        toast.error("Token Test Failed", {
           description: result.error || 'Unknown error',
-          variant: "destructive",
         })
       }
     } catch (error) {
-      toast({
-        title: "Test Error",
+      toast.error("Test Error", {
         description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive",
       })
     } finally {
       setIsTesting(false)
@@ -178,10 +168,8 @@ export function CustomTokenManager() {
 
   const handleSetToken = async () => {
     if (!formData.accessToken.trim() || !formData.expiresAt.trim() || !formData.accountId.trim()) {
-      toast({
-        title: "Validation Error",
+      toast.error("Validation Error", {
         description: "Please fill in all required fields",
-        variant: "destructive",
       })
       return
     }
@@ -196,25 +184,20 @@ export function CustomTokenManager() {
       )
 
       if (result.success) {
-        toast({
-          title: "Token Set Successfully",
+        toast.success("Token Set Successfully", {
           description: result.message,
         })
         setIsDialogOpen(false)
         resetFormWithDefaults()
         loadTokens()
       } else {
-        toast({
-          title: "Failed to Set Token",
+        toast.error("Failed to Set Token", {
           description: 'error' in result ? result.error : 'Unknown error',
-          variant: "destructive",
         })
       }
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive",
       })
     } finally {
       setIsLoading(false)
@@ -227,23 +210,18 @@ export function CustomTokenManager() {
       const result = await removeTradovateToken(accountId)
       
       if (result.success) {
-        toast({
-          title: "Token Removed",
+        toast.success("Token Removed", {
           description: `Token for account ${accountId} has been removed`,
         })
         loadTokens()
       } else {
-        toast({
-          title: "Failed to Remove Token",
+        toast.error("Failed to Remove Token", {
           description: result.error || 'Unknown error',
-          variant: "destructive",
         })
       }
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: error instanceof Error ? error.message : 'Unknown error',
-        variant: "destructive",
       })
     } finally {
       setIsLoading(false)
@@ -252,8 +230,7 @@ export function CustomTokenManager() {
 
   const handleCopyToken = (token: string) => {
     navigator.clipboard.writeText(token)
-    toast({
-      title: "Token Copied",
+    toast.success("Token Copied", {
       description: "Access token copied to clipboard",
     })
   }

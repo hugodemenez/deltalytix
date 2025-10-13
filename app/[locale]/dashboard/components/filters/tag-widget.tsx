@@ -36,7 +36,7 @@ import {
 import { HexColorPicker } from 'react-colorful'
 import { cn } from '@/lib/utils'
 import { createTagAction, updateTagAction, deleteTagAction, syncTradeTagsToTagTableAction } from '@/server/tags'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from "sonner"
 import { Trade, Tag } from '@prisma/client'
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import {
@@ -82,7 +82,6 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
   const contextTrades = useTradesStore(state => state.trades)
   const tags = useUserStore(state => state.tags)
   const setTags = useUserStore(state => state.setTags)
-  const { toast } = useToast()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [editingTag, setEditingTag] = useState<TagType | null>(null)
   const [formData, setFormData] = useState<TagFormData>({
@@ -109,10 +108,8 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
       
       // Check if name is empty
       if (!trimmedName) {
-        toast({
-          title: t('widgets.tags.error'),
+        toast.error(t('widgets.tags.error'), {
           description: t('widgets.tags.nameRequired'),
-          variant: 'destructive',
         })
         return
       }
@@ -130,10 +127,8 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
         )
 
         if (tagExists) {
-          toast({
-            title: t('widgets.tags.error'),
+          toast.error(t('widgets.tags.error'), {
             description: t('widgets.tags.tagExists'),
-            variant: 'destructive',
           })
           return
         }
@@ -183,8 +178,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
           }
         }
 
-        toast({
-          title: t('widgets.tags.success'),
+        toast.success(t('widgets.tags.success'), {
           description: t('widgets.tags.updateSuccess'),
         })
       } else {
@@ -194,10 +188,8 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
         )
 
         if (tagExists) {
-          toast({
-            title: t('widgets.tags.error'),
+          toast.error(t('widgets.tags.error'), {
             description: t('widgets.tags.tagExists'),
-            variant: 'destructive',
           })
           return
         }
@@ -212,8 +204,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
         // Update tag metadata in context and cache
         setTags([...tags, newTag.tag])
 
-        toast({
-          title: t('widgets.tags.success'),
+        toast.success(t('widgets.tags.success'), {
           description: t('widgets.tags.createSuccess'),
         })
       }
@@ -222,10 +213,8 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
       setFormData({ name: '', description: null, color: '#CBD5E1' })
     } catch (error) {
       console.error('Failed to save tag:', error)
-      toast({
-        title: t('widgets.tags.error'),
+      toast.error(t('widgets.tags.error'), {
         description: editingTag ? t('widgets.tags.updateError') : t('widgets.tags.createError'),
-        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -263,16 +252,13 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
         }))
       }
       
-      toast({
-        title: t('widgets.tags.success'),
+      toast.success(t('widgets.tags.success'), {
         description: t('widgets.tags.deleteSuccess'),
       })
     } catch (error) {
       console.error('Failed to delete tag:', error)
-      toast({
-        title: t('widgets.tags.error'),
+      toast.error(t('widgets.tags.error'), {
         description: t('widgets.tags.deleteError'),
-        variant: 'destructive',
       })
     } finally {
       setIsLoading(false)
@@ -353,7 +339,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                     variant="ghost" 
                     size="icon"
                     className={cn(
-                      "flex-shrink-0 hover:bg-muted/50",
+                      "shrink-0 hover:bg-muted/50",
                       size === 'small-long' ? "h-6 w-6" : "h-8 w-8"
                     )}
                     disabled={isLoading}
@@ -400,7 +386,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                         <Label>{t('widgets.tags.color')}</Label>
                         <div className="flex gap-4 items-start">
                           <div
-                            className="w-10 h-10 rounded-md border shadow-sm"
+                            className="w-10 h-10 rounded-md border shadow-xs"
                             style={{ backgroundColor: formData.color }}
                           />
                           <div className="flex-1">
@@ -489,7 +475,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                         />
                         <div
                           className={cn(
-                            "rounded-full flex-shrink-0",
+                            "rounded-full shrink-0",
                             size === 'small-long' ? "w-2.5 h-2.5" : "w-3 h-3"
                           )}
                           style={{ backgroundColor: tag.color || '#CBD5E1' }}
@@ -523,7 +509,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                           </TooltipProvider>
                         </label>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"
                           size="icon"

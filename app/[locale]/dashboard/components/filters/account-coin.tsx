@@ -121,7 +121,7 @@ export function AccountCoin({
             <div
               className={cn(
                 "relative w-12 h-12 rounded-full border-2 border-border/20 shadow-lg",
-                "bg-gradient-to-br from-card to-card/80 backdrop-blur-sm",
+                "bg-linear-to-br from-card to-card/80 backdrop-blur-xs",
                 "hover:shadow-xl hover:border-primary/30",
                 "transition-all duration-300 ease-out",
               )}
@@ -133,7 +133,7 @@ export function AccountCoin({
               </Avatar>
 
               {/* Shine effect */}
-              <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 rounded-full bg-linear-to-tr from-transparent via-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
             </div>
           </div>
         </SheetTooltipTrigger>

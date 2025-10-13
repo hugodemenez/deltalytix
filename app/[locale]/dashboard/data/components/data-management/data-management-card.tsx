@@ -13,7 +13,7 @@ import {
   renameInstrumentAction 
 } from "@/server/accounts"
 import { useData } from '@/context/data-provider'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { User } from '@supabase/supabase-js'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
@@ -88,17 +88,12 @@ export function DataManagementCard() {
       await removeAccountsFromTradesAction(accountsToDelete)
       await refreshTrades()
       setSelectedAccounts([])
-      toast({
-        title: accountsToDelete.length > 1 ? t('dataManagement.toast.accountsDeleted') : t('dataManagement.toast.accountDeleted'),
-        variant: 'default',
-      })
+      toast.success(accountsToDelete.length > 1 ? t('dataManagement.toast.accountsDeleted') : t('dataManagement.toast.accountDeleted'))
     } catch (error) {
       console.error("Failed to delete accounts:", error)
       setError(error instanceof Error ? error : new Error('Failed to delete accounts'))
-      toast({
-        title: t('dataManagement.toast.deleteError'),
+      toast.error(t('dataManagement.toast.deleteError'), {
         description: t('dataManagement.toast.deleteErrorDesc'),
-        variant: 'destructive',
       })
     } finally {
       setDeleteLoading(false)
@@ -110,17 +105,12 @@ export function DataManagementCard() {
     try {
       await deleteInstrumentGroupAction(accountNumber, instrumentGroup, user!.id)
       await refreshTrades()
-      toast({
-        title: t('dataManagement.toast.instrumentDeleted'),
-        variant: 'default',
-      })
+      toast.success(t('dataManagement.toast.instrumentDeleted'))
     } catch (error) {
       console.error("Failed to delete instrument group:", error)
       setError(error instanceof Error ? error : new Error('Failed to delete instrument group'))
-      toast({
-        title: t('dataManagement.toast.instrumentDeleteError'),
+      toast.error(t('dataManagement.toast.instrumentDeleteError'), {
         description: t('dataManagement.toast.deleteErrorDesc'),
-        variant: 'destructive',
       })
     }
   }, [user, refreshTrades, t])
@@ -168,17 +158,12 @@ export function DataManagementCard() {
         return newState
       })
       
-      toast({
-        title: t('dataManagement.toast.commissionUpdated'),
-        variant: 'default',
-      })
+      toast.success(t('dataManagement.toast.commissionUpdated'))
     } catch (error) {
       console.error("Failed to update commission:", error)
       setError(error instanceof Error ? error : new Error('Failed to update commission'))
-      toast({
-        title: t('dataManagement.toast.commissionError'),
+      toast.error(t('dataManagement.toast.commissionError'), {
         description: t('dataManagement.toast.deleteErrorDesc'),
-        variant: 'destructive',
       })
     } finally {
       setCommissionLoading(prev => ({ ...prev, [updateKey]: false }))
@@ -198,20 +183,15 @@ export function DataManagementCard() {
       setRenameLoading(true)
       await renameInstrumentAction(instrumentToRename.accountNumber, instrumentToRename.currentName, newInstrumentName)
       await refreshTrades()
-      toast({
-        title: t('dataManagement.toast.instrumentRenamed'),
-        variant: 'default',
-      })
+      toast.success(t('dataManagement.toast.instrumentRenamed'))
       setRenameInstrumentDialogOpen(false)
       setInstrumentToRename({ accountNumber: "", currentName: "" })
       setNewInstrumentName("")
     } catch (error) {
       console.error("Failed to rename instrument:", error)
       setError(error instanceof Error ? error : new Error('Failed to rename instrument'))
-      toast({
-        title: t('dataManagement.toast.instrumentRenameError'),
+      toast.error(t('dataManagement.toast.instrumentRenameError'), {
         description: error instanceof Error ? error.message : t('dataManagement.toast.deleteErrorDesc'),
-        variant: 'destructive',
       })
     } finally {
       setRenameLoading(false)
@@ -232,20 +212,15 @@ export function DataManagementCard() {
       setRenameLoading(true)
       await renameAccountAction(accountToRename, newAccountNumber)
       await refreshTrades()
-      toast({
-        title: t('dataManagement.toast.accountRenamed'),
-        variant: 'default',
-      })
+      toast.success(t('dataManagement.toast.accountRenamed'))
       setRenameAccountDialogOpen(false)
       setAccountToRename("")
       setNewAccountNumber("")
     } catch (error) {
       console.error("Failed to rename account:", error)
       setError(error instanceof Error ? error : new Error('Failed to rename account'))
-      toast({
-        title: t('dataManagement.toast.accountRenameError'),
+      toast.error(t('dataManagement.toast.accountRenameError'), {
         description: error instanceof Error ? error.message : t('dataManagement.toast.deleteErrorDesc'),
-        variant: 'destructive',
       })
     } finally {
       setRenameLoading(false)
@@ -353,17 +328,17 @@ export function DataManagementCard() {
                     id={`select-${accountNumber}`}
                     checked={selectedAccounts.includes(accountNumber)}
                     onCheckedChange={() => handleSelectAccount(accountNumber)}
-                    className="mr-2 flex-shrink-0"
+                    className="mr-2 shrink-0"
                   />
                   <div className="flex items-center justify-between w-full sm:w-auto">
                     <button
                       onClick={() => toggleAccountExpansion(accountNumber)}
-                      className="flex items-center text-base sm:text-lg font-semibold focus:outline-none text-left"
+                      className="flex items-center text-base sm:text-lg font-semibold focus:outline-hidden text-left"
                       aria-expanded={expandedAccounts[accountNumber]}
                       aria-controls={`account-${accountNumber}`}
                     >
                       <span className="mr-2">{accountNumber}</span>
-                      {expandedAccounts[accountNumber] ? <ChevronUp className="w-4 h-4 flex-shrink-0" /> : <ChevronDown className="w-4 h-4 flex-shrink-0" />}
+                      {expandedAccounts[accountNumber] ? <ChevronUp className="w-4 h-4 shrink-0" /> : <ChevronDown className="w-4 h-4 shrink-0" />}
                     </button>
                     <div className="flex items-center sm:hidden ml-2">
                       <DropdownMenu>

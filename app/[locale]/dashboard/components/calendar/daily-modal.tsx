@@ -63,23 +63,23 @@ export function CalendarModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[100dvh] sm:h-[80vh] p-0 flex flex-col">
+      <DialogContent className="max-w-4xl w-full h-dvh sm:h-[80vh] p-0 flex flex-col">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>{formattedDate}</DialogTitle>
           <DialogDescription>
             {t('calendar.modal.tradeDetails')}
           </DialogDescription>
         </DialogHeader>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="grow flex flex-col overflow-hidden">
           <TabsList className="px-6">
             <TabsTrigger value="comment">{t('calendar.modal.comment')}</TabsTrigger>
             <TabsTrigger value="table">{t('calendar.modal.table')}</TabsTrigger>
             <TabsTrigger value="analysis">{t('calendar.modal.analysis')}</TabsTrigger>
           </TabsList>
-          <TabsContent value="comment" className="flex-grow overflow-auto p-6 pt-2">
+          <TabsContent value="comment" className="grow overflow-auto p-6 pt-2">
             <DailyComment dayData={dayData} selectedDate={selectedDate} />
           </TabsContent>
-          <TabsContent value="table" className="flex-grow overflow-auto p-6 pt-2">
+          <TabsContent value="table" className="grow overflow-auto p-6 pt-2">
             <ScrollArea className="h-full">
               {dayData && dayData.trades?.length > 0 ? (
                 <div className="space-y-6">
@@ -142,7 +142,7 @@ export function CalendarModal({
               )}
             </ScrollArea>
           </TabsContent>
-          <TabsContent value="analysis" className="flex-grow overflow-auto p-6 pt-2 space-y-4">
+          <TabsContent value="analysis" className="grow overflow-auto p-6 pt-2 space-y-4">
             <DailyStats dayData={dayData} isWeekly={false} />
             {/* <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} /> */}
             <Charts dayData={dayData} />

@@ -203,7 +203,7 @@ export default async function Page({ params }: PageProps) {
               prose-thead:border-b prose-thead:border-neutral-200 dark:prose-thead:border-neutral-800
               prose-th:px-6 prose-th:py-3 prose-th:text-left prose-th:font-semibold
               prose-td:px-6 prose-td:py-3 prose-td:border-b prose-td:border-neutral-200 dark:prose-td:border-neutral-800
-              prose-tr:transition-colors hover:prose-tr:bg-neutral-50 dark:hover:prose-tr:bg-neutral-900/30"
+              prose-tr:transition-colors prose-tr:hover:bg-neutral-50 dark:prose-tr:hover:bg-neutral-900/30"
               itemProp="articleBody"
             >
               {content}

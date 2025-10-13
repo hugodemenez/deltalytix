@@ -107,7 +107,7 @@ function SessionIndicator({ session, hourElements, containerRef }: {
 
 function SessionLegend({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
   return (
-    <div className="p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t shadow-lg">
+    <div className="p-2 bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60 border-t shadow-lg">
       <div className="flex items-center justify-center gap-4 text-xs">
         {SESSIONS.map((session) => (
           <div 
@@ -473,7 +473,7 @@ function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = f
         )}
 
         <div className="flex items-center">
-          <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
+          <Clock className="h-3 w-3 mr-1 shrink-0" />
           <span>{formatInTimeZone(new Date(event.date), timezone, "HH:mm", { locale: dateLocale })}</span>
         </div>
       </div>
@@ -554,12 +554,12 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
 
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
             <div className="flex items-center">
-              <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
+              <Clock className="h-3 w-3 mr-1 shrink-0" />
               <span>{formatInTimeZone(new Date(earliestTrade.entryDate), timezone, "HH:mm", { locale: dateLocale })}</span>
             </div>
 
             <div className="flex items-center">
-              <DollarSign className="h-3 w-3 mr-1 flex-shrink-0" />
+              <DollarSign className="h-3 w-3 mr-1 shrink-0" />
               <span>{trade.totalPnL.toFixed(2)}</span>
             </div>
           </div>

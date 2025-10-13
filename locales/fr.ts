@@ -363,6 +363,7 @@ export default {
         min: "Min",
         max: "Max",
         apply: "Appliquer",
+        customRange: "Période personnalisée",
         // Account management related
         accountGroups: "Groupes de Comptes",
         loading: "Chargement...",

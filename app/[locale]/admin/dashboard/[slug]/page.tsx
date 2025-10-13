@@ -1,6 +1,6 @@
 import { ThemeProvider } from "@/context/theme-provider";
 import { DataProvider } from "@/context/data-provider";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import WidgetCanvas from "@/app/[locale]/dashboard/components/widget-canvas";
 import Navbar from "@/app/[locale]/dashboard/components/navbar";
 import { notFound } from "next/navigation";

@@ -38,7 +38,7 @@ export default function NewsletterEmail({
       <Preview>Nouveautés sur Deltalytix - Votre plateforme de suivi de trading</Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans">
-          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-sm">
+          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-xs">
             <Section className="px-6 py-8">
               <Heading className="text-2xl font-bold text-gray-900 mb-6">
                 Bonjour {firstName},
@@ -53,7 +53,7 @@ export default function NewsletterEmail({
                   <Img
                     src={thumbnailUrl}
                     alt="Dernière vidéo Deltalytix"
-                    className="rounded-lg w-full mb-4 shadow-sm"
+                    className="rounded-lg w-full mb-4 shadow-xs"
                   />
                 </Link>
                 <Button

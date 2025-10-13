@@ -69,7 +69,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     const data = payload[0].payload;
     const date = new Date(data.date + 'T00:00:00Z');
     return (
-      <div className="bg-background p-2 border rounded shadow-sm">
+      <div className="bg-background p-2 border rounded shadow-xs">
         <p className="font-semibold">
           {formatInTimeZone(date, timezone, 'MMM d, yyyy', { locale: dateLocale })}
         </p>

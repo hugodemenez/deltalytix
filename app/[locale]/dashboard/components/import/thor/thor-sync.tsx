@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { CopyIcon, RefreshCwIcon, EyeIcon } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { generateThorToken } from "@/server/thor"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import {
@@ -25,7 +25,6 @@ import { useUserStore } from "../../../../../../store/user-store"
 export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRevealed, setIsRevealed] = useState(false)
-  const { toast } = useToast()
   const { user, setUser } = useUserStore.getState()
   const t = useI18n()
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -68,25 +67,14 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
       setIsRevealed(false)
       const result = await generateThorToken()
       if (result.error || !result.token) {
-        toast({
-          title: "Error",
-          description: t('thor.error.generation'),
-          variant: "destructive",
-        })
+        toast.error(t('thor.error.generation'))
         return
       }
       if (!user) return
       setUser({ ...user, thorToken: result.token })
-      toast({
-        title: "Success",
-        description: t('thor.generated'),
-      })
+      toast.success(t('thor.generated'))
     } catch (error) {
-      toast({
-        title: "Error",
-        description: t('thor.error.generation'),
-        variant: "destructive",
-      })
+      toast.error(t('thor.error.generation'))
     } finally {
       setIsGenerating(false)
     }
@@ -95,10 +83,7 @@ export function ThorSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }
   const handleCopyToken = () => {
     if (!user?.thorToken) return
     navigator.clipboard.writeText(user.thorToken)
-    toast({
-      title: "Success",
-      description: t('thor.copied'),
-    })
+    toast.success(t('thor.copied'))
   }
 
   const getMaskedToken = () => {

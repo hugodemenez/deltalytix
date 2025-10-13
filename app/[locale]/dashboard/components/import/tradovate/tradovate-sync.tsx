@@ -1,7 +1,5 @@
 'use client'
 
-import { useState } from "react"
-import { useToast } from "@/hooks/use-toast"
 import { useI18n } from "@/locales/client"
 import { TradovateCredentialsManager } from './tradovate-credentials-manager'
  

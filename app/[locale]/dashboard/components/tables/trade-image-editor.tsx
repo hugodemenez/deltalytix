@@ -208,7 +208,7 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
           <div className="relative group">
             <button
               onClick={() => setIsOpen(true)}
-              className="relative w-10 h-10 overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="relative w-10 h-10 overflow-hidden rounded focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               aria-label="View image"
             >
               <Image
@@ -230,7 +230,7 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
               <HoverCard openDelay={200}>
                 <HoverCardTrigger asChild>
                   <button
-                    className="absolute -top-2 -left-2 h-5 w-5 bg-primary text-primary-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-sm hover:bg-primary/90 transition-colors"
+                    className="absolute -top-2 -left-2 h-5 w-5 bg-primary text-primary-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-xs hover:bg-primary/90 transition-colors"
                     onClick={(e) => {
                       e.stopPropagation()
                       setIsSecondImage(true)
@@ -250,7 +250,7 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
             <HoverCard openDelay={200}>
               <HoverCardTrigger asChild>
                 <button
-                  className="absolute -top-2 -right-2 h-5 w-5 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-sm hover:bg-destructive/90 transition-colors"
+                  className="absolute -top-2 -right-2 h-5 w-5 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-xs hover:bg-destructive/90 transition-colors"
                   onClick={(e) => {
                     e.stopPropagation()
                     setShowDeleteConfirm(true)
@@ -267,7 +267,7 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
         ) : (
           <button
             onClick={handleUploadClick}
-            className="relative w-10 h-10 overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-muted hover:bg-muted/80 transition-colors"
+            className="relative w-10 h-10 overflow-hidden rounded focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-muted hover:bg-muted/80 transition-colors"
             aria-label="Upload image"
           >
             <Upload className="h-4 w-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -279,7 +279,7 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
             <HoverCardTrigger asChild>
               <button
                 onClick={handleUploadClick}
-                className="relative w-10 h-10 overflow-hidden rounded focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-muted hover:bg-muted/80 transition-colors"
+                className="relative w-10 h-10 overflow-hidden rounded focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-muted hover:bg-muted/80 transition-colors"
                 aria-label="Upload second image"
               >
                 <Upload className="h-4 w-4 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -327,8 +327,8 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
                   {({ zoomIn, zoomOut }) => (
                     <>
                       <TransformComponent
-                        wrapperClass="!w-full !h-full"
-                        contentClass="!w-full !h-full flex items-center justify-center"
+                        wrapperClass="w-full! h-full!"
+                        contentClass="w-full! h-full! flex items-center justify-center"
                       >
                         <div className="flex items-center justify-center w-full h-full">
                           <img
@@ -340,23 +340,23 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
                         </div>
                       </TransformComponent>
 
-                      <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-lg bg-white/50 backdrop-blur-sm z-50">
+                      <div className="absolute bottom-4 sm:bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-lg bg-white/50 backdrop-blur-xs z-50">
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="bg-gradient-to-r from-white/95 to-white/90 hover:from-white hover:to-white shadow-lg border border-gray-200 ring-1 ring-gray-100 h-7 w-7 sm:h-8 sm:w-8"
+                          className="bg-linear-to-r from-white/95 to-white/90 hover:from-white hover:to-white shadow-lg border border-gray-200 ring-1 ring-gray-100 h-7 w-7 sm:h-8 sm:w-8"
                           onClick={() => zoomOut()}
                           disabled={scale <= 0.5}
                         >
                           <ZoomOut className="h-3 w-3 sm:h-4 sm:w-4 text-gray-700" />
                         </Button>
-                        <span className="min-w-[2.5rem] sm:min-w-[3rem] text-center text-xs sm:text-sm font-medium text-gray-700">
+                        <span className="min-w-10 sm:min-w-12 text-center text-xs sm:text-sm font-medium text-gray-700">
                           {Math.round(scale * 100)}%
                         </span>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="bg-gradient-to-r from-white/95 to-white/90 hover:from-white hover:to-white shadow-lg border border-gray-200 ring-1 ring-gray-100 h-7 w-7 sm:h-8 sm:w-8"
+                          className="bg-linear-to-r from-white/95 to-white/90 hover:from-white hover:to-white shadow-lg border border-gray-200 ring-1 ring-gray-100 h-7 w-7 sm:h-8 sm:w-8"
                           onClick={() => zoomIn()}
                           disabled={scale >= 3}
                         >

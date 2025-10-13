@@ -120,7 +120,7 @@ export function ConsentBanner() {
   return (
     <AnimatePresence>
       <motion.div 
-        className="fixed bottom-0 left-0 right-0 z-[9999] p-4 -m-4"
+        className="fixed bottom-0 left-0 right-0 z-9999 p-4 -m-4"
         initial={{ y: 100 }}
         animate={{ y: 0 }}
         exit={{ y: 100 }}
@@ -171,9 +171,9 @@ export function ConsentBanner() {
 
         {isDesktop ? (
           <>
-            {showDetails && <div className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-sm" />}
+            {showDetails && <div className="fixed inset-0 z-9998 bg-black/20 backdrop-blur-xs" />}
             <Dialog open={showDetails} onOpenChange={setShowDetails}>
-                            <DialogContent className="fixed left-[50%] top-[50%] z-[9999] translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-xl max-w-[480px] w-[90vw] max-h-[80vh] overflow-hidden border-0">
+                            <DialogContent className="fixed left-[50%] top-[50%] z-9999 translate-x-[-50%] translate-y-[-50%] bg-white rounded-lg shadow-xl max-w-[480px] w-[90vw] max-h-[80vh] overflow-hidden border-0">
                 <DialogHeader className="p-6 pb-4">
                   <DialogTitle className="text-lg font-medium text-gray-900">
                     {t('landing.consent.preferences.title')}
@@ -252,7 +252,7 @@ export function ConsentBanner() {
           </>
         ) : (
           <Drawer open={showDetails} onOpenChange={setShowDetails}>
-            <DrawerContent className="z-[10000] bg-white rounded-t-lg">
+            <DrawerContent className="z-10000 bg-white rounded-t-lg">
               <div className="h-[80vh] flex flex-col">
                 <DrawerHeader className="text-left px-6 py-6">
                   <DrawerTitle className="text-lg font-medium text-gray-900">

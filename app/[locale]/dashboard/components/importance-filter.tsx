@@ -113,7 +113,7 @@ export function ImportanceFilter({ value, onValueChange, className }: Importance
                 className={cn(
                   "relative p-1 rounded-full transition-all duration-200",
                   (value.includes(level) || hoverLevel === level) && "scale-110",
-                  "focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary",
+                  "focus:outline-hidden focus:ring-2 focus:ring-offset-2 focus:ring-primary",
                   "hover:bg-yellow-50 dark:hover:bg-yellow-950/20",
                 )}
                 onClick={() => handleClick(level)}

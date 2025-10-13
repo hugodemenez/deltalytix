@@ -272,7 +272,7 @@ const OptimizedTooltip = React.memo(({
 
   // Only show tooltip in grouped mode
   return (
-    <div className="rounded-lg border bg-background p-2 shadow-sm">
+    <div className="rounded-lg border bg-background p-2 shadow-xs">
       <div className="grid gap-2">
         <div className="flex flex-col">
           <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -393,7 +393,7 @@ const AccountsLegend = React.memo(({
 
   return (
     <div className="border-t pt-2 mt-2 h-[88px] flex flex-col">
-      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+      <div className="flex items-center justify-between mb-2 shrink-0">
         <div className="flex items-center gap-2">
           <span className="text-xs font-medium text-muted-foreground">
             {t('equity.legend.title')}
@@ -411,7 +411,7 @@ const AccountsLegend = React.memo(({
               <TooltipTrigger asChild>
                 <Info className="h-3 w-3 text-muted-foreground hover:text-foreground cursor-help" />
               </TooltipTrigger>
-              <TooltipContent side="top" className="z-[9999] max-w-xs">
+              <TooltipContent side="top" className="z-9999 max-w-xs">
                 <p className="text-xs">{t('equity.legend.maxAccountsInfo')}</p>
               </TooltipContent>
             </Tooltip>
@@ -427,9 +427,9 @@ const AccountsLegend = React.memo(({
       <div className="flex gap-3 overflow-x-auto max-w-full flex-1 scrollbar-hide">
         <div className="flex gap-3 min-w-max">
           {accountsWithEquity.slice(0, 20).map(({ accountNumber, equity, color, hasPayout, hasReset, payoutStatus, payoutAmount }) => (
-            <div key={accountNumber} className="flex items-center gap-1.5 flex-shrink-0">
+            <div key={accountNumber} className="flex items-center gap-1.5 shrink-0">
               <div 
-                className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
+                className="w-2.5 h-2.5 rounded-full shrink-0" 
                 style={{ backgroundColor: color }}
               />
               <div className="flex flex-col h-[50px] justify-start">
@@ -455,7 +455,7 @@ const AccountsLegend = React.memo(({
             </div>
           ))}
           {accountsWithEquity.length > 20 && (
-            <div className="flex items-center gap-1.5 flex-shrink-0 text-xs text-muted-foreground h-[50px]">
+            <div className="flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground h-[50px]">
               +{accountsWithEquity.length - 20} more
             </div>
           )}

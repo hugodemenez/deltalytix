@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { CopyIcon, RefreshCwIcon, EyeIcon } from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { generateEtpToken } from "./action"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import {
@@ -25,7 +25,6 @@ import { useUserStore } from "@/store/user-store"
 export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void }) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [isRevealed, setIsRevealed] = useState(false)
-  const { toast } = useToast()
   const user = useUserStore(state => state.user)
   const setUser = useUserStore(state => state.setUser)
   const t = useI18n()
@@ -69,25 +68,14 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
       setIsRevealed(false)
       const result = await generateEtpToken()
       if (result.error || !result.token) {
-        toast({
-          title: "Error",
-          description: t('etp.error.generation'),
-          variant: "destructive",
-        })
+        toast.error(t('etp.error.generation'))
         return
       }
       if (!user) return
       setUser({ ...user, etpToken: result.token })
-      toast({
-        title: "Success",
-        description: t('etp.generated'),
-      })
+      toast.success(t('etp.generated'))
     } catch (error) {
-      toast({
-        title: "Error",
-        description: t('etp.error.generation'),
-        variant: "destructive",
-      })
+      toast.error(t('etp.error.generation'))
     } finally {
       setIsGenerating(false)
     }
@@ -96,10 +84,7 @@ export function EtpSync({ setIsOpen }: { setIsOpen: (isOpen: boolean) => void })
   const handleCopyToken = () => {
     if (!user?.etpToken) return
     navigator.clipboard.writeText(user.etpToken)
-    toast({
-      title: "Success",
-      description: t('etp.copied'),
-    })
+    toast.success(t('etp.copied'))
   }
 
   const getMaskedToken = () => {

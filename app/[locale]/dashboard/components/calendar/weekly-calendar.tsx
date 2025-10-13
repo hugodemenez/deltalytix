@@ -150,7 +150,7 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
                   return (
                     <div
                       key={weekIndex}
-                      className="flex flex-col items-center justify-center border rounded p-1 min-h-[3rem] flex-1 bg-muted/10 dark:bg-muted/5"
+                      className="flex flex-col items-center justify-center border rounded p-1 min-h-12 flex-1 bg-muted/10 dark:bg-muted/5"
                     />
                   )
                 }
@@ -162,8 +162,8 @@ export default function WeeklyCalendarPnl({ calendarData, year }: WeeklyCalendar
                     <PopoverTrigger asChild>
                       <div
                         className={cn(
-                          "flex flex-col items-center justify-center border rounded p-1 min-h-[3rem] flex-1 cursor-pointer",
-                          "transition-all duration-200 hover:scale-[1.02] hover:shadow-sm",
+                          "flex flex-col items-center justify-center border rounded p-1 min-h-12 flex-1 cursor-pointer",
+                          "transition-all duration-200 hover:scale-[1.02] hover:shadow-xs",
                           pnl > 0 
                             ? "bg-green-50/80 dark:bg-green-950/40 text-green-700 dark:text-green-400 border-green-100 dark:border-green-900/50" 
                             : pnl < 0 

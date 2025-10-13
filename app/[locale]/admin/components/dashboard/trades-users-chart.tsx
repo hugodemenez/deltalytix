@@ -83,7 +83,7 @@ export function TradesUsersChart({ dailyData }: TradesUsersChartProps) {
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     return (
-                      <div className="rounded-lg border bg-background p-4 shadow-sm">
+                      <div className="rounded-lg border bg-background p-4 shadow-xs">
                         <div className="grid gap-2">
                           <div className="flex items-center justify-between">
                             <span className="text-sm">{payload[0].payload.date}</span>

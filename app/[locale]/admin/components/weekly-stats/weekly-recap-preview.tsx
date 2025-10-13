@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { EmailPreviewLoading } from "./email-preview-loading"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import React from "react"
 
 interface User {
@@ -44,10 +44,8 @@ export function WeeklyRecapPreview() {
         }
       } catch (err) {
         console.error("Error loading users:", err)
-        toast({
-          title: "Error",
+        toast.error("Error", {
           description: "Failed to load users",
-          variant: "destructive",
         })
       }
     }

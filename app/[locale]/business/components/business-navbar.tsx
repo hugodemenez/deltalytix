@@ -39,7 +39,7 @@ const ListItem = React.forwardRef<
             <NavigationMenuLink asChild>
                 <a
                     ref={ref}
-                    className={`block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${className}`}
+                    className={`block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-hidden transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground ${className}`}
                     {...props}
                 >
                     <div className="text-sm font-medium leading-none flex items-center">
@@ -195,7 +195,7 @@ export default function BusinessNavbar() {
 
     return (
         <>
-            <div className={`fixed inset-0 bg-background/80  backdrop-blur-sm z-40 transition-opacity duration-300 ${hoveredItem ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
+            <div className={`fixed inset-0 bg-background/80  backdrop-blur-xs z-40 transition-opacity duration-300 ${hoveredItem ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
             <span className={`h-14 fixed top-0 left-0 right-0 bg-background z-50 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}></span>
             <header className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
                 <Link href="/business" className="flex items-center space-x-2">
@@ -214,7 +214,7 @@ export default function BusinessNavbar() {
                                     <ul className="grid gap-3 p-6 md:w-[400px] lg:w-[500px] lg:grid-cols-[.75fr_1fr] list-none">
                                         <li className="row-span-3">
                                             <NavigationMenuLink asChild>
-                                                <Link className="flex h-full w-full select-none flex-col justify-end rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md" href="/business">
+                                                <Link className="flex h-full w-full select-none flex-col justify-end rounded-md bg-linear-to-b from-muted/50 to-muted p-6 no-underline outline-hidden focus:shadow-md" href="/business">
                                                     <Logo className='w-6 h-6' />
                                                     <div className="mb-2 mt-4 text-lg font-medium">
                                                         Deltalytix Enterprise
@@ -309,7 +309,7 @@ export default function BusinessNavbar() {
                         </SheetTrigger>
                         <SheetContent side="right" className="w-[300px] sm:w-[400px] lg:hidden">
                             <div className="flex flex-col h-full">
-                                <div className="flex-grow overflow-y-auto py-6">
+                                <div className="grow overflow-y-auto py-6">
                                     <MobileNavContent onLinkClick={closeMenu} />
                                 </div>
                             </div>

@@ -154,7 +154,7 @@ export function TiptapEditor({
     editorProps: {
       attributes: {
         class: cn(
-          'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none',
+          'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-hidden',
           'min-h-[200px] p-4',
           className
         ),
@@ -227,7 +227,7 @@ export function TiptapEditor({
       <div className="relative">
         <EditorContent 
           editor={editor} 
-          className="min-h-[200px] focus-within:outline-none p-4"
+          className="min-h-[200px] focus-within:outline-hidden p-4"
           style={{ height, width }}
         />
         

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription, D
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { updateSubscription, collectSubscriptionFeedback, type SubscriptionWithPrice } from "../../actions/billing"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import PricingPlans from "@/components/pricing-plans"
 import Link from "next/link"
@@ -48,7 +48,6 @@ export default function BillingManagement() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
   const [feedback, setFeedback] = useState("")
-  const { toast } = useToast()
   const t = useI18n()
   const locale = useCurrentLocale()
   
@@ -93,18 +92,15 @@ export default function BillingManagement() {
         // Refresh subscription data
         await refreshSubscription()
         
-        toast({
-          title: "Success",
+        toast.success("Success", {
           description: `Successfully ${action}ed your subscription`,
         })
       } else {
         throw new Error(result.error)
       }
     } catch (error) {
-      toast({
-        title: "Error",
+      toast.error("Error", {
         description: `Failed to ${action} subscription. Please try again.`,
-        variant: "destructive",
       })
     }
   }

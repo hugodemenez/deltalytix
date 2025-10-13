@@ -61,7 +61,7 @@ export default function ContractQuantityChart({ size = 'medium' }: ContractQuant
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-background p-2 border rounded shadow-sm">
+        <div className="bg-background p-2 border rounded shadow-xs">
           <p className="font-semibold">{`${label}${t('contracts.tooltip.hour')} - ${(label + 1) % 24}${t('contracts.tooltip.hour')}`}</p>
           <p className="font-bold">{t('contracts.tooltip.totalContracts')}: {data.totalQuantity}</p>
           <p>{t('contracts.tooltip.numberOfTrades')}: {data.tradeCount}</p>
