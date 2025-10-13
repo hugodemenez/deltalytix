@@ -6,7 +6,10 @@
   max-width: none;
 }
 
-.ProseMirror p.is-editor-empty:first-child::before {
+.ProseMirror p.is-editor-empty:first-child::before,
+.ProseMirror h1.is-empty::before,
+.ProseMirror h2.is-empty::before,
+.ProseMirror h3.is-empty::before {
   color: #adb5bd;
   content: attr(data-placeholder);
   float: left;
@@ -15,21 +18,21 @@
 }
 
 .ProseMirror h1 {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.2;
-  margin: 1.5rem 0 0.5rem 0;
+  margin: 0.75rem 0 0.5rem 0;
 }
 
 .ProseMirror h2 {
-  font-size: 1.5rem;
+  font-size: 1.375rem;
   font-weight: 600;
   line-height: 1.3;
   margin: 1.25rem 0 0.5rem 0;
 }
 
 .ProseMirror h3 {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 600;
   line-height: 1.4;
   margin: 1rem 0 0.5rem 0;
@@ -190,10 +193,33 @@
   background: #9ca3af;
 }
 
+/* AI Question Styling */
+.ProseMirror em.text-muted-foreground {
+  color: #6b7280;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* AI Suggestion Popup Animation */
+.ai-suggestion-popup {
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .ProseMirror {
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
   
   .ProseMirror h1 {
