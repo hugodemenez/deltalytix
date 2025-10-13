@@ -116,7 +116,11 @@ export default async function middleware(req: NextRequest) {
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob:; " +
-        "connect-src 'self' ws: wss: https://vercel.live;"
+        "connect-src 'self' ws: wss: https://vercel.live; " +
+        "font-src 'self' data:; " +
+        "object-src 'none'; " +
+        "base-uri 'self'; " +
+        "form-action 'self';"
       );
     } else {
       // Production CSP - more restrictive
@@ -130,10 +134,14 @@ export default async function middleware(req: NextRequest) {
       
       response.headers.set('Content-Security-Policy', 
         `frame-ancestors ${allowedOrigins}; ` +
-        "script-src 'self' https://vercel.live; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; " +
         "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data:; " +
-        "connect-src 'self' https://vercel.live;"
+        "img-src 'self' data: blob:; " +
+        "connect-src 'self' https://vercel.live; " +
+        "font-src 'self' data:; " +
+        "object-src 'none'; " +
+        "base-uri 'self'; " +
+        "form-action 'self';"
       );
     }
     
