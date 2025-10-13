@@ -145,11 +145,12 @@ function createPropfirmPreview() {
 }
 
 function createMindsetPreview() {
+  const t = useI18n()
   return (
     <Card className="h-[300px] flex flex-col">
       <CardHeader className="pb-3 border-b">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">Mindset</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('mindset.title')}</CardTitle>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-primary" />

@@ -7,6 +7,7 @@ import { ChartConfig } from "@/components/ui/chart"
 import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -21,6 +22,7 @@ import { formatInTimeZone } from 'date-fns-tz'
 import { fr, enUS } from 'date-fns/locale'
 import { useUserStore } from '@/store/user-store'
 import { useCurrentLocale } from '@/locales/client'
+import { Button } from "@/components/ui/button"
 
 interface PnLPerContractDailyChartProps {
   size?: WidgetSize
@@ -230,20 +232,124 @@ export default function PnLPerContractDailyChart({ size = 'medium' }: PnLPerCont
           "w-full h-full"
         )}>
           {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col items-center gap-2">
-                <div className={cn(
-                  "animate-spin rounded-full border-2 border-muted-foreground/20 border-t-muted-foreground",
-                  size === 'small-long' ? "h-6 w-6" : "h-8 w-8"
-                )} />
-                <span className={cn(
-                  "text-muted-foreground",
-                  size === 'small-long' ? "text-xs" : "text-sm"
-                )}>
-                  {t('common.loading')}
-                </span>
-              </div>
-            </div>
+            (() => {
+              const loadingMockData = [
+                {"date":"2024-12-02","averagePnl":12.444999999999999,"totalPnl":99.55999999999999,"tradeCount":8,"winCount":2,"totalContracts":8},
+                {"date":"2024-12-03","averagePnl":59.32,"totalPnl":237.28,"tradeCount":4,"winCount":4,"totalContracts":4},
+                {"date":"2024-12-11","averagePnl":28.069999999999997,"totalPnl":224.55999999999997,"tradeCount":8,"winCount":4,"totalContracts":8},
+                {"date":"2024-12-16","averagePnl":-34.43,"totalPnl":-68.86,"tradeCount":2,"winCount":0,"totalContracts":2},
+                {"date":"2024-12-17","averagePnl":-3.18,"totalPnl":-6.36,"tradeCount":2,"winCount":0,"totalContracts":2},
+                {"date":"2024-12-19","averagePnl":48.90333333333333,"totalPnl":293.41999999999996,"tradeCount":6,"winCount":4,"totalContracts":6},
+                {"date":"2024-12-20","averagePnl":17.653333333333332,"totalPnl":105.92,"tradeCount":6,"winCount":2,"totalContracts":6},
+                {"date":"2025-01-06","averagePnl":59.32,"totalPnl":237.28,"tradeCount":3,"winCount":3,"totalContracts":4},
+                {"date":"2025-01-07","averagePnl":74.94500000000001,"totalPnl":599.5600000000001,"tradeCount":6,"winCount":6,"totalContracts":8},
+                {"date":"2025-01-14","averagePnl":28.07,"totalPnl":224.56,"tradeCount":6,"winCount":3,"totalContracts":8},
+                {"date":"2025-01-15","averagePnl":-3.18,"totalPnl":-12.72,"tradeCount":3,"winCount":0,"totalContracts":4},
+                {"date":"2025-01-21","averagePnl":28.07,"totalPnl":224.56,"tradeCount":6,"winCount":3,"totalContracts":8},
+                {"date":"2025-01-22","averagePnl":59.32,"totalPnl":474.56,"tradeCount":6,"winCount":6,"totalContracts":8},
+                {"date":"2025-01-23","averagePnl":74.945,"totalPnl":599.56,"tradeCount":6,"winCount":6,"totalContracts":8},
+                {"date":"2025-01-24","averagePnl":-34.43000000000001,"totalPnl":-413.1600000000001,"tradeCount":9,"winCount":0,"totalContracts":12},
+                {"date":"2025-01-28","averagePnl":-3.18,"totalPnl":-38.160000000000004,"tradeCount":9,"winCount":0,"totalContracts":12},
+                {"date":"2025-01-31","averagePnl":59.32,"totalPnl":237.28,"tradeCount":3,"winCount":3,"totalContracts":4},
+                {"date":"2025-02-20","averagePnl":59.32000000000001,"totalPnl":593.2,"tradeCount":6,"winCount":6,"totalContracts":10},
+                {"date":"2025-02-25","averagePnl":59.32000000000001,"totalPnl":296.6,"tradeCount":3,"winCount":3,"totalContracts":5},
+                {"date":"2025-02-27","averagePnl":-96.93,"totalPnl":-484.65000000000003,"tradeCount":3,"winCount":0,"totalContracts":5},
+                {"date":"2025-03-12","averagePnl":21.82,"totalPnl":109.1,"tradeCount":3,"winCount":2,"totalContracts":5},
+                {"date":"2025-03-18","averagePnl":-3.1799999999999997,"totalPnl":-15.899999999999999,"tradeCount":3,"winCount":0,"totalContracts":5},
+                {"date":"2025-03-19","averagePnl":-3.1799999999999997,"totalPnl":-15.899999999999999,"tradeCount":3,"winCount":0,"totalContracts":5},
+                {"date":"2025-03-20","averagePnl":-65.67999999999999,"totalPnl":-328.4,"tradeCount":3,"winCount":0,"totalContracts":5},
+                {"date":"2025-03-21","averagePnl":-34.43,"totalPnl":-172.15,"tradeCount":3,"winCount":0,"totalContracts":5},
+                {"date":"2025-04-22","averagePnl":17.65333333333333,"totalPnl":264.79999999999995,"tradeCount":9,"winCount":3,"totalContracts":15},
+                {"date":"2025-04-23","averagePnl":59.32000000000001,"totalPnl":296.6,"tradeCount":3,"winCount":3,"totalContracts":5},
+                {"date":"2025-04-24","averagePnl":-3.1799999999999997,"totalPnl":-47.699999999999996,"tradeCount":9,"winCount":0,"totalContracts":15},
+                {"date":"2025-04-29","averagePnl":-34.42999999999999,"totalPnl":-344.29999999999995,"tradeCount":6,"winCount":0,"totalContracts":10},
+                {"date":"2025-05-08","averagePnl":59.32000000000001,"totalPnl":296.6,"tradeCount":3,"winCount":3,"totalContracts":5},
+                {"date":"2025-05-15","averagePnl":59.32000000000001,"totalPnl":296.6,"tradeCount":3,"winCount":3,"totalContracts":5},
+                {"date":"2025-05-19","averagePnl":-34.43,"totalPnl":-172.15,"tradeCount":3,"winCount":0,"totalContracts":5},
+                {"date":"2025-05-22","averagePnl":28.07,"totalPnl":280.7,"tradeCount":6,"winCount":3,"totalContracts":10},
+                {"date":"2025-06-03","averagePnl":-34.43,"totalPnl":-344.3,"tradeCount":6,"winCount":0,"totalContracts":10},
+                {"date":"2025-06-04","averagePnl":-3.1799999999999997,"totalPnl":-15.899999999999999,"tradeCount":3,"winCount":0,"totalContracts":5}
+              ]
+              const maxP = Math.max(...loadingMockData.map(d => d.averagePnl))
+              const minP = Math.min(...loadingMockData.map(d => d.averagePnl))
+              const domainMin = Math.min(minP * 1.1, 0)
+              const domainMax = Math.max(maxP * 1.1, 0)
+              const margin = size === 'small-long'
+                ? { left: 10, right: 4, top: 4, bottom: 20 }
+                : { left: 10, right: 8, top: 8, bottom: 24 }
+              const yAxisWidth = 60
+              const xAxisHeight = size === 'small-long' ? 20 : 24
+              return (
+                <div className={cn("w-full h-full animate-pulse relative")}> 
+                  {/* Axis tick skeletons */}
+                  <div
+                    className="pointer-events-none absolute flex flex-col justify-between pr-2"
+                    style={{
+                      left: `${margin.left}px`,
+                      top: `${margin.top}px`,
+                      bottom: `${margin.bottom + xAxisHeight}px`,
+                      width: `${yAxisWidth}px`
+                    }}
+                  >
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Skeleton key={i} className="h-3 w-10" />
+                    ))}
+                  </div>
+                  <div
+                    className="pointer-events-none absolute flex items-center justify-between"
+                    style={{
+                      left: `${margin.left + yAxisWidth}px`,
+                      right: `${margin.right}px`,
+                      bottom: `${margin.bottom}px`,
+                      height: `${xAxisHeight}px`
+                    }}
+                  >
+                    {Array.from({ length: 6 }).map((_, i) => (
+                      <Skeleton key={i} className={cn(size === 'small-long' ? "h-3 w-8" : "h-3.5 w-10")} />
+                    ))}
+                  </div>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={loadingMockData}
+                      margin={margin}
+                    >
+                      <CartesianGrid 
+                        strokeDasharray="3 3" 
+                        className="text-border dark:opacity-[0.12] opacity-[0.2]"
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tickLine={false}
+                        axisLine={false}
+                        height={size === 'small-long' ? 20 : 24}
+                        tick={false}
+                        minTickGap={size === 'small-long' ? 30 : 50}
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        width={60}
+                        tickMargin={4}
+                        tick={false}
+                        domain={[domainMin, domainMax]}
+                      />
+                      <ReferenceLine y={0} stroke="hsl(var(--border))" />
+                      <Bar
+                        dataKey="averagePnl"
+                        radius={[3, 3, 0, 0]}
+                        maxBarSize={size === 'small-long' ? 25 : 40}
+                        className="transition-none"
+                        fill="hsl(var(--muted-foreground) / 0.35)"
+                      >
+                        {loadingMockData.map((_, index) => (
+                          <Cell key={`skeleton-cell-${index}`} fill="hsl(var(--muted-foreground) / 0.35)" />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )
+            })()
           ) : chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
