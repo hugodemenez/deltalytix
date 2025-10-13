@@ -59,25 +59,6 @@ interface ChartDataPoint {
   [key: `payoutAmount_${string}`]: number // Payout amount for each account
 }
 
-interface AccountEquityInfo {
-  accountNumber: string
-  equity: number
-  dailyPnL: number
-  color: string
-  distance?: number
-  hadActivity?: boolean
-}
-
-// Chart event interface for payouts and resets
-interface ChartEvent {
-  date: Date
-  amount: number
-  isPayout: boolean
-  isReset?: boolean
-  payoutStatus?: string
-  accountNumber: string
-}
-
 // Optimized constants
 const formatCurrency = (value: number) =>
   `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
