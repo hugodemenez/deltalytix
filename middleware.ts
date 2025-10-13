@@ -96,12 +96,49 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+
   // Apply i18n middleware first
   const response = I18nMiddleware(req)
+
 
   // Then update session
   const { response: authResponse, user, error } = await updateSession(req)
 
+  // Embed route check
+  if (pathname.includes("/embed")) {
+    response.headers.delete('X-Frame-Options'); // Allow framing
+    
+    // Set CSP based on environment
+    if (process.env.NODE_ENV === 'development') {
+      // More permissive CSP for development
+      response.headers.set('Content-Security-Policy', 
+        "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:*; " +
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: blob:; " +
+        "connect-src 'self' ws: wss:;"
+      );
+    } else {
+      // Production CSP - more restrictive
+      // Allow localhost for testing (remove in final production)
+      const allowedOrigins = [
+        "'self'",
+        "https://deltalytix.app", // Replace with your actual domain
+        "http://localhost:*", // For local testing
+        "http://127.0.0.1:*"  // For local testing
+      ].join(" ");
+      
+      response.headers.set('Content-Security-Policy', 
+        `frame-ancestors ${allowedOrigins}; ` +
+        "script-src 'self'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data:; " +
+        "connect-src 'self';"
+      );
+    }
+    
+    return response;
+  }
   // Merge responses - copy headers from auth response to i18n response
   authResponse.headers.forEach((value, key) => {
     response.headers.set(key, value)

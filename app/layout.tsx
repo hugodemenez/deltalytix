@@ -178,54 +178,6 @@ export default async function RootLayout({
           sizes="180x180"
           href="/apple-touch-icon-precomposed.png"
         />
-        <style>
-          {`
-            /* Base layout */
-            html {
-              margin: 0;
-              padding: 0;
-              overflow-y: scroll !important;
-              overflow-x: hidden !important;
-              scrollbar-gutter: stable !important;
-              -ms-overflow-style: scrollbar !important;
-            }
-
-            body {
-              min-height: 100vh !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              overflow-x: hidden !important;
-            }
-
-            /* Style the scrollbar */
-            ::-webkit-scrollbar {
-              width: 14px !important;
-              background-color: transparent !important;
-            }
-
-            ::-webkit-scrollbar-track {
-              background: hsl(var(--background)) !important;
-              border-left: 1px solid hsl(var(--border)) !important;
-            }
-
-            ::-webkit-scrollbar-thumb {
-              background: hsl(var(--muted-foreground) / 0.3) !important;
-              border-radius: 7px !important;
-              border: 3px solid hsl(var(--background)) !important;
-              min-height: 40px !important;
-            }
-
-            ::-webkit-scrollbar-thumb:hover {
-              background: hsl(var(--muted-foreground) / 0.4) !important;
-            }
-
-            /* Firefox scrollbar styles */
-            * {
-              scrollbar-width: thin !important;
-              scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent !important;
-            }
-          `}
-        </style>
 
       </head>
       <body className={inter.className + " min-h-screen overflow-x-hidden w-screen"}>

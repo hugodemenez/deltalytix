@@ -126,7 +126,7 @@
     "react-resizable-panels": "^2.1.7",
     "react-syntax-highlighter": "^15.6.6",
     "react-zoom-pan-pinch": "^3.7.0",
-    "recharts": "^2.13.0-alpha.4",
+    "recharts": "^2.15.4",
     "rehype-autolink-headings": "^7.1.0",
     "rehype-img-size": "^1.0.1",
     "rehype-pretty-code": "^0.14.1",
