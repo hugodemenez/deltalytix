@@ -219,6 +219,6 @@ export const config = {
      * - opengraph-image (Open Graph image generation)
      * - public files with extensions
      */
-    "/((?!_next/static|_next/image|favicon.ico|api|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|mp4|webm|gif|webp)$).*)",
   ],
 }
