@@ -51,7 +51,7 @@ import {
 } from '@/server/groups';
 import { createClient } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
-import { ensureUserInDatabase, signOut, getUserId } from '@/server/auth';
+import { signOut, getUserId, updateUserLanguage } from '@/server/auth';
 import { useUserStore } from '@/store/user-store';
 import { useTickDetailsStore } from '@/store/tick-details-store';
 import { useFinancialEventsStore } from '@/store/financial-events-store';
@@ -612,7 +612,7 @@ export const DataProvider: React.FC<{
       setAccounts(accountsWithBalance);
 
 
-      setUser(await ensureUserInDatabase(user, locale));
+      setUser(data.userData);
       setSubscription(data.subscription as PrismaSubscription | null);
       setTags(data.tags);
       setGroups(data.groups);
@@ -662,6 +662,15 @@ export const DataProvider: React.FC<{
     };
   }, [isSharedView]); // Only depend on isSharedView
 
+  // Persist language changes without blocking UI
+  useEffect(() => {
+    if (!supabaseUser?.id || !locale) return
+    // Fire and forget; do not block UI
+    updateUserLanguage(locale).catch((e) => {
+      console.error('[DataProvider] Failed to update user language', e)
+    })
+  }, [locale, supabaseUser?.id])
+
   const refreshTrades = useCallback(async () => {
     if (!supabaseUser?.id) return
 
@@ -691,7 +700,7 @@ export const DataProvider: React.FC<{
       setAccounts(accountsWithBalance);
 
 
-      setUser(await ensureUserInDatabase(supabaseUser, locale));
+      setUser(data.userData);
       setSubscription(data.subscription as PrismaSubscription | null);
       setTags(data.tags);
       setGroups(data.groups);

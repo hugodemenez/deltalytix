@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { headers } from "next/headers"
+import { User } from '@supabase/supabase-js'
 
 export async function getWebsiteURL() {
   let url =
@@ -44,31 +45,36 @@ export async function createClient() {
   )
 }
 
-export async function signInWithDiscord(next: string | null = null) {
+export async function signInWithDiscord(next: string | null = null, locale?: string) {
   const supabase = await createClient()
   const websiteURL = await getWebsiteURL()
+  const callbackParams = new URLSearchParams()
+  if (next) callbackParams.set('next', next)
+  if (locale) callbackParams.set('locale', locale)
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'discord',
     options: {
-      redirectTo: `${websiteURL}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
+      redirectTo: `${websiteURL}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
     },
   })
   if (data.url) {
-    // Before redirecting, ensure user is created/updated in Prisma database
     redirect(data.url)
   }
 }
 
-export async function signInWithGoogle(next: string | null = null) {
+export async function signInWithGoogle(next: string | null = null, locale?: string) {
   const supabase = await createClient()
   const websiteURL = await getWebsiteURL()
+  const callbackParams = new URLSearchParams()
+  if (next) callbackParams.set('next', next)
+  if (locale) callbackParams.set('locale', locale)
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       queryParams: {
         prompt: 'select_account',
       },
-      redirectTo: `${websiteURL}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
+      redirectTo: `${websiteURL}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
     },
   })
   if (data.url) {
@@ -82,22 +88,51 @@ export async function signOut() {
   redirect('/')
 }
 
-export async function signInWithEmail(email: string, next: string | null = null) {
+export async function signInWithEmail(email: string, next: string | null = null, locale?: string) {
   const supabase = await createClient()
+  const callbackParams = new URLSearchParams()
+  if (next) callbackParams.set('next', next)
+  if (locale) callbackParams.set('locale', locale)
   const { error } = await supabase.auth.signInWithOtp({
     email: email,
     options: {
-      emailRedirectTo: `${getWebsiteURL()}api/auth/callback/${next ? `?next=${encodeURIComponent(next)}` : ''}`,
+      emailRedirectTo: `${getWebsiteURL()}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
     },
   })
 }
 
-interface SupabaseUser {
-  id: string;
-  email?: string | null;
-}
-
-export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) {
+/**
+ * ensureUserInDatabase
+ *
+ * Ensures there is a corresponding user record in the public schema linked to the
+ * Supabase Auth user, and synchronizes the preferred language/locale from the client.
+ *
+ * Behavior:
+ * - If a user with matching `auth_user_id` exists, updates the email if it changed and
+ *   keeps language set to the provided `locale` (fallbacks to existing value).
+ * - If no match by `auth_user_id`, optionally checks for an existing user by email; if an
+ *   email conflict with a different `auth_user_id` is detected, signs out and throws.
+ * - Otherwise, creates a new `user` with `id` and `auth_user_id` set to the Supabase user id,
+ *   email set from the Supabase profile, and language set to `locale` (default 'en'). Also
+ *   attempts to create a default dashboard layout for first-time users.
+ *
+ * Parameters:
+ * - user: Supabase `User` object (required). Must contain a valid `id`.
+ * - locale: Optional locale string from the client (e.g. 'en', 'fr'). When provided, it is
+ *   persisted to the `language` field for the user record.
+ *
+ * Returns:
+ * - The up-to-date Prisma `user` record.
+ *
+ * Side effects:
+ * - May sign the user out on integrity or identification errors.
+ * - May create a default dashboard layout for new users.
+ *
+ * Errors:
+ * - Throws on missing user or id, account conflicts, Prisma integrity/validation issues, or
+ *   unexpected errors. NEXT_REDIRECT errors are re-thrown to allow Next.js redirects.
+ */
+export async function ensureUserInDatabase(user: User, locale?: string) {
   console.log('[ensureUserInDatabase] Starting with user:', { id: user?.id, email: user?.email });
   
   if (!user) {
@@ -118,26 +153,28 @@ export async function ensureUserInDatabase(user: SupabaseUser, locale?: string) 
       where: { auth_user_id: user.id },
     });
 
-    // If user exists by auth_user_id, update email if needed
+    // If user exists by auth_user_id, update fields if needed
     if (existingUserByAuthId) {
-      // If email is different, update it
-      if (existingUserByAuthId.email !== user.email) {
-        console.log('[ensureUserInDatabase] Updating existing user email');
+      const shouldUpdateEmail = existingUserByAuthId.email !== user.email;
+      const shouldUpdateLanguage = !!locale && locale !== existingUserByAuthId.language;
+
+      if (shouldUpdateEmail || shouldUpdateLanguage) {
+        console.log('[ensureUserInDatabase] Updating existing user record');
         try {
           const updatedUser = await prisma.user.update({
             where: {
               auth_user_id: user.id // Always use auth_user_id as the unique identifier
             },
             data: {
-              email: user.email || existingUserByAuthId.email,
-              language: locale || existingUserByAuthId.language
+              email: shouldUpdateEmail ? (user.email || existingUserByAuthId.email) : existingUserByAuthId.email,
+              language: shouldUpdateLanguage ? (locale as string) : existingUserByAuthId.language
             },
           });
           console.log('[ensureUserInDatabase] SUCCESS: User updated successfully');
           return updatedUser;
         } catch (updateError) {
-          console.error('[ensureUserInDatabase] ERROR: Failed to update user email:', updateError);
-          throw new Error('Failed to update user email');
+          console.error('[ensureUserInDatabase] ERROR: Failed to update user record:', updateError);
+          throw new Error('Failed to update user');
         }
       }
       console.log('[ensureUserInDatabase] SUCCESS: Existing user found, no update needed');
@@ -281,6 +318,36 @@ export async function getUserEmail(): Promise<string> {
   const userEmail = headersList.get("x-user-email")
   console.log("[Auth] getUserEmail FROM HEADERS", userEmail)
   return userEmail || ""
+}
+
+// Lightweight updater for user language without full ensure logic
+export async function updateUserLanguage(locale: string): Promise<{ updated: boolean }> {
+  console.log("[Auth] updateUserLanguage", locale)
+  const allowedLocales = new Set(['en', 'fr'])
+  if (!allowedLocales.has(locale)) {
+    return { updated: false }
+  }
+
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user?.id) {
+    return { updated: false }
+  }
+
+  const existing = await prisma.user.findUnique({ where: { auth_user_id: user.id } })
+  if (!existing) {
+    return { updated: false }
+  }
+
+  if (existing.language === locale) {
+    return { updated: false }
+  }
+
+  await prisma.user.update({
+    where: { auth_user_id: user.id },
+    data: { language: locale },
+  })
+  return { updated: true }
 }
 
 // Identity linking functions
