@@ -363,23 +363,41 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 
 ## 🗺️ Roadmap
 
-### Upcoming Features
-- [ ] Advanced backtesting capabilities with historical data
-- [ ] Additional platform integrations (TD Ameritrade, MetaTrader, more prop firms)
-- [ ] Mobile application (React Native)
-- [ ] Advanced AI trading insights and recommendations
-- [ ] Portfolio optimization tools
-- [ ] Social trading features and community insights
-- [ ] Advanced charting with custom indicators
-- [ ] Risk management tools and alerts
+### ✅ Recently Completed
+- [x] **Custom Dashboard Layout** - Drag-and-drop widgets with flexible workspace customization
+- [x] **AI-Powered Data Import** - Intelligent field mapping for seamless CSV processing
+- [x] **Enhanced Data Processing** - Multi-platform support with encryption and accurate commission calculations
+- [x] **Automatic Rithmic Integration** - Direct API connection with hourly data synchronization
+- [x] **Tradovate Synchronization** - Real-time trade data sync with automated import
+- [x] **Interactive Brokers Integration** - PDF statement import system for comprehensive trade data
+- [x] **AMP Integration** - Connected through Rithmic sync for seamless data flow
+- [x] **Subscription Plans** - Flexible pricing tiers for different trader needs
 
-### Long-term Vision
-- [ ] Plugin system for custom indicators and strategies
-- [ ] Public API for third-party integrations
-- [ ] Enhanced AI field mapping for more broker formats
-- [ ] Advanced reporting and analytics suite
-- [ ] Community-driven platform integration contributions
-- [ ] Open-source trading strategy marketplace
+### 🔄 Currently In Development
+- [ ] **Automated Journaling System** - AI-assisted trade journaling that focuses on mistakes and successes
+- [ ] **Collaborative AI Assistant** - Notion-style peer writer for real-time trading insights and analysis
+
+### 📋 Upcoming Features (Q2-Q3 2025)
+- [ ] **Enhanced Journaling Experience** - Session-based analysis with automated insights on trading patterns
+- [ ] **Market Data Integration** - Databento connection for real-time market insights and context
+- [ ] **Advanced AI Collaboration** - Direct integration of AI insights into trading workflow
+- [ ] **Session Analysis Tools** - Automated identification of trading mistakes and successful patterns
+- [ ] **Performance Coaching** - AI-powered suggestions based on historical trading behavior
+
+### 🚀 Long-term Vision (2026+)
+- [ ] **Third-Party Dashboard Licensing** - Prop firms can embed Deltalytix directly into their platforms
+- [ ] **Interactive Brokers API Integration** - Direct sync replacing PDF imports for real-time data
+- [ ] **Advanced Market Analytics** - Deep market insights powered by Databento data feeds
+- [ ] **White-Label Solutions** - Customizable platform for trading firms and educational institutions
+- [ ] **Community Features** - Trader-to-trader insights and collaborative learning
+- [ ] **Advanced Risk Management** - Real-time alerts and automated risk monitoring
+- [ ] **Portfolio Optimization Tools** - Modern portfolio theory and risk-adjusted returns
+
+### 🎯 Strategic Focus Areas
+- **Trader-Centric Development** - All features designed specifically for individual traders
+- **AI-Human Collaboration** - Seamless integration of AI insights into natural trading workflow
+- **Automated Learning** - Systems that help traders identify and learn from their patterns
+- **Market Context Integration** - Connecting trading performance to broader market conditions
 
 ---
 
