@@ -35,7 +35,7 @@ import {
   Check,
   X
 } from 'lucide-react'
-import { useCallback, useState, useEffect, useRef } from 'react'
+import { useCallback, useState, useEffect, useRef, useMemo } from 'react'
 import { useUserStore } from '@/store/user-store'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
@@ -44,6 +44,7 @@ import { createClient } from '@/lib/supabase'
 import './tiptap-editor.css'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { Kbd, KbdGroup } from '@/components/ui/kbd'
 
 const supabase = createClient()
 
@@ -59,24 +60,6 @@ function generateShortId(): string {
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-
-// Mock AI question generator
-const mockQuestions = [
-  "What specific details can you add about this?",
-  "How does this relate to your main point?",
-  "Can you provide an example?",
-  "What are the key takeaways here?",
-  "What happens next?",
-  "What challenges did you face?",
-  "How would you summarize this?",
-  "What's the most important aspect?",
-  "Can you elaborate on this further?",
-  "What would you do differently?"
-]
-
-function getRandomQuestion(): string {
-  return mockQuestions[Math.floor(Math.random() * mockQuestions.length)]
-}
 
 interface TiptapEditorProps {
   content?: string
@@ -104,16 +87,34 @@ export function TiptapEditor({
   const [showSuggestion, setShowSuggestion] = useState(false)
   const [suggestionPosition, setSuggestionPosition] = useState<number | null>(null)
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastTextRef = useRef<string>('')
+  const isTypingRef = useRef<boolean>(false)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const lastSuggestionTimeRef = useRef<number>(0)
+  const suggestionCooldown = 30000 // 30 seconds cooldown between suggestions
 
   // Set up AI chat hook to stream questions
-  const { messages, sendMessage, status } = useChat({
+  const { messages, sendMessage, status, setMessages } = useChat({
     transport: new DefaultChatTransport({
       api: '/api/ai/question-suggest',
     }),
     onFinish: (message) => {
-    console.log(JSON.stringify(message, null, 2))
+      console.log(JSON.stringify(message, null, 2))
     }
   });
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Only keep role assistant messages
+      const assistantMessages = messages.filter(message => message.role === 'assistant')
+      
+      if (assistantMessages.length > 0) {
+        const lastMessage = assistantMessages[assistantMessages.length - 1]
+        const textPart = lastMessage.parts?.find(part => part.type === 'text')
+        setAiSuggestion(textPart?.text || null)
+      }
+    }
+  }, [messages, setAiSuggestion])
 
   const handleImageUpload = useCallback(async (file: File): Promise<string> => {
     try {
@@ -145,6 +146,18 @@ export function TiptapEditor({
       throw error
     }
   }, [user?.id, generatedId, t])
+
+  // Handle dismissing AI suggestion
+  const handleDismissSuggestion = useCallback(() => {
+    setAiSuggestion(null)
+    setShowSuggestion(false)
+    setSuggestionPosition(null)
+  }, [])
+
+  // Memoized word count calculation
+  const getWordCount = useCallback((text: string) => {
+    return text.split(/\s+/).filter(word => word.length > 0).length
+  }, [])
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -195,30 +208,65 @@ export function TiptapEditor({
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML())
       
-      // Clear existing timeout
+      // Get current text content
+      const text = editor.getText().trim()
+      const currentText = text
+      
+      // Mark as typing
+      isTypingRef.current = true
+      
+      // Clear existing typing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+      
+      // Set timeout to mark as not typing after 2 seconds of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        isTypingRef.current = false
+      }, 2000)
+      
+      // Clear existing suggestion timeout
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current)
       }
       
-      // Get current text content
-      const text = editor.getText().trim()
-      const wordCount = text.split(/\s+/).filter(word => word.length > 0).length
-      
-      // Only suggest if user has written at least 5 words
-      if (wordCount >= 5) {
-        // Set debounced timeout for 1 seconds
-        debounceTimeoutRef.current = setTimeout(() => {
-          // Check if suggestion is not already showing
-          if (!showSuggestion && !aiSuggestion) {
-            sendMessage({
-              text: text,
-            })
-            setAiSuggestion(messages[messages.length - 1].parts.find(part => part.type === 'text')?.text || null)
-            setSuggestionPosition(editor.state.selection.$anchor.pos)
-            setShowSuggestion(true)
-          }
-        }, 1000)
+      // Dismiss suggestion if user is actively typing and text has changed
+      if (showSuggestion && aiSuggestion && currentText !== lastTextRef.current) {
+        const textDiff = Math.abs(currentText.length - lastTextRef.current.length)
+        // Dismiss on any significant change or if user is actively typing
+        if (textDiff > 5 || isTypingRef.current) {
+          handleDismissSuggestion()
+        }
       }
+      
+      const wordCount = getWordCount(text)
+      
+      // Only suggest if user has written at least 8 words and is not actively typing
+      if (wordCount >= 8 && !isTypingRef.current) {
+        const now = Date.now()
+        const timeSinceLastSuggestion = now - lastSuggestionTimeRef.current
+        
+        // Check cooldown period
+        if (timeSinceLastSuggestion >= suggestionCooldown) {
+          // Set debounced timeout for 3 seconds (longer pause required)
+          debounceTimeoutRef.current = setTimeout(() => {
+            // Check if suggestion is not already showing and user is still not typing
+            if (!showSuggestion && !aiSuggestion && !isTypingRef.current && currentText === editor.getText().trim()) {
+              // Clear previous messages to avoid sending conversation history
+              setMessages([])
+              
+              sendMessage({
+                text: currentText,
+              })
+              setSuggestionPosition(editor.state.selection.$anchor.pos)
+              setShowSuggestion(true)
+              lastSuggestionTimeRef.current = now
+            }
+          }, 3000)
+        }
+      }
+      
+      lastTextRef.current = currentText
     },
     editorProps: {
       attributes: {
@@ -283,12 +331,27 @@ export function TiptapEditor({
     setSuggestionPosition(null)
   }, [editor, aiSuggestion])
 
-  // Handle dismissing AI suggestion
-  const handleDismissSuggestion = useCallback(() => {
-    setAiSuggestion(null)
-    setShowSuggestion(false)
-    setSuggestionPosition(null)
-  }, [])
+  // Handle keyboard events for AI suggestion
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (!showSuggestion || !aiSuggestion) return
+    
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      handleAcceptSuggestion()
+    } else if (event.key !== 'Shift' && event.key !== 'Control' && event.key !== 'Alt' && event.key !== 'Meta') {
+      // Dismiss on any other key except modifier keys
+      event.preventDefault()
+      handleDismissSuggestion()
+    }
+  }, [showSuggestion, aiSuggestion, handleAcceptSuggestion, handleDismissSuggestion])
+
+  // Add keyboard event listener when suggestion is shown
+  useEffect(() => {
+    if (showSuggestion && aiSuggestion) {
+      document.addEventListener('keydown', handleKeyDown)
+      return () => document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [showSuggestion, aiSuggestion, handleKeyDown])
 
   // Update editor content when content prop changes
   useEffect(() => {
@@ -297,11 +360,14 @@ export function TiptapEditor({
     }
   }, [editor, content])
 
-  // Cleanup timeout on unmount
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current)
+      }
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
       }
     }
   }, [])
@@ -464,32 +530,43 @@ export function TiptapEditor({
 
         {/* AI Suggestion Popup */}
         {showSuggestion && aiSuggestion && (
-          <div className="absolute bottom-2 left-2 right-2 z-50">
-            <div className="bg-background border rounded-lg shadow-lg p-3 max-w-md ai-suggestion-popup">
-              <div className="flex items-start gap-3">
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">AI Suggestion:</p>
-                  <p className="text-sm">{aiSuggestion}</p>
+          <div className="absolute bottom-3 right-3 z-50 max-w-sm">
+            <div className="bg-background/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg p-3 animate-in slide-in-from-bottom-2 duration-200">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">AI Suggestion</span>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <KbdGroup>
+                      <Kbd>Enter</Kbd>
+                    </KbdGroup>
+                    <span className="text-xs">to accept</span>
+                  </div>
                 </div>
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleAcceptSuggestion}
-                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                    title="Accept suggestion"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleDismissSuggestion}
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    title="Dismiss suggestion"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                <p className="text-sm leading-relaxed text-foreground/90">{aiSuggestion}</p>
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <span>Any other key to dismiss</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleAcceptSuggestion}
+                      className="h-6 w-6 p-0 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
+                      title="Accept suggestion"
+                    >
+                      <Check className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleDismissSuggestion}
+                      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      title="Dismiss suggestion"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

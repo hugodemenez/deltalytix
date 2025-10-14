@@ -67,7 +67,7 @@ export default function EmbedPage() {
     // Message listener for iframe communication
     React.useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
-            toast.message('Received message from iframe', { description: event.data.orders.length })
+            toast.message('Received message from iframe', { description: JSON.stringify(event) })
             // Validate origin for security (you can customize this)
             // if (event.origin !== 'http://localhost:3000') return
 
@@ -92,6 +92,7 @@ export default function EmbedPage() {
                     // Clear all trades
                     setTrades([])
                 } else if (data.type === 'ADD_PHOENIX_ORDERS') {
+                    toast.message('Received message from iframe', { description: event.data.orders.length })
                     const { orders } = data
                     // Process Phoenix orders
                     if (orders && Array.isArray(orders)) {
