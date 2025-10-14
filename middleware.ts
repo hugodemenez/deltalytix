@@ -108,44 +108,48 @@ export default async function middleware(req: NextRequest) {
   if (pathname.includes("/embed")) {
     response.headers.delete('X-Frame-Options'); // Allow framing
     
-    // Set CSP based on environment
-    if (process.env.NODE_ENV === 'development') {
-      // More permissive CSP for development
-      response.headers.set('Content-Security-Policy', 
-        "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* file: *; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; " +
-        "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: blob:; " +
-        "connect-src 'self' ws: wss: https://vercel.live; " +
-        "font-src 'self' data:; " +
-        "object-src 'none'; " +
-        "base-uri 'self'; " +
-        "form-action 'self';"
-      );
-    } else {
-      // Production CSP - more restrictive
-      // Allow localhost for testing (remove in final production)
-      const allowedOrigins = [
-        "'self'",
-        "https://deltalytix.app", // Replace with your actual domain
-        "http://localhost:*", // For local testing
-        "http://127.0.0.1:*",  // For local testing
-        "file:", // For local HTML file testing
-        "*"
-      ].join(" ");
-      
-      response.headers.set('Content-Security-Policy', 
-        `frame-ancestors ${allowedOrigins}; ` +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; " +
-        "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data: blob:; " +
-        "connect-src 'self' https://vercel.live; " +
-        "font-src 'self' data:; " +
-        "object-src 'none'; " +
-        "base-uri 'self'; " +
-        "form-action 'self';"
-      );
+    // Check if request is from a local file or development environment
+    const origin = req.headers.get('origin');
+    const referer = req.headers.get('referer');
+    const isLocalFile = origin === 'null' || referer?.startsWith('file://') || (!origin && !referer);
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    console.log('Embed request debug:', { origin, referer, isLocalFile, nodeEnv: process.env.NODE_ENV, pathname });
+    
+    // If embedding from a local file (file://), omit CSP entirely so browsers don't block
+    if (isLocalFile) {
+      response.headers.delete('Content-Security-Policy');
+      return response;
     }
+
+    // Development: omit CSP entirely to prevent frame-ancestors blocking during local testing
+    if (isDev) {
+      response.headers.delete('Content-Security-Policy');
+      return response;
+    }
+
+    // Production CSP - more restrictive
+    // Allow localhost for testing (remove in final production)
+    const allowedOrigins = [
+      "'self'",
+      "https://deltalytix.app", // Main domain
+      "https://beta.deltalytix.app", // Beta subdomain
+      "http://localhost:*", // For local testing
+      "http://127.0.0.1:*",  // For local testing
+      "file:" // For local HTML file testing (may be ignored by some browsers)
+    ].join(" ");
+    
+    response.headers.set('Content-Security-Policy',
+      `frame-ancestors ${allowedOrigins}; ` +
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; " +
+      "style-src 'self' 'unsafe-inline'; " +
+      "img-src 'self' data: blob:; " +
+      "connect-src 'self' https://vercel.live; " +
+      "font-src 'self' data:; " +
+      "object-src 'none'; " +
+      "base-uri 'self'; " +
+      "form-action 'self';"
+    );
     
     return response;
   }
@@ -266,6 +270,6 @@ export const config = {
      * - opengraph-image (Open Graph image generation)
      * - public files with extensions
      */
-    "/((?!_next/static|_next/image|favicon.ico|api|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|mp4|webm|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|api|opengraph-image|.*\\.(?:svg|png|jpg|jpeg|mp4|webm|gif|html|webp)$).*)",
   ],
 }
