@@ -112,7 +112,7 @@ export default async function middleware(req: NextRequest) {
     if (process.env.NODE_ENV === 'development') {
       // More permissive CSP for development
       response.headers.set('Content-Security-Policy', 
-        "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:*; " +
+        "frame-ancestors 'self' http://localhost:* http://127.0.0.1:* https://localhost:* https://127.0.0.1:* file: *; " +
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data: blob:; " +
@@ -130,6 +130,7 @@ export default async function middleware(req: NextRequest) {
         "https://deltalytix.app", // Replace with your actual domain
         "http://localhost:*", // For local testing
         "http://127.0.0.1:*",  // For local testing
+        "file:", // For local HTML file testing
         "*"
       ].join(" ");
       
