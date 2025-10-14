@@ -129,7 +129,8 @@ export default async function middleware(req: NextRequest) {
         "'self'",
         "https://deltalytix.app", // Replace with your actual domain
         "http://localhost:*", // For local testing
-        "http://127.0.0.1:*"  // For local testing
+        "http://127.0.0.1:*",  // For local testing
+        "*"
       ].join(" ");
       
       response.headers.set('Content-Security-Policy', 
