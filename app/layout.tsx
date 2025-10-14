@@ -157,8 +157,8 @@ export default async function RootLayout({
 
         {/* PostHog Analytics */}
         {process.env.NODE_ENV === "production" && (
-        <Script id="posthog-analytics" strategy="afterInteractive">
-          {`
+          <Script id="posthog-analytics" strategy="afterInteractive">
+            {`
             !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug getPageViewId".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
             posthog.init('phc_NS2VmvRg0gY0tMBpq3tMX3gOBQdG79VOciAh8NDWSeX', {
                 api_host: 'https://eu.i.posthog.com',
@@ -178,6 +178,55 @@ export default async function RootLayout({
           sizes="180x180"
           href="/apple-touch-icon-precomposed.png"
         />
+
+        <style>
+          {`
+            /* Base layout */
+            html {
+              margin: 0;
+              padding: 0;
+              overflow-y: scroll !important;
+              overflow-x: hidden !important;
+              scrollbar-gutter: stable !important;
+              -ms-overflow-style: scrollbar !important;
+            }
+
+            body {
+              min-height: 100vh !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow-x: hidden !important;
+            }
+
+            /* Style the scrollbar */
+            ::-webkit-scrollbar {
+              width: 14px !important;
+              background-color: transparent !important;
+            }
+
+            ::-webkit-scrollbar-track {
+              background: hsl(var(--background)) !important;
+              border-left: 1px solid hsl(var(--border)) !important;
+            }
+
+            ::-webkit-scrollbar-thumb {
+              background: hsl(var(--muted-foreground) / 0.3) !important;
+              border-radius: 7px !important;
+              border: 3px solid hsl(var(--background)) !important;
+              min-height: 40px !important;
+            }
+
+            ::-webkit-scrollbar-thumb:hover {
+              background: hsl(var(--muted-foreground) / 0.4) !important;
+            }
+
+            /* Firefox scrollbar styles */
+            * {
+              scrollbar-width: thin !important;
+              scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent !important;
+            }
+          `}
+        </style>
 
       </head>
       <body className={inter.className + " min-h-screen overflow-x-hidden w-screen"}>

@@ -1,6 +1,8 @@
 import { getTradesAction } from "@/server/database";
+import { getGroupsAction } from "@/server/groups";
 import { Trade } from "@prisma/client";
 import { tool } from "ai";
+import { groups } from "d3";
 import { z } from 'zod/v3';
 
 // Define Zod schemas first
@@ -247,6 +249,12 @@ export const getAccountPerformance = tool({
         return tradeDate >= start && tradeDate <= end;
       });
     }
+
+    const groups = await getGroupsAction();
+    const hiddenGroup = groups.find(g => g.name === "Hidden Accounts")
+    const hiddenAccountNumbers = hiddenGroup ? new Set(hiddenGroup.accounts.map(a => a.number)) : new Set()
+    // Filter out hidden accounts
+    trades = trades.filter(trade => !hiddenAccountNumbers.has(trade.accountNumber));
     
     const analysis = analyzeAccounts(trades);
     
