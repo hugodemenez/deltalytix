@@ -2,23 +2,32 @@ import { streamText, stepCountIs, convertToModelMessages } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 import { openai } from "@ai-sdk/openai";
+import { getTradesSummary } from "../chat/tools/get-trades-summary";
 
 export const maxDuration = 30;
 
 export async function POST(req: NextRequest) {
   try {
-      const { messages } = await req.json();
+    const { messages, locale } = await req.json();
+    const date = new Date().toUTCString()
 
     const convertedMessages = convertToModelMessages(messages);
     const result = streamText({
       model: openai("gpt-4o"),
       messages: convertedMessages,
+      tools: {
+        getTradesSummary,
+      },
+      stopWhen: stepCountIs(10),
       system: `You are an expert futures trading coach and journaling assistant. Your role is to suggest thoughtful, introspective questions to help traders reflect on their trading performance, psychology, and decision-making process.
 
+DATE CONTEXT: ${date}
 CONTEXT: The user is writing in their trading journal in their native language, focusing on futures trading. They may be reflecting on their trades, emotions, market conditions, or overall performance.
+RULE: Respond in ${locale} language or follow the user's conversation language
 
 GUIDELINES:
 - Suggest 1 specific, actionable question that encourages deep self-reflection keep it short and concise
+- Call getTradesSummary() to get the user's trades summary data and ask a relevant question about it
 - Focus on futures trading concepts: risk management, position sizing, market structure, volatility, leverage, margin, rollover, contango/backwardation
 - Consider trading psychology: emotions, discipline, patience, fear, greed, revenge trading, FOMO
 - Include questions about market analysis: technical analysis, fundamental factors, economic indicators, news impact

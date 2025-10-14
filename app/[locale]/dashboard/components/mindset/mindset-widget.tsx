@@ -7,7 +7,7 @@ import { Journaling } from "./journaling"
 import { Timeline } from "./timeline"
 import { MindsetSummary } from "./mindset-summary"
 import { useI18n } from "@/locales/client"
-import { Info, ChevronLeft, ChevronRight } from "lucide-react"
+import { Info, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Tooltip as UITooltip,
@@ -38,6 +38,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [journalContent, setJournalContent] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isEditing, setIsEditing] = useState(true)
+  const [isTimelineVisible, setIsTimelineVisible] = useState(true)
   const moods = useMoodStore(state => state.moods)
   const setMoods = useMoodStore(state => state.setMoods)
   const financialEvents = useFinancialEventsStore(state => state.events)
@@ -229,6 +230,10 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     }
   }
 
+  const toggleTimeline = () => {
+    setIsTimelineVisible(!isTimelineVisible)
+  }
+
   const steps = [
     {
       title: t('mindset.journaling.title'),
@@ -325,14 +330,72 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden p-0 flex flex-row gap-4">
-        <Timeline 
-          className="shrink-0"
-          selectedDate={selectedDate}
-          onSelectDate={handleDateSelect}
-          moodHistory={moods}
-          onDeleteEntry={handleDeleteEntry}
-        />
+      <CardContent className="flex-1 overflow-hidden p-0 flex flex-row relative">
+        {/* Timeline with animation */}
+        <div 
+          className={cn(
+            "relative transition-all duration-300 ease-out-quart",
+            isTimelineVisible ? "w-auto" : "w-0 overflow-hidden"
+          )}
+        >
+          <Timeline 
+            className="shrink-0"
+            selectedDate={selectedDate}
+            onSelectDate={handleDateSelect}
+            moodHistory={moods}
+            onDeleteEntry={handleDeleteEntry}
+          />
+          
+          {/* Hide/Show Button - positioned at right edge of timeline */}
+          <div className="absolute right-0 top-1/2 -translate-y-1/2 z-10">
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={toggleTimeline}
+                    className="h-8 w-4 rounded-r-none rounded-l-md border-r-0"
+                  >
+                    {isTimelineVisible ? (
+                      <ChevronLeft className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p>{isTimelineVisible ? t('mindset.hideTimeline') : t('mindset.showTimeline')}</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          </div>
+        </div>
+        
+        {/* Show Button when timeline is collapsed */}
+        {!isTimelineVisible && (
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10">
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    onClick={toggleTimeline}
+                    className="h-8 w-4 rounded-l-none rounded-r-md border-l-0"
+                  >
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>{t('mindset.showTimeline')}</p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
+          </div>
+        )}
+
+        {/* Carousel */}
         <Carousel
           opts={{
             loop: false,
@@ -347,7 +410,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
           setApi={setApi}
           className="flex-1 min-w-0 h-full flex flex-col"
         >
-          <CarouselContent className="h-full flex-1">
+          <CarouselContent className="h-full flex-1 pl-4">
             {steps.map((step, index) => (
               <CarouselItem key={index} className="h-full p-4">
                 {step.component}

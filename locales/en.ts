@@ -1766,5 +1766,29 @@ export default {
     'table.hideColumn': 'Hide Column',
     'table.showPoints': 'Show Points',
     'widgets.duplicate.title': 'Widget already added',
-    'widgets.duplicate.description': "You can't add the same widget twice to your dashboard."
+    'widgets.duplicate.description': "You can't add the same widget twice to your dashboard.",
+    editor: {
+        ai: {
+            button: 'AI actions',
+            actions: {
+                explain: 'Explain selection',
+                improvements: 'Identify improvements',
+                summarize: 'Summarize selection',
+                rewrite: 'Rewrite for clarity',
+                expand: 'Expand',
+                grammar: 'Fix grammar & spelling',
+                translateTo: {
+                    en: 'Translate to English',
+                    fr: 'Translate to French'
+                },
+                suggestQuestion: 'Suggest a journaling question'
+            },
+            thinking: 'AI is thinking...',
+            generating: 'Generating suggestion...',
+            suggestionTitle: 'AI Suggestion',
+            accept: 'Accept suggestion',
+            dismiss: 'Dismiss suggestion',
+            minCharsError: 'Please write at least 10 characters to use AI'
+        }
+    }
 } as const

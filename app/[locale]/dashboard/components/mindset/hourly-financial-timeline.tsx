@@ -361,7 +361,11 @@ export function HourlyFinancialTimeline({
                       <FinancialEventCard
                         key={item.id}
                         event={item}
-                        onClick={() => onEventClick?.(item)}
+                        onClick={(e?: any) => {
+                          // Prevent outer popover from thinking this is outside
+                          if (e && typeof e.stopPropagation === 'function') e.stopPropagation()
+                          onEventClick?.(item)
+                        }}
                         timezone={timezone}
                         dateLocale={dateLocale}
                         isSelected={selectedEventIds.includes(item.id)}
@@ -461,7 +465,11 @@ function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = f
         !isSelected && "border-l-4",
         isSelected && "border-2 border-current"
       )}
-      onClick={onClick}
+      onClick={(e) => {
+        // Ensure clicks within child elements don't bubble to outside popovers
+        e.stopPropagation()
+        onClick?.()
+      }}
     >
       <div className="font-medium text-sm truncate">{event.title}</div>
 

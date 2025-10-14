@@ -120,9 +120,9 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
   }
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <div className={cn(
-        "min-h-[200px]",
+        "flex-1 min-h-0",
         isSavingComment && "opacity-50",
         saveError && "border-destructive"
       )}>
@@ -136,7 +136,7 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
             onChange={setComment}
             height="100%"
             width="100%"
-            placeholder={t('calendar.charts.addComment')}
+            placeholder={t('mindset.journaling.placeholder')}
           />
         )}
       </div>

@@ -82,6 +82,15 @@ export default {
       save: 'Enregistrer',
       editorPlaceholder: 'Commencez à écrire...'
     },
+    editor: {
+      news: {
+        title: 'Actualités',
+        selectNews: 'Sélectionner les actualités',
+        selectedCount: '{count} sélectionnées',
+        noNews: 'Aucune actualité disponible',
+        clearSelection: 'Effacer la sélection'
+      }
+    },
     tradingStats: {
       title: 'Statistiques de trading',
       winningTrades: 'Trades gagnants',
@@ -94,5 +103,7 @@ export default {
       netPnL: 'P&L Net',
       entryTime: 'Heure d\'entrée'
     },
+    hideTimeline: 'Masquer la chronologie',
+    showTimeline: 'Afficher la chronologie'
   }
 } as const; 

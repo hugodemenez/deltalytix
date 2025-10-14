@@ -76,7 +76,7 @@ export function CalendarModal({
             <TabsTrigger value="table">{t('calendar.modal.table')}</TabsTrigger>
             <TabsTrigger value="analysis">{t('calendar.modal.analysis')}</TabsTrigger>
           </TabsList>
-          <TabsContent value="comment" className="grow overflow-auto p-6 pt-2">
+          <TabsContent value="comment" className="grow overflow-hidden p-6 pt-2 h-full flex flex-col">
             <DailyComment dayData={dayData} selectedDate={selectedDate} />
           </TabsContent>
           <TabsContent value="table" className="grow overflow-auto p-6 pt-2">
