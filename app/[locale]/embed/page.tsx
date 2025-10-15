@@ -73,10 +73,6 @@ export default function EmbedPage() {
     // Message listener for iframe communication
     React.useEffect(() => {
         const handleMessage = (event: MessageEvent) => {
-            toast.message('Received message from iframe', { description: JSON.stringify(event) })
-            // Validate origin for security (you can customize this)
-            // if (event.origin !== 'http://localhost:3000') return
-
             try {
                 const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
 
@@ -87,6 +83,7 @@ export default function EmbedPage() {
                         // Add provided trades
                         setTrades(prev => [...prev, ...newTrades])
                     } else {
+                        toast.error('No trades provided', { description: `Generating ${count} random trades` })
                         // Generate random trades
                         const randomTrades = generateRandomTrades(count)
                         setTrades(prev => [...prev, ...randomTrades])
@@ -98,13 +95,11 @@ export default function EmbedPage() {
                     // Clear all trades
                     setTrades([])
                 } else if (data.type === 'ADD_PHOENIX_ORDERS') {
-                    toast.message('Received message from iframe', { description: event.data.orders.length })
                     const { orders } = data
                     // Process Phoenix orders
                     if (orders && Array.isArray(orders)) {
                         const parsedOrders = parsePhoenixOrders(orders)
                         const processedOrdersWithFIFO = processPhoenixOrdersWithFIFO(parsedOrders.processedOrders)
-                        toast.message('Processed ' + processedOrdersWithFIFO.trades.length + ' trades', { description: processedOrdersWithFIFO.trades.map(trade => trade.pnl).join(', ') })
                         setTrades(prev => [
                           ...prev,
                           ...processedOrdersWithFIFO.trades.map(trade => ({
@@ -120,7 +115,7 @@ export default function EmbedPage() {
                     }
                 }
             } catch (error) {
-                console.error('Error processing message:', error)
+                toast.error('Error processing message', { description: error instanceof Error ? error.message : 'Unknown error' })
             }
         }
 
@@ -142,7 +137,7 @@ export default function EmbedPage() {
 
     return (
       <ThemeProvider>
-        <div className="w-full h-full min-h-[400px]">
+        <div className="w-full h-full min-h-[400px] mb-20">
           <Toaster />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
             <TimeRangePerformanceChart trades={trades} />

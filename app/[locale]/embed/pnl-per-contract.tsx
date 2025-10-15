@@ -14,6 +14,11 @@ type TradeLike = {
 }
 
 function formatCurrency(value: number) {
+  // Handle NaN and invalid numbers
+  if (!isFinite(value) || isNaN(value)) {
+    return '$0'
+  }
+  
   const abs = Math.abs(value)
   if (abs >= 1_000_000) return `${value < 0 ? '-' : ''}$${(abs / 1_000_000).toFixed(1)}M`
   if (abs >= 1_000) return `${value < 0 ? '-' : ''}$${(abs / 1_000).toFixed(1)}k`
@@ -26,10 +31,12 @@ export default function PnLPerContractChartEmbed({ trades }: { trades: TradeLike
 
     trades.forEach((trade) => {
       const instrument = trade.instrument || 'Unknown'
-      const netPnl = trade.pnl - (trade.commission || 0)
+      const netPnl = (isFinite(trade.pnl) ? trade.pnl : 0) - (isFinite(trade.commission || 0) ? (trade.commission || 0) : 0)
+      const quantity = isFinite(trade.quantity) ? trade.quantity : 0
+      
       if (!groups[instrument]) groups[instrument] = { totalPnl: 0, totalContracts: 0, winCount: 0, trades: 0 }
       groups[instrument].totalPnl += netPnl
-      groups[instrument].totalContracts += trade.quantity
+      groups[instrument].totalContracts += quantity
       groups[instrument].trades += 1
       if (netPnl > 0) groups[instrument].winCount += 1
     })
@@ -51,6 +58,11 @@ export default function PnLPerContractChartEmbed({ trades }: { trades: TradeLike
   const absMax = React.useMemo(() => Math.max(Math.abs(maxPnL), Math.abs(minPnL)), [maxPnL, minPnL])
 
   const getColor = (value: number) => {
+    // Handle NaN and invalid numbers
+    if (!isFinite(value) || isNaN(value)) {
+      return `hsl(var(--chart-3) / 0.2)`
+    }
+    
     const ratio = absMax === 0 ? 0.2 : Math.max(0.2, Math.abs(value / absMax))
     const base = value >= 0 ? '--chart-3' : '--chart-4'
     return `hsl(var(${base}) / ${ratio})`
