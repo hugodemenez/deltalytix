@@ -234,18 +234,25 @@
             opacity: 0.9;
         }
 
-        input {
+        input, select {
             padding: 0.5rem 0.75rem;
             border: 1px solid hsl(var(--input));
             border-radius: var(--radius);
             background: hsl(var(--background));
             color: hsl(var(--foreground));
             font-size: 0.875rem;
-            width: 5rem;
             transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        input:focus {
+        input {
+            width: 5rem;
+        }
+
+        select {
+            min-width: 12rem;
+        }
+
+        input:focus, select:focus {
             outline: none;
             border-color: hsl(var(--ring));
             box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
@@ -271,6 +278,114 @@
             /* Dark background as fallback */
         }
 
+        /* Dialog Styles */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .dialog {
+            background: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid hsl(var(--border));
+        }
+
+        .dialog-header h3 {
+            margin: 0;
+            color: hsl(var(--foreground));
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .dialog-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: hsl(var(--muted-foreground));
+            cursor: pointer;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dialog-close:hover {
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+        }
+
+        .dialog-body {
+            padding: 1.5rem;
+        }
+
+        .dialog-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            border-top: 1px solid hsl(var(--border));
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: hsl(var(--foreground));
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid hsl(var(--input));
+            border-radius: var(--radius);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            font-size: 0.875rem;
+            transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: hsl(var(--ring));
+            box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -294,9 +409,22 @@
                 width: 100%;
             }
 
-            input {
+            input, select {
                 width: 100%;
                 margin-bottom: 0.5rem;
+            }
+
+            .dialog {
+                width: 95%;
+                margin: 1rem;
+            }
+
+            .dialog-footer {
+                flex-direction: column;
+            }
+
+            .dialog-footer button {
+                width: 100%;
             }
         }
     </style>
@@ -315,69 +443,195 @@
                 on your interactions.</p>
             <p><strong>Available Actions:</strong></p>
             <ul>
-                <li><code>ADD_TRADES</code> - Add random trades or specific trade data</li>
-                <li><code>RESET_TRADES</code> - Reset to original mock data</li>
-                <li><code>CLEAR_TRADES</code> - Clear all trades from the chart</li>
-                <li><code>ADD_PHOENIX_ORDERS</code> - Add Phoenix orders to be processed into trades</li>
+                <li><strong>Client-Side:</strong> Generate trades locally and send full trade data</li>
+                <li><strong>Server-Side:</strong> Send count only, let server generate trades</li>
+                <li><strong>Specific Trade:</strong> Add a custom trade via dialog form</li>
+                <li><strong>Reset:</strong> Reset to original mock data</li>
+                <li><strong>Clear:</strong> Clear all trades from the chart</li>
             </ul>
+        </div>
+
+        <div class="controls">
+            <h3>Environment Settings</h3>
+            
+            <div class="button-group">
+                <label>Environment:</label>
+                <select id="environmentSelect" onchange="changeEnvironment()">
+                    <option value="localhost">Localhost (http://localhost:3000)</option>
+                    <option value="beta">Beta (https://beta.deltalytix.app)</option>
+                    <option value="stable">Stable (https://deltalytix.app)</option>
+                </select>
+                <button onclick="reloadIframe()" class="secondary">Reload Chart</button>
+            </div>
         </div>
 
         <div class="controls">
             <h3>Chart Controls</h3>
 
             <div class="button-group">
-                <label>Add Random Trades:</label>
+                <label>Number of Random Trades:</label>
                 <input type="number" id="tradeCount" value="5" min="1" max="50">
-                <button onclick="addRandomTrades()">Add Random Trades</button>
+                <button onclick="addClientSideTrades()">Add Client-Side</button>
+                <button onclick="addServerSideTrades()" class="secondary">Add Server-Side</button>
             </div>
 
             <div class="button-group">
-                <button onclick="addSpecificTrades()">Add Specific Trades</button>
-                <button onclick="resetTrades()" class="secondary">Reset to Original</button>
-                <button onclick="clearTrades()" class="danger">Clear All Trades</button>
+                <button onclick="addSpecificTrades()" class="success">Add Specific Trade</button>
+                <button onclick="resetTrades()" class="secondary">Reset</button>
+                <button onclick="clearTrades()" class="danger">Clear</button>
             </div>
+        </div>
 
-            <div class="button-group">
-                <button onclick="addBulkTrades()">Add 20 Random Trades</button>
-                <button onclick="addMixedTrades()">Add Mixed Performance Trades</button>
-                <button onclick="addPhoenixOrders()" class="success">Add Phoenix Orders</button>
+        <div class="controls">
+            <h3>Data Being Sent</h3>
+            <div id="dataDisplay" style="background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); padding: 1rem; margin-top: 1rem;">
+                <pre id="jsonData" style="margin: 0; font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace; font-size: 0.875rem; color: hsl(var(--foreground)); white-space: pre-wrap; word-wrap: break-word; max-height: 300px; overflow-y: auto;"></pre>
             </div>
         </div>
 
         <div class="iframe-container">
-            <iframe id="chartIframe" src="https://beta.deltalytix.app/embed?theme=dark"></iframe>
+            <iframe id="chartIframe" src="http://localhost:3000/embed?theme=dark"></iframe>
+        </div>
+    </div>
+
+    <!-- Add Trade Dialog -->
+    <div id="addTradeDialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3>Add Specific Trade</h3>
+                <button class="dialog-close" onclick="closeAddTradeDialog()">&times;</button>
+            </div>
+            <div class="dialog-body">
+                <form id="addTradeForm">
+                    <div class="form-group">
+                        <label for="tradePnl">PnL ($):</label>
+                        <input type="number" id="tradePnl" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeTimeInPosition">Time in Position (seconds):</label>
+                        <input type="number" id="tradeTimeInPosition" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeSide">Side:</label>
+                        <select id="tradeSide" required>
+                            <option value="long">Long</option>
+                            <option value="short">Short</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeQuantity">Quantity:</label>
+                        <input type="number" id="tradeQuantity" min="1" max="10" value="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeCommission">Commission ($):</label>
+                        <input type="number" id="tradeCommission" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeInstrument">Instrument:</label>
+                        <select id="tradeInstrument" required>
+                            <option value="ES">ES</option>
+                            <option value="NQ">NQ</option>
+                            <option value="CL">CL</option>
+                            <option value="GC">GC</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeEntryDate">Entry Date:</label>
+                        <input type="datetime-local" id="tradeEntryDate" required>
+                    </div>
+                </form>
+            </div>
+            <div class="dialog-footer">
+                <button type="button" onclick="closeAddTradeDialog()" class="secondary">Cancel</button>
+                <button type="button" onclick="submitAddTrade()" class="success">Add Trade</button>
+            </div>
         </div>
     </div>
 
     <script>
         const iframe = document.getElementById('chartIframe');
+        
+        // Environment configuration
+        const environments = {
+            localhost: 'http://localhost:3000',
+            beta: 'https://beta.deltalytix.app',
+            stable: 'https://deltalytix.app'
+        };
+
+        function changeEnvironment() {
+            const selectedEnv = document.getElementById('environmentSelect').value;
+            const baseUrl = environments[selectedEnv];
+            const newSrc = `${baseUrl}/embed?theme=dark`;
+            iframe.src = newSrc;
+            console.log('Switched to environment:', selectedEnv, 'URL:', newSrc);
+        }
+
+        function reloadIframe() {
+            iframe.src = iframe.src;
+            console.log('Reloaded iframe');
+        }
 
         function sendMessage(message) {
             iframe.contentWindow.postMessage(message, '*');
             console.log('Sent message:', message);
-        }
-
-        function addRandomTrades() {
-            const count = parseInt(document.getElementById('tradeCount').value) || 5;
-            sendMessage({
-                type: 'ADD_TRADES',
-                count: count
-            });
+            
+            // Display the JSON data being sent
+            const jsonDataElement = document.getElementById('jsonData');
+            jsonDataElement.textContent = JSON.stringify(message, null, 2);
         }
 
         function addSpecificTrades() {
-            const specificTrades = [
-                { pnl: 500.00, timeInPosition: 120 }, // 2 minutes, big win
-                { pnl: -200.50, timeInPosition: 300 }, // 5 minutes, loss
-                { pnl: 150.75, timeInPosition: 60 }, // 1 minute, quick win
-                { pnl: -75.25, timeInPosition: 1800 }, // 30 minutes, long loss
-                { pnl: 300.00, timeInPosition: 900 } // 15 minutes, good win
-            ];
+            // Set default values for the form
+            const now = new Date();
+            const defaultDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Yesterday
+            document.getElementById('tradeEntryDate').value = defaultDate.toISOString().slice(0, 16);
+            
+            // Show the dialog
+            document.getElementById('addTradeDialog').style.display = 'flex';
+        }
 
+        function closeAddTradeDialog() {
+            document.getElementById('addTradeDialog').style.display = 'none';
+            document.getElementById('addTradeForm').reset();
+        }
+
+        function submitAddTrade() {
+            const form = document.getElementById('addTradeForm');
+            
+            // Validate form
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Get form values
+            const pnl = parseFloat(document.getElementById('tradePnl').value);
+            const timeInPosition = parseInt(document.getElementById('tradeTimeInPosition').value);
+            const side = document.getElementById('tradeSide').value;
+            const quantity = parseInt(document.getElementById('tradeQuantity').value);
+            const commission = parseFloat(document.getElementById('tradeCommission').value);
+            const instrument = document.getElementById('tradeInstrument').value;
+            const entryDate = new Date(document.getElementById('tradeEntryDate').value);
+
+            // Create trade object
+            const trade = {
+                pnl: pnl,
+                timeInPosition: timeInPosition,
+                entryDate: entryDate.toISOString(),
+                side: side,
+                quantity: quantity,
+                commission: commission,
+                instrument: instrument
+            };
+
+            // Send the trade
             sendMessage({
                 type: 'ADD_TRADES',
-                trades: specificTrades
+                trades: [trade]
             });
+
+            // Close dialog and reset form
+            closeAddTradeDialog();
         }
 
         function resetTrades() {
@@ -392,141 +646,88 @@
             });
         }
 
-        function addBulkTrades() {
+        function addServerSideTrades() {
+            const count = parseInt(document.getElementById('tradeCount').value) || 5;
             sendMessage({
                 type: 'ADD_TRADES',
-                count: 20
+                count: count
             });
         }
 
-        function addMixedTrades() {
-            // Add trades with different performance patterns
-            const mixedTrades = [
-                // Quick scalping trades (mostly wins)
-                { pnl: 45.50, timeInPosition: 30 },
-                { pnl: 32.25, timeInPosition: 45 },
-                { pnl: -15.75, timeInPosition: 60 },
-                { pnl: 28.90, timeInPosition: 25 },
-                { pnl: 41.20, timeInPosition: 40 },
-
-                // Medium-term trades (mixed results)
-                { pnl: 125.00, timeInPosition: 600 },
-                { pnl: -89.50, timeInPosition: 450 },
-                { pnl: 156.75, timeInPosition: 720 },
-                { pnl: -67.25, timeInPosition: 540 },
-                { pnl: 98.30, timeInPosition: 480 },
-
-                // Long-term trades (higher volatility)
-                { pnl: 450.00, timeInPosition: 1800 },
-                { pnl: -234.75, timeInPosition: 2100 },
-                { pnl: 312.50, timeInPosition: 1500 },
-                { pnl: -189.25, timeInPosition: 2400 },
-                { pnl: 267.80, timeInPosition: 1200 }
-            ];
-
+        function addClientSideTrades() {
+            const count = parseInt(document.getElementById('tradeCount').value) || 5;
+            const trades = generateRandomTrades(count);
             sendMessage({
                 type: 'ADD_TRADES',
-                trades: mixedTrades
+                trades: trades
             });
         }
 
-        function addPhoenixOrders() {
-            // Create simple Phoenix orders for testing
-            // Strategy: Create 4 orders that will result in 1 complete trade + 1 remaining unmatched order
-            const baseTime = new Date('2024-01-15T09:30:00Z');
-
-            const phoenixOrders = [
-                // Entry: Buy 1 MESZ5
-                {
-                    orderNumber: 1001,
-                    orderId: "order_1001",
-                    symbol: "MESZ5",
-                    insertTime: new Date(baseTime.getTime() + 0 * 60000).toISOString(), // 9:30:00
-                    executeTime: new Date(baseTime.getTime() + 1 * 60000).toISOString(), // 9:31:00
-                    cancelTime: null,
-                    orderType: "Market",
-                    status: "Filled",
-                    reason: null,
-                    insertPrice: 4250.00,
-                    executePrice: 4250.50,
-                    totalQty: 1,
-                    filledQty: 1,
-                    source: "Manual",
-                    platform: "Phoenix",
-                    ip: "192.168.1.100",
-                    accountNumber: "TEST001"
-                },
-                // Exit: Sell 1 MESZ5
-                {
-                    orderNumber: 1002,
-                    orderId: "order_1002",
-                    symbol: "MESZ5",
-                    insertTime: new Date(baseTime.getTime() + 15 * 60000).toISOString(), // 9:45:00
-                    executeTime: new Date(baseTime.getTime() + 16 * 60000).toISOString(), // 9:46:00
-                    cancelTime: null,
-                    orderType: "Market",
-                    status: "Filled",
-                    reason: null,
-                    insertPrice: 4255.00,
-                    executePrice: 4254.75,
-                    totalQty: -1,
-                    filledQty: -1,
-                    source: "Manual",
-                    platform: "Phoenix",
-                    ip: "192.168.1.100",
-                    accountNumber: "TEST001"
-                },
-                // Entry: Buy 1 NQZ5
-                {
-                    orderNumber: 1003,
-                    orderId: "order_1003",
-                    symbol: "NQZ5",
-                    insertTime: new Date(baseTime.getTime() + 30 * 60000).toISOString(), // 10:00:00
-                    executeTime: new Date(baseTime.getTime() + 31 * 60000).toISOString(), // 10:01:00
-                    cancelTime: null,
-                    orderType: "Market",
-                    status: "Filled",
-                    reason: null,
-                    insertPrice: 18500.00,
-                    executePrice: 18501.00,
-                    totalQty: 1,
-                    filledQty: 1,
-                    source: "Manual",
-                    platform: "Phoenix",
-                    ip: "192.168.1.100",
-                    accountNumber: "TEST001"
-                },
-                // Exit: Sell 1 NQZ5
-                {
-                    orderNumber: 1004,
-                    orderId: "order_1004",
-                    symbol: "NQZ5",
-                    insertTime: new Date(baseTime.getTime() + 45 * 60000).toISOString(), // 10:15:00
-                    executeTime: new Date(baseTime.getTime() + 46 * 60000).toISOString(), // 10:16:00
-                    cancelTime: null,
-                    orderType: "Market",
-                    status: "Filled",
-                    reason: null,
-                    insertPrice: 18510.00,
-                    executePrice: 18509.50,
-                    totalQty: -1,
-                    filledQty: -1,
-                    source: "Manual",
-                    platform: "Phoenix",
-                    ip: "192.168.1.100",
-                    accountNumber: "TEST001"
-                }
-            ];
-
-            sendMessage({
-                type: 'ADD_PHOENIX_ORDERS',
-                orders: phoenixOrders
-            });
+        function generateRandomTrade() {
+            // Available instruments and sides from the embed page
+            const instruments = ['ES', 'NQ', 'CL', 'GC'];
+            const sides = ['long', 'short'];
+            
+            // Generate random values
+            const now = Date.now();
+            const dayMs = 24 * 60 * 60 * 1000;
+            
+            // Random entry date within the last 30 days
+            const entry = new Date(now - Math.floor(Math.random() * 30) * dayMs - Math.floor(Math.random() * 24) * 3600 * 1000);
+            
+            // Random quantity between 1-3
+            const qty = Math.ceil(Math.random() * 3);
+            
+            // Random PnL with slight bias toward losses (like the original)
+            const pnl = Math.round(((Math.random() - 0.4) * 500) * 100) / 100;
+            
+            // Random time in position (0-3600 seconds = 0-60 minutes)
+            const timeInPosition = Math.floor(Math.random() * 3600);
+            
+            // Random commission based on quantity
+            const commission = Math.round(qty * (1 + Math.random() * 3) * 100) / 100;
+            
+            return {
+                pnl: pnl,
+                timeInPosition: timeInPosition,
+                entryDate: entry.toISOString(),
+                side: sides[Math.floor(Math.random() * sides.length)],
+                quantity: qty,
+                commission: commission,
+                instrument: instruments[Math.floor(Math.random() * instruments.length)]
+            };
         }
+
+        function generateRandomTrades(count = 1) {
+            return Array.from({ length: count }, generateRandomTrade);
+        }
+
 
         // Listen for messages from iframe (optional)
         window.addEventListener('message', function (event) {
             console.log('Received message from iframe:', event.data);
+        });
+
+        // Dialog keyboard and click handling
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const dialog = document.getElementById('addTradeDialog');
+                if (dialog.style.display === 'flex') {
+                    closeAddTradeDialog();
+                }
+            }
+        });
+
+        // Close dialog when clicking outside
+        document.getElementById('addTradeDialog').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeAddTradeDialog();
+            }
+        });
+
+        // Prevent dialog from closing when clicking inside the dialog
+        document.querySelector('.dialog').addEventListener('click', function(event) {
+            event.stopPropagation();
         });
     </script>
 </body>
