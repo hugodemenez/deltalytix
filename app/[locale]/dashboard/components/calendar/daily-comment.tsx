@@ -132,10 +132,12 @@ export function DailyComment({ dayData, selectedDate }: DailyCommentProps) {
           </div>
         ) : (
           <TiptapEditor
-            content={comment==="" ? undefined : comment}
+            key={`${selectedDate.toISOString()}-${comment ? 'has-content' : 'no-content'}`}
+            content={comment}
             onChange={setComment}
             height="100%"
             width="100%"
+            collaboration={false}
             placeholder={t('mindset.journaling.placeholder')}
           />
         )}

@@ -297,8 +297,9 @@ function ResponsiveMenuBar({
         canOrderedList: ctx.editor.can().toggleList('orderedList', 'listItem') ?? false,
         canBlockquote: ctx.editor.can().toggleNode('blockquote', 'paragraph') ?? false,
         // History
-        canUndo: ctx.editor.can().undo() ?? false,
-        canRedo: ctx.editor.can().redo() ?? false,
+        // Only enable if commands are registered
+        canUndo: Boolean((ctx.editor as any).commands?.undo),
+        canRedo: Boolean((ctx.editor as any).commands?.redo),
       }
     },
   })
@@ -626,6 +627,7 @@ interface TiptapEditorProps {
   onNewsSelection?: (newsIds: string[]) => void
   onEmbedNews?: (newsIds: string[], action: 'add' | 'remove') => void
   date?: Date
+  collaboration?: boolean
 }
 
 export function TiptapEditor({
@@ -639,7 +641,8 @@ export function TiptapEditor({
   selectedNews,
   onNewsSelection,
   onEmbedNews,
-  date
+  date,
+  collaboration = false
 }: TiptapEditorProps) {
   const t = useI18n()
   const user = useUserStore(state => state.user)
@@ -653,6 +656,8 @@ export function TiptapEditor({
   const locale = useCurrentLocale()
 
   const editorRef = useRef<any>(null)
+  // Prevent initial empty onUpdate from clearing externally provided content
+  const isInitializingRef = useRef<boolean>(true)
 
   // Create Y.js document for collaboration
   const [ydoc] = useState(() => new Y.Doc())
@@ -784,6 +789,12 @@ export function TiptapEditor({
     immediatelyRender: false,
     onCreate: ({ editor }) => {
       editorRef.current = editor
+      // Set initial content only when collaboration is disabled
+      if (!collaboration && content && content !== '') {
+        isInitializingRef.current = true
+        editor.commands.setContent(content)
+        isInitializingRef.current = false
+      }
     },
     extensions: [
       StarterKit.configure({
@@ -825,13 +836,13 @@ export function TiptapEditor({
       TaskItem.configure({
         nested: true,
       }),
-      // Collaboration extension
-      Collaboration.configure({
-        document: ydoc,
-      }),
+      // Collaboration extension (optional)
+      ...(collaboration ? [Collaboration.configure({ document: ydoc })] : []),
     ],
-    content,
+    // With collaboration enabled, TipTap ignores initial content; keep empty
+    content: collaboration ? '' : content,
     onUpdate: ({ editor }) => {
+      if (isInitializingRef.current) return
       onChange?.(editor.getHTML())
     },
     editorProps: {
@@ -1052,12 +1063,18 @@ export function TiptapEditor({
   }, [editor, events])
 
 
-  // Update editor content when content prop changes
+  // Update editor content when content prop changes (only when not collaborating)
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
-      editor.commands.setContent(content)
+    if (!collaboration && editor && content !== undefined) {
+      const currentContent = editor.getHTML()
+      // Update if content is different, or if we're setting content for the first time (empty editor)
+      if (content !== currentContent && (content !== '' || currentContent === '<p></p>' || currentContent === '')) {
+        isInitializingRef.current = true
+        editor.commands.setContent(content)
+        isInitializingRef.current = false
+      }
     }
-  }, [editor, content])
+  }, [collaboration, editor, content])
 
 
   // Handle file input for image upload
