@@ -150,7 +150,6 @@ export default function TimeRangePerformanceChart({ trades }: { trades: { pnl: n
     }
 
     return (
-        <div className="p-6 bg-background min-h-screen">
             <Card className="h-[500px] flex flex-col">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
                     <div className="flex items-center justify-between w-full">
@@ -244,6 +243,5 @@ export default function TimeRangePerformanceChart({ trades }: { trades: { pnl: n
                     </div>
                 </CardContent>
             </Card>
-        </div>
     )
 }

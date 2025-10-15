@@ -2,55 +2,61 @@
 
 import React from 'react'
 import TimeRangePerformanceChart from './time-range-performance'
+import {
+  DailyPnLChartEmbed,
+  TimeOfDayPerformanceChart,
+  TimeInPositionByHourChart,
+  PnLBySideChartEmbed,
+  TradeDistributionChartEmbed,
+  WeekdayPnLChartEmbed,
+  PnLPerContractChartEmbed,
+  PnLPerContractDailyChartEmbed,
+  TickDistributionChartEmbed,
+  CommissionsPnLEmbed,
+  ContractQuantityChartEmbed,
+} from './index'
 import { toast, Toaster } from 'sonner'
 import { processPhoenixOrdersWithFIFO } from '@/lib/phoenix-fifo-processor'
 import { parsePhoenixOrders } from '@/lib/phoenix-order-parser'
 import { useSearchParams } from 'next/navigation'
 import { ThemeProvider, useTheme } from '@/context/theme-provider'
 
-// Mock trade data with PnL and time in position
-const mockTrades = [
-    { pnl: 125.50, timeInPosition: 45 }, // 45 seconds
-    { pnl: -87.25, timeInPosition: 120 }, // 2 minutes
-    { pnl: 234.75, timeInPosition: 300 }, // 5 minutes
-    { pnl: -156.00, timeInPosition: 180 }, // 3 minutes
-    { pnl: 89.30, timeInPosition: 90 }, // 1.5 minutes
-    { pnl: 445.60, timeInPosition: 900 }, // 15 minutes
-    { pnl: -78.90, timeInPosition: 240 }, // 4 minutes
-    { pnl: 167.25, timeInPosition: 600 }, // 10 minutes
-    { pnl: -234.15, timeInPosition: 150 }, // 2.5 minutes
-    { pnl: 312.80, timeInPosition: 1800 }, // 30 minutes
-    { pnl: -45.60, timeInPosition: 75 }, // 1.25 minutes
-    { pnl: 198.40, timeInPosition: 450 }, // 7.5 minutes
-    { pnl: -123.70, timeInPosition: 210 }, // 3.5 minutes
-    { pnl: 267.90, timeInPosition: 1200 }, // 20 minutes
-    { pnl: -89.30, timeInPosition: 105 }, // 1.75 minutes
-    { pnl: 156.75, timeInPosition: 360 }, // 6 minutes
-    { pnl: -201.45, timeInPosition: 270 }, // 4.5 minutes
-    { pnl: 334.20, timeInPosition: 1500 }, // 25 minutes
-    { pnl: -67.80, timeInPosition: 135 }, // 2.25 minutes
-    { pnl: 189.60, timeInPosition: 720 }, // 12 minutes
-    { pnl: -145.30, timeInPosition: 195 }, // 3.25 minutes
-    { pnl: 278.45, timeInPosition: 1080 }, // 18 minutes
-    { pnl: -112.90, timeInPosition: 165 }, // 2.75 minutes
-    { pnl: 203.70, timeInPosition: 540 }, // 9 minutes
-    { pnl: -78.25, timeInPosition: 225 }, // 3.75 minutes
-    { pnl: 356.80, timeInPosition: 2100 }, // 35 minutes
-    { pnl: -134.60, timeInPosition: 255 }, // 4.25 minutes
-    { pnl: 245.30, timeInPosition: 1350 }, // 22.5 minutes
-    { pnl: -91.45, timeInPosition: 285 }, // 4.75 minutes
-    { pnl: 178.90, timeInPosition: 840 }, // 14 minutes
-]
+// Mock trade data enriched with typical fields
+const instruments = ['ES', 'NQ', 'CL', 'GC'] as const
+const sides = ['long', 'short'] as const
+const now = Date.now()
+const dayMs = 24 * 60 * 60 * 1000
+const mockTrades = Array.from({ length: 60 }, (_, i) => {
+  const entry = new Date(now - Math.floor(Math.random() * 30) * dayMs - Math.floor(Math.random() * 24) * 3600 * 1000)
+  const qty = Math.ceil(Math.random() * 3)
+  const pnl = Math.round(((Math.random() - 0.4) * 500) * 100) / 100
+  const timeInPosition = Math.floor(Math.random() * 3600)
+  return {
+    pnl,
+    timeInPosition,
+    entryDate: entry.toISOString(),
+    side: sides[Math.floor(Math.random() * sides.length)],
+    quantity: qty,
+    commission: Math.round(qty * (1 + Math.random() * 3) * 100) / 100,
+    instrument: instruments[Math.floor(Math.random() * instruments.length)],
+  }
+})
 
 // Function to generate random trade data
 function generateRandomTrade() {
-    const pnl = (Math.random() - 0.4) * 500 // Slightly biased towards positive PnL
-    const timeInPosition = Math.random() * 3600 // Random time up to 1 hour (3600 seconds)
-
-    return {
-        pnl: Math.round(pnl * 100) / 100, // Round to 2 decimal places
-        timeInPosition: Math.round(timeInPosition)
-    }
+  const qty = Math.ceil(Math.random() * 3)
+  const pnl = (Math.random() - 0.4) * 500
+  const timeInPosition = Math.random() * 3600
+  const entry = new Date(Date.now() - Math.floor(Math.random() * 20) * dayMs)
+  return {
+    pnl: Math.round(pnl * 100) / 100,
+    timeInPosition: Math.round(timeInPosition),
+    entryDate: entry.toISOString(),
+    side: sides[Math.floor(Math.random() * sides.length)],
+    quantity: qty,
+    commission: Math.round(qty * (1 + Math.random() * 3) * 100) / 100,
+    instrument: instruments[Math.floor(Math.random() * instruments.length)],
+  }
 }
 
 // Function to generate multiple random trades
@@ -62,7 +68,7 @@ export default function EmbedPage() {
     const theme = searchParams.get('theme') || 'dark'
     const { setTheme } = useTheme()
     setTheme(theme as "light" | "dark" | "system")
-    const [trades, setTrades] = React.useState<{ pnl: number, timeInPosition: number }[]>(mockTrades)
+    const [trades, setTrades] = React.useState<any[]>(mockTrades)
 
     // Message listener for iframe communication
     React.useEffect(() => {
@@ -99,8 +105,18 @@ export default function EmbedPage() {
                         const parsedOrders = parsePhoenixOrders(orders)
                         const processedOrdersWithFIFO = processPhoenixOrdersWithFIFO(parsedOrders.processedOrders)
                         toast.message('Processed ' + processedOrdersWithFIFO.trades.length + ' trades', { description: processedOrdersWithFIFO.trades.map(trade => trade.pnl).join(', ') })
-                        setTrades(prev => [...prev, ...processedOrdersWithFIFO.trades.map(trade => ({ pnl: trade.pnl, timeInPosition: trade.timeInPosition }))]
-                        )
+                        setTrades(prev => [
+                          ...prev,
+                          ...processedOrdersWithFIFO.trades.map(trade => ({
+                            pnl: trade.pnl,
+                            timeInPosition: trade.timeInPosition,
+                            entryDate: trade.entryDate,
+                            side: trade.side,
+                            quantity: trade.quantity,
+                            commission: trade.commission,
+                            instrument: trade.instrument,
+                          })),
+                        ])
                     }
                 }
             } catch (error) {
@@ -115,12 +131,34 @@ export default function EmbedPage() {
         }
     }, [])
 
+    const selectedInstrument = React.useMemo(() => {
+      const counts: Record<string, number> = {}
+      trades.forEach((t) => {
+        if (!t.instrument) return
+        counts[t.instrument] = (counts[t.instrument] || 0) + 1
+      })
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || instruments[0]
+    }, [trades])
+
     return (
-        <ThemeProvider>
-            <div className="w-full h-full min-h-[400px] max-h-[800px] ">
-                <Toaster />
-                <TimeRangePerformanceChart trades={trades} />
-            </div>
-        </ThemeProvider>
+      <ThemeProvider>
+        <div className="w-full h-full min-h-[400px]">
+          <Toaster />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+            <TimeRangePerformanceChart trades={trades} />
+            <DailyPnLChartEmbed trades={trades} />
+            <TimeOfDayPerformanceChart trades={trades} />
+            <TimeInPositionByHourChart trades={trades} />
+            <PnLBySideChartEmbed trades={trades} />
+            <TradeDistributionChartEmbed trades={trades} />
+            <WeekdayPnLChartEmbed trades={trades} />
+            <PnLPerContractChartEmbed trades={trades} />
+            <PnLPerContractDailyChartEmbed trades={trades} instrument={selectedInstrument} />
+            <TickDistributionChartEmbed trades={trades} />
+            <CommissionsPnLEmbed trades={trades} />
+            <ContractQuantityChartEmbed trades={trades} />
+          </div>
+        </div>
+      </ThemeProvider>
     )
 }
