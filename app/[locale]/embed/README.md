@@ -1,32 +1,121 @@
-# Embedding Our Recharts Dashboard
+## Deltalytix Embed
 
-Embed the dashboard using this iframe:
+Embed an interactive analytics dashboard (or a single chart) into any site using a simple iframe. You can also live-feed data via postMessage.
+
+### Quick start
 
 ```html
 <iframe
-  src="https://deltalytix.app/embed?theme=dark&apiKey=your_key"
+  id="deltalytix-embed"
+  src="https://deltalytix.app/embed?theme=dark"
   width="100%"
-  height="600px"
-  title="Dashboard"
-  frameborder="0"
-  allowfullscreen
+  height="900"
+  style="border:0;"
+  loading="lazy"
+  allow="fullscreen"
+  title="Deltalytix Dashboard"
 ></iframe>
+```
 
-## Query Parameters
-- `theme`: `light` or `dark` for styling default to dark.
-- `apiKey`: Required for access (contact us for a key).
+### Query parameters
+- `theme` (optional): `dark` | `light` | `system` (default: `dark`)
+- `chart` (optional): render a single chart by key (see list below)
+- `charts` (optional): comma-separated list of chart keys to render
+  - If neither `chart` nor `charts` is provided, all charts are shown
 
-## Updating Chart Data
-Send new data using `postMessage`:
+Examples:
 
-```javascript
-const iframe = document.getElementById('dashboard');
-const newData = [
-  { name: 'Jan', value: 500 },
-  { name: 'Feb', value: 200 },
-  { name: 'Mar', value: 700 },
-];
-iframe.contentWindow.postMessage(
-  { chartData: newData },
-  'https://your-dashboard.com'
-);
+```html
+<!-- Single chart -->
+<iframe src="https://deltalytix.app/embed?chart=pnl-per-contract-daily" ...></iframe>
+
+<!-- Multiple charts -->
+<iframe src="https://deltalytix.app/embed?charts=time-range-performance,daily-pnl,pnl-by-side" ...></iframe>
+```
+
+### Available chart keys
+- `time-range-performance`
+- `daily-pnl`
+- `time-of-day`
+- `time-in-position`
+- `pnl-by-side`
+- `trade-distribution`
+- `weekday-pnl`
+- `pnl-per-contract`
+- `pnl-per-contract-daily`
+- `tick-distribution`
+- `commissions-pnl`
+- `contract-quantity`
+
+### Data schema
+You can push your own trades into the embed. A trade object can include:
+
+```ts
+type Trade = {
+  pnl: number
+  entryDate?: string | Date // ISO string preferred
+  side?: 'long' | 'short' | string
+  timeInPosition?: number // seconds
+  quantity?: number
+  commission?: number
+  instrument?: string // e.g. ES, NQ, CL
+}
+```
+
+### PostMessage API
+Target the iframe and post structured messages. Origin can be restricted to `https://deltalytix.app` for production.
+
+```html
+<iframe id="deltalytix-embed" src="https://deltalytix.app/embed" ...></iframe>
+<script>
+  const iframe = document.getElementById('deltalytix-embed')
+
+  // 1) Add specific trades
+  iframe.contentWindow.postMessage({
+    type: 'ADD_TRADES',
+    trades: [
+      {
+        pnl: 125.4,
+        timeInPosition: 240,
+        entryDate: '2025-01-10T14:25:00Z',
+        side: 'long',
+        quantity: 2,
+        commission: 4.5,
+        instrument: 'ES'
+      }
+    ]
+  }, 'https://deltalytix.app')
+
+  // 2) Generate N random trades (useful for demos)
+  iframe.contentWindow.postMessage({ type: 'ADD_TRADES', count: 25 }, 'https://deltalytix.app')
+
+  // 3) Reset back to initial demo data
+  iframe.contentWindow.postMessage({ type: 'RESET_TRADES' }, 'https://deltalytix.app')
+
+  // 4) Clear all trades
+  iframe.contentWindow.postMessage({ type: 'CLEAR_TRADES' }, 'https://deltalytix.app')
+
+  // 5) Add Phoenix orders (they will be parsed and processed FIFO into trades)
+  //    Provide the raw orders array from your Phoenix export
+  iframe.contentWindow.postMessage({ type: 'ADD_PHOENIX_ORDERS', orders: [/* ... */] }, 'https://deltalytix.app')
+</script>
+```
+
+Notes:
+- Messages are JSON-serializable objects with a `type` field.
+- For local testing or permissive setups you can use `'*'` as the target origin instead of `https://deltalytix.app`.
+
+### Theming
+Choose a theme via the `theme` query parameter. Example:
+
+```html
+<iframe src="https://deltalytix.app/embed?theme=light" ...></iframe>
+```
+
+### Sizing and layout
+- The embed is responsive; set `width="100%"` and a fixed `height` that suits your layout.
+- All charts are placed in a responsive grid.
+
+### Troubleshooting
+- Nothing renders: ensure the iframe `src` is reachable and no adblocker is interfering.
+- No data after posting: check that the message `type` matches one of the supported values and that you target the correct iframe/origin.

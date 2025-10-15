@@ -1,7 +1,6 @@
 'use client'
 
 import React from 'react'
-import TimeRangePerformanceChart from './time-range-performance'
 import {
   DailyPnLChartEmbed,
   TimeOfDayPerformanceChart,
@@ -14,6 +13,7 @@ import {
   TickDistributionChartEmbed,
   CommissionsPnLEmbed,
   ContractQuantityChartEmbed,
+  TimeRangePerformanceChart,
 } from './index'
 import { toast, Toaster } from 'sonner'
 import { processPhoenixOrdersWithFIFO } from '@/lib/phoenix-fifo-processor'
@@ -135,23 +135,48 @@ export default function EmbedPage() {
       return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || instruments[0]
     }, [trades])
 
+    // Parse chart selection via search params: `chart` or `charts`
+    const chartParam = searchParams.get('chart') || searchParams.get('charts') || 'all'
+    const selectedCharts = React.useMemo(() => {
+      if (!chartParam || chartParam.toLowerCase() === 'all') return null
+      const set = new Set(
+        chartParam
+          .split(',')
+          .map((v) => v.trim().toLowerCase())
+          .filter(Boolean)
+      )
+      return set.size ? set : null
+    }, [chartParam])
+
+    const chartDefinitions = React.useMemo(() => (
+      [
+        { key: 'time-range-performance', render: () => <TimeRangePerformanceChart trades={trades} /> },
+        { key: 'daily-pnl', render: () => <DailyPnLChartEmbed trades={trades} /> },
+        { key: 'time-of-day', render: () => <TimeOfDayPerformanceChart trades={trades} /> },
+        { key: 'time-in-position', render: () => <TimeInPositionByHourChart trades={trades} /> },
+        { key: 'pnl-by-side', render: () => <PnLBySideChartEmbed trades={trades} /> },
+        { key: 'trade-distribution', render: () => <TradeDistributionChartEmbed trades={trades} /> },
+        { key: 'weekday-pnl', render: () => <WeekdayPnLChartEmbed trades={trades} /> },
+        { key: 'pnl-per-contract', render: () => <PnLPerContractChartEmbed trades={trades} /> },
+        { key: 'pnl-per-contract-daily', render: () => <PnLPerContractDailyChartEmbed trades={trades} instrument={selectedInstrument} /> },
+        { key: 'tick-distribution', render: () => <TickDistributionChartEmbed trades={trades} /> },
+        { key: 'commissions-pnl', render: () => <CommissionsPnLEmbed trades={trades} /> },
+        { key: 'contract-quantity', render: () => <ContractQuantityChartEmbed trades={trades} /> },
+      ]
+    ), [trades, selectedInstrument])
+
+    const chartsToRender = React.useMemo(() => {
+      const filtered = chartDefinitions.filter((c) => !selectedCharts || selectedCharts.has(c.key))
+      // If selection was provided but no keys matched, fall back to all
+      return (selectedCharts && filtered.length === 0 ? chartDefinitions : filtered).map((c) => c.render())
+    }, [chartDefinitions, selectedCharts])
+
     return (
       <ThemeProvider>
         <div className="w-full h-full min-h-[400px] mb-20">
           <Toaster />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-            <TimeRangePerformanceChart trades={trades} />
-            <DailyPnLChartEmbed trades={trades} />
-            <TimeOfDayPerformanceChart trades={trades} />
-            <TimeInPositionByHourChart trades={trades} />
-            <PnLBySideChartEmbed trades={trades} />
-            <TradeDistributionChartEmbed trades={trades} />
-            <WeekdayPnLChartEmbed trades={trades} />
-            <PnLPerContractChartEmbed trades={trades} />
-            <PnLPerContractDailyChartEmbed trades={trades} instrument={selectedInstrument} />
-            <TickDistributionChartEmbed trades={trades} />
-            <CommissionsPnLEmbed trades={trades} />
-            <ContractQuantityChartEmbed trades={trades} />
+            {chartsToRender}
           </div>
         </div>
       </ThemeProvider>
