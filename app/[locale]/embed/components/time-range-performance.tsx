@@ -40,7 +40,8 @@ function getTimeRangeLabel(range: string): string {
 
 function getColorByWinRate(winRate: number): string {
     if (winRate === 0) return "hsl(var(--muted-foreground))"
-    return winRate >= 50 ? "hsl(var(--success))" : "hsl(var(--destructive))"
+    // Use chart palette variables so presets/overrides affect this chart
+    return winRate >= 50 ? "hsl(var(--chart-3))" : "hsl(var(--chart-1))"
 }
 
 const chartConfig = {
