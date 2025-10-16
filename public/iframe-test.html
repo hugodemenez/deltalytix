@@ -913,6 +913,32 @@
                     <option value="dark" selected>Dark</option>
                     <option value="system">System</option>
                 </select>
+                <span class="theme-indicator" id="themeIndicator" data-theme="dark">Active: <strong id="activeThemeLabel">dark</strong></span>
+            </div>
+
+            <div class="button-group">
+                <label>Preset:</label>
+                <select id="presetSelect" onchange="updateConfiguration();">
+                    <option value="">None</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="sunset">Sunset</option>
+                    <option value="light">Light (Base)</option>
+                    <option value="dark">Dark (Base)</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <label>Overrides (HSL/RGB/HEX accepted):</label>
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+                  <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">BG</label>
+                  <input id="overrideBackground" placeholder="210 40% 98% | #ffffff | rgb(255,255,255)" />
+                  <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Border</label>
+                  <input id="overrideBorder" placeholder="220 13% 91% | #e5e7eb | rgba(229,231,235,1)" />
+                  <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart1</label>
+                  <input id="overrideChart1" placeholder="210 70% 50% | #3b82f6" />
+                  <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Tooltip BG</label>
+                  <input id="overrideTooltipBg" placeholder="0 0% 0% / 0.8 | rgba(0,0,0,0.8)" />
+                </div>
             </div>
 
             <div class="button-group">
@@ -1106,10 +1132,23 @@
             // Update current config from UI
             currentConfig.environment = document.getElementById('environmentSelect').value;
             currentConfig.theme = document.getElementById('themeSelect').value;
+            currentConfig.preset = document.getElementById('presetSelect').value;
+            currentConfig.overrides = {
+                background: document.getElementById('overrideBackground').value.trim(),
+                border: document.getElementById('overrideBorder').value.trim(),
+                chart1: document.getElementById('overrideChart1').value.trim(),
+                tooltipBg: document.getElementById('overrideTooltipBg').value.trim()
+            };
             
             // Generate new iframe URL
             const baseUrl = environments[currentConfig.environment];
             let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const { background, border, chart1, tooltipBg } = currentConfig.overrides || {};
+            if (background) url += `&background=${encodeURIComponent(background)}`;
+            if (border) url += `&border=${encodeURIComponent(border)}`;
+            if (chart1) url += `&chart1=${encodeURIComponent(chart1)}`;
+            if (tooltipBg) url += `&tooltipBg=${encodeURIComponent(tooltipBg)}`;
             
             // Add chart parameters if specific charts are selected
             if (currentConfig.selectedCharts.length > 0) {
@@ -1120,6 +1159,8 @@
             iframe.src = url;
             
             updateIframeContainerTheme(currentConfig.theme);
+            document.getElementById('themeIndicator').setAttribute('data-theme', currentConfig.theme);
+            document.getElementById('activeThemeLabel').textContent = currentConfig.theme + (currentConfig.preset ? ` + ${currentConfig.preset}` : '');
             updateSelectedChartsList();
             updateEmbedCode();
             
@@ -1140,6 +1181,12 @@
         function updateMainIframeOnly() {
             const baseUrl = environments[currentConfig.environment];
             let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const { background, border, chart1, tooltipBg } = currentConfig.overrides || {};
+            if (background) url += `&background=${encodeURIComponent(background)}`;
+            if (border) url += `&border=${encodeURIComponent(border)}`;
+            if (chart1) url += `&chart1=${encodeURIComponent(chart1)}`;
+            if (tooltipBg) url += `&tooltipBg=${encodeURIComponent(tooltipBg)}`;
             
             // Add chart parameters if specific charts are selected
             if (currentConfig.selectedCharts.length > 0) {
@@ -1153,6 +1200,12 @@
         function updateEmbedCode() {
             const baseUrl = environments[currentConfig.environment];
             let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const { background, border, chart1, tooltipBg } = currentConfig.overrides || {};
+            if (background) url += `&background=${encodeURIComponent(background)}`;
+            if (border) url += `&border=${encodeURIComponent(border)}`;
+            if (chart1) url += `&chart1=${encodeURIComponent(chart1)}`;
+            if (tooltipBg) url += `&tooltipBg=${encodeURIComponent(tooltipBg)}`;
             
             // Add chart parameters if specific charts are selected
             if (currentConfig.selectedCharts.length > 0) {

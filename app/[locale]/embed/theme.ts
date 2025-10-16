@@ -64,6 +64,98 @@ export const THEME_PRESETS: Record<string, EmbedThemeVars> = {
   },
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function rgbToHslComponentsString(r: number, g: number, b: number): string {
+  r /= 255; g /= 255; b /= 255
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  let h = 0, s = 0, l = (max + min) / 2
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break
+      case g: h = (b - r) / d + 2; break
+      case b: h = (r - g) / d + 4; break
+    }
+    h /= 6
+  }
+  const H = Math.round(h * 360)
+  const S = Math.round(s * 100)
+  const L = Math.round(l * 100)
+  return `${H} ${S}% ${L}%`
+}
+
+function parseHexToHslComponentsString(hex: string): string | null {
+  let h = hex.replace('#', '').trim()
+  if (![3,4,6,8].includes(h.length)) return null
+  if (h.length === 3 || h.length === 4) {
+    h = h.split('').map((c) => c + c).join('')
+  }
+  const r = parseInt(h.slice(0,2), 16)
+  const g = parseInt(h.slice(2,4), 16)
+  const b = parseInt(h.slice(4,6), 16)
+  return rgbToHslComponentsString(r, g, b)
+}
+
+function parseRgbToHslComponentsString(input: string): string | null {
+  const match = input.trim().match(/^rgba?\(([^)]+)\)$/i)
+  if (!match) return null
+  const parts = match[1].split(',').map((p) => p.trim())
+  if (parts.length < 3) return null
+  const to255 = (v: string): number => {
+    if (v.endsWith('%')) {
+      return clamp(Math.round(parseFloat(v) * 2.55), 0, 255)
+    }
+    return clamp(parseInt(v, 10), 0, 255)
+  }
+  const r = to255(parts[0])
+  const g = to255(parts[1])
+  const b = to255(parts[2])
+  return rgbToHslComponentsString(r, g, b)
+}
+
+function parseHslToComponentsString(input: string): string | null {
+  const match = input.trim().match(/^hsla?\(([^)]+)\)$/i)
+  if (!match) return null
+  const parts = match[1].split(',').map((p) => p.trim())
+  // Support space-separated as well
+  const flat = parts.length === 1 ? parts[0].split(/[\s/]+/).filter(Boolean) : parts
+  if (flat.length < 3) return null
+  let h = flat[0]
+  let s = flat[1]
+  let l = flat[2]
+  // normalize h
+  let H = 0
+  if (h.endsWith('deg')) H = parseFloat(h)
+  else if (h.endsWith('rad')) H = parseFloat(h) * (180 / Math.PI)
+  else if (h.endsWith('turn')) H = parseFloat(h) * 360
+  else H = parseFloat(h)
+  H = ((H % 360) + 360) % 360
+  // normalize s,l ensure %
+  const toPct = (v: string) => v.endsWith('%') ? `${clamp(parseFloat(v), 0, 100)}%` : `${clamp(parseFloat(v), 0, 100)}%`
+  const S = toPct(s)
+  const L = toPct(l)
+  return `${Math.round(H)} ${S} ${L}`
+}
+
+function normalizeColorValueToHslComponents(value: string): string | null {
+  if (!value) return null
+  const v = value.trim()
+  // Already an HSL components string like "210 40% 98%" or includes '/'
+  if (/^\d+\s+\d+%\s+\d+%/.test(v)) {
+    // strip any trailing alpha part after '/'
+    const parts = v.split('/')
+    return parts[0].trim()
+  }
+  if (v.startsWith('#')) return parseHexToHslComponentsString(v)
+  if (/^rgba?\(/i.test(v)) return parseRgbToHslComponentsString(v)
+  if (/^hsla?\(/i.test(v)) return parseHslToComponentsString(v)
+  return null
+}
+
 // Apply a set of CSS vars onto a target (defaults to documentElement)
 export function applyEmbedTheme(vars: EmbedThemeVars, target: HTMLElement | Document = document) {
   const root = (target as Document).documentElement ? (target as Document).documentElement : (target as HTMLElement)
@@ -117,9 +209,25 @@ export function getOverridesFromSearchParams(searchParams: URLSearchParams): Emb
   }
 
   const overrides: EmbedThemeVars = {}
+  const colorish = new Set([
+    'background','foreground','card','popover','muted','mutedFg','border','input','ring',
+    'chart1','chart2','chart3','chart4','chart5','chart6','chart7','chart8',
+    'success','successFg','destructive','destructiveFg','tooltipBg','tooltipBorder'
+  ])
+
   Object.entries(map).forEach(([qp, cssVar]) => {
     const value = searchParams.get(qp)
-    if (value) overrides[cssVar] = value
+    if (!value) return
+    if (qp === 'radius' || qp === 'tooltipRadius') {
+      overrides[cssVar] = value
+      return
+    }
+    if (colorish.has(qp)) {
+      const normalized = normalizeColorValueToHslComponents(value) || value
+      overrides[cssVar] = normalized
+    } else {
+      overrides[cssVar] = value
+    }
   })
 
   return overrides

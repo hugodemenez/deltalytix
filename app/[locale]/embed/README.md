@@ -19,8 +19,15 @@ Embed an interactive analytics dashboard (or a single chart) into any site using
 
 ### Query parameters
 - `theme` (optional): `dark` | `light` | `system` (default: `dark`)
+- `preset` (optional): `light` | `dark` | `ocean` | `sunset`
 - `charts` (optional): comma-separated list of chart keys to render
   - If `charts` is not provided, all charts are shown
+- `overrides` (via individual keys below). Accepts HSL components, HEX, rgb(a), or hsl(a). Values are normalized to Tailwind-compatible HSL components under the hood.
+  - `background`, `foreground`, `card`, `popover`, `muted`, `mutedFg`, `border`, `input`, `ring`
+  - `radius` (CSS length, e.g. `0.75rem`)
+  - `chart1`..`chart8` (chart palette slots)
+  - `success`, `successFg`, `destructive`, `destructiveFg`
+  - `tooltipBg`, `tooltipBorder`, `tooltipRadius`
 
 Examples:
 
@@ -30,6 +37,9 @@ Examples:
 
 <!-- Multiple charts -->
 <iframe src="https://deltalytix.app/embed?charts=time-range-performance,daily-pnl,pnl-by-side" ...></iframe>
+
+<!-- Preset with palette tweaks (HEX, RGB, HSL all accepted) -->
+<iframe src="https://deltalytix.app/embed?theme=dark&preset=ocean&chart1=%233b82f6&border=rgba(229,231,235,1)&tooltipBg=0%200%200%20/%200.8" ...></iframe>
 ```
 
 ### Available chart keys
