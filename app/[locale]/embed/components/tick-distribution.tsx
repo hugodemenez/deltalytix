@@ -8,8 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getTickDetails } from "@/server/tick-details"
 import { TickDetails } from "@prisma/client"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
-export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: number, quantity: number, instrument?: string }[] }) {
+export default function TickDistributionChartEmbed({ trades, theme }: { trades: { pnl: number, quantity: number, instrument?: string }[]; theme?: EmbedThemeVars }) {
   const [tickDetails, setTickDetails] = React.useState<Record<string, TickDetails>>({})
   const [isLoading, setIsLoading] = React.useState(true)
   const [selectedInstrument, setSelectedInstrument] = React.useState<string>("")
@@ -123,7 +124,7 @@ export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: 
   }
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
@@ -191,7 +192,11 @@ export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: 
                   allowDataOverflow
                 />
                 <YAxis tickLine={false} axisLine={false} width={45} tickMargin={4} tickFormatter={formatCount} tick={{ fontSize: 11, fill: 'currentColor' }} />
-                <Tooltip content={<CustomTooltip />} wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} />
+              <Tooltip content={<CustomTooltip />} wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} contentStyle={{
+                background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+                borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+                borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+              }} />
                 <Bar dataKey="count" radius={[3, 3, 0, 0]} maxBarSize={40} className="transition-all duration-300 ease-in-out">
                   {chartData.map((entry) => (
                     <Cell 

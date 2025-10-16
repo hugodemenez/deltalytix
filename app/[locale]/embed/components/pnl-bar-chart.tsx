@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
 export type EmbedTrade = {
   pnl: number
@@ -19,7 +20,7 @@ function formatCurrency(value: number) {
   return `${value < 0 ? '-' : ''}$${abs.toFixed(0)}`
 }
 
-export default function DailyPnLChartEmbed({ trades }: { trades: EmbedTrade[] }) {
+export default function DailyPnLChartEmbed({ trades, theme }: { trades: EmbedTrade[]; theme?: EmbedThemeVars }) {
   const chartData = React.useMemo(() => {
     const byDate: Record<string, { pnl: number; longNumber: number; shortNumber: number }> = {}
 
@@ -47,9 +48,15 @@ export default function DailyPnLChartEmbed({ trades }: { trades: EmbedTrade[] })
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-background p-2 border rounded shadow-xs">
+        <div className="bg-background p-2 border rounded shadow-xs" style={{
+          background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+          borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+          borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+        }}>
           <p className="font-semibold">{data.date}</p>
-          <p className={`font-bold ${data.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>PnL: {formatCurrency(data.pnl)}</p>
+          <p className="font-bold" style={{ color: data.pnl >= 0 ? 'hsl(var(--success))' : 'hsl(var(--destructive))' }}>
+            PnL: {formatCurrency(data.pnl)}
+          </p>
           <p>Long trades: {data.longNumber}</p>
           <p>Short trades: {data.shortNumber}</p>
         </div>
@@ -59,7 +66,7 @@ export default function DailyPnLChartEmbed({ trades }: { trades: EmbedTrade[] })
   }
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">

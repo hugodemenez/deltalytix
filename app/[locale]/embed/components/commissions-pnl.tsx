@@ -5,8 +5,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
-export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number, commission: number }[] }) {
+export default function CommissionsPnLEmbed({ trades, theme }: { trades: { pnl: number, commission: number }[]; theme?: EmbedThemeVars }) {
   const chartData = React.useMemo(() => {
     const totalPnL = trades.reduce((s, t) => s + (t.pnl || 0), 0)
     const totalCommissions = trades.reduce((s, t) => s + (t.commission || 0), 0)
@@ -20,7 +21,7 @@ export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number,
   const formatCurrency = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
@@ -45,7 +46,11 @@ export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number,
                   <Cell key={`cell-${idx}`} fill={entry.fill} className="transition-all duration-300 ease-in-out" />
                 ))}
               </Pie>
-              <Tooltip wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} formatter={(value: any, name: string, p: any) => [
+              <Tooltip wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} contentStyle={{
+                background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+                borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+                borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+              }} formatter={(value: any, name: string, p: any) => [
                 formatCurrency(value as number),
                 name,
               ]} />

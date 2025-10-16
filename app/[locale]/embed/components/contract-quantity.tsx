@@ -5,8 +5,9 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
-export default function ContractQuantityChartEmbed({ trades }: { trades: { quantity: number, entryDate?: string | Date }[] }) {
+export default function ContractQuantityChartEmbed({ trades, theme }: { trades: { quantity: number, entryDate?: string | Date }[]; theme?: EmbedThemeVars }) {
   const chartData = React.useMemo(() => {
     const byHour: Record<number, { totalQuantity: number; count: number }> = {}
     for (let h = 0; h < 24; h++) byHour[h] = { totalQuantity: 0, count: 0 }
@@ -43,7 +44,7 @@ export default function ContractQuantityChartEmbed({ trades }: { trades: { quant
   }
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
@@ -66,7 +67,11 @@ export default function ContractQuantityChartEmbed({ trades }: { trades: { quant
               <CartesianGrid strokeDasharray="3 3" className="text-border dark:opacity-[0.12] opacity-[0.2]" />
               <XAxis dataKey="hour" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${v}h`} ticks={[0,3,6,9,12,15,18,21]} />
               <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v: number) => v.toFixed(0)} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} contentStyle={{
+                background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+                borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+                borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+              }} />
               <Bar dataKey="totalQuantity" radius={[4,4,0,0]} className="transition-all duration-300 ease-in-out">
                 {chartData.map((entry, idx) => (
                   <Cell key={`cell-${idx}`} fill={getColor(entry.tradeCount)} />

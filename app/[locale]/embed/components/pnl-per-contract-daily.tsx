@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
 import { formatInTimeZone } from 'date-fns-tz'
 import { enUS } from 'date-fns/locale'
@@ -22,7 +23,7 @@ function formatCurrency(value: number) {
   return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 }
 
-export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { trades: TradeLike[], instrument: string }) {
+export default function PnLPerContractDailyChartEmbed({ trades, instrument, theme }: { trades: TradeLike[], instrument: string, theme?: EmbedThemeVars }) {
   const chartData = React.useMemo(() => {
     if (!instrument) return []
 
@@ -68,7 +69,11 @@ export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { 
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
+          background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+          borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+          borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+        }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">Date</span>
@@ -98,7 +103,7 @@ export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { 
   }
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">

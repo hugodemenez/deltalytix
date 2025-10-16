@@ -7,8 +7,9 @@ import type { PolarViewBox } from 'recharts/types/util/types'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
-export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl: number }[] }) {
+export default function TradeDistributionChartEmbed({ trades, theme }: { trades: { pnl: number }[]; theme?: EmbedThemeVars }) {
   const chartData = React.useMemo(() => {
     const nbTrades = trades.length
     const nbWin = trades.filter(t => t.pnl > 0).length
@@ -28,7 +29,7 @@ export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl:
   const renderLegendText = (value: string) => <span className="text-xs text-muted-foreground">{value}</span>
 
   return (
-    <Card className="h-[500px] flex flex-col">
+    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
@@ -72,7 +73,11 @@ export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl:
                 }} />
               </Pie>
               <Legend verticalAlign="bottom" align="center" iconSize={8} iconType="circle" formatter={renderLegendText} wrapperStyle={{ paddingTop: 16 }} />
-              <Tooltip wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} formatter={(value: any, name: string) => [
+              <Tooltip wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} contentStyle={{
+                background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+                borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+                borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+              }} formatter={(value: any, name: string) => [
                 `${Number(value).toFixed(1)}%`,
                 name,
               ]} />

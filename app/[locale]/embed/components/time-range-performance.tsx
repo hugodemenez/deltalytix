@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 import { Info } from 'lucide-react'
 import { ChartConfig } from "@/components/ui/chart"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
 
 function getTimeRangeKey(timeInPosition: number): string {
@@ -50,7 +51,7 @@ const chartConfig = {
 } satisfies ChartConfig
 
 
-export default function TimeRangePerformanceChart({ trades }: { trades: { pnl: number, timeInPosition: number }[] }) {
+export default function TimeRangePerformanceChart({ trades, theme }: { trades: { pnl: number, timeInPosition: number }[]; theme?: EmbedThemeVars }) {
     const [activeRange, setActiveRange] = React.useState<string | null>(null)
 
     const chartData = React.useMemo(() => {
@@ -108,7 +109,11 @@ export default function TimeRangePerformanceChart({ trades }: { trades: { pnl: n
         if (active && payload && payload.length) {
             const data = payload[0].payload
             return (
-                <div className="rounded-lg border bg-background p-2 shadow-xs">
+                <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
+                    background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+                    borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+                    borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+                }}>
                     <div className="grid gap-2">
                         <div className="flex flex-col">
                             <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -150,7 +155,7 @@ export default function TimeRangePerformanceChart({ trades }: { trades: { pnl: n
     }
 
     return (
-            <Card className="h-[500px] flex flex-col">
+            <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
                     <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-1.5">
