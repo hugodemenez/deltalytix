@@ -19,15 +19,14 @@ Embed an interactive analytics dashboard (or a single chart) into any site using
 
 ### Query parameters
 - `theme` (optional): `dark` | `light` | `system` (default: `dark`)
-- `chart` (optional): render a single chart by key (see list below)
 - `charts` (optional): comma-separated list of chart keys to render
-  - If neither `chart` nor `charts` is provided, all charts are shown
+  - If `charts` is not provided, all charts are shown
 
 Examples:
 
 ```html
 <!-- Single chart -->
-<iframe src="https://deltalytix.app/embed?chart=pnl-per-contract-daily" ...></iframe>
+<iframe src="https://deltalytix.app/embed?charts=pnl-per-contract-daily" ...></iframe>
 
 <!-- Multiple charts -->
 <iframe src="https://deltalytix.app/embed?charts=time-range-performance,daily-pnl,pnl-by-side" ...></iframe>

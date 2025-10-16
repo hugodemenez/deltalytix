@@ -161,8 +161,8 @@ export default function EmbedPage() {
       return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || instruments[0]
     }, [trades])
 
-    // Parse chart selection via search params: `chart` or `charts`
-    const chartParam = searchParams.get('chart') || searchParams.get('charts') || 'all'
+    // Parse chart selection via search params: `charts`
+    const chartParam = searchParams.get('charts') || 'all'
     const selectedCharts = React.useMemo(() => {
       if (!chartParam || chartParam.toLowerCase() === 'all') return null
       const set = new Set(
