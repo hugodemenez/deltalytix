@@ -5,11 +5,10 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
 const days = [0,1,2,3,4,5,6] // Sunday=0
 
-export default function WeekdayPnLChartEmbed({ trades, theme }: { trades: { pnl: number, entryDate?: string | Date }[]; theme?: EmbedThemeVars }) {
+export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number, entryDate?: string | Date }[] }) {
   const [activeDay, setActiveDay] = React.useState<number | null>(null)
 
   const weekdayData = React.useMemo(() => {
@@ -71,7 +70,7 @@ export default function WeekdayPnLChartEmbed({ trades, theme }: { trades: { pnl:
   }
 
   return (
-    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
+    <Card className="h-[500px] flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">

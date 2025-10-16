@@ -14,7 +14,6 @@ import {
   CommissionsPnLEmbed,
   ContractQuantityChartEmbed,
   TimeRangePerformanceChart,
-  type EmbedThemeVars,
 } from './index'
 import { toast, Toaster } from 'sonner'
 import { processPhoenixOrdersWithFIFO } from '@/lib/phoenix-fifo-processor'
@@ -213,24 +212,22 @@ export default function EmbedPage() {
       return set.size ? set : null
     }, [chartParam])
 
-    const overrides = React.useMemo<EmbedThemeVars>(() => getOverridesFromSearchParams(searchParams), [searchParams])
-
     const chartDefinitions = React.useMemo(() => (
       [
-        { key: 'time-range-performance', render: () => <TimeRangePerformanceChart trades={trades} theme={overrides} /> },
-        { key: 'daily-pnl', render: () => <DailyPnLChartEmbed trades={trades} theme={overrides} /> },
-        { key: 'time-of-day', render: () => <TimeOfDayPerformanceChart trades={trades} theme={overrides} /> },
-        { key: 'time-in-position', render: () => <TimeInPositionByHourChart trades={trades} theme={overrides} /> },
-        { key: 'pnl-by-side', render: () => <PnLBySideChartEmbed trades={trades} theme={overrides} /> },
-        { key: 'trade-distribution', render: () => <TradeDistributionChartEmbed trades={trades} theme={overrides} /> },
-        { key: 'weekday-pnl', render: () => <WeekdayPnLChartEmbed trades={trades} theme={overrides} /> },
-        { key: 'pnl-per-contract', render: () => <PnLPerContractChartEmbed trades={trades} theme={overrides} /> },
-        { key: 'pnl-per-contract-daily', render: () => <PnLPerContractDailyChartEmbed trades={trades} instrument={selectedInstrument} theme={overrides} /> },
-        { key: 'tick-distribution', render: () => <TickDistributionChartEmbed trades={trades} theme={overrides} /> },
-        { key: 'commissions-pnl', render: () => <CommissionsPnLEmbed trades={trades} theme={overrides} /> },
-        { key: 'contract-quantity', render: () => <ContractQuantityChartEmbed trades={trades} theme={overrides} /> },
+        { key: 'time-range-performance', render: () => <TimeRangePerformanceChart trades={trades} /> },
+        { key: 'daily-pnl', render: () => <DailyPnLChartEmbed trades={trades} /> },
+        { key: 'time-of-day', render: () => <TimeOfDayPerformanceChart trades={trades} /> },
+        { key: 'time-in-position', render: () => <TimeInPositionByHourChart trades={trades} /> },
+        { key: 'pnl-by-side', render: () => <PnLBySideChartEmbed trades={trades} /> },
+        { key: 'trade-distribution', render: () => <TradeDistributionChartEmbed trades={trades} /> },
+        { key: 'weekday-pnl', render: () => <WeekdayPnLChartEmbed trades={trades} /> },
+        { key: 'pnl-per-contract', render: () => <PnLPerContractChartEmbed trades={trades} /> },
+        { key: 'pnl-per-contract-daily', render: () => <PnLPerContractDailyChartEmbed trades={trades} instrument={selectedInstrument} /> },
+        { key: 'tick-distribution', render: () => <TickDistributionChartEmbed trades={trades} /> },
+        { key: 'commissions-pnl', render: () => <CommissionsPnLEmbed trades={trades} /> },
+        { key: 'contract-quantity', render: () => <ContractQuantityChartEmbed trades={trades} /> },
       ]
-    ), [trades, selectedInstrument, overrides])
+    ), [trades, selectedInstrument])
 
     // Function to send chart click message to parent
     const sendChartClickMessage = React.useCallback((chartKey: string, chartName: string) => {

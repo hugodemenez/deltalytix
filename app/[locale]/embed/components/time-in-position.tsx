@@ -5,7 +5,6 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
 type TradeLike = {
   entryDate?: string | Date
@@ -19,7 +18,7 @@ function formatTime(minutes: number) {
   return `${mins}m`
 }
 
-export default function TimeInPositionByHourChart({ trades, theme }: { trades: TradeLike[]; theme?: EmbedThemeVars }) {
+export default function TimeInPositionByHourChart({ trades }: { trades: TradeLike[] }) {
   const chartData = React.useMemo(() => {
     const hourlyData: Record<number, { totalTime: number; count: number }> = {}
     for (let h = 0; h < 24; h++) hourlyData[h] = { totalTime: 0, count: 0 }
@@ -75,7 +74,7 @@ export default function TimeInPositionByHourChart({ trades, theme }: { trades: T
   }
 
   return (
-    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
+    <Card className="h-[500px] flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">

@@ -5,9 +5,8 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
-export default function CommissionsPnLEmbed({ trades, theme }: { trades: { pnl: number, commission: number }[]; theme?: EmbedThemeVars }) {
+export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number, commission: number }[] }) {
   const chartData = React.useMemo(() => {
     const totalPnL = trades.reduce((s, t) => s + (t.pnl || 0), 0)
     const totalCommissions = trades.reduce((s, t) => s + (t.commission || 0), 0)
@@ -21,7 +20,7 @@ export default function CommissionsPnLEmbed({ trades, theme }: { trades: { pnl: 
   const formatCurrency = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
   return (
-    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
+    <Card className="h-[500px] flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">

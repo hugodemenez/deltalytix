@@ -8,9 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getTickDetails } from "@/server/tick-details"
 import { TickDetails } from "@prisma/client"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
-export default function TickDistributionChartEmbed({ trades, theme }: { trades: { pnl: number, quantity: number, instrument?: string }[]; theme?: EmbedThemeVars }) {
+export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: number, quantity: number, instrument?: string }[] }) {
   const [tickDetails, setTickDetails] = React.useState<Record<string, TickDetails>>({})
   const [isLoading, setIsLoading] = React.useState(true)
   const [selectedInstrument, setSelectedInstrument] = React.useState<string>("")
@@ -124,7 +123,7 @@ export default function TickDistributionChartEmbed({ trades, theme }: { trades: 
   }
 
   return (
-    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
+    <Card className="h-[500px] flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">

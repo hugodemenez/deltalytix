@@ -7,9 +7,8 @@ import type { PolarViewBox } from 'recharts/types/util/types'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
-export default function TradeDistributionChartEmbed({ trades, theme }: { trades: { pnl: number }[]; theme?: EmbedThemeVars }) {
+export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl: number }[] }) {
   const chartData = React.useMemo(() => {
     const nbTrades = trades.length
     const nbWin = trades.filter(t => t.pnl > 0).length
@@ -29,7 +28,7 @@ export default function TradeDistributionChartEmbed({ trades, theme }: { trades:
   const renderLegendText = (value: string) => <span className="text-xs text-muted-foreground">{value}</span>
 
   return (
-    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
+    <Card className="h-[500px] flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">

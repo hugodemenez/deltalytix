@@ -13,6 +13,8 @@ export const THEME_PRESETS: Record<string, EmbedThemeVars> = {
     '--card': '210 40% 98%',
     '--popover': '210 40% 98%',
     '--foreground': '222 47% 11%',
+    '--card-foreground': '222 47% 11%',
+    '--popover-foreground': '222 47% 11%',
     '--muted': '210 40% 96%',
     '--muted-foreground': '215 16% 47%',
 
@@ -42,6 +44,8 @@ export const THEME_PRESETS: Record<string, EmbedThemeVars> = {
     '--card': '24 100% 98%',
     '--popover': '24 100% 98%',
     '--foreground': '18 60% 10%',
+    '--card-foreground': '18 60% 10%',
+    '--popover-foreground': '18 60% 10%',
     '--muted': '20 35% 93%',
     '--muted-foreground': '18 20% 35%',
 

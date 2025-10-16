@@ -5,9 +5,8 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { themeVarsToStyle, type EmbedThemeVars } from "../theme"
 
-export default function ContractQuantityChartEmbed({ trades, theme }: { trades: { quantity: number, entryDate?: string | Date }[]; theme?: EmbedThemeVars }) {
+export default function ContractQuantityChartEmbed({ trades }: { trades: { quantity: number, entryDate?: string | Date }[] }) {
   const chartData = React.useMemo(() => {
     const byHour: Record<number, { totalQuantity: number; count: number }> = {}
     for (let h = 0; h < 24; h++) byHour[h] = { totalQuantity: 0, count: 0 }
@@ -44,7 +43,7 @@ export default function ContractQuantityChartEmbed({ trades, theme }: { trades: 
   }
 
   return (
-    <Card className="h-[500px] flex flex-col" style={themeVarsToStyle(theme)}>
+    <Card className="h-[500px] flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
