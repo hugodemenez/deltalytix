@@ -19,7 +19,7 @@ import { toast, Toaster } from 'sonner'
 import { processPhoenixOrdersWithFIFO } from '@/lib/phoenix-fifo-processor'
 import { parsePhoenixOrders } from '@/lib/phoenix-order-parser'
 import { useSearchParams } from 'next/navigation'
-import { ThemeProvider, useTheme } from '@/context/theme-provider'
+// Removed ThemeProvider import - using simple theme implementation
 
 // Mock trade data enriched with typical fields
 const instruments = ['ES', 'NQ', 'CL', 'GC'] as const
@@ -66,9 +66,35 @@ function generateRandomTrades(count: number = 1) {
 export default function EmbedPage() {
     const searchParams = useSearchParams()
     const theme = searchParams.get('theme') || 'dark'
-    const { setTheme } = useTheme()
-    setTheme(theme as "light" | "dark" | "system")
     const [trades, setTrades] = React.useState<any[]>(mockTrades)
+
+    // Simple theme application without context
+    React.useEffect(() => {
+        const root = document.documentElement
+        root.classList.remove('light', 'dark')
+        
+        let effectiveTheme: 'light' | 'dark' = 'light'
+        if (theme === 'system') {
+            effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        } else {
+            effectiveTheme = theme as 'light' | 'dark'
+        }
+        
+        root.classList.add(effectiveTheme)
+        
+        // Listen for system theme changes when theme is 'system'
+        if (theme === 'system') {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+            const handleChange = () => {
+                root.classList.remove('light', 'dark')
+                const newEffectiveTheme = mediaQuery.matches ? 'dark' : 'light'
+                root.classList.add(newEffectiveTheme)
+            }
+            
+            mediaQuery.addEventListener('change', handleChange)
+            return () => mediaQuery.removeEventListener('change', handleChange)
+        }
+    }, [theme])
 
     // Message listener for iframe communication
     React.useEffect(() => {
@@ -165,20 +191,45 @@ export default function EmbedPage() {
       ]
     ), [trades, selectedInstrument])
 
+    // Function to send chart click message to parent
+    const sendChartClickMessage = React.useCallback((chartKey: string, chartName: string) => {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'CHART_CLICKED',
+          chartKey,
+          chartName
+        }, '*')
+      }
+    }, [])
+
     const chartsToRender = React.useMemo(() => {
       const filtered = chartDefinitions.filter((c) => !selectedCharts || selectedCharts.has(c.key))
       // If selection was provided but no keys matched, fall back to all
-      return (selectedCharts && filtered.length === 0 ? chartDefinitions : filtered).map((c) => c.render())
-    }, [chartDefinitions, selectedCharts])
+      return (selectedCharts && filtered.length === 0 ? chartDefinitions : filtered).map((component) => (
+        <div 
+          key={component.key}
+          className="cursor-pointer hover:opacity-90 transition-opacity"
+          onClick={() => {
+            const chartName = component.key.split('-').map(word => 
+              word.charAt(0).toUpperCase() + word.slice(1)
+            ).join(' ')
+            sendChartClickMessage(component.key, chartName)
+          }}
+          title={`Click to add "${component.key.split('-').map(word => 
+            word.charAt(0).toUpperCase() + word.slice(1)
+          ).join(' ')}" to selection`}
+        >
+          {component.render()}
+        </div>
+      ))
+    }, [chartDefinitions, selectedCharts, sendChartClickMessage])
 
     return (
-      <ThemeProvider>
-        <div className="w-full h-full min-h-[400px] mb-20">
-          <Toaster />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-            {chartsToRender}
-          </div>
+      <div className="w-full h-full min-h-[400px] mb-20">
+        <Toaster />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+          {chartsToRender}
         </div>
-      </ThemeProvider>
+      </div>
     )
 }
