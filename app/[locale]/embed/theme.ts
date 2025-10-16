@@ -70,7 +70,11 @@ export function applyEmbedTheme(vars: EmbedThemeVars, target: HTMLElement | Docu
   const style = root instanceof HTMLElement ? root.style : (root as HTMLElement).style
   Object.entries(vars).forEach(([k, v]) => {
     if (!k.startsWith('--')) return
-    style.setProperty(k, v)
+    if (typeof v === 'string') {
+      style.setProperty(k, v)
+    } else {
+      style.removeProperty(k)
+    }
   })
 }
 
