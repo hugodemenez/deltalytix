@@ -21,6 +21,7 @@ import { parsePhoenixOrders } from '@/lib/phoenix-order-parser'
 import { useSearchParams } from 'next/navigation'
 import { applyEmbedTheme, THEME_PRESETS, getOverridesFromSearchParams } from './theme'
 import { useEffect } from 'react'
+import Script from 'next/script'
 
 
 // Removed ThemeProvider import - using simple theme implementation
@@ -72,13 +73,6 @@ export default function EmbedPage() {
     const theme = searchParams.get('theme') || 'dark'
     const preset = searchParams.get('preset') || undefined
     const [trades, setTrades] = React.useState<any[]>(mockTrades)
-    // Set cookie consent
-    useEffect(() => {
-        const cookieConsent = localStorage.getItem('cookieConsent')
-        if (!cookieConsent) {
-            localStorage.setItem('cookieConsent', 'accepted')
-        }
-    }, [])
 
     // Simple theme + preset + overrides application without context
     React.useEffect(() => {
@@ -274,6 +268,24 @@ export default function EmbedPage() {
 
     return (
       <div className="w-full h-full min-h-[400px] mb-20">
+        {/*Dismiss cookie consent banner*/}
+        <Script id="embed-autoconsent" strategy="beforeInteractive">
+        {`try {
+          if (!window.localStorage.getItem('cookieConsent')) {
+            window.localStorage.setItem('cookieConsent', JSON.stringify({
+              analytics_storage: false,
+              ad_storage: false,
+              ad_user_data: false,
+              ad_personalization: false,
+              functionality_storage: true,
+              personalization_storage: false,
+              security_storage: true
+            }))
+          }
+        } catch (e) {}`
+        }
+        </Script>
+
         <Toaster />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
           {chartsToRender}
