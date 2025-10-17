@@ -7,8 +7,11 @@ import type { PolarViewBox } from 'recharts/types/util/types'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useI18n } from '@/locales/client'
 
 export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl: number }[] }) {
+  const t = useI18n()
+  
   const chartData = React.useMemo(() => {
     const nbTrades = trades.length
     const nbWin = trades.filter(t => t.pnl > 0).length
@@ -39,16 +42,16 @@ export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl:
         }}>
           <div className="grid gap-2">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Category</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('tradeDistribution.tooltip.type')}</span>
               <span className="font-bold text-muted-foreground">{data.name || item?.name}</span>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Percentage</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('tradeDistribution.tooltip.percentage')}</span>
               <span className="font-bold">{`${Number(item?.value ?? data.value ?? 0).toFixed(1)}%`}</span>
             </div>
             {typeof data.count === 'number' && (
               <div className="flex items-center justify-between gap-4">
-                <span className="text-[0.70rem] uppercase text-muted-foreground">Trades</span>
+                <span className="text-[0.70rem] uppercase text-muted-foreground">{t('calendar.charts.trades')}</span>
                 <span className="font-bold text-muted-foreground">{data.count}</span>
               </div>
             )}
@@ -64,13 +67,13 @@ export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl:
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">Trade Distribution</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('tradeDistribution.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>Distribution of wins, losses, and breakevens.</p>
+                <p>{t('tradeDistribution.description')}</p>
               </PopoverContent>
             </Popover>
           </div>
