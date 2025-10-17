@@ -5,10 +5,12 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useI18n } from '@/locales/client'
 
 const days = [0,1,2,3,4,5,6] // Sunday=0
 
 export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number, entryDate?: string | Date }[] }) {
+  const t = useI18n()
   const [activeDay, setActiveDay] = React.useState<number | null>(null)
 
   const weekdayData = React.useMemo(() => {
@@ -42,7 +44,15 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
 
     if (active && payload && payload.length) {
       const data = payload[0].payload
-      const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+      const dayNames = [
+        t('calendar.weekdays.sun'),
+        t('calendar.weekdays.mon'),
+        t('calendar.weekdays.tue'),
+        t('calendar.weekdays.wed'),
+        t('calendar.weekdays.thu'),
+        t('calendar.weekdays.fri'),
+        t('calendar.weekdays.sat')
+      ]
       return (
         <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
           background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
@@ -51,15 +61,15 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
         }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Day</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('weekdayPnl.tooltip.day')}</span>
               <span className="font-bold text-muted-foreground">{dayNames[label]}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Average PnL</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('weekdayPnl.tooltip.averagePnl')}</span>
               <span className="font-bold">${data.pnl.toFixed(2)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Trades</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('weekdayPnl.tooltip.trades')}</span>
               <span className="font-bold text-muted-foreground">{data.tradeCount}</span>
             </div>
           </div>
@@ -74,13 +84,13 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">Weekday Average PnL</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('weekdayPnl.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>Average PnL by day of week.</p>
+                <p>{t('weekdayPnl.description')}</p>
               </PopoverContent>
             </Popover>
           </div>

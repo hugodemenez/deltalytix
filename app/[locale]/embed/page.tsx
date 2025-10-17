@@ -22,6 +22,7 @@ import { useSearchParams } from 'next/navigation'
 import { applyEmbedTheme, THEME_PRESETS, getOverridesFromSearchParams } from './theme'
 import { useEffect } from 'react'
 import Script from 'next/script'
+import { I18nProviderClient } from '@/locales/client'
 
 
 // Removed ThemeProvider import - using simple theme implementation
@@ -72,6 +73,7 @@ export default function EmbedPage() {
     const searchParams = useSearchParams()
     const theme = searchParams.get('theme') || 'dark'
     const preset = searchParams.get('preset') || undefined
+    const lang = searchParams.get('lang') || 'en'
     const [trades, setTrades] = React.useState<any[]>(mockTrades)
 
     // Simple theme + preset + overrides application without context
@@ -267,29 +269,31 @@ export default function EmbedPage() {
     }, [chartDefinitions, selectedCharts, sendChartClickMessage])
 
     return (
-      <div className="w-full h-full min-h-[400px] mb-20">
-        {/*Dismiss cookie consent banner*/}
-        <Script id="embed-autoconsent" strategy="beforeInteractive">
-        {`try {
-          if (!window.localStorage.getItem('cookieConsent')) {
-            window.localStorage.setItem('cookieConsent', JSON.stringify({
-              analytics_storage: false,
-              ad_storage: false,
-              ad_user_data: false,
-              ad_personalization: false,
-              functionality_storage: true,
-              personalization_storage: false,
-              security_storage: true
-            }))
+      <I18nProviderClient locale={lang}>
+        <div className="w-full h-full min-h-[400px] mb-20">
+          {/*Dismiss cookie consent banner*/}
+          <Script id="embed-autoconsent" strategy="beforeInteractive">
+          {`try {
+            if (!window.localStorage.getItem('cookieConsent')) {
+              window.localStorage.setItem('cookieConsent', JSON.stringify({
+                analytics_storage: false,
+                ad_storage: false,
+                ad_user_data: false,
+                ad_personalization: false,
+                functionality_storage: true,
+                personalization_storage: false,
+                security_storage: true
+              }))
+            }
+          } catch (e) {}`
           }
-        } catch (e) {}`
-        }
-        </Script>
+          </Script>
 
-        <Toaster />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-          {chartsToRender}
+          <Toaster />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+            {chartsToRender}
+          </div>
         </div>
-      </div>
+      </I18nProviderClient>
     )
 }

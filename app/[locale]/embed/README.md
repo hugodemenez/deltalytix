@@ -20,6 +20,7 @@ Embed an interactive analytics dashboard (or a single chart) into any site using
 ### Query parameters
 - `theme` (optional): `dark` | `light` | `system` (default: `dark`)
 - `preset` (optional): `light` | `dark` | `ocean` | `sunset`
+- `lang` (optional): `en` | `fr` (default: `en`) - Language for chart labels and tooltips
 - `charts` (optional): comma-separated list of chart keys to render
   - If `charts` is not provided, all charts are shown
 - `overrides` (via individual keys below). Accepts HSL components, HEX, rgb(a), or hsl(a). Values are normalized to Tailwind-compatible HSL components under the hood.
@@ -32,11 +33,11 @@ Embed an interactive analytics dashboard (or a single chart) into any site using
 Examples:
 
 ```html
-<!-- Single chart -->
-<iframe src="https://deltalytix.app/embed?charts=pnl-per-contract-daily" ...></iframe>
+<!-- Single chart with French language -->
+<iframe src="https://deltalytix.app/embed?charts=pnl-per-contract-daily&lang=fr" ...></iframe>
 
-<!-- Multiple charts -->
-<iframe src="https://deltalytix.app/embed?charts=time-range-performance,daily-pnl,pnl-by-side" ...></iframe>
+<!-- Multiple charts with English language (default) -->
+<iframe src="https://deltalytix.app/embed?charts=time-range-performance,daily-pnl,pnl-by-side&lang=en" ...></iframe>
 
 <!-- Preset with palette tweaks (HEX, RGB, HSL all accepted) -->
 <iframe src="https://deltalytix.app/embed?theme=dark&preset=ocean&chart1=%233b82f6&border=rgba(229,231,235,1)&tooltipBg=0%200%200%20/%200.8" ...></iframe>
