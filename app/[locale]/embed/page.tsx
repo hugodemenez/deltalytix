@@ -19,6 +19,10 @@ import { toast, Toaster } from 'sonner'
 import { processPhoenixOrdersWithFIFO } from '@/lib/phoenix-fifo-processor'
 import { parsePhoenixOrders } from '@/lib/phoenix-order-parser'
 import { useSearchParams } from 'next/navigation'
+import { applyEmbedTheme, THEME_PRESETS, getOverridesFromSearchParams } from './theme'
+import { useEffect } from 'react'
+
+
 // Removed ThemeProvider import - using simple theme implementation
 
 // Mock trade data enriched with typical fields
@@ -66,22 +70,44 @@ function generateRandomTrades(count: number = 1) {
 export default function EmbedPage() {
     const searchParams = useSearchParams()
     const theme = searchParams.get('theme') || 'dark'
+    const preset = searchParams.get('preset') || undefined
     const [trades, setTrades] = React.useState<any[]>(mockTrades)
+    // Set cookie consent
+    useEffect(() => {
+        const cookieConsent = localStorage.getItem('cookieConsent')
+        if (!cookieConsent) {
+            localStorage.setItem('cookieConsent', 'accepted')
+        }
+    }, [])
 
-    // Simple theme application without context
+    // Simple theme + preset + overrides application without context
     React.useEffect(() => {
         const root = document.documentElement
         root.classList.remove('light', 'dark')
-        
+
         let effectiveTheme: 'light' | 'dark' = 'light'
         if (theme === 'system') {
             effectiveTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        } else if (theme === 'light' || theme === 'dark') {
+            effectiveTheme = theme
         } else {
-            effectiveTheme = theme as 'light' | 'dark'
+            // If theme is a non-standard string, default to light but still allow presets/overrides
+            effectiveTheme = 'light'
         }
-        
+
         root.classList.add(effectiveTheme)
-        
+
+        // Apply optional preset (ocean, sunset, etc.) on top of light/dark
+        if (preset && THEME_PRESETS[preset as keyof typeof THEME_PRESETS]) {
+            applyEmbedTheme(THEME_PRESETS[preset as keyof typeof THEME_PRESETS], root)
+        }
+
+        // Apply explicit overrides from query params last
+        const overrides = getOverridesFromSearchParams(searchParams)
+        if (Object.keys(overrides).length > 0) {
+            applyEmbedTheme(overrides, root)
+        }
+
         // Listen for system theme changes when theme is 'system'
         if (theme === 'system') {
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -89,12 +115,21 @@ export default function EmbedPage() {
                 root.classList.remove('light', 'dark')
                 const newEffectiveTheme = mediaQuery.matches ? 'dark' : 'light'
                 root.classList.add(newEffectiveTheme)
+
+                // Re-apply preset and overrides after class change to ensure they persist
+                if (preset && THEME_PRESETS[preset as keyof typeof THEME_PRESETS]) {
+                    applyEmbedTheme(THEME_PRESETS[preset as keyof typeof THEME_PRESETS], root)
+                }
+                const newOverrides = getOverridesFromSearchParams(searchParams)
+                if (Object.keys(newOverrides).length > 0) {
+                    applyEmbedTheme(newOverrides, root)
+                }
             }
-            
+
             mediaQuery.addEventListener('change', handleChange)
             return () => mediaQuery.removeEventListener('change', handleChange)
         }
-    }, [theme])
+    }, [theme, preset, searchParams])
 
     // Message listener for iframe communication
     React.useEffect(() => {
@@ -138,6 +173,19 @@ export default function EmbedPage() {
                             instrument: trade.instrument,
                           })),
                         ])
+                    }
+                } else if (data.type === 'SET_THEME') {
+                    const root = document.documentElement
+                    const { themeMode, preset: p, vars } = data
+                    if (themeMode === 'light' || themeMode === 'dark') {
+                        root.classList.remove('light', 'dark')
+                        root.classList.add(themeMode)
+                    }
+                    if (p && THEME_PRESETS[p as keyof typeof THEME_PRESETS]) {
+                        applyEmbedTheme(THEME_PRESETS[p as keyof typeof THEME_PRESETS], root)
+                    }
+                    if (vars && typeof vars === 'object') {
+                        applyEmbedTheme(vars, root)
                     }
                 }
             } catch (error) {

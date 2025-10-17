@@ -10,3 +10,4 @@ export { default as TickDistributionChartEmbed } from './components/tick-distrib
 export { default as CommissionsPnLEmbed } from './components/commissions-pnl'
 export { default as DailyPnLChartEmbed } from './components/pnl-bar-chart'
 export { default as ContractQuantityChartEmbed } from './components/contract-quantity'
+export type { EmbedThemeVars } from './theme'

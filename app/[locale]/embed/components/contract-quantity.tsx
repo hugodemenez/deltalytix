@@ -26,16 +26,31 @@ export default function ContractQuantityChartEmbed({ trades }: { trades: { quant
   }, [trades])
 
   const maxTradeCount = React.useMemo(() => Math.max(1, ...chartData.map(d => d.tradeCount)), [chartData])
-  const getColor = (count: number) => `hsl(var(--chart-1) / ${Math.max(0.2, count / maxTradeCount)})`
+  const getColor = (count: number) => `hsl(var(--chart-8) / ${Math.max(0.2, count / maxTradeCount)})`
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-background p-2 border rounded shadow-xs">
-          <p className="font-semibold">{`${label}:00 - ${(label + 1) % 24}:00`}</p>
-          <p className="font-bold">Total Contracts: {data.totalQuantity}</p>
-          <p>Trades: {data.tradeCount}</p>
+        <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
+          background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+          borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+          borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+        }}>
+          <div className="grid gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">Time</span>
+              <span className="font-bold text-muted-foreground">{`${label}:00 - ${(label + 1) % 24}:00`}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">Total Contracts</span>
+              <span className="font-bold">{data.totalQuantity}</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">Trades</span>
+              <span className="font-bold text-muted-foreground">{data.tradeCount}</span>
+            </div>
+          </div>
         </div>
       )
     }
@@ -66,7 +81,7 @@ export default function ContractQuantityChartEmbed({ trades }: { trades: { quant
               <CartesianGrid strokeDasharray="3 3" className="text-border dark:opacity-[0.12] opacity-[0.2]" />
               <XAxis dataKey="hour" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v) => `${v}h`} ticks={[0,3,6,9,12,15,18,21]} />
               <YAxis tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(v: number) => v.toFixed(0)} />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip />} wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} />
               <Bar dataKey="totalQuantity" radius={[4,4,0,0]} className="transition-all duration-300 ease-in-out">
                 {chartData.map((entry, idx) => (
                   <Cell key={`cell-${idx}`} fill={getColor(entry.tradeCount)} />

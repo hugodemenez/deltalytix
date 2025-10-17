@@ -42,13 +42,17 @@ export default function TimeInPositionByHourChart({ trades }: { trades: TradeLik
   }, [trades])
 
   const maxTradeCount = React.useMemo(() => Math.max(1, ...chartData.map(d => d.tradeCount)), [chartData])
-  const getColor = (count: number) => `hsl(var(--chart-3) / ${Math.max(0.2, count / maxTradeCount)})`
+  const getColor = (count: number) => `hsl(var(--chart-2) / ${Math.max(0.2, count / maxTradeCount)})`
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
+          background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+          borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+          borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+        }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">Time</span>

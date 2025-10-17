@@ -19,13 +19,45 @@ export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl:
     const beRate = nbTrades ? (nbBe / nbTrades) * 100 : 0
 
     return [
-      { name: `Win (${nbWin}/${nbTrades})`, value: winRate, color: 'hsl(var(--success))', count: nbWin },
-      { name: `Breakeven (${nbBe}/${nbTrades})`, value: beRate, color: 'hsl(var(--muted-foreground))', count: nbBe },
-      { name: `Loss (${nbLoss}/${nbTrades})`, value: lossRate, color: 'hsl(var(--destructive))', count: nbLoss },
+      { name: `Win (${nbWin}/${nbTrades})`, value: winRate, color: 'hsl(var(--chart-win))', count: nbWin },
+      { name: `Breakeven (${nbBe}/${nbTrades})`, value: beRate, color: 'hsl(var(--chart-5) / 0.6)', count: nbBe },
+      { name: `Loss (${nbLoss}/${nbTrades})`, value: lossRate, color: 'hsl(var(--chart-loss))', count: nbLoss },
     ]
   }, [trades])
 
   const renderLegendText = (value: string) => <span className="text-xs text-muted-foreground">{value}</span>
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const item = payload[0]
+      const data = item?.payload || {}
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
+          background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+          borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+          borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+        }}>
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">Category</span>
+              <span className="font-bold text-muted-foreground">{data.name || item?.name}</span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">Percentage</span>
+              <span className="font-bold">{`${Number(item?.value ?? data.value ?? 0).toFixed(1)}%`}</span>
+            </div>
+            {typeof data.count === 'number' && (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[0.70rem] uppercase text-muted-foreground">Trades</span>
+                <span className="font-bold text-muted-foreground">{data.count}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <Card className="h-[500px] flex flex-col">
@@ -72,10 +104,7 @@ export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl:
                 }} />
               </Pie>
               <Legend verticalAlign="bottom" align="center" iconSize={8} iconType="circle" formatter={renderLegendText} wrapperStyle={{ paddingTop: 16 }} />
-              <Tooltip wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} formatter={(value: any, name: string) => [
-                `${Number(value).toFixed(1)}%`,
-                name,
-              ]} />
+              <Tooltip content={<CustomTooltip />} wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} />
             </PieChart>
           </ResponsiveContainer>
         </div>

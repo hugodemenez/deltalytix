@@ -75,9 +75,9 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
     const beRate = Number((nbBe / nbTrades * 100).toFixed(2))
 
     return [
-      { name: t('tradeDistribution.winWithCount', { count: nbWin, total: nbTrades }), value: winRate, color: 'hsl(var(--success))', count: nbWin },
+      { name: t('tradeDistribution.winWithCount', { count: nbWin, total: nbTrades }), value: winRate, color: 'hsl(var(--chart-win))', count: nbWin },
       { name: t('tradeDistribution.breakevenWithCount', { count: nbBe, total: nbTrades }), value: beRate, color: 'hsl(var(--muted-foreground))', count: nbBe },
-      { name: t('tradeDistribution.lossWithCount', { count: nbLoss, total: nbTrades }), value: lossRate, color: 'hsl(var(--destructive))', count: nbLoss }
+      { name: t('tradeDistribution.lossWithCount', { count: nbLoss, total: nbTrades }), value: lossRate, color: 'hsl(var(--chart-loss))', count: nbLoss }
     ]
   }, [nbWin, nbLoss, nbBe, nbTrades, t])
 

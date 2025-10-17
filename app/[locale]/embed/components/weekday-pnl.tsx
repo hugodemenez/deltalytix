@@ -29,7 +29,7 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
   const getColor = (value: number) => {
     const range = maxPnL - minPnL || 1
     const ratio = Math.abs((value - minPnL) / range)
-    const base = value >= 0 ? '--chart-3' : '--chart-4'
+    const base = value >= 0 ? '--chart-win' : '--chart-loss'
     const intensity = Math.max(0.2, ratio)
     return `hsl(var(${base}) / ${intensity})`
   }
@@ -44,7 +44,11 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
       const data = payload[0].payload
       const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
+          background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+          borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+          borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+        }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">Day</span>

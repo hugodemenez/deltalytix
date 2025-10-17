@@ -1,50 +1,66 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
-import { format } from 'date-fns'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { aggregateCombinedDataByPeriod } from '@/app/[locale]/admin/lib/utils'
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { aggregateCombinedDataByPeriod } from "@/app/[locale]/admin/lib/utils";
 
 interface DailyData {
-  date: string
-  users: number
-  trades: number
+  date: string;
+  users: number;
+  trades: number;
 }
 
 interface TradesUsersChartProps {
-  dailyData: DailyData[]
+  dailyData: DailyData[];
 }
 
 function valueFormatter(number: number) {
-  return `${Intl.NumberFormat('us').format(number).toString()}`
+  return `${Intl.NumberFormat("us").format(number).toString()}`;
 }
 
 export function TradesUsersChart({ dailyData }: TradesUsersChartProps) {
-  const [timePeriod, setTimePeriod] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('daily')
+  const [timePeriod, setTimePeriod] = useState<
+    "daily" | "weekly" | "monthly" | "yearly"
+  >("daily");
 
   // Aggregate data based on selected time period
-  const aggregatedData = aggregateCombinedDataByPeriod(dailyData, timePeriod)
+  const aggregatedData = aggregateCombinedDataByPeriod(dailyData, timePeriod);
 
   // Transform data for the chart
-  const chartData = aggregatedData.map(item => ({
+  const chartData = aggregatedData.map((item) => ({
     date: formatDate(item.date),
     Users: item.users,
-    Trades: item.trades
-  }))
+    Trades: item.trades,
+  }));
 
   function formatDate(date: string) {
-    const d = new Date(date)
+    const d = new Date(date);
     switch (timePeriod) {
-      case 'weekly':
-        return `Week of ${format(d, 'MMM d, yyyy')}`
-      case 'monthly':
-        return format(d, 'MMMM yyyy')
-      case 'yearly':
-        return format(d, 'yyyy')
+      case "weekly":
+        return `Week of ${format(d, "MMM d, yyyy")}`;
+      case "monthly":
+        return format(d, "MMMM yyyy");
+      case "yearly":
+        return format(d, "yyyy");
       default:
-        return format(d, 'MMM d, yyyy')
+        return format(d, "MMM d, yyyy");
     }
   }
 
@@ -52,7 +68,12 @@ export function TradesUsersChart({ dailyData }: TradesUsersChartProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Trading Activity Overview</CardTitle>
-        <Select value={timePeriod} onValueChange={(value: 'daily' | 'weekly' | 'monthly' | 'yearly') => setTimePeriod(value)}>
+        <Select
+          value={timePeriod}
+          onValueChange={(value: "daily" | "weekly" | "monthly" | "yearly") =>
+            setTimePeriod(value)
+          }
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select time period" />
           </SelectTrigger>
@@ -69,39 +90,43 @@ export function TradesUsersChart({ dailyData }: TradesUsersChartProps) {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 className="text-sm"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fill: "hsl(var(--muted-foreground))" }}
               />
-              <YAxis 
+              <YAxis
                 className="text-sm"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                tick={{ fill: "hsl(var(--muted-foreground))" }}
                 width={48}
               />
-              <Tooltip 
+              <Tooltip
                 content={({ active, payload }) => {
                   if (active && payload && payload.length) {
                     return (
                       <div className="rounded-lg border bg-background p-4 shadow-xs">
                         <div className="grid gap-2">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm">{payload[0].payload.date}</span>
+                            <span className="text-sm">
+                              {payload[0].payload.date}
+                            </span>
                           </div>
                           <div className="flex items-center justify-between gap-x-2">
                             <span className="text-sm font-medium">Trades</span>
-                            <span className="text-sm font-bold">{valueFormatter(payload[1].value as number)}</span>
+                            <span className="text-sm font-bold">
+                              {valueFormatter(payload[1].value as number)}
+                            </span>
                           </div>
                         </div>
                       </div>
-                    )
+                    );
                   }
-                  return null
+                  return null;
                 }}
               />
               <Bar
                 dataKey="Users"
-                fill="hsl(var(--chart-1))"
+                fill="hsl(var(--chart-loss))"
                 radius={[4, 4, 0, 0]}
               />
               <Bar
@@ -114,5 +139,5 @@ export function TradesUsersChart({ dailyData }: TradesUsersChartProps) {
         </div>
       </CardContent>
     </Card>
-  )
-} 
+  );
+}

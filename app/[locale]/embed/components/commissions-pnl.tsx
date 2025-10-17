@@ -12,12 +12,40 @@ export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number,
     const totalCommissions = trades.reduce((s, t) => s + (t.commission || 0), 0)
     const total = Math.abs(totalPnL) + Math.abs(totalCommissions) || 1
     return [
-      { name: 'Net PnL', value: totalPnL, percentage: totalPnL / total, fill: 'hsl(var(--chart-3))' },
+      { name: 'Net PnL', value: totalPnL, percentage: totalPnL / total, fill: totalPnL >= 0 ? 'hsl(var(--chart-win))' : 'hsl(var(--chart-loss))' },
       { name: 'Commissions', value: totalCommissions, percentage: totalCommissions / total, fill: 'hsl(var(--chart-4))' },
     ]
   }, [trades])
 
   const formatCurrency = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const item = payload[0]
+      const data = item?.payload || {}
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
+          background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+          borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+          borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+        }}>
+          <div className="grid gap-2">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{data.name || item?.name}</span>
+              <span className="font-bold">{formatCurrency(Number(data.value ?? item?.value ?? 0))}</span>
+            </div>
+            {typeof data.percentage === 'number' && (
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[0.70rem] uppercase text-muted-foreground">Share</span>
+                <span className="font-bold text-muted-foreground">{(Math.abs(data.percentage) * 100).toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <Card className="h-[500px] flex flex-col">
@@ -45,10 +73,7 @@ export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number,
                   <Cell key={`cell-${idx}`} fill={entry.fill} className="transition-all duration-300 ease-in-out" />
                 ))}
               </Pie>
-              <Tooltip wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} formatter={(value: any, name: string, p: any) => [
-                formatCurrency(value as number),
-                name,
-              ]} />
+              <Tooltip content={<CustomTooltip />} wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} />
               <Legend verticalAlign="bottom" align="center" />
             </PieChart>
           </ResponsiveContainer>

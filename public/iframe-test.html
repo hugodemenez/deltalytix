@@ -432,6 +432,28 @@
             opacity: 0.9;
         }
 
+        /* Per-override clear button */
+        .clear-override {
+            background: none;
+            border: 1px solid hsl(var(--border));
+            color: hsl(var(--muted-foreground));
+            cursor: pointer;
+            padding: 0 0.4rem;
+            border-radius: var(--radius);
+            line-height: 1.2;
+            font-size: 0.875rem;
+            display: none;
+        }
+        .clear-override.visible {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .clear-override:hover {
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+        }
+
         input, select {
             padding: 0.5rem 0.75rem;
             border: 1px solid hsl(var(--input));
@@ -486,41 +508,9 @@
             background-color: hsl(var(--background));
         }
 
-        /* Theme switcher enhancements */
+        /* Theme switcher enhancements - keeping for potential reuse, but hidden in DOM */
         .theme-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.25rem 0.5rem;
-            background: hsl(var(--muted));
-            border: 1px solid hsl(var(--border));
-            border-radius: calc(var(--radius) - 2px);
-            font-size: 0.75rem;
-            color: hsl(var(--muted-foreground));
-            margin-left: 0.5rem;
-        }
-
-        .theme-indicator::before {
-            content: '';
-            width: 0.75rem;
-            height: 0.75rem;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .theme-indicator[data-theme="light"]::before {
-            background: #fbbf24;
-            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
-        }
-
-        .theme-indicator[data-theme="dark"]::before {
-            background: #1f2937;
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
-        }
-
-        .theme-indicator[data-theme="system"]::before {
-            background: linear-gradient(45deg, #fbbf24 50%, #1f2937 50%);
-            box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+            display: none;
         }
 
         /* Chart selection styling */
@@ -791,6 +781,38 @@
             box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
         }
 
+        .left-sidebar {
+            width: 400px;
+            background: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            height: 90vh;
+            position: fixed;
+            top: 50%;
+            left: 2rem;
+            z-index: 100;
+            box-shadow: var(--shadow-lg);
+            transform: translate(calc(-100% - 2rem), -50%);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left-sidebar.open {
+            transform: translate(0, -50%);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Match right sidebar spacing/padding on desktop */
+        .left-sidebar .sidebar-content {
+            padding: 1rem;
+            gap: 1rem;
+            overflow: auto;
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -800,7 +822,7 @@
                 max-width: 100%;
             }
 
-            .sidebar {
+            .sidebar, .left-sidebar {
                 width: 100%;
                 position: fixed;
                 top: 0;
@@ -824,7 +846,7 @@
                 padding: 1rem;
             }
 
-            .sidebar.open {
+            .sidebar.open, .left-sidebar.open {
                 transform: translateY(0);
             }
 
@@ -868,10 +890,122 @@
                 width: 100%;
             }
         }
+
+        /* Toast notification styles */
+        .toast-container {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 1rem 1rem 1rem;
+            max-width: 560px;
+            width: 100%;
+        }
+
+        .toast {
+            background: hsl(var(--card));
+            color: hsl(var(--card-foreground));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow-lg);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 300px;
+            max-width: 100%;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            animation: toast-slide-up 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: bottom center;
+            opacity: 0;
+            animation-fill-mode: forwards;
+        }
+
+        .toast.toast-removing {
+            animation: toast-slide-down 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+
+        @keyframes toast-slide-up {
+            from {
+                opacity: 0;
+                transform: translateY(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes toast-slide-down {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(100%) scale(0.95);
+            }
+        }
+
+        .toast-success {
+            background: hsl(var(--success));
+            color: hsl(var(--success-foreground));
+            border-color: hsl(var(--success));
+        }
+
+        .toast-info {
+            background: hsl(var(--muted));
+            color: hsl(var(--muted-foreground));
+            border-color: hsl(var(--border));
+        }
+
+        .toast-error {
+            background: hsl(var(--destructive));
+            color: hsl(var(--destructive-foreground));
+            border-color: hsl(var(--destructive));
+        }
+
+        .toast-icon {
+            flex-shrink: 0;
+            width: 1.25rem;
+            height: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .toast-content {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .toast-container {
+                max-width: 100%;
+                padding: 0 0.5rem 0.5rem 0.5rem;
+            }
+
+            .toast {
+                min-width: unset;
+                width: 100%;
+            }
+        }
     </style>
 </head>
 
 <body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
     <div class="container">
         <div class="main-content">
         <div class="header">
@@ -894,9 +1028,12 @@
         </div>
 
         <div class="controls">
-            <h3>Embed Configuration & Code Generation</h3>
+            <div class="selected-charts-header config-header">
+                <h3>Embed Configuration & Code Generation</h3>
+                <button onclick="resetConfiguration()" class="danger" title="Reset all configuration to defaults">Reset Configuration</button>
+            </div>
             <p>Configure your embed settings and see the generated code below. Copy the code to integrate the chart into your application.</p>
-            
+
             <div class="button-group">
                 <label>Environment:</label>
                 <select id="environmentSelect" onchange="updateConfiguration(); updateSidebarIframe();">
@@ -916,8 +1053,73 @@
             </div>
 
             <div class="button-group">
-                <label>Charts:</label>
-                <button onclick="toggleSidebar()" class="secondary">Configure Charts</button>
+                <label>Preset:</label>
+                <select id="presetSelect" onchange="updateConfiguration();">
+                    <option value="">None</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="thor">Thor</option>
+                    <option value="sunset">Sunset</option>
+                </select>
+            </div>
+
+            <div class="button-group" id="overridesInline">
+                <label>Overrides (HSL/RGB/HEX accepted):</label>
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">BG</label>
+                    <input type="color" id="overrideBackgroundColor" title="Background color" />
+                    <input id="overrideBackground" placeholder="210 40% 98% | #ffffff | rgb(255,255,255)" />
+                    <button class="clear-override" data-target="overrideBackground" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Border</label>
+                    <input type="color" id="overrideBorderColor" title="Border color" />
+                    <input id="overrideBorder" placeholder="220 13% 91% | #e5e7eb | rgba(229,231,235,1)" />
+                    <button class="clear-override" data-target="overrideBorder" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart1</label>
+                    <input type="color" id="overrideChart1Color" title="Chart1 color" />
+                    <input id="overrideChart1" placeholder="#3b82f6 | 210 70% 50%" />
+                    <button class="clear-override" data-target="overrideChart1" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart2</label>
+                    <input type="color" id="overrideChart2Color" title="Chart2 color" />
+                    <input id="overrideChart2" placeholder="#22c55e" />
+                    <button class="clear-override" data-target="overrideChart2" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart3</label>
+                    <input type="color" id="overrideChart3Color" title="Chart3 color" />
+                    <input id="overrideChart3" placeholder="#eab308" />
+                    <button class="clear-override" data-target="overrideChart3" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart4</label>
+                    <input type="color" id="overrideChart4Color" title="Chart4 color" />
+                    <input id="overrideChart4" placeholder="#ef4444" />
+                    <button class="clear-override" data-target="overrideChart4" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Tooltip BG</label>
+                    <input type="color" id="overrideTooltipBgColor" title="Tooltip background" />
+                    <input id="overrideTooltipBg" placeholder="0 0% 0% / 0.8 | rgba(0,0,0,0.8)" />
+                    <button class="clear-override" data-target="overrideTooltipBg" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Tooltip Border</label>
+                    <input type="color" id="overrideTooltipBorderColor" title="Tooltip border"/>
+                    <input id="overrideTooltipBorder" placeholder="#374151 | 215 28% 17%" />
+                    <button class="clear-override" data-target="overrideTooltipBorder" title="Remove override">×</button>
+                  </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                  <button onclick="toggleSidebar()" class="secondary">🗂 Configure Charts</button>
+                </div>
             </div>
 
             <div class="selected-charts-section">
@@ -970,6 +1172,17 @@
         </div>
     </div>
 
+        <!-- Left Sidebar -->
+        <div class="left-sidebar" id="leftSidebar">
+            <div class="sidebar-header">
+                <h3>Theme Overrides</h3>
+                <button class="sidebar-close" onclick="toggleLeftSidebar()" title="Close sidebar">&times;</button>
+            </div>
+            <div class="sidebar-content">
+                <p>Theme override controls will appear here on mobile. On desktop, you can open both sidebars.</p>
+            </div>
+        </div>
+
         <!-- Right Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
@@ -978,7 +1191,7 @@
             </div>
             <div class="sidebar-content">
                 <p>Click on charts in the iframe below to add them to your selection.</p>
-                
+
                 <div class="sidebar-iframe-container">
                     <iframe id="sidebarIframe" class="sidebar-iframe" src=""></iframe>
                 </div>
@@ -987,7 +1200,7 @@
     </div>
 
     <!-- Sidebar Backdrop -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebars()"></div>
 
     <!-- Add Trade Dialog -->
     <div id="addTradeDialog" class="dialog-overlay" style="display: none;">
@@ -1047,7 +1260,40 @@
     <script>
         const iframe = document.getElementById('chartIframe');
         const sidebarIframe = document.getElementById('sidebarIframe');
-        
+
+        // Move inline theme override controls into the left sidebar and leave a compact summary in main
+        document.addEventListener('DOMContentLoaded', function () {
+            const inlineGroup = document.getElementById('overridesInline');
+            if (!inlineGroup) return;
+
+            // The first div inside the overrides group contains all controls
+            const controlsContainer = inlineGroup.querySelector('div');
+            const sidebarContent = document.querySelector('#leftSidebar .sidebar-content');
+
+            if (controlsContainer && sidebarContent) {
+                // Create compact summary for main area
+                const summary = document.createElement('div');
+                summary.className = 'overrides-summary';
+                summary.style.display = 'flex';
+                summary.style.alignItems = 'center';
+                summary.style.gap = '0.5rem';
+                summary.innerHTML = '<span style="color: hsl(var(--muted-foreground)); font-size: 0.875rem;">Edit theme overrides in the left sidebar.</span>';
+
+                const openBtn = document.createElement('button');
+                openBtn.className = 'secondary';
+                openBtn.textContent = '🗂 Theme Overrides';
+                openBtn.onclick = () => {
+                    if (typeof toggleLeftSidebar === 'function') toggleLeftSidebar();
+                };
+                summary.appendChild(openBtn);
+
+                // Insert summary before the controls and move controls to left sidebar
+                inlineGroup.insertBefore(summary, controlsContainer);
+                sidebarContent.innerHTML = '';
+                sidebarContent.appendChild(controlsContainer);
+            }
+        });
+
         // Environment configuration
         const environments = {
             localhost: 'http://localhost:3000',
@@ -1088,11 +1334,11 @@
                     console.warn('Failed to parse saved configuration:', e);
                 }
             }
-            
+
             // Apply loaded configuration to UI
             document.getElementById('environmentSelect').value = currentConfig.environment;
             document.getElementById('themeSelect').value = currentConfig.theme;
-            
+
             updateConfiguration();
         }
 
@@ -1106,26 +1352,66 @@
             // Update current config from UI
             currentConfig.environment = document.getElementById('environmentSelect').value;
             currentConfig.theme = document.getElementById('themeSelect').value;
-            
+            currentConfig.preset = document.getElementById('presetSelect').value;
+            currentConfig.overrides = {
+                background: document.getElementById('overrideBackground').value.trim(),
+                foreground: (document.getElementById('overrideForeground')?.value || '').trim(),
+                card: (document.getElementById('overrideCard')?.value || '').trim(),
+                popover: (document.getElementById('overridePopover')?.value || '').trim(),
+                muted: (document.getElementById('overrideMuted')?.value || '').trim(),
+                mutedFg: (document.getElementById('overrideMutedFg')?.value || '').trim(),
+                border: document.getElementById('overrideBorder').value.trim(),
+                input: (document.getElementById('overrideInput')?.value || '').trim(),
+                ring: (document.getElementById('overrideRing')?.value || '').trim(),
+                radius: (document.getElementById('overrideRadius')?.value || '').trim(),
+                chart1: document.getElementById('overrideChart1').value.trim(),
+                chart2: (document.getElementById('overrideChart2')?.value || '').trim(),
+                chart3: (document.getElementById('overrideChart3')?.value || '').trim(),
+                chart4: (document.getElementById('overrideChart4')?.value || '').trim(),
+                chart5: (document.getElementById('overrideChart5')?.value || '').trim(),
+                chart6: (document.getElementById('overrideChart6')?.value || '').trim(),
+                chart7: (document.getElementById('overrideChart7')?.value || '').trim(),
+                chart8: (document.getElementById('overrideChart8')?.value || '').trim(),
+                success: (document.getElementById('overrideSuccess')?.value || '').trim(),
+                successFg: (document.getElementById('overrideSuccessFg')?.value || '').trim(),
+                destructive: (document.getElementById('overrideDestructive')?.value || '').trim(),
+                destructiveFg: (document.getElementById('overrideDestructiveFg')?.value || '').trim(),
+                tooltipBg: document.getElementById('overrideTooltipBg').value.trim(),
+                tooltipBorder: (document.getElementById('overrideTooltipBorder')?.value || '').trim(),
+                tooltipRadius: (document.getElementById('overrideTooltipRadius')?.value || '').trim()
+            };
+
             // Generate new iframe URL
             const baseUrl = environments[currentConfig.environment];
             let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
-            
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const overrideKeys = Object.keys(currentConfig.overrides || {});
+            overrideKeys.forEach((key) => {
+                const val = currentConfig.overrides[key];
+                if (val) {
+                    url += `&${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+                }
+            });
+
             // Add chart parameters if specific charts are selected
             if (currentConfig.selectedCharts.length > 0) {
                 url += `&charts=${currentConfig.selectedCharts.join(',')}`;
             }
-            
+
             // Update main iframe
             iframe.src = url;
-            
+
             updateIframeContainerTheme(currentConfig.theme);
+            const indicator = document.getElementById('themeIndicator');
+            if (indicator) indicator.setAttribute('data-theme', currentConfig.theme);
+            const label = document.getElementById('activeThemeLabel');
+            if (label) label.textContent = currentConfig.theme + (currentConfig.preset ? ` + ${currentConfig.preset}` : '');
             updateSelectedChartsList();
             updateEmbedCode();
-            
+
             // Save configuration
             saveConfiguration();
-            
+
             console.log('Updated configuration:', currentConfig, 'URL:', url);
         }
 
@@ -1140,12 +1426,20 @@
         function updateMainIframeOnly() {
             const baseUrl = environments[currentConfig.environment];
             let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
-            
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const overrideKeys = Object.keys(currentConfig.overrides || {});
+            overrideKeys.forEach((key) => {
+                const val = currentConfig.overrides[key];
+                if (val) {
+                    url += `&${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+                }
+            });
+
             // Add chart parameters if specific charts are selected
             if (currentConfig.selectedCharts.length > 0) {
                 url += `&charts=${currentConfig.selectedCharts.join(',')}`;
             }
-            
+
             // Update main iframe
             iframe.src = url;
         }
@@ -1153,20 +1447,28 @@
         function updateEmbedCode() {
             const baseUrl = environments[currentConfig.environment];
             let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
-            
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const overrideKeys = Object.keys(currentConfig.overrides || {});
+            overrideKeys.forEach((key) => {
+                const val = currentConfig.overrides[key];
+                if (val) {
+                    url += `&${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+                }
+            });
+
             // Add chart parameters if specific charts are selected
             if (currentConfig.selectedCharts.length > 0) {
                 url += `&charts=${currentConfig.selectedCharts.join(',')}`;
             }
-            
-            const embedCode = `<iframe 
+
+            const embedCode = `<iframe
   src="${url}"
-  width="100%" 
-  height="600" 
+  width="100%"
+  height="600"
   frameborder="0"
   allowtransparency="true">
 </iframe>`;
-            
+
             document.getElementById('embedCode').textContent = embedCode;
         }
 
@@ -1184,13 +1486,50 @@
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
+            const left = document.getElementById('leftSidebar');
             const backdrop = document.getElementById('sidebarBackdrop');
+            const isOpening = !sidebar.classList.contains('open');
             sidebar.classList.toggle('open');
-            
+
             // Only handle backdrop on mobile devices
             if (window.innerWidth <= 768) {
-                backdrop.classList.toggle('open');
+                if (isOpening) {
+                    if (left) left.classList.remove('open');
+                    backdrop.classList.add('open');
+                } else {
+                    if (!left || !left.classList.contains('open')) {
+                        backdrop.classList.remove('open');
+                    }
+                }
             }
+        }
+
+        function toggleLeftSidebar() {
+            const left = document.getElementById('leftSidebar');
+            const right = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const isOpening = !left.classList.contains('open');
+            left.classList.toggle('open');
+
+            if (window.innerWidth <= 768) {
+                if (isOpening) {
+                    if (right) right.classList.remove('open');
+                    backdrop.classList.add('open');
+                } else {
+                    if (!right || !right.classList.contains('open')) {
+                        backdrop.classList.remove('open');
+                    }
+                }
+            }
+        }
+
+        function closeSidebars() {
+            const left = document.getElementById('leftSidebar');
+            const right = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (left) left.classList.remove('open');
+            if (right) right.classList.remove('open');
+            if (backdrop) backdrop.classList.remove('open');
         }
 
 
@@ -1214,7 +1553,7 @@
 
         function updateSelectedChartsList() {
             const selectedChartsList = document.getElementById('selectedChartsList');
-            
+
             if (currentConfig.selectedCharts.length === 0) {
                 selectedChartsList.innerHTML = '<span style="color: hsl(var(--muted-foreground)); font-size: 0.875rem;">All charts selected</span>';
             } else {
@@ -1224,10 +1563,10 @@
                     if (chart) {
                         const tag = document.createElement('span');
                         tag.className = 'selected-chart-tag';
-                        
+
                         const chartName = document.createElement('span');
                         chartName.textContent = chart.name;
-                        
+
                         const removeButton = document.createElement('button');
                         removeButton.className = 'chart-tag-remove';
                         removeButton.innerHTML = '×';
@@ -1236,7 +1575,7 @@
                             e.stopPropagation();
                             removeChartFromSelection(chartKey);
                         };
-                        
+
                         tag.appendChild(chartName);
                         tag.appendChild(removeButton);
                         selectedChartsList.appendChild(tag);
@@ -1264,56 +1603,57 @@
             saveConfiguration();
         }
 
-        function showChartAddedFeedback(chartName) {
-            // Create a temporary notification
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: hsl(var(--success));
-                color: hsl(var(--success-foreground));
-                padding: 1rem;
-                border-radius: var(--radius);
-                box-shadow: var(--shadow-lg);
-                z-index: 1000;
-                font-weight: 500;
-            `;
-            notification.textContent = `Added "${chartName}" to selection`;
-            document.body.appendChild(notification);
-            
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 3000) {
+            const toastContainer = document.getElementById('toastContainer');
+
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            // Add icon based on type
+            const icon = document.createElement('div');
+            icon.className = 'toast-icon';
+            if (type === 'success') {
+                icon.innerHTML = '✓';
+            } else if (type === 'error') {
+                icon.innerHTML = '✕';
+            } else if (type === 'info') {
+                icon.innerHTML = 'ℹ';
+            }
+
+            // Add content
+            const content = document.createElement('div');
+            content.className = 'toast-content';
+            content.textContent = message;
+
+            toast.appendChild(icon);
+            toast.appendChild(content);
+
+            // Add to container
+            toastContainer.appendChild(toast);
+
+            // Remove toast after duration
             setTimeout(() => {
-                notification.remove();
-            }, 3000);
+                toast.classList.add('toast-removing');
+                setTimeout(() => {
+                    toast.remove();
+                }, 150); // Match animation duration
+            }, duration);
+        }
+
+        function showChartAddedFeedback(chartName) {
+            showToast(`Added "${chartName}" to selection`, 'success');
         }
 
         function showChartAlreadySelectedFeedback(chartName) {
-            // Create a temporary notification
-            const notification = document.createElement('div');
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: hsl(var(--muted));
-                color: hsl(var(--muted-foreground));
-                padding: 1rem;
-                border-radius: var(--radius);
-                box-shadow: var(--shadow-lg);
-                z-index: 1000;
-                font-weight: 500;
-            `;
-            notification.textContent = `"${chartName}" is already selected`;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
+            showToast(`"${chartName}" is already selected`, 'info');
         }
 
         function sendMessage(message) {
             iframe.contentWindow.postMessage(message, '*');
             console.log('Sent message:', message);
-            
+
             // Display the JSON data being sent
             const jsonDataElement = document.getElementById('jsonData');
             jsonDataElement.textContent = JSON.stringify(message, null, 2);
@@ -1324,7 +1664,7 @@
             const now = new Date();
             const defaultDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Yesterday
             document.getElementById('tradeEntryDate').value = defaultDate.toISOString().slice(0, 16);
-            
+
             // Show the dialog
             document.getElementById('addTradeDialog').style.display = 'flex';
         }
@@ -1336,7 +1676,7 @@
 
         function submitAddTrade() {
             const form = document.getElementById('addTradeForm');
-            
+
             // Validate form
             if (!form.checkValidity()) {
                 form.reportValidity();
@@ -1406,26 +1746,26 @@
             // Available instruments and sides from the embed page
             const instruments = ['ES', 'NQ', 'CL', 'GC'];
             const sides = ['long', 'short'];
-            
+
             // Generate random values
             const now = Date.now();
             const dayMs = 24 * 60 * 60 * 1000;
-            
+
             // Random entry date within the last 30 days
             const entry = new Date(now - Math.floor(Math.random() * 30) * dayMs - Math.floor(Math.random() * 24) * 3600 * 1000);
-            
+
             // Random quantity between 1-3
             const qty = Math.ceil(Math.random() * 3);
-            
+
             // Random PnL with slight bias toward losses (like the original)
             const pnl = Math.round(((Math.random() - 0.4) * 500) * 100) / 100;
-            
+
             // Random time in position (0-3600 seconds = 0-60 minutes)
             const timeInPosition = Math.floor(Math.random() * 3600);
-            
+
             // Random commission based on quantity
             const commission = Math.round(qty * (1 + Math.random() * 3) * 100) / 100;
-            
+
             return {
                 pnl: pnl,
                 timeInPosition: timeInPosition,
@@ -1445,23 +1785,23 @@
         // Listen for messages from iframes
         window.addEventListener('message', function (event) {
             console.log('Received message from iframe:', event.data);
-            
+
             if (event.data && event.data.type === 'CHART_CLICKED') {
                 // Only process chart clicks from the sidebar iframe, not the main iframe
                 const sidebarIframe = document.getElementById('sidebarIframe');
                 if (event.source === sidebarIframe.contentWindow) {
                     const { chartKey, chartName } = event.data;
-                    
+
                     // Add chart to selected charts if not already selected
                     if (!currentConfig.selectedCharts.includes(chartKey)) {
                         currentConfig.selectedCharts.push(chartKey);
-                        
+
                         // Update only the main iframe and UI elements, not the sidebar iframe
                         updateMainIframeOnly();
                         updateSelectedChartsList();
                         updateEmbedCode();
                         saveConfiguration();
-                        
+
                         // Show success feedback
                         showChartAddedFeedback(chartName);
                     } else {
@@ -1477,12 +1817,13 @@
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 const addTradeDialog = document.getElementById('addTradeDialog');
-                const sidebar = document.getElementById('sidebar');
-                
+                const rightSidebar = document.getElementById('sidebar');
+                const leftSidebar = document.getElementById('leftSidebar');
+
                 if (addTradeDialog.style.display === 'flex') {
                     closeAddTradeDialog();
-                } else if (sidebar.classList.contains('open')) {
-                    toggleSidebar();
+                } else if ((rightSidebar && rightSidebar.classList.contains('open')) || (leftSidebar && leftSidebar.classList.contains('open'))) {
+                    closeSidebars();
                 }
             }
         });
@@ -1501,6 +1842,36 @@
             });
         });
 
+        function hexFromString(value) {
+            const trimmed = value.trim();
+            if (!trimmed) return '';
+            // Extract hex like #fff or #ffffff
+            const match = trimmed.match(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})/);
+            return match ? `#${match[1].length === 3 ? match[1].split('').map(c=>c+c).join('') : match[1]}` : '';
+        }
+
+        function wireColorPickerSync(colorId, textId) {
+            const colorEl = document.getElementById(colorId);
+            const textEl = document.getElementById(textId);
+            if (!colorEl || !textEl) return;
+            colorEl.addEventListener('input', function() {
+                textEl.value = colorEl.value;
+                // Reflect current value on the color input background
+                colorEl.style.background = colorEl.value;
+                updateConfiguration();
+                if (typeof updateOverrideClearButtonsVisibility === 'function') updateOverrideClearButtonsVisibility();
+            });
+            textEl.addEventListener('change', function() {
+                const hex = hexFromString(textEl.value);
+                if (hex) {
+                    colorEl.value = hex;
+                    colorEl.style.background = hex;
+                }
+                updateConfiguration();
+                if (typeof updateOverrideClearButtonsVisibility === 'function') updateOverrideClearButtonsVisibility();
+            });
+        }
+
         // Initialize configuration on page load
         document.addEventListener('DOMContentLoaded', function() {
             loadConfiguration();
@@ -1508,7 +1879,161 @@
             const baseUrl = environments[currentConfig.environment];
             const sidebarUrl = `${baseUrl}/embed?theme=system`;
             sidebarIframe.src = sidebarUrl;
+
+            // Wire color pickers
+            wireColorPickerSync('overrideBackgroundColor', 'overrideBackground');
+            wireColorPickerSync('overrideBorderColor', 'overrideBorder');
+            wireColorPickerSync('overrideChart1Color', 'overrideChart1');
+            wireColorPickerSync('overrideChart2Color', 'overrideChart2');
+            wireColorPickerSync('overrideChart3Color', 'overrideChart3');
+            wireColorPickerSync('overrideChart4Color', 'overrideChart4');
+            wireColorPickerSync('overrideTooltipBgColor', 'overrideTooltipBg');
+            wireColorPickerSync('overrideTooltipBorderColor', 'overrideTooltipBorder');
+
+            // Prime color inputs from text values if present
+            ['Background','Border','Chart1','Chart2','Chart3','Chart4','TooltipBg','TooltipBorder'].forEach((k) => {
+                const textEl = document.getElementById(`override${k}`);
+                const colorEl = document.getElementById(`override${k}Color`);
+                if (textEl && colorEl) {
+                    const hex = hexFromString(textEl.value);
+                    if (hex) {
+                        colorEl.value = hex;
+                        colorEl.style.background = hex;
+                    }
+                }
+            });
+
+            // Setup per-override clear buttons
+            if (typeof setupOverrideClearButtons === 'function') {
+                setupOverrideClearButtons();
+                updateOverrideClearButtonsVisibility();
+            }
+
+            // Tweak UI:
+            // 1) Add destructive reset button to section header (already in markup if JS fails)
+            const controlsSections = document.querySelectorAll('.controls');
+            if (controlsSections && controlsSections[0]) {
+                const section = controlsSections[0];
+                const h3 = section.querySelector('h3');
+                if (h3 && !section.querySelector('.config-header')) {
+                    const headerWrap = document.createElement('div');
+                    headerWrap.className = 'selected-charts-header config-header';
+                    const h3clone = h3.cloneNode(true);
+                    headerWrap.appendChild(h3clone);
+                    const resetBtn = document.createElement('button');
+                    resetBtn.className = 'danger';
+                    resetBtn.title = 'Reset all configuration to defaults';
+                    resetBtn.textContent = 'Reset Configuration';
+                    resetBtn.onclick = () => resetConfiguration();
+                    section.replaceChild(headerWrap, h3);
+                }
+            }
+
+            // 2) Ensure summary open button text has icon if exists
+            const summaryBtn = document.querySelector('.overrides-summary button.secondary');
+            if (summaryBtn) {
+                summaryBtn.textContent = '🗂 Theme Overrides';
+            }
         });
+
+        function resetConfiguration() {
+            // Preserve current environment; do not clear localStorage
+            const preservedEnvironment = currentConfig.environment || 'beta';
+
+            // Reset in-memory config while preserving environment
+            currentConfig = {
+                environment: preservedEnvironment,
+                theme: 'dark',
+                preset: '',
+                overrides: {},
+                selectedCharts: []
+            };
+
+            // Reset UI controls
+            document.getElementById('environmentSelect').value = currentConfig.environment;
+            document.getElementById('themeSelect').value = currentConfig.theme;
+            document.getElementById('presetSelect').value = '';
+            const label = document.getElementById('activeThemeLabel');
+            if (label) label.textContent = currentConfig.theme;
+            const indicator = document.getElementById('themeIndicator');
+            if (indicator) indicator.setAttribute('data-theme', currentConfig.theme);
+
+            // Clear override text inputs
+            const overrideTextIds = [
+                'overrideBackground','overrideBorder','overrideChart1','overrideChart2','overrideChart3','overrideChart4',
+                'overrideTooltipBg','overrideTooltipBorder'
+            ];
+            overrideTextIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            // Clear color pickers and backgrounds
+            const overrideColorIds = [
+                'overrideBackgroundColor','overrideBorderColor','overrideChart1Color','overrideChart2Color','overrideChart3Color','overrideChart4Color',
+                'overrideTooltipBgColor','overrideTooltipBorderColor'
+            ];
+            overrideColorIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = '#000000';
+                    el.style.background = '';
+                }
+            });
+
+            // Clear selected charts UI
+            updateSelectedChartsList();
+
+            // Recompute URLs and embed code from defaults
+            updateConfiguration();
+
+            // Update sidebar iframe (system theme)
+            updateSidebarIframe();
+
+            // Update clear buttons visibility
+            if (typeof updateOverrideClearButtonsVisibility === 'function') updateOverrideClearButtonsVisibility();
+        }
+
+        // Per-override clear button wiring
+        function setupOverrideClearButtons() {
+            document.querySelectorAll('.clear-override').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const target = btn.getAttribute('data-target');
+                    if (!target) return;
+                    const textEl = document.getElementById(target);
+                    const colorEl = document.getElementById(`${target}Color`);
+                    if (textEl) textEl.value = '';
+                    if (colorEl) {
+                        colorEl.value = '#000000';
+                        colorEl.style.background = '';
+                    }
+                    updateConfiguration();
+                    updateOverrideClearButtonsVisibility();
+                });
+            });
+
+            // Also watch text inputs to update button visibility as user types
+            ['Background','Border','Chart1','Chart2','Chart3','Chart4','TooltipBg','TooltipBorder'].forEach((k) => {
+                const textEl = document.getElementById(`override${k}`);
+                if (textEl) {
+                    textEl.addEventListener('input', () => {
+                        updateOverrideClearButtonsVisibility();
+                    });
+                }
+            });
+        }
+
+        function updateOverrideClearButtonsVisibility() {
+            document.querySelectorAll('.clear-override').forEach(btn => {
+                const target = btn.getAttribute('data-target');
+                const textEl = target ? document.getElementById(target) : null;
+                if (textEl && textEl.value.trim()) {
+                    btn.classList.add('visible');
+                } else {
+                    btn.classList.remove('visible');
+                }
+            });
+        }
     </script>
 </body>
 
