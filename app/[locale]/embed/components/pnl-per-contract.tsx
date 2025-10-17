@@ -60,11 +60,11 @@ export default function PnLPerContractChartEmbed({ trades }: { trades: TradeLike
   const getColor = (value: number) => {
     // Handle NaN and invalid numbers
     if (!isFinite(value) || isNaN(value)) {
-      return `hsl(var(--chart-3) / 0.2)`
+      return `hsl(var(--chart-win) / 0.2)`
     }
     
     const ratio = absMax === 0 ? 0.2 : Math.max(0.2, Math.abs(value / absMax))
-    const base = value >= 0 ? '--chart-3' : '--chart-4'
+    const base = value >= 0 ? '--chart-win' : '--chart-loss'
     return `hsl(var(${base}) / ${ratio})`
   }
 

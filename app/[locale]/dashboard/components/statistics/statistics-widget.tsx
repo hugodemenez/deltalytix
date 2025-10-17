@@ -80,8 +80,8 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
   const shortRate = Number((shortNumber / totalTrades * 100).toFixed(2))
 
   // Colors
-  const positiveColor = "hsl(var(--chart-2))"
-  const negativeColor = "hsl(var(--chart-1))"
+  const positiveColor = "hsl(var(--chart-win))"
+  const negativeColor = "hsl(var(--chart-loss))"
   const neutralColor = "hsl(var(--muted))"
 
   // Performance data

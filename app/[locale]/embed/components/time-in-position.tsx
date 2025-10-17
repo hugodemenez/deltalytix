@@ -42,7 +42,7 @@ export default function TimeInPositionByHourChart({ trades }: { trades: TradeLik
   }, [trades])
 
   const maxTradeCount = React.useMemo(() => Math.max(1, ...chartData.map(d => d.tradeCount)), [chartData])
-  const getColor = (count: number) => `hsl(var(--chart-3) / ${Math.max(0.2, count / maxTradeCount)})`
+  const getColor = (count: number) => `hsl(var(--chart-2) / ${Math.max(0.2, count / maxTradeCount)})`
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {

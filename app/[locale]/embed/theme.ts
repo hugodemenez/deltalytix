@@ -5,66 +5,103 @@ export type EmbedThemeVars = Partial<Record<string, string>>
 // Keys map to CSS custom properties under :root and .dark
 // Provide a compact, shared set used by all embed charts and containers.
 export const THEME_PRESETS: Record<string, EmbedThemeVars> = {
-  light: {},
-  dark: {},
+  sunset: {
+      '--background': '24 100% 98%',
+      '--card': '24 100% 98%',
+      '--popover': '24 100% 98%',
+      '--foreground': '18 60% 10%',
+      '--card-foreground': '18 60% 10%',
+      '--popover-foreground': '18 60% 10%',
+      '--muted': '20 35% 93%',
+      '--muted-foreground': '18 20% 35%',
+  
+      '--border': '20 25% 86%',
+      '--input': '20 25% 86%',
+      '--ring': '18 60% 10%',
+  
+      '--chart-1': '12 76% 61%', // orange
+      '--chart-2': '343 83% 45%', // raspberry
+      '--chart-3': '43 74% 66%',  // yellow
+      '--chart-4': '330 70% 60%', // pink
+      '--chart-5': '27 87% 67%',  // amber
+      '--chart-win': '120 72% 45%', // green
+      '--chart-loss': '0 72% 45%', // red
+      
+  
+      '--success': '142 72% 29%',
+      '--success-foreground': '144 80% 10%',
+      '--destructive': '0 72% 45%',
+      '--destructive-foreground': '0 0% 98%',
+  
+      '--radius': '0.75rem',
+    },
   ocean: {
-    // backgrounds
-    '--background': '210 40% 98%',
-    '--card': '210 40% 98%',
-    '--popover': '210 40% 98%',
-    '--foreground': '222 47% 11%',
-    '--card-foreground': '222 47% 11%',
-    '--popover-foreground': '222 47% 11%',
-    '--muted': '210 40% 96%',
-    '--muted-foreground': '215 16% 47%',
+      // backgrounds
+      '--background': '210 40% 98%',
+      '--card': '210 40% 98%',
+      '--popover': '210 40% 98%',
+      '--foreground': '222 47% 11%',
+      '--card-foreground': '222 47% 11%',
+      '--popover-foreground': '222 47% 11%',
+      '--muted': '210 40% 96%',
+      '--muted-foreground': '215 16% 47%',
+  
+      // borders / inputs
+      '--border': '214 32% 91%',
+      '--input': '214 32% 91%',
+      '--ring': '222 84% 5%',
+  
+      // chart palette
+      '--chart-1': '199 89% 48%', // cyan
+      '--chart-2': '201 79% 35%', // teal/dark cyan
+      '--chart-3': '217 91% 60%', // blue
+      '--chart-4': '187 92% 42%', // green-cyan
+      '--chart-5': '231 48% 48%', // indigo
+      '--chart-loss': '0 70% 60%',
+      '--chart-win': '160 84% 40%',
+  
+      // success / destructive
+      '--success': '164 94% 30%',
+      '--success-foreground': '160 84% 14%',
+      '--destructive': '0 84% 60%',
+      '--destructive-foreground': '0 0% 98%',
+  
+      // radius
+      '--radius': '0.5rem',
+    },
+  "thor": {
+    // Thor brand dark based on #0f1419 
+    '--background': '210 25% 7.84%',
+    '--card': '210 25% 8%',
+    '--popover': '210 25% 8%',
+    '--foreground': '210 20% 96%',
+    '--card-foreground': '210 20% 96%',
+    '--popover-foreground': '210 20% 96%',
+    '--muted': '210 16% 14%',
+    '--muted-foreground': '215 16% 60%',
 
-    // borders / inputs
-    '--border': '214 32% 91%',
-    '--input': '214 32% 91%',
-    '--ring': '222 84% 5%',
+    // borders / inputs / focus ring
+    '--border': '210 15% 18%',
+    '--input': '210 15% 18%',
+    '--ring': '210 90% 56%',
 
-    // chart palette
-    '--chart-1': '199 89% 48%', // cyan
-    '--chart-2': '201 79% 35%', // teal/dark cyan
-    '--chart-3': '217 91% 60%', // blue
-    '--chart-4': '187 92% 42%', // green-cyan
-    '--chart-5': '231 48% 48%', // indigo
+    // chart palette (ensure loss color is subtle red)
+    '--chart-1': '0 70% 60%', // subtle red for losses
+    '--chart-2': '190 92% 45%', // cyan
+    '--chart-3': '160 84% 40%', // green
+    '--chart-4': '260 84% 60%', // violet
+    '--chart-5': '340 80% 60%', // magenta
+    '--chart-loss': '0 70% 60%',
+    '--chart-win': '160 84% 40%',
 
-    // success / destructive
-    '--success': '164 94% 30%',
-    '--success-foreground': '160 84% 14%',
+    // status colors
+    '--success': '142 72% 29%',
+    '--success-foreground': '0 0% 98%',
     '--destructive': '0 84% 60%',
     '--destructive-foreground': '0 0% 98%',
 
     // radius
     '--radius': '0.5rem',
-  },
-  sunset: {
-    '--background': '24 100% 98%',
-    '--card': '24 100% 98%',
-    '--popover': '24 100% 98%',
-    '--foreground': '18 60% 10%',
-    '--card-foreground': '18 60% 10%',
-    '--popover-foreground': '18 60% 10%',
-    '--muted': '20 35% 93%',
-    '--muted-foreground': '18 20% 35%',
-
-    '--border': '20 25% 86%',
-    '--input': '20 25% 86%',
-    '--ring': '18 60% 10%',
-
-    '--chart-1': '12 76% 61%', // orange
-    '--chart-2': '343 83% 45%', // raspberry
-    '--chart-3': '43 74% 66%',  // yellow
-    '--chart-4': '330 70% 60%', // pink
-    '--chart-5': '27 87% 67%',  // amber
-
-    '--success': '142 72% 29%',
-    '--success-foreground': '144 80% 10%',
-    '--destructive': '0 72% 45%',
-    '--destructive-foreground': '0 0% 98%',
-
-    '--radius': '0.75rem',
   },
 }
 
@@ -203,6 +240,8 @@ export function getOverridesFromSearchParams(searchParams: URLSearchParams): Emb
     chart6: '--chart-6',
     chart7: '--chart-7',
     chart8: '--chart-8',
+    chartLoss: '--chart-loss',
+    chartWin: '--chart-win',
     success: '--success',
     successFg: '--success-foreground',
     destructive: '--destructive',

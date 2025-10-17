@@ -91,9 +91,9 @@ export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: 
   // Color logic similar to weekday chart
   const maxCount = React.useMemo(() => Math.max(...chartData.map(d => d.count), 0), [chartData])
   const getColor = (value: number) => {
-    if (maxCount === 0) return 'hsl(var(--chart-1))'
+    if (maxCount === 0) return 'hsl(var(--chart-2))'
     const intensity = Math.max(0.3, value / maxCount)
-    return `hsl(var(--chart-1) / ${intensity})`
+    return `hsl(var(--chart-2) / ${intensity})`
   }
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -105,7 +105,11 @@ export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: 
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="rounded-lg border bg-background p-2 shadow-xs">
+        <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
+          background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
+          borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
+          borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
+        }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">Ticks</span>

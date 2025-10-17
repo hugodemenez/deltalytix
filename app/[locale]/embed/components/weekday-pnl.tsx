@@ -29,7 +29,7 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
   const getColor = (value: number) => {
     const range = maxPnL - minPnL || 1
     const ratio = Math.abs((value - minPnL) / range)
-    const base = value >= 0 ? '--chart-3' : '--chart-4'
+    const base = value >= 0 ? '--chart-win' : '--chart-loss'
     const intensity = Math.max(0.2, ratio)
     return `hsl(var(${base}) / ${intensity})`
   }

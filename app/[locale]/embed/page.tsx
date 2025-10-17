@@ -20,6 +20,9 @@ import { processPhoenixOrdersWithFIFO } from '@/lib/phoenix-fifo-processor'
 import { parsePhoenixOrders } from '@/lib/phoenix-order-parser'
 import { useSearchParams } from 'next/navigation'
 import { applyEmbedTheme, THEME_PRESETS, getOverridesFromSearchParams } from './theme'
+import { useEffect } from 'react'
+
+
 // Removed ThemeProvider import - using simple theme implementation
 
 // Mock trade data enriched with typical fields
@@ -69,6 +72,13 @@ export default function EmbedPage() {
     const theme = searchParams.get('theme') || 'dark'
     const preset = searchParams.get('preset') || undefined
     const [trades, setTrades] = React.useState<any[]>(mockTrades)
+    // Set cookie consent
+    useEffect(() => {
+        const cookieConsent = localStorage.getItem('cookieConsent')
+        if (!cookieConsent) {
+            localStorage.setItem('cookieConsent', 'accepted')
+        }
+    }, [])
 
     // Simple theme + preset + overrides application without context
     React.useEffect(() => {

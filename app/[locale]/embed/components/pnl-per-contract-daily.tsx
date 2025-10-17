@@ -60,7 +60,7 @@ export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { 
 
   const getColor = (value: number) => {
     const ratio = absMax === 0 ? 0.2 : Math.max(0.2, Math.abs(value / absMax))
-    const base = value >= 0 ? '--chart-3' : '--chart-4'
+    const base = value >= 0 ? '--chart-win' : '--chart-loss'
     return `hsl(var(${base}) / ${ratio})`
   }
 
