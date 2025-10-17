@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useI18n } from '@/locales/client'
 
 type TradeLike = {
   pnl: number
@@ -12,6 +13,7 @@ type TradeLike = {
 }
 
 export default function TimeOfDayPerformanceChart({ trades }: { trades: TradeLike[] }) {
+  const t = useI18n()
   const [activeHour, setActiveHour] = React.useState<number | null>(null)
 
   const chartData = React.useMemo(() => {
@@ -62,15 +64,15 @@ export default function TimeOfDayPerformanceChart({ trades }: { trades: TradeLik
         }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Time</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlTime.tooltip.time')}</span>
               <span className="font-bold text-muted-foreground">{`${label}:00 - ${(label + 1) % 24}:00`}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Average PnL</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlTime.tooltip.averagePnl')}</span>
               <span className="font-bold">${data.avgPnl.toFixed(2)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Trades</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlTime.tooltip.trades')}</span>
               <span className="font-bold text-muted-foreground">{data.tradeCount}</span>
             </div>
           </div>
@@ -85,13 +87,13 @@ export default function TimeOfDayPerformanceChart({ trades }: { trades: TradeLik
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">Time of Day Performance</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('pnlTime.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>Average PnL by entry hour (UTC). Bar intensity reflects trade count.</p>
+                <p>{t('pnlTime.description')}</p>
               </PopoverContent>
             </Popover>
           </div>
