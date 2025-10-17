@@ -19,9 +19,9 @@ export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl:
     const beRate = nbTrades ? (nbBe / nbTrades) * 100 : 0
 
     return [
-      { name: `Win (${nbWin}/${nbTrades})`, value: winRate, color: 'hsl(var(--success))', count: nbWin },
-      { name: `Breakeven (${nbBe}/${nbTrades})`, value: beRate, color: 'hsl(var(--muted-foreground))', count: nbBe },
-      { name: `Loss (${nbLoss}/${nbTrades})`, value: lossRate, color: 'hsl(var(--destructive))', count: nbLoss },
+      { name: `Win (${nbWin}/${nbTrades})`, value: winRate, color: 'hsl(var(--chart-3))', count: nbWin },
+      { name: `Breakeven (${nbBe}/${nbTrades})`, value: beRate, color: 'hsl(var(--chart-5) / 0.6)', count: nbBe },
+      { name: `Loss (${nbLoss}/${nbTrades})`, value: lossRate, color: 'hsl(var(--chart-1))', count: nbLoss },
     ]
   }, [trades])
 
@@ -75,8 +75,9 @@ export default function TradeDistributionChartEmbed({ trades }: { trades: { pnl:
               <Tooltip wrapperStyle={{ fontSize: '12px', zIndex: 1000 }} contentStyle={{
                 background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
                 borderColor: 'hsl(var(--embed-tooltip-border, var(--border)))',
-                borderRadius: 'var(--embed-tooltip-radius, 0.5rem)'
-              }} formatter={(value: any, name: string) => [
+                borderRadius: 'var(--embed-tooltip-radius, 0.5rem)',
+                color: 'hsl(var(--foreground))'
+              }} itemStyle={{ color: 'hsl(var(--foreground))' }} labelStyle={{ color: 'hsl(var(--muted-foreground))' }} formatter={(value: any, name: string) => [
                 `${Number(value).toFixed(1)}%`,
                 name,
               ]} />
