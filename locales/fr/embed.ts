@@ -1,0 +1,101 @@
+export default {
+  embed: {
+    charts: {
+      timeRangePerformance: 'Performance par intervalle de temps',
+      dailyPnl: 'PnL quotidien',
+      timeOfDay: 'Performance par heure de la journée',
+      timeInPosition: 'Temps en position',
+      pnlBySide: 'PnL par direction',
+      tradeDistribution: 'Distribution des trades',
+      weekdayPnl: 'PnL par jour de la semaine',
+      pnlPerContract: 'PnL par contrat',
+      pnlPerContractDaily: 'PnL par contrat (quotidien)',
+      tickDistribution: 'Distribution des ticks',
+      commissionsPnl: 'PnL des commissions',
+      contractQuantity: 'Quantité de contrats',
+    },
+
+    descriptions: {
+      timeRangePerformance:
+        'Affiche le PnL moyen et le taux de réussite des trades regroupés par temps en position',
+      pnlBySide:
+        'Compare la performance des positions longues vs courtes. Bascule moyenne/total.',
+      dailyPnl:
+        'PnL total quotidien agrégé à partir des trades. L’infobulle affiche le nombre de longs/courts.',
+      timeOfDay:
+        'Répartition des performances selon les heures de la journée pour révéler les périodes optimales.',
+      timeInPosition:
+        'Durée pendant laquelle les positions sont généralement conservées avant d’être clôturées.',
+      tradeDistribution:
+        'Distribution des trades par PnL pour visualiser l’asymétrie et les queues.',
+      weekdayPnl:
+        'Performance moyenne par jour de la semaine pour identifier les schémas hebdomadaires.',
+      pnlPerContract:
+        'Performance regroupée par instrument/contrat pour comparer les avantages.',
+      pnlPerContractDaily:
+        'Répartition quotidienne du PnL par instrument/contrat sélectionné.',
+      tickDistribution:
+        'Histogramme du PnL en ticks pour analyser la dispersion des résultats.',
+      commissionsPnl:
+        'Impact des commissions sur le PnL afin de comprendre la rentabilité nette.',
+      contractQuantity:
+        'Répartition des tailles de position (quantité) sur l’ensemble des trades.',
+    },
+
+    labels: {
+      averagePnl: 'PnL moyen',
+      totalPnl: 'PnL total',
+      pnl: 'PnL',
+      timeRange: 'Intervalle de temps',
+      winRate: 'Taux de réussite',
+      totalTrades: 'Nombre total de trades',
+      trades: 'Trades',
+      date: 'Date',
+      long: 'Long',
+      short: 'Short',
+      longTrades: 'Trades longs',
+      shortTrades: 'Trades courts',
+      average: 'Moyenne',
+      total: 'Total',
+      instrument: 'Instrument',
+      quantity: 'Quantité',
+      commission: 'Commission',
+    },
+
+    actions: {
+      showTotal: 'Afficher le total',
+      showAverage: 'Afficher la moyenne',
+    },
+
+    tooltips: {
+      timeRangePerformance:
+        'Affiche le PnL moyen et le taux de réussite des trades regroupés par temps en position',
+      pnlBySide:
+        'Compare la performance des positions longues vs courtes. Bascule moyenne/total.',
+      dailyPnl:
+        'PnL total quotidien agrégé à partir des trades. L’infobulle affiche le nombre de longs/courts.',
+    },
+
+    timeRanges: {
+      under1min: '< 1m',
+      '1to5min': '1-5m',
+      '5to10min': '5-10m',
+      '10to15min': '10-15m',
+      '15to30min': '15-30m',
+      '30to60min': '30-60m',
+      '1to2hours': '1-2h',
+      '2to5hours': '2-5h',
+      over5hours: '> 5h',
+    },
+
+    toasts: {
+      noTradesProvided: 'Aucun trade fourni',
+      generatingRandomTrades: 'Génération de {count} trades aléatoires',
+      errorProcessingMessage: 'Erreur lors du traitement du message',
+    },
+
+    aria: {
+      clickToAddToSelection: 'Cliquez pour ajouter "{name}" à la sélection',
+    },
+  },
+}
