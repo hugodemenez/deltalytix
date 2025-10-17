@@ -8,7 +8,7 @@ import { User } from "@supabase/supabase-js"
 const MAINTENANCE_MODE = false
 
 const I18nMiddleware = createI18nMiddleware({
-  locales: ["en", "fr"],
+  locales: ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo"],
   defaultLocale: "en",
   urlMappingStrategy: "rewrite",
 })
