@@ -167,7 +167,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.14",
     "tw-animate-css": "latest",
-    "typescript": "^5"
+    "typescript": "5.9.3"
   },
   "overrides": {
     "react-is": "^19.0.0",

@@ -60,8 +60,19 @@ export default function TimeRangePerformanceChart({
   const [activeRange, setActiveRange] = React.useState<string | null>(null);
 
   const getTimeRangeLabel = React.useCallback((range: string): string => {
-    const key = `timeRangePerformance.ranges.${range}` as any;
-    return t(key);
+    // Map range keys to their translations
+    const rangeLabels: Record<string, string> = {
+      under1min: t('timeRangePerformance.ranges.under1min'),
+      '1to5min': t('timeRangePerformance.ranges.1to5min'),
+      '5to10min': t('timeRangePerformance.ranges.5to10min'),
+      '10to15min': t('timeRangePerformance.ranges.10to15min'),
+      '15to30min': t('timeRangePerformance.ranges.15to30min'),
+      '30to60min': t('timeRangePerformance.ranges.30to60min'),
+      '1to2hours': t('timeRangePerformance.ranges.1to2hours'),
+      '2to5hours': t('timeRangePerformance.ranges.2to5hours'),
+      over5hours: t('timeRangePerformance.ranges.over5hours'),
+    };
+    return rangeLabels[range] || range;
   }, [t]);
 
   const chartData = React.useMemo(() => {
