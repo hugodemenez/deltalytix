@@ -86,7 +86,7 @@ export const THEME_PRESETS: Record<string, EmbedThemeVars> = {
     '--ring': '210 90% 56%',
 
     // chart palette (ensure loss color is subtle red)
-    '--chart-1': '0 70% 60%', // subtle red for losses
+    '--chart-1': '0 70% 60%', 
     '--chart-2': '190 92% 45%', // cyan
     '--chart-3': '160 84% 40%', // green
     '--chart-4': '260 84% 60%', // violet
