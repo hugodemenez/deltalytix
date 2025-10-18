@@ -174,17 +174,24 @@ export default {
     },
 
     tradeDistribution: {
-      title: 'Trade Distribution',
-      description: 'Distribution of trades',
+      title: 'Pínpín iṣòwò',
+      description: 'Pínpín iṣòwò nípa èsì (bori/pàdánù/dọ́gba)',
       tooltip: {
-        type: 'Type',
-        percentage: 'Percentage',
+        type: 'Irú',
+        percentage: 'Ìdáméjì',
       },
+      winTrades: 'Àwọn iṣòwò tó bori',
+      lossTrades: 'Àwọn iṣòwò tó pàdánù',
+      breakevenTrades: 'Àwọn iṣòwò tó dọ́gba',
     },
 
     tickDistribution: {
-      title: 'Tick Distribution',
-      description: 'Distribution by ticks',
+      title: 'Pínpín tick',
+      description: 'Pínpín iṣòwò nípa iye tick',
+      tooltip: {
+        ticks: 'Ticks',
+        frequency: 'Ìgbà',
+      },
     },
 
     commissions: {
@@ -210,12 +217,16 @@ export default {
     },
 
     timeRangePerformance: {
-      title: 'Time Range Performance',
-      description: 'Performance by time range',
+      title: 'Ìṣiṣẹ́ àkókò',
+      description: 'Ìṣiṣẹ́ gẹ́gẹ́ bí àkókò',
       tooltip: {
-        timeRange: 'Time Range',
-        avgPnl: 'Average P/L',
-        winRate: 'Win Rate',
+        timeRange: 'Àkókò',
+        avgPnl: 'Àpapọ̀ P/L',
+        winRate: 'Oṣuwọ̀n ìbori',
+        trades: {
+          one: 'iṣòwò {count}',
+          other: 'àwọn iṣòwò {count}',
+        },
       },
       ranges: {
         under1min: '< 1m',

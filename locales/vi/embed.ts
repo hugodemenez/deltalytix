@@ -174,17 +174,24 @@ export default {
     },
 
     tradeDistribution: {
-      title: 'Trade Distribution',
-      description: 'Distribution of trades',
+      title: 'Phân bổ giao dịch',
+      description: 'Phân bổ giao dịch theo kết quả (thắng/thua/hòa)',
       tooltip: {
-        type: 'Type',
-        percentage: 'Percentage',
+        type: 'Loại',
+        percentage: 'Phần trăm',
       },
+      winTrades: 'Giao dịch thắng',
+      lossTrades: 'Giao dịch thua',
+      breakevenTrades: 'Giao dịch hòa',
     },
 
     tickDistribution: {
-      title: 'Tick Distribution',
-      description: 'Distribution by ticks',
+      title: 'Phân bổ tick',
+      description: 'Phân bổ giao dịch theo giá trị tick',
+      tooltip: {
+        ticks: 'Ticks',
+        frequency: 'Tần suất',
+      },
     },
 
     commissions: {
@@ -210,12 +217,16 @@ export default {
     },
 
     timeRangePerformance: {
-      title: 'Time Range Performance',
-      description: 'Performance by time range',
+      title: 'Hiệu suất theo khoảng thời gian',
+      description: 'Hiệu suất theo khoảng thời gian',
       tooltip: {
-        timeRange: 'Time Range',
-        avgPnl: 'Average P/L',
-        winRate: 'Win Rate',
+        timeRange: 'Khoảng thời gian',
+        avgPnl: 'P/L trung bình',
+        winRate: 'Tỷ lệ thắng',
+        trades: {
+          one: '{count} giao dịch',
+          other: '{count} giao dịch',
+        },
       },
       ranges: {
         under1min: '< 1m',

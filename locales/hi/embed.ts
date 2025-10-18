@@ -174,17 +174,24 @@ export default {
     },
 
     tradeDistribution: {
-      title: 'Trade Distribution',
-      description: 'Distribution of trades',
+      title: 'ट्रेड वितरण',
+      description: 'परिणाम के आधार पर ट्रेडों का वितरण (जीत/हार/बराबर)',
       tooltip: {
-        type: 'Type',
-        percentage: 'Percentage',
+        type: 'प्रकार',
+        percentage: 'प्रतिशत',
       },
+      winTrades: 'जीतने वाले ट्रेड',
+      lossTrades: 'हारने वाले ट्रेड',
+      breakevenTrades: 'बराबर ट्रेड',
     },
 
     tickDistribution: {
-      title: 'Tick Distribution',
-      description: 'Distribution by ticks',
+      title: 'टिक वितरण',
+      description: 'टिक मूल्य के आधार पर ट्रेडों का वितरण',
+      tooltip: {
+        ticks: 'टिक्स',
+        frequency: 'आवृत्ति',
+      },
     },
 
     commissions: {
@@ -210,12 +217,16 @@ export default {
     },
 
     timeRangePerformance: {
-      title: 'Time Range Performance',
-      description: 'Performance by time range',
+      title: 'समय सीमा प्रदर्शन',
+      description: 'समय सीमा के अनुसार प्रदर्शन',
       tooltip: {
-        timeRange: 'Time Range',
-        avgPnl: 'Average P/L',
-        winRate: 'Win Rate',
+        timeRange: 'समय सीमा',
+        avgPnl: 'औसत P/L',
+        winRate: 'जीत दर',
+        trades: {
+          one: '{count} ट्रेड',
+          other: '{count} ट्रेड',
+        },
       },
       ranges: {
         under1min: '< 1m',

@@ -174,17 +174,24 @@ export default {
     },
 
     tradeDistribution: {
-      title: 'Trade Distribution',
-      description: 'Distribution of trades',
+      title: '交易分布',
+      description: '按结果（盈利/亏损/持平）的交易分布',
       tooltip: {
-        type: 'Type',
-        percentage: 'Percentage',
+        type: '类型',
+        percentage: '百分比',
       },
+      winTrades: '盈利交易',
+      lossTrades: '亏损交易',
+      breakevenTrades: '持平交易',
     },
 
     tickDistribution: {
-      title: 'Tick Distribution',
-      description: 'Distribution by ticks',
+      title: '跳动点分布',
+      description: '按跳动点值的交易分布',
+      tooltip: {
+        ticks: '跳动点',
+        frequency: '频率',
+      },
     },
 
     commissions: {
@@ -210,12 +217,16 @@ export default {
     },
 
     timeRangePerformance: {
-      title: 'Time Range Performance',
-      description: 'Performance by time range',
+      title: '时间范围表现',
+      description: '按时间范围的表现',
       tooltip: {
-        timeRange: 'Time Range',
-        avgPnl: 'Average P/L',
-        winRate: 'Win Rate',
+        timeRange: '时间范围',
+        avgPnl: '平均盈亏',
+        winRate: '胜率',
+        trades: {
+          one: '{count}笔交易',
+          other: '{count}笔交易',
+        },
       },
       ranges: {
         under1min: '< 1m',

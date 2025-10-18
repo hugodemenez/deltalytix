@@ -174,17 +174,24 @@ export default {
     },
 
     tradeDistribution: {
-      title: 'Trade Distribution',
-      description: 'Distribution of trades',
+      title: '取引分布',
+      description: '結果別の取引分布（勝/負/引き分け）',
       tooltip: {
-        type: 'Type',
-        percentage: 'Percentage',
+        type: 'タイプ',
+        percentage: 'パーセンテージ',
       },
+      winTrades: '勝ちトレード',
+      lossTrades: '負けトレード',
+      breakevenTrades: '引き分けトレード',
     },
 
     tickDistribution: {
-      title: 'Tick Distribution',
-      description: 'Distribution by ticks',
+      title: 'ティック分布',
+      description: 'ティック値による取引分布',
+      tooltip: {
+        ticks: 'ティック',
+        frequency: '頻度',
+      },
     },
 
     commissions: {
@@ -210,12 +217,16 @@ export default {
     },
 
     timeRangePerformance: {
-      title: 'Time Range Performance',
-      description: 'Performance by time range',
+      title: '時間範囲パフォーマンス',
+      description: '時間範囲別のパフォーマンス',
       tooltip: {
-        timeRange: 'Time Range',
-        avgPnl: 'Average P/L',
-        winRate: 'Win Rate',
+        timeRange: '時間範囲',
+        avgPnl: '平均P/L',
+        winRate: '勝率',
+        trades: {
+          one: '{count}取引',
+          other: '{count}取引',
+        },
       },
       ranges: {
         under1min: '< 1m',

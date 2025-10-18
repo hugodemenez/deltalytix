@@ -174,17 +174,24 @@ export default {
     },
 
     tradeDistribution: {
-      title: 'Trade Distribution',
-      description: 'Distribution of trades',
+      title: 'Trade-Verteilung',
+      description: 'Verteilung der Trades nach Ergebnis (Gewinn/Verlust/Ausgeglichen)',
       tooltip: {
-        type: 'Type',
-        percentage: 'Percentage',
+        type: 'Typ',
+        percentage: 'Prozentsatz',
       },
+      winTrades: 'Gewinn-Trades',
+      lossTrades: 'Verlust-Trades',
+      breakevenTrades: 'Ausgeglichene Trades',
     },
 
     tickDistribution: {
-      title: 'Tick Distribution',
-      description: 'Distribution by ticks',
+      title: 'Tick-Verteilung',
+      description: 'Verteilung der Trades nach Tick-Wert',
+      tooltip: {
+        ticks: 'Ticks',
+        frequency: 'Häufigkeit',
+      },
     },
 
     commissions: {
@@ -210,12 +217,16 @@ export default {
     },
 
     timeRangePerformance: {
-      title: 'Time Range Performance',
-      description: 'Performance by time range',
+      title: 'Zeitbereichsleistung',
+      description: 'Leistung nach Zeitbereich',
       tooltip: {
-        timeRange: 'Time Range',
-        avgPnl: 'Average P/L',
-        winRate: 'Win Rate',
+        timeRange: 'Zeitbereich',
+        avgPnl: 'Durchschnittlicher P/L',
+        winRate: 'Gewinnrate',
+        trades: {
+          one: '{count} Trade',
+          other: '{count} Trades',
+        },
       },
       ranges: {
         under1min: '< 1m',
