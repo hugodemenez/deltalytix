@@ -27,7 +27,6 @@ export default {
     },
     clearFilter: 'Xóa bộ lọc'
   },
-}
   'commissions.title': 'P&L vs Hoa Hồng',
   'commissions.tooltip.description': 'Phân bổ lợi nhuận/thua lỗ ròng so với hoa hồng đã trả',
   'commissions.tooltip.type': 'Loại',
