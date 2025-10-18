@@ -21,6 +21,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { themeVarsToStyle, type EmbedThemeVars } from "../theme";
+import { useI18n } from "@/locales/client";
 
 function getTimeRangeKey(timeInPosition: number): string {
   const minutes = timeInPosition / 60; // Convert seconds to minutes
@@ -33,21 +34,6 @@ function getTimeRangeKey(timeInPosition: number): string {
   if (minutes >= 60 && minutes < 120) return "1to2hours";
   if (minutes >= 120 && minutes < 300) return "2to5hours";
   return "over5hours";
-}
-
-function getTimeRangeLabel(range: string): string {
-  const labels: Record<string, string> = {
-    under1min: "< 1m",
-    "1to5min": "1-5m",
-    "5to10min": "5-10m",
-    "10to15min": "10-15m",
-    "15to30min": "15-30m",
-    "30to60min": "30-60m",
-    "1to2hours": "1-2h",
-    "2to5hours": "2-5h",
-    over5hours: "> 5h",
-  };
-  return labels[range] || range;
 }
 
 function getColorByWinRate(winRate: number): string {
@@ -70,7 +56,13 @@ export default function TimeRangePerformanceChart({
   trades: { pnl: number; timeInPosition: number }[];
   theme?: EmbedThemeVars;
 }) {
+  const t = useI18n();
   const [activeRange, setActiveRange] = React.useState<string | null>(null);
+
+  const getTimeRangeLabel = React.useCallback((range: string): string => {
+    const key = `timeRangePerformance.ranges.${range}` as any;
+    return t(key);
+  }, [t]);
 
   const chartData = React.useMemo(() => {
     const timeRangeData: Record<
@@ -140,7 +132,7 @@ export default function TimeRangePerformanceChart({
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Time Range
+                {t('timeRangePerformance.tooltip.timeRange')}
               </span>
               <span className="font-bold text-muted-foreground">
                 {getTimeRangeLabel(label)}
@@ -148,13 +140,13 @@ export default function TimeRangePerformanceChart({
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Average PnL
+                {t('timeRangePerformance.tooltip.avgPnl')}
               </span>
               <span className="font-bold">${data.avgPnl.toFixed(2)}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Win Rate
+                {t('timeRangePerformance.tooltip.winRate')}
               </span>
               <span className="font-bold" style={{ color: data.color }}>
                 {data.winRate.toFixed(1)}%
@@ -162,7 +154,7 @@ export default function TimeRangePerformanceChart({
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Total Trades
+                {data.trades === 1 ? t('timeRangePerformance.tooltip.trades.one', { count: data.trades }) : t('timeRangePerformance.tooltip.trades.other', { count: data.trades })}
               </span>
               <span className="font-bold text-muted-foreground">
                 {data.trades}
@@ -181,7 +173,7 @@ export default function TimeRangePerformanceChart({
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
             <CardTitle className="line-clamp-1 text-base">
-              Time Range Performance
+              {t('timeRangePerformance.title')}
             </CardTitle>
             <Popover>
               <PopoverTrigger asChild>
@@ -189,8 +181,7 @@ export default function TimeRangePerformanceChart({
               </PopoverTrigger>
               <PopoverContent side="top">
                 <p>
-                  Shows average PnL and win rate for trades grouped by time in
-                  position
+                  {t('timeRangePerformance.description')}
                 </p>
               </PopoverContent>
             </Popover>
