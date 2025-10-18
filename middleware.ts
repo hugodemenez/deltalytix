@@ -136,7 +136,9 @@ export default async function middleware(req: NextRequest) {
       "https://beta.deltalytix.app", // Beta subdomain
       "http://localhost:*", // For local testing
       "http://127.0.0.1:*",  // For local testing
-      "file:" // For local HTML file testing (may be ignored by some browsers)
+      "file:", // For local HTML file testing (may be ignored by some browsers)
+      "https://thortradecopier.com",
+      "https://app.thortradecopier.com",
     ].join(" ");
     
     response.headers.set('Content-Security-Policy',
