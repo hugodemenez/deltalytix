@@ -53,7 +53,7 @@ export default function TimeRangePerformanceChart({
   trades,
   theme,
 }: {
-  trades: { pnl: number; timeInPosition: number }[];
+  trades: { pnl: number; timeInPosition: number; commission?: number }[];
   theme?: EmbedThemeVars;
 }) {
   const t = useI18n();
@@ -101,9 +101,9 @@ export default function TimeRangePerformanceChart({
 
     trades.forEach((trade) => {
       const timeRange = getTimeRangeKey(trade.timeInPosition);
-      timeRangeData[timeRange].totalPnl += trade.pnl;
+      timeRangeData[timeRange].totalPnl += trade.pnl - (trade.commission || 0);
       timeRangeData[timeRange].totalTrades++;
-      if (trade.pnl > 0) {
+      if (trade.pnl - (trade.commission || 0) > 0) {
         timeRangeData[timeRange].winCount++;
       } else {
         timeRangeData[timeRange].lossCount++;
@@ -168,7 +168,9 @@ export default function TimeRangePerformanceChart({
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('embed.timeRangePerformance.tooltip.trades', { count: data.trades })}
+                {t("embed.timeRangePerformance.tooltip.trades", {
+                  count: data.trades,
+                })}
               </span>
               <span className="font-bold text-muted-foreground">
                 {data.trades}
