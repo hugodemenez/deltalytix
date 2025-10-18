@@ -13,6 +13,16 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
   const t = useI18n()
   const [activeDay, setActiveDay] = React.useState<number | null>(null)
 
+  const dayAbbreviations = React.useMemo(() => [
+    t('calendar.weekdays.sun'),
+    t('calendar.weekdays.mon'),
+    t('calendar.weekdays.tue'),
+    t('calendar.weekdays.wed'),
+    t('calendar.weekdays.thu'),
+    t('calendar.weekdays.fri'),
+    t('calendar.weekdays.sat')
+  ], [t])
+
   const weekdayData = React.useMemo(() => {
     const totals: Record<number, { total: number, count: number }> = Object.fromEntries(days.map(d => [d, { total: 0, count: 0 }])) as any
     trades.forEach(t => {
@@ -44,15 +54,6 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
 
     if (active && payload && payload.length) {
       const data = payload[0].payload
-      const dayNames = [
-        t('calendar.weekdays.sun'),
-        t('calendar.weekdays.mon'),
-        t('calendar.weekdays.tue'),
-        t('calendar.weekdays.wed'),
-        t('calendar.weekdays.thu'),
-        t('calendar.weekdays.fri'),
-        t('calendar.weekdays.sat')
-      ]
       return (
         <div className="rounded-lg border bg-background p-2 shadow-xs" style={{
           background: 'hsl(var(--embed-tooltip-bg, var(--background)))',
@@ -62,7 +63,7 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">{t('weekdayPnl.tooltip.day')}</span>
-              <span className="font-bold text-muted-foreground">{dayNames[label]}</span>
+              <span className="font-bold text-muted-foreground">{dayAbbreviations[label]}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">{t('weekdayPnl.tooltip.averagePnl')}</span>
@@ -108,7 +109,7 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
                 height={24}
                 tickMargin={8}
                 tick={{ fontSize: 11, fill: 'currentColor' }}
-                tickFormatter={(v) => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][v]}
+                tickFormatter={(v) => dayAbbreviations[v]}
               />
               <YAxis
                 tickLine={false}
