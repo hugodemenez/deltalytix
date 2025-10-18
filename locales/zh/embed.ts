@@ -95,5 +95,155 @@ export default {
     aria: {
       clickToAddToSelection: '点击将"{name}"添加到选择',
     },
+    // Component-specific translations
+    pnl: {
+      title: '每日盈亏',
+      description: '显示一段时间内的每日盈亏',
+      tooltip: {
+        date: '日期',
+        pnl: 'P/L',
+        longTrades: '做多交易',
+        shortTrades: '做空交易',
+      },
+    },
+
+    pnlBySide: {
+      title: '按方向分类的盈亏',
+      description: '做多与做空交易之间的利润/亏损比较',
+      tooltip: {
+        averageTotal: '平均盈亏',
+        winRate: '胜率',
+        trades: '交易',
+      },
+      toggle: {
+        showAverage: '显示平均值',
+      },
+    },
+
+    pnlPerContract: {
+      title: '每份合约平均净盈亏',
+      description: '按交易工具每份合约的平均净利润/亏损（扣除佣金后）',
+      tooltip: {
+        averagePnl: '每份合约平均净盈亏',
+        totalPnl: '总净盈亏',
+        trades: '交易',
+        totalContracts: '总合约数',
+      },
+    },
+
+    pnlPerContractDaily: {
+      title: '每份合约每日平均净盈亏',
+      description: '所选工具每天每份合约的平均净利润/亏损（扣除佣金后）',
+      tooltip: {
+        date: '日期',
+        averagePnl: '每份合约平均净盈亏',
+        totalPnl: '总净盈亏',
+        trades: '交易',
+        totalContracts: '总合约数',
+      },
+    },
+
+    pnlTime: {
+      title: '按小时平均盈亏',
+      description: '一天中每小时的平均利润/亏损',
+      tooltip: {
+        time: '时间',
+        averagePnl: '平均盈亏',
+        trades: '交易',
+      },
+    },
+
+    timeInPosition: {
+      title: '持仓平均时间',
+      description: '一天中每小时的平均持仓时间',
+      tooltip: {
+        time: '时间',
+        averageDuration: '平均持续时间',
+        trades: '交易',
+      },
+    },
+
+    weekdayPnl: {
+      title: '按星期平均盈亏',
+      description: '一周中每天的平均利润/亏损',
+      tooltip: {
+        day: '星期',
+        averagePnl: '平均盈亏',
+        trades: '交易',
+      },
+    },
+
+    tradeDistribution: {
+      title: 'Trade Distribution',
+      description: 'Distribution of trades',
+      tooltip: {
+        type: 'Type',
+        percentage: 'Percentage',
+      },
+    },
+
+    tickDistribution: {
+      title: 'Tick Distribution',
+      description: 'Distribution by ticks',
+    },
+
+    commissions: {
+      title: '盈亏 vs 佣金',
+      tooltip: {
+        description: '净利润/亏损与支付佣金的分布',
+        percentage: '百分比',
+      },
+      legend: {
+        netPnl: '净盈亏',
+        commissions: '佣金',
+      },
+    },
+
+    contracts: {
+      title: '合约总数',
+      description: '显示一天中每小时交易的合约总数。较深的条形表示更多交易。',
+      tooltip: {
+        hour: 'h',
+        totalContracts: '总合约数',
+        numberOfTrades: '交易数量',
+      },
+    },
+
+    timeRangePerformance: {
+      title: 'Time Range Performance',
+      description: 'Performance by time range',
+      tooltip: {
+        timeRange: 'Time Range',
+        avgPnl: 'Average P/L',
+        winRate: 'Win Rate',
+      },
+      ranges: {
+        under1min: '< 1m',
+        '1to5min': '1-5m',
+        '5to10min': '5-10m',
+        '10to15min': '10-15m',
+        '15to30min': '15-30m',
+        '30to60min': '30-60m',
+        '1to2hours': '1-2h',
+        '2to5hours': '2-5h',
+        over5hours: '> 5h',
+      },
+    },
+
+    calendar: {
+      weekdays: {
+        sun: '周日',
+        mon: '周一',
+        tue: '周二',
+        wed: '周三',
+        thu: '周四',
+        fri: '周五',
+        sat: '周六',
+      },
+      charts: {
+        trades: '交易',
+      },
+    },
+
   },
 }

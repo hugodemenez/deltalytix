@@ -95,5 +95,155 @@ export default {
     aria: {
       clickToAddToSelection: '"{name}"を選択に追加するにはクリックしてください',
     },
+    // Component-specific translations
+    pnl: {
+      title: '日次損益',
+      description: '時系列での日次P&Lを表示',
+      tooltip: {
+        date: '日付',
+        pnl: 'P/L',
+        longTrades: 'ロング取引',
+        shortTrades: 'ショート取引',
+      },
+    },
+
+    pnlBySide: {
+      title: 'ロング/ショート別P&L',
+      description: 'ロングとショートの取引間の利益/損失の比較',
+      tooltip: {
+        averageTotal: '平均P&L',
+        winRate: '勝率',
+        trades: '取引',
+      },
+      toggle: {
+        showAverage: '平均を表示',
+      },
+    },
+
+    pnlPerContract: {
+      title: '契約あたり平均純P&L',
+      description: '取引銘柄別の契約あたり平均純利益/損失（手数料控除後）',
+      tooltip: {
+        averagePnl: '契約あたり平均純P&L',
+        totalPnl: '総純P&L',
+        trades: '取引',
+        totalContracts: '総契約数',
+      },
+    },
+
+    pnlPerContractDaily: {
+      title: '契約あたり日次平均純P&L',
+      description: '選択した銘柄の1日あたり契約あたり平均純利益/損失（手数料控除後）',
+      tooltip: {
+        date: '日付',
+        averagePnl: '契約あたり平均純P&L',
+        totalPnl: '総純P&L',
+        trades: '取引',
+        totalContracts: '総契約数',
+      },
+    },
+
+    pnlTime: {
+      title: '時間別平均P&L',
+      description: '一日の各時間帯における平均利益/損失',
+      tooltip: {
+        time: '時間',
+        averagePnl: '平均P&L',
+        trades: '取引',
+      },
+    },
+
+    timeInPosition: {
+      title: 'ポジション保有時間の平均',
+      description: '一日の各時間帯におけるポジション保有時間の平均',
+      tooltip: {
+        time: '時間',
+        averageDuration: '平均期間',
+        trades: '取引',
+      },
+    },
+
+    weekdayPnl: {
+      title: '曜日別平均P&L',
+      description: '週の各曜日における平均利益/損失',
+      tooltip: {
+        day: '曜日',
+        averagePnl: '平均P&L',
+        trades: '取引',
+      },
+    },
+
+    tradeDistribution: {
+      title: 'Trade Distribution',
+      description: 'Distribution of trades',
+      tooltip: {
+        type: 'Type',
+        percentage: 'Percentage',
+      },
+    },
+
+    tickDistribution: {
+      title: 'Tick Distribution',
+      description: 'Distribution by ticks',
+    },
+
+    commissions: {
+      title: 'P&L vs 手数料',
+      tooltip: {
+        description: '純利益/損失と支払った手数料の分布',
+        percentage: '割合',
+      },
+      legend: {
+        netPnl: '純P&L',
+        commissions: '手数料',
+      },
+    },
+
+    contracts: {
+      title: '契約の総数',
+      description: '一日の各時間帯における取引された契約の総数を表示。暗いバーはより多くの取引を示します。',
+      tooltip: {
+        hour: 'h',
+        totalContracts: '総契約数',
+        numberOfTrades: '取引数',
+      },
+    },
+
+    timeRangePerformance: {
+      title: 'Time Range Performance',
+      description: 'Performance by time range',
+      tooltip: {
+        timeRange: 'Time Range',
+        avgPnl: 'Average P/L',
+        winRate: 'Win Rate',
+      },
+      ranges: {
+        under1min: '< 1m',
+        '1to5min': '1-5m',
+        '5to10min': '5-10m',
+        '10to15min': '10-15m',
+        '15to30min': '15-30m',
+        '30to60min': '30-60m',
+        '1to2hours': '1-2h',
+        '2to5hours': '2-5h',
+        over5hours: '> 5h',
+      },
+    },
+
+    calendar: {
+      weekdays: {
+        sun: '日',
+        mon: '月',
+        tue: '火',
+        wed: '水',
+        thu: '木',
+        fri: '金',
+        sat: '土',
+      },
+      charts: {
+        trades: '取引',
+      },
+    },
+
   },
 }

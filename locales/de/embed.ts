@@ -95,5 +95,155 @@ export default {
     aria: {
       clickToAddToSelection: 'Klicken, um "{name}" zur Auswahl hinzuzufügen',
     },
+    // Component-specific translations
+    pnl: {
+      title: 'Täglicher Gewinn/Verlust',
+      description: 'Anzeige des täglichen P&L im Zeitverlauf',
+      tooltip: {
+        date: 'Datum',
+        pnl: 'P/L',
+        longTrades: 'Long-Trades',
+        shortTrades: 'Short-Trades',
+      },
+    },
+
+    pnlBySide: {
+      title: 'P&L nach Richtung',
+      description: 'Gewinn/Verlust-Vergleich zwischen Long- und Short-Trades',
+      tooltip: {
+        averageTotal: 'Durchschn. P&L',
+        winRate: 'Gewinnrate',
+        trades: 'Trades',
+      },
+      toggle: {
+        showAverage: 'Durchschnitt anzeigen',
+      },
+    },
+
+    pnlPerContract: {
+      title: 'Durchschn. Netto P&L pro Kontrakt',
+      description: 'Durchschnittlicher Nettogewinn/-verlust pro Kontrakt nach Handelsinstrument (nach Provisionen)',
+      tooltip: {
+        averagePnl: 'Durchschn. Netto P&L pro Kontrakt',
+        totalPnl: 'Gesamt Netto P&L',
+        trades: 'Trades',
+        totalContracts: 'Gesamte Kontrakte',
+      },
+    },
+
+    pnlPerContractDaily: {
+      title: 'Tägl. Durchschn. Netto P&L pro Kontrakt',
+      description: 'Durchschnittlicher Nettogewinn/-verlust pro Kontrakt pro Tag für ausgewähltes Instrument (nach Provisionen)',
+      tooltip: {
+        date: 'Datum',
+        averagePnl: 'Durchschn. Netto P&L pro Kontrakt',
+        totalPnl: 'Gesamt Netto P&L',
+        trades: 'Trades',
+        totalContracts: 'Gesamte Kontrakte',
+      },
+    },
+
+    pnlTime: {
+      title: 'Durchschnittlicher P&L nach Stunde',
+      description: 'Durchschnittlicher Gewinn/Verlust für jede Stunde des Tages',
+      tooltip: {
+        time: 'Uhrzeit',
+        averagePnl: 'Durchschnittlicher P&L',
+        trades: 'Trades',
+      },
+    },
+
+    timeInPosition: {
+      title: 'Durchschnittliche Zeit in Position',
+      description: 'Durchschnittliche Zeit in Position für jede Stunde des Tages',
+      tooltip: {
+        time: 'Uhrzeit',
+        averageDuration: 'Durchschnittliche Dauer',
+        trades: 'Trades',
+      },
+    },
+
+    weekdayPnl: {
+      title: 'Durchschnittlicher P&L nach Tag',
+      description: 'Durchschnittlicher Gewinn/Verlust für jeden Wochentag',
+      tooltip: {
+        day: 'Tag',
+        averagePnl: 'Durchschnittlicher P&L',
+        trades: 'Trades',
+      },
+    },
+
+    tradeDistribution: {
+      title: 'Trade Distribution',
+      description: 'Distribution of trades',
+      tooltip: {
+        type: 'Type',
+        percentage: 'Percentage',
+      },
+    },
+
+    tickDistribution: {
+      title: 'Tick Distribution',
+      description: 'Distribution by ticks',
+    },
+
+    commissions: {
+      title: 'P&L vs Provisionen',
+      tooltip: {
+        description: 'Verteilung von Nettogewinn/-verlust vs gezahlte Provisionen',
+        percentage: 'Prozentsatz',
+      },
+      legend: {
+        netPnl: 'Netto P&L',
+        commissions: 'Provisionen',
+      },
+    },
+
+    contracts: {
+      title: 'Gesamtzahl der Kontrakte',
+      description: 'Zeigt die Gesamtzahl der gehandelten Kontrakte für jede Stunde des Tages. Dunklere Balken zeigen mehr Trades an.',
+      tooltip: {
+        hour: 'h',
+        totalContracts: 'Gesamte Kontrakte',
+        numberOfTrades: 'Anzahl der Trades',
+      },
+    },
+
+    timeRangePerformance: {
+      title: 'Time Range Performance',
+      description: 'Performance by time range',
+      tooltip: {
+        timeRange: 'Time Range',
+        avgPnl: 'Average P/L',
+        winRate: 'Win Rate',
+      },
+      ranges: {
+        under1min: '< 1m',
+        '1to5min': '1-5m',
+        '5to10min': '5-10m',
+        '10to15min': '10-15m',
+        '15to30min': '15-30m',
+        '30to60min': '30-60m',
+        '1to2hours': '1-2h',
+        '2to5hours': '2-5h',
+        over5hours: '> 5h',
+      },
+    },
+
+    calendar: {
+      weekdays: {
+        sun: 'So',
+        mon: 'Mo',
+        tue: 'Di',
+        wed: 'Mi',
+        thu: 'Do',
+        fri: 'Fr',
+        sat: 'Sa',
+      },
+      charts: {
+        trades: 'Trades',
+      },
+    },
+
   },
 }

@@ -97,5 +97,155 @@ export default {
     aria: {
       clickToAddToSelection: 'Cliquez pour ajouter "{name}" à la sélection',
     },
+    // Component-specific translations
+    pnl: {
+      title: 'Profits et Pertes Quotidiens',
+      description: 'Affichage des P&L quotidiens dans le temps',
+      tooltip: {
+        date: 'Date',
+        pnl: 'P/L',
+        longTrades: 'Trades Long',
+        shortTrades: 'Trades Short',
+      },
+    },
+
+    pnlBySide: {
+      title: 'P&L par Direction',
+      description: 'Comparaison des profits et pertes entre les trades long et short',
+      tooltip: {
+        averageTotal: 'P&L Moyen',
+        winRate: 'Taux de Réussite',
+        trades: 'Trades',
+      },
+      toggle: {
+        showAverage: 'Afficher la Moyenne',
+      },
+    },
+
+    pnlPerContract: {
+      title: 'P&L Net Moyen par Contrat',
+      description: 'Profit/perte net moyen par contrat par instrument de trading (après commissions)',
+      tooltip: {
+        averagePnl: 'P&L Net Moyen par Contrat',
+        totalPnl: 'P&L Net Total',
+        trades: 'Trades',
+        totalContracts: 'Total des Contrats',
+      },
+    },
+
+    pnlPerContractDaily: {
+      title: 'P&L Net moyen par contrat par jour',
+      description: 'Profit/perte net moyen par contrat par jour pour l\',
+      tooltip: {
+        date: 'Date',
+        averagePnl: 'P&L Net moyen par contrat',
+        totalPnl: 'P&L Net total',
+        trades: 'Trades',
+        totalContracts: 'Total des contrats',
+      },
+    },
+
+    pnlTime: {
+      title: 'P&L moyen par heure',
+      description: 'Profits et pertes moyens pour chaque heure de la journée',
+      tooltip: {
+        time: 'Heure',
+        averagePnl: 'P&L Moyen',
+        trades: 'Trades',
+      },
+    },
+
+    timeInPosition: {
+      title: 'Temps Moyen en Position',
+      description: 'Temps moyen en position pour chaque heure de la journée',
+      tooltip: {
+        time: 'Heure',
+        averageDuration: 'Durée Moyenne',
+        trades: 'Trades',
+      },
+    },
+
+    weekdayPnl: {
+      title: 'P&L Moyen par Jour',
+      description: 'Profits et pertes moyens pour chaque jour de la semaine',
+      tooltip: {
+        day: 'Jour',
+        averagePnl: 'P&L Moyen',
+        trades: 'Trades',
+      },
+    },
+
+    tradeDistribution: {
+      title: 'Trade Distribution',
+      description: 'Distribution of trades',
+      tooltip: {
+        type: 'Type',
+        percentage: 'Percentage',
+      },
+    },
+
+    tickDistribution: {
+      title: 'Distribution des ticks',
+      description: 'Visualisez la distribution de vos trades par ticks',
+    },
+
+    commissions: {
+      title: 'P&L vs Commissions',
+      tooltip: {
+        description: 'Distribution des profits/pertes nets par rapport aux commissions payées',
+        percentage: 'Pourcentage',
+      },
+      legend: {
+        netPnl: 'P&L Net',
+        commissions: 'Commissions',
+      },
+    },
+
+    contracts: {
+      title: 'Nombre Total de Contrats',
+      description: 'Affichage du nombre total de contrats tradés pour chaque heure de la journée. Les barres plus foncées indiquent plus de trades.',
+      tooltip: {
+        hour: 'h',
+        totalContracts: 'Total des Contrats',
+        numberOfTrades: 'Nombre de Trades',
+      },
+    },
+
+    timeRangePerformance: {
+      title: 'Time Range Performance',
+      description: 'Performance by time range',
+      tooltip: {
+        timeRange: 'Time Range',
+        avgPnl: 'Average P/L',
+        winRate: 'Win Rate',
+      },
+      ranges: {
+        under1min: '< 1m',
+        '1to5min': '1-5m',
+        '5to10min': '5-10m',
+        '10to15min': '10-15m',
+        '15to30min': '15-30m',
+        '30to60min': '30-60m',
+        '1to2hours': '1-2h',
+        '2to5hours': '2-5h',
+        over5hours: '> 5h',
+      },
+    },
+
+    calendar: {
+      weekdays: {
+        sun: 'Dim',
+        mon: 'Lun',
+        tue: 'Mar',
+        wed: 'Mer',
+        thu: 'Jeu',
+        fri: 'Ven',
+        sat: 'Sam',
+      },
+      charts: {
+        trades: 'trades',
+      },
+    },
+
   },
 }

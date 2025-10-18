@@ -95,5 +95,155 @@ export default {
     aria: {
       clickToAddToSelection: 'Clique para adicionar "{name}" à seleção',
     },
+    // Component-specific translations
+    pnl: {
+      title: 'Lucro/prejuízo diário',
+      description: 'Exibindo P&L diário ao longo do tempo',
+      tooltip: {
+        date: 'Data',
+        pnl: 'P/L',
+        longTrades: 'Operações long',
+        shortTrades: 'Operações short',
+      },
+    },
+
+    pnlBySide: {
+      title: 'P&L por Direção',
+      description: 'Comparação de lucro/prejuízo entre operações long e short',
+      tooltip: {
+        averageTotal: 'P&L Médio',
+        winRate: 'Taxa de Vitória',
+        trades: 'Operações',
+      },
+      toggle: {
+        showAverage: 'Mostrar Média',
+      },
+    },
+
+    pnlPerContract: {
+      title: 'P&L Líquido Médio por Contrato',
+      description: 'Lucro/prejuízo líquido médio por contrato por instrumento de trading (após comissões)',
+      tooltip: {
+        averagePnl: 'P&L Líquido Médio por Contrato',
+        totalPnl: 'P&L Líquido Total',
+        trades: 'Operações',
+        totalContracts: 'Contratos Totais',
+      },
+    },
+
+    pnlPerContractDaily: {
+      title: 'P&L Líquido Médio Diário por Contrato',
+      description: 'Lucro/prejuízo líquido médio por contrato por dia para instrumento selecionado (após comissões)',
+      tooltip: {
+        date: 'Data',
+        averagePnl: 'P&L Líquido Médio por Contrato',
+        totalPnl: 'P&L Líquido Total',
+        trades: 'Operações',
+        totalContracts: 'Contratos Totais',
+      },
+    },
+
+    pnlTime: {
+      title: 'P&L médio por hora',
+      description: 'Lucro/prejuízo médio para cada hora do dia',
+      tooltip: {
+        time: 'Hora',
+        averagePnl: 'P&L médio',
+        trades: 'Operações',
+      },
+    },
+
+    timeInPosition: {
+      title: 'Tempo médio em posição',
+      description: 'Tempo médio em posição para cada hora do dia',
+      tooltip: {
+        time: 'Hora',
+        averageDuration: 'Duração média',
+        trades: 'Operações',
+      },
+    },
+
+    weekdayPnl: {
+      title: 'P&L médio por dia',
+      description: 'Lucro/prejuízo médio para cada dia da semana',
+      tooltip: {
+        day: 'Dia',
+        averagePnl: 'P&L médio',
+        trades: 'Operações',
+      },
+    },
+
+    tradeDistribution: {
+      title: 'Trade Distribution',
+      description: 'Distribution of trades',
+      tooltip: {
+        type: 'Type',
+        percentage: 'Percentage',
+      },
+    },
+
+    tickDistribution: {
+      title: 'Tick Distribution',
+      description: 'Distribution by ticks',
+    },
+
+    commissions: {
+      title: 'P&L vs Comissões',
+      tooltip: {
+        description: 'Distribuição do lucro/prejuízo líquido versus comissões pagas',
+        percentage: 'Percentagem',
+      },
+      legend: {
+        netPnl: 'P&L Líquido',
+        commissions: 'Comissões',
+      },
+    },
+
+    contracts: {
+      title: 'Número Total de Contratos',
+      description: 'Mostrando o número total de contratos negociados para cada hora do dia. Barras mais escuras indicam mais operações.',
+      tooltip: {
+        hour: 'h',
+        totalContracts: 'Contratos Totais',
+        numberOfTrades: 'Número de Operações',
+      },
+    },
+
+    timeRangePerformance: {
+      title: 'Time Range Performance',
+      description: 'Performance by time range',
+      tooltip: {
+        timeRange: 'Time Range',
+        avgPnl: 'Average P/L',
+        winRate: 'Win Rate',
+      },
+      ranges: {
+        under1min: '< 1m',
+        '1to5min': '1-5m',
+        '5to10min': '5-10m',
+        '10to15min': '10-15m',
+        '15to30min': '15-30m',
+        '30to60min': '30-60m',
+        '1to2hours': '1-2h',
+        '2to5hours': '2-5h',
+        over5hours: '> 5h',
+      },
+    },
+
+    calendar: {
+      weekdays: {
+        sun: 'Dom',
+        mon: 'Seg',
+        tue: 'Ter',
+        wed: 'Qua',
+        thu: 'Qui',
+        fri: 'Sex',
+        sat: 'Sáb',
+      },
+      charts: {
+        trades: 'operações',
+      },
+    },
+
   },
 }

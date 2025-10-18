@@ -95,5 +95,155 @@ export default {
     aria: {
       clickToAddToSelection: 'चयन में "{name}" जोड़ने के लिए क्लिक करें',
     },
+    // Component-specific translations
+    pnl: {
+      title: 'दैनिक लाभ/हानि',
+      description: 'समय के साथ दैनिक P&L दिखा रहा है',
+      tooltip: {
+        date: 'तारीख',
+        pnl: 'P/L',
+        longTrades: 'लॉन्ग ट्रेड',
+        shortTrades: 'शॉर्ट ट्रेड',
+      },
+    },
+
+    pnlBySide: {
+      title: 'दिशा के अनुसार P&L',
+      description: 'लॉन्ग और शॉर्ट ट्रेडों के बीच लाभ/हानि की तुलना',
+      tooltip: {
+        averageTotal: 'औसत P&L',
+        winRate: 'जीत दर',
+        trades: 'ट्रेड',
+      },
+      toggle: {
+        showAverage: 'औसत दिखाएं',
+      },
+    },
+
+    pnlPerContract: {
+      title: 'प्रति अनुबंध औसत शुद्ध P&L',
+      description: 'ट्रेडिंग इंस्ट्रूमेंट द्वारा प्रति अनुबंध औसत शुद्ध लाभ/हानि (कमीशन के बाद)',
+      tooltip: {
+        averagePnl: 'प्रति अनुबंध औसत शुद्ध P&L',
+        totalPnl: 'कुल शुद्ध P&L',
+        trades: 'ट्रेड',
+        totalContracts: 'कुल अनुबंध',
+      },
+    },
+
+    pnlPerContractDaily: {
+      title: 'प्रति अनुबंध दैनिक औसत शुद्ध P&L',
+      description: 'चयनित इंस्ट्रूमेंट के लिए प्रति दिन प्रति अनुबंध औसत शुद्ध लाभ/हानि (कमीशन के बाद)',
+      tooltip: {
+        date: 'तारीख',
+        averagePnl: 'प्रति अनुबंध औसत शुद्ध P&L',
+        totalPnl: 'कुल शुद्ध P&L',
+        trades: 'ट्रेड',
+        totalContracts: 'कुल अनुबंध',
+      },
+    },
+
+    pnlTime: {
+      title: 'घंटे के अनुसार औसत P&L',
+      description: 'दिन के प्रत्येक घंटे के लिए औसत लाभ/हानि',
+      tooltip: {
+        time: 'समय',
+        averagePnl: 'औसत P&L',
+        trades: 'ट्रेड',
+      },
+    },
+
+    timeInPosition: {
+      title: 'पोजीशन में औसत समय',
+      description: 'दिन के प्रत्येक घंटे के लिए पोजीशन में औसत समय',
+      tooltip: {
+        time: 'समय',
+        averageDuration: 'औसत अवधि',
+        trades: 'ट्रेड',
+      },
+    },
+
+    weekdayPnl: {
+      title: 'दिन के अनुसार औसत P&L',
+      description: 'सप्ताह के प्रत्येक दिन के लिए औसत लाभ/हानि',
+      tooltip: {
+        day: 'दिन',
+        averagePnl: 'औसत P&L',
+        trades: 'ट्रेड',
+      },
+    },
+
+    tradeDistribution: {
+      title: 'Trade Distribution',
+      description: 'Distribution of trades',
+      tooltip: {
+        type: 'Type',
+        percentage: 'Percentage',
+      },
+    },
+
+    tickDistribution: {
+      title: 'Tick Distribution',
+      description: 'Distribution by ticks',
+    },
+
+    commissions: {
+      title: 'P&L बनाम कमीशन',
+      tooltip: {
+        description: 'शुद्ध लाभ/हानि का भुगतान किए गए कमीशन के साथ वितरण',
+        percentage: 'प्रतिशत',
+      },
+      legend: {
+        netPnl: 'शुद्ध P&L',
+        commissions: 'कमीशन',
+      },
+    },
+
+    contracts: {
+      title: 'कुल अनुबंध संख्या',
+      description: 'दिन के प्रत्येक घंटे के लिए ट्रेड किए गए कुल अनुबंधों की संख्या दिखा रहा है। गहरे बार अधिक ट्रेडों को दर्शाते हैं।',
+      tooltip: {
+        hour: 'h',
+        totalContracts: 'कुल अनुबंध',
+        numberOfTrades: 'ट्रेडों की संख्या',
+      },
+    },
+
+    timeRangePerformance: {
+      title: 'Time Range Performance',
+      description: 'Performance by time range',
+      tooltip: {
+        timeRange: 'Time Range',
+        avgPnl: 'Average P/L',
+        winRate: 'Win Rate',
+      },
+      ranges: {
+        under1min: '< 1m',
+        '1to5min': '1-5m',
+        '5to10min': '5-10m',
+        '10to15min': '10-15m',
+        '15to30min': '15-30m',
+        '30to60min': '30-60m',
+        '1to2hours': '1-2h',
+        '2to5hours': '2-5h',
+        over5hours: '> 5h',
+      },
+    },
+
+    calendar: {
+      weekdays: {
+        sun: 'रवि',
+        mon: 'सोम',
+        tue: 'मंगल',
+        wed: 'बुध',
+        thu: 'गुरु',
+        fri: 'शुक्र',
+        sat: 'शनि',
+      },
+      charts: {
+        trades: 'ट्रेड',
+      },
+    },
+
   },
 }

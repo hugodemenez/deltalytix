@@ -95,5 +95,155 @@ export default {
     aria: {
       clickToAddToSelection: 'Tẹ lati fikun "{name}" si aṣayan',
     },
+    // Component-specific translations
+    pnl: {
+      title: 'Ere/offo ojoojúmọ́',
+      description: 'Nfihan PnL ojoojúmọ́ ni akoko',
+      tooltip: {
+        date: 'Ọjọ',
+        pnl: 'P/L',
+        longTrades: 'Awọn iṣowo gigun',
+        shortTrades: 'Awọn iṣowo kukuru',
+      },
+    },
+
+    pnlBySide: {
+      title: 'PnL nipasẹ Ọna',
+      description: 'Afiwe ere/offo laarin awọn iṣowo gigun ati kukuru',
+      tooltip: {
+        averageTotal: 'Apapọ PnL',
+        winRate: 'Oṣuwọn Iṣẹgun',
+        trades: 'Awọn Iṣowo',
+      },
+      toggle: {
+        showAverage: 'Fihan Apapọ',
+      },
+    },
+
+    pnlPerContract: {
+      title: 'Apapọ PnL Funfun fun Adehun',
+      description: 'Apapọ ere/offo funfun fun adehun nipasẹ ohun elo iṣowo (lẹhin awọn igbese)',
+      tooltip: {
+        averagePnl: 'Apapọ PnL Funfun fun Adehun',
+        totalPnl: 'Lapapọ PnL Funfun',
+        trades: 'Awọn Iṣowo',
+        totalContracts: 'Lapapọ Awọn Adehun',
+      },
+    },
+
+    pnlPerContractDaily: {
+      title: 'Apapọ PnL Funfun Ojoojúmọ́ fun Adehun',
+      description: 'Apapọ ere/offo funfun fun adehun fun ọjọ fun ohun elo ti a yan (lẹhin awọn igbese)',
+      tooltip: {
+        date: 'Ọjọ',
+        averagePnl: 'Apapọ PnL Funfun fun Adehun',
+        totalPnl: 'Lapapọ PnL Funfun',
+        trades: 'Awọn Iṣowo',
+        totalContracts: 'Lapapọ Awọn Adehun',
+      },
+    },
+
+    pnlTime: {
+      title: 'Apapọ PnL nipasẹ wakati',
+      description: 'Apapọ ere/offo fun wakati kọọkan ti ọjọ',
+      tooltip: {
+        time: 'Akoko',
+        averagePnl: 'Apapọ PnL',
+        trades: 'Awọn iṣowo',
+      },
+    },
+
+    timeInPosition: {
+      title: 'Apapọ akoko ni ipo',
+      description: 'Apapọ akoko ni ipo fun wakati kọọkan ti ọjọ',
+      tooltip: {
+        time: 'Akoko',
+        averageDuration: 'Apapọ aago',
+        trades: 'Awọn iṣowo',
+      },
+    },
+
+    weekdayPnl: {
+      title: 'Apapọ PnL nipasẹ ọjọ',
+      description: 'Apapọ ere/offo fun ọjọ kọọkan ti ọsẹ',
+      tooltip: {
+        day: 'Ọjọ',
+        averagePnl: 'Apapọ PnL',
+        trades: 'Awọn iṣowo',
+      },
+    },
+
+    tradeDistribution: {
+      title: 'Trade Distribution',
+      description: 'Distribution of trades',
+      tooltip: {
+        type: 'Type',
+        percentage: 'Percentage',
+      },
+    },
+
+    tickDistribution: {
+      title: 'Tick Distribution',
+      description: 'Distribution by ticks',
+    },
+
+    commissions: {
+      title: 'PnL vs Awọn Igbese',
+      tooltip: {
+        description: 'Pinpin ere/offo funfun pẹlu awọn igbese ti a sanwo',
+        percentage: 'Ida',
+      },
+      legend: {
+        netPnl: 'PnL Funfun',
+        commissions: 'Awọn Igbese',
+      },
+    },
+
+    contracts: {
+      title: 'Nọmba Lapapọ ti Awọn Adehun',
+      description: 'Nfihan nọmba lapapọ ti awọn adehun ti a ṣe iṣowo fun wakati kọọkan ti ọjọ. Awọn igi dudu fihan diẹ sii awọn iṣowo.',
+      tooltip: {
+        hour: 'h',
+        totalContracts: 'Lapapọ Awọn Adehun',
+        numberOfTrades: 'Nọmba Awọn Iṣowo',
+      },
+    },
+
+    timeRangePerformance: {
+      title: 'Time Range Performance',
+      description: 'Performance by time range',
+      tooltip: {
+        timeRange: 'Time Range',
+        avgPnl: 'Average P/L',
+        winRate: 'Win Rate',
+      },
+      ranges: {
+        under1min: '< 1m',
+        '1to5min': '1-5m',
+        '5to10min': '5-10m',
+        '10to15min': '10-15m',
+        '15to30min': '15-30m',
+        '30to60min': '30-60m',
+        '1to2hours': '1-2h',
+        '2to5hours': '2-5h',
+        over5hours: '> 5h',
+      },
+    },
+
+    calendar: {
+      weekdays: {
+        sun: 'Aiku',
+        mon: 'Aje',
+        tue: 'Isegun',
+        wed: 'Ọjọru',
+        thu: 'Ọjọbọ',
+        fri: 'Eti',
+        sat: 'Abameta',
+      },
+      charts: {
+        trades: 'awọn iṣowo',
+      },
+    },
+
   },
 }
