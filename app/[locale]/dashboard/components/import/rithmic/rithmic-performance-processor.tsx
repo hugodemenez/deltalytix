@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { toast } from '@/hooks/use-toast'
+import { toast } from "sonner"
 import { Trade } from '@prisma/client'
 
 interface RithmicPerformanceProcessorProps {
@@ -72,8 +72,7 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
                     item.closeDate = new Date(item.closeDate).toISOString();
                 }
             } catch (e) {
-                toast({
-                    title: "Error",
+                toast.error("Error", {
                     description: "There was an error processing the trades. Please check the data and try again."
                 })
                 return;
@@ -165,10 +164,6 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
                         <Button
                             key={instrument}
                             variant="outline"
-                            onClick={() => toast({
-                                title: "Instrument Information",
-                                description: `You traded ${instrument}. For more details, please check the trades table.`
-                            })}
                         >
                             {instrument}
                         </Button>

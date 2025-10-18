@@ -127,7 +127,7 @@ export function UserGrowthChart({ dailyData, allUsers }: UserGrowthChartProps) {
                     if (active && payload && payload.length) {
                       const data = payload[0].payload
                       return (
-                        <div className="rounded-lg border bg-background p-4 shadow-sm">
+                        <div className="rounded-lg border bg-background p-4 shadow-xs">
                           <div className="grid gap-2">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium">Period</span>

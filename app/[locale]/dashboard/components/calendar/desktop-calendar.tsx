@@ -207,7 +207,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
             {renewals.map((account, index) => (
               <div 
                 key={account.id} 
-                className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-all duration-200 hover:shadow-sm"
+                className="group relative p-3 sm:p-4 rounded-lg border bg-card hover:bg-muted/50 hover:border-border transition-all duration-200 hover:shadow-xs"
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-3">
                   {/* Account Info */}
@@ -239,7 +239,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
                       </div>
                       {account.autoRenewal && (
                         <div className="flex items-center gap-1 px-2 py-1 bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-md whitespace-nowrap">
-                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0"></div>
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full shrink-0"></div>
                           <span className="text-xs font-medium">{t('propFirm.renewal.notification')}</span>
                         </div>
                       )}
@@ -247,7 +247,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
                   </div>
 
                   {/* Price */}
-                  <div className="text-left sm:text-right flex-shrink-0">
+                  <div className="text-left sm:text-right shrink-0">
                     <div className="font-bold text-base sm:text-lg text-blue-600 dark:text-blue-400 mb-1">
                       {account.price != null && formatCurrency(account.price, { maximumFractionDigits: 2 })}
                     </div>
@@ -258,7 +258,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
                 </div>
 
                 {/* Subtle hover effect line */}
-                <div className="absolute bottom-0 left-3 right-3 sm:left-4 sm:right-4 h-0.5 bg-gradient-to-r from-blue-500/0 via-blue-500/50 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                <div className="absolute bottom-0 left-3 right-3 sm:left-4 sm:right-4 h-0.5 bg-linear-to-r from-blue-500/0 via-blue-500/50 to-blue-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
               </div>
             ))}
           </div>
@@ -517,7 +517,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
       <CardContent className="flex-1 min-h-0 p-1.5 sm:p-4">
         {viewMode === 'daily' ? (
           <>
-            <div className="grid grid-cols-8 gap-x-[1px] mb-1">
+            <div className="grid grid-cols-8 gap-x-px mb-1">
               {WEEKDAYS.map((day) => (
                 <div key={day} className="text-center font-medium text-[9px] sm:text-[11px] text-muted-foreground">
                   {translateWeekday(t, day)}
@@ -706,7 +706,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
             size="sm"
             className={cn(
               "h-7 px-2 transition-colors",
-              viewMode === 'daily' && "bg-primary text-primary-foreground shadow font-semibold"
+              viewMode === 'daily' && "bg-primary text-primary-foreground shadow-sm font-semibold"
             )}
             onClick={() => setViewMode('daily')}
           >
@@ -718,7 +718,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
             size="sm"
             className={cn(
               "h-7 px-2 transition-colors",
-              viewMode === 'weekly' && "bg-primary text-primary-foreground shadow font-semibold"
+              viewMode === 'weekly' && "bg-primary text-primary-foreground shadow-sm font-semibold"
             )}
             onClick={() => setViewMode('weekly')}
           >

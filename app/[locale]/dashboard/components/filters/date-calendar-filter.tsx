@@ -167,7 +167,7 @@ export default function DateCalendarFilter() {
         <SheetTrigger asChild>
           {DateButton}
         </SheetTrigger>
-        <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-[100dvh] overflow-hidden">
+        <SheetContent side="right" className="w-[90vw] sm:max-w-[640px] flex flex-col h-dvh overflow-hidden">
           <SheetHeader>
             <SheetTitle>{t('filters.pickDate')}</SheetTitle>
           </SheetHeader>

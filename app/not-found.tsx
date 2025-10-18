@@ -21,8 +21,8 @@ const translations = {
   fr: {
     title: '404 - Page introuvable',
     heading: 'Oups ! Page introuvable',
-    description: 'La page que vous recherchez n&apos;existe pas ou a été déplacée.',
-    goHome: 'Retour à l&apos;accueil',
+    description: 'La page que vous recherchez n\'existe pas ou a été déplacée.',
+    goHome: 'Retour à l\'accueil',
     goBack: 'Retourner',
     searchPlaceholder: 'Rechercher une page...',
     searchComingSoon: 'Fonctionnalité de recherche bientôt disponible'
@@ -238,7 +238,7 @@ function NotFoundContent() {
           <input
             type="text"
             placeholder={t.searchPlaceholder}
-            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:border-transparent"
             disabled
           />
         </div>

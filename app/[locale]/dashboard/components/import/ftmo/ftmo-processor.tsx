@@ -3,11 +3,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { toast } from '@/hooks/use-toast'
 import { Trade } from '@prisma/client'
 import { useI18n } from '@/locales/client'
-import { useTradesStore } from '@/store/trades-store'
 import { generateTradeHash } from '@/lib/utils'
 
 const formatDuration = (seconds: number): string => {
@@ -244,10 +241,6 @@ export default function FtmoProcessor({ headers, csvData, setProcessedTrades, ac
                                 <Button
                                     key={instrument}
                                     variant="outline"
-                                    onClick={() => toast({
-                                        title: "Instrument Information",
-                                        description: `You traded ${instrument}. For more details, please check the trades table.`
-                                    })}
                                 >
                                     {instrument}
                                 </Button>

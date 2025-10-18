@@ -1,0 +1,2040 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Chart Test - Deltalytix</title>
+    <style>
+        :root {
+            --background: 0 0% 100%;
+            --foreground: 0 0% 3.9%;
+            --card: 0 0% 100%;
+            --card-foreground: 0 0% 3.9%;
+            --popover: 0 0% 100%;
+            --popover-foreground: 0 0% 3.9%;
+            --primary: 0 0% 9%;
+            --primary-foreground: 0 0% 98%;
+            --secondary: 0 0% 96.1%;
+            --secondary-foreground: 0 0% 9%;
+            --muted: 0 0% 96.1%;
+            --muted-foreground: 0 0% 45.1%;
+            --accent: 0 0% 96.1%;
+            --accent-foreground: 0 0% 9%;
+            --destructive: 0 84.2% 60.2%;
+            --destructive-foreground: 0 0% 98%;
+            --success: 173 58% 39%;
+            --success-foreground: 355.7 100% 97.3%;
+            --border: 0 0% 89.8%;
+            --input: 0 0% 89.8%;
+            --ring: 0 0% 3.9%;
+            --radius: 0.5rem;
+            --shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background: 0 0% 0%;
+                --foreground: 0 0% 98%;
+                --card: 0 0% 0%;
+                --card-foreground: 0 0% 98%;
+                --popover: 0 0% 0%;
+                --popover-foreground: 0 0% 98%;
+                --primary: 0 0% 98%;
+                --primary-foreground: 0 0% 9%;
+                --secondary: 0 0% 14.9%;
+                --secondary-foreground: 0 0% 98%;
+                --muted: 0 0% 14.9%;
+                --muted-foreground: 0 0% 63.9%;
+                --accent: 0 0% 14.9%;
+                --accent-foreground: 0 0% 98%;
+                --destructive: 0 62.8% 30.6%;
+                --destructive-foreground: 0 0% 98%;
+                --success: 173 58% 39%;
+                --success-foreground: 144.9 80.4% 10%;
+                --border: 0 0% 14.9%;
+                --input: 0 0% 14.9%;
+                --ring: 0 0% 83.1%;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .main-content {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .sidebar {
+            width: 400px;
+            background: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            height: 90vh;
+            position: fixed;
+            top: 50%;
+            right: 2rem;
+            z-index: 100;
+            box-shadow: var(--shadow-lg);
+            transform: translate(calc(100% + 2rem), -50%);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.open {
+            transform: translate(0, -50%);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sidebar-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-track {
+            background: hsl(var(--muted));
+            border-radius: 3px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: hsl(var(--muted-foreground));
+            border-radius: 3px;
+        }
+
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: hsl(var(--foreground));
+        }
+
+        .sidebar h3 {
+            margin: 0;
+            color: hsl(var(--foreground));
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .sidebar p {
+            margin: 0 0 1rem 0;
+            color: hsl(var(--muted-foreground));
+            font-size: 0.875rem;
+        }
+
+        .sidebar-iframe-container {
+            background: hsl(var(--background));
+            overflow: hidden;
+            margin-bottom: 1rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .sidebar-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+            flex: 1;
+        }
+
+
+        .selected-charts-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .selected-chart-tag {
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            padding: 0.25rem 0.5rem;
+            border-radius: calc(var(--radius) - 2px);
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .selected-chart-tag:hover {
+            background: hsl(var(--primary));
+            opacity: 0.9;
+        }
+
+        .chart-tag-remove {
+            background: none;
+            border: none;
+            color: hsl(var(--primary-foreground));
+            cursor: pointer;
+            padding: 0;
+            margin-left: 0.25rem;
+            border-radius: 50%;
+            width: 1rem;
+            height: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            line-height: 1;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+        }
+
+        .chart-tag-remove:hover {
+            background: rgba(255, 255, 255, 0.2);
+            opacity: 1;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 1.5rem 1rem 1.5rem;
+            border-bottom: 1px solid hsl(var(--border));
+            flex-shrink: 0;
+            background: hsl(var(--background));
+            border-radius: var(--radius) var(--radius) 0 0;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .sidebar-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: hsl(var(--muted-foreground));
+            cursor: pointer;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sidebar-close:hover {
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+        }
+
+        .sidebar-backdrop {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar-backdrop {
+                display: block;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 99;
+                opacity: 0;
+                visibility: hidden;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+
+            .sidebar-backdrop.open {
+                opacity: 1;
+                visibility: visible;
+            }
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            margin: 0 0 0.5rem 0;
+            color: hsl(var(--foreground));
+        }
+
+        .header p {
+            color: hsl(var(--muted-foreground));
+            margin: 0;
+            font-size: 1rem;
+        }
+
+        .info {
+            background: hsl(var(--muted));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .info h3 {
+            margin: 0 0 1rem 0;
+            color: hsl(var(--foreground));
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .info p {
+            margin: 0 0 1rem 0;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .info ul {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .info li {
+            margin-bottom: 0.5rem;
+            color: hsl(var(--muted-foreground));
+        }
+
+        .info code {
+            background: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            padding: 0.125rem 0.375rem;
+            border-radius: calc(var(--radius) - 2px);
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+            font-size: 0.875rem;
+            color: hsl(var(--foreground));
+        }
+
+        .controls {
+            background: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .controls h3 {
+            margin: 0 0 1.5rem 0;
+            color: hsl(var(--foreground));
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+            align-items: center;
+        }
+
+        .button-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .button-group label {
+            color: hsl(var(--foreground));
+            font-weight: 500;
+            font-size: 0.875rem;
+            margin-right: 0.5rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            border: 1px solid transparent;
+            border-radius: var(--radius);
+            background: hsl(var(--primary));
+            color: hsl(var(--primary-foreground));
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 2.25rem;
+        }
+
+        button:hover {
+            background: hsl(var(--primary));
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        button:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-sm);
+        }
+
+        button.secondary {
+            background: hsl(var(--secondary));
+            color: hsl(var(--secondary-foreground));
+            border-color: hsl(var(--border));
+        }
+
+        button.secondary:hover {
+            background: hsl(var(--accent));
+            color: hsl(var(--accent-foreground));
+        }
+
+        button.danger {
+            background: hsl(var(--destructive));
+            color: hsl(var(--destructive-foreground));
+        }
+
+        button.danger:hover {
+            background: hsl(var(--destructive));
+            opacity: 0.9;
+        }
+
+        button.success {
+            background: hsl(var(--success));
+            color: hsl(var(--success-foreground));
+        }
+
+        button.success:hover {
+            background: hsl(var(--success));
+            opacity: 0.9;
+        }
+
+        /* Per-override clear button */
+        .clear-override {
+            background: none;
+            border: 1px solid hsl(var(--border));
+            color: hsl(var(--muted-foreground));
+            cursor: pointer;
+            padding: 0 0.4rem;
+            border-radius: var(--radius);
+            line-height: 1.2;
+            font-size: 0.875rem;
+            display: none;
+        }
+        .clear-override.visible {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .clear-override:hover {
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+        }
+
+        input, select {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid hsl(var(--input));
+            border-radius: var(--radius);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            font-size: 0.875rem;
+            transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        input {
+            width: 5rem;
+        }
+
+        select {
+            min-width: 12rem;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: hsl(var(--ring));
+            box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
+        }
+
+        .iframe-container {
+            background: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            transition: background-color 0.2s ease;
+        }
+
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            display: block;
+            transition: background-color 0.2s ease;
+        }
+
+        /* Theme-specific iframe background */
+        .iframe-container[data-theme="light"] {
+            background-color: #ffffff;
+        }
+
+        .iframe-container[data-theme="dark"] {
+            background-color: #0a0a0a;
+        }
+
+        .iframe-container[data-theme="system"] {
+            background-color: hsl(var(--background));
+        }
+
+        /* Theme switcher enhancements - keeping for potential reuse, but hidden in DOM */
+        .theme-indicator {
+            display: none;
+        }
+
+        /* Chart selection styling */
+        .selected-charts-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background: hsl(var(--muted));
+            border: 1px solid hsl(var(--border));
+            border-radius: calc(var(--radius) - 2px);
+            font-size: 0.75rem;
+            color: hsl(var(--muted-foreground));
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chart-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            margin-bottom: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .chart-checkbox:hover {
+            background: hsl(var(--muted));
+        }
+
+        .chart-checkbox input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            margin: 0;
+        }
+
+        .chart-checkbox label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+            font-size: 0.875rem;
+        }
+
+        .chart-checkbox .chart-description {
+            font-size: 0.75rem;
+            color: hsl(var(--muted-foreground));
+            margin-top: 0.25rem;
+        }
+
+        .code-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid hsl(var(--border));
+        }
+
+        .code-section h4 {
+            margin: 0 0 1rem 0;
+            color: hsl(var(--foreground));
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .code-block {
+            background: hsl(var(--muted));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 1rem;
+            position: relative;
+        }
+
+        .code-block pre {
+            margin: 0;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+            font-size: 0.875rem;
+            color: hsl(var(--foreground));
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            background: none;
+            border: none;
+            padding: 0;
+            font-family: inherit;
+            font-size: inherit;
+            color: inherit;
+        }
+
+        .selected-charts-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid hsl(var(--border));
+        }
+
+        .selected-charts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .selected-charts-header h4 {
+            margin: 0;
+            color: hsl(var(--foreground));
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .clear-button {
+            background: none;
+            border: none;
+            color: hsl(var(--muted-foreground));
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: var(--radius);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+
+        .clear-button:hover {
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+        }
+
+        .clear-button span {
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .config-dialog {
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+        }
+
+        .config-dialog .dialog-body {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        @media (min-width: 768px) {
+            .chart-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        /* Dialog Styles */
+        .dialog-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .dialog {
+            background: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid hsl(var(--border));
+        }
+
+        .dialog-header h3 {
+            margin: 0;
+            color: hsl(var(--foreground));
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .dialog-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: hsl(var(--muted-foreground));
+            cursor: pointer;
+            padding: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dialog-close:hover {
+            background: hsl(var(--muted));
+            color: hsl(var(--foreground));
+        }
+
+        .dialog-body {
+            padding: 1.5rem;
+        }
+
+        .dialog-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            border-top: 1px solid hsl(var(--border));
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: hsl(var(--foreground));
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid hsl(var(--input));
+            border-radius: var(--radius);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            font-size: 0.875rem;
+            transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: hsl(var(--ring));
+            box-shadow: 0 0 0 2px rgb(0 0 0 / 0.1);
+        }
+
+        .left-sidebar {
+            width: 400px;
+            background: hsl(var(--background));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            height: 90vh;
+            position: fixed;
+            top: 50%;
+            left: 2rem;
+            z-index: 100;
+            box-shadow: var(--shadow-lg);
+            transform: translate(calc(-100% - 2rem), -50%);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .left-sidebar.open {
+            transform: translate(0, -50%);
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Match right sidebar spacing/padding on desktop */
+        .left-sidebar .sidebar-content {
+            padding: 1rem;
+            gap: 1rem;
+            overflow: auto;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .main-content {
+                max-width: 100%;
+            }
+
+            .sidebar, .left-sidebar {
+                width: 100%;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1000;
+                transform: translateY(100%);
+                border-radius: 0;
+                margin: 0;
+                height: 100vh;
+                max-height: 100vh;
+            }
+
+            .sidebar-header {
+                padding: 1rem;
+                border-radius: 0;
+            }
+
+            .sidebar-content {
+                padding: 1rem;
+            }
+
+            .sidebar.open, .left-sidebar.open {
+                transform: translateY(0);
+            }
+
+            .sidebar-iframe {
+                height: 400px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .button-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .button-group label {
+                margin-bottom: 0.5rem;
+                margin-right: 0;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            input, select {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+
+            .dialog {
+                width: 95%;
+                margin: 1rem;
+            }
+
+            .dialog-footer {
+                flex-direction: column;
+            }
+
+            .dialog-footer button {
+                width: 100%;
+            }
+        }
+
+        /* Toast notification styles */
+        .toast-container {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10000;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 1rem 1rem 1rem;
+            max-width: 560px;
+            width: 100%;
+        }
+
+        .toast {
+            background: hsl(var(--card));
+            color: hsl(var(--card-foreground));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            padding: 1rem 1.5rem;
+            box-shadow: var(--shadow-lg);
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            min-width: 300px;
+            max-width: 100%;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            animation: toast-slide-up 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transform-origin: bottom center;
+            opacity: 0;
+            animation-fill-mode: forwards;
+        }
+
+        .toast.toast-removing {
+            animation: toast-slide-down 0.15s cubic-bezier(0.4, 0, 1, 1) forwards;
+        }
+
+        @keyframes toast-slide-up {
+            from {
+                opacity: 0;
+                transform: translateY(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes toast-slide-down {
+            from {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(100%) scale(0.95);
+            }
+        }
+
+        .toast-success {
+            background: hsl(var(--success));
+            color: hsl(var(--success-foreground));
+            border-color: hsl(var(--success));
+        }
+
+        .toast-info {
+            background: hsl(var(--muted));
+            color: hsl(var(--muted-foreground));
+            border-color: hsl(var(--border));
+        }
+
+        .toast-error {
+            background: hsl(var(--destructive));
+            color: hsl(var(--destructive-foreground));
+            border-color: hsl(var(--destructive));
+        }
+
+        .toast-icon {
+            flex-shrink: 0;
+            width: 1.25rem;
+            height: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .toast-content {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .toast-container {
+                max-width: 100%;
+                padding: 0 0.5rem 0.5rem 0.5rem;
+            }
+
+            .toast {
+                min-width: unset;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container">
+        <div class="main-content">
+        <div class="header">
+            <h1>Interactive Chart Test</h1>
+            <p>Test and interact with the Deltalytix trading performance chart in real-time</p>
+        </div>
+
+        <div class="info">
+            <h3>How to use</h3>
+            <p>Use the controls below to send messages to the embedded chart. The chart will update in real-time based
+                on your interactions.</p>
+            <p><strong>Available Actions:</strong></p>
+            <ul>
+                <li><strong>Client-Side:</strong> Generate trades locally and send full trade data</li>
+                <li><strong>Server-Side:</strong> Send count only, let server generate trades</li>
+                <li><strong>Specific Trade:</strong> Add a custom trade via dialog form</li>
+                <li><strong>Reset:</strong> Reset to original mock data</li>
+                <li><strong>Clear:</strong> Clear all trades from the chart</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <div class="selected-charts-header config-header">
+                <h3>Embed Configuration & Code Generation</h3>
+                <button onclick="resetConfiguration()" class="danger" title="Reset all configuration to defaults">Reset Configuration</button>
+            </div>
+            <p>Configure your embed settings and see the generated code below. Copy the code to integrate the chart into your application.</p>
+
+            <div class="button-group">
+                <label>Environment:</label>
+                <select id="environmentSelect" onchange="updateConfiguration(); updateSidebarIframe();">
+                    <option value="localhost">Localhost (http://localhost:3000)</option>
+                    <option value="beta" selected>Beta (https://beta.deltalytix.app)</option>
+                    <option value="stable">Stable (https://deltalytix.app)</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <label>Theme:</label>
+                <select id="themeSelect" onchange="updateConfiguration();">
+                    <option value="light">Light</option>
+                    <option value="dark" selected>Dark</option>
+                    <option value="system">System</option>
+                </select>
+            </div>
+
+            <div class="button-group">
+                <label>Preset:</label>
+                <select id="presetSelect" onchange="updateConfiguration();">
+                    <option value="">None</option>
+                    <option value="ocean">Ocean</option>
+                    <option value="thor">Thor</option>
+                    <option value="sunset">Sunset</option>
+                </select>
+            </div>
+
+            <div class="button-group" id="overridesInline">
+                <label>Overrides (HSL/RGB/HEX accepted):</label>
+                <div style="display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">BG</label>
+                    <input type="color" id="overrideBackgroundColor" title="Background color" />
+                    <input id="overrideBackground" placeholder="210 40% 98% | #ffffff | rgb(255,255,255)" />
+                    <button class="clear-override" data-target="overrideBackground" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Border</label>
+                    <input type="color" id="overrideBorderColor" title="Border color" />
+                    <input id="overrideBorder" placeholder="220 13% 91% | #e5e7eb | rgba(229,231,235,1)" />
+                    <button class="clear-override" data-target="overrideBorder" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart1</label>
+                    <input type="color" id="overrideChart1Color" title="Chart1 color" />
+                    <input id="overrideChart1" placeholder="#3b82f6 | 210 70% 50%" />
+                    <button class="clear-override" data-target="overrideChart1" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart2</label>
+                    <input type="color" id="overrideChart2Color" title="Chart2 color" />
+                    <input id="overrideChart2" placeholder="#22c55e" />
+                    <button class="clear-override" data-target="overrideChart2" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart3</label>
+                    <input type="color" id="overrideChart3Color" title="Chart3 color" />
+                    <input id="overrideChart3" placeholder="#eab308" />
+                    <button class="clear-override" data-target="overrideChart3" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Chart4</label>
+                    <input type="color" id="overrideChart4Color" title="Chart4 color" />
+                    <input id="overrideChart4" placeholder="#ef4444" />
+                    <button class="clear-override" data-target="overrideChart4" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Tooltip BG</label>
+                    <input type="color" id="overrideTooltipBgColor" title="Tooltip background" />
+                    <input id="overrideTooltipBg" placeholder="0 0% 0% / 0.8 | rgba(0,0,0,0.8)" />
+                    <button class="clear-override" data-target="overrideTooltipBg" title="Remove override">×</button>
+                  </div>
+                  <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                    <label style="font-size:0.75rem; color:hsl(var(--muted-foreground));">Tooltip Border</label>
+                    <input type="color" id="overrideTooltipBorderColor" title="Tooltip border"/>
+                    <input id="overrideTooltipBorder" placeholder="#374151 | 215 28% 17%" />
+                    <button class="clear-override" data-target="overrideTooltipBorder" title="Remove override">×</button>
+                  </div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                  <button onclick="toggleSidebar()" class="secondary">🗂 Configure Charts</button>
+                </div>
+            </div>
+
+            <div class="selected-charts-section">
+                <div class="selected-charts-header">
+                    <h4>Selected Charts:</h4>
+                    <button onclick="clearChartSelection()" class="clear-button" title="Clear all selections">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="selected-charts-list" id="selectedChartsList">
+                    <span style="color: hsl(var(--muted-foreground)); font-size: 0.875rem;">All charts selected</span>
+                </div>
+            </div>
+
+            <div class="code-section">
+                <h4>Generated Embed Code:</h4>
+                <div class="code-block">
+                    <pre><code id="embedCode"></code></pre>
+                    <button onclick="copyEmbedCode()" class="secondary" style="margin-top: 0.5rem;">Copy Code</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>Chart Controls</h3>
+
+            <div class="button-group">
+                <label>Number of Random Trades:</label>
+                <input type="number" id="tradeCount" value="5" min="1" max="50">
+                <button onclick="addClientSideTrades()">Add Client-Side</button>
+                <button onclick="addServerSideTrades()" class="secondary">Add Server-Side</button>
+            </div>
+
+            <div class="button-group">
+                <button onclick="addSpecificTrades()" class="success">Add Specific Trade</button>
+                <button onclick="resetTrades()" class="secondary">Reset</button>
+                <button onclick="clearTrades()" class="danger">Clear</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <h3>Data Being Sent</h3>
+            <div id="dataDisplay" style="background: hsl(var(--muted)); border: 1px solid hsl(var(--border)); border-radius: var(--radius); padding: 1rem; margin-top: 1rem;">
+                <pre id="jsonData" style="margin: 0; font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace; font-size: 0.875rem; color: hsl(var(--foreground)); white-space: pre-wrap; word-wrap: break-word; max-height: 300px; overflow-y: auto;"></pre>
+            </div>
+        </div>
+
+        <div class="iframe-container" id="iframeContainer" data-theme="dark">
+            <iframe id="chartIframe" src="https://beta.deltalytix.app/embed?theme=dark"></iframe>
+        </div>
+    </div>
+
+        <!-- Left Sidebar -->
+        <div class="left-sidebar" id="leftSidebar">
+            <div class="sidebar-header">
+                <h3>Theme Overrides</h3>
+                <button class="sidebar-close" onclick="toggleLeftSidebar()" title="Close sidebar">&times;</button>
+            </div>
+            <div class="sidebar-content">
+                <p>Theme override controls will appear here on mobile. On desktop, you can open both sidebars.</p>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3>Chart Selection</h3>
+                <button class="sidebar-close" onclick="toggleSidebar()" title="Close sidebar">&times;</button>
+            </div>
+            <div class="sidebar-content">
+                <p>Click on charts in the iframe below to add them to your selection.</p>
+
+                <div class="sidebar-iframe-container">
+                    <iframe id="sidebarIframe" class="sidebar-iframe" src=""></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebars()"></div>
+
+    <!-- Add Trade Dialog -->
+    <div id="addTradeDialog" class="dialog-overlay" style="display: none;">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3>Add Specific Trade</h3>
+                <button class="dialog-close" onclick="closeAddTradeDialog()">&times;</button>
+            </div>
+            <div class="dialog-body">
+                <form id="addTradeForm">
+                    <div class="form-group">
+                        <label for="tradePnl">PnL ($):</label>
+                        <input type="number" id="tradePnl" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeTimeInPosition">Time in Position (seconds):</label>
+                        <input type="number" id="tradeTimeInPosition" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeSide">Side:</label>
+                        <select id="tradeSide" required>
+                            <option value="long">Long</option>
+                            <option value="short">Short</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeQuantity">Quantity:</label>
+                        <input type="number" id="tradeQuantity" min="1" max="10" value="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeCommission">Commission ($):</label>
+                        <input type="number" id="tradeCommission" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeInstrument">Instrument:</label>
+                        <select id="tradeInstrument" required>
+                            <option value="ES">ES</option>
+                            <option value="NQ">NQ</option>
+                            <option value="CL">CL</option>
+                            <option value="GC">GC</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="tradeEntryDate">Entry Date:</label>
+                        <input type="datetime-local" id="tradeEntryDate" required>
+                    </div>
+                </form>
+            </div>
+            <div class="dialog-footer">
+                <button type="button" onclick="closeAddTradeDialog()" class="secondary">Cancel</button>
+                <button type="button" onclick="submitAddTrade()" class="success">Add Trade</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const iframe = document.getElementById('chartIframe');
+        const sidebarIframe = document.getElementById('sidebarIframe');
+
+        // Move inline theme override controls into the left sidebar and leave a compact summary in main
+        document.addEventListener('DOMContentLoaded', function () {
+            const inlineGroup = document.getElementById('overridesInline');
+            if (!inlineGroup) return;
+
+            // The first div inside the overrides group contains all controls
+            const controlsContainer = inlineGroup.querySelector('div');
+            const sidebarContent = document.querySelector('#leftSidebar .sidebar-content');
+
+            if (controlsContainer && sidebarContent) {
+                // Create compact summary for main area
+                const summary = document.createElement('div');
+                summary.className = 'overrides-summary';
+                summary.style.display = 'flex';
+                summary.style.alignItems = 'center';
+                summary.style.gap = '0.5rem';
+                summary.innerHTML = '<span style="color: hsl(var(--muted-foreground)); font-size: 0.875rem;">Edit theme overrides in the left sidebar.</span>';
+
+                const openBtn = document.createElement('button');
+                openBtn.className = 'secondary';
+                openBtn.textContent = '🗂 Theme Overrides';
+                openBtn.onclick = () => {
+                    if (typeof toggleLeftSidebar === 'function') toggleLeftSidebar();
+                };
+                summary.appendChild(openBtn);
+
+                // Insert summary before the controls and move controls to left sidebar
+                inlineGroup.insertBefore(summary, controlsContainer);
+                sidebarContent.innerHTML = '';
+                sidebarContent.appendChild(controlsContainer);
+            }
+        });
+
+        // Environment configuration
+        const environments = {
+            localhost: 'http://localhost:3000',
+            beta: 'https://beta.deltalytix.app',
+            stable: 'https://deltalytix.app'
+        };
+
+        // Chart definitions with descriptions
+        const chartDefinitions = [
+            { key: 'time-range-performance', name: 'Time Range Performance', description: 'Performance over different time periods' },
+            { key: 'daily-pnl', name: 'Daily PnL', description: 'Profit and loss by day' },
+            { key: 'time-of-day', name: 'Time of Day', description: 'Performance by hour of day' },
+            { key: 'time-in-position', name: 'Time in Position', description: 'Performance by time held in position' },
+            { key: 'pnl-by-side', name: 'PnL by Side', description: 'Performance by long vs short positions' },
+            { key: 'trade-distribution', name: 'Trade Distribution', description: 'Distribution of trade sizes and outcomes' },
+            { key: 'weekday-pnl', name: 'Weekday PnL', description: 'Performance by day of week' },
+            { key: 'pnl-per-contract', name: 'PnL per Contract', description: 'Average PnL per contract traded' },
+            { key: 'pnl-per-contract-daily', name: 'PnL per Contract Daily', description: 'Daily PnL per contract' },
+            { key: 'tick-distribution', name: 'Tick Distribution', description: 'Distribution of tick movements' },
+            { key: 'commissions-pnl', name: 'Commissions PnL', description: 'Impact of commissions on PnL' },
+            { key: 'contract-quantity', name: 'Contract Quantity', description: 'Performance by number of contracts' }
+        ];
+
+        // Configuration state
+        let currentConfig = {
+            environment: 'beta',
+            theme: 'dark',
+            selectedCharts: []
+        };
+
+        // Load configuration from localStorage
+        function loadConfiguration() {
+            const saved = localStorage.getItem('deltalytix-embed-config');
+            if (saved) {
+                try {
+                    currentConfig = { ...currentConfig, ...JSON.parse(saved) };
+                } catch (e) {
+                    console.warn('Failed to parse saved configuration:', e);
+                }
+            }
+
+            // Apply loaded configuration to UI
+            document.getElementById('environmentSelect').value = currentConfig.environment;
+            document.getElementById('themeSelect').value = currentConfig.theme;
+
+            updateConfiguration();
+        }
+
+        // Save configuration to localStorage
+        function saveConfiguration() {
+            localStorage.setItem('deltalytix-embed-config', JSON.stringify(currentConfig));
+        }
+
+        // Update configuration and reload iframe
+        function updateConfiguration() {
+            // Update current config from UI
+            currentConfig.environment = document.getElementById('environmentSelect').value;
+            currentConfig.theme = document.getElementById('themeSelect').value;
+            currentConfig.preset = document.getElementById('presetSelect').value;
+            currentConfig.overrides = {
+                background: document.getElementById('overrideBackground').value.trim(),
+                foreground: (document.getElementById('overrideForeground')?.value || '').trim(),
+                card: (document.getElementById('overrideCard')?.value || '').trim(),
+                popover: (document.getElementById('overridePopover')?.value || '').trim(),
+                muted: (document.getElementById('overrideMuted')?.value || '').trim(),
+                mutedFg: (document.getElementById('overrideMutedFg')?.value || '').trim(),
+                border: document.getElementById('overrideBorder').value.trim(),
+                input: (document.getElementById('overrideInput')?.value || '').trim(),
+                ring: (document.getElementById('overrideRing')?.value || '').trim(),
+                radius: (document.getElementById('overrideRadius')?.value || '').trim(),
+                chart1: document.getElementById('overrideChart1').value.trim(),
+                chart2: (document.getElementById('overrideChart2')?.value || '').trim(),
+                chart3: (document.getElementById('overrideChart3')?.value || '').trim(),
+                chart4: (document.getElementById('overrideChart4')?.value || '').trim(),
+                chart5: (document.getElementById('overrideChart5')?.value || '').trim(),
+                chart6: (document.getElementById('overrideChart6')?.value || '').trim(),
+                chart7: (document.getElementById('overrideChart7')?.value || '').trim(),
+                chart8: (document.getElementById('overrideChart8')?.value || '').trim(),
+                success: (document.getElementById('overrideSuccess')?.value || '').trim(),
+                successFg: (document.getElementById('overrideSuccessFg')?.value || '').trim(),
+                destructive: (document.getElementById('overrideDestructive')?.value || '').trim(),
+                destructiveFg: (document.getElementById('overrideDestructiveFg')?.value || '').trim(),
+                tooltipBg: document.getElementById('overrideTooltipBg').value.trim(),
+                tooltipBorder: (document.getElementById('overrideTooltipBorder')?.value || '').trim(),
+                tooltipRadius: (document.getElementById('overrideTooltipRadius')?.value || '').trim()
+            };
+
+            // Generate new iframe URL
+            const baseUrl = environments[currentConfig.environment];
+            let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const overrideKeys = Object.keys(currentConfig.overrides || {});
+            overrideKeys.forEach((key) => {
+                const val = currentConfig.overrides[key];
+                if (val) {
+                    url += `&${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+                }
+            });
+
+            // Add chart parameters if specific charts are selected
+            if (currentConfig.selectedCharts.length > 0) {
+                url += `&charts=${currentConfig.selectedCharts.join(',')}`;
+            }
+
+            // Update main iframe
+            iframe.src = url;
+
+            updateIframeContainerTheme(currentConfig.theme);
+            const indicator = document.getElementById('themeIndicator');
+            if (indicator) indicator.setAttribute('data-theme', currentConfig.theme);
+            const label = document.getElementById('activeThemeLabel');
+            if (label) label.textContent = currentConfig.theme + (currentConfig.preset ? ` + ${currentConfig.preset}` : '');
+            updateSelectedChartsList();
+            updateEmbedCode();
+
+            // Save configuration
+            saveConfiguration();
+
+            console.log('Updated configuration:', currentConfig, 'URL:', url);
+        }
+
+        // Update sidebar iframe (only when environment changes, always uses system theme)
+        function updateSidebarIframe() {
+            const baseUrl = environments[currentConfig.environment];
+            const sidebarUrl = `${baseUrl}/embed?theme=system`;
+            sidebarIframe.src = sidebarUrl;
+        }
+
+        // Update only the main iframe (for chart selection changes)
+        function updateMainIframeOnly() {
+            const baseUrl = environments[currentConfig.environment];
+            let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const overrideKeys = Object.keys(currentConfig.overrides || {});
+            overrideKeys.forEach((key) => {
+                const val = currentConfig.overrides[key];
+                if (val) {
+                    url += `&${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+                }
+            });
+
+            // Add chart parameters if specific charts are selected
+            if (currentConfig.selectedCharts.length > 0) {
+                url += `&charts=${currentConfig.selectedCharts.join(',')}`;
+            }
+
+            // Update main iframe
+            iframe.src = url;
+        }
+
+        function updateEmbedCode() {
+            const baseUrl = environments[currentConfig.environment];
+            let url = `${baseUrl}/embed?theme=${currentConfig.theme}`;
+            if (currentConfig.preset) url += `&preset=${encodeURIComponent(currentConfig.preset)}`;
+            const overrideKeys = Object.keys(currentConfig.overrides || {});
+            overrideKeys.forEach((key) => {
+                const val = currentConfig.overrides[key];
+                if (val) {
+                    url += `&${encodeURIComponent(key)}=${encodeURIComponent(val)}`;
+                }
+            });
+
+            // Add chart parameters if specific charts are selected
+            if (currentConfig.selectedCharts.length > 0) {
+                url += `&charts=${currentConfig.selectedCharts.join(',')}`;
+            }
+
+            const embedCode = `<iframe
+  src="${url}"
+  width="100%"
+  height="600"
+  frameborder="0"
+  allowtransparency="true">
+</iframe>`;
+
+            document.getElementById('embedCode').textContent = embedCode;
+        }
+
+
+
+        function updateIframeContainerTheme(theme) {
+            const iframeContainer = document.getElementById('iframeContainer');
+            iframeContainer.setAttribute('data-theme', theme);
+        }
+
+        function reloadIframe() {
+            iframe.src = iframe.src;
+            console.log('Reloaded iframe');
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const left = document.getElementById('leftSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const isOpening = !sidebar.classList.contains('open');
+            sidebar.classList.toggle('open');
+
+            // Only handle backdrop on mobile devices
+            if (window.innerWidth <= 768) {
+                if (isOpening) {
+                    if (left) left.classList.remove('open');
+                    backdrop.classList.add('open');
+                } else {
+                    if (!left || !left.classList.contains('open')) {
+                        backdrop.classList.remove('open');
+                    }
+                }
+            }
+        }
+
+        function toggleLeftSidebar() {
+            const left = document.getElementById('leftSidebar');
+            const right = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const isOpening = !left.classList.contains('open');
+            left.classList.toggle('open');
+
+            if (window.innerWidth <= 768) {
+                if (isOpening) {
+                    if (right) right.classList.remove('open');
+                    backdrop.classList.add('open');
+                } else {
+                    if (!right || !right.classList.contains('open')) {
+                        backdrop.classList.remove('open');
+                    }
+                }
+            }
+        }
+
+        function closeSidebars() {
+            const left = document.getElementById('leftSidebar');
+            const right = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (left) left.classList.remove('open');
+            if (right) right.classList.remove('open');
+            if (backdrop) backdrop.classList.remove('open');
+        }
+
+
+        function copyEmbedCode() {
+            const embedCode = document.getElementById('embedCode').textContent;
+            navigator.clipboard.writeText(embedCode).then(() => {
+                // Show success feedback
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                button.classList.add('success');
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.classList.remove('success');
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy embed code:', err);
+                alert('Failed to copy embed code. Please select and copy manually.');
+            });
+        }
+
+        function updateSelectedChartsList() {
+            const selectedChartsList = document.getElementById('selectedChartsList');
+
+            if (currentConfig.selectedCharts.length === 0) {
+                selectedChartsList.innerHTML = '<span style="color: hsl(var(--muted-foreground)); font-size: 0.875rem;">All charts selected</span>';
+            } else {
+                selectedChartsList.innerHTML = '';
+                currentConfig.selectedCharts.forEach(chartKey => {
+                    const chart = chartDefinitions.find(c => c.key === chartKey);
+                    if (chart) {
+                        const tag = document.createElement('span');
+                        tag.className = 'selected-chart-tag';
+
+                        const chartName = document.createElement('span');
+                        chartName.textContent = chart.name;
+
+                        const removeButton = document.createElement('button');
+                        removeButton.className = 'chart-tag-remove';
+                        removeButton.innerHTML = '×';
+                        removeButton.title = `Remove ${chart.name}`;
+                        removeButton.onclick = (e) => {
+                            e.stopPropagation();
+                            removeChartFromSelection(chartKey);
+                        };
+
+                        tag.appendChild(chartName);
+                        tag.appendChild(removeButton);
+                        selectedChartsList.appendChild(tag);
+                    }
+                });
+            }
+        }
+
+        function removeChartFromSelection(chartKey) {
+            const index = currentConfig.selectedCharts.indexOf(chartKey);
+            if (index > -1) {
+                currentConfig.selectedCharts.splice(index, 1);
+                updateMainIframeOnly();
+                updateSelectedChartsList();
+                updateEmbedCode();
+                saveConfiguration();
+            }
+        }
+
+        function clearChartSelection() {
+            currentConfig.selectedCharts = [];
+            updateMainIframeOnly();
+            updateSelectedChartsList();
+            updateEmbedCode();
+            saveConfiguration();
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'info', duration = 3000) {
+            const toastContainer = document.getElementById('toastContainer');
+
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+
+            // Add icon based on type
+            const icon = document.createElement('div');
+            icon.className = 'toast-icon';
+            if (type === 'success') {
+                icon.innerHTML = '✓';
+            } else if (type === 'error') {
+                icon.innerHTML = '✕';
+            } else if (type === 'info') {
+                icon.innerHTML = 'ℹ';
+            }
+
+            // Add content
+            const content = document.createElement('div');
+            content.className = 'toast-content';
+            content.textContent = message;
+
+            toast.appendChild(icon);
+            toast.appendChild(content);
+
+            // Add to container
+            toastContainer.appendChild(toast);
+
+            // Remove toast after duration
+            setTimeout(() => {
+                toast.classList.add('toast-removing');
+                setTimeout(() => {
+                    toast.remove();
+                }, 150); // Match animation duration
+            }, duration);
+        }
+
+        function showChartAddedFeedback(chartName) {
+            showToast(`Added "${chartName}" to selection`, 'success');
+        }
+
+        function showChartAlreadySelectedFeedback(chartName) {
+            showToast(`"${chartName}" is already selected`, 'info');
+        }
+
+        function sendMessage(message) {
+            iframe.contentWindow.postMessage(message, '*');
+            console.log('Sent message:', message);
+
+            // Display the JSON data being sent
+            const jsonDataElement = document.getElementById('jsonData');
+            jsonDataElement.textContent = JSON.stringify(message, null, 2);
+        }
+
+        function addSpecificTrades() {
+            // Set default values for the form
+            const now = new Date();
+            const defaultDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); // Yesterday
+            document.getElementById('tradeEntryDate').value = defaultDate.toISOString().slice(0, 16);
+
+            // Show the dialog
+            document.getElementById('addTradeDialog').style.display = 'flex';
+        }
+
+        function closeAddTradeDialog() {
+            document.getElementById('addTradeDialog').style.display = 'none';
+            document.getElementById('addTradeForm').reset();
+        }
+
+        function submitAddTrade() {
+            const form = document.getElementById('addTradeForm');
+
+            // Validate form
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            // Get form values
+            const pnl = parseFloat(document.getElementById('tradePnl').value);
+            const timeInPosition = parseInt(document.getElementById('tradeTimeInPosition').value);
+            const side = document.getElementById('tradeSide').value;
+            const quantity = parseInt(document.getElementById('tradeQuantity').value);
+            const commission = parseFloat(document.getElementById('tradeCommission').value);
+            const instrument = document.getElementById('tradeInstrument').value;
+            const entryDate = new Date(document.getElementById('tradeEntryDate').value);
+
+            // Create trade object
+            const trade = {
+                pnl: pnl,
+                timeInPosition: timeInPosition,
+                entryDate: entryDate.toISOString(),
+                side: side,
+                quantity: quantity,
+                commission: commission,
+                instrument: instrument
+            };
+
+            // Send the trade
+            sendMessage({
+                type: 'ADD_TRADES',
+                trades: [trade]
+            });
+
+            // Close dialog and reset form
+            closeAddTradeDialog();
+        }
+
+        function resetTrades() {
+            sendMessage({
+                type: 'RESET_TRADES'
+            });
+        }
+
+        function clearTrades() {
+            sendMessage({
+                type: 'CLEAR_TRADES'
+            });
+        }
+
+        function addServerSideTrades() {
+            const count = parseInt(document.getElementById('tradeCount').value) || 5;
+            sendMessage({
+                type: 'ADD_TRADES',
+                count: count
+            });
+        }
+
+        function addClientSideTrades() {
+            const count = parseInt(document.getElementById('tradeCount').value) || 5;
+            const trades = generateRandomTrades(count);
+            sendMessage({
+                type: 'ADD_TRADES',
+                trades: trades
+            });
+        }
+
+        function generateRandomTrade() {
+            // Available instruments and sides from the embed page
+            const instruments = ['ES', 'NQ', 'CL', 'GC'];
+            const sides = ['long', 'short'];
+
+            // Generate random values
+            const now = Date.now();
+            const dayMs = 24 * 60 * 60 * 1000;
+
+            // Random entry date within the last 30 days
+            const entry = new Date(now - Math.floor(Math.random() * 30) * dayMs - Math.floor(Math.random() * 24) * 3600 * 1000);
+
+            // Random quantity between 1-3
+            const qty = Math.ceil(Math.random() * 3);
+
+            // Random PnL with slight bias toward losses (like the original)
+            const pnl = Math.round(((Math.random() - 0.4) * 500) * 100) / 100;
+
+            // Random time in position (0-3600 seconds = 0-60 minutes)
+            const timeInPosition = Math.floor(Math.random() * 3600);
+
+            // Random commission based on quantity
+            const commission = Math.round(qty * (1 + Math.random() * 3) * 100) / 100;
+
+            return {
+                pnl: pnl,
+                timeInPosition: timeInPosition,
+                entryDate: entry.toISOString(),
+                side: sides[Math.floor(Math.random() * sides.length)],
+                quantity: qty,
+                commission: commission,
+                instrument: instruments[Math.floor(Math.random() * instruments.length)]
+            };
+        }
+
+        function generateRandomTrades(count = 1) {
+            return Array.from({ length: count }, generateRandomTrade);
+        }
+
+
+        // Listen for messages from iframes
+        window.addEventListener('message', function (event) {
+            console.log('Received message from iframe:', event.data);
+
+            if (event.data && event.data.type === 'CHART_CLICKED') {
+                // Only process chart clicks from the sidebar iframe, not the main iframe
+                const sidebarIframe = document.getElementById('sidebarIframe');
+                if (event.source === sidebarIframe.contentWindow) {
+                    const { chartKey, chartName } = event.data;
+
+                    // Add chart to selected charts if not already selected
+                    if (!currentConfig.selectedCharts.includes(chartKey)) {
+                        currentConfig.selectedCharts.push(chartKey);
+
+                        // Update only the main iframe and UI elements, not the sidebar iframe
+                        updateMainIframeOnly();
+                        updateSelectedChartsList();
+                        updateEmbedCode();
+                        saveConfiguration();
+
+                        // Show success feedback
+                        showChartAddedFeedback(chartName);
+                    } else {
+                        // Show feedback that chart is already selected
+                        showChartAlreadySelectedFeedback(chartName);
+                    }
+                }
+                // Ignore chart clicks from the main iframe to avoid filtering
+            }
+        });
+
+        // Dialog keyboard and click handling
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const addTradeDialog = document.getElementById('addTradeDialog');
+                const rightSidebar = document.getElementById('sidebar');
+                const leftSidebar = document.getElementById('leftSidebar');
+
+                if (addTradeDialog.style.display === 'flex') {
+                    closeAddTradeDialog();
+                } else if ((rightSidebar && rightSidebar.classList.contains('open')) || (leftSidebar && leftSidebar.classList.contains('open'))) {
+                    closeSidebars();
+                }
+            }
+        });
+
+        // Close dialogs when clicking outside
+        document.getElementById('addTradeDialog').addEventListener('click', function(event) {
+            if (event.target === this) {
+                closeAddTradeDialog();
+            }
+        });
+
+        // Prevent dialogs from closing when clicking inside
+        document.querySelectorAll('.dialog').forEach(dialog => {
+            dialog.addEventListener('click', function(event) {
+                event.stopPropagation();
+            });
+        });
+
+        function hexFromString(value) {
+            const trimmed = value.trim();
+            if (!trimmed) return '';
+            // Extract hex like #fff or #ffffff
+            const match = trimmed.match(/#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})/);
+            return match ? `#${match[1].length === 3 ? match[1].split('').map(c=>c+c).join('') : match[1]}` : '';
+        }
+
+        function wireColorPickerSync(colorId, textId) {
+            const colorEl = document.getElementById(colorId);
+            const textEl = document.getElementById(textId);
+            if (!colorEl || !textEl) return;
+            colorEl.addEventListener('input', function() {
+                textEl.value = colorEl.value;
+                // Reflect current value on the color input background
+                colorEl.style.background = colorEl.value;
+                updateConfiguration();
+                if (typeof updateOverrideClearButtonsVisibility === 'function') updateOverrideClearButtonsVisibility();
+            });
+            textEl.addEventListener('change', function() {
+                const hex = hexFromString(textEl.value);
+                if (hex) {
+                    colorEl.value = hex;
+                    colorEl.style.background = hex;
+                }
+                updateConfiguration();
+                if (typeof updateOverrideClearButtonsVisibility === 'function') updateOverrideClearButtonsVisibility();
+            });
+        }
+
+        // Initialize configuration on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfiguration();
+            // Initialize sidebar iframe (always uses system theme)
+            const baseUrl = environments[currentConfig.environment];
+            const sidebarUrl = `${baseUrl}/embed?theme=system`;
+            sidebarIframe.src = sidebarUrl;
+
+            // Wire color pickers
+            wireColorPickerSync('overrideBackgroundColor', 'overrideBackground');
+            wireColorPickerSync('overrideBorderColor', 'overrideBorder');
+            wireColorPickerSync('overrideChart1Color', 'overrideChart1');
+            wireColorPickerSync('overrideChart2Color', 'overrideChart2');
+            wireColorPickerSync('overrideChart3Color', 'overrideChart3');
+            wireColorPickerSync('overrideChart4Color', 'overrideChart4');
+            wireColorPickerSync('overrideTooltipBgColor', 'overrideTooltipBg');
+            wireColorPickerSync('overrideTooltipBorderColor', 'overrideTooltipBorder');
+
+            // Prime color inputs from text values if present
+            ['Background','Border','Chart1','Chart2','Chart3','Chart4','TooltipBg','TooltipBorder'].forEach((k) => {
+                const textEl = document.getElementById(`override${k}`);
+                const colorEl = document.getElementById(`override${k}Color`);
+                if (textEl && colorEl) {
+                    const hex = hexFromString(textEl.value);
+                    if (hex) {
+                        colorEl.value = hex;
+                        colorEl.style.background = hex;
+                    }
+                }
+            });
+
+            // Setup per-override clear buttons
+            if (typeof setupOverrideClearButtons === 'function') {
+                setupOverrideClearButtons();
+                updateOverrideClearButtonsVisibility();
+            }
+
+            // Tweak UI:
+            // 1) Add destructive reset button to section header (already in markup if JS fails)
+            const controlsSections = document.querySelectorAll('.controls');
+            if (controlsSections && controlsSections[0]) {
+                const section = controlsSections[0];
+                const h3 = section.querySelector('h3');
+                if (h3 && !section.querySelector('.config-header')) {
+                    const headerWrap = document.createElement('div');
+                    headerWrap.className = 'selected-charts-header config-header';
+                    const h3clone = h3.cloneNode(true);
+                    headerWrap.appendChild(h3clone);
+                    const resetBtn = document.createElement('button');
+                    resetBtn.className = 'danger';
+                    resetBtn.title = 'Reset all configuration to defaults';
+                    resetBtn.textContent = 'Reset Configuration';
+                    resetBtn.onclick = () => resetConfiguration();
+                    section.replaceChild(headerWrap, h3);
+                }
+            }
+
+            // 2) Ensure summary open button text has icon if exists
+            const summaryBtn = document.querySelector('.overrides-summary button.secondary');
+            if (summaryBtn) {
+                summaryBtn.textContent = '🗂 Theme Overrides';
+            }
+        });
+
+        function resetConfiguration() {
+            // Preserve current environment; do not clear localStorage
+            const preservedEnvironment = currentConfig.environment || 'beta';
+
+            // Reset in-memory config while preserving environment
+            currentConfig = {
+                environment: preservedEnvironment,
+                theme: 'dark',
+                preset: '',
+                overrides: {},
+                selectedCharts: []
+            };
+
+            // Reset UI controls
+            document.getElementById('environmentSelect').value = currentConfig.environment;
+            document.getElementById('themeSelect').value = currentConfig.theme;
+            document.getElementById('presetSelect').value = '';
+            const label = document.getElementById('activeThemeLabel');
+            if (label) label.textContent = currentConfig.theme;
+            const indicator = document.getElementById('themeIndicator');
+            if (indicator) indicator.setAttribute('data-theme', currentConfig.theme);
+
+            // Clear override text inputs
+            const overrideTextIds = [
+                'overrideBackground','overrideBorder','overrideChart1','overrideChart2','overrideChart3','overrideChart4',
+                'overrideTooltipBg','overrideTooltipBorder'
+            ];
+            overrideTextIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            // Clear color pickers and backgrounds
+            const overrideColorIds = [
+                'overrideBackgroundColor','overrideBorderColor','overrideChart1Color','overrideChart2Color','overrideChart3Color','overrideChart4Color',
+                'overrideTooltipBgColor','overrideTooltipBorderColor'
+            ];
+            overrideColorIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = '#000000';
+                    el.style.background = '';
+                }
+            });
+
+            // Clear selected charts UI
+            updateSelectedChartsList();
+
+            // Recompute URLs and embed code from defaults
+            updateConfiguration();
+
+            // Update sidebar iframe (system theme)
+            updateSidebarIframe();
+
+            // Update clear buttons visibility
+            if (typeof updateOverrideClearButtonsVisibility === 'function') updateOverrideClearButtonsVisibility();
+        }
+
+        // Per-override clear button wiring
+        function setupOverrideClearButtons() {
+            document.querySelectorAll('.clear-override').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const target = btn.getAttribute('data-target');
+                    if (!target) return;
+                    const textEl = document.getElementById(target);
+                    const colorEl = document.getElementById(`${target}Color`);
+                    if (textEl) textEl.value = '';
+                    if (colorEl) {
+                        colorEl.value = '#000000';
+                        colorEl.style.background = '';
+                    }
+                    updateConfiguration();
+                    updateOverrideClearButtonsVisibility();
+                });
+            });
+
+            // Also watch text inputs to update button visibility as user types
+            ['Background','Border','Chart1','Chart2','Chart3','Chart4','TooltipBg','TooltipBorder'].forEach((k) => {
+                const textEl = document.getElementById(`override${k}`);
+                if (textEl) {
+                    textEl.addEventListener('input', () => {
+                        updateOverrideClearButtonsVisibility();
+                    });
+                }
+            });
+        }
+
+        function updateOverrideClearButtonsVisibility() {
+            document.querySelectorAll('.clear-override').forEach(btn => {
+                const target = btn.getAttribute('data-target');
+                const textEl = target ? document.getElementById(target) : null;
+                if (textEl && textEl.value.trim()) {
+                    btn.classList.add('visible');
+                } else {
+                    btn.classList.remove('visible');
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

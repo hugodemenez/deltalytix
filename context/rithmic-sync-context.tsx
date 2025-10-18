@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react'
 import { getRithmicData, getAllRithmicData, updateLastSyncTime, clearRithmicData, saveRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { useData } from '@/context/data-provider'
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import { useI18n } from "@/locales/client"
 import { useRithmicSyncStore, SyncInterval } from '@/store/rithmic-sync-store'
 import { useUserStore } from '@/store/user-store'
@@ -504,10 +504,8 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         const data = await response.json()
         const params = parseRateLimitMessage(data.detail)
 
-        toast({
-          title: t('rithmic.rateLimit.title'),
+        toast.error(t('rithmic.rateLimit.title'), {
           description: t('rithmic.rateLimit.description', params),
-          variant: "destructive",
         })
 
         return {
@@ -606,10 +604,8 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       const data = await response.json()
       const params = parseRateLimitMessage(data.detail)
 
-      toast({
-        title: t('rithmic.rateLimit.title'),
+      toast.error(t('rithmic.rateLimit.title'), {
         description: t('rithmic.rateLimit.description', params),
-        variant: "destructive",
       })
 
       return {

@@ -68,18 +68,18 @@ export function WeeklyModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl w-full h-[100dvh] sm:h-[90vh] p-0 flex flex-col">
+      <DialogContent className="max-w-4xl w-full h-dvh sm:h-[90vh] p-0 flex flex-col">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle>{dateRange}</DialogTitle>
           <DialogDescription>
             {t('calendar.modal.weeklyDetails')}
           </DialogDescription>
         </DialogHeader>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-grow flex flex-col overflow-hidden">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="grow flex flex-col overflow-hidden">
           <TabsList className="px-6">
             <TabsTrigger value="charts">{t('calendar.modal.charts')}</TabsTrigger>
           </TabsList>
-          <TabsContent value="charts" className="flex-grow overflow-auto p-6 pt-2">
+          <TabsContent value="charts" className="grow overflow-auto p-6 pt-2">
             <Charts dayData={weeklyData} isWeekly={true} />
           </TabsContent>
         </Tabs>

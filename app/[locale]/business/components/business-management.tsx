@@ -729,12 +729,12 @@ export function BusinessManagement({
           const access = business.userAccess || (isOwner ? 'admin' : 'viewer')
 
           return (
-            <Card key={business.id} className="cursor-pointer hover:border-primary/50 transition-colors shadow-sm hover:shadow-md">
+            <Card key={business.id} className="cursor-pointer hover:border-primary/50 transition-colors shadow-xs hover:shadow-md">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className={cn(
-                      "rounded-full h-2 w-2 flex-shrink-0",
+                      "rounded-full h-2 w-2 shrink-0",
                       getStatusIndicator(access, isOwner)
                     )} />
                     <div className="min-w-0 flex-1">
@@ -862,7 +862,7 @@ export function BusinessManagement({
         {filteredBusinesses.length > 0 && (
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Card className="cursor-pointer transition-colors shadow-sm hover:shadow-md border-dashed border-2 border-muted-foreground/25 hover:border-primary/50">
+              <Card className="cursor-pointer transition-colors shadow-xs hover:shadow-md border-dashed border-2 border-muted-foreground/25 hover:border-primary/50">
                 <CardContent className="flex flex-col items-center justify-center h-48 p-6">
                   <Plus className="h-12 w-12 text-muted-foreground mb-4" />
                   <CardTitle className="text-lg text-center mb-2">
@@ -1018,7 +1018,7 @@ export function BusinessManagement({
         }
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col w-[95vw] sm:w-full">
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="shrink-0">
             <DialogTitle>{t('business.management.manageTitle').replace('{name}', selectedBusiness?.name || '')}</DialogTitle>
             <DialogDescription>
               {t('business.management.manageDescription')}
@@ -1256,7 +1256,7 @@ export function BusinessManagement({
             </div>
           </div>
 
-          <DialogFooter className="flex-shrink-0 mt-4">
+          <DialogFooter className="shrink-0 mt-4">
             <Button variant="outline" onClick={() => setManageDialogOpen(false)}>
               {t('business.management.close')}
             </Button>

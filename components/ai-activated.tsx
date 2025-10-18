@@ -37,7 +37,7 @@ export function AIBorder({ children, className, success = false }: AIBorderProps
         {/* Scanner effect overlay - Only show when not in success state */}
         {!success && (
           <div className="absolute inset-0 z-20 pointer-events-none overflow-hidden">
-            <div className="absolute left-0 right-0 h-[3px] bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-80 animate-scanner-smooth" />
+            <div className="absolute left-0 right-0 h-[3px] bg-linear-to-r from-transparent via-blue-400 to-transparent opacity-80 animate-scanner-smooth" />
           </div>
         )}
 
@@ -50,7 +50,7 @@ export function AIBorder({ children, className, success = false }: AIBorderProps
 
 
             {/* Success sweep effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-green-400/20 to-transparent animate-success-sweep" />
+            <div className="absolute inset-0 bg-linear-to-r from-transparent via-green-400/20 to-transparent animate-success-sweep" />
           </div>
         )}
 
@@ -71,8 +71,8 @@ export function AIBorder({ children, className, success = false }: AIBorderProps
           className={cn(
             "absolute inset-[-2px] rounded-lg opacity-60",
             success
-              ? "bg-gradient-to-r from-green-600 to-emerald-600 animate-glow-success"
-              : "bg-gradient-to-r from-blue-600 to-purple-600 animate-glow-subtle",
+              ? "bg-linear-to-r from-green-600 to-emerald-600 animate-glow-success"
+              : "bg-linear-to-r from-blue-600 to-purple-600 animate-glow-subtle",
           )}
         />
       </div>

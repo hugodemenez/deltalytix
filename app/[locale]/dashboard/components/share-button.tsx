@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { addDays, startOfDay, endOfDay, format } from "date-fns"
 import { createShared } from "@/server/shared"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import {
   Command,
   CommandEmpty,
@@ -116,7 +116,6 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const locale = useCurrentLocale()
     const dateLocale = locale === 'fr' ? fr : undefined
     const isMobile = useIsMobile()
-    const { toast } = useToast()
     const user = useUserStore(state => state.user)
     const trades = useTradesStore(state => state.trades)
     const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
@@ -173,28 +172,22 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const handleShare = async () => {
       try {
         if (!user) {
-          toast({
-            title: t('share.error'),
+          toast.error(t('share.error'), {
             description: t('share.error.auth'),
-            variant: "destructive",
           })
           return
         }
 
         if (!shareAllAccounts && selectedAccounts.length === 0) {
-          toast({
-            title: t('share.error'),
+          toast.error(t('share.error'), {
             description: t('share.error.noAccount'),
-            variant: "destructive",
           })
           return
         }
 
         if (!selectedDateRange.from) {
-          toast({
-            title: t('share.error'),
+          toast.error(t('share.error'), {
             description: t('share.error.noStartDate'),
-            variant: "destructive",
           })
           return
         }
@@ -210,10 +203,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         })
 
         if (filteredTrades.length === 0) {
-          toast({
-            title: t('share.error'),
+          toast.error(t('share.error'), {
             description: t('share.error.noTrades'),
-            variant: "destructive",
           })
           return
         }
@@ -338,8 +329,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         const url = `${window.location.origin}/shared/${slug}`
         setShareUrl(url)
 
-        toast({
-          title: t('share.shareSuccess'),
+        toast.success(t('share.shareSuccess'), {
           description: t('share.shareSuccessDescription'),
         })
 
@@ -349,10 +339,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
         }, 1000)
       } catch (error) {
         console.error('Error sharing trades:', error)
-        toast({
-          title: t('share.error'),
+        toast.error(t('share.error'), {
           description: error instanceof Error ? error.message : t('share.error.description'),
-          variant: "destructive",
         })
       }
     }
@@ -360,9 +348,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const handleCopyUrl = async () => {
       try {
         await navigator.clipboard.writeText(shareUrl)
-        toast({
-          title: t('share.urlCopied'),
-        })
+        toast.success(t('share.urlCopied'))
       } catch (error) {
         console.error('Error copying URL:', error)
       }
@@ -502,7 +488,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent 
-                            className="w-[var(--radix-popover-trigger-width)] p-0" 
+                            className="w-(--radix-popover-trigger-width) p-0" 
                             align="start" 
                             side="bottom" 
                             sideOffset={4}
@@ -613,7 +599,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                 )}
               </div>
             </div>
-            <div className="flex-shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="shrink-0 px-3 sm:px-6 py-3 sm:py-4 border-t bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60">
               <DialogFooter>
                 {showManager ? null : !shareUrl ? (
                   <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4 sm:justify-end">

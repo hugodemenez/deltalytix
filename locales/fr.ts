@@ -7,6 +7,7 @@ import mindset from './fr/mindset'
 import propfirm from './fr/propfirm'
 import chat from './fr/chat'
 import terms from './fr/terms'
+import embed from './fr/embed'
 import business from './fr/business'
 
 export default {
@@ -19,6 +20,7 @@ export default {
     ...propfirm,
     ...chat,
     ...terms,
+    ...embed,
     ...business,
     'footer.heading': 'Pied de page',
     'footer.description': 'Analyses avancées pour les traders modernes.',
@@ -363,6 +365,7 @@ export default {
         min: "Min",
         max: "Max",
         apply: "Appliquer",
+        customRange: "Période personnalisée",
         // Account management related
         accountGroups: "Groupes de Comptes",
         loading: "Chargement...",
@@ -1860,4 +1863,28 @@ export default {
     'table.showPoints': 'Afficher les points',
     'widgets.duplicate.title': 'Widget déjà ajouté',
     'widgets.duplicate.description': 'Vous ne pouvez pas ajouter deux fois le même widget à votre tableau de bord.',
+    editor: {
+        ai: {
+            button: 'Actions IA',
+            actions: {
+                explain: 'Expliquer la sélection',
+                improvements: 'Identifier des améliorations',
+                summarize: 'Résumer la sélection',
+                rewrite: 'Réécrire pour plus de clarté',
+                expand: 'Développer',
+                grammar: 'Corriger grammaire et orthographe',
+                translateTo: {
+                    en: 'Traduire en anglais',
+                    fr: 'Traduire en français'
+                },
+                suggestQuestion: 'Suggérer une question de journal'
+            },
+            thinking: "L'IA réfléchit...",
+            generating: 'Génération en cours...',
+            suggestionTitle: 'Suggestion IA',
+            accept: 'Accepter la suggestion',
+            dismiss: 'Ignorer la suggestion',
+            minCharsError: 'Veuillez écrire au moins 10 caractères pour utiliser l’IA'
+        }
+    }
 } as const

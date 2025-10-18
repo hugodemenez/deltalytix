@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ArrowUpDown, Trash, ChevronLeft, ChevronRight } from "lucide-react"
 import { saveTradesAction } from '@/server/database'
-import { useToast } from "@/hooks/use-toast"
+import { toast } from 'sonner'
 import { deleteTradesByIdsAction } from '@/server/accounts'
 import { useData } from '@/context/data-provider'
 
@@ -24,7 +24,6 @@ export default function TradeTable() {
   const [filterKey, setFilterKey] = useState<keyof Trade>('instrument')
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'entryDate', direction: 'desc' })
   const [selectedTrades, setSelectedTrades] = useState<Set<string>>(new Set())
-  const { toast } = useToast()
   const [selectAll, setSelectAll] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const tradesPerPage = 10
@@ -64,8 +63,7 @@ export default function TradeTable() {
     await deleteTradesByIdsAction(ids)
     setSelectedTrades(new Set())
     refreshTrades()
-    toast({
-      title: "Trades Deleted",
+    toast.message( "Trades Deleted", {
       description: `${ids.length} trade(s) have been deleted.`,
     })
   }

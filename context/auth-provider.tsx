@@ -3,7 +3,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { useRouter } from 'next/navigation'
 import { createContext, useContext, useEffect, useState } from 'react'
-import { toast } from '@/hooks/use-toast'
+import { toast } from 'sonner'
 import { Session } from '@supabase/supabase-js'
 import { signOut } from '@/server/auth'
 
@@ -38,10 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(initialSession)
       } catch (error) {
         console.error('Error checking session:', error)
-        toast({
-          title: 'Session Error',
+        toast.error('Session Error', {
           description: 'Failed to check authentication status',
-          variant: 'destructive',
         })
         await signOut()
       } finally {

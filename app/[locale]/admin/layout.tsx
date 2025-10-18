@@ -2,8 +2,7 @@
 
 import { useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "@/hooks/use-toast";
-import { I18nProviderClient } from "@/locales/client";
+import { toast } from "sonner";
 import { SidebarNav } from "./components/sidebar-nav";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeProvider } from "@/context/theme-provider";
@@ -25,10 +24,8 @@ export default function RootLayout(
 
     if (params.get('error')) {
       const errorDescription = params.get('error_description');
-      toast({
-        title: "Authentication Error",
+      toast.error("Authentication Error", {
         description: errorDescription?.replace(/\+/g, ' ') || "An error occurred during authentication",
-        variant: "destructive",
       });
 
       // Clear the hash after showing the toast

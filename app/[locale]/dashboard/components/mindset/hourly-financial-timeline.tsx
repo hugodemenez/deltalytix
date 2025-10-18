@@ -107,7 +107,7 @@ function SessionIndicator({ session, hourElements, containerRef }: {
 
 function SessionLegend({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
   return (
-    <div className="p-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-t shadow-lg">
+    <div className="p-2 bg-background/95 backdrop-blur-sm supports-backdrop-filter:bg-background/60 border-t shadow-lg">
       <div className="flex items-center justify-center gap-4 text-xs">
         {SESSIONS.map((session) => (
           <div 
@@ -361,7 +361,11 @@ export function HourlyFinancialTimeline({
                       <FinancialEventCard
                         key={item.id}
                         event={item}
-                        onClick={() => onEventClick?.(item)}
+                        onClick={(e?: any) => {
+                          // Prevent outer popover from thinking this is outside
+                          if (e && typeof e.stopPropagation === 'function') e.stopPropagation()
+                          onEventClick?.(item)
+                        }}
                         timezone={timezone}
                         dateLocale={dateLocale}
                         isSelected={selectedEventIds.includes(item.id)}
@@ -461,7 +465,11 @@ function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = f
         !isSelected && "border-l-4",
         isSelected && "border-2 border-current"
       )}
-      onClick={onClick}
+      onClick={(e) => {
+        // Ensure clicks within child elements don't bubble to outside popovers
+        e.stopPropagation()
+        onClick?.()
+      }}
     >
       <div className="font-medium text-sm truncate">{event.title}</div>
 
@@ -473,7 +481,7 @@ function FinancialEventCard({ event, onClick, timezone, dateLocale, expanded = f
         )}
 
         <div className="flex items-center">
-          <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
+          <Clock className="h-3 w-3 mr-1 shrink-0" />
           <span>{formatInTimeZone(new Date(event.date), timezone, "HH:mm", { locale: dateLocale })}</span>
         </div>
       </div>
@@ -554,12 +562,12 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
 
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs">
             <div className="flex items-center">
-              <Clock className="h-3 w-3 mr-1 flex-shrink-0" />
+              <Clock className="h-3 w-3 mr-1 shrink-0" />
               <span>{formatInTimeZone(new Date(earliestTrade.entryDate), timezone, "HH:mm", { locale: dateLocale })}</span>
             </div>
 
             <div className="flex items-center">
-              <DollarSign className="h-3 w-3 mr-1 flex-shrink-0" />
+              <DollarSign className="h-3 w-3 mr-1 shrink-0" />
               <span>{trade.totalPnL.toFixed(2)}</span>
             </div>
           </div>

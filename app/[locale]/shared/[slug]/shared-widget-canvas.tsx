@@ -125,7 +125,7 @@ export function SharedWidgetCanvas() {
 
   return (
     <div className="relative mt-6">
-      <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-[9999]" />
+      <div id="tooltip-portal" className="fixed inset-0 pointer-events-none z-9999" />
       <ResponsiveGridLayout
         className="layout"
         layouts={generateResponsiveLayout(transformedLayout)}

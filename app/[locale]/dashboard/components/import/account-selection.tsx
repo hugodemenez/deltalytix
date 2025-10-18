@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { PlusCircleIcon, CheckCircle2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 interface AccountSelectionProps {
   accounts: string[]
@@ -28,17 +28,12 @@ export default function AccountSelection({
   const [isAddingNewAccount, setIsAddingNewAccount] = useState(false)
   const [localAccounts, setLocalAccounts] = useState<string[]>(accounts)
   const t = useI18n()
-  const { toast } = useToast()
 
   const handleAddAccount = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     if (newAccountNumber.trim()) {
       if (localAccounts.includes(newAccountNumber.trim())) {
-        toast({
-          variant: "destructive",
-          title: t('error'),
-          description: t('import.error.accountExists')
-        })
+        toast.error(t('import.error.accountExists'))
         return
       }
       setLocalAccounts(prev => [...prev, newAccountNumber.trim()])

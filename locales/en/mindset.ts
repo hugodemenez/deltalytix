@@ -82,6 +82,15 @@ export default {
       save: 'Save Entry',
       editorPlaceholder: 'Start writing...'
     },
+    editor: {
+      news: {
+        title: 'News',
+        selectNews: 'Select News',
+        selectedCount: '{count} selected',
+        noNews: 'No news available',
+        clearSelection: 'Clear selection'
+      }
+    },
     tradingStats: {
       title: 'Trading Statistics',
       winningTrades: 'Winning Trades',
@@ -93,6 +102,8 @@ export default {
       commission: 'Commission',
       netPnL: 'Net P&L',
       entryTime: 'Entry Time'
-    }
+    },
+    hideTimeline: 'Hide Timeline',
+    showTimeline: 'Show Timeline'
   }
 } as const 

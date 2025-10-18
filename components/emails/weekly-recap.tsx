@@ -167,7 +167,7 @@ const TradingActivityCell = ({ level }: { level: number }) => {
 
   return (
     <div
-      className={`${colors[level]} w-[14px] h-[14px] rounded-[2px] m-[1px]`}
+      className={`${colors[level]} w-[14px] h-[14px] rounded-[2px] m-px`}
     />
   );
 };
@@ -297,7 +297,7 @@ const ActionButtons = ({ t }: { t: typeof translations.fr }) => (
             </div>
           </td>
           <td className="w-[50%] pl-[8px]">
-            <div className="bg-white border-[1px] border-[#3469DF] rounded-[6px] text-center py-[12px] px-[16px] box-border">
+            <div className="bg-white border border-[#3469DF] rounded-[6px] text-center py-[12px] px-[16px] box-border">
               <Link
                 href="https://deltalytix.app/dashboard"
                 className="text-[#3469DF] font-medium no-underline text-[14px]"
@@ -408,7 +408,7 @@ export default function TraderStatsEmail({
       <Preview>{t.preview}</Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans">
-          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-sm">
+          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-xs">
             <Section className="px-6 py-8">
               <Heading className="text-2xl font-bold text-gray-900 mb-6">
                 {t.greeting} {firstName},
@@ -469,7 +469,7 @@ export default function TraderStatsEmail({
                       {t.activityTitle}
                     </Heading>
                     <div className="overflow-auto">
-                      <table className="mx-auto border-collapse border-[1px] border-[#d0d7de] rounded-[6px] bg-white" cellPadding="16">
+                      <table className="mx-auto border-collapse border border-[#d0d7de] rounded-[6px] bg-white" cellPadding="16">
                         <thead>
                           <tr>
                             <th className="text-[12px] text-[#57606a] pr-[8px] text-left"></th>
@@ -505,11 +505,11 @@ export default function TraderStatsEmail({
 
                       <div className="flex flex-row mt-[8px] items-center justify-center">
                         <Text className="text-[12px] text-[#57606a] mr-[4px] m-0">{t.less}</Text>
-                        <div className="bg-[#ebedf0] w-[14px] h-[14px] rounded-[2px] mx-[1px]" />
-                        <div className="bg-[#c6d7f9] w-[14px] h-[14px] rounded-[2px] mx-[1px]" />
-                        <div className="bg-[#8badf3] w-[14px] h-[14px] rounded-[2px] mx-[1px]" />
-                        <div className="bg-[#5a8bec] w-[14px] h-[14px] rounded-[2px] mx-[1px]" />
-                        <div className="bg-[#3469DF] w-[14px] h-[14px] rounded-[2px] mx-[1px]" />
+                        <div className="bg-[#ebedf0] w-[14px] h-[14px] rounded-[2px] mx-px" />
+                        <div className="bg-[#c6d7f9] w-[14px] h-[14px] rounded-[2px] mx-px" />
+                        <div className="bg-[#8badf3] w-[14px] h-[14px] rounded-[2px] mx-px" />
+                        <div className="bg-[#5a8bec] w-[14px] h-[14px] rounded-[2px] mx-px" />
+                        <div className="bg-[#3469DF] w-[14px] h-[14px] rounded-[2px] mx-px" />
                         <Text className="text-[12px] text-[#57606a] ml-[4px] m-0">{t.more}</Text>
                       </div>
                       <Text className="text-[12px] text-[#57606a] mt-[4px] m-0">

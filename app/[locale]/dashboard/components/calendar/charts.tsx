@@ -142,7 +142,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
-        <div className="bg-background p-2 border rounded shadow-sm text-xs md:text-sm">
+        <div className="bg-background p-2 border rounded shadow-xs text-xs md:text-sm">
           <p className="font-semibold">{isWeekly ? data.date : data.time}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className={`font-bold ${entry.dataKey === 'pnl' ? (entry.value >= 0 ? 'text-green-600' : 'text-red-600') : 'text-blue-600'}`}>
@@ -165,7 +165,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
         ? ((data.value / totalPnL) * 100).toFixed(1)
         : '100'
       return (
-        <div className="bg-background p-2 border rounded shadow-sm text-xs md:text-sm">
+        <div className="bg-background p-2 border rounded shadow-xs text-xs md:text-sm">
           <p className="font-semibold">{data.name}</p>
           <p className={`font-bold ${data.value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
             {formatCurrency(data.value)}

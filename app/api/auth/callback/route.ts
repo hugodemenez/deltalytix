@@ -1,5 +1,4 @@
 'use server'
-import { getCurrentLocale } from '@/locales/server'
 import { createClient, ensureUserInDatabase } from '@/server/auth'
 import { NextResponse } from 'next/server'
 // The client you created from the Server-Side Auth instructions
@@ -10,6 +9,7 @@ export async function GET(request: Request) {
   // if "next" is in param, use it as the redirect URL
   const next = searchParams.get('next')
   const action = searchParams.get('action')
+  const locale = searchParams.get('locale') || undefined
 
   // Add debugging for Edge
   console.log('Auth callback debug:', {
@@ -29,6 +29,7 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
+
     if (!error) {
       // Handle identity linking redirect
       if (action === 'link') {
@@ -39,6 +40,17 @@ export async function GET(request: Request) {
           : `https://${forwardedHost || origin}/dashboard/settings`
         const redirectUrl = `${baseUrl}?linked=true`
         return NextResponse.redirect(redirectUrl)
+      }
+
+      // Ensure DB user exists and persist locale before redirecting
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await ensureUserInDatabase(user, locale)
+        }
+      } catch (e) {
+        console.error('Auth callback ensureUserInDatabase error:', e)
+        // Non-fatal: continue redirect
       }
 
       const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer

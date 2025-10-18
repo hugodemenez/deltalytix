@@ -70,7 +70,7 @@ import { TradeImageEditor } from './trade-image-editor'
 import { ColumnConfigDialog } from '@/components/ui/column-config-dialog'
 import { calculateTicksAndPointsForTrades, calculateTicksAndPointsForGroupedTrade } from '@/lib/tick-calculations'
 import { Input } from '@/components/ui/input'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from "sonner"
 import { deleteTradesByIdsAction } from '@/server/accounts'
 import { Trash } from 'lucide-react'
 import {
@@ -174,7 +174,7 @@ function TagsColumnHeader() {
                             className="h-4 w-4"
                           />
                           <div
-                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            className="w-3 h-3 rounded-full shrink-0"
                             style={{ backgroundColor: tag.color || '#CBD5E1' }}
                           />
                           <label
@@ -254,7 +254,6 @@ export function TradeTableReview() {
   const tags = useUserStore(state => state.tags)
   const timezone = useUserStore(state => state.timezone)
   const tickDetails = useTickDetailsStore(state => state.tickDetails)
-  const { toast } = useToast()
 
   // Debug: Log tick details
   console.log('Available tick details:', tickDetails)
@@ -373,16 +372,13 @@ export function TradeTableReview() {
       setSelectedTrades([])
       table.resetRowSelection()
       refreshTrades()
-      toast({
-        title: t('trade-table.deleteSuccess'),
+      toast.success(t('trade-table.deleteSuccess'), {
         description: t('trade-table.deleteSuccessDescription', { count: validTradeIds.length }),
       })
     } catch (error) {
       console.error('Error deleting trades:', error)
-      toast({
-        title: t('trade-table.deleteError'),
+      toast.error(t('trade-table.deleteError'), {
         description: t('trade-table.deleteErrorDescription'),
-        variant: "destructive"
       })
     }
   }
@@ -1017,7 +1013,7 @@ export function TradeTableReview() {
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Info 
-                          className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help mr-2 flex-shrink-0" 
+                          className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help mr-2 shrink-0" 
                           onClick={(e) => e.stopPropagation()}
                         />
                       </TooltipTrigger>
@@ -1044,7 +1040,7 @@ export function TradeTableReview() {
       <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
         <div className="flex h-full flex-col overflow-hidden">
           <Table className="w-full h-full border-separate border-spacing-0">
-            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-sm shadow-sm border-b">
+            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (

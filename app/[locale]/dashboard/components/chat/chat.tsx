@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useRef, useState, useEffect, useMemo, useCallback } from "react"
+import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom"
 import { Button } from "@/components/ui/button"
 import { RotateCcw, ChevronDown, MessageSquare, Loader2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -32,39 +33,12 @@ interface ChatWidgetProps {
 
 export type ChatStatus = "error" | "submitted" | "streaming" | "ready"
 
-interface ScrollState {
-    isAutoScrollEnabled: boolean
-    isNearBottom: boolean
-    showResumeButton: boolean
-}
+// Removed custom scroll state - using use-stick-to-bottom instead
 
 // Constants
-const SCROLL_THRESHOLD = 100
 const MESSAGE_BATCH_SIZE = 50
 
-// Utility functions
-function throttle<T extends (...args: any[]) => any>(func: T, delay: number): (...args: Parameters<T>) => void {
-    let timeoutId: NodeJS.Timeout | null = null
-    let lastExecTime = 0
-
-    return (...args: Parameters<T>) => {
-        const currentTime = Date.now()
-
-        if (currentTime - lastExecTime > delay) {
-            func(...args)
-            lastExecTime = currentTime
-        } else {
-            if (timeoutId) clearTimeout(timeoutId)
-            timeoutId = setTimeout(
-                () => {
-                    func(...args)
-                    lastExecTime = Date.now()
-                },
-                delay - (currentTime - lastExecTime),
-            )
-        }
-    }
-}
+// Utility functions - throttle removed as we're using use-stick-to-bottom
 
 // Message virtualization hook
 function useMessageVirtualization(messages: UIMessage[]) {
@@ -100,12 +74,23 @@ function useMessageVirtualization(messages: UIMessage[]) {
     }
 }
 
-// Resume Scroll Button Component
-const ResumeScrollButton = ({ onClick, show }: { onClick: () => void; show: boolean }) => {
+// Resume Scroll Button Component using StickToBottom context
+const ResumeScrollButton = () => {
     const t = useI18n()
+    const { isAtBottom, scrollToBottom } = useStickToBottomContext()
+    
+    // Debug logging
+    console.log('ResumeScrollButton - isAtBottom:', isAtBottom)
+    console.log('ResumeScrollButton - scrollToBottom function:', scrollToBottom)
+    
+    const handleScrollToBottom = useCallback(() => {
+        console.log('Scroll to bottom clicked')
+        scrollToBottom()
+    }, [scrollToBottom])
+    
     return (
         <AnimatePresence>
-            {show && (
+            {!isAtBottom && (
                 <motion.div
                     className="absolute bottom-20 right-4 z-10"
                     initial={{ opacity: 0, y: 20, scale: 0.8 }}
@@ -113,7 +98,7 @@ const ResumeScrollButton = ({ onClick, show }: { onClick: () => void; show: bool
                     exit={{ opacity: 0, y: 20, scale: 0.8 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
                 >
-                    <Button onClick={onClick} size="sm" className="shadow-lg hover:shadow-xl transition-shadow" variant="secondary">
+                    <Button onClick={handleScrollToBottom} size="sm" className="shadow-lg hover:shadow-xl transition-shadow" variant="secondary">
                         <ChevronDown className="h-4 w-4 mr-1" />
                         {t('chat.overlay.resumeScroll')}
                     </Button>
@@ -184,9 +169,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const [hideFirstMessage, setHideFirstMessage] = useState(false)
     const { messages: storedMessages, setMessages: setStoredMessages } = useChatStore()
     const [isLoadingMessages, setIsLoadingMessages] = useState(true)
-    const scrollContainerRef = useRef<HTMLDivElement>(null)
-    const [showResumeButton, setShowResumeButton] = useState(false)
-    const [isNearBottom, setIsNearBottom] = useState(true)
+    // Using use-stick-to-bottom for scroll management
     const moods = useMoodStore(state => state.moods)
     const setMoods = useMoodStore(state => state.setMoods)
 
@@ -293,39 +276,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
 
 
 
-    // Custom scroll management
-    useEffect(() => {
-        const container = scrollContainerRef.current
-        if (!container) return
-
-        const handleScroll = throttle(() => {
-            const { scrollTop, scrollHeight, clientHeight } = container
-            const threshold = 100 // pixels from bottom to consider "near bottom"
-            const isNearBottom = scrollHeight - scrollTop - clientHeight < threshold
-            setIsNearBottom(isNearBottom)
-            setShowResumeButton(!isNearBottom)
-        }, 100) // Throttle to 100ms
-
-        // Initial check
-        handleScroll()
-
-        // Add scroll listener
-        container.addEventListener('scroll', handleScroll)
-        return () => container.removeEventListener('scroll', handleScroll)
-    }, [])
-
-    // Auto-scroll when new messages arrive
-    useEffect(() => {
-        if (!scrollContainerRef.current || !isNearBottom) return
-        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-    }, [messages, isNearBottom])
-
-    const scrollToBottom = useCallback(() => {
-        if (!scrollContainerRef.current) return
-        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
-        setIsNearBottom(true)
-        setShowResumeButton(false)
-    }, [])
+    // Scroll management is now handled by use-stick-to-bottom
 
     const { visibleMessages, hasMoreMessages, loadMoreMessages } = useMessageVirtualization(messages)
 
@@ -339,12 +290,13 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
         <Card className="h-full flex flex-col bg-background relative">
             <ChatHeader title="AI Assistant" onReset={handleReset} isLoading={status === "streaming"} size={size} />
             <CardContent className="flex-1 flex flex-col min-h-0 p-0 relative">
-                <div
+                <StickToBottom
                     className="flex-1 min-h-0 w-full overflow-y-auto"
-                    style={{ overscrollBehavior: "contain" }}
-                    ref={scrollContainerRef}
+                    initial="smooth"
+                    resize="smooth"
+                    role="log"
                 >
-                    <div className="p-4">
+                    <StickToBottom.Content className="p-4">
                         {hasMoreMessages && (
                             <div className="text-center mb-4">
                                 <Button variant="outline" size="sm" onClick={loadMoreMessages} className="text-xs">
@@ -582,10 +534,10 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                                 }
                             })}
                         </AnimatePresence>
-                    </div>
-                </div>
-
-                <ResumeScrollButton onClick={scrollToBottom} show={showResumeButton} />
+                    </StickToBottom.Content>
+                    
+                    <ResumeScrollButton />
+                </StickToBottom>
 
                 <ChatInput
                     onSend={() => {
@@ -615,7 +567,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 />
             </CardContent>
             {!isStarted && !isLoadingMessages && storedMessages.length === 0 && (
-                <div className="absolute inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="absolute inset-0 bg-background/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
                     <div className="w-full max-w-md p-4 sm:p-6 space-y-4 sm:space-y-6 text-center">
                         <div className="flex justify-center">
                             <div className="p-2 sm:p-3 rounded-full bg-primary/10">

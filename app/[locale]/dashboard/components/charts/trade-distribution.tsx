@@ -40,7 +40,7 @@ const CustomTooltip = ({ active, payload }: TooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
-      <div className="rounded-lg border bg-background p-2 shadow-sm">
+      <div className="rounded-lg border bg-background p-2 shadow-xs">
         <div className="grid gap-2">
           <div className="flex flex-col">
             <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -75,9 +75,9 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
     const beRate = Number((nbBe / nbTrades * 100).toFixed(2))
 
     return [
-      { name: t('tradeDistribution.winWithCount', { count: nbWin, total: nbTrades }), value: winRate, color: 'hsl(var(--success))', count: nbWin },
+      { name: t('tradeDistribution.winWithCount', { count: nbWin, total: nbTrades }), value: winRate, color: 'hsl(var(--chart-win))', count: nbWin },
       { name: t('tradeDistribution.breakevenWithCount', { count: nbBe, total: nbTrades }), value: beRate, color: 'hsl(var(--muted-foreground))', count: nbBe },
-      { name: t('tradeDistribution.lossWithCount', { count: nbLoss, total: nbTrades }), value: lossRate, color: 'hsl(var(--destructive))', count: nbLoss }
+      { name: t('tradeDistribution.lossWithCount', { count: nbLoss, total: nbTrades }), value: lossRate, color: 'hsl(var(--chart-loss))', count: nbLoss }
     ]
   }, [nbWin, nbLoss, nbBe, nbTrades, t])
 

@@ -65,23 +65,21 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
   }
 
   try {
-    // Fetch all trades for the user
-    const trades = await prisma.trade.findMany({
-      where: { userId: user.id },
-      orderBy: { entryDate: 'desc' }
-    })
-
-    // Fetch accounts with payouts
-    const accounts = await prisma.account.findMany({
-      where: { userId: user.id },
-      include: { payouts: true }
-    })
-
-    // Fetch groups to identify hidden accounts
-    const groups = await prisma.group.findMany({
-      where: { userId: user.id },
-      include: { accounts: true }
-    })
+    // Use a Prisma transaction to fetch all needed data in a single DB roundtrip
+    const [trades, accounts, groups] = await prisma.$transaction([
+      prisma.trade.findMany({
+        where: { userId: user.id },
+        orderBy: { entryDate: 'desc' }
+      }),
+      prisma.account.findMany({
+        where: { userId: user.id },
+        include: { payouts: true }
+      }),
+      prisma.group.findMany({
+        where: { userId: user.id },
+        include: { accounts: true }
+      }),
+    ])
 
     // Get hidden accounts for filtering
     const hiddenGroup = groups.find(g => g.name === "Hidden Accounts")
@@ -94,6 +92,16 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
       // Skip trades from hidden accounts
       if (hiddenAccountNumbers.includes(trade.accountNumber)) {
         return false
+      }
+
+      // Skip trades from not accountNumbers (filter is set)
+      if (params.accountNumbers.length > 0 && !params.accountNumbers.includes(trade.accountNumber)) {
+        return false
+      }
+
+      // Include all trades if  showIndividual is false
+      if (!params.showIndividual) {
+        return true
       }
 
       // Validate entry date

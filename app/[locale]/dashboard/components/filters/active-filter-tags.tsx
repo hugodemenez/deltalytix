@@ -159,7 +159,7 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
           </div>
           <motion.div 
             className={cn(
-              "absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent flex items-center justify-end"
+              "absolute right-0 top-0 bottom-0 w-8 bg-linear-to-l from-background to-transparent flex items-center justify-end"
             )}
             initial={{ opacity: 0 }}
             animate={{ opacity: canScroll ? 1 : 0 }}

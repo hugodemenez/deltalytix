@@ -118,7 +118,7 @@ export function AccountCard({ account, trades, allTrades, metrics, tradingDaysMe
   return (
     <Card
       className={cn(
-        "flex flex-col cursor-pointer hover:border-primary/50 transition-colors shadow-sm hover:shadow-md",
+        "flex flex-col cursor-pointer hover:border-primary/50 transition-colors shadow-xs hover:shadow-md",
         size === 'small' || size === 'small-long' ? "w-72" : "w-96"
       )}
       onClick={onClick}
@@ -140,7 +140,7 @@ export function AccountCard({ account, trades, allTrades, metrics, tradingDaysMe
                   {
                     account.nextPaymentDate && (
                       <div className={cn(
-                        "self-center ml-2 flex-shrink-0",
+                        "self-center ml-2 shrink-0",
                         size === 'small' || size === 'small-long' ? "text-xs" : "text-xs",
                         Math.floor((new Date(account.nextPaymentDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 5 ? 'text-red-500 blink' : 'text-muted-foreground'
                       )}>

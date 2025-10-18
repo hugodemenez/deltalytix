@@ -106,7 +106,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed py-2 top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-sm w-screen">
+      <nav className="fixed py-2 top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-xs w-screen">
         <div className="flex items-center justify-between px-10 h-16">
           <div className="flex items-center gap-x-2">
             <div className="flex flex-col items-center">
@@ -115,7 +115,7 @@ export default function Navbar() {
                   <Button 
                     variant="ghost" 
                     size="sm" 
-                    className="h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
+                    className="h-9 px-2 rounded-md hover:bg-accent hover:text-accent-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background transition-colors"
                     aria-haspopup="menu"
                     aria-expanded={isLogoPopoverOpen}
                     aria-label={t('landing.navbar.logo.title')}
@@ -138,7 +138,7 @@ export default function Navbar() {
                         className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
                         onClick={() => setIsLogoPopoverOpen(false)}
                       >
-                        <div className="flex-shrink-0 w-4 h-4">
+                        <div className="shrink-0 w-4 h-4">
                           <LayoutDashboard className="h-full w-full" />
                         </div>
                         {t('landing.navbar.logo.dashboard')}
@@ -148,7 +148,7 @@ export default function Navbar() {
                         className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
                         onClick={() => setIsLogoPopoverOpen(false)}
                       >
-                        <div className="flex-shrink-0 w-4 h-4">
+                        <div className="shrink-0 w-4 h-4">
                           <Globe className="h-full w-full" />
                         </div>
                         {t('landing.navbar.logo.home')}

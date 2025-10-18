@@ -267,7 +267,7 @@ export default function GitHubRepoCard() {
                     target="_blank"
                     rel="noreferrer"
                   >
-                    <div className="bg-background pl-2 pr-3 text-xs md:text-sm flex items-center space-x-2 border-r-[1px] border-border">
+                    <div className="bg-background pl-2 pr-3 text-xs md:text-sm flex items-center space-x-2 border-r border-border">
                       <StarIcon className="w-3 h-3 md:w-4 md:h-4" />
                       <span className="font-medium">Star</span>
                     </div>

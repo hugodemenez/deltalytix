@@ -91,7 +91,7 @@ export function TagFilter({ className }: TagFilterProps) {
                     className="h-4 w-4"
                   />
                   <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
+                    className="w-3 h-3 rounded-full shrink-0"
                     style={{ backgroundColor: tag.color || '#CBD5E1' }}
                   />
                   <span className="text-sm truncate">{tag.name}</span>

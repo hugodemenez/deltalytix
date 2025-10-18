@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { useUserStore } from '@/store/user-store'
-import LoadingOverlay from '../app/[locale]/dashboard/components/loading-overlay'
 import ImportButton from '../app/[locale]/dashboard/components/import/import-button'
 import { useI18n } from "@/locales/client"
 import { signOut } from '@/server/auth'
@@ -15,6 +14,7 @@ import OnboardingModal from './onboarding-modal'
 import { AccountGroupBoard } from '@/app/[locale]/dashboard/components/filters/account-group-board'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useTradesStore } from '@/store/trades-store'
+import { toast } from 'sonner'
 
 const PAYWALL_COOLDOWN = 30 * 60 * 1000; // 30 minutes in milliseconds
 
@@ -46,6 +46,21 @@ export default function Modals() {
     }
   }, [trades, isPaywallOpen, isLoading])
 
+  // Handle loading toast
+  const loadingToastRef = useRef<string | number | null>(null)
+  
+  useEffect(() => {
+    if (isLoading && !loadingToastRef.current) {
+      // Show loading toast
+      const toastId = toast.loading(t('loading.trades'))
+      loadingToastRef.current = toastId
+    } else if (!isLoading && loadingToastRef.current) {
+      // Dismiss loading toast
+      toast.dismiss(loadingToastRef.current)
+      loadingToastRef.current = null
+    }
+  }, [isLoading, t])
+
   const handlePaywallClose = useCallback(() => {
     setIsPaywallOpen(false);
     // Update timestamp when user manually closes the modal
@@ -55,11 +70,10 @@ export default function Modals() {
   if (!user) return null
   return (
     <>
-      {isLoading && <LoadingOverlay />}
       <OnboardingModal />
 
       {/* Tooltip Portal for Sheet */}
-      <div id="sheet-tooltip-portal" className="fixed inset-0 pointer-events-none z-[100]" />
+      <div id="sheet-tooltip-portal" className="fixed inset-0 pointer-events-none z-100" />
       
       {/* Account Group Board */}
       <Sheet open={accountGroupBoardOpen} onOpenChange={setAccountGroupBoardOpen}>

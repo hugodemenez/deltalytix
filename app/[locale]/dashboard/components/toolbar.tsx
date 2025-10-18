@@ -205,7 +205,7 @@ export function Toolbar({
                 <motion.div
           ref={toolbarRef}
           className={cn(
-            "fixed inset-x-0 mx-auto z-[9999] w-fit",
+            "fixed inset-x-0 mx-auto z-9999 w-fit",
             isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
           )}
           style={{ 
@@ -220,7 +220,7 @@ export function Toolbar({
         >
           {/* Gradient strip overlay for hidden state */}
           {!isVisible && (
-            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent h-4 rounded-t-full pointer-events-none" />
+            <div className="absolute inset-0 bg-linear-to-t from-background/90 via-background/40 to-transparent h-4 rounded-t-full pointer-events-none" />
           )}
           <motion.div 
             className="flex items-center justify-center gap-4 p-3 bg-background/95 border rounded-full shadow-lg relative"

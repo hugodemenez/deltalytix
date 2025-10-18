@@ -18,9 +18,9 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
-import { useI18n } from "@/locales/client"
+import { useI18n, useCurrentLocale } from "@/locales/client"
 import { useRouter } from "next/navigation"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 import {
     InputOTP,
     InputOTPGroup,
@@ -51,6 +51,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const router = useRouter()
     const t = useI18n()
+    const locale = useCurrentLocale()
 
     React.useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search)
@@ -89,7 +90,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setIsLoading(true)
         setAuthMethod('email')
         try {
-            await signInWithEmail(values.email, isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl)
+            await signInWithEmail(values.email, isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl, locale)
             setIsEmailSent(true)
             setShowOtpInput(true)
             setCountdown(15)
@@ -106,18 +107,15 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         try {
             const email = form.getValues('email')
             await verifyOtp(email, values.otp)
-            toast({
-                title: "Success",
+            toast.success("Successfully verified. Redirecting...", {
                 description: "Successfully verified. Redirecting...",
             })
             router.refresh()
             router.push(nextUrl || '/dashboard')
         } catch (error) {
             console.error(error)
-            toast({
-                title: "Error",
+            toast.error("Error", {
                 description: error instanceof Error ? error.message : "Failed to verify code",
-                variant: "destructive",
             })
         } finally {
             setIsLoading(false)
@@ -130,7 +128,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('discord')
 
         try {
-            await signInWithDiscord(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl)
+            await signInWithDiscord(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl, locale)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
@@ -144,7 +142,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('google')
 
         try {
-            await signInWithGoogle(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl)
+            await signInWithGoogle(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl, locale)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)

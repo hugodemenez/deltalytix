@@ -501,7 +501,7 @@ export default function PdfProcessing({
       <div className="flex-1 min-h-0 overflow-hidden">
         <div className="flex flex-col h-full">
           <Table className="w-full">
-            <TableHeader className="sticky top-0 z-10 bg-background shadow-sm">
+            <TableHeader className="sticky top-0 z-10 bg-background shadow-xs">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (

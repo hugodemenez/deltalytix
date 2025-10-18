@@ -66,8 +66,8 @@ function createTablePreview(type: 'tradeTableReview' | 'consistencyTable') {
               <div key={i} className={cn(
                 "h-4 bg-muted-foreground/20 rounded",
                 type === 'tradeTableReview' 
-                  ? i === 1 ? "flex-[3]" : "flex-[2]"
-                  : i < 2 ? "flex-[2]" : "flex-[1]"
+                  ? i === 1 ? "flex-3" : "flex-2"
+                  : i < 2 ? "flex-2" : "flex-1"
               )} />
             ))}
           </div>
@@ -77,8 +77,8 @@ function createTablePreview(type: 'tradeTableReview' | 'consistencyTable') {
                 <div key={i} className={cn(
                   "h-3 bg-muted-foreground/10 rounded",
                   type === 'tradeTableReview' 
-                    ? i === 1 ? "flex-[3]" : "flex-[2]"
-                    : i < 2 ? "flex-[2]" : "flex-[1]"
+                    ? i === 1 ? "flex-3" : "flex-2"
+                    : i < 2 ? "flex-2" : "flex-1"
                 )} />
               ))}
             </div>
@@ -145,11 +145,12 @@ function createPropfirmPreview() {
 }
 
 function createMindsetPreview() {
+  const t = useI18n()
   return (
     <Card className="h-[300px] flex flex-col">
       <CardHeader className="pb-3 border-b">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium">Mindset</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('mindset.title')}</CardTitle>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
               <div className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -294,7 +295,7 @@ function CreateChatPreview() {
           <div className="p-4 space-y-3">
             {/* Bot message */}
             <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <div className="w-3 h-3 rounded-full bg-primary" />
               </div>
               <div className="bg-muted rounded-lg p-2 max-w-[80%]">
@@ -308,14 +309,14 @@ function CreateChatPreview() {
               <div className="bg-primary rounded-lg p-2 max-w-[80%]">
                 <div className="h-3 w-20 bg-primary-foreground/40 rounded" />
               </div>
-              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0">
                 <div className="w-3 h-3 rounded-full bg-muted-foreground" />
               </div>
             </div>
             
             {/* Bot message */}
             <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                 <div className="w-3 h-3 rounded-full bg-primary" />
               </div>
               <div className="bg-muted rounded-lg p-2 max-w-[80%]">

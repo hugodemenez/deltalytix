@@ -88,7 +88,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     ),
     p: ({ className, ...props }: WithoutRef<HTMLAttributes<HTMLParagraphElement>>) => (
       <p
-        className="mb-4 leading-7 text-neutral-700 dark:text-neutral-300 [&:not(:first-child)]:mt-6"
+        className="mb-4 leading-7 text-neutral-700 dark:text-neutral-300 not-first:mt-6"
         {...props}
       />
     ),

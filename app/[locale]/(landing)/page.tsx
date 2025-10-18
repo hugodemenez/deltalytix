@@ -37,7 +37,7 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="flex flex-col min-h-[100dvh] text-gray-900 dark:text-white transition-colors duration-300">
+        <div className="flex flex-col min-h-dvh text-gray-900 dark:text-white transition-colors duration-300">
             <main className="flex-1">
                 <section className="w-full py-14 md:py-12 lg:py-16 xl:py-24">
                     <div className="container px-4 md:px-6 mx-auto">
@@ -88,17 +88,11 @@ export default function LandingPage() {
                                         autoPlay
                                         playsInline
                                         className={`w-full h-full rounded-[14.5867px] border-[1.82333px] border-[#E5E7EB] dark:border-gray-800 ${videoLoaded ? 'block' : 'hidden'}`}
+                                        poster={effectiveTheme === "dark" ? "/videos/demo_dark_poster.png" : "/videos/demo_white_poster.png"}
                                         onLoadedData={handleVideoLoad}
                                         onError={handleVideoError}
                                     >
-                                        <source src={effectiveTheme === "dark" ? "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo-dark.mp4" : "https://fhvmtnvjiotzztimdxbi.supabase.co/storage/v1/object/public/assets/demo.mp4"} type="video/mp4" />
-                                        <track
-                                            src="/path/to/captions.vtt"
-                                            kind="subtitles"
-                                            srcLang="en"
-                                            label="English"
-                                        />
-                                        Your browser does not support the video tag.
+                                        <source src={effectiveTheme === "dark" ? "/videos/demo_dark.mp4" : "/videos/demo_white.mp4"} type="video/mp4" />
                                     </video>
                                 </div>
                             </div>

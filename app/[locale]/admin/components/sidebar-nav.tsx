@@ -37,11 +37,6 @@ export function SidebarNav({ className, ...props }: SidebarNavProps) {
       icon: UserPlus,
     },
     {
-      href: "/admin/investing-calendar",
-      label: "Investing Calendar",
-      icon: Calendar,
-    },
-    {
       href: "/admin/user-equity",
       label: "User Equity",
       icon: TrendingUp,

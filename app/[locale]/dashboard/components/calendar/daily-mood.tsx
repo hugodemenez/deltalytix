@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
-import { useToast } from '@/hooks/use-toast'
+import { toast } from "sonner"
 import { useI18n } from '@/locales/client'
 import { saveMood, getMoodForDay } from '@/server/journal'
 import { format } from 'date-fns'
@@ -26,7 +26,6 @@ const STORAGE_KEY = 'daily_mood'
 
 export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMoodProps) {
   const user = useUserStore(state => state.user)
-  const { toast } = useToast()
   const t = useI18n()
   const [isLoading, setIsLoading] = React.useState<'bad' | 'okay' | 'great' | null>(null)
   const [selectedMood, setSelectedMood] = React.useState<'bad' | 'okay' | 'great' | null>(null)
@@ -70,11 +69,7 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
 
   const handleMoodSelect = async (mood: 'bad' | 'okay' | 'great') => {
     if (!user?.id) {
-      toast({
-        title: t('error'),
-        description: t('auth.required'),
-        variant: "destructive",
-      })
+      toast.error(t('auth.required'))
       return
     }
 
@@ -94,17 +89,10 @@ export function DailyMood({ dayData, isWeekly = false, selectedDate }: DailyMood
         date: focusedDay
       }))
 
-      toast({
-        title: t('success'),
-        description: t('mood.saved'),
-      })
+      toast.success(t('mood.saved'))
     } catch (error) {
       console.error('Error saving mood:', error)
-      toast({
-        title: t('error'),
-        description: t('mood.error'),
-        variant: "destructive",
-      })
+      toast.error(t('mood.error'))
     } finally {
       setIsLoading(null)
     }

@@ -71,7 +71,7 @@ const CommentNotificationEmail = ({
       <Preview>{i18n.preview}</Preview>
       <Tailwind>
         <Body className="bg-gray-50 font-sans">
-          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-sm">
+          <Section className="bg-white max-w-[600px] mx-auto rounded-lg shadow-xs">
             <Section className="px-6 py-8">
               <Heading className="text-2xl font-bold text-gray-900 mb-6">
                 {i18n.greeting} {recipientName},
