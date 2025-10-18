@@ -5,8 +5,10 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useI18n } from '@/locales/client'
 
 export default function ContractQuantityChartEmbed({ trades }: { trades: { quantity: number, entryDate?: string | Date }[] }) {
+  const t = useI18n()
   const chartData = React.useMemo(() => {
     const byHour: Record<number, { totalQuantity: number; count: number }> = {}
     for (let h = 0; h < 24; h++) byHour[h] = { totalQuantity: 0, count: 0 }
@@ -39,15 +41,15 @@ export default function ContractQuantityChartEmbed({ trades }: { trades: { quant
         }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Time</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.contracts.tooltip.hour')}</span>
               <span className="font-bold text-muted-foreground">{`${label}:00 - ${(label + 1) % 24}:00`}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Total Contracts</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.contracts.tooltip.totalContracts')}</span>
               <span className="font-bold">{data.totalQuantity}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Trades</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.contracts.tooltip.numberOfTrades')}</span>
               <span className="font-bold text-muted-foreground">{data.tradeCount}</span>
             </div>
           </div>
@@ -62,13 +64,13 @@ export default function ContractQuantityChartEmbed({ trades }: { trades: { quant
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">Contracts by Hour</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('embed.contracts.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>Total number of contracts traded by entry hour (UTC).</p>
+                <p>{t('embed.contracts.description')}</p>
               </PopoverContent>
             </Popover>
           </div>

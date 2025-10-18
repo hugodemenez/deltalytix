@@ -7,6 +7,7 @@ import mindset from './fr/mindset'
 import propfirm from './fr/propfirm'
 import chat from './fr/chat'
 import terms from './fr/terms'
+import embed from './fr/embed'
 import business from './fr/business'
 
 export default {
@@ -19,6 +20,7 @@ export default {
     ...propfirm,
     ...chat,
     ...terms,
+    ...embed,
     ...business,
     'footer.heading': 'Pied de page',
     'footer.description': 'Analyses avancées pour les traders modernes.',

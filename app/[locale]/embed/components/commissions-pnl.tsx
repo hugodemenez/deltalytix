@@ -5,17 +5,19 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useI18n } from '@/locales/client'
 
 export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number, commission: number }[] }) {
+  const t = useI18n()
   const chartData = React.useMemo(() => {
     const totalPnL = trades.reduce((s, t) => s + (t.pnl || 0), 0)
     const totalCommissions = trades.reduce((s, t) => s + (t.commission || 0), 0)
     const total = Math.abs(totalPnL) + Math.abs(totalCommissions) || 1
     return [
-      { name: 'Net PnL', value: totalPnL, percentage: totalPnL / total, fill: totalPnL >= 0 ? 'hsl(var(--chart-win))' : 'hsl(var(--chart-loss))' },
-      { name: 'Commissions', value: totalCommissions, percentage: totalCommissions / total, fill: 'hsl(var(--chart-4))' },
+      { name: t('embed.commissions.legend.netPnl'), value: totalPnL, percentage: totalPnL / total, fill: totalPnL >= 0 ? 'hsl(var(--chart-win))' : 'hsl(var(--chart-loss))' },
+      { name: t('embed.commissions.legend.commissions'), value: totalCommissions, percentage: totalCommissions / total, fill: 'hsl(var(--chart-4))' },
     ]
-  }, [trades])
+  }, [trades, t])
 
   const formatCurrency = (v: number) => v.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
 
@@ -36,7 +38,7 @@ export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number,
             </div>
             {typeof data.percentage === 'number' && (
               <div className="flex items-center justify-between gap-4">
-                <span className="text-[0.70rem] uppercase text-muted-foreground">Share</span>
+                <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.commissions.tooltip.percentage')}</span>
                 <span className="font-bold text-muted-foreground">{(Math.abs(data.percentage) * 100).toFixed(1)}%</span>
               </div>
             )}
@@ -52,13 +54,13 @@ export default function CommissionsPnLEmbed({ trades }: { trades: { pnl: number,
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">Commissions vs Net PnL</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('embed.commissions.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>Share of total PnL vs total commissions.</p>
+                <p>{t('embed.commissions.tooltip.description')}</p>
               </PopoverContent>
             </Popover>
           </div>
