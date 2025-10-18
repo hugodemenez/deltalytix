@@ -231,10 +231,9 @@ export default {
         timeRange: "Intervalle de temps",
         avgPnl: "P/L moyen",
         winRate: "Taux de réussite",
-        trades: {
-          one: "{count} opération",
-          other: "{count} opérations",
-        },
+        "trades#zero": "Aucune opération",
+        "trades#one": "1 opération",
+        "trades#other": "{count} opérations",
       },
       ranges: {
         under1min: "< 1m",

@@ -223,10 +223,9 @@ export default {
         timeRange: 'Àkókò',
         avgPnl: 'Àpapọ̀ P/L',
         winRate: 'Oṣuwọ̀n ìbori',
-        trades: {
-          one: 'iṣòwò {count}',
-          other: 'àwọn iṣòwò {count}',
-        },
+        "trades#zero": "Ko si awọn iṣowo",
+        "trades#one": "1 iṣowo",
+        "trades#other": "{count} awọn iṣowo",
       },
       ranges: {
         under1min: '< 1m',

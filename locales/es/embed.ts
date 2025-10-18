@@ -231,10 +231,9 @@ export default {
         timeRange: "Rango de tiempo",
         avgPnl: "P/L promedio",
         winRate: "Tasa de ganancia",
-        trades: {
-          one: "{count} operación",
-          other: "{count} operaciones",
-        },
+        "trades#zero": "Sin operaciones",
+        "trades#one": "1 operación",
+        "trades#other": "{count} operaciones",
       },
       ranges: {
         under1min: "< 1 min",
