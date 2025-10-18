@@ -23,7 +23,7 @@ export default {
       '30to60min': '30-60分钟',
       '1to2hours': '1-2小时',
       '2to5hours': '2-5小时',
-      over5hours': '超过5小时'
+      over5hours: '超过5小时'
     },
     clearFilter: '清除筛选'
   },
