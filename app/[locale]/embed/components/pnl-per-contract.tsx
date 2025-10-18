@@ -81,19 +81,19 @@ export default function PnLPerContractChartEmbed({ trades }: { trades: TradeLike
         }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Avg PnL / Contract</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContract.tooltip.averagePnl')}</span>
               <span className="font-bold">{formatCurrency(data.averagePnl)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Total PnL</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContract.tooltip.totalPnl')}</span>
               <span className="font-bold text-muted-foreground">{formatCurrency(data.totalPnl)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Trades</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContract.tooltip.trades')}</span>
               <span className="font-bold text-muted-foreground">{data.tradeCount}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Total Contracts</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContract.tooltip.totalContracts')}</span>
               <span className="font-bold text-muted-foreground">{data.totalContracts}</span>
             </div>
           </div>
