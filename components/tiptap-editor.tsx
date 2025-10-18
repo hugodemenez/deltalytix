@@ -3,6 +3,7 @@
 import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
+import Paragraph from "@tiptap/extension-paragraph";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import { BubbleMenu as BubbleMenuExtension } from "@tiptap/extension-bubble-menu";
@@ -39,13 +40,13 @@ import {
   Loader2,
 } from "lucide-react";
 import { Maximize2, Minimize2 } from "lucide-react";
-import { useCallback, useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef, act } from "react";
 import { useUserStore } from "@/store/user-store";
 import { toast } from "sonner";
 import { useCurrentLocale, useI18n } from "@/locales/client";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase";
-import { useChat } from "@ai-sdk/react";
+import { useChat, useCompletion } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import {
   DropdownMenu,
@@ -53,11 +54,106 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { MoreHorizontal } from "lucide-react";
 import { NewsSubMenu } from "@/components/ai-elements/news-sub-menu";
 import { FinancialEvent } from "@prisma/client";
+import { ActionSchema as EditorAction } from "@/app/api/ai/editor/route";
+import { z } from "zod";
 
 const supabase = createClient();
+
+// AI Content Mark Extension to style AI-generated content
+import { Mark } from "@tiptap/core";
+
+const AIContentMark = Mark.create({
+  name: "aiContent",
+
+  addAttributes() {
+    return {
+      class: {
+        default: "ai-generated-content",
+      },
+    };
+  },
+
+  parseHTML() {
+    return [
+      {
+        tag: "span[data-ai-content]",
+      },
+    ];
+  },
+
+  renderHTML({ HTMLAttributes }) {
+    return [
+      "span",
+      {
+        ...HTMLAttributes,
+        "data-ai-content": "true",
+        class: "ai-generated-content",
+      },
+      0,
+    ];
+  },
+});
+
+// AI Completion Extension to manage streaming state
+const AICompletionExtension = StarterKit.extend({
+  name: "aiCompletion",
+  link: false,
+
+  addStorage() {
+    return {
+      insertPosition: null as number | null,
+      lastInsertedLength: 0,
+    };
+  },
+
+  addCommands() {
+    return {
+      startAICompletion: (position: number) => () => {
+        this.storage.insertPosition = position;
+        this.storage.lastInsertedLength = 0;
+        return true;
+      },
+      updateAICompletion:
+        (completion: string) =>
+        ({ commands }: { commands: any }) => {
+          if (this.storage.insertPosition === null) return false;
+
+          const delta = completion.slice(this.storage.lastInsertedLength);
+
+          if (delta.length > 0) {
+            const newPosition =
+              this.storage.insertPosition + this.storage.lastInsertedLength;
+            commands.insertContentAt(newPosition, {
+              type: "heading",
+              attrs: {
+                level: 2,
+              },
+              content: {
+                text: delta,
+                type: "text",
+              },
+            });
+            this.storage.lastInsertedLength = completion.length;
+          }
+
+          return true;
+        },
+      finishAICompletion: () => () => {
+        this.storage.insertPosition = null;
+        this.storage.lastInsertedLength = 0;
+        return true;
+      },
+    };
+  },
+});
 
 // Optimized BubbleMenu component using useEditorState
 function OptimizedBubbleMenu({
@@ -70,27 +166,7 @@ function OptimizedBubbleMenu({
   status: string;
 }) {
   const t = useI18n();
-  const [isAIHovered, setIsAIHovered] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<"bottom" | "top">(
-    "bottom",
-  );
-  const aiButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Calculate dropdown position based on available space
-  useEffect(() => {
-    if (isAIHovered && aiButtonRef.current) {
-      const rect = aiButtonRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const dropdownHeight = 280; // Approximate height of dropdown
-
-      // If there's not enough space below, show above
-      if (rect.bottom + dropdownHeight > viewportHeight - 20) {
-        setDropdownPosition("top");
-      } else {
-        setDropdownPosition("bottom");
-      }
-    }
-  }, [isAIHovered]);
+  const [isAIOpen, setIsAIOpen] = useState(false);
 
   const editorState = useEditorState({
     editor,
@@ -168,76 +244,60 @@ function OptimizedBubbleMenu({
         <Highlighter className="h-4 w-4" />
       </Button>
 
-      {/* AI Dropdown with hover effect */}
-      <div className="relative">
-        <Button
-          ref={aiButtonRef}
-          variant="ghost"
-          size="sm"
-          disabled={status === "streaming"}
-          className={cn(
-            "h-8 w-8 p-0",
-            status === "streaming" && "animate-pulse",
-          )}
-          title={t("editor.ai.button")}
-          onMouseEnter={() => setIsAIHovered(true)}
-          onMouseLeave={() => setIsAIHovered(false)}
-        >
-          {status === "streaming" ? (
-            <Loader2 className="h-4 w-4" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-        </Button>
-
-        {/* AI Dropdown Menu */}
-        {isAIHovered && (
-          <div
+      {/* AI Menu */}
+      <Popover open={isAIOpen} onOpenChange={setIsAIOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={status === "streaming"}
             className={cn(
-              "absolute left-0 w-56 bg-background border rounded-lg shadow-lg z-[100] animate-in fade-in-0 zoom-in-95 duration-200",
-              dropdownPosition === "bottom"
-                ? "top-full mt-1"
-                : "bottom-full mb-1",
+              "h-8 w-8 p-0",
+              status === "streaming" && "animate-pulse",
             )}
-            onMouseEnter={() => setIsAIHovered(true)}
-            onMouseLeave={() => setIsAIHovered(false)}
+            title={t("editor.ai.button")}
           >
-            <div className="p-1">
-              <button
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
-                onClick={() => {
-                  onRunAIAction("explain");
-                  setIsAIHovered(false);
-                }}
-                disabled={status === "streaming"}
-              >
-                {t("editor.ai.actions.explain")}
-              </button>
-              <button
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
-                onClick={() => {
-                  onRunAIAction("improve");
-                  setIsAIHovered(false);
-                }}
-                disabled={status === "streaming"}
-              >
-                {t("editor.ai.actions.improvements")}
-              </button>
-              <div className="h-px bg-border my-1" />
-              <button
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
-                onClick={() => {
-                  onRunAIAction("suggest_question");
-                  setIsAIHovered(false);
-                }}
-                disabled={status === "streaming"}
-              >
-                {t("editor.ai.actions.suggestQuestion")}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+            {status === "streaming" ? (
+              <Loader2 className="h-4 w-4" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-1" align="start">
+          <button
+            className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
+            onClick={() => {
+              onRunAIAction("explain");
+              setIsAIOpen(false);
+            }}
+            disabled={status === "streaming"}
+          >
+            {t("editor.ai.actions.explain")}
+          </button>
+          <button
+            className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
+            onClick={() => {
+              onRunAIAction("improve");
+              setIsAIOpen(false);
+            }}
+            disabled={status === "streaming"}
+          >
+            {t("editor.ai.actions.improvements")}
+          </button>
+          <div className="h-px bg-border my-1" />
+          <button
+            className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
+            onClick={() => {
+              onRunAIAction("suggest_question");
+              setIsAIOpen(false);
+            }}
+            disabled={status === "streaming"}
+          >
+            {t("editor.ai.actions.suggestQuestion")}
+          </button>
+        </PopoverContent>
+      </Popover>
     </BubbleMenu>
   );
 }
@@ -245,7 +305,6 @@ function OptimizedBubbleMenu({
 // Responsive MenuBar component with overflow dropdown
 function ResponsiveMenuBar({
   editor,
-  onRequestSuggestion,
   onRunAIAction,
   status,
   onFileInput,
@@ -258,7 +317,6 @@ function ResponsiveMenuBar({
   date,
 }: {
   editor: any;
-  onRequestSuggestion: () => void;
   onRunAIAction: (action: "explain" | "improve" | "suggest_question") => void;
   status: string;
   onFileInput: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -307,8 +365,7 @@ function ResponsiveMenuBar({
           ctx.editor.can().toggleList("bulletList", "listItem") ?? false,
         canOrderedList:
           ctx.editor.can().toggleList("orderedList", "listItem") ?? false,
-        canBlockquote:
-          ctx.editor.can().toggleNode("blockquote", "paragraph") ?? false,
+        canBlockquote: (ctx.editor.can() as any).toggleBlockquote() ?? false,
         // History
         // Only enable if commands are registered
         canUndo: Boolean((ctx.editor as any).commands?.undo),
@@ -757,35 +814,26 @@ function ResponsiveMenuBar({
                 // Keep overflow rendering, but handle AI as a submenu-like list
                 if (item.id === "ai") {
                   return (
-                    <div key={item.id} className="flex flex-col gap-1 py-1">
-                      <button
-                        className={cn(
-                          "px-2 py-1.5 text-left hover:bg-muted rounded",
-                        )}
+                    <div key={item.id}>
+                      <DropdownMenuItem
                         onClick={() => onRunAIAction("explain")}
                         disabled={status === "streaming"}
                       >
                         {t("editor.ai.actions.explain")}
-                      </button>
-                      <button
-                        className={cn(
-                          "px-2 py-1.5 text-left hover:bg-muted rounded",
-                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         onClick={() => onRunAIAction("improve")}
                         disabled={status === "streaming"}
                       >
                         {t("editor.ai.actions.improvements")}
-                      </button>
+                      </DropdownMenuItem>
                       <div className="h-px bg-border my-1" />
-                      <button
-                        className={cn(
-                          "px-2 py-1.5 text-left hover:bg-muted rounded",
-                        )}
+                      <DropdownMenuItem
                         onClick={() => onRunAIAction("suggest_question")}
                         disabled={status === "streaming"}
                       >
                         {t("editor.ai.actions.suggestQuestion")}
-                      </button>
+                      </DropdownMenuItem>
                     </div>
                   );
                 }
@@ -830,17 +878,6 @@ function ResponsiveMenuBar({
   );
 }
 
-// Generate a random 6-character alphanumeric ID
-function generateShortId(): string {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = [
   "image/jpeg",
@@ -880,14 +917,6 @@ export function TiptapEditor({
 }: TiptapEditorProps) {
   const t = useI18n();
   const user = useUserStore((state) => state.user);
-  const [generatedId] = useState(() => generateShortId());
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
-  const [aiSuggestionPosition, setAiSuggestionPosition] = useState<
-    number | null
-  >(null);
-  const [aiEditInsertPos, setAiEditInsertPos] = useState<number | null>(null);
-  const [aiEditHasInserted, setAiEditHasInserted] = useState(false);
-  const [aiEditEndPos, setAiEditEndPos] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const locale = useCurrentLocale();
 
@@ -900,29 +929,22 @@ export function TiptapEditor({
   // Create Y.js document for collaboration
   const [ydoc] = useState(() => new Y.Doc());
 
-  // Set up AI chat hook to stream questions
-  const { messages, sendMessage, status, setMessages } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/ai/question-suggest",
-      body: {
-        locale: locale,
-      },
-    }),
-  });
-
-  // Separate AI chat stream for editor text-edit actions
-  const {
-    messages: editMessages,
-    sendMessage: sendEditMessage,
-    status: editStatus,
-    setMessages: setEditEditMessages,
-  } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/ai/editor",
-      body: {
-        locale: locale,
-      },
-    }),
+  const { completion, complete, isLoading, setCompletion } = useCompletion({
+    api: "/api/ai/editor",
+    onFinish: () => {
+      // Use the editor command to reset completion state
+      if (editorRef.current) {
+        editorRef.current.commands.finishAICompletion();
+      }
+    },
+    onError: (error) => {
+      console.error("Completion error:", error);
+      toast.error(t("editor.ai.minCharsError"));
+      if (editorRef.current) {
+        editorRef.current.commands.finishAICompletion();
+      }
+    },
+    experimental_throttle: 50,
   });
 
   const handleImageUpload = useCallback(
@@ -1007,31 +1029,9 @@ export function TiptapEditor({
     [user?.id, t],
   );
 
-  // Handle requesting AI suggestion - defined early to avoid hoisting issues
-  const handleRequestSuggestion = useCallback(() => {
-    if (!editorRef.current) return;
-
-    const text = editorRef.current.getText().trim();
-    if (text.length < 10) {
-      toast.error(t("editor.ai.minCharsError"));
-      return;
-    }
-
-    // Clear all AI state and messages at the start of any new action
-    setAiSuggestion(null);
-    setAiSuggestionPosition(null);
-    setAiEditHasInserted(false);
-    setMessages([]); // Clear question messages
-    setEditEditMessages([]); // Clear edit messages
-
-    sendMessage({
-      text: text,
-    });
-  }, [sendMessage, setMessages, setEditEditMessages, t]);
-
   // Handle AI dropdown actions
   const handleRunAIAction = useCallback(
-    (action: "explain" | "improve" | "suggest_question") => {
+    (action: z.infer<typeof EditorAction>) => {
       if (!editorRef.current) return;
       const selectedText = editorRef.current.state?.doc
         ?.textBetween(
@@ -1043,47 +1043,41 @@ export function TiptapEditor({
       const fullText = editorRef.current.getText().trim();
       const targetText =
         selectedText && selectedText.length > 0 ? selectedText : fullText;
-      if (!targetText || targetText.length < 10) {
+
+      if (
+        (!targetText || targetText.length < 10) &&
+        action != "suggest_question"
+      ) {
         toast.error(t("editor.ai.minCharsError"));
         return;
       }
 
-      // Clear all AI state and messages at the start of any new action
-      setAiSuggestion(null);
-      setAiSuggestionPosition(null);
-      setAiEditHasInserted(false);
-      setMessages([]); // Clear question messages
-      setEditEditMessages([]); // Clear edit messages
+      // Get insertion position and start AI completion
+      const { to } = editorRef.current.state.selection;
+      editorRef.current.commands.startAICompletion(to);
 
-      // When an edit action is run, remember where to insert results: after current selection (or cursor)
-      const { from, to } = editorRef.current.state.selection;
-      // Insert after selection end to place result right after selected content
-      setAiEditInsertPos(to);
+      // Clear any previous completion
+      setCompletion("");
 
-      if (action === "suggest_question") {
-        sendMessage({ text: targetText });
-        return;
-      }
-
-      // Build instruction for edit actions
-      let instruction = "";
-      switch (action) {
-        case "explain":
-          instruction =
-            "Explain the following selection in simple, clear terms. Keep it concise.";
-          break;
-        case "improve":
-          instruction =
-            "Identify concrete improvements to the following selection. Return a short bulleted list of 3-5 actionable suggestions.";
-          break;
-      }
-
-      sendEditMessage({
-        text: `${instruction}\n\n"""\n${targetText}\n"""`,
+      // Call complete with the action
+      complete(targetText, {
+        body: {
+          action: action,
+        },
       });
     },
-    [sendMessage, setMessages, sendEditMessage, setEditEditMessages, t],
+    [locale, t, complete, setCompletion],
   );
+
+  // Handle completion streaming using editor command
+  useEffect(() => {
+    if (!completion || !editorRef.current) {
+      return;
+    }
+
+    // Use the editor command to update completion
+    editorRef.current.commands.updateAICompletion(completion);
+  }, [completion]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -1097,13 +1091,13 @@ export function TiptapEditor({
       }
     },
     extensions: [
-      StarterKit.configure({
-        // Disable default undo/redo for collaboration
-        undoRedo: false,
-      }),
+      // StarterKit.configure({
+      //   // Disable default undo/redo for collaboration
+      //   link: false,
+      //   undoRedo: false,
+      // }),
       BubbleMenuExtension,
       TextStyleKit,
-      UnderlineExtension,
       Placeholder.configure({
         placeholder: placeholder,
         showOnlyCurrent: false,
@@ -1116,18 +1110,8 @@ export function TiptapEditor({
           class: "max-w-full h-auto rounded-lg",
         },
       }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: "text-blue-500 underline cursor-pointer",
-        },
-      }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
-      }),
-      TextStyle,
-      Color.configure({
-        types: ["textStyle"],
       }),
       Highlight.configure({
         multicolor: true,
@@ -1136,6 +1120,10 @@ export function TiptapEditor({
       TaskItem.configure({
         nested: true,
       }),
+      // AI Content mark for styling
+      AIContentMark,
+      // AI Completion extension
+      AICompletionExtension,
       // Collaboration extension (optional)
       ...(collaboration ? [Collaboration.configure({ document: ydoc })] : []),
     ],
@@ -1175,6 +1163,8 @@ export function TiptapEditor({
           "[&_.news-event-inline]:text-sm [&_.news-event-inline]:text-blue-600 [&_.news-event-inline]:dark:text-blue-400 [&_.news-event-inline]:bg-blue-50 [&_.news-event-inline]:dark:bg-blue-950/20 [&_.news-event-inline]:px-2 [&_.news-event-inline]:py-1 [&_.news-event-inline]:rounded [&_.news-event-inline]:border-l-2 [&_.news-event-inline]:border-blue-500 [&_.news-event-inline]:my-1",
           // Placeholder styles - using CSS custom properties for complex selectors
           "[&_p.is-editor-empty:first-child::before]:text-gray-400 [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
+          // AI-generated content styles
+          "[&_.ai-generated-content]:bg-purple-50 [&_.ai-generated-content]:dark:bg-purple-950/20 [&_.ai-generated-content]:rounded [&_.ai-generated-content]:px-0.5 [&_.ai-generated-content]:animate-in [&_.ai-generated-content]:fade-in-50",
           "[&_h1.is-empty::before]:text-gray-400 [&_h1.is-empty::before]:float-left [&_h1.is-empty::before]:h-0 [&_h1.is-empty::before]:pointer-events-none [&_h1.is-empty::before]:content-[attr(data-placeholder)]",
           "[&_h2.is-empty::before]:text-gray-400 [&_h2.is-empty::before]:float-left [&_h2.is-empty::before]:h-0 [&_h2.is-empty::before]:pointer-events-none [&_h2.is-empty::before]:content-[attr(data-placeholder)]",
           "[&_h3.is-empty::before]:text-gray-400 [&_h3.is-empty::before]:float-left [&_h3.is-empty::before]:h-0 [&_h3.is-empty::before]:pointer-events-none [&_h3.is-empty::before]:content-[attr(data-placeholder)]",
@@ -1186,7 +1176,7 @@ export function TiptapEditor({
         ),
         style: `height: ${height}; width: ${width};`,
       },
-      handlePaste: (view, event) => {
+      handlePaste: (_view, event) => {
         const items = Array.from(event.clipboardData?.items || []);
 
         for (const item of items) {
@@ -1207,7 +1197,7 @@ export function TiptapEditor({
         }
         return false;
       },
-      handleDrop: (view, event) => {
+      handleDrop: (_view, event) => {
         const files = Array.from(event.dataTransfer?.files || []);
 
         for (const file of files) {
@@ -1227,112 +1217,6 @@ export function TiptapEditor({
       },
     },
   });
-
-  // Handle AI suggestion streaming (journaling question)
-  useEffect(() => {
-    if (messages.length > 0) {
-      // Only keep role assistant messages
-      const assistantMessages = messages.filter(
-        (message) => message.role === "assistant",
-      );
-
-      if (assistantMessages.length > 0) {
-        const lastMessage = assistantMessages[assistantMessages.length - 1];
-        const textPart = lastMessage.parts?.find(
-          (part) => part.type === "text",
-        );
-        const suggestionText = textPart?.text || null;
-
-        if (suggestionText && editor) {
-          // Update the AI suggestion as it streams
-          setAiSuggestion(suggestionText);
-
-          if (aiSuggestionPosition === null) {
-            // First time - insert the AI suggestion at the end
-            const endPosition = editor.state.doc.content.size;
-            editor.commands.setTextSelection(endPosition);
-
-            // Insert the streaming text as italic and muted
-            const suggestionHtml = `<p><em class="text-muted-foreground">${suggestionText}</em></p>`;
-            editor.commands.insertContent(suggestionHtml);
-
-            // Store the position where we inserted the suggestion
-            setAiSuggestionPosition(endPosition);
-          } else {
-            // Update the existing suggestion text
-            const suggestionHtml = `<p><em class="text-muted-foreground">${suggestionText}</em></p>`;
-
-            // Replace the content at the stored position
-            editor.commands.setTextSelection(aiSuggestionPosition);
-            editor.commands.deleteRange({
-              from: aiSuggestionPosition,
-              to: editor.state.doc.content.size,
-            });
-            editor.commands.insertContent(suggestionHtml);
-          }
-        }
-      }
-    }
-  }, [messages, setAiSuggestion, editor, aiSuggestionPosition]);
-
-  // Handle AI edit action streaming - insert right after selection and update in place
-  useEffect(() => {
-    if (editMessages.length > 0) {
-      const assistantMessages = editMessages.filter(
-        (message) => message.role === "assistant",
-      );
-      if (assistantMessages.length > 0) {
-        const lastMessage = assistantMessages[assistantMessages.length - 1];
-        const textPart = lastMessage.parts?.find(
-          (part) => part.type === "text",
-        );
-        const suggestionText = textPart?.text || null;
-        if (suggestionText && editor) {
-          setAiSuggestion(suggestionText);
-          // Determine insertion position (after selection) once per stream
-          let insertPos = aiEditInsertPos;
-          if (insertPos == null) {
-            insertPos = editor.state.selection.to;
-            setAiEditInsertPos(insertPos);
-          }
-
-          const suggestionHtml = `<p data-ai-edit="true"><em class="text-muted-foreground">${suggestionText}</em></p>`;
-
-          if (!aiEditHasInserted) {
-            // First chunk: insert at computed position
-            editor.commands.setTextSelection(insertPos);
-            editor.commands.insertContent(suggestionHtml);
-            // Store the start position of inserted content for later updates
-            setAiSuggestionPosition(insertPos);
-            setAiEditHasInserted(true);
-            // Capture end position of inserted block after first insert
-            const newEnd = editor.state.selection.to;
-            setAiEditEndPos(newEnd);
-          } else if (aiSuggestionPosition != null) {
-            // Subsequent chunks: replace only the previously inserted block range
-            const replaceFrom = aiSuggestionPosition;
-            const replaceTo = aiEditEndPos ?? aiSuggestionPosition;
-            editor.commands.setTextSelection({
-              from: replaceFrom,
-              to: replaceTo,
-            });
-            editor.commands.insertContent(suggestionHtml);
-            // Update end pos after replacement
-            const updatedEnd = editor.state.selection.to;
-            setAiEditEndPos(updatedEnd);
-          }
-        }
-      }
-    }
-  }, [
-    editMessages,
-    setAiSuggestion,
-    editor,
-    aiEditInsertPos,
-    aiEditHasInserted,
-    aiSuggestionPosition,
-    aiEditEndPos,
-  ]);
 
   // Handle embedding news into the editor
   const handleEmbedNews = useCallback(
@@ -1445,13 +1329,8 @@ export function TiptapEditor({
           {/* MenuBar */}
           <ResponsiveMenuBar
             editor={editor}
-            onRequestSuggestion={handleRequestSuggestion}
             onRunAIAction={handleRunAIAction}
-            status={
-              status === "streaming" || editStatus === "streaming"
-                ? "streaming"
-                : "ready"
-            }
+            status={isLoading ? "streaming" : "ready"}
             onFileInput={handleFileInput}
             onToggleFullscreen={() => setIsFullscreen(true)}
             isFullscreen={false}
@@ -1474,11 +1353,7 @@ export function TiptapEditor({
             <OptimizedBubbleMenu
               editor={editor}
               onRunAIAction={handleRunAIAction}
-              status={
-                status === "streaming" || editStatus === "streaming"
-                  ? "streaming"
-                  : "ready"
-              }
+              status={isLoading ? "streaming" : "ready"}
             />
           </div>
         </div>
@@ -1489,13 +1364,8 @@ export function TiptapEditor({
           <div className="flex flex-col h-full bg-background">
             <ResponsiveMenuBar
               editor={editor}
-              onRequestSuggestion={handleRequestSuggestion}
               onRunAIAction={handleRunAIAction}
-              status={
-                status === "streaming" || editStatus === "streaming"
-                  ? "streaming"
-                  : "ready"
-              }
+              status={isLoading ? "streaming" : "ready"}
               onFileInput={handleFileInput}
               onToggleFullscreen={() => setIsFullscreen(false)}
               isFullscreen={true}
@@ -1514,11 +1384,7 @@ export function TiptapEditor({
               <OptimizedBubbleMenu
                 editor={editor}
                 onRunAIAction={handleRunAIAction}
-                status={
-                  status === "streaming" || editStatus === "streaming"
-                    ? "streaming"
-                    : "ready"
-                }
+                status={isLoading ? "streaming" : "ready"}
               />
             </div>
           </div>
