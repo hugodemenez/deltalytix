@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useI18n } from '@/locales/client'
 
 type TradeLike = {
   side?: string
@@ -16,6 +17,7 @@ function formatCurrency(value: number) {
 }
 
 export default function PnLBySideChartEmbed({ trades }: { trades: TradeLike[] }) {
+  const t = useI18n()
   const [showAverage, setShowAverage] = React.useState(true)
 
   const chartData = React.useMemo(() => {
@@ -67,15 +69,15 @@ export default function PnLBySideChartEmbed({ trades }: { trades: TradeLike[] })
         }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{data.isAverage ? 'Average' : 'Total'} PnL</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlBySide.tooltip.averageTotal')}</span>
               <span className="font-bold">{formatCurrency(data.pnl)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Trades</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlBySide.tooltip.trades')}</span>
               <span className="font-bold text-muted-foreground">{data.tradeCount}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">Win rate</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlBySide.tooltip.winRate')}</span>
               <span className="font-bold text-muted-foreground">{((data.winCount / Math.max(1, data.tradeCount)) * 100).toFixed(1)}%</span>
             </div>
           </div>
@@ -90,18 +92,18 @@ export default function PnLBySideChartEmbed({ trades }: { trades: TradeLike[] })
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">PnL by Side</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('pnlBySide.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>Compare long vs short performance. Toggle average/total.</p>
+                <p>{t('pnlBySide.description')}</p>
               </PopoverContent>
             </Popover>
           </div>
           <button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setShowAverage(v => !v)}>
-            {showAverage ? 'Show total' : 'Show average'}
+            {t('pnlBySide.toggle.showAverage')}
           </button>
         </div>
       </CardHeader>
