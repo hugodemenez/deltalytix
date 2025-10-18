@@ -8,8 +8,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { getTickDetails } from "@/server/tick-details"
 import { TickDetails } from "@prisma/client"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useI18n } from '@/locales/client'
 
 export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: number, quantity: number, instrument?: string }[] }) {
+  const t = useI18n()
   const [tickDetails, setTickDetails] = React.useState<Record<string, TickDetails>>({})
   const [isLoading, setIsLoading] = React.useState(true)
   const [selectedInstrument, setSelectedInstrument] = React.useState<string>("")
@@ -131,13 +133,13 @@ export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">Tick Distribution</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('tickDistribution.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>Distribution of trades by PnL ticks per contract for the selected instrument.</p>
+                <p>{t('tickDistribution.description')}</p>
               </PopoverContent>
             </Popover>
           </div>

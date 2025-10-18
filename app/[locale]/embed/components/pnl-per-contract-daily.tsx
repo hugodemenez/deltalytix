@@ -5,6 +5,7 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContaine
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Info } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { useI18n } from '@/locales/client'
 
 import { formatInTimeZone } from 'date-fns-tz'
 import { enUS } from 'date-fns/locale'
@@ -23,6 +24,7 @@ function formatCurrency(value: number) {
 }
 
 export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { trades: TradeLike[], instrument: string }) {
+  const t = useI18n()
   const chartData = React.useMemo(() => {
     if (!instrument) return []
 
@@ -106,13 +108,13 @@ export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">Avg Net PnL per Contract (Daily)</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('pnlPerContractDaily.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>Average net PnL per contract per day for a selected instrument.</p>
+                <p>{t('pnlPerContractDaily.description')}</p>
               </PopoverContent>
             </Popover>
           </div>
