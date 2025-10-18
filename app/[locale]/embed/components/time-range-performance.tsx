@@ -62,15 +62,15 @@ export default function TimeRangePerformanceChart({
   const getTimeRangeLabel = React.useCallback((range: string): string => {
     // Map range keys to their translations
     const rangeLabels: Record<string, string> = {
-      under1min: t('timeRangePerformance.ranges.under1min'),
-      '1to5min': t('timeRangePerformance.ranges.1to5min'),
-      '5to10min': t('timeRangePerformance.ranges.5to10min'),
-      '10to15min': t('timeRangePerformance.ranges.10to15min'),
-      '15to30min': t('timeRangePerformance.ranges.15to30min'),
-      '30to60min': t('timeRangePerformance.ranges.30to60min'),
-      '1to2hours': t('timeRangePerformance.ranges.1to2hours'),
-      '2to5hours': t('timeRangePerformance.ranges.2to5hours'),
-      over5hours: t('timeRangePerformance.ranges.over5hours'),
+      under1min: t('embed.timeRangePerformance.ranges.under1min'),
+      '1to5min': t('embed.timeRangePerformance.ranges.1to5min'),
+      '5to10min': t('embed.timeRangePerformance.ranges.5to10min'),
+      '10to15min': t('embed.timeRangePerformance.ranges.10to15min'),
+      '15to30min': t('embed.timeRangePerformance.ranges.15to30min'),
+      '30to60min': t('embed.timeRangePerformance.ranges.30to60min'),
+      '1to2hours': t('embed.timeRangePerformance.ranges.1to2hours'),
+      '2to5hours': t('embed.timeRangePerformance.ranges.2to5hours'),
+      over5hours: t('embed.timeRangePerformance.ranges.over5hours'),
     };
     return rangeLabels[range] || range;
   }, [t]);
@@ -143,7 +143,7 @@ export default function TimeRangePerformanceChart({
           <div className="grid gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('timeRangePerformance.tooltip.timeRange')}
+                {t('embed.timeRangePerformance.tooltip.timeRange')}
               </span>
               <span className="font-bold text-muted-foreground">
                 {getTimeRangeLabel(label)}
@@ -151,13 +151,13 @@ export default function TimeRangePerformanceChart({
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('timeRangePerformance.tooltip.avgPnl')}
+                {t('embed.timeRangePerformance.tooltip.avgPnl')}
               </span>
               <span className="font-bold">${data.avgPnl.toFixed(2)}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {t('timeRangePerformance.tooltip.winRate')}
+                {t('embed.timeRangePerformance.tooltip.winRate')}
               </span>
               <span className="font-bold" style={{ color: data.color }}>
                 {data.winRate.toFixed(1)}%
@@ -165,7 +165,7 @@ export default function TimeRangePerformanceChart({
             </div>
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                {data.trades === 1 ? t('timeRangePerformance.tooltip.trades.one', { count: data.trades }) : t('timeRangePerformance.tooltip.trades.other', { count: data.trades })}
+                {data.trades === 1 ? t('embed.timeRangePerformance.tooltip.trades.one', { count: data.trades }) : t('embed.timeRangePerformance.tooltip.trades.other', { count: data.trades })}
               </span>
               <span className="font-bold text-muted-foreground">
                 {data.trades}
@@ -184,7 +184,7 @@ export default function TimeRangePerformanceChart({
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
             <CardTitle className="line-clamp-1 text-base">
-              {t('timeRangePerformance.title')}
+              {t('embed.timeRangePerformance.title')}
             </CardTitle>
             <Popover>
               <PopoverTrigger asChild>
@@ -192,7 +192,7 @@ export default function TimeRangePerformanceChart({
               </PopoverTrigger>
               <PopoverContent side="top">
                 <p>
-                  {t('timeRangePerformance.description')}
+                  {t('embed.timeRangePerformance.description')}
                 </p>
               </PopoverContent>
             </Popover>

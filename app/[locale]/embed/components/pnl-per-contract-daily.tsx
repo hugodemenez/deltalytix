@@ -77,23 +77,23 @@ export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { 
         }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContractDaily.tooltip.date')}</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.pnlPerContractDaily.tooltip.date')}</span>
               <span className="font-bold text-muted-foreground">{data.date}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContractDaily.tooltip.averagePnl')}</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.pnlPerContractDaily.tooltip.averagePnl')}</span>
               <span className="font-bold">{formatCurrency(data.averagePnl)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContractDaily.tooltip.totalPnl')}</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.pnlPerContractDaily.tooltip.totalPnl')}</span>
               <span className="font-bold text-muted-foreground">{formatCurrency(data.totalPnl)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContractDaily.tooltip.trades')}</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.pnlPerContractDaily.tooltip.trades')}</span>
               <span className="font-bold text-muted-foreground">{data.tradeCount}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('pnlPerContractDaily.tooltip.totalContracts')}</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.pnlPerContractDaily.tooltip.totalContracts')}</span>
               <span className="font-bold text-muted-foreground">{data.totalContracts}</span>
             </div>
           </div>
@@ -108,13 +108,13 @@ export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">{t('pnlPerContractDaily.title')}</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('embed.pnlPerContractDaily.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>{t('pnlPerContractDaily.description')}</p>
+                <p>{t('embed.pnlPerContractDaily.description')}</p>
               </PopoverContent>
             </Popover>
           </div>

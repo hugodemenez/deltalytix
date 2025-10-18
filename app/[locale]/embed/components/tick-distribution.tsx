@@ -133,13 +133,13 @@ export default function TickDistributionChartEmbed({ trades }: { trades: { pnl: 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">{t('tickDistribution.title')}</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('embed.tickDistribution.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>{t('tickDistribution.description')}</p>
+                <p>{t('embed.tickDistribution.description')}</p>
               </PopoverContent>
             </Popover>
           </div>

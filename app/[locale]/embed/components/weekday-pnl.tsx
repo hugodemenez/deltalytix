@@ -14,13 +14,13 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
   const [activeDay, setActiveDay] = React.useState<number | null>(null)
 
   const dayAbbreviations = React.useMemo(() => [
-    t('calendar.weekdays.sun'),
-    t('calendar.weekdays.mon'),
-    t('calendar.weekdays.tue'),
-    t('calendar.weekdays.wed'),
-    t('calendar.weekdays.thu'),
-    t('calendar.weekdays.fri'),
-    t('calendar.weekdays.sat')
+    t('embed.calendar.weekdays.sun'),
+    t('embed.calendar.weekdays.mon'),
+    t('embed.calendar.weekdays.tue'),
+    t('embed.calendar.weekdays.wed'),
+    t('embed.calendar.weekdays.thu'),
+    t('embed.calendar.weekdays.fri'),
+    t('embed.calendar.weekdays.sat')
   ], [t])
 
   const weekdayData = React.useMemo(() => {
@@ -62,15 +62,15 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
         }}>
           <div className="grid gap-2">
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('weekdayPnl.tooltip.day')}</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.weekdayPnl.tooltip.day')}</span>
               <span className="font-bold text-muted-foreground">{dayAbbreviations[label]}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('weekdayPnl.tooltip.averagePnl')}</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.weekdayPnl.tooltip.averagePnl')}</span>
               <span className="font-bold">${data.pnl.toFixed(2)}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('weekdayPnl.tooltip.trades')}</span>
+              <span className="text-[0.70rem] uppercase text-muted-foreground">{t('embed.weekdayPnl.tooltip.trades')}</span>
               <span className="font-bold text-muted-foreground">{data.tradeCount}</span>
             </div>
           </div>
@@ -85,13 +85,13 @@ export default function WeekdayPnLChartEmbed({ trades }: { trades: { pnl: number
       <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
-            <CardTitle className="line-clamp-1 text-base">{t('weekdayPnl.title')}</CardTitle>
+            <CardTitle className="line-clamp-1 text-base">{t('embed.weekdayPnl.title')}</CardTitle>
             <Popover>
               <PopoverTrigger asChild>
                 <Info className="text-muted-foreground hover:text-foreground transition-colors cursor-help h-4 w-4" />
               </PopoverTrigger>
               <PopoverContent side="top">
-                <p>{t('weekdayPnl.description')}</p>
+                <p>{t('embed.weekdayPnl.description')}</p>
               </PopoverContent>
             </Popover>
           </div>
