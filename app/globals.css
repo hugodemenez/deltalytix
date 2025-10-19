@@ -394,7 +394,7 @@
     }
   }
 
-  /* Make sure the caret is visible during selection */
+  /* Make sure the caret is more visible during focus */
   .ProseMirror-focused {
     caret-color: hsl(var(--primary));
   }
@@ -402,7 +402,6 @@
   /* Improve caret visibility on mobile devices */
   @media (max-width: 768px) {
     .ProseMirror {
-      caret-color: hsl(var(--foreground));
       /* Prevent zoom on focus for better UX */
       -webkit-text-size-adjust: 100%;
       /* Ensure smooth scrolling when caret moves */

@@ -387,10 +387,11 @@ export function TiptapEditor({
           className,
         ),
         style: `height: ${height}; width: ${width};`,
-        // Ensure caret is visible on mobile
+        // Ensure caret is visible on mobile - disable browser extensions that might interfere
         "data-gramm": "false",
         "data-gramm_editor": "false",
         "data-enable-grammarly": "false",
+        "spellcheck": "false",
       },
       handlePaste: (_view, event) => {
         const items = Array.from(event.clipboardData?.items || []);
@@ -555,19 +556,23 @@ export function TiptapEditor({
 
         if (isAboveView || isBelowView) {
           // Scroll the caret into view with smooth behavior
-          const caretElement = editor.view.dom.querySelector('.ProseMirror-gapcursor, [data-tippy-root]');
-          if (caretElement) {
-            caretElement.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center',
-              inline: 'nearest'
-            });
-          } else {
-            // Fallback: scroll to the selection position
-            editor.view.dom.querySelector('p, h1, h2, h3')?.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'center' 
-            });
+          // Try to find the actual DOM node at cursor position for precise scrolling
+          try {
+            const $pos = editor.view.state.doc.resolve(selection.from);
+            const domNode = editor.view.nodeDOM($pos.pos);
+            if (domNode && domNode instanceof HTMLElement) {
+              domNode.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center',
+                inline: 'nearest'
+              });
+            } else {
+              // Fallback: scroll the editor view to the caret coordinates
+              editor.view.dom.scrollTop = caretTop - containerRect.top - (containerRect.height / 2);
+            }
+          } catch (e) {
+            // Final fallback: use basic scrolling
+            editor.view.dom.scrollTop = caretTop - containerRect.top - 100;
           }
         }
       });
@@ -628,7 +633,7 @@ export function TiptapEditor({
       )}
 
       {isFullscreen && (
-        <DialogContent className="w-screen h-screen max-w-none p-0 sm:rounded-none z-9999 [&>button]:hidden">
+        <DialogContent className="w-screen h-screen max-w-none p-0 sm:rounded-none z-9999 [&>button[aria-label='Close']]:hidden">
           <div className="flex flex-col h-full bg-background">
             {/* Menu bar at top on desktop, bottom on mobile */}
             {!isMobile && (
