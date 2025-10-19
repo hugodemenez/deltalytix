@@ -37,6 +37,7 @@ import { z } from "zod";
 import { OptimizedBubbleMenu } from "@/components/tiptap/optimized-bubble-menu";
 import { ResponsiveMenuBar } from "@/components/tiptap/menu-bar";
 import { ActionSchema as EditorAction } from "@/app/api/ai/editor/schema";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const supabase = createClient();
 
@@ -130,6 +131,7 @@ export function TiptapEditor({
   const user = useUserStore((state) => state.user);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const locale = useCurrentLocale();
+  const isMobile = useIsMobile();
 
   const editorRef = useRef<any>(null);
   // Prevent initial empty onUpdate from clearing externally provided content
@@ -377,13 +379,18 @@ export function TiptapEditor({
           "[&_h1.is-empty::before]:text-gray-400 [&_h1.is-empty::before]:float-left [&_h1.is-empty::before]:h-0 [&_h1.is-empty::before]:pointer-events-none [&_h1.is-empty::before]:content-[attr(data-placeholder)]",
           "[&_h2.is-empty::before]:text-gray-400 [&_h2.is-empty::before]:float-left [&_h2.is-empty::before]:h-0 [&_h2.is-empty::before]:pointer-events-none [&_h2.is-empty::before]:content-[attr(data-placeholder)]",
           "[&_h3.is-empty::before]:text-gray-400 [&_h3.is-empty::before]:float-left [&_h3.is-empty::before]:h-0 [&_h3.is-empty::before]:pointer-events-none [&_h3.is-empty::before]:content-[attr(data-placeholder)]",
-          // Selection styles
+          // Selection styles with visible caret
           "[&_::selection]:bg-blue-500 [&_::selection]:text-white",
+          "[&_.ProseMirror-selectednode]:outline [&_.ProseMirror-selectednode]:outline-2 [&_.ProseMirror-selectednode]:outline-blue-500",
           // Responsive adjustments
           "sm:[&_h1]:text-3xl sm:[&_h2]:text-2xl sm:[&_h3]:text-lg",
           className,
         ),
         style: `height: ${height}; width: ${width};`,
+        // Ensure caret is visible on mobile
+        "data-gramm": "false",
+        "data-gramm_editor": "false",
+        "data-enable-grammarly": "false",
       },
       handlePaste: (_view, event) => {
         const items = Array.from(event.clipboardData?.items || []);
@@ -524,10 +531,62 @@ export function TiptapEditor({
     [editor, handleImageUpload],
   );
 
+  // Handle caret visibility on mobile - scroll to keep caret in view
+  useEffect(() => {
+    if (!editor || !isMobile) return;
+
+    const handleSelectionUpdate = () => {
+      // Use requestAnimationFrame to ensure DOM is updated before scrolling
+      requestAnimationFrame(() => {
+        const selection = editor.view.state.selection;
+        const coords = editor.view.coordsAtPos(selection.from);
+        
+        // Get the editor container
+        const editorElement = editor.view.dom.closest('.overflow-y-auto');
+        if (!editorElement) return;
+
+        const containerRect = editorElement.getBoundingClientRect();
+        const caretTop = coords.top;
+        const caretBottom = coords.bottom;
+
+        // Check if caret is outside visible area
+        const isAboveView = caretTop < containerRect.top + 20; // 20px buffer
+        const isBelowView = caretBottom > containerRect.bottom - 20;
+
+        if (isAboveView || isBelowView) {
+          // Scroll the caret into view with smooth behavior
+          const caretElement = editor.view.dom.querySelector('.ProseMirror-gapcursor, [data-tippy-root]');
+          if (caretElement) {
+            caretElement.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center',
+              inline: 'nearest'
+            });
+          } else {
+            // Fallback: scroll to the selection position
+            editor.view.dom.querySelector('p, h1, h2, h3')?.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center' 
+            });
+          }
+        }
+      });
+    };
+
+    // Listen to selection updates
+    editor.on('selectionUpdate', handleSelectionUpdate);
+
+    return () => {
+      editor.off('selectionUpdate', handleSelectionUpdate);
+    };
+  }, [editor, isMobile]);
+
   if (!editor) {
     return null;
   }
 
+  // In fullscreen mode, account for menu bar height (48px)
+  // On mobile, menu is at bottom; on desktop, menu is at top
   const editorHeight = isFullscreen ? "calc(100vh - 48px)" : height;
 
   return (
@@ -569,21 +628,24 @@ export function TiptapEditor({
       )}
 
       {isFullscreen && (
-        <DialogContent className="w-screen h-screen max-w-none p-0 sm:rounded-none z-9999">
+        <DialogContent className="w-screen h-screen max-w-none p-0 sm:rounded-none z-9999 [&>button]:hidden">
           <div className="flex flex-col h-full bg-background">
-            <ResponsiveMenuBar
-              editor={editor}
-              onRunAIAction={handleRunAIAction}
-              status={isLoading ? "streaming" : "ready"}
-              onFileInput={handleFileInput}
-              onToggleFullscreen={() => setIsFullscreen(false)}
-              isFullscreen={true}
-              events={events}
-              selectedNews={selectedNews}
-              onNewsSelection={onNewsSelection}
-              onEmbedNews={onEmbedNews || handleEmbedNews}
-              date={date}
-            />
+            {/* Menu bar at top on desktop, bottom on mobile */}
+            {!isMobile && (
+              <ResponsiveMenuBar
+                editor={editor}
+                onRunAIAction={handleRunAIAction}
+                status={isLoading ? "streaming" : "ready"}
+                onFileInput={handleFileInput}
+                onToggleFullscreen={() => setIsFullscreen(false)}
+                isFullscreen={true}
+                events={events}
+                selectedNews={selectedNews}
+                onNewsSelection={onNewsSelection}
+                onEmbedNews={onEmbedNews || handleEmbedNews}
+                date={date}
+              />
+            )}
             <div className="relative flex-1 min-h-0">
               <EditorContent
                 editor={editor}
@@ -596,6 +658,22 @@ export function TiptapEditor({
                 status={isLoading ? "streaming" : "ready"}
               />
             </div>
+            {/* Menu bar at bottom on mobile for better reachability */}
+            {isMobile && (
+              <ResponsiveMenuBar
+                editor={editor}
+                onRunAIAction={handleRunAIAction}
+                status={isLoading ? "streaming" : "ready"}
+                onFileInput={handleFileInput}
+                onToggleFullscreen={() => setIsFullscreen(false)}
+                isFullscreen={true}
+                events={events}
+                selectedNews={selectedNews}
+                onNewsSelection={onNewsSelection}
+                onEmbedNews={onEmbedNews || handleEmbedNews}
+                date={date}
+              />
+            )}
           </div>
         </DialogContent>
       )}

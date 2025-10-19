@@ -384,6 +384,53 @@
   [data-accordion-trigger] [data-accordion-icon] {
     display: none;
   }
+
+  /* TipTap Editor Caret Styles - Ensure visible caret on mobile */
+  .ProseMirror {
+    caret-color: hsl(var(--foreground));
+    /* Ensure caret is visible with a minimum width */
+    & > * {
+      position: relative;
+    }
+  }
+
+  /* Make sure the caret is visible during selection */
+  .ProseMirror-focused {
+    caret-color: hsl(var(--primary));
+  }
+
+  /* Improve caret visibility on mobile devices */
+  @media (max-width: 768px) {
+    .ProseMirror {
+      caret-color: hsl(var(--foreground));
+      /* Prevent zoom on focus for better UX */
+      -webkit-text-size-adjust: 100%;
+      /* Ensure smooth scrolling when caret moves */
+      scroll-behavior: smooth;
+    }
+  }
+
+  /* Gapcursor styling for better visibility */
+  .ProseMirror-gapcursor {
+    display: block;
+    position: relative;
+  }
+
+  .ProseMirror-gapcursor:after {
+    content: "";
+    display: block;
+    position: absolute;
+    top: -2px;
+    width: 20px;
+    border-top: 1px solid hsl(var(--foreground));
+    animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
+  }
+
+  @keyframes ProseMirror-cursor-blink {
+    to {
+      visibility: hidden;
+    }
+  }
 }
 
 @utility touch-hitbox {
