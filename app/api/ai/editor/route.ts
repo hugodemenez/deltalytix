@@ -3,10 +3,10 @@ import { NextRequest } from "next/server";
 import { z } from "zod/v3";
 import { openai } from "@ai-sdk/openai";
 import { getCurrentDayData } from "./tools/get-current-day-data";
+import { ActionSchema } from "./schema";
 
 export const maxDuration = 30;
 
-export const ActionSchema = z.enum(["explain", "improve", "suggest_question"]);
 type EditorAction = z.infer<typeof ActionSchema>;
 
 // Model selection based on action type
