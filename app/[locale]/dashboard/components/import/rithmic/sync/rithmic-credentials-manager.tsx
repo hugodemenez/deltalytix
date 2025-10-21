@@ -106,7 +106,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
 
       // Calculate start date (300 days ago)
       const startDate = new Date()
-      startDate.setDate(startDate.getDate() - 300)
+      startDate.setDate(startDate.getDate() - 400)
       const formattedStartDate = startDate.toISOString().slice(0, 10).replace(/-/g, '')
 
       // Get accounts to sync
