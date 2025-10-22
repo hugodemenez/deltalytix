@@ -7,7 +7,7 @@ import { openai } from "@ai-sdk/openai";
 import { generateAnalysisComponent } from "./generate-analysis-component";
 import { getAccountPerformance } from "./get-account-performance";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const analysisSchema = z.object({
   username: z.string().optional(),
