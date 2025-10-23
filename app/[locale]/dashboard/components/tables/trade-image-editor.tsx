@@ -82,7 +82,7 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
       ? trade.images
       : [trade.imageBase64, trade.imageBase64Second].filter(Boolean);
 
-  const uploadCallback = useCallback(async()=>{
+  const uploadCallback = useCallback(async () => {
     if (uploadProps.isSuccess && uploadProps.uploadedUrls.length > 0) {
       await handleUpdateImages(uploadProps.uploadedUrls);
       setUploadDialogOpen(false);
@@ -95,12 +95,12 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
       const error = uploadProps.errors[0].message;
       toast.error(t("trade-table.imageUploadError", { error }));
     }
-  }, [uploadProps.isSuccess, uploadProps.uploadedUrls, uploadProps.errors])
-  
+  }, [uploadProps.isSuccess, uploadProps.uploadedUrls, uploadProps.errors]);
+
   // Listen for successful uploads
-  useEffect(()=>{
+  useEffect(() => {
     uploadCallback();
-  },[uploadProps.isSuccess, uploadProps.uploadedUrls, uploadProps.errors])
+  }, [uploadProps.isSuccess, uploadProps.uploadedUrls, uploadProps.errors]);
 
   const handleRemoveImage = async (imageIndex: number) => {
     try {
@@ -285,20 +285,30 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
               </HoverCard>
             )}
 
-            <HoverCard openDelay={200}>
+            <HoverCard openDelay={300}>
               <HoverCardTrigger asChild>
-                <button
-                  className="absolute -top-2 -right-2 h-5 w-5 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-xs hover:bg-destructive/90 transition-colors"
+                <motion.button
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{
+                    duration: 0.2,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  }}
+                  className="absolute -top-2 -right-2 h-6 w-6 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-md hover:bg-destructive/90 transition-colors duration-200 touch-action-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowDeleteConfirm(true);
                   }}
+                  aria-label="Delete images"
                 >
-                  <X className="h-3 w-3" />
-                </button>
+                  <X className="h-3.5 w-3.5" />
+                </motion.button>
               </HoverCardTrigger>
               <HoverCardContent side="top" align="center" className="text-xs">
-                Delete image
+                Delete Images
               </HoverCardContent>
             </HoverCard>
           </div>
@@ -462,80 +472,87 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
       </Dialog>
 
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Delete Image</DialogTitle>
+            <DialogTitle>Manage Images</DialogTitle>
             <DialogDescription>
-              Select which image you want to delete. This action cannot be
-              undone.
+              Delete individual images or remove all at once. This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4 max-h-[60vh] overflow-y-auto">
-            {imageArray.map((imageUrl: string, index: number) => (
-              <button
-                key={index}
-                onClick={() => setImageToDelete(index)}
-                className={cn(
-                  "relative group aspect-square rounded-lg overflow-hidden border-2 transition-colors",
-                  imageToDelete === index
-                    ? "border-destructive ring-2 ring-destructive"
-                    : "border-destructive/50 hover:border-destructive",
-                )}
-              >
-                <Image
-                  src={imageUrl}
-                  alt={`Image ${index + 1}`}
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    Delete Image {index + 1}
-                  </span>
-                </div>
-                {imageToDelete === index && (
-                  <div className="absolute inset-0 bg-destructive/20 flex items-center justify-center">
-                    <X className="h-8 w-8 text-destructive" />
+          <div className="space-y-3 py-4 max-h-[60vh] overflow-y-auto pr-2">
+            <AnimatePresence mode="popLayout">
+              {imageArray.map((imageUrl: string, index: number) => (
+                <motion.div
+                  key={imageUrl}
+                  layout
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -100, scale: 0.8 }}
+                  transition={{
+                    duration: 0.3,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  }}
+                  className="group relative flex items-center gap-4 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors duration-200"
+                >
+                  <div className="relative w-24 h-24 rounded-md overflow-hidden flex-shrink-0 border border-border">
+                    <Image
+                      src={imageUrl}
+                      alt={`Trade image ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
                   </div>
-                )}
-              </button>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm">Image {index + 1}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {imageUrl.split("/").pop()?.substring(0, 40)}...
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await handleRemoveImage(index);
+                      if (imageArray.length === 1) {
+                        setShowDeleteConfirm(false);
+                      }
+                    }}
+                    className="flex-shrink-0 h-9 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-200 touch-action-manipulation"
+                    aria-label={`Delete image ${index + 1}`}
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="hidden sm:inline">Delete</span>
+                  </Button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
-          <div className="flex justify-between">
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteConfirm(false);
-                  setImageToDelete(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={async () => {
-                  if (imageToDelete !== null) {
-                    await handleRemoveImage(imageToDelete);
-                    setShowDeleteConfirm(false);
-                  }
-                }}
-                disabled={imageToDelete === null}
-              >
-                Delete Image
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={async () => {
-                  await handleRemoveAllImages();
-                  setShowDeleteConfirm(false);
-                  toast.success(t("trade-table.allImagesDeleted"));
-                }}
-              >
-                {t("trade-table.deleteAllImages")}
-              </Button>
-            </DialogFooter>
-          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setImageToDelete(null);
+              }}
+              className="w-full sm:w-auto transition-colors duration-200"
+            >
+              Close
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await handleRemoveAllImages();
+                setShowDeleteConfirm(false);
+                toast.success(t("trade-table.allImagesDeleted"));
+              }}
+              className="w-full sm:w-auto gap-2 transition-colors duration-200"
+            >
+              <X className="h-4 w-4" />
+              Delete All {imageArray.length} Images
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
