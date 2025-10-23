@@ -26,11 +26,7 @@ import {
 import { useI18n } from "@/locales/client";
 import { toast } from "sonner";
 import {
-  getAllTradovateTokens,
-  storeTradovateToken,
-  getTradovateTrades,
   initiateTradovateOAuth,
-  removeTradovateToken,
 } from "./actions";
 import { useTradovateSyncStore } from "@/store/tradovate-sync-store";
 import { useData } from "@/context/data-provider";
@@ -200,24 +196,24 @@ export function TradovateCredentialsManager() {
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded text-xs ${
-                      account.environment === "live"
-                        ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                      false
+                      ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                         : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     }`}
                   >
-                    {account.environment}
+                    demo
                   </span>
                 </TableCell>
-                <TableCell>{formatDate(account.lastSyncedAt)}</TableCell>
+                <TableCell>{formatDate(account.lastSyncedAt.toISOString())}</TableCell>
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded text-xs ${
-                      account.isExpired
+                      !account.token
                         ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                         : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                     }`}
                   >
-                    {account.isExpired
+                    {!account.token
                       ? t("tradovateSync.multiAccount.expired")
                       : t("tradovateSync.multiAccount.valid")}
                   </span>
@@ -230,7 +226,7 @@ export function TradovateCredentialsManager() {
                       onClick={async () => {
                         await performSyncForAccount(account.accountId);
                       }}
-                      disabled={syncingId !== null || account.isExpired}
+                      disabled={syncingId !== null || !account.token}
                     >
                       {syncingId === account.accountId ? (
                         <Loader2 className="h-4 w-4 animate-spin" />

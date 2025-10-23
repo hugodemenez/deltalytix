@@ -732,7 +732,12 @@ export async function handleTradovateCallback(code: string, state: string): Prom
     // API provides an endpoint https://demo.tradovateapi.com/v1/auth/me
     const propfirm = await getPropfirmName(tokens.access_token)
     // Store token in database
-    const storeResult = await storeTradovateToken(tokens.access_token, expiresAt, 'demo', propfirm)
+    const storeResult = await storeTradovateToken(
+      tokens.access_token,
+      expiresAt,
+      'demo', //Environment default to demo for now
+      propfirm //accountId
+    )
     if (storeResult.error) {
       logger.warn('Failed to store token in database:', storeResult.error)
       // Continue anyway - token is still valid for this session
@@ -1280,6 +1285,7 @@ export async function getTradovateSynchronizations() {
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
+      console.error("TRADOVATE SYNC: Failed to authenticate user")
       return { error: 'User not authenticated' }
     }
 
@@ -1295,52 +1301,8 @@ export async function getTradovateSynchronizations() {
 
     return { synchronizations }
   } catch (error) {
-    console.error('Failed to get Tradovate synchronizations:', error)
+    console.error('TRADOVATE SYNC: Failed to get Tradovate synchronizations:', error)
     return { error: 'Failed to get synchronizations' }
-  }
-}
-
-// Function to get all stored Tradovate tokens with their status
-export async function getAllTradovateTokens() {
-  try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return { error: 'User not authenticated' }
-    }
-
-    const synchronizations = await prisma.synchronization.findMany({
-      where: {
-        userId: user.id,
-        service: 'tradovate'
-      },
-      select: {
-        id: true,
-        accountId: true,
-        token: true,
-        tokenExpiresAt: true,
-        lastSyncedAt: true,
-        createdAt: true,
-        updatedAt: true
-      },
-      orderBy: {
-        lastSyncedAt: 'desc'
-      }
-    })
-
-    // Add token status (valid/expired) to each synchronization
-    const now = new Date()
-    const tokensWithStatus = synchronizations.map(sync => ({
-      ...sync,
-      isExpired: sync.tokenExpiresAt ? sync.tokenExpiresAt <= now : true,
-      tokenPreview: sync.token ? `${sync.token.substring(0, 10)}...` : null
-    }))
-
-    return { tokens: tokensWithStatus }
-  } catch (error) {
-    console.error('Failed to get all Tradovate tokens:', error)
-    return { error: 'Failed to get tokens' }
   }
 }
 

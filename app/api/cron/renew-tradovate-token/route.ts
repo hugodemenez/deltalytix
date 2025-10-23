@@ -66,6 +66,7 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
     });
     
     if (!renewal.ok) {
+      console.error('Failed to renew token:', await renewal.text());
       // Remove invalid token
       await prisma.user.update({
         where: { id: synchronization.userId },
@@ -73,7 +74,7 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
           synchronizations: {
             update: {
               where: { id: synchronization.id },
-              data: { token: null, tokenExpiresAt: null }
+              data: { token: null }
             }
           }
         }

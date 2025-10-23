@@ -5,7 +5,8 @@ import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
 import { useTradesStore } from '@/store/trades-store'
-import { getTradovateTrades, getAllTradovateTokens, removeTradovateToken } from '@/app/[locale]/dashboard/components/import/tradovate/actions'
+import { getTradovateTrades, removeTradovateToken, getTradovateSynchronizations } from '@/app/[locale]/dashboard/components/import/tradovate/actions'
+import { Synchronization } from '@prisma/client'
 
 interface TradovateAccount {
   accountId: string
@@ -38,7 +39,7 @@ interface TradovateSyncContextType {
   syncProgress: Record<string, TradovateSyncProgress>
   
   // Account management
-  accounts: TradovateAccount[]
+  accounts: Synchronization[]
   loadAccounts: () => Promise<void>
   deleteAccount: (accountId: string) => Promise<void>
   
@@ -57,7 +58,7 @@ const TradovateSyncContext = createContext<TradovateSyncContextType | undefined>
 export function TradovateSyncContextProvider({ children }: { children: ReactNode }) {
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
   const [syncProgress, setSyncProgress] = useState<Record<string, TradovateSyncProgress>>({})
-  const [accounts, setAccounts] = useState<TradovateAccount[]>([])
+  const [accounts, setAccounts] = useState<Synchronization[]>([])
   const [syncInterval, setSyncInterval] = useState(15) // 15 minutes default
   const [enableAutoSync, setEnableAutoSync] = useState(false)
 
@@ -73,19 +74,9 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
   // Load accounts from database
   const loadAccounts = useCallback(async () => {
     try {
-      const result = await getAllTradovateTokens()
-      if (!result.error && result.tokens) {
-        const accountsData = result.tokens
-          .filter(token => token.token) // Only include tokens that have a valid token
-          .map(token => ({
-            accountId: token.accountId,
-            token: token.token!,
-            tokenExpiresAt: token.tokenExpiresAt?.toISOString() || new Date().toISOString(),
-            lastSyncedAt: token.lastSyncedAt?.toISOString() || new Date().toISOString(),
-            isExpired: token.isExpired || false,
-            environment: 'demo' as 'demo' | 'live' // Default to demo since we don't store environment in the current schema
-          }))
-        setAccounts(accountsData)
+      const result = await getTradovateSynchronizations()
+      if (!result.error && result.synchronizations) {
+        setAccounts(result.synchronizations)
       }
     } catch (error) {
       console.warn('Failed to load Tradovate accounts:', error)
@@ -116,7 +107,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       return { success: false, message: errorMsg }
     }
 
-    if (account.isExpired) {
+    if (!account.token) {
       const errorMsg = `Token for account ${accountId} is expired`
       return { success: false, message: errorMsg }
     }
@@ -141,6 +132,10 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
         })
 
         console.log('Starting sync for account:', accountId)
+        if (!account.token) {
+          const errorMsg = `Token for account ${accountId} is expired`
+          return errorMsg
+        }
 
         const result = await getTradovateTrades(account.token)
 
@@ -242,7 +237,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     setIsAutoSyncing(true)
     
     try {
-      const validAccounts = accounts.filter(acc => !acc.isExpired)
+      const validAccounts = accounts.filter(acc => !acc.token)
       
       if (validAccounts.length === 0) {
         return
@@ -271,7 +266,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       
       // Check each account's last sync time
       for (const account of accounts) {
-        if (account.isExpired) continue
+        if (!account.token) continue
 
         const lastSyncTime = new Date(account.lastSyncedAt).getTime()
         const minutesSinceLastSync = (now - lastSyncTime) / (1000 * 60)
