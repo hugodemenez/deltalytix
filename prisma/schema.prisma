@@ -1,116 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
   schemas   = ["public"]
 }
-generator client {
-  provider = "prisma-client-js"
-}
 
 model Trade {
-  id             String   @id @unique @default(uuid())
-  accountNumber  String
-  quantity       Int
-  entryId        String? @default("")
-  closeId        String? @default("")
-  instrument     String
-  entryPrice     String
-  closePrice     String
-  entryDate      String
-  closeDate      String
-  pnl            Float
-  timeInPosition Float    @default(0)
-  userId         String
-  side           String?  @default("")
-  commission     Float    @default(0)
-  createdAt      DateTime @default(now())
-  comment        String?
-  videoUrl       String?  @db.Text
-  tags           String[] @default([])
-  imageBase64    String?  @db.Text
-  imageBase64Second String? @db.Text
-  groupId        String?  @default("")
+  id                String   @id @unique @default(uuid())
+  accountNumber     String
+  quantity          Int
+  entryId           String?  @default("")
+  closeId           String?  @default("")
+  instrument        String
+  entryPrice        String
+  closePrice        String
+  entryDate         String
+  closeDate         String
+  pnl               Float
+  timeInPosition    Float    @default(0)
+  userId            String
+  side              String?  @default("")
+  commission        Float    @default(0)
+  createdAt         DateTime @default(now())
+  comment           String?
+  tags              String[] @default([])
+  imageBase64       String?
+  videoUrl          String?
+  imageBase64Second String?
+  groupId           String?  @default("")
+  images            String[] @default([])
 
   @@index([accountNumber])
   @@index([groupId])
   @@schema("public")
 }
 
-model TickDetails{
-  id String @id @unique @default(uuid())
-  ticker String
+model TickDetails {
+  id        String @id @unique @default(uuid())
+  ticker    String
   tickValue Float
-  tickSize Float
+  tickSize  Float
+
   @@schema("public")
 }
 
 model Subscription {
-  id        String    @id @unique @default(uuid())
-  email     String    @unique
-  plan      String
-  createdAt DateTime  @default(now())
-  userId    String    @unique
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status    String    @default("ACTIVE")
-  endDate   DateTime?
+  id          String    @id @unique @default(uuid())
+  email       String    @unique
+  plan        String
+  createdAt   DateTime  @default(now())
+  userId      String    @unique
+  endDate     DateTime?
+  status      String    @default("ACTIVE")
   trialEndsAt DateTime?
-  interval  String?
+  interval    String?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([email])
   @@schema("public")
 }
 
 model Notification {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
   title       String
   description String
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
   readAt      DateTime?
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@schema("public")
 }
 
 model User {
-  id              String           @id @default(cuid())
-  email           String           @unique
-  auth_user_id    String           @unique
-  notifications   Notification[]
-  subscriptions   Subscription?
-  accounts        Account[]
-  groups          Group[]
-  dashboardLayout DashboardLayout?
-  moods           Mood[]
-  tags            Tag[]
-  isBeta          Boolean          @default(false)
-  isFirstConnection Boolean        @default(true)
-  etpToken        String?
-  thorToken       String?
-  posts           Post[]
-  votes           Vote[]
-  comments        Comment[]
-  language        String           @default("en")
-  orders          Order[]
-  businesses      Business[]
-  synchronizations Synchronization[]
+  id                String            @id @default(cuid())
+  email             String            @unique
+  auth_user_id      String            @unique
+  isFirstConnection Boolean           @default(true)
+  etpToken          String?
+  isBeta            Boolean           @default(false)
+  language          String            @default("en")
+  thorToken         String?
+  accounts          Account[]
+  businesses        Business[]
+  comments          Comment[]
+  dashboardLayout   DashboardLayout?
+  groups            Group[]
+  moods             Mood[]
+  notifications     Notification[]
+  orders            Order[]
+  posts             Post[]
+  subscriptions     Subscription?
+  synchronizations  Synchronization[]
+  tags              Tag[]
+  votes             Vote[]
+
   @@index([email])
   @@schema("public")
 }
 
 model Synchronization {
-  id          String   @id @default(uuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  service     String
-  accountId  String
-  lastSyncedAt DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  token       String?
-  tokenExpiresAt   DateTime?
+  id             String    @id @default(uuid())
+  userId         String
+  service        String
+  accountId      String
+  lastSyncedAt   DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  token          String?
+  tokenExpiresAt DateTime?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, service, accountId])
   @@index([userId])
@@ -119,15 +123,15 @@ model Synchronization {
 }
 
 model Business {
-  id          String   @id @default(uuid())
+  id          String               @id @default(uuid())
   name        String
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  traderIds   String[] @default([]) // List of trader IDs
-  managers    BusinessManager[] // Relation to managers
-  invitations BusinessInvitation[] // Relation to invitations
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  traderIds   String[]             @default([])
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitations BusinessInvitation[]
+  managers    BusinessManager[]
 
   @@unique([name, userId])
   @@index([userId])
@@ -135,32 +139,32 @@ model Business {
 }
 
 model BusinessManager {
-  id          String   @id @default(uuid())
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  managerId   String
-  access      String   @default("viewer") // "admin" or "viewer"
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  businessId String
+  managerId  String
+  access     String   @default("viewer")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
-  @@unique([businessId, managerId]) // Prevent duplicate managers per business
+  @@unique([businessId, managerId])
   @@index([businessId])
-  @@index([managerId]) // This makes querying by manager ID very efficient!
+  @@index([managerId])
   @@schema("public")
 }
 
 model BusinessInvitation {
-  id          String   @id @default(uuid())
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  email       String
-  invitedBy   String   // User ID of the person who sent the invitation
-  status      String   @default("PENDING") // PENDING, ACCEPTED, DECLINED, EXPIRED
-  expiresAt   DateTime @default(dbgenerated("(NOW() + INTERVAL '7 days')"))
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(uuid())
+  businessId String
+  email      String
+  invitedBy  String
+  status     String   @default("PENDING")
+  expiresAt  DateTime @default(dbgenerated("(now() + '7 days'::interval)"))
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
-  @@unique([businessId, email]) // Prevent duplicate invitations
+  @@unique([businessId, email])
   @@index([businessId])
   @@index([email])
   @@index([status])
@@ -168,13 +172,13 @@ model BusinessInvitation {
 }
 
 model Group {
-  id          String    @id @default(uuid())
-  name        String
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accounts    Account[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(uuid())
+  name      String
+  userId    String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  accounts  Account[]
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([name, userId])
   @@index([userId])
@@ -182,75 +186,69 @@ model Group {
 }
 
 model Account {
-  id                String    @id @unique @default(uuid())
-  number            String
-  propfirm          String    @default("")
-  groupId           String?
-  group             Group?    @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  drawdownThreshold Float     @default(0)
-  trailingDrawdown  Boolean   @default(false)
-  trailingStopProfit Float?   
-  profitTarget      Float     @default(0)
-  startingBalance   Float     @default(0)
-  isPerformance     Boolean   @default(false)
-  userId            String
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt         DateTime  @default(now())
-  payoutCount       Int       @default(0)
-  resetDate         DateTime?
-  payouts           Payout[]
-  consistencyPercentage Float? @default(30)
-
-  // New fields for prop firm configuration
-  accountSize       String?   // The account size key (e.g., '50K', '100K')
-  accountSizeName   String?   // The display name of the account size
-  price             Float?    // Regular price
-  priceWithPromo    Float?    // Promotional price
-  evaluation        Boolean   @default(true) // Whether it's an evaluation account
-  minDays           Int?      // Minimum trading days required
-  dailyLoss         Float?    // Daily loss limit
-  rulesDailyLoss    String?   // Rules for daily loss (Violation, No, Lock, DIRECTLY FUNDED)
-  trailing          String?   // Trailing type (EOD, Intraday, Static, DIRECTLY FUNDED)
-  tradingNewsAllowed Boolean  @default(true)
-  activationFees    Float?    // Activation fees
-  isRecursively     String?   // Recursivity type (Unique, Monthly, No)
-  payoutBonus       Float?    // Bonus for payouts
-  profitSharing     Float?    // Profit sharing percentage
-  payoutPolicy      String?   // Payout policy description
-  balanceRequired   Float?    // Required balance
-  minTradingDaysForPayout Int? // Minimum trading days for payout
-  minPayout         Float?    // Minimum payout amount
-  maxPayout         String?   // Maximum payout policy
-  maxFundedAccounts Int?      // Maximum number of funded accounts
-  minPnlToCountAsDay Float?   // Minimum PnL required to count as a trading day
-  
-  // Promotional pricing fields
-  promoType         PromoType? // Type of promotional pricing
-  promoPercentage   Float?     // Discount percentage for percentage-based promos
-  
-  // Payment & Renewal fields
-  nextPaymentDate   DateTime?           // Next payment due date
-  paymentFrequency  PaymentFrequency?   // How often payments are due
-  autoRenewal       Boolean   @default(false) // Whether to automatically renew
-  renewalNotice     Int?      // Days before payment to send renewal notice
+  id                      String            @id @unique @default(uuid())
+  number                  String
+  propfirm                String            @default("")
+  drawdownThreshold       Float             @default(0)
+  profitTarget            Float             @default(0)
+  isPerformance           Boolean           @default(false)
+  userId                  String
+  createdAt               DateTime          @default(now())
+  startingBalance         Float             @default(0)
+  payoutCount             Int               @default(0)
+  trailingDrawdown        Boolean           @default(false)
+  trailingStopProfit      Float?
+  resetDate               DateTime?
+  consistencyPercentage   Float?            @default(30)
+  groupId                 String?
+  accountSize             String?
+  accountSizeName         String?
+  activationFees          Float?
+  balanceRequired         Float?
+  dailyLoss               Float?
+  evaluation              Boolean           @default(true)
+  isRecursively           String?
+  maxFundedAccounts       Int?
+  maxPayout               String?
+  minDays                 Int?
+  minPayout               Float?
+  minTradingDaysForPayout Int?
+  payoutBonus             Float?
+  payoutPolicy            String?
+  price                   Float?
+  priceWithPromo          Float?
+  profitSharing           Float?
+  rulesDailyLoss          String?
+  tradingNewsAllowed      Boolean           @default(true)
+  trailing                String?
+  autoRenewal             Boolean           @default(false)
+  nextPaymentDate         DateTime?
+  paymentFrequency        PaymentFrequency?
+  promoPercentage         Float?
+  promoType               PromoType?
+  renewalNotice           Int?
+  minPnlToCountAsDay      Float?
+  group                   Group?            @relation(fields: [groupId], references: [id])
+  user                    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payouts                 Payout[]
 
   @@unique([number, userId])
   @@index([number])
   @@index([groupId])
-  @@index([nextPaymentDate]) // Index for efficient cron job queries
+  @@index([nextPaymentDate])
   @@schema("public")
 }
 
 model Payout {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   amount        Float
   date          DateTime
-  accountNumber String    
+  createdAt     DateTime @default(now())
+  status        String   @default("PENDING")
+  accountNumber String
   accountId     String
-  account       Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdAt     DateTime  @default(now())
-  status        String    @default("PENDING")
-  
+  account       Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
   @@index([accountNumber])
   @@schema("public")
 }
@@ -258,41 +256,41 @@ model Payout {
 model DashboardLayout {
   id        String   @id @default(uuid())
   userId    String   @unique
-  user      User     @relation(fields: [userId], references: [auth_user_id], onDelete: Cascade)
-  desktop   Json     @default("[]")
-  mobile    Json     @default("[]")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  desktop   Json     @default("[]")
+  mobile    Json     @default("[]")
+  user      User     @relation(fields: [userId], references: [auth_user_id], onDelete: Cascade)
 
   @@index([userId])
   @@schema("public")
 }
 
 model SubscriptionFeedback {
-  id                 String       @id @default(uuid())
-  email             String
-  event             String
+  id                 String   @id @default(uuid())
+  email              String
+  event              String
+  createdAt          DateTime @default(now())
   cancellationReason String?
-  feedback          String?      // For both feedback and comment from Stripe
-  createdAt         DateTime     @default(now())
+  feedback           String?
 
   @@index([email])
   @@schema("public")
 }
 
 model Mood {
-  id            String   @id @default(uuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  day           DateTime
-  mood          String
-  emotionValue  Int      @default(50)  // Stores the emotion slider value (0-100)
-  hasTradingExperience Boolean?  // Stores whether user has trading experience
-  selectedNews  String[] @default([])  // Stores IDs of selected news events
-  journalContent String? @db.Text  // Stores the journal entry content
-  conversation  Json?    // Stores the conversation history as JSON
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                   String   @id @default(uuid())
+  userId               String
+  day                  DateTime
+  mood                 String
+  conversation         Json?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  emotionValue         Int      @default(50)
+  hasTradingExperience Boolean?
+  journalContent       String?
+  selectedNews         String[] @default([])
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, day])
   @@index([userId])
@@ -300,40 +298,39 @@ model Mood {
   @@schema("public")
 }
 
-model Shared{
-  id            String   @id @default(uuid())
-  userId        String   // The user who shared the trades
-  slug          String   @unique // Unique identifier for the share URL
-  title         String?  // Optional title for the shared trades
-  description   String?  // Optional description
-  createdAt     DateTime @default(now())
-  expiresAt     DateTime? // Optional expiration date
-  isPublic      Boolean  @default(true)
-  viewCount     Int      @default(0)
-  accountNumbers String[] // List of account numbers included
-  dateRange     Json     // { from: string, to: string }
-  desktop       Json     @default("[]") // Desktop layout configuration
-  mobile        Json     @default("[]") // Mobile layout configuration
+model Shared {
+  id             String    @id @default(uuid())
+  userId         String
+  slug           String    @unique
+  title          String?
+  description    String?
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime?
+  isPublic       Boolean   @default(true)
+  viewCount      Int       @default(0)
+  accountNumbers String[]
+  dateRange      Json
+  desktop        Json      @default("[]")
+  mobile         Json      @default("[]")
 
   @@index([userId])
   @@index([slug])
   @@schema("public")
 }
 
-
 model FinancialEvent {
   id          String   @id @default(uuid())
   title       String
   date        DateTime
-  importance  String   // HIGH, MEDIUM, LOW
-  type        String   // FOMC, NFP, GDP, etc.
+  importance  String
+  type        String
   description String?
-  sourceUrl   String?  // URL to the event details
-  country     String?  // Country of the event (e.g., "United States", "Australia")
-  lang        String   @default("fr") // Language of the event (e.g., "fr", "en")
-  timezone    String   @default("UTC") // Timezone of the event (e.g., "UTC", "America/New_York")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  sourceUrl   String?
+  country     String?
+  lang        String   @default("fr")
+  timezone    String   @default("UTC")
 
   @@unique([title, date, lang, timezone])
   @@index([date])
@@ -344,11 +341,11 @@ model Tag {
   id          String   @id @default(uuid())
   name        String
   description String?
-  color       String?  @default("#CBD5E1") // Default to a neutral color
+  color       String?  @default("#CBD5E1")
   userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([name, userId])
   @@index([userId])
@@ -356,28 +353,28 @@ model Tag {
 }
 
 model Newsletter {
-  email     String   @unique @id
+  email     String  @id @unique
+  isActive  Boolean @default(true)
   firstName String?
   lastName  String?
-  isActive  Boolean  @default(true)
 
   @@index([email])
   @@schema("public")
 }
 
 model Post {
-  id          String    @id @default(uuid())
+  id          String     @id @default(uuid())
   title       String
-  content     String    @db.Text
-  type        PostType  @default(FEATURE_REQUEST)
+  content     String
+  type        PostType   @default(FEATURE_REQUEST)
   status      PostStatus @default(OPEN)
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  votes       Vote[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  screenshots String[]   @default([])
   comments    Comment[]
-  screenshots String[]  @default([]) @db.Text
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  votes       Vote[]
 
   @@index([userId])
   @@index([type])
@@ -387,20 +384,93 @@ model Post {
 
 model Comment {
   id        String    @id @default(uuid())
-  content   String    @db.Text
+  content   String
   postId    String
-  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
   userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   parentId  String?
-  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Comment[] @relation("CommentReplies")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("CommentReplies")
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([postId])
   @@index([userId])
   @@index([parentId])
+  @@schema("public")
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  type      VoteType
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model Order {
+  id                 String   @id @default(uuid())
+  accountId          String
+  orderId            String   @unique
+  orderAction        String
+  quantity           Int
+  averageFilledPrice Float
+  isOpeningOrder     Boolean
+  time               DateTime
+  symbol             String
+  instrumentType     String
+  userId             String
+  createdAt          DateTime @default(now())
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model TradeAnalytics {
+  id                 String   @id @default(uuid())
+  tradeId            String   @unique
+  mae                Float    @default(0)
+  mfe                Float    @default(0)
+  entryPriceFromData Float?
+  priceDifference    Float?
+  riskRewardRatio    Float?
+  efficiency         Float?
+  dataSource         String   @default("DATABENTO")
+  computedAt         DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([tradeId])
+  @@index([computedAt])
+  @@schema("public")
+}
+
+model HistoricalData {
+  id             String   @id @default(uuid())
+  symbol         String
+  databentSymbol String
+  timestamp      DateTime
+  open           Float
+  high           Float
+  low            Float
+  close          Float
+  volume         Int
+  dataSource     String   @default("DATABENTO")
+  createdAt      DateTime @default(now())
+
+  @@unique([symbol, databentSymbol, timestamp])
+  @@index([symbol])
+  @@index([databentSymbol])
+  @@index([timestamp])
   @@schema("public")
 }
 
@@ -418,21 +488,6 @@ enum PostStatus {
   COMPLETED
   CLOSED
 
-  @@schema("public")
-}
-
-model Vote {
-  id        String   @id @default(uuid())
-  type      VoteType
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([postId, userId])
-  @@index([postId])
-  @@index([userId])
   @@schema("public")
 }
 
@@ -457,63 +512,5 @@ enum PromoType {
   DIRECT
   PERCENTAGE
 
-  @@schema("public")
-}
-
-model Order {
-  id                String   @id @default(uuid())
-  accountId         String
-  orderId           String   @unique
-  orderAction       String
-  quantity          Int
-  averageFilledPrice Float
-  isOpeningOrder    Boolean
-  time              DateTime
-  symbol            String
-  instrumentType    String
-  userId            String
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt         DateTime @default(now())
-
-  @@index([accountId])
-  @@index([userId])
-  @@schema("public")
-}
-
-model TradeAnalytics {
-  id                String   @id @default(uuid())
-  tradeId           String   @unique
-  mae               Float    @default(0) // Maximum Adverse Excursion
-  mfe               Float    @default(0) // Maximum Favorable Excursion
-  entryPriceFromData Float?  // Actual entry price from market data
-  priceDifference   Float?   // Difference between reported and actual entry price
-  riskRewardRatio   Float?   // Risk/Reward ratio
-  efficiency        Float?   // How much of the favorable move was captured
-  dataSource        String   @default("DATABENTO") // Source of the data
-  computedAt        DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  @@index([tradeId])
-  @@index([computedAt])
-  @@schema("public")
-}
-
-model HistoricalData {
-  id            String   @id @default(uuid())
-  symbol        String   // Original symbol (e.g., "ES", "NQ")
-  databentSymbol String  // Databento symbol (e.g., "ES.FUT.CME")
-  timestamp     DateTime
-  open          Float
-  high          Float
-  low           Float
-  close         Float
-  volume        Int
-  dataSource    String   @default("DATABENTO")
-  createdAt     DateTime @default(now())
-
-  @@unique([symbol, databentSymbol, timestamp])
-  @@index([symbol])
-  @@index([databentSymbol])
-  @@index([timestamp])
   @@schema("public")
 }
