@@ -2135,6 +2135,7 @@ export default {
           fr: "Traduire en français",
         },
         suggestQuestion: "Suggérer une question de journal",
+        tradesSummary: "Résumer la session du jour",
       },
       thinking: "L'IA réfléchit...",
       generating: "Génération en cours...",

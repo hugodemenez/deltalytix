@@ -177,9 +177,10 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
 
     if (moodForDate) {
       // If we have data, update all the state values
+      console.warn("We have data for the selected date")
       setEmotionValue(moodForDate.emotionValue ?? 50)
       setSelectedNews(moodForDate.selectedNews ?? [])
-      setJournalContent(moodForDate.journalContent ?? "")
+      setJournalContent(moodForDate.journalContent ?? " ")
       setIsEditing(true)
       api?.scrollTo(1) // Summary is now index 1
     } else {

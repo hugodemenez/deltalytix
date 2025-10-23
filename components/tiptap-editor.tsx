@@ -257,7 +257,8 @@ export function TiptapEditor({
 
       if (
         (!targetText || targetText.length < 10) &&
-        action != "suggest_question"
+        action != "suggest_question" &&
+        action != "trades_summary"
       ) {
         toast.error(t("editor.ai.minCharsError"));
         return;
@@ -274,6 +275,7 @@ export function TiptapEditor({
       complete(targetText, {
         body: {
           action: action,
+          date: date,
         },
       });
     },

@@ -1980,6 +1980,7 @@ export default {
           fr: "Translate to French",
         },
         suggestQuestion: "Suggest a journaling question",
+        tradesSummary: "Summarize trades",
       },
       thinking: "AI is thinking...",
       generating: "Generating suggestion...",

@@ -7,6 +7,8 @@ import { Bold, Italic, UnderlineIcon, Strikethrough, Highlighter, Heading1, Head
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { NewsSubMenu } from "@/components/ai-elements/news-sub-menu";
+import z from "zod";
+import { ActionSchema as EditorAction } from "@/app/api/ai/editor/schema";
 
 // Responsive MenuBar component with overflow dropdown
 export function ResponsiveMenuBar({
@@ -23,7 +25,7 @@ export function ResponsiveMenuBar({
   date,
 }: {
   editor: any;
-  onRunAIAction: (action: "explain" | "improve" | "suggest_question") => void;
+  onRunAIAction: (action: z.infer<typeof EditorAction>) => void;
   status: string;
   onFileInput: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onToggleFullscreen: () => void;
@@ -168,55 +170,55 @@ export function ResponsiveMenuBar({
 
   // Define all menu items
   const allMenuItems = [
-    // Text Formatting
-    {
-      type: "button" as const,
-      id: "bold",
-      icon: Bold,
-      title: "Bold",
-      action: () => editor.chain().focus().toggleBold().run(),
-      active: editorState.isBold,
-      disabled: !editorState.canBold,
-    },
-    {
-      type: "button" as const,
-      id: "italic",
-      icon: Italic,
-      title: "Italic",
-      action: () => editor.chain().focus().toggleItalic().run(),
-      active: editorState.isItalic,
-      disabled: !editorState.canItalic,
-    },
-    {
-      type: "button" as const,
-      id: "underline",
-      icon: UnderlineIcon,
-      title: "Underline",
-      action: () => editor.chain().focus().toggleUnderline().run(),
-      active: editorState.isUnderline,
-      disabled: !editorState.canUnderline,
-    },
-    {
-      type: "button" as const,
-      id: "strike",
-      icon: Strikethrough,
-      title: "Strikethrough",
-      action: () => editor.chain().focus().toggleStrike().run(),
-      active: editorState.isStrike,
-      disabled: !editorState.canStrike,
-    },
-    {
-      type: "button" as const,
-      id: "highlight",
-      icon: Highlighter,
-      title: "Highlight",
-      action: () => editor.chain().focus().toggleHighlight().run(),
-      active: editorState.isHighlight,
-      disabled: !editorState.canHighlight,
-    },
+    // // Text Formatting
+    // {
+    //   type: "button" as const,
+    //   id: "bold",
+    //   icon: Bold,
+    //   title: "Bold",
+    //   action: () => editor.chain().focus().toggleBold().run(),
+    //   active: editorState.isBold,
+    //   disabled: !editorState.canBold,
+    // },
+    // {
+    //   type: "button" as const,
+    //   id: "italic",
+    //   icon: Italic,
+    //   title: "Italic",
+    //   action: () => editor.chain().focus().toggleItalic().run(),
+    //   active: editorState.isItalic,
+    //   disabled: !editorState.canItalic,
+    // },
+    // {
+    //   type: "button" as const,
+    //   id: "underline",
+    //   icon: UnderlineIcon,
+    //   title: "Underline",
+    //   action: () => editor.chain().focus().toggleUnderline().run(),
+    //   active: editorState.isUnderline,
+    //   disabled: !editorState.canUnderline,
+    // },
+    // {
+    //   type: "button" as const,
+    //   id: "strike",
+    //   icon: Strikethrough,
+    //   title: "Strikethrough",
+    //   action: () => editor.chain().focus().toggleStrike().run(),
+    //   active: editorState.isStrike,
+    //   disabled: !editorState.canStrike,
+    // },
+    // {
+    //   type: "button" as const,
+    //   id: "highlight",
+    //   icon: Highlighter,
+    //   title: "Highlight",
+    //   action: () => editor.chain().focus().toggleHighlight().run(),
+    //   active: editorState.isHighlight,
+    //   disabled: !editorState.canHighlight,
+    // },
 
-    // Headings
-    { type: "separator" as const, id: "heading-sep" },
+    // // Headings
+    // { type: "separator" as const, id: "heading-sep" },
     {
       type: "button" as const,
       id: "h1",
@@ -440,6 +442,12 @@ export function ResponsiveMenuBar({
                     disabled={status === "streaming"}
                   >
                     {t("editor.ai.actions.suggestQuestion")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onRunAIAction("trades_summary")}
+                    disabled={status === "streaming"}
+                  >
+                    {t("editor.ai.actions.tradesSummary")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
