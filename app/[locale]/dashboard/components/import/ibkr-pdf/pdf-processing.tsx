@@ -40,6 +40,7 @@ import { ChevronDown, ChevronRight } from "lucide-react"
 import { DataTableColumnHeader } from '../../tables/column-header'
 import { Trade as PrismaTrade } from '@prisma/client'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
+import { createTradeWithDefaults } from '@/lib/trade-factory'
 
 type Order = z.infer<typeof orderSchema>
 type Trade = z.infer<typeof tradeSchema>
@@ -138,22 +139,7 @@ export default function PdfProcessing({
       
       // Convert ApiTrade to Prisma Trade format for processedTrades
       const convertedTrades: PrismaTrade[] = newTrades.map(trade => {
-        const tradeData = {
-          accountNumber: '',
-          entryId: trade.entryId || '',
-          closeId: trade.closeId || '',
-          instrument: trade.instrument,
-          entryPrice: trade.entryPrice,
-          closePrice: trade.closePrice,
-          entryDate: trade.entryDate,
-          closeDate: trade.closeDate,
-          quantity: trade.quantity,
-          side: trade.side || '',
-          userId: userId
-        }
-
-        return {
-          id: generateDeterministicTradeId(tradeData),
+        return createTradeWithDefaults({
           accountNumber: '',
           quantity: trade.quantity,
           entryId: trade.entryId || '',
@@ -168,14 +154,7 @@ export default function PdfProcessing({
           userId: userId,
           side: trade.side || '',
           commission: Math.abs(trade.commission || 0),
-          createdAt: new Date(),
-          comment: null,
-          videoUrl: null,
-          tags: [],
-          imageBase64: null,
-          imageBase64Second: null,
-          groupId: null
-        }
+        });
       });
       
       setProcessedTrades(convertedTrades);

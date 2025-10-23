@@ -9,6 +9,7 @@ import { getTickDetails } from '@/server/tick-details'
 import { prisma } from '@/lib/prisma'
 
 import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
+import { createTradeWithDefaults } from '@/lib/trade-factory'
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -1120,7 +1121,7 @@ async function buildTradesFromFillPairs(
         userId: userId
       }
 
-      const trade: Trade = {
+      const trade = createTradeWithDefaults({
         id: generateDeterministicTradeId(tradeData),
         accountNumber: accountLabel,
         quantity: fillPair.qty,
@@ -1136,14 +1137,8 @@ async function buildTradesFromFillPairs(
         userId: userId,
         side: side,
         commission: totalCommission,
-        createdAt: new Date(),
-        comment: ``,
-        videoUrl: null,
         tags: ['tradovate'],
-        imageBase64: null,
-        imageBase64Second: null,
-        groupId: null
-      }
+      })
 
       trades.push(trade)
       logger.debug(`Created trade for ${contractSymbol}: ${side} ${fillPair.qty} @ ${entryPrice} -> ${exitPrice} = $${netPnl.toFixed(2)} (${formatDuration(durationSeconds)}) [Commission: $${totalCommission.toFixed(2)}]`)

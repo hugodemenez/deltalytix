@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Trade } from '@prisma/client'
 import { useI18n } from '@/locales/client'
-import { generateTradeHash } from '@/lib/utils'
+import { createTradeWithDefaults } from '@/lib/trade-factory'
 
 const formatDuration = (seconds: number): string => {
     if (seconds === 0) return '0s'
@@ -96,24 +96,9 @@ export default function FtmoProcessor({ headers, csvData, setProcessedTrades, ac
             // Calculate total commission including swap (overnight financing costs)
             const totalCommission = Math.abs(commission) - swap
 
-            const trade: Trade = {
-                id: generateTradeHash({
-                    accountNumber,
-                    instrument: symbol,
-                    side,
-                    quantity,
-                    entryPrice: entryPrice.toString(),
-                    closePrice: exitPrice.toString(),
-                    entryDate: openDate.toISOString(),
-                    closeDate: closeDate.toISOString(),
-                    pnl: profit,
-                    commission: totalCommission,
-                    timeInPosition: duration
-                } as Trade).toString(),
+            const trade = createTradeWithDefaults({
                 accountNumber,
                 quantity,
-                entryId: null,
-                closeId: null,
                 instrument: symbol,
                 entryPrice: entryPrice.toString(),
                 closePrice: exitPrice.toString(),
@@ -124,18 +109,11 @@ export default function FtmoProcessor({ headers, csvData, setProcessedTrades, ac
                 timeInPosition: duration,
                 side,
                 comment: `FTMO Trade ${ticket}`,
-                imageBase64: null,
-                createdAt: new Date(),
-                userId: '', // Will be set by the parent component
-                tags: [],
-                videoUrl: null,
-                imageBase64Second: null,
-                groupId: null
-            }
+            })
 
             // FTMO provides all cost information directly, no need for commission handling
 
-            newTrades.push(trade)
+            newTrades.push(trade as Trade)
         }
 
         setTrades(newTrades);
