@@ -1,845 +1,93 @@
 "use client";
 
-import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/react/menus";
+import { useEditor, EditorContent } from "@tiptap/react";
+
+// Declare custom TipTap commands for TypeScript
+declare module "@tiptap/core" {
+  interface Commands<ReturnType> {
+    aiCompletion: {
+      startAICompletion: (position: number) => ReturnType;
+      updateAICompletion: (completion: string) => ReturnType;
+      finishAICompletion: () => ReturnType;
+    };
+  }
+}
 import StarterKit from "@tiptap/starter-kit";
+import { Extension } from "@tiptap/core";
 import Image from "@tiptap/extension-image";
-import Link from "@tiptap/extension-link";
 import { BubbleMenu as BubbleMenuExtension } from "@tiptap/extension-bubble-menu";
 import { TextAlign } from "@tiptap/extension-text-align";
-import { TextStyle } from "@tiptap/extension-text-style";
 import { TextStyleKit } from "@tiptap/extension-text-style";
-import { Color } from "@tiptap/extension-color";
 import { Highlight } from "@tiptap/extension-highlight";
 import { TaskList } from "@tiptap/extension-task-list";
 import { TaskItem } from "@tiptap/extension-task-item";
-import UnderlineExtension from "@tiptap/extension-underline";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import Collaboration from "@tiptap/extension-collaboration";
 import * as Y from "yjs";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import {
-  Bold,
-  Italic,
-  Underline as UnderlineIcon,
-  Strikethrough,
-  List,
-  ListOrdered,
-  CheckSquare,
-  Image as ImageIcon,
-  Quote,
-  Highlighter,
-  Heading1,
-  Heading2,
-  Heading3,
-  Check,
-  X,
-  Sparkles,
-  Loader2,
-} from "lucide-react";
-import { Maximize2, Minimize2 } from "lucide-react";
 import { useCallback, useState, useEffect, useRef } from "react";
 import { useUserStore } from "@/store/user-store";
 import { toast } from "sonner";
 import { useCurrentLocale, useI18n } from "@/locales/client";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
-import { NewsSubMenu } from "@/components/ai-elements/news-sub-menu";
+import { useCompletion } from "@ai-sdk/react";
 import { FinancialEvent } from "@prisma/client";
+import { z } from "zod";
+import { OptimizedBubbleMenu } from "@/components/tiptap/optimized-bubble-menu";
+import { ResponsiveMenuBar } from "@/components/tiptap/menu-bar";
+import { ActionSchema as EditorAction } from "@/app/api/ai/editor/schema";
 
 const supabase = createClient();
 
-// Optimized BubbleMenu component using useEditorState
-function OptimizedBubbleMenu({
-  editor,
-  onRunAIAction,
-  status,
-}: {
-  editor: any;
-  onRunAIAction: (action: "explain" | "improve" | "suggest_question") => void;
-  status: string;
-}) {
-  const t = useI18n();
-  const [isAIHovered, setIsAIHovered] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState<"bottom" | "top">(
-    "bottom",
-  );
-  const aiButtonRef = useRef<HTMLButtonElement>(null);
+// AI Completion Extension to manage streaming state
+const AICompletionExtension = Extension.create({
+  name: "aiCompletion",
 
-  // Calculate dropdown position based on available space
-  useEffect(() => {
-    if (isAIHovered && aiButtonRef.current) {
-      const rect = aiButtonRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-      const dropdownHeight = 280; // Approximate height of dropdown
-
-      // If there's not enough space below, show above
-      if (rect.bottom + dropdownHeight > viewportHeight - 20) {
-        setDropdownPosition("top");
-      } else {
-        setDropdownPosition("bottom");
-      }
-    }
-  }, [isAIHovered]);
-
-  const editorState = useEditorState({
-    editor,
-    selector: (ctx) => {
-      return {
-        isBold: ctx.editor.isActive("bold") ?? false,
-        isItalic: ctx.editor.isActive("italic") ?? false,
-        isUnderline: ctx.editor.isActive("underline") ?? false,
-        isStrike: ctx.editor.isActive("strike") ?? false,
-        isHighlight: ctx.editor.isActive("highlight") ?? false,
-        canBold: ctx.editor.can().toggleMark("bold") ?? false,
-        canItalic: ctx.editor.can().toggleMark("italic") ?? false,
-        canUnderline: ctx.editor.can().toggleMark("underline") ?? false,
-        canStrike: ctx.editor.can().toggleMark("strike") ?? false,
-        canHighlight: ctx.editor.can().toggleMark("highlight") ?? false,
-      };
-    },
-  });
-
-  if (!editorState) return null;
-
-  return (
-    <BubbleMenu
-      editor={editor}
-      className="flex items-center flex-wrap gap-1 p-2 bg-background border rounded-lg shadow-lg max-w-[90vw] overflow-visible"
-    >
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        disabled={!editorState.canBold}
-        className={cn(editorState.isBold && "bg-muted")}
-        title="Bold"
-      >
-        <Bold className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        disabled={!editorState.canItalic}
-        className={cn(editorState.isItalic && "bg-muted")}
-        title="Italic"
-      >
-        <Italic className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleUnderline().run()}
-        disabled={!editorState.canUnderline}
-        className={cn(editorState.isUnderline && "bg-muted")}
-        title="Underline"
-      >
-        <UnderlineIcon className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleStrike().run()}
-        disabled={!editorState.canStrike}
-        className={cn(editorState.isStrike && "bg-muted")}
-        title="Strikethrough"
-      >
-        <Strikethrough className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleHighlight().run()}
-        disabled={!editorState.canHighlight}
-        className={cn(editorState.isHighlight && "bg-muted")}
-        title="Highlight"
-      >
-        <Highlighter className="h-4 w-4" />
-      </Button>
-
-      {/* AI Dropdown with hover effect */}
-      <div className="relative">
-        <Button
-          ref={aiButtonRef}
-          variant="ghost"
-          size="sm"
-          disabled={status === "streaming"}
-          className={cn(
-            "h-8 w-8 p-0",
-            status === "streaming" && "animate-pulse",
-          )}
-          title={t("editor.ai.button")}
-          onMouseEnter={() => setIsAIHovered(true)}
-          onMouseLeave={() => setIsAIHovered(false)}
-        >
-          {status === "streaming" ? (
-            <Loader2 className="h-4 w-4" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-        </Button>
-
-        {/* AI Dropdown Menu */}
-        {isAIHovered && (
-          <div
-            className={cn(
-              "absolute left-0 w-56 bg-background border rounded-lg shadow-lg z-[100] animate-in fade-in-0 zoom-in-95 duration-200",
-              dropdownPosition === "bottom"
-                ? "top-full mt-1"
-                : "bottom-full mb-1",
-            )}
-            onMouseEnter={() => setIsAIHovered(true)}
-            onMouseLeave={() => setIsAIHovered(false)}
-          >
-            <div className="p-1">
-              <button
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
-                onClick={() => {
-                  onRunAIAction("explain");
-                  setIsAIHovered(false);
-                }}
-                disabled={status === "streaming"}
-              >
-                {t("editor.ai.actions.explain")}
-              </button>
-              <button
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
-                onClick={() => {
-                  onRunAIAction("improve");
-                  setIsAIHovered(false);
-                }}
-                disabled={status === "streaming"}
-              >
-                {t("editor.ai.actions.improvements")}
-              </button>
-              <div className="h-px bg-border my-1" />
-              <button
-                className="w-full px-3 py-2 text-left text-sm hover:bg-muted rounded transition-colors"
-                onClick={() => {
-                  onRunAIAction("suggest_question");
-                  setIsAIHovered(false);
-                }}
-                disabled={status === "streaming"}
-              >
-                {t("editor.ai.actions.suggestQuestion")}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </BubbleMenu>
-  );
-}
-
-// Responsive MenuBar component with overflow dropdown
-function ResponsiveMenuBar({
-  editor,
-  onRequestSuggestion,
-  onRunAIAction,
-  status,
-  onFileInput,
-  onToggleFullscreen,
-  isFullscreen,
-  events,
-  selectedNews,
-  onNewsSelection,
-  onEmbedNews,
-  date,
-}: {
-  editor: any;
-  onRequestSuggestion: () => void;
-  onRunAIAction: (action: "explain" | "improve" | "suggest_question") => void;
-  status: string;
-  onFileInput: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  onToggleFullscreen: () => void;
-  isFullscreen: boolean;
-  events?: FinancialEvent[];
-  selectedNews?: string[];
-  onNewsSelection?: (newsIds: string[]) => void;
-  onEmbedNews?: (newsIds: string[], action: "add" | "remove") => void;
-  date?: Date;
-}) {
-  const t = useI18n();
-  const editorState = useEditorState({
-    editor,
-    selector: (ctx) => {
-      return {
-        // Text formatting
-        isBold: ctx.editor.isActive("bold") ?? false,
-        isItalic: ctx.editor.isActive("italic") ?? false,
-        isUnderline: ctx.editor.isActive("underline") ?? false,
-        isStrike: ctx.editor.isActive("strike") ?? false,
-        isHighlight: ctx.editor.isActive("highlight") ?? false,
-        canBold: ctx.editor.can().toggleMark("bold") ?? false,
-        canItalic: ctx.editor.can().toggleMark("italic") ?? false,
-        canUnderline: ctx.editor.can().toggleMark("underline") ?? false,
-        canStrike: ctx.editor.can().toggleMark("strike") ?? false,
-        canHighlight: ctx.editor.can().toggleMark("highlight") ?? false,
-        // Headings
-        isHeading1: ctx.editor.isActive("heading", { level: 1 }) ?? false,
-        isHeading2: ctx.editor.isActive("heading", { level: 2 }) ?? false,
-        isHeading3: ctx.editor.isActive("heading", { level: 3 }) ?? false,
-        canHeading1:
-          ctx.editor.can().toggleNode("heading", "paragraph", { level: 1 }) ??
-          false,
-        canHeading2:
-          ctx.editor.can().toggleNode("heading", "paragraph", { level: 2 }) ??
-          false,
-        canHeading3:
-          ctx.editor.can().toggleNode("heading", "paragraph", { level: 3 }) ??
-          false,
-        // Lists and blocks
-        isBulletList: ctx.editor.isActive("bulletList") ?? false,
-        isOrderedList: ctx.editor.isActive("orderedList") ?? false,
-        isBlockquote: ctx.editor.isActive("blockquote") ?? false,
-        canBulletList:
-          ctx.editor.can().toggleList("bulletList", "listItem") ?? false,
-        canOrderedList:
-          ctx.editor.can().toggleList("orderedList", "listItem") ?? false,
-        canBlockquote:
-          ctx.editor.can().toggleNode("blockquote", "paragraph") ?? false,
-        // History
-        // Only enable if commands are registered
-        canUndo: Boolean((ctx.editor as any).commands?.undo),
-        canRedo: Boolean((ctx.editor as any).commands?.redo),
-      };
-    },
-  });
-
-  const [visibleItems, setVisibleItems] = useState<number>(0);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const itemsRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-
-  // Check for overflow and determine visible items using an offscreen measure row
-  useEffect(() => {
-    const computeLayout = () => {
-      if (!containerRef.current || !measureRef.current) return;
-
-      const containerWidth = containerRef.current.offsetWidth;
-      const padding = 16; // p-2
-      const dropdownButtonWidth = 48; // reserve space
-      const availableWidth = containerWidth - padding - dropdownButtonWidth;
-
-      // Measure children widths from the measurement row
-      const itemElements = Array.from(
-        measureRef.current.children,
-      ) as HTMLElement[];
-      if (itemElements.length === 0) return;
-
-      // Total width with 4px gaps
-      const totalWidth = itemElements.reduce(
-        (acc, el, idx) =>
-          acc + el.offsetWidth + (idx < itemElements.length - 1 ? 4 : 0),
-        0,
-      );
-
-      if (totalWidth <= availableWidth) {
-        setShowDropdown(false);
-        setVisibleItems(0);
-        return;
-      }
-
-      // Find visible count that fits
-      let running = 0;
-      let count = 0;
-      for (let i = 0; i < itemElements.length; i++) {
-        const w = itemElements[i].offsetWidth;
-        const gap = i < itemElements.length - 1 ? 4 : 0;
-        if (running + w + gap <= availableWidth) {
-          running += w + gap;
-          count++;
-        } else {
-          break;
-        }
-      }
-
-      if (count >= itemElements.length) {
-        setShowDropdown(false);
-        setVisibleItems(0);
-      } else {
-        setShowDropdown(true);
-        setVisibleItems(count);
-      }
+  addStorage() {
+    return {
+      insertPosition: null as number | null,
+      lastInsertedLength: 0,
     };
+  },
 
-    // Observe size changes reliably
-    const ro = new ResizeObserver(() => {
-      computeLayout();
-    });
-    if (containerRef.current) ro.observe(containerRef.current);
-    if (measureRef.current) ro.observe(measureRef.current);
+  addCommands() {
+    return {
+      startAICompletion:
+        (position: number) =>
+        ({ commands }) => {
+          this.storage.insertPosition = position;
+          this.storage.lastInsertedLength = 0;
+          return true;
+        },
+      updateAICompletion:
+        (completion: string) =>
+        ({ commands }: { commands: any }) => {
+          if (this.storage.insertPosition === null) return false;
 
-    // Also recompute when editor state that affects active styles changes
-    computeLayout();
-    return () => {
-      ro.disconnect();
+          const delta = completion.slice(this.storage.lastInsertedLength);
+
+          if (delta.length > 0) {
+            const newPosition =
+              this.storage.insertPosition + this.storage.lastInsertedLength;
+            commands.insertContentAt(newPosition, {
+              text: delta,
+              type: "text",
+            });
+            this.storage.lastInsertedLength = completion.length;
+          }
+          return true;
+        },
+      finishAICompletion:
+        () =>
+        ({ commands }) => {
+          this.storage.insertPosition = null;
+          this.storage.lastInsertedLength = 0;
+          return true;
+        },
     };
-  }, [
-    editorState.isBold,
-    editorState.isItalic,
-    editorState.isUnderline,
-    editorState.isStrike,
-    editorState.isHighlight,
-    editorState.isHeading1,
-    editorState.isHeading2,
-    editorState.isHeading3,
-    editorState.isBulletList,
-    editorState.isOrderedList,
-    editorState.isBlockquote,
-  ]);
-
-  if (!editorState) return null;
-
-  // Define all menu items
-  const allMenuItems = [
-    // Text Formatting
-    {
-      type: "button" as const,
-      id: "bold",
-      icon: Bold,
-      title: "Bold",
-      action: () => editor.chain().focus().toggleBold().run(),
-      active: editorState.isBold,
-      disabled: !editorState.canBold,
-    },
-    {
-      type: "button" as const,
-      id: "italic",
-      icon: Italic,
-      title: "Italic",
-      action: () => editor.chain().focus().toggleItalic().run(),
-      active: editorState.isItalic,
-      disabled: !editorState.canItalic,
-    },
-    {
-      type: "button" as const,
-      id: "underline",
-      icon: UnderlineIcon,
-      title: "Underline",
-      action: () => editor.chain().focus().toggleUnderline().run(),
-      active: editorState.isUnderline,
-      disabled: !editorState.canUnderline,
-    },
-    {
-      type: "button" as const,
-      id: "strike",
-      icon: Strikethrough,
-      title: "Strikethrough",
-      action: () => editor.chain().focus().toggleStrike().run(),
-      active: editorState.isStrike,
-      disabled: !editorState.canStrike,
-    },
-    {
-      type: "button" as const,
-      id: "highlight",
-      icon: Highlighter,
-      title: "Highlight",
-      action: () => editor.chain().focus().toggleHighlight().run(),
-      active: editorState.isHighlight,
-      disabled: !editorState.canHighlight,
-    },
-
-    // Headings
-    { type: "separator" as const, id: "heading-sep" },
-    {
-      type: "button" as const,
-      id: "h1",
-      icon: Heading1,
-      title: "Heading 1",
-      action: () => editor.chain().focus().toggleHeading({ level: 1 }).run(),
-      active: editorState.isHeading1,
-      disabled: !editorState.canHeading1,
-    },
-    {
-      type: "button" as const,
-      id: "h2",
-      icon: Heading2,
-      title: "Heading 2",
-      action: () => editor.chain().focus().toggleHeading({ level: 2 }).run(),
-      active: editorState.isHeading2,
-      disabled: !editorState.canHeading2,
-    },
-    {
-      type: "button" as const,
-      id: "h3",
-      icon: Heading3,
-      title: "Heading 3",
-      action: () => editor.chain().focus().toggleHeading({ level: 3 }).run(),
-      active: editorState.isHeading3,
-      disabled: !editorState.canHeading3,
-    },
-
-    // Lists and Blocks
-    { type: "separator" as const, id: "list-sep" },
-    {
-      type: "button" as const,
-      id: "bullet",
-      icon: List,
-      title: "Bullet List",
-      action: () => editor.chain().focus().toggleBulletList().run(),
-      active: editorState.isBulletList,
-      disabled: !editorState.canBulletList,
-    },
-    {
-      type: "button" as const,
-      id: "ordered",
-      icon: ListOrdered,
-      title: "Numbered List",
-      action: () => editor.chain().focus().toggleOrderedList().run(),
-      active: editorState.isOrderedList,
-      disabled: !editorState.canOrderedList,
-    },
-    {
-      type: "button" as const,
-      id: "quote",
-      icon: Quote,
-      title: "Blockquote",
-      action: () => editor.chain().focus().toggleBlockquote().run(),
-      active: editorState.isBlockquote,
-      disabled: !editorState.canBlockquote,
-    },
-
-    // Actions
-    { type: "separator" as const, id: "action-sep" },
-    {
-      type: "button" as const,
-      id: "image",
-      icon: ImageIcon,
-      title: "Upload Image",
-      action: () => document.getElementById("image-upload")?.click(),
-      active: false,
-      disabled: false,
-    },
-    // Special AI dropdown trigger (rendered custom below)
-    {
-      type: "button" as const,
-      id: "ai",
-      icon: status === "streaming" ? Loader2 : Sparkles,
-      title: t("editor.ai.button"),
-      action: () => {},
-      active: false,
-      disabled: false,
-    },
-
-    // History
-    { type: "separator" as const, id: "history-sep" },
-    {
-      type: "button" as const,
-      id: "undo",
-      icon: () => (
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"
-          />
-        </svg>
-      ),
-      title: "Undo",
-      action: () => editor.chain().focus().undo().run(),
-      active: false,
-      disabled: !editorState.canUndo,
-    },
-    {
-      type: "button" as const,
-      id: "redo",
-      icon: () => (
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6"
-          />
-        </svg>
-      ),
-      title: "Redo",
-      action: () => editor.chain().focus().redo().run(),
-      active: false,
-      disabled: !editorState.canRedo,
-    },
-  ];
-
-  const visibleItemsList = showDropdown
-    ? allMenuItems.slice(0, visibleItems)
-    : allMenuItems;
-  const overflowItems = showDropdown ? allMenuItems.slice(visibleItems) : [];
-
-  return (
-    <div
-      ref={containerRef}
-      className="relative flex items-center justify-between gap-1 p-2 bg-muted/30 border-b min-w-0 overflow-hidden"
-    >
-      <input
-        type="file"
-        accept="image/*"
-        onChange={onFileInput}
-        className="hidden"
-        id="image-upload"
-      />
-
-      <div
-        ref={itemsRef}
-        className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden"
-      >
-        {/* News SubMenu - always visible when events are provided */}
-        {events &&
-          events.length > 0 &&
-          onNewsSelection &&
-          onEmbedNews &&
-          date && (
-            <NewsSubMenu
-              events={events}
-              selectedNews={selectedNews || []}
-              onNewsSelection={onNewsSelection}
-              onEmbedNews={onEmbedNews}
-              date={date}
-              className="shrink-0"
-            />
-          )}
-
-        {visibleItemsList.map((item, index) => {
-          if (item.type === "separator") {
-            return (
-              <div key={item.id} className="w-px h-6 bg-border mx-1 shrink-0" />
-            );
-          }
-
-          const IconComponent = item.icon;
-          // Custom render for AI dropdown
-          if (item.id === "ai") {
-            return (
-              <DropdownMenu key={item.id}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={status === "streaming"}
-                    className={cn(
-                      "shrink-0 h-8 w-8 p-0",
-                      item.active && "bg-muted",
-                      status === "streaming" && "animate-pulse",
-                    )}
-                    title={item.title}
-                  >
-                    {typeof IconComponent === "function" &&
-                    IconComponent.name === "" ? (
-                      <IconComponent />
-                    ) : (
-                      <IconComponent className="h-4 w-4" />
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="start"
-                  className="w-56"
-                  sideOffset={4}
-                >
-                  <DropdownMenuItem
-                    onClick={() => onRunAIAction("explain")}
-                    disabled={status === "streaming"}
-                  >
-                    {t("editor.ai.actions.explain")}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onRunAIAction("improve")}
-                    disabled={status === "streaming"}
-                  >
-                    {t("editor.ai.actions.improvements")}
-                  </DropdownMenuItem>
-                  <div className="h-px bg-border my-1" />
-                  <DropdownMenuItem
-                    onClick={() => onRunAIAction("suggest_question")}
-                    disabled={status === "streaming"}
-                  >
-                    {t("editor.ai.actions.suggestQuestion")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            );
-          }
-          return (
-            <Button
-              key={item.id}
-              variant="ghost"
-              size="sm"
-              onClick={item.action}
-              disabled={item.disabled}
-              className={cn(
-                "shrink-0 h-8 w-8 p-0",
-                item.active && "bg-muted",
-                item.id === "ai" && status === "streaming" && "animate-pulse",
-              )}
-              title={item.title}
-            >
-              {typeof IconComponent === "function" &&
-              IconComponent.name === "" ? (
-                <IconComponent />
-              ) : (
-                <IconComponent className="h-4 w-4" />
-              )}
-            </Button>
-          );
-        })}
-      </div>
-
-      {/* Offscreen measurement row to get stable widths regardless of active styles */}
-      <div
-        aria-hidden
-        className="absolute -left-[9999px] top-0 flex items-center gap-1"
-        ref={measureRef}
-      >
-        {allMenuItems.map((item) => {
-          if (item.type === "separator") {
-            return (
-              <div
-                key={`m-${item.id}`}
-                className="w-px h-6 bg-border shrink-0"
-              />
-            );
-          }
-          const IconComponent = item.icon;
-          return (
-            <div
-              key={`m-${item.id}`}
-              className="shrink-0 h-8 w-8 p-0 inline-flex items-center justify-center"
-            >
-              {typeof IconComponent === "function" &&
-              IconComponent.name === "" ? (
-                <IconComponent />
-              ) : (
-                <IconComponent className="h-4 w-4" />
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="shrink-0 ml-2 flex items-center gap-1">
-        {showDropdown && overflowItems.length > 0 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48" sideOffset={4}>
-              {overflowItems.map((item) => {
-                if (item.type === "separator") {
-                  return <div key={item.id} className="h-px bg-border my-1" />;
-                }
-
-                const IconComponent = item.icon;
-                // Keep overflow rendering, but handle AI as a submenu-like list
-                if (item.id === "ai") {
-                  return (
-                    <div key={item.id} className="flex flex-col gap-1 py-1">
-                      <button
-                        className={cn(
-                          "px-2 py-1.5 text-left hover:bg-muted rounded",
-                        )}
-                        onClick={() => onRunAIAction("explain")}
-                        disabled={status === "streaming"}
-                      >
-                        {t("editor.ai.actions.explain")}
-                      </button>
-                      <button
-                        className={cn(
-                          "px-2 py-1.5 text-left hover:bg-muted rounded",
-                        )}
-                        onClick={() => onRunAIAction("improve")}
-                        disabled={status === "streaming"}
-                      >
-                        {t("editor.ai.actions.improvements")}
-                      </button>
-                      <div className="h-px bg-border my-1" />
-                      <button
-                        className={cn(
-                          "px-2 py-1.5 text-left hover:bg-muted rounded",
-                        )}
-                        onClick={() => onRunAIAction("suggest_question")}
-                        disabled={status === "streaming"}
-                      >
-                        {t("editor.ai.actions.suggestQuestion")}
-                      </button>
-                    </div>
-                  );
-                }
-                return (
-                  <DropdownMenuItem
-                    key={item.id}
-                    onClick={item.action}
-                    disabled={item.disabled}
-                    className={cn(
-                      "flex items-center gap-2",
-                      item.active && "bg-muted",
-                    )}
-                  >
-                    {typeof IconComponent === "function" &&
-                    IconComponent.name === "" ? (
-                      <IconComponent />
-                    ) : (
-                      <IconComponent className="h-4 w-4" />
-                    )}
-                    <span>{item.title}</span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onToggleFullscreen}
-          className="h-8 w-8 p-0"
-          title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
-        >
-          {isFullscreen ? (
-            <Minimize2 className="h-4 w-4" />
-          ) : (
-            <Maximize2 className="h-4 w-4" />
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// Generate a random 6-character alphanumeric ID
-function generateShortId(): string {
-  const chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+  },
+});
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ACCEPTED_IMAGE_TYPES = [
@@ -880,14 +128,6 @@ export function TiptapEditor({
 }: TiptapEditorProps) {
   const t = useI18n();
   const user = useUserStore((state) => state.user);
-  const [generatedId] = useState(() => generateShortId());
-  const [aiSuggestion, setAiSuggestion] = useState<string | null>(null);
-  const [aiSuggestionPosition, setAiSuggestionPosition] = useState<
-    number | null
-  >(null);
-  const [aiEditInsertPos, setAiEditInsertPos] = useState<number | null>(null);
-  const [aiEditHasInserted, setAiEditHasInserted] = useState(false);
-  const [aiEditEndPos, setAiEditEndPos] = useState<number | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const locale = useCurrentLocale();
 
@@ -900,29 +140,22 @@ export function TiptapEditor({
   // Create Y.js document for collaboration
   const [ydoc] = useState(() => new Y.Doc());
 
-  // Set up AI chat hook to stream questions
-  const { messages, sendMessage, status, setMessages } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/ai/question-suggest",
-      body: {
-        locale: locale,
-      },
-    }),
-  });
-
-  // Separate AI chat stream for editor text-edit actions
-  const {
-    messages: editMessages,
-    sendMessage: sendEditMessage,
-    status: editStatus,
-    setMessages: setEditEditMessages,
-  } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/ai/editor",
-      body: {
-        locale: locale,
-      },
-    }),
+  const { completion, complete, isLoading, setCompletion } = useCompletion({
+    api: "/api/ai/editor",
+    onFinish: () => {
+      // Use the editor command to reset completion state
+      if (editorRef.current) {
+        editorRef.current.commands.finishAICompletion();
+      }
+    },
+    onError: (error) => {
+      console.error("Completion error:", error);
+      toast.error(t("editor.ai.minCharsError"));
+      if (editorRef.current) {
+        editorRef.current.commands.finishAICompletion();
+      }
+    },
+    experimental_throttle: 50,
   });
 
   const handleImageUpload = useCallback(
@@ -1007,31 +240,9 @@ export function TiptapEditor({
     [user?.id, t],
   );
 
-  // Handle requesting AI suggestion - defined early to avoid hoisting issues
-  const handleRequestSuggestion = useCallback(() => {
-    if (!editorRef.current) return;
-
-    const text = editorRef.current.getText().trim();
-    if (text.length < 10) {
-      toast.error(t("editor.ai.minCharsError"));
-      return;
-    }
-
-    // Clear all AI state and messages at the start of any new action
-    setAiSuggestion(null);
-    setAiSuggestionPosition(null);
-    setAiEditHasInserted(false);
-    setMessages([]); // Clear question messages
-    setEditEditMessages([]); // Clear edit messages
-
-    sendMessage({
-      text: text,
-    });
-  }, [sendMessage, setMessages, setEditEditMessages, t]);
-
   // Handle AI dropdown actions
   const handleRunAIAction = useCallback(
-    (action: "explain" | "improve" | "suggest_question") => {
+    (action: z.infer<typeof EditorAction>) => {
       if (!editorRef.current) return;
       const selectedText = editorRef.current.state?.doc
         ?.textBetween(
@@ -1043,47 +254,43 @@ export function TiptapEditor({
       const fullText = editorRef.current.getText().trim();
       const targetText =
         selectedText && selectedText.length > 0 ? selectedText : fullText;
-      if (!targetText || targetText.length < 10) {
+
+      if (
+        (!targetText || targetText.length < 10) &&
+        action != "suggest_question" &&
+        action != "trades_summary"
+      ) {
         toast.error(t("editor.ai.minCharsError"));
         return;
       }
 
-      // Clear all AI state and messages at the start of any new action
-      setAiSuggestion(null);
-      setAiSuggestionPosition(null);
-      setAiEditHasInserted(false);
-      setMessages([]); // Clear question messages
-      setEditEditMessages([]); // Clear edit messages
+      // Get insertion position and start AI completion
+      const { to } = editorRef.current.state.selection;
+      editorRef.current.commands.startAICompletion(to);
 
-      // When an edit action is run, remember where to insert results: after current selection (or cursor)
-      const { from, to } = editorRef.current.state.selection;
-      // Insert after selection end to place result right after selected content
-      setAiEditInsertPos(to);
+      // Clear any previous completion
+      setCompletion("");
 
-      if (action === "suggest_question") {
-        sendMessage({ text: targetText });
-        return;
-      }
-
-      // Build instruction for edit actions
-      let instruction = "";
-      switch (action) {
-        case "explain":
-          instruction =
-            "Explain the following selection in simple, clear terms. Keep it concise.";
-          break;
-        case "improve":
-          instruction =
-            "Identify concrete improvements to the following selection. Return a short bulleted list of 3-5 actionable suggestions.";
-          break;
-      }
-
-      sendEditMessage({
-        text: `${instruction}\n\n"""\n${targetText}\n"""`,
+      // Call complete with the action
+      complete(targetText, {
+        body: {
+          action: action,
+          date: date,
+        },
       });
     },
-    [sendMessage, setMessages, sendEditMessage, setEditEditMessages, t],
+    [locale, t, complete, setCompletion],
   );
+
+  // Handle completion streaming using editor command
+  useEffect(() => {
+    if (!completion || !editorRef.current) {
+      return;
+    }
+
+    // Use the editor command to update completion
+    editorRef.current.commands.updateAICompletion(completion);
+  }, [completion]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -1099,11 +306,11 @@ export function TiptapEditor({
     extensions: [
       StarterKit.configure({
         // Disable default undo/redo for collaboration
+        link: false,
         undoRedo: false,
       }),
       BubbleMenuExtension,
       TextStyleKit,
-      UnderlineExtension,
       Placeholder.configure({
         placeholder: placeholder,
         showOnlyCurrent: false,
@@ -1116,18 +323,8 @@ export function TiptapEditor({
           class: "max-w-full h-auto rounded-lg",
         },
       }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: "text-blue-500 underline cursor-pointer",
-        },
-      }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
-      }),
-      TextStyle,
-      Color.configure({
-        types: ["textStyle"],
       }),
       Highlight.configure({
         multicolor: true,
@@ -1136,6 +333,8 @@ export function TiptapEditor({
       TaskItem.configure({
         nested: true,
       }),
+      // AI Completion extension
+      AICompletionExtension,
       // Collaboration extension (optional)
       ...(collaboration ? [Collaboration.configure({ document: ydoc })] : []),
     ],
@@ -1175,6 +374,8 @@ export function TiptapEditor({
           "[&_.news-event-inline]:text-sm [&_.news-event-inline]:text-blue-600 [&_.news-event-inline]:dark:text-blue-400 [&_.news-event-inline]:bg-blue-50 [&_.news-event-inline]:dark:bg-blue-950/20 [&_.news-event-inline]:px-2 [&_.news-event-inline]:py-1 [&_.news-event-inline]:rounded [&_.news-event-inline]:border-l-2 [&_.news-event-inline]:border-blue-500 [&_.news-event-inline]:my-1",
           // Placeholder styles - using CSS custom properties for complex selectors
           "[&_p.is-editor-empty:first-child::before]:text-gray-400 [&_p.is-editor-empty:first-child::before]:float-left [&_p.is-editor-empty:first-child::before]:h-0 [&_p.is-editor-empty:first-child::before]:pointer-events-none [&_p.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
+          // AI-generated content styles
+          "[&_.ai-generated-content]:bg-purple-50 [&_.ai-generated-content]:dark:bg-purple-950/20 [&_.ai-generated-content]:rounded [&_.ai-generated-content]:px-0.5 [&_.ai-generated-content]:animate-in [&_.ai-generated-content]:fade-in-50",
           "[&_h1.is-empty::before]:text-gray-400 [&_h1.is-empty::before]:float-left [&_h1.is-empty::before]:h-0 [&_h1.is-empty::before]:pointer-events-none [&_h1.is-empty::before]:content-[attr(data-placeholder)]",
           "[&_h2.is-empty::before]:text-gray-400 [&_h2.is-empty::before]:float-left [&_h2.is-empty::before]:h-0 [&_h2.is-empty::before]:pointer-events-none [&_h2.is-empty::before]:content-[attr(data-placeholder)]",
           "[&_h3.is-empty::before]:text-gray-400 [&_h3.is-empty::before]:float-left [&_h3.is-empty::before]:h-0 [&_h3.is-empty::before]:pointer-events-none [&_h3.is-empty::before]:content-[attr(data-placeholder)]",
@@ -1186,7 +387,7 @@ export function TiptapEditor({
         ),
         style: `height: ${height}; width: ${width};`,
       },
-      handlePaste: (view, event) => {
+      handlePaste: (_view, event) => {
         const items = Array.from(event.clipboardData?.items || []);
 
         for (const item of items) {
@@ -1207,7 +408,7 @@ export function TiptapEditor({
         }
         return false;
       },
-      handleDrop: (view, event) => {
+      handleDrop: (_view, event) => {
         const files = Array.from(event.dataTransfer?.files || []);
 
         for (const file of files) {
@@ -1227,112 +428,6 @@ export function TiptapEditor({
       },
     },
   });
-
-  // Handle AI suggestion streaming (journaling question)
-  useEffect(() => {
-    if (messages.length > 0) {
-      // Only keep role assistant messages
-      const assistantMessages = messages.filter(
-        (message) => message.role === "assistant",
-      );
-
-      if (assistantMessages.length > 0) {
-        const lastMessage = assistantMessages[assistantMessages.length - 1];
-        const textPart = lastMessage.parts?.find(
-          (part) => part.type === "text",
-        );
-        const suggestionText = textPart?.text || null;
-
-        if (suggestionText && editor) {
-          // Update the AI suggestion as it streams
-          setAiSuggestion(suggestionText);
-
-          if (aiSuggestionPosition === null) {
-            // First time - insert the AI suggestion at the end
-            const endPosition = editor.state.doc.content.size;
-            editor.commands.setTextSelection(endPosition);
-
-            // Insert the streaming text as italic and muted
-            const suggestionHtml = `<p><em class="text-muted-foreground">${suggestionText}</em></p>`;
-            editor.commands.insertContent(suggestionHtml);
-
-            // Store the position where we inserted the suggestion
-            setAiSuggestionPosition(endPosition);
-          } else {
-            // Update the existing suggestion text
-            const suggestionHtml = `<p><em class="text-muted-foreground">${suggestionText}</em></p>`;
-
-            // Replace the content at the stored position
-            editor.commands.setTextSelection(aiSuggestionPosition);
-            editor.commands.deleteRange({
-              from: aiSuggestionPosition,
-              to: editor.state.doc.content.size,
-            });
-            editor.commands.insertContent(suggestionHtml);
-          }
-        }
-      }
-    }
-  }, [messages, setAiSuggestion, editor, aiSuggestionPosition]);
-
-  // Handle AI edit action streaming - insert right after selection and update in place
-  useEffect(() => {
-    if (editMessages.length > 0) {
-      const assistantMessages = editMessages.filter(
-        (message) => message.role === "assistant",
-      );
-      if (assistantMessages.length > 0) {
-        const lastMessage = assistantMessages[assistantMessages.length - 1];
-        const textPart = lastMessage.parts?.find(
-          (part) => part.type === "text",
-        );
-        const suggestionText = textPart?.text || null;
-        if (suggestionText && editor) {
-          setAiSuggestion(suggestionText);
-          // Determine insertion position (after selection) once per stream
-          let insertPos = aiEditInsertPos;
-          if (insertPos == null) {
-            insertPos = editor.state.selection.to;
-            setAiEditInsertPos(insertPos);
-          }
-
-          const suggestionHtml = `<p data-ai-edit="true"><em class="text-muted-foreground">${suggestionText}</em></p>`;
-
-          if (!aiEditHasInserted) {
-            // First chunk: insert at computed position
-            editor.commands.setTextSelection(insertPos);
-            editor.commands.insertContent(suggestionHtml);
-            // Store the start position of inserted content for later updates
-            setAiSuggestionPosition(insertPos);
-            setAiEditHasInserted(true);
-            // Capture end position of inserted block after first insert
-            const newEnd = editor.state.selection.to;
-            setAiEditEndPos(newEnd);
-          } else if (aiSuggestionPosition != null) {
-            // Subsequent chunks: replace only the previously inserted block range
-            const replaceFrom = aiSuggestionPosition;
-            const replaceTo = aiEditEndPos ?? aiSuggestionPosition;
-            editor.commands.setTextSelection({
-              from: replaceFrom,
-              to: replaceTo,
-            });
-            editor.commands.insertContent(suggestionHtml);
-            // Update end pos after replacement
-            const updatedEnd = editor.state.selection.to;
-            setAiEditEndPos(updatedEnd);
-          }
-        }
-      }
-    }
-  }, [
-    editMessages,
-    setAiSuggestion,
-    editor,
-    aiEditInsertPos,
-    aiEditHasInserted,
-    aiSuggestionPosition,
-    aiEditEndPos,
-  ]);
 
   // Handle embedding news into the editor
   const handleEmbedNews = useCallback(
@@ -1445,13 +540,8 @@ export function TiptapEditor({
           {/* MenuBar */}
           <ResponsiveMenuBar
             editor={editor}
-            onRequestSuggestion={handleRequestSuggestion}
             onRunAIAction={handleRunAIAction}
-            status={
-              status === "streaming" || editStatus === "streaming"
-                ? "streaming"
-                : "ready"
-            }
+            status={isLoading ? "streaming" : "ready"}
             onFileInput={handleFileInput}
             onToggleFullscreen={() => setIsFullscreen(true)}
             isFullscreen={false}
@@ -1474,11 +564,7 @@ export function TiptapEditor({
             <OptimizedBubbleMenu
               editor={editor}
               onRunAIAction={handleRunAIAction}
-              status={
-                status === "streaming" || editStatus === "streaming"
-                  ? "streaming"
-                  : "ready"
-              }
+              status={isLoading ? "streaming" : "ready"}
             />
           </div>
         </div>
@@ -1489,13 +575,8 @@ export function TiptapEditor({
           <div className="flex flex-col h-full bg-background">
             <ResponsiveMenuBar
               editor={editor}
-              onRequestSuggestion={handleRequestSuggestion}
               onRunAIAction={handleRunAIAction}
-              status={
-                status === "streaming" || editStatus === "streaming"
-                  ? "streaming"
-                  : "ready"
-              }
+              status={isLoading ? "streaming" : "ready"}
               onFileInput={handleFileInput}
               onToggleFullscreen={() => setIsFullscreen(false)}
               isFullscreen={true}
@@ -1514,11 +595,7 @@ export function TiptapEditor({
               <OptimizedBubbleMenu
                 editor={editor}
                 onRunAIAction={handleRunAIAction}
-                status={
-                  status === "streaming" || editStatus === "streaming"
-                    ? "streaming"
-                    : "ready"
-                }
+                status={isLoading ? "streaming" : "ready"}
               />
             </div>
           </div>

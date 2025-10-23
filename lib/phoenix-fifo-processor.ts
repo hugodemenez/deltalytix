@@ -8,6 +8,8 @@
 import { ProcessedPhoenixOrder } from '@/types/phoenix-order'
 import { TickDetails, Trade } from '@prisma/client'
 import { filterOrdersForFIFO, sortOrdersByExecutionTime } from './phoenix-order-parser'
+import { CITY_HEADER_NAME } from '@vercel/functions/headers'
+import { createTradeWithDefaults } from './trade-factory'
 
 /**
  * FIFO processing result
@@ -386,9 +388,8 @@ function createTrade(
       }
     }
     
-    return {
+    return createTradeWithDefaults({
       id: `${finalEntryOrder.orderId}-${finalExitOrder.orderId}`,
-      userId: '', // Will be set when saving to database
       accountNumber: finalEntryOrder.accountNumber || 'Unknown',
       instrument: symbol,
       side: side,
@@ -402,14 +403,7 @@ function createTrade(
       timeInPosition: timeInPosition,
       entryId: finalEntryOrder.orderId,
       closeId: finalExitOrder.orderId,
-      comment: null,
-      videoUrl: null,
-      tags: [],
-      imageBase64: null,
-      imageBase64Second: null,
-      groupId: null,
-      createdAt: new Date()
-    } as Trade
+    })
     
   } catch (error) {
     console.error('Failed to create trade:', error)

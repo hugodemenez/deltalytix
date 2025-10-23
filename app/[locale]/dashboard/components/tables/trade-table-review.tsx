@@ -410,6 +410,7 @@ export function TradeTableReview() {
           entryDate: roundedEntryDate.toISOString(),
           closeDate: trade.closeDate,
           tags: trade.tags,
+          images: trade.images,
           imageBase64: trade.imageBase64,
           imageBase64Second: trade.imageBase64Second,
           comment: trade.comment,

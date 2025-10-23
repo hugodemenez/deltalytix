@@ -1,205 +1,243 @@
-"use client"
+"use client";
 
-import { useState, useCallback, useEffect } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { ZoomIn, ZoomOut, X, Upload } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch"
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
-import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/ui/dropzone'
-import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
-import { toast } from 'sonner'
-import { useI18n } from '@/locales/client'
-import { useUserStore } from '@/store/user-store'
-import Image from "next/image"
-import { createClient } from '@/lib/supabase'
-import { useData } from '@/context/data-provider'
+import { useState, useCallback, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ZoomIn, ZoomOut, X, Upload } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import {
+  Dropzone,
+  DropzoneContent,
+  DropzoneEmptyState,
+} from "@/components/ui/dropzone";
+import { useHashUpload } from "@/hooks/use-hash-upload";
+import { toast } from "sonner";
+import { useI18n } from "@/locales/client";
+import { useUserStore } from "@/store/user-store";
+import Image from "next/image";
+import { createClient } from "@/lib/supabase";
+import { useData } from "@/context/data-provider";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "@/components/ui/carousel"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/carousel";
+import { cn } from "@/lib/utils";
 
-const supabase = createClient()
+const supabase = createClient();
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
-const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
-
-// Generate a random 6-character alphanumeric ID
-function generateShortId(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_IMAGES = 10; // Maximum number of images allowed
+const ACCEPTED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+];
 
 interface TradeImageEditorProps {
-  trade: any
-  tradeIds: string[]
+  trade: any;
+  tradeIds: string[];
 }
 
 export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
-  const t = useI18n()
-  const user = useUserStore(state => state.user)
-  const { updateTrades } = useData()
-  const [isOpen, setIsOpen] = useState(false)
-  const [scale, setScale] = useState(1)
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
-  const [isSecondImage, setIsSecondImage] = useState(false)
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
-  const [uploadKey, setUploadKey] = useState(0)
+  const t = useI18n();
+  const user = useUserStore((state) => state.user);
+  const { updateTrades } = useData();
+  const [isOpen, setIsOpen] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [imageToDelete, setImageToDelete] = useState<number | null>(null);
 
-  const [generatedId] = useState(() => {
-    if (tradeIds[0]?.includes('undefined')) {
-      return generateShortId()
+  // Use hash-based upload hook
+  const uploadProps = useHashUpload({
+    bucketName: "trade-images",
+    path: `${user?.id}/trades`,
+    allowedMimeTypes: ACCEPTED_IMAGE_TYPES,
+    maxFileSize: MAX_FILE_SIZE,
+    maxFiles: MAX_IMAGES,
+  });
+
+  // Use new images array if available, otherwise fall back to legacy fields
+  const imageArray =
+    trade.images && trade.images.length > 0
+      ? trade.images
+      : [trade.imageBase64, trade.imageBase64Second].filter(Boolean);
+
+  const uploadCallback = useCallback(async () => {
+    if (uploadProps.isSuccess && uploadProps.uploadedUrls.length > 0) {
+      await handleUpdateImages(uploadProps.uploadedUrls);
+      setUploadDialogOpen(false);
+      toast.success(t("trade-table.imageUploadSuccess"));
+
+      // Reset upload state
+      uploadProps.setFiles([]);
+      uploadProps.setErrors([]);
+    } else if (uploadProps.errors.length > 0) {
+      const error = uploadProps.errors[0].message;
+      toast.error(t("trade-table.imageUploadError", { error }));
     }
-    // Take first 6 characters of the trade ID
-    return tradeIds[0].slice(0, 6)
-  })
+  }, [uploadProps.isSuccess, uploadProps.uploadedUrls, uploadProps.errors]);
 
-  // Create separate upload instances for first and second images
-  const firstImageUploadProps = useSupabaseUpload({
-    bucketName: 'trade-images',
-    path: user?.id + '/' + generatedId,
-    allowedMimeTypes: ACCEPTED_IMAGE_TYPES,
-    maxFileSize: MAX_FILE_SIZE,
-    maxFiles: 1,
-  })
+  // Listen for successful uploads
+  useEffect(() => {
+    uploadCallback();
+  }, [uploadProps.isSuccess, uploadProps.uploadedUrls, uploadProps.errors]);
 
-  const secondImageUploadProps = useSupabaseUpload({
-    bucketName: 'trade-images',
-    path: user?.id + '/' + generatedId,
-    allowedMimeTypes: ACCEPTED_IMAGE_TYPES,
-    maxFileSize: MAX_FILE_SIZE,
-    maxFiles: 1,
-  })
-
-  // Use the appropriate upload props based on which image slot we're uploading to
-  const uploadProps = isSecondImage ? secondImageUploadProps : firstImageUploadProps
-
-  const handleRemoveImage = async (isSecondImage: boolean, imageUrl?: string | null) => {
+  const handleRemoveImage = async (imageIndex: number) => {
     try {
-      const update = {
-        [isSecondImage ? 'imageBase64Second' : 'imageBase64']: null
+      // Get current images array or create from legacy fields
+      const currentImages =
+        trade.images && trade.images.length > 0
+          ? [...trade.images]
+          : [trade.imageBase64, trade.imageBase64Second].filter(Boolean);
+
+      const imageUrl = currentImages[imageIndex];
+
+      // Update the images array by filtering out the removed image
+      const newImages = currentImages.filter(
+        (_, index) => index !== imageIndex,
+      );
+
+      // Update both new and legacy fields for backward compatibility
+      const update: any = {
+        images: newImages,
+      };
+
+      // Also update legacy fields if we're removing the first or second image
+      if (imageIndex === 0) {
+        update.imageBase64 = newImages[0] || null;
       }
+      if (imageIndex === 1 || (imageIndex === 0 && trade.imageBase64Second)) {
+        update.imageBase64Second = newImages[1] || null;
+      }
+
       // Update trades
-      await updateTrades(tradeIds, update)
-      
+      await updateTrades(tradeIds, update);
+
       // Remove the image from Supabase storage
       if (imageUrl) {
         // Extract the path from the full URL
-        const path = imageUrl.split('/storage/v1/object/public/trade-images/')[1]
+        const path = imageUrl.split(
+          "/storage/v1/object/public/trade-images/",
+        )[1];
         if (path) {
-          await supabase.storage.from('trade-images').remove([path])
+          await supabase.storage.from("trade-images").remove([path]);
         }
       }
+
+      toast.success("Image deleted successfully");
+      setImageToDelete(null);
     } catch (error) {
-      console.error('Error removing image:', error)
+      console.error("Error removing image:", error);
+      toast.error("Failed to delete image");
     }
-  }
+  };
 
   const handleRemoveAllImages = async () => {
     try {
-      // Update both image fields to null in a single operation
-      const update = {
+      // Update both new and legacy fields
+      const update: any = {
+        images: [],
         imageBase64: null,
-        imageBase64Second: null
+        imageBase64Second: null,
+      };
+      await updateTrades(tradeIds, update);
+
+      // Get all images to remove from both new and legacy fields
+      const imagesToRemove: string[] = [];
+
+      // From new images array
+      if (trade.images && trade.images.length > 0) {
+        trade.images.forEach((imageUrl: string) => {
+          const path = imageUrl.split(
+            "/storage/v1/object/public/trade-images/",
+          )[1];
+          if (path) imagesToRemove.push(path);
+        });
       }
-      await updateTrades(tradeIds, update)
-      
-      // Remove both images from Supabase storage
-      const imagesToRemove: string[] = []
+
+      // From legacy fields (in case they're not in the images array)
       if (trade.imageBase64) {
-        const path = trade.imageBase64.split('/storage/v1/object/public/trade-images/')[1]
-        if (path) imagesToRemove.push(path)
+        const path = trade.imageBase64.split(
+          "/storage/v1/object/public/trade-images/",
+        )[1];
+        if (path && !imagesToRemove.includes(path)) imagesToRemove.push(path);
       }
       if (trade.imageBase64Second) {
-        const path = trade.imageBase64Second.split('/storage/v1/object/public/trade-images/')[1]
-        if (path) imagesToRemove.push(path)
+        const path = trade.imageBase64Second.split(
+          "/storage/v1/object/public/trade-images/",
+        )[1];
+        if (path && !imagesToRemove.includes(path)) imagesToRemove.push(path);
       }
-      
+
       if (imagesToRemove.length > 0) {
-        await supabase.storage.from('trade-images').remove(imagesToRemove)
+        await supabase.storage.from("trade-images").remove(imagesToRemove);
       }
     } catch (error) {
-      console.error('Error removing all images:', error)
+      console.error("Error removing all images:", error);
     }
-  }
+  };
 
-  const handleUpdateImage = async (imageBase64: string, isSecondImage: boolean) => {
-    const update = {
-      [isSecondImage ? 'imageBase64Second' : 'imageBase64']: imageBase64
-    }
-    await updateTrades(tradeIds, update)
-  }
+  const handleUpdateImages = async (newUrls: string[]) => {
+    console.error("handleUpdateImages called");
+    // Get current images array or create from legacy fields
+    const currentImages =
+      trade.images && trade.images.length > 0
+        ? [...trade.images]
+        : [trade.imageBase64, trade.imageBase64Second].filter(Boolean);
 
-  // Listen for successful uploads from first image upload
-  useEffect(() => {
-    if (firstImageUploadProps.isSuccess && firstImageUploadProps.files.length > 0) {
-      const file = firstImageUploadProps.files[0]
-      const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/trade-images/${user?.id}/${generatedId}/${file.name}`
-      handleUpdateImage(imageUrl, false)
-      setUploadDialogOpen(false)
-      toast.success(t('trade-table.imageUploadSuccess'))
-      
-      // Reset the upload props after successful upload
-      firstImageUploadProps.setFiles([])
-      firstImageUploadProps.setErrors([])
-    } else if (firstImageUploadProps.errors.length > 0) {
-      const error = firstImageUploadProps.errors[0].message
-      toast.error(t('trade-table.imageUploadError', { error }))
-    }
-  }, [firstImageUploadProps.isSuccess, firstImageUploadProps.files, firstImageUploadProps.errors, user?.id, t, generatedId])
+    // Add new URLs to existing images
+    const updatedImages = [...currentImages, ...newUrls];
 
-  // Listen for successful uploads from second image upload
-  useEffect(() => {
-    if (secondImageUploadProps.isSuccess && secondImageUploadProps.files.length > 0) {
-      const file = secondImageUploadProps.files[0]
-      const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/trade-images/${user?.id}/${generatedId}/${file.name}`
-      handleUpdateImage(imageUrl, true)
-      setUploadDialogOpen(false)
-      toast.success(t('trade-table.imageUploadSuccess'))
-      
-      // Reset the upload props after successful upload
-      secondImageUploadProps.setFiles([])
-      secondImageUploadProps.setErrors([])
-    } else if (secondImageUploadProps.errors.length > 0) {
-      const error = secondImageUploadProps.errors[0].message
-      toast.error(t('trade-table.imageUploadError', { error }))
-    }
-  }, [secondImageUploadProps.isSuccess, secondImageUploadProps.files, secondImageUploadProps.errors, user?.id, t, generatedId])
+    // Update both new and legacy fields for backward compatibility
+    const update: any = {
+      images: updatedImages,
+      imageBase64: updatedImages[0] || null,
+      imageBase64Second: updatedImages[1] || null,
+    };
 
-  // Reset upload state when dialog closes to ensure clean state for next upload
-  useEffect(() => {
-    if (!uploadDialogOpen) {
-      firstImageUploadProps.setFiles([])
-      firstImageUploadProps.setErrors([])
-      secondImageUploadProps.setFiles([])
-      secondImageUploadProps.setErrors([])
-    }
-  }, [uploadDialogOpen])
-
-  const imageArray = [trade.imageBase64, trade.imageBase64Second].filter(Boolean)
+    await updateTrades(tradeIds, update);
+  };
 
   const handleUploadClick = () => {
-    // If first image is null, set it as first image, otherwise set as second image
-    setIsSecondImage(!!trade.imageBase64)
-    // Force remount of upload component with new key to ensure clean state
-    setUploadKey(prev => prev + 1)
-    setUploadDialogOpen(true)
-  }
+    if (imageArray.length >= MAX_IMAGES) {
+      toast.error(`Maximum ${MAX_IMAGES} images allowed`);
+      return;
+    }
+    setUploadDialogOpen(true);
+  };
+
+  // Reset upload state when dialog closes
+  useEffect(() => {
+    if (!uploadDialogOpen) {
+      uploadProps.setFiles([]);
+      uploadProps.setErrors([]);
+    }
+  }, [uploadDialogOpen]);
 
   const handleThumbnailClick = (index: number) => {
-    setSelectedImageIndex(index)
-    setScale(1) // Reset zoom when changing images
-  }
+    setSelectedImageIndex(index);
+    setScale(1); // Reset zoom when changing images
+  };
 
   return (
     <>
@@ -229,17 +267,17 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
             {imageArray.length === 1 && (
               <HoverCard openDelay={200}>
                 <HoverCardTrigger asChild>
-                  <button
-                    className="absolute -top-2 -left-2 h-5 w-5 bg-primary text-primary-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-xs hover:bg-primary/90 transition-colors"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setIsSecondImage(true)
-                      setUploadKey(prev => prev + 1)
-                      setUploadDialogOpen(true)
-                    }}
-                  >
-                    <Upload className="h-3 w-3" />
-                  </button>
+                  {imageArray.length < MAX_IMAGES && (
+                    <button
+                      className="absolute -top-2 -left-2 h-5 w-5 bg-primary text-primary-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-xs hover:bg-primary/90 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleUploadClick();
+                      }}
+                    >
+                      <Upload className="h-3 w-3" />
+                    </button>
+                  )}
                 </HoverCardTrigger>
                 <HoverCardContent side="top" align="center" className="text-xs">
                   Upload second image
@@ -247,20 +285,30 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
               </HoverCard>
             )}
 
-            <HoverCard openDelay={200}>
+            <HoverCard openDelay={300}>
               <HoverCardTrigger asChild>
-                <button
-                  className="absolute -top-2 -right-2 h-5 w-5 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-xs hover:bg-destructive/90 transition-colors"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowDeleteConfirm(true)
+                <motion.button
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0, opacity: 0 }}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.95 }}
+                  transition={{
+                    duration: 0.2,
+                    ease: [0.25, 0.46, 0.45, 0.94],
                   }}
+                  className="absolute -top-2 -right-2 h-6 w-6 bg-destructive text-destructive-foreground rounded-full hidden group-hover:flex items-center justify-center shadow-md hover:bg-destructive/90 transition-colors duration-200 touch-action-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive focus-visible:ring-offset-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowDeleteConfirm(true);
+                  }}
+                  aria-label="Delete images"
                 >
-                  <X className="h-3 w-3" />
-                </button>
+                  <X className="h-3.5 w-3.5" />
+                </motion.button>
               </HoverCardTrigger>
               <HoverCardContent side="top" align="center" className="text-xs">
-                Delete image
+                Delete Images
               </HoverCardContent>
             </HoverCard>
           </div>
@@ -318,10 +366,10 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
                   limitToBounds
                   smooth
                   doubleClick={{
-                    mode: "reset"
+                    mode: "reset",
                   }}
                   onTransformed={(_, state) => {
-                    setScale(state.scale)
+                    setScale(state.scale);
                   }}
                 >
                   {({ zoomIn, zoomOut }) => (
@@ -335,7 +383,7 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
                             src={imageArray[selectedImageIndex]}
                             alt="Trade image"
                             className="max-w-full max-h-full object-contain select-none"
-                            style={{ margin: 'auto' }}
+                            style={{ margin: "auto" }}
                           />
                         </div>
                       </TransformComponent>
@@ -373,9 +421,9 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
           <div className="border-t p-4">
             <Carousel className="w-full">
               <CarouselContent className="w-full flex items-center justify-center gap-2">
-                {imageArray.map((image, index) => (
+                {imageArray.map((image: string, index: number) => (
                   <CarouselItem key={index} className="basis-auto">
-                    <div 
+                    <div
                       className="relative aspect-square cursor-pointer"
                       onClick={() => handleThumbnailClick(index)}
                     >
@@ -386,22 +434,25 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
                         height={40}
                         className={cn(
                           "object-cover w-12 h-12 rounded-md transition-all",
-                          selectedImageIndex === index ? "ring-2 ring-primary" : "hover:ring-2 hover:ring-primary/50"
+                          selectedImageIndex === index
+                            ? "ring-2 ring-primary"
+                            : "hover:ring-2 hover:ring-primary/50",
                         )}
                       />
                     </div>
                   </CarouselItem>
                 ))}
-                {imageArray.length < 2 && (
+                {imageArray.length < MAX_IMAGES && (
                   <CarouselItem className="basis-auto">
                     <Button
-                      size={'icon'}
-                      variant={'secondary'}
+                      size={"icon"}
+                      variant={"secondary"}
                       onClick={handleUploadClick}
-                      className={cn("w-full aspect-square rounded-md",
+                      className={cn(
+                        "w-full aspect-square rounded-md",
                         "border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50",
                         "transition-colors flex items-center justify-center",
-                        "h-12 w-12"
+                        "h-12 w-12",
                       )}
                     >
                       <Upload className="h-6 w-6 text-muted-foreground" />
@@ -421,84 +472,100 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
       </Dialog>
 
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>Delete Image</DialogTitle>
+            <DialogTitle>Manage Images</DialogTitle>
             <DialogDescription>
-              Select which image you want to delete. This action cannot be undone.
+              Delete individual images or remove all at once. This action cannot
+              be undone.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
-            {trade.imageBase64 && (
-              <button
-                onClick={() => {
-                  handleRemoveImage(false, trade.imageBase64)
-                  setShowDeleteConfirm(false)
-                }}
-                className="relative group aspect-square rounded-lg overflow-hidden border-2 border-destructive/50 hover:border-destructive transition-colors"
-              >
-                <Image
-                  src={trade.imageBase64}
-                  alt="First image"
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">Delete First Image</span>
-                </div>
-              </button>
-            )}
-            {trade.imageBase64Second && (
-              <button
-                onClick={() => {
-                  handleRemoveImage(true, trade.imageBase64Second)
-                  setShowDeleteConfirm(false)
-                }}
-                className="relative group aspect-square rounded-lg overflow-hidden border-2 border-destructive/50 hover:border-destructive transition-colors"
-              >
-                <Image
-                  src={trade.imageBase64Second}
-                  alt="Second image"
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">Delete Second Image</span>
-                </div>
-              </button>
-            )}
+          <div className="space-y-3 py-4 max-h-[60vh] overflow-y-auto pr-2">
+            <AnimatePresence mode="popLayout">
+              {imageArray.map((imageUrl: string, index: number) => (
+                <motion.div
+                  key={imageUrl}
+                  layout
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -100, scale: 0.8 }}
+                  transition={{
+                    duration: 0.3,
+                    ease: [0.25, 0.46, 0.45, 0.94],
+                  }}
+                  className="group relative flex items-center gap-4 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 transition-colors duration-200"
+                >
+                  <div className="relative w-24 h-24 rounded-md overflow-hidden flex-shrink-0 border border-border">
+                    <Image
+                      src={imageUrl}
+                      alt={`Trade image ${index + 1}`}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm">Image {index + 1}</h4>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {imageUrl.split("/").pop()?.substring(0, 40)}...
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      await handleRemoveImage(index);
+                      if (imageArray.length === 1) {
+                        setShowDeleteConfirm(false);
+                      }
+                    }}
+                    className="flex-shrink-0 h-9 gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 transition-all duration-200 touch-action-manipulation"
+                    aria-label={`Delete image ${index + 1}`}
+                  >
+                    <X className="h-4 w-4" />
+                    <span className="hidden sm:inline">Delete</span>
+                  </Button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
-          <div className="flex justify-between">
+          <DialogFooter className="flex-col sm:flex-row gap-2 border-t pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirm(false);
+                setImageToDelete(null);
+              }}
+              className="w-full sm:w-auto transition-colors duration-200"
+            >
+              Close
+            </Button>
             <Button
               variant="destructive"
               onClick={async () => {
-                await handleRemoveAllImages()
-                setShowDeleteConfirm(false)
-                toast.success(t('trade-table.allImagesDeleted'))
+                await handleRemoveAllImages();
+                setShowDeleteConfirm(false);
+                toast.success(t("trade-table.allImagesDeleted"));
               }}
-              disabled={!trade.imageBase64 && !trade.imageBase64Second}
+              className="w-full sm:w-auto gap-2 transition-colors duration-200"
             >
-              {t('trade-table.deleteAllImages')}
+              <X className="h-4 w-4" />
+              Delete All {imageArray.length} Images
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(false)}
-            >
-              Cancel
-            </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
-            <DialogTitle>
-              {isSecondImage ? t('trade-table.uploadSecondImage') : t('trade-table.uploadImage')}
-            </DialogTitle>
+            <DialogTitle>{t("trade-table.uploadImage")}</DialogTitle>
+            <DialogDescription>
+              {`Upload up to ${MAX_IMAGES - imageArray.length} more images (${imageArray.length}/${MAX_IMAGES} used)`}
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <Dropzone key={uploadKey} {...uploadProps}>
+            <Dropzone {...uploadProps}>
               {uploadProps.files.length > 0 ? (
                 <DropzoneContent />
               ) : (
@@ -509,6 +576,5 @@ export function TradeImageEditor({ trade, tradeIds }: TradeImageEditorProps) {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
-
