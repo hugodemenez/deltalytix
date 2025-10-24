@@ -144,8 +144,8 @@ export function DayTagSelector({ selectedTags, onTagsChange }: DayTagSelectorPro
                     {tags
                       .filter(tag => !selectedTags.includes(tag.name))
                       .filter(tag => {
-                        const input = inputValue.trim()
-                        return !input || tag.name.includes(input)
+                        const input = inputValue.trim().toLowerCase()
+                        return !input || tag.name.toLowerCase().includes(input)
                       })
                       .map(tag => (
                         <CommandItem
@@ -195,9 +195,9 @@ function getContrastColor(hexColor: string): string {
   const color = hexColor.replace('#', '')
   
   // Convert hex to RGB
-  const r = parseInt(color.substr(0, 2), 16)
-  const g = parseInt(color.substr(2, 2), 16)
-  const b = parseInt(color.substr(4, 2), 16)
+  const r = parseInt(color.substring(0, 2), 16)
+  const g = parseInt(color.substring(2, 4), 16)
+  const b = parseInt(color.substring(4, 6), 16)
   
   // Calculate luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
