@@ -50,7 +50,10 @@ export function DayTagSelector({ trades, date, onApplyTagToAll }: DayTagSelector
     return trades.filter(trade => {
       const entryDate = trade.entryDate
       const closeDate = trade.closeDate
-      return entryDate === dateKey || closeDate === dateKey
+      // Check if the date matches (handling both exact match and date with time)
+      const entryMatches = entryDate && (entryDate === dateKey || entryDate.startsWith(dateKey))
+      const closeMatches = closeDate && (closeDate === dateKey || closeDate.startsWith(dateKey))
+      return entryMatches || closeMatches
     })
   }, [trades, date])
 
