@@ -165,9 +165,9 @@ function parseHslToComponentsString(input: string): string | null {
   // Support space-separated as well
   const flat = parts.length === 1 ? parts[0].split(/[\s/]+/).filter(Boolean) : parts
   if (flat.length < 3) return null
-  let h = flat[0]
-  let s = flat[1]
-  let l = flat[2]
+  const h = flat[0]
+  const s = flat[1]
+  const l = flat[2]
   // normalize h
   let H = 0
   if (h.endsWith('deg')) H = parseFloat(h)

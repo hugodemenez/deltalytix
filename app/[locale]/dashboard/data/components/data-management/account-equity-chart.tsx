@@ -132,12 +132,12 @@ export function AccountEquityChart({
       events: typeof allEvents,
       isAfterReset: boolean = false
     ) => {
-      let currentDate = new Date(startDate)
+      const currentDate = new Date(startDate)
       let runningBalance = initialBalance
       let maxBalanceToDate = initialBalance
       let maxDrawdownLevel = initialBalance - drawdownThreshold
       let hasReachedStopProfit = false
-      let stopProfitBalance = initialBalance + trailingStopProfit
+      const stopProfitBalance = initialBalance + trailingStopProfit
 
       while (currentDate <= endDate) {
         const dayEvents = events.filter(event =>

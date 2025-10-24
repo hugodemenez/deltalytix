@@ -17,7 +17,7 @@ const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: st
     return { pnl: 0, error: 'Invalid PNL value' };
   }
 
-  let formattedPnl = pnl.trim();
+  const formattedPnl = pnl.trim();
   const numericValue = parseFloat(formattedPnl.replace(/[$]/g, '').replace(',', '.'));
   
   if (isNaN(numericValue)) {
@@ -31,7 +31,7 @@ const formatPriceValue = (price: string | undefined): { price: number, error?: s
     return { price: 0, error: 'Invalid price value' };
   }
 
-  let formattedPrice = price.trim();
+  const formattedPrice = price.trim();
   const numericValue = parseFloat(formattedPrice.replace(',', '.'));
   
   if (isNaN(numericValue)) {

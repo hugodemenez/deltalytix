@@ -77,7 +77,7 @@ async function updateSession(request: NextRequest) {
   return { response, user, error }
 }
 
-export default async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
   // More specific static asset exclusions - must be first!

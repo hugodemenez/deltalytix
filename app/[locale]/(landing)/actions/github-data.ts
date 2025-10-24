@@ -85,7 +85,7 @@ const getCachedGithubData = unstable_cache(
       }
 
       // Get all commits from all branches to build daily activity chart
-      let allCommits: any[] = []
+      const allCommits: any[] = []
       const seenCommits = new Set<string>() // To avoid duplicate commits across branches
       
       // Fetch commits from each branch

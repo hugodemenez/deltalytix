@@ -35,8 +35,8 @@ export function WeeklyModal({
     if (!selectedDate) return { trades: [], tradeNumber: 0, pnl: 0, longNumber: 0, shortNumber: 0 }
 
     const trades: any[] = []
-    let weekStart = startOfWeek(selectedDate)
-    let weekEnd = endOfWeek(selectedDate)
+    const weekStart = startOfWeek(selectedDate)
+    const weekEnd = endOfWeek(selectedDate)
 
     // Collect all trades for the week
     for (const [dateString, dayData] of Object.entries(calendarData)) {

@@ -490,7 +490,7 @@ export default function WidgetCanvas() {
     }
 
     // Determine default size based on widget type
-    let effectiveSize = size
+    const effectiveSize = size
 
     const grid = sizeToGrid(effectiveSize, activeLayout === 'mobile')
     
