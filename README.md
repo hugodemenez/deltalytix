@@ -42,6 +42,7 @@
 - **Sentiment analysis** of trading patterns and market conditions
 - **Automated trade journal** with AI-generated insights
 - **Pattern recognition** for identifying trading opportunities
+- **Rich text editor** with image resizing and table support for structured journaling
 
 <!-- TODO: Add GIF showing AI chat assistant helping with trade analysis -->
 
@@ -226,6 +227,7 @@ deltalytix/
 │   ├── ui/               # Base UI components (Radix UI)
 │   ├── ai-elements/      # AI-powered components
 │   ├── emails/           # Email templates
+│   ├── tiptap/           # TipTap editor components
 │   └── magicui/          # Custom UI components
 ├── server/               # Server-side business logic
 ├── store/                # Zustand state management
@@ -234,6 +236,8 @@ deltalytix/
 ├── lib/                  # Utility functions
 ├── hooks/                # Custom React hooks
 ├── context/              # React Context providers
+├── docs/                 # Feature documentation
+│   └── JOURNAL_EDITOR.md # Journal editor feature guide
 └── content/              # MDX content for updates
 ```
 
