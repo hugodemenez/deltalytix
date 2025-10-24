@@ -14,7 +14,7 @@ declare module "@tiptap/core" {
 }
 import StarterKit from "@tiptap/starter-kit";
 import { Extension } from "@tiptap/core";
-import Image from "@tiptap/extension-image";
+import ResizableImageExtension from "tiptap-extension-resize-image";
 import { BubbleMenu as BubbleMenuExtension } from "@tiptap/extension-bubble-menu";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { TextStyleKit } from "@tiptap/extension-text-style";
@@ -23,6 +23,10 @@ import { TaskList } from "@tiptap/extension-task-list";
 import { TaskItem } from "@tiptap/extension-task-item";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import Collaboration from "@tiptap/extension-collaboration";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { TableCell } from "@tiptap/extension-table-cell";
 import * as Y from "yjs";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useCallback, useState, useEffect, useRef } from "react";
@@ -316,11 +320,11 @@ export function TiptapEditor({
         showOnlyCurrent: false,
         includeChildren: true,
       }),
-      Image.configure({
+      ResizableImageExtension.configure({
         inline: true,
         allowBase64: false,
         HTMLAttributes: {
-          class: "max-w-full h-auto rounded-lg",
+          class: "rounded-lg",
         },
       }),
       TextAlign.configure({
@@ -333,6 +337,15 @@ export function TiptapEditor({
       TaskItem.configure({
         nested: true,
       }),
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: "border-collapse my-4",
+        },
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
       // AI Completion extension
       AICompletionExtension,
       // Collaboration extension (optional)
@@ -357,11 +370,14 @@ export function TiptapEditor({
           "[&_ul]:pl-6 [&_ol]:pl-6 [&_ul]:my-2 [&_ol]:my-2",
           "[&_li]:my-1",
           "[&_blockquote]:border-l-4 [&_blockquote]:border-gray-300 [&_blockquote]:pl-4 [&_blockquote]:my-4 [&_blockquote]:italic [&_blockquote]:text-gray-600",
-          "[&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-4 [&_img]:shadow-md",
+          "[&_img]:rounded-lg [&_img]:my-4 [&_img]:shadow-md [&_img]:cursor-pointer",
+          "[&_img:hover]:shadow-lg [&_img:hover]:opacity-90",
           "[&_a]:text-blue-500 [&_a]:underline [&_a]:cursor-pointer [&_a]:hover:text-blue-700 [&_a]:transition-colors",
-          "[&_table]:border-collapse [&_table]:my-4 [&_table]:w-full",
-          "[&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_td]:text-left",
+          "[&_table]:border-collapse [&_table]:my-4 [&_table]:w-full [&_table]:table-fixed",
+          "[&_td]:border [&_td]:border-gray-300 [&_td]:p-2 [&_td]:text-left [&_td]:break-words",
           "[&_th]:border [&_th]:border-gray-300 [&_th]:p-2 [&_th]:text-left [&_th]:bg-gray-50 [&_th]:font-semibold",
+          "[&_.selectedCell]:bg-blue-100 [&_.selectedCell]:dark:bg-blue-900",
+          "[&_.column-resize-handle]:absolute [&_.column-resize-handle]:right-[-2px] [&_.column-resize-handle]:top-0 [&_.column-resize-handle]:bottom-0 [&_.column-resize-handle]:w-1 [&_.column-resize-handle]:bg-blue-500 [&_.column-resize-handle]:cursor-col-resize",
           "[&_.task-list-item]:list-none [&_.task-list-item]:flex [&_.task-list-item]:items-start [&_.task-list-item]:my-1",
           "[&_.task-list-item_input]:mr-2 [&_.task-list-item_input]:mt-0.5 [&_.task-list-item_input]:flex-shrink-0",
           "[&_.task-list-item_>_div]:flex-1",
