@@ -20,9 +20,11 @@ import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 import type { EmblaCarouselType as CarouselApi } from "embla-carousel"
 import { toast } from "sonner"
 import { saveMindset, deleteMindset } from "@/server/journal"
+import { addTagsToTradesForDay } from "@/server/trades"
 import { isToday, format } from "date-fns"
 import { useMoodStore } from "@/store/mood-store"
 import { useFinancialEventsStore } from "@/store/financial-events-store"
+import { useTradesStore } from "@/store/trades-store"
 import { useCurrentLocale } from "@/locales/client"
 import { FinancialEvent } from "@prisma/client"
 
@@ -42,6 +44,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const moods = useMoodStore(state => state.moods)
   const setMoods = useMoodStore(state => state.setMoods)
   const financialEvents = useFinancialEventsStore(state => state.events)
+  const trades = useTradesStore(state => state.trades)
+  const setTrades = useTradesStore(state => state.setTrades)
   const locale = useCurrentLocale()
   const t = useI18n()
 
@@ -105,6 +109,46 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
 
   const handleJournalChange = (content: string) => {
     setJournalContent(content)
+  }
+
+  const handleApplyTagToAll = async (tag: string) => {
+    try {
+      const dateKey = format(selectedDate, 'yyyy-MM-dd')
+      
+      // Find all trades for this day
+      const tradesForDay = trades.filter(trade => {
+        const entryDate = trade.entryDate
+        const closeDate = trade.closeDate
+        const entryMatches = entryDate && (entryDate === dateKey || entryDate.startsWith(dateKey))
+        const closeMatches = closeDate && (closeDate === dateKey || closeDate.startsWith(dateKey))
+        return entryMatches || closeMatches
+      })
+      
+      const tradeIds = tradesForDay.map(trade => trade.id)
+      
+      // Update local state immediately for instant feedback
+      const updatedTrades = trades.map(trade => {
+        if (tradeIds.includes(trade.id)) {
+          return {
+            ...trade,
+            tags: Array.from(new Set([...trade.tags, tag]))
+          }
+        }
+        return trade
+      })
+      setTrades(updatedTrades)
+      
+      // Then update on server
+      await addTagsToTradesForDay(dateKey, [tag])
+      
+      toast.success(t('mindset.tags.tagApplied'), {
+        description: t('mindset.tags.tagAppliedDescription', { tag }),
+      })
+    } catch (error) {
+      toast.error(t('mindset.tags.tagApplyError'), {
+        description: t('mindset.tags.tagApplyErrorDescription'),
+      })
+    }
   }
 
   const handleSave = async () => {
@@ -248,6 +292,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         events={getEventsForDate(selectedDate)}
         selectedNews={selectedNews}
         onNewsSelection={handleNewsSelection}
+        trades={trades}
+        onApplyTagToAll={handleApplyTagToAll}
       />
     },
     {

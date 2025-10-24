@@ -6,8 +6,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useI18n } from "@/locales/client"
 import { EmotionSelector } from "./emotion-selector"
 import { HourlyFinancialTimeline } from "./hourly-financial-timeline"
+import { DayTagSelector } from "./day-tag-selector"
 import { Newspaper, X } from "lucide-react"
-import { FinancialEvent } from "@prisma/client"
+import { FinancialEvent, Trade } from "@prisma/client"
 import { cn } from "@/lib/utils"
 import { TiptapEditor } from "@/components/tiptap-editor"
 
@@ -21,6 +22,8 @@ interface JournalingProps {
   events: FinancialEvent[]
   selectedNews: string[]
   onNewsSelection: (newsIds: string[]) => void
+  trades: Trade[]
+  onApplyTagToAll: (tag: string) => Promise<void>
 }
 
 export function Journaling({ 
@@ -33,6 +36,8 @@ export function Journaling({
   events,
   selectedNews,
   onNewsSelection,
+  trades,
+  onApplyTagToAll,
 }: JournalingProps) {
   const t = useI18n()
 
@@ -53,6 +58,13 @@ export function Journaling({
         />
       </div>
 
+      <div className="flex-none mt-6">
+        <DayTagSelector
+          trades={trades}
+          date={date}
+          onApplyTagToAll={onApplyTagToAll}
+        />
+      </div>
 
       <div className="flex-1 min-h-0 mt-6 flex flex-col">
           <TiptapEditor
