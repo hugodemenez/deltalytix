@@ -1,189 +1,142 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, X } from 'lucide-react'
+import { Plus, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/locales/client'
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import { Tag } from '@prisma/client'
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import { Badge } from '@/components/ui/badge'
+import { Trade } from '@prisma/client'
 import { useUserStore } from '@/store/user-store'
-import { createTagAction } from '@/server/tags'
+import { format } from 'date-fns'
 
 interface DayTagSelectorProps {
-  selectedTags: string[]
-  onTagsChange: (tags: string[]) => void
+  trades: Trade[]
+  date: Date
+  onApplyTagToAll: (tag: string) => Promise<void>
 }
 
-export function DayTagSelector({ selectedTags, onTagsChange }: DayTagSelectorProps) {
+export function DayTagSelector({ trades, date, onApplyTagToAll }: DayTagSelectorProps) {
   const t = useI18n()
   const tags = useUserStore(state => state.tags)
-  const setTags = useUserStore(state => state.setTags)
-  const [isOpen, setIsOpen] = useState(false)
-  const [inputValue, setInputValue] = useState('')
-  const [isUpdating, setIsUpdating] = useState(false)
+  const [isApplying, setIsApplying] = useState<string | null>(null)
 
-  const handleAddTag = async (tag: string) => {
-    const trimmedTag = tag.trim()
-    if (!trimmedTag) return
+  // Get trades for the selected date
+  const tradesForDay = useMemo(() => {
+    const dateKey = format(date, 'yyyy-MM-dd')
+    return trades.filter(trade => {
+      const entryDate = trade.entryDate
+      const closeDate = trade.closeDate
+      return entryDate === dateKey || closeDate === dateKey
+    })
+  }, [trades, date])
 
-    setIsUpdating(true)
+  // Calculate tag statistics
+  const tagStats = useMemo(() => {
+    const stats = new Map<string, { count: number, totalTrades: number }>()
+    
+    tradesForDay.forEach(trade => {
+      trade.tags.forEach(tag => {
+        const current = stats.get(tag) || { count: 0, totalTrades: tradesForDay.length }
+        stats.set(tag, { count: current.count + 1, totalTrades: tradesForDay.length })
+      })
+    })
+    
+    return Array.from(stats.entries()).map(([tag, data]) => ({
+      tag,
+      count: data.count,
+      totalTrades: data.totalTrades,
+      isComplete: data.count === data.totalTrades
+    }))
+  }, [tradesForDay])
+
+  const handleApplyToAll = async (tag: string) => {
+    setIsApplying(tag)
     try {
-      // Add tag to selected tags
-      const newTags = [...selectedTags, trimmedTag]
-      onTagsChange(newTags)
-
-      // If this is a new tag not in availableTags, add it
-      const existingTag = tags.find(t => t.name === trimmedTag)
-      if (!existingTag) {
-        const newTag = await createTagAction({
-          name: trimmedTag,
-          description: '',
-          color: '#CBD5E1'
-        })
-        setTags([...tags, newTag.tag])
-      }
-      
-      setInputValue('')
-      setIsOpen(false)
-    } catch (error) {
-      console.error('Failed to add tag:', error)
+      await onApplyTagToAll(tag)
     } finally {
-      setIsUpdating(false)
+      setIsApplying(null)
     }
   }
 
-  const handleRemoveTag = (tagToRemove: string) => {
-    const newTags = selectedTags.filter(tag => tag !== tagToRemove)
-    onTagsChange(newTags)
+  // Get tag metadata (color, description)
+  const getTagMetadata = (tagName: string) => {
+    return tags.find(t => t.name.toLowerCase() === tagName.toLowerCase())
+  }
+
+  if (tradesForDay.length === 0) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-medium">{t('mindset.tags.title')}</label>
+        </div>
+        <p className="text-xs text-muted-foreground">{t('mindset.tags.noTrades')}</p>
+      </div>
+    )
   }
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium">{t('mindset.tags.title')}</label>
+        <span className="text-xs text-muted-foreground">
+          {tradesForDay.length} {tradesForDay.length === 1 ? t('mindset.tags.trade') : t('mindset.tags.trades')}
+        </span>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        {selectedTags.map((tag, index) => {
-          const metadata = tags.find(t => t.name.toLowerCase() === tag.toLowerCase())
-          return (
-            <div 
-              key={index} 
-              className="rounded-md px-2 py-1 text-xs flex items-center gap-1"
-              style={{ 
-                backgroundColor: metadata?.color || '#CBD5E1',
-                color: metadata?.color ? getContrastColor(metadata.color) : 'inherit'
-              }}
-            >
-              {tag}
-              <button
-                onClick={() => handleRemoveTag(tag)}
-                className="hover:text-destructive ml-1"
-                disabled={isUpdating}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )
-        })}
-        <Popover 
-          open={isOpen} 
-          onOpenChange={setIsOpen}
-        >
-          <PopoverTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-7 px-2"
-              disabled={isUpdating}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              {t('mindset.tags.add')}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="p-0" side="right" align="start">
-            <Command shouldFilter={false}>
-              <CommandInput 
-                placeholder={t('mindset.tags.search')}
-                value={inputValue}
-                onValueChange={setInputValue}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && inputValue && !isUpdating) {
-                    e.preventDefault()
-                    handleAddTag(inputValue)
-                  }
-                }}
-              />
-              <CommandList className="max-h-[200px] overflow-y-auto">
-                {inputValue.trim() && (
-                  <CommandItem
-                    value={inputValue.trim()}
-                    onSelect={(value) => {
-                      if (!isUpdating) {
-                        handleAddTag(value)
+      
+      {tagStats.length === 0 ? (
+        <p className="text-xs text-muted-foreground">{t('mindset.tags.noTagsOnTrades')}</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {tagStats.map(({ tag, count, totalTrades, isComplete }) => {
+            const metadata = getTagMetadata(tag)
+            return (
+              <TooltipProvider key={tag}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "cursor-pointer transition-all hover:scale-105",
+                        isComplete && "opacity-100",
+                        !isComplete && "opacity-70 hover:opacity-100"
+                      )}
+                      style={{
+                        backgroundColor: metadata?.color || '#CBD5E1',
+                        color: metadata?.color ? getContrastColor(metadata.color) : 'inherit'
+                      }}
+                      onClick={() => !isComplete && handleApplyToAll(tag)}
+                    >
+                      <span className="flex items-center gap-1">
+                        {tag} ({count}/{totalTrades})
+                        {isComplete && <Check className="h-3 w-3 ml-1" />}
+                        {isApplying === tag && (
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent ml-1" />
+                        )}
+                      </span>
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {isComplete 
+                        ? t('mindset.tags.allTradesTagged')
+                        : t('mindset.tags.clickToApplyToAll')
                       }
-                    }}
-                  >
-                    {t('mindset.tags.create', { tag: inputValue.trim() })}
-                  </CommandItem>
-                )}
-                {tags.length > 0 && (
-                  <CommandGroup heading={t('mindset.tags.existing')}>
-                    {tags
-                      .filter(tag => !selectedTags.includes(tag.name))
-                      .filter(tag => {
-                        const input = inputValue.trim().toLowerCase()
-                        return !input || tag.name.toLowerCase().includes(input)
-                      })
-                      .map(tag => (
-                        <CommandItem
-                          key={tag.name}
-                          value={tag.name}
-                          onSelect={() => {
-                            if (!isUpdating) {
-                              handleAddTag(tag.name)
-                            }
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-3 h-3 rounded-full shrink-0"
-                              style={{ backgroundColor: tag.color || '#CBD5E1' }}
-                            />
-                            <span>{tag.name}</span>
-                            {tag.description && (
-                              <span className="text-muted-foreground text-xs">
-                                - {tag.description}
-                              </span>
-                            )}
-                          </div>
-                        </CommandItem>
-                      ))}
-                  </CommandGroup>
-                )}
-                <CommandEmpty>{t('mindset.tags.noTags')}</CommandEmpty>
-              </CommandList>
-            </Command>
-            {isUpdating && (
-              <div className="absolute right-2 top-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
-      </div>
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )
+          })}
+        </div>
+      )}
+      
       <p className="text-xs text-muted-foreground">{t('mindset.tags.description')}</p>
     </div>
   )

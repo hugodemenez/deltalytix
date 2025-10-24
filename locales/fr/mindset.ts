@@ -84,12 +84,22 @@ export default {
     },
     tags: {
       title: 'Tags de Session',
-      description: 'Ces tags seront appliqués à tous les trades de cette journée',
+      description: 'Cliquez sur un tag pour l\'appliquer à tous les trades de cette journée',
       add: 'Ajouter un tag',
       search: 'Rechercher des tags...',
       create: 'Créer "{tag}"',
       existing: 'Tags existants',
-      noTags: 'Aucun tag trouvé'
+      noTags: 'Aucun tag trouvé',
+      noTrades: 'Aucun trade pour cette journée',
+      noTagsOnTrades: 'Aucun tag sur les trades',
+      trade: 'trade',
+      trades: 'trades',
+      clickToApplyToAll: 'Cliquez pour appliquer ce tag à tous les trades',
+      allTradesTagged: 'Tous les trades ont ce tag',
+      tagApplied: 'Tag appliqué',
+      tagAppliedDescription: 'Le tag "{tag}" a été appliqué à tous les trades de cette journée',
+      tagApplyError: 'Échec de l\'application du tag',
+      tagApplyErrorDescription: 'Impossible d\'appliquer le tag. Veuillez réessayer.'
     },
     editor: {
       news: {

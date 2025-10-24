@@ -84,12 +84,22 @@ export default {
     },
     tags: {
       title: 'Session Tags',
-      description: 'These tags will be applied to all trades for this day',
+      description: 'Click on a tag to apply it to all trades for this day',
       add: 'Add Tag',
       search: 'Search tags...',
       create: 'Create "{tag}"',
       existing: 'Existing Tags',
-      noTags: 'No tags found'
+      noTags: 'No tags found',
+      noTrades: 'No trades for this day',
+      noTagsOnTrades: 'No tags on trades yet',
+      trade: 'trade',
+      trades: 'trades',
+      clickToApplyToAll: 'Click to apply this tag to all trades',
+      allTradesTagged: 'All trades have this tag',
+      tagApplied: 'Tag applied',
+      tagAppliedDescription: 'Tag "{tag}" has been applied to all trades for this day',
+      tagApplyError: 'Failed to apply tag',
+      tagApplyErrorDescription: 'Could not apply the tag. Please try again.'
     },
     editor: {
       news: {

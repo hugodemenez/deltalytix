@@ -8,7 +8,7 @@ import { EmotionSelector } from "./emotion-selector"
 import { HourlyFinancialTimeline } from "./hourly-financial-timeline"
 import { DayTagSelector } from "./day-tag-selector"
 import { Newspaper, X } from "lucide-react"
-import { FinancialEvent } from "@prisma/client"
+import { FinancialEvent, Trade } from "@prisma/client"
 import { cn } from "@/lib/utils"
 import { TiptapEditor } from "@/components/tiptap-editor"
 
@@ -22,8 +22,8 @@ interface JournalingProps {
   events: FinancialEvent[]
   selectedNews: string[]
   onNewsSelection: (newsIds: string[]) => void
-  selectedTags: string[]
-  onTagsChange: (tags: string[]) => void
+  trades: Trade[]
+  onApplyTagToAll: (tag: string) => Promise<void>
 }
 
 export function Journaling({ 
@@ -36,8 +36,8 @@ export function Journaling({
   events,
   selectedNews,
   onNewsSelection,
-  selectedTags,
-  onTagsChange,
+  trades,
+  onApplyTagToAll,
 }: JournalingProps) {
   const t = useI18n()
 
@@ -60,8 +60,9 @@ export function Journaling({
 
       <div className="flex-none mt-6">
         <DayTagSelector
-          selectedTags={selectedTags}
-          onTagsChange={onTagsChange}
+          trades={trades}
+          date={date}
+          onApplyTagToAll={onApplyTagToAll}
         />
       </div>
 
