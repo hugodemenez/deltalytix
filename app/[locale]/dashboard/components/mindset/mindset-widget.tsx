@@ -45,6 +45,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const setMoods = useMoodStore(state => state.setMoods)
   const financialEvents = useFinancialEventsStore(state => state.events)
   const trades = useTradesStore(state => state.trades)
+  const setTrades = useTradesStore(state => state.setTrades)
   const locale = useCurrentLocale()
   const t = useI18n()
 
@@ -113,6 +114,31 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const handleApplyTagToAll = async (tag: string) => {
     try {
       const dateKey = format(selectedDate, 'yyyy-MM-dd')
+      
+      // Find all trades for this day
+      const tradesForDay = trades.filter(trade => {
+        const entryDate = trade.entryDate
+        const closeDate = trade.closeDate
+        const entryMatches = entryDate && (entryDate === dateKey || entryDate.startsWith(dateKey))
+        const closeMatches = closeDate && (closeDate === dateKey || closeDate.startsWith(dateKey))
+        return entryMatches || closeMatches
+      })
+      
+      const tradeIds = tradesForDay.map(trade => trade.id)
+      
+      // Update local state immediately for instant feedback
+      const updatedTrades = trades.map(trade => {
+        if (tradeIds.includes(trade.id)) {
+          return {
+            ...trade,
+            tags: Array.from(new Set([...trade.tags, tag]))
+          }
+        }
+        return trade
+      })
+      setTrades(updatedTrades)
+      
+      // Then update on server
       await addTagsToTradesForDay(dateKey, [tag])
       
       toast.success(t('mindset.tags.tagApplied'), {
