@@ -191,7 +191,7 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
   ])
 
   // Handle selecting a credential from the manager
-  const handleSelectCredential = useCallback((credential: RithmicCredentialSet) => {
+  const handleSelectCredential = useCallback(async (credential: RithmicCredentialSet) => {
     setCredentials({
       ...credential.credentials,
       password: credential.credentials.password,
@@ -215,22 +215,32 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
 
   // Load saved data on mount
   useEffect(() => {
-    const allData = getAllRithmicData()
-    const lastCredential = Object.values(allData)[0] // Get first saved credential
-    if (lastCredential && user?.id) {
-      setCredentials({
-        ...lastCredential.credentials,
-        userId: user.id
-      })
-      setSelectedAccounts(lastCredential.selectedAccounts)
-      setShouldSaveCredentials(true)
+    const loadSavedData = async () => {
+      if (user?.id) {
+        try {
+          const allData = await getAllRithmicData(user.id)
+          const lastCredential = Object.values(allData)[0] // Get first saved credential
+          if (lastCredential) {
+            setCredentials({
+              ...lastCredential.credentials,
+              userId: user.id
+            })
+            setSelectedAccounts(lastCredential.selectedAccounts)
+            setShouldSaveCredentials(true)
+          }
+        } catch (error) {
+          console.error('Failed to load saved credentials:', error)
+        }
+      }
     }
+    
+    loadSavedData()
   }, [user?.id, setSelectedAccounts])
 
   // Update the saveCredentialsAndAccounts function to merge duplicate usernames into one credential set
-  const saveCredentialsAndAccounts = useCallback(() => {
-    if (shouldSaveCredentials) {
-      const allData = getAllRithmicData()
+  const saveCredentialsAndAccounts = useCallback(async () => {
+    if (shouldSaveCredentials && user?.id) {
+      const allData = await getAllRithmicData(user.id)
       
       // Find all credentials with the same username
       const existingCredentials = Object.values(allData).filter(
@@ -275,7 +285,7 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
         })
 
         // Save the merged credential
-        saveRithmicData(dataToSave)
+        await saveRithmicData(dataToSave, user.id)
         setCurrentCredentialId(dataToSave.id)
 
         // Show toast notification
@@ -297,11 +307,11 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
           allAccounts
         }
 
-        saveRithmicData(dataToSave)
+        await saveRithmicData(dataToSave, user.id)
         setCurrentCredentialId(dataToSave.id)
       }
     }
-  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId, allAccounts, t])
+  }, [credentials, selectedAccounts, shouldSaveCredentials, currentCredentialId, allAccounts, t, user?.id])
 
   // Reset state when component mounts (modal opens)
   useEffect(() => {
@@ -362,12 +372,16 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
     }
 
     // Save credentials and accounts locally
-    saveCredentialsAndAccounts()
-    // Store synchronization data in db
+    await saveCredentialsAndAccounts()
+    
+    // Get the credential ID after saving
+    const credId = currentCredentialId || generateCredentialId()
+    
+    // Store synchronization data in db with credential ID
     try {
       await setRithmicSynchronization({
         service: 'rithmic',
-        accountId: credentials.username || '',
+        accountId: credId, // Use credential ID, not username
         token: token,
         tokenExpiresAt: null
       })
@@ -393,7 +407,8 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
     saveCredentialsAndAccounts,
     calculateStartDate,
     connect,
-    setStep
+    setStep,
+    t
   ])
 
   return (
