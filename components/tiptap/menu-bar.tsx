@@ -3,7 +3,7 @@ import { useI18n } from "@/locales/client";
 import { FinancialEvent } from "@prisma/client";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useEditorState } from "@tiptap/react";
-import { Bold, Italic, UnderlineIcon, Strikethrough, Highlighter, Heading1, Heading2, Heading3, List, ListOrdered, Quote, ImageIcon, Loader2, Sparkles, MoreHorizontal, Minimize2, Maximize2 } from "lucide-react";
+import { Bold, Italic, UnderlineIcon, Strikethrough, Highlighter, Heading1, Heading2, Heading3, List, ListOrdered, Quote, ImageIcon, Loader2, Sparkles, MoreHorizontal, Minimize2, Maximize2, Table2, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { NewsSubMenu } from "@/components/ai-elements/news-sub-menu";
@@ -74,6 +74,16 @@ export function ResponsiveMenuBar({
         canOrderedList:
           ctx.editor.can().toggleList("orderedList", "listItem") ?? false,
         canBlockquote: (ctx.editor.can() as any).toggleBlockquote() ?? false,
+        // Table
+        isTable: ctx.editor.isActive("table") ?? false,
+        canInsertTable: ctx.editor.can().insertTable() ?? false,
+        // Image
+        isImage: ctx.editor.isActive("image") ?? false,
+        // Alignment
+        isAlignLeft: ctx.editor.isActive({ textAlign: 'left' }) ?? false,
+        isAlignCenter: ctx.editor.isActive({ textAlign: 'center' }) ?? false,
+        isAlignRight: ctx.editor.isActive({ textAlign: 'right' }) ?? false,
+        canSetAlignment: ctx.editor.can().setTextAlign('left') ?? false,
         // History
         // Only enable if commands are registered
         canUndo: Boolean((ctx.editor as any).commands?.undo),
@@ -164,6 +174,10 @@ export function ResponsiveMenuBar({
     editorState.isBulletList,
     editorState.isOrderedList,
     editorState.isBlockquote,
+    editorState.isTable,
+    editorState.isAlignLeft,
+    editorState.isAlignCenter,
+    editorState.isAlignRight,
   ]);
 
   if (!editorState) return null;
@@ -287,6 +301,44 @@ export function ResponsiveMenuBar({
       action: () => document.getElementById("image-upload")?.click(),
       active: false,
       disabled: false,
+    },
+    {
+      type: "button" as const,
+      id: "table",
+      icon: Table2,
+      title: "Insert Table",
+      action: () => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+      active: editorState.isTable,
+      disabled: !editorState.canInsertTable,
+    },
+    // Alignment buttons
+    { type: "separator" as const, id: "align-sep" },
+    {
+      type: "button" as const,
+      id: "align-left",
+      icon: AlignLeft,
+      title: "Align Left",
+      action: () => editor.chain().focus().setTextAlign('left').run(),
+      active: editorState.isAlignLeft,
+      disabled: !editorState.canSetAlignment,
+    },
+    {
+      type: "button" as const,
+      id: "align-center",
+      icon: AlignCenter,
+      title: "Align Center",
+      action: () => editor.chain().focus().setTextAlign('center').run(),
+      active: editorState.isAlignCenter,
+      disabled: !editorState.canSetAlignment,
+    },
+    {
+      type: "button" as const,
+      id: "align-right",
+      icon: AlignRight,
+      title: "Align Right",
+      action: () => editor.chain().focus().setTextAlign('right').run(),
+      active: editorState.isAlignRight,
+      disabled: !editorState.canSetAlignment,
     },
     // Special AI dropdown trigger (rendered custom below)
     {
