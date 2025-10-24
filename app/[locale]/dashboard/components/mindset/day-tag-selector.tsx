@@ -123,6 +123,89 @@ export function DayTagSelector({ trades, date, onApplyTagToAll }: DayTagSelector
           <label className="text-sm font-medium">{t('mindset.tags.title')}</label>
         </div>
         <p className="text-xs text-muted-foreground">{t('mindset.tags.noTrades')}</p>
+        
+        {/* Add new tag button - still available even with no trades */}
+        <Popover open={isOpen} onOpenChange={setIsOpen}>
+          <PopoverTrigger asChild>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-7 px-2 w-fit"
+              disabled={isApplying !== null}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              {t('mindset.tags.addNew')}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="p-0" side="right" align="start">
+            <Command shouldFilter={false}>
+              <CommandInput 
+                placeholder={t('mindset.tags.search')}
+                value={inputValue}
+                onValueChange={setInputValue}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && inputValue && isApplying === null) {
+                    e.preventDefault()
+                    handleCreateAndApply(inputValue)
+                  }
+                }}
+              />
+              <CommandList className="max-h-[200px] overflow-y-auto">
+                {inputValue.trim() && (
+                  <CommandItem
+                    value={inputValue.trim()}
+                    onSelect={(value) => {
+                      if (isApplying === null) {
+                        handleCreateAndApply(value)
+                      }
+                    }}
+                  >
+                    {t('mindset.tags.createAndApply', { tag: inputValue.trim() })}
+                  </CommandItem>
+                )}
+                {tags.length > 0 && (
+                  <CommandGroup heading={t('mindset.tags.existing')}>
+                    {tags
+                      .filter(tag => {
+                        const input = inputValue.trim().toLowerCase()
+                        return !input || tag.name.toLowerCase().includes(input)
+                      })
+                      .map(tag => (
+                        <CommandItem
+                          key={tag.name}
+                          value={tag.name}
+                          onSelect={() => {
+                            if (isApplying === null) {
+                              handleCreateAndApply(tag.name)
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full shrink-0"
+                              style={{ backgroundColor: tag.color || '#CBD5E1' }}
+                            />
+                            <span>{tag.name}</span>
+                            {tag.description && (
+                              <span className="text-muted-foreground text-xs">
+                                - {tag.description}
+                              </span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                  </CommandGroup>
+                )}
+                <CommandEmpty>{t('mindset.tags.noTags')}</CommandEmpty>
+              </CommandList>
+            </Command>
+            {isApplying !== null && (
+              <div className="absolute right-2 top-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
       </div>
     )
   }
