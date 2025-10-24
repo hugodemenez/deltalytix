@@ -14,7 +14,6 @@ export type MindsetData = {
   emotionValue: number;
   selectedNews: string[];
   journalContent: string;
-  selectedTags?: string[];
 };
 
 export async function saveMindset(
@@ -68,7 +67,6 @@ export async function saveMindset(
           emotionValue: data.emotionValue,
           selectedNews: data.selectedNews,
           journalContent: data.journalContent,
-          selectedTags: data.selectedTags || [],
           mood: getMoodLabel(data.emotionValue),
           updatedAt: now,
         },
@@ -85,7 +83,6 @@ export async function saveMindset(
         emotionValue: data.emotionValue,
         selectedNews: data.selectedNews,
         journalContent: data.journalContent,
-        selectedTags: data.selectedTags || [],
         mood: getMoodLabel(data.emotionValue),
       },
     })

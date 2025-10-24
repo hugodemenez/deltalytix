@@ -77,8 +77,9 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         // Set data to today's data
         setEmotionValue(mood?.emotionValue ?? 50)
         setSelectedNews(mood?.selectedNews ?? [])
-        setSelectedTags(mood?.selectedTags ?? [])
         setJournalContent(mood?.journalContent ?? "")
+        // Tags are not stored in mood, reset them
+        setSelectedTags([])
         setIsEditing(true)
         api.scrollTo(1) // Summary is now index 1
         return
@@ -87,8 +88,9 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       if (mood) {
         setEmotionValue(mood.emotionValue ?? 50)
         setSelectedNews(mood.selectedNews ?? [])
-        setSelectedTags(mood.selectedTags ?? [])
         setJournalContent(mood.journalContent ?? "")
+        // Tags are not stored in mood, reset them
+        setSelectedTags([])
         api.scrollTo(1) // Summary is now index 1
       } else {
         // Reset all values if no mood data exists for the selected date
@@ -125,7 +127,6 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         emotionValue,
         selectedNews,
         journalContent,
-        selectedTags,
       }, dateKey)
 
       // Apply tags to all trades for this day if tags are selected
@@ -196,7 +197,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       console.warn("We have data for the selected date")
       setEmotionValue(moodForDate.emotionValue ?? 50)
       setSelectedNews(moodForDate.selectedNews ?? [])
-      setSelectedTags(moodForDate.selectedTags ?? [])
+      // Tags are not stored in mood, reset them
+      setSelectedTags([])
       setJournalContent(moodForDate.journalContent ?? " ")
       setIsEditing(true)
       api?.scrollTo(1) // Summary is now index 1
