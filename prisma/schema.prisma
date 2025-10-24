@@ -290,6 +290,7 @@ model Mood {
   hasTradingExperience Boolean?
   journalContent       String?
   selectedNews         String[] @default([])
+  selectedTags         String[] @default([])
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, day])

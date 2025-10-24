@@ -82,6 +82,15 @@ export default {
       save: 'Save Entry',
       editorPlaceholder: 'Start writing...'
     },
+    tags: {
+      title: 'Session Tags',
+      description: 'These tags will be applied to all trades for this day',
+      add: 'Add Tag',
+      search: 'Search tags...',
+      create: 'Create "{tag}"',
+      existing: 'Existing Tags',
+      noTags: 'No tags found'
+    },
     editor: {
       news: {
         title: 'News',

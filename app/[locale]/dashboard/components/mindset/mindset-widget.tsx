@@ -20,6 +20,7 @@ import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard"
 import type { EmblaCarouselType as CarouselApi } from "embla-carousel"
 import { toast } from "sonner"
 import { saveMindset, deleteMindset } from "@/server/journal"
+import { addTagsToTradesForDay } from "@/server/trades"
 import { isToday, format } from "date-fns"
 import { useMoodStore } from "@/store/mood-store"
 import { useFinancialEventsStore } from "@/store/financial-events-store"
@@ -35,6 +36,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [current, setCurrent] = useState(0)
   const [emotionValue, setEmotionValue] = useState(50)
   const [selectedNews, setSelectedNews] = useState<string[]>([])
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [journalContent, setJournalContent] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [isEditing, setIsEditing] = useState(true)
@@ -75,6 +77,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         // Set data to today's data
         setEmotionValue(mood?.emotionValue ?? 50)
         setSelectedNews(mood?.selectedNews ?? [])
+        setSelectedTags(mood?.selectedTags ?? [])
         setJournalContent(mood?.journalContent ?? "")
         setIsEditing(true)
         api.scrollTo(1) // Summary is now index 1
@@ -84,12 +87,14 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       if (mood) {
         setEmotionValue(mood.emotionValue ?? 50)
         setSelectedNews(mood.selectedNews ?? [])
+        setSelectedTags(mood.selectedTags ?? [])
         setJournalContent(mood.journalContent ?? "")
         api.scrollTo(1) // Summary is now index 1
       } else {
         // Reset all values if no mood data exists for the selected date
         setEmotionValue(50)
         setSelectedNews([])
+        setSelectedTags([])
         setJournalContent("")
       }
     }
@@ -107,6 +112,10 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
     setJournalContent(content)
   }
 
+  const handleTagsChange = (tags: string[]) => {
+    setSelectedTags(tags)
+  }
+
   const handleSave = async () => {
     // Scroll to summary view after saving
     api?.scrollTo(1)
@@ -116,7 +125,13 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         emotionValue,
         selectedNews,
         journalContent,
+        selectedTags,
       }, dateKey)
+
+      // Apply tags to all trades for this day if tags are selected
+      if (selectedTags.length > 0) {
+        await addTagsToTradesForDay(dateKey, selectedTags)
+      }
 
       // Update the moodHistory in context
       const updatedMoodHistory = moods?.filter(mood => {
@@ -156,6 +171,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       if (dateKey === format(selectedDate, 'yyyy-MM-dd')) {
         setEmotionValue(50)
         setSelectedNews([])
+        setSelectedTags([])
         setJournalContent("")
         setIsEditing(true)
         api?.scrollTo(0)
@@ -180,6 +196,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       console.warn("We have data for the selected date")
       setEmotionValue(moodForDate.emotionValue ?? 50)
       setSelectedNews(moodForDate.selectedNews ?? [])
+      setSelectedTags(moodForDate.selectedTags ?? [])
       setJournalContent(moodForDate.journalContent ?? " ")
       setIsEditing(true)
       api?.scrollTo(1) // Summary is now index 1
@@ -187,6 +204,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
       // If no data exists, reset the form
       setEmotionValue(50)
       setSelectedNews([])
+      setSelectedTags([])
       setJournalContent("")
       setIsEditing(true)
       api?.scrollTo(0) // Journaling is index 0
@@ -248,6 +266,8 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         events={getEventsForDate(selectedDate)}
         selectedNews={selectedNews}
         onNewsSelection={handleNewsSelection}
+        selectedTags={selectedTags}
+        onTagsChange={handleTagsChange}
       />
     },
     {

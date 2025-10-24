@@ -82,6 +82,15 @@ export default {
       save: 'Enregistrer',
       editorPlaceholder: 'Commencez à écrire...'
     },
+    tags: {
+      title: 'Tags de Session',
+      description: 'Ces tags seront appliqués à tous les trades de cette journée',
+      add: 'Ajouter un tag',
+      search: 'Rechercher des tags...',
+      create: 'Créer "{tag}"',
+      existing: 'Tags existants',
+      noTags: 'Aucun tag trouvé'
+    },
     editor: {
       news: {
         title: 'Actualités',
