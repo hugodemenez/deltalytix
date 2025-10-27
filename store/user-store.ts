@@ -4,6 +4,7 @@ import { User, Subscription, Tag, DashboardLayout } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { Group, Account } from "@/context/data-provider";
+import { Widget } from "@/app/[locale]/dashboard/types/dashboard";
 import {
   deleteGroupAction,
   saveGroupAction,
@@ -19,6 +20,16 @@ type SubscriptionData = {
   trialEndsAt: Date | null;
 } | null;
 
+// Internal type with proper Widget[] types
+export type DashboardLayoutWithWidgets = {
+  id: string;
+  userId: string;
+  desktop: Widget[];
+  mobile: Widget[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type UserStore = {
   user: User | null;
   supabaseUser: SupabaseUser | null;
@@ -26,14 +37,7 @@ type UserStore = {
   tags: Tag[];
   accounts: Account[];
   groups: Group[];
-  dashboardLayout: {
-    id: string;
-    userId: string;
-    desktop: Prisma.JsonValue;
-    mobile: Prisma.JsonValue;
-    createdAt: Date;
-    updatedAt: Date;
-  } | null;
+  dashboardLayout: DashboardLayoutWithWidgets | null;
   isLoading: boolean;
   isMobile: boolean;
   isSharedView: boolean;
@@ -53,7 +57,7 @@ type UserStore = {
   addGroup: (group: Group) => void;
   updateGroup: (groupId: string, data: Partial<Group>) => void;
   removeGroup: (groupId: string) => void;
-  setDashboardLayout: (layout: DashboardLayout) => void;
+  setDashboardLayout: (layout: DashboardLayoutWithWidgets) => void;
   setIsLoading: (value: boolean) => void;
   setIsMobile: (value: boolean) => void;
   setIsSharedView: (value: boolean) => void;
@@ -166,11 +170,11 @@ export const useUserStore = create<UserStore>()(
             desktop:
               typeof layout.desktop === "string"
                 ? JSON.parse(layout.desktop)
-                : layout.desktop,
+                : (layout.desktop as Widget[]),
             mobile:
               typeof layout.mobile === "string"
                 ? JSON.parse(layout.mobile)
-                : layout.mobile,
+                : (layout.mobile as Widget[]),
             createdAt: layout.createdAt,
             updatedAt: layout.updatedAt,
           },

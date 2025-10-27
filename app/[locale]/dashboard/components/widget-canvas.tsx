@@ -20,10 +20,19 @@ import { useAutoScroll } from '../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
 import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
-import { useUserStore } from '../../../../store/user-store'
+import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user-store'
 import { toast } from "sonner"
 import { defaultLayouts } from "@/context/data-provider"
+import { Prisma, DashboardLayout } from "@prisma/client"
 
+// Helper function to convert internal layout to Prisma type
+const toPrismaLayout = (layout: DashboardLayoutWithWidgets): DashboardLayout => {
+  return {
+    ...layout,
+    desktop: layout.desktop as unknown as Prisma.JsonValue,
+    mobile: layout.mobile as unknown as Prisma.JsonValue,
+  }
+}
 
 // Update sizeToGrid to handle responsive sizes
 const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
@@ -382,27 +391,25 @@ export default function WidgetCanvas() {
   const widgetDimensions = useMemo(() => {
     if (!layouts?.[activeLayout]) return {}
     
-    const widgets = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+    const widgets = layouts[activeLayout]
     return widgets.reduce((acc: Record<string, WidgetDimensions>, widget) => {
-      if (widget && typeof widget === 'object' && 'i' in widget) {
-        acc[widget.i as string] = getWidgetDimensions(widget as unknown as Widget, isMobile)
-      }
+      acc[widget.i] = getWidgetDimensions(widget, isMobile)
       return acc
     }, {} as Record<string, WidgetDimensions>)
   }, [layouts, activeLayout, isMobile])
 
   const responsiveLayout = useMemo(() => {
     if (!layouts) return {}
-    return generateResponsiveLayout(layouts[activeLayout] as unknown as Widget[])
+    return generateResponsiveLayout(layouts[activeLayout])
   }, [layouts, activeLayout])
 
   const currentLayout = useMemo(() => {
     if (!layouts?.[activeLayout]) return []
     // Filter out duplicate widgets by type, keep only the first occurrence
     const seenTypes = new Set()
-    return (Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []).filter(widget => {
-      if (seenTypes.has(widget?.type)) return false
-      seenTypes.add(widget?.type)
+    return layouts[activeLayout].filter(widget => {
+      if (seenTypes.has(widget.type)) return false
+      seenTypes.add(widget.type)
       return true
     })
   }, [layouts, activeLayout])
@@ -457,7 +464,7 @@ export default function WidgetCanvas() {
       });
       
       // Always save to database when layout changes
-      saveDashboardLayout(updatedLayouts);
+      saveDashboardLayout(toPrismaLayout(updatedLayouts));
       
       // Reset user action flag
       if (isUserAction) {
@@ -481,7 +488,7 @@ export default function WidgetCanvas() {
       return
     }
     
-    const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+    const currentLayout = layouts[activeLayout]
 
     // Prevent adding duplicate widget types
     if (currentLayout.some(widget => widget.type === type)) {
@@ -573,7 +580,7 @@ export default function WidgetCanvas() {
             toast.success(t('widgets.widgetAdded'), {
               description: t('widgets.widgetAddedDescription'),
             })
-            await saveDashboardLayout(newLayouts)
+            await saveDashboardLayout(toPrismaLayout(newLayouts))
             return
           }
         }
@@ -604,7 +611,7 @@ export default function WidgetCanvas() {
     toast.success(t('widgets.widgetAdded'), {
       description: t('widgets.widgetAddedDescription'),
     })
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
 
   }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout, t, toast]);
 
@@ -618,7 +625,7 @@ export default function WidgetCanvas() {
       updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
   }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define changeWidgetType with all dependencies
@@ -633,7 +640,7 @@ export default function WidgetCanvas() {
       updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
   }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define changeWidgetSize with all dependencies
@@ -660,7 +667,7 @@ export default function WidgetCanvas() {
       updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
   }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define removeAllWidgets with all dependencies
@@ -675,7 +682,7 @@ export default function WidgetCanvas() {
     }
     
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
   }, [user?.id, layouts, setLayouts, saveDashboardLayout]);
 
   // Restore default layout for both desktop and mobile
@@ -683,12 +690,12 @@ export default function WidgetCanvas() {
     if (!user?.id || !layouts) return
     const newLayouts = {
       ...layouts,
-      desktop: defaultLayouts.desktop,
-      mobile: defaultLayouts.mobile,
+      desktop: defaultLayouts.desktop as unknown as Widget[],
+      mobile: defaultLayouts.mobile as unknown as Widget[],
       updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
     toast.success(t('widgets.restoredDefaultsTitle'), {
       description: t('widgets.restoredDefaultsDescription')
     })
@@ -764,12 +771,11 @@ export default function WidgetCanvas() {
             useCSSTransforms={true}
           >
             {currentLayout.map((widget) => {
-              const typedWidget = widget as unknown as Widget
-              const dimensions = widgetDimensions[typedWidget.i]
+              const dimensions = widgetDimensions[widget.i]
               
               return (
                 <div 
-                  key={typedWidget.i} 
+                  key={widget.i} 
                   className="h-full" 
                   data-customizing={isCustomizing}
                   style={{
@@ -778,13 +784,13 @@ export default function WidgetCanvas() {
                   }}
                 >
                   <WidgetWrapper
-                    onRemove={() => removeWidget(typedWidget.i)}
-                    onChangeSize={(size) => changeWidgetSize(typedWidget.i, size)}
+                    onRemove={() => removeWidget(widget.i)}
+                    onChangeSize={(size) => changeWidgetSize(widget.i, size)}
                     isCustomizing={isCustomizing}
-                    size={typedWidget.size as WidgetSize}
-                    currentType={typedWidget.type as WidgetType}
+                    size={widget.size}
+                    currentType={widget.type}
                   >
-                    {renderWidget(typedWidget)}
+                    {renderWidget(widget)}
                   </WidgetWrapper>
                 </div>
               )
