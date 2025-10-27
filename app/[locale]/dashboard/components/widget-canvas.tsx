@@ -382,27 +382,25 @@ export default function WidgetCanvas() {
   const widgetDimensions = useMemo(() => {
     if (!layouts?.[activeLayout]) return {}
     
-    const widgets = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+    const widgets = layouts[activeLayout]
     return widgets.reduce((acc: Record<string, WidgetDimensions>, widget) => {
-      if (widget && typeof widget === 'object' && 'i' in widget) {
-        acc[widget.i as string] = getWidgetDimensions(widget as unknown as Widget, isMobile)
-      }
+      acc[widget.i] = getWidgetDimensions(widget, isMobile)
       return acc
     }, {} as Record<string, WidgetDimensions>)
   }, [layouts, activeLayout, isMobile])
 
   const responsiveLayout = useMemo(() => {
     if (!layouts) return {}
-    return generateResponsiveLayout(layouts[activeLayout] as unknown as Widget[])
+    return generateResponsiveLayout(layouts[activeLayout])
   }, [layouts, activeLayout])
 
   const currentLayout = useMemo(() => {
     if (!layouts?.[activeLayout]) return []
     // Filter out duplicate widgets by type, keep only the first occurrence
     const seenTypes = new Set()
-    return (Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []).filter(widget => {
-      if (seenTypes.has(widget?.type)) return false
-      seenTypes.add(widget?.type)
+    return layouts[activeLayout].filter(widget => {
+      if (seenTypes.has(widget.type)) return false
+      seenTypes.add(widget.type)
       return true
     })
   }, [layouts, activeLayout])
@@ -481,7 +479,7 @@ export default function WidgetCanvas() {
       return
     }
     
-    const currentLayout = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
+    const currentLayout = layouts[activeLayout]
 
     // Prevent adding duplicate widget types
     if (currentLayout.some(widget => widget.type === type)) {
@@ -764,12 +762,11 @@ export default function WidgetCanvas() {
             useCSSTransforms={true}
           >
             {currentLayout.map((widget) => {
-              const typedWidget = widget as unknown as Widget
-              const dimensions = widgetDimensions[typedWidget.i]
+              const dimensions = widgetDimensions[widget.i]
               
               return (
                 <div 
-                  key={typedWidget.i} 
+                  key={widget.i} 
                   className="h-full" 
                   data-customizing={isCustomizing}
                   style={{
@@ -778,13 +775,13 @@ export default function WidgetCanvas() {
                   }}
                 >
                   <WidgetWrapper
-                    onRemove={() => removeWidget(typedWidget.i)}
-                    onChangeSize={(size) => changeWidgetSize(typedWidget.i, size)}
+                    onRemove={() => removeWidget(widget.i)}
+                    onChangeSize={(size) => changeWidgetSize(widget.i, size)}
                     isCustomizing={isCustomizing}
-                    size={typedWidget.size as WidgetSize}
-                    currentType={typedWidget.type as WidgetType}
+                    size={widget.size}
+                    currentType={widget.type}
                   >
-                    {renderWidget(typedWidget)}
+                    {renderWidget(widget)}
                   </WidgetWrapper>
                 </div>
               )

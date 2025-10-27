@@ -4,6 +4,7 @@ import { User, Subscription, Tag, DashboardLayout } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { Group, Account } from "@/context/data-provider";
+import { Widget } from "@/app/[locale]/dashboard/types/dashboard";
 import {
   deleteGroupAction,
   saveGroupAction,
@@ -29,8 +30,8 @@ type UserStore = {
   dashboardLayout: {
     id: string;
     userId: string;
-    desktop: Prisma.JsonValue;
-    mobile: Prisma.JsonValue;
+    desktop: Widget[];
+    mobile: Widget[];
     createdAt: Date;
     updatedAt: Date;
   } | null;
@@ -166,11 +167,11 @@ export const useUserStore = create<UserStore>()(
             desktop:
               typeof layout.desktop === "string"
                 ? JSON.parse(layout.desktop)
-                : layout.desktop,
+                : (layout.desktop as Widget[]),
             mobile:
               typeof layout.mobile === "string"
                 ? JSON.parse(layout.mobile)
-                : layout.mobile,
+                : (layout.mobile as Widget[]),
             createdAt: layout.createdAt,
             updatedAt: layout.updatedAt,
           },
