@@ -1595,6 +1595,33 @@ export default {
       description: "Manage your email preferences and subscription settings",
       comingSoon:
         "Additional newsletter preferences management features coming soon.",
+      emailLabel: "Email Address",
+      emailPlaceholder: "Enter your email address",
+      load: "Load Preferences",
+      save: "Save Preferences",
+      saving: "Saving...",
+      options: {
+        monthlyStats: {
+          title: "Monthly Statistics Update",
+          description: "Receive a monthly summary of your trading performance and statistics",
+        },
+        weeklyUpdates: {
+          title: "Deltalytix Weekly Updates",
+          description: "Get the latest product updates, features, and trading tips every week",
+        },
+        renewalNotifications: {
+          title: "Renewal Notifications",
+          description: "Receive reminders about your subscription renewals and account updates",
+        },
+      },
+      success: {
+        saved: "Preferences saved successfully",
+      },
+      error: {
+        load: "Failed to load preferences",
+        save: "Failed to save preferences",
+        emailRequired: "Email address is required",
+      },
     },
     admin: {
       inferNames: "Infer Names",
