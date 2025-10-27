@@ -138,7 +138,7 @@ Write an analysis that helps the trader improve:`,
       temperature: 0.7,
     })
 
-    let content = { intro: "", tips: "" }
+    const content = { intro: "", tips: "" }
     for await (const partialObject of partialObjectStream) {
       if (partialObject.intro) content.intro = partialObject.intro
       if (partialObject.tips) content.tips = partialObject.tips

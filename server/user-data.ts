@@ -70,7 +70,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
   if (forceRefresh) {
     const start = performance.now();
     console.log(`[getUserData] Force refresh - bypassing cache for user ${userId}`)
-    revalidateTag(`user-data-${userId}`)
+    revalidateTag(`user-data-${userId}`, { expire: 0 })
     
     // Fetch all data in a single transaction
     const [userData, subscription, tickDetails, accounts, groups, tags, financialEvents, moodHistory] = await prisma.$transaction([
@@ -202,5 +202,5 @@ export async function updateIsFirstConnectionAction(isFirstConnection: boolean) 
     where: { id: userId },
     data: { isFirstConnection }
   })
-  revalidateTag(`user-data-${userId}`)
+  revalidateTag(`user-data-${userId}`, { expire: 0 })
 }

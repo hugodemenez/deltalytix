@@ -280,6 +280,7 @@ export function TiptapEditor({
         body: {
           action: action,
           date: date,
+          locale: locale,
         },
       });
     },

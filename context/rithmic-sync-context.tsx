@@ -465,8 +465,6 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     const userId = await getUserId()
     // Ensure we are not already syncing
     // Prevent multiple syncs at the same time
-    console.log('Is auto syncing', isAutoSyncing)
-    console.log('User ID', userId)
     if (!userId || isAutoSyncing) return
 
     const savedData = getRithmicData(credentialId)
@@ -546,7 +544,6 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       }
 
       // Connect and start syncing
-      console.log('Connecting to WebSocket with:', { wsUrl, accountsToSync, startDate })
       connect(wsUrl, data.token, accountsToSync, startDate)
       updateLastSyncTime(credentialId)
 
@@ -637,12 +634,6 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
   const calculateStartDate = useCallback((selectedAccounts: string[]): string => {
     // Filter trades for selected accounts
     const accountTrades = trades.filter(trade => selectedAccounts.includes(trade.accountNumber))
-
-    console.log('calculateStartDate called:', {
-      selectedAccounts,
-      totalTrades: trades.length,
-      accountTrades: accountTrades.length
-    })
 
     if (accountTrades.length === 0) {
       // If no trades found, return date 90 days ago

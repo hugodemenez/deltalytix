@@ -61,7 +61,7 @@ export default function TradezellaProcessor({ headers, csvData, setProcessedTrad
 
     csvData.forEach(row => {
       const item: Partial<Trade> = {};
-      let quantity = 0;
+      const quantity = 0;
       let entryTime = '';
       let closeTime = '';
       headers.forEach((header, index) => {

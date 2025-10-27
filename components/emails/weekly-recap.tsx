@@ -227,7 +227,7 @@ function generateTradingActivityGrid(dailyPnL: TraderStatsEmailProps['dailyPnL']
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
   // Populate grid with actual trading data
-  let currentDate = new Date(startDate);
+  const currentDate = new Date(startDate);
   let currentRow = 0;
 
   while (currentDate <= endDate && currentRow < 2) {
@@ -265,8 +265,8 @@ function calculateTradingStreak(dailyPnL: TraderStatsEmailProps['dailyPnL']): { 
 
   // For a real streak calculation, we'd need to identify consecutive trading days
   // As a simple approximation, we'll count groups of consecutive dates
-  let currentStreak = 1;
-  let longestStreak = 1;
+  const currentStreak = 1;
+  const longestStreak = 1;
 
   // In a real implementation, you'd use actual consecutive trading days
   // This is just a placeholder calculation
