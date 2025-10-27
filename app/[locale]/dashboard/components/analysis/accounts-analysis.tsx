@@ -24,13 +24,6 @@ import { useUserStore } from "@/store/user-store";
 import { useAnalysisStore } from "@/store/analysis-store";
 import { DefaultChatTransport, ToolUIPart } from "ai";
 import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "@/components/ai-elements/tool";
-import {
   AccountAnalysisSchema,
   AccountMetricsSchema,
 } from "@/app/api/ai/analysis/accounts/get-account-performance";
@@ -209,44 +202,6 @@ export function AccountsAnalysis({ onStatusChange }: AccountsAnalysisProps) {
     onStatusChange,
   ]);
 
-  // Function to render all tool calls from messages
-  const renderToolCalls = () => {
-    const toolCalls = messages
-      .flatMap((message) => message.parts || [])
-      .filter((part): part is ToolUIPart => part.type.startsWith("tool-"));
-
-    if (toolCalls.length === 0) return null;
-
-    return (
-      <div className="space-y-4">
-        <h4 className="font-medium text-sm text-muted-foreground">
-          Tool Calls
-        </h4>
-        {toolCalls.map((toolCall, index) => (
-          <Tool
-            key={`${toolCall.type}-${index}`}
-            defaultOpen={toolCall.state === "output-available"}
-          >
-            <ToolHeader
-              type={toolCall.type}
-              state={toolCall.state}
-              title={toolCall.type
-                .replace("tool-", "")
-                .replace(/([A-Z])/g, " $1")
-                .trim()}
-            />
-            <ToolContent>
-              <ToolInput input={toolCall.input} />
-              <ToolOutput
-                output={toolCall.output}
-                errorText={toolCall.errorText}
-              />
-            </ToolContent>
-          </Tool>
-        ))}
-      </div>
-    );
-  };
 
   return (
     <Card className="relative">
