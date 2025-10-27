@@ -35,6 +35,7 @@ import {
 import {
   WidgetType,
   WidgetSize,
+  Widget,
 } from '@/app/[locale]/dashboard/types/dashboard';
 import {
   deletePayoutAction,
@@ -52,7 +53,7 @@ import {
 import { createClient } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 import { signOut, getUserId, updateUserLanguage } from '@/server/auth';
-import { useUserStore } from '@/store/user-store';
+import { DashboardLayoutWithWidgets, useUserStore } from '@/store/user-store';
 import { useTickDetailsStore } from '@/store/tick-details-store';
 import { useFinancialEventsStore } from '@/store/financial-events-store';
 import { useTradesStore } from '@/store/trades-store';
@@ -556,8 +557,8 @@ export const DataProvider: React.FC<{
           userId: 'admin',
           createdAt: new Date(),
           updatedAt: new Date(),
-          desktop: defaultLayouts.desktop,
-          mobile: defaultLayouts.mobile
+          desktop: defaultLayouts.desktop as unknown as Widget[],
+          mobile: defaultLayouts.mobile as unknown as Widget[]
         });
         return;
       }
@@ -580,11 +581,11 @@ export const DataProvider: React.FC<{
         const userId = await getUserId()
         const dashboardLayoutResponse = await getDashboardLayout(userId)
         if (dashboardLayoutResponse) {
-          setDashboardLayout(dashboardLayoutResponse)
+          setDashboardLayout(dashboardLayoutResponse as unknown as DashboardLayoutWithWidgets)
         }
         else {
           // If no layout exists in database, use default layout
-          setDashboardLayout(defaultLayouts)
+          setDashboardLayout(defaultLayouts as unknown as DashboardLayoutWithWidgets)
         }
       }
 
@@ -664,11 +665,14 @@ export const DataProvider: React.FC<{
 
   // Persist language changes without blocking UI
   useEffect(() => {
-    if (!supabaseUser?.id || !locale) return
-    // Fire and forget; do not block UI
-    updateUserLanguage(locale).catch((e) => {
-      console.error('[DataProvider] Failed to update user language', e)
-    })
+    const updateLanguage = async () => {
+      if (!supabaseUser?.id || !locale) return
+      // Fire and forget; do not block UI
+      await updateUserLanguage(locale).catch((e) => {
+        console.error('[DataProvider] Failed to update user language', e)
+      })
+    }
+    updateLanguage()
   }, [locale, supabaseUser?.id])
 
   const refreshTrades = useCallback(async () => {
@@ -1139,10 +1143,7 @@ export const DataProvider: React.FC<{
     if (!supabaseUser?.id) return
 
     try {
-      // Get the correct user ID from server
-      const userId = await getUserId()
-
-      setDashboardLayout(layout)
+      setDashboardLayout(layout as unknown as DashboardLayoutWithWidgets)
       await saveDashboardLayoutAction(layout)
     } catch (error) {
       console.error('Error saving dashboard layout:', error)

@@ -29,8 +29,8 @@ import { Prisma, DashboardLayout } from "@prisma/client"
 const toPrismaLayout = (layout: DashboardLayoutWithWidgets): DashboardLayout => {
   return {
     ...layout,
-    desktop: layout.desktop as Prisma.JsonValue,
-    mobile: layout.mobile as Prisma.JsonValue,
+    desktop: layout.desktop as unknown as Prisma.JsonValue,
+    mobile: layout.mobile as unknown as Prisma.JsonValue,
   }
 }
 
@@ -690,8 +690,8 @@ export default function WidgetCanvas() {
     if (!user?.id || !layouts) return
     const newLayouts = {
       ...layouts,
-      desktop: defaultLayouts.desktop,
-      mobile: defaultLayouts.mobile,
+      desktop: defaultLayouts.desktop as unknown as Widget[],
+      mobile: defaultLayouts.mobile as unknown as Widget[],
       updatedAt: new Date()
     }
     setLayouts(newLayouts)

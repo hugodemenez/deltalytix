@@ -91,7 +91,7 @@ export async function deleteTagFromAllTrades(tag: string) {
       )
     )
 
-    revalidateTag(userId)
+    revalidateTag(userId, { expire: 0 })
     return { success: true }
   } catch (error) {
     console.error('Failed to delete tag:', error)
