@@ -79,12 +79,7 @@ const ResumeScrollButton = () => {
     const t = useI18n()
     const { isAtBottom, scrollToBottom } = useStickToBottomContext()
     
-    // Debug logging
-    console.log('ResumeScrollButton - isAtBottom:', isAtBottom)
-    console.log('ResumeScrollButton - scrollToBottom function:', scrollToBottom)
-    
     const handleScrollToBottom = useCallback(() => {
-        console.log('Scroll to bottom clicked')
         scrollToBottom()
     }, [scrollToBottom])
     
@@ -169,6 +164,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
     const [hideFirstMessage, setHideFirstMessage] = useState(false)
     const { messages: storedMessages, setMessages: setStoredMessages } = useChatStore()
     const [isLoadingMessages, setIsLoadingMessages] = useState(true)
+
     // Using use-stick-to-bottom for scroll management
     const moods = useMoodStore(state => state.moods)
     const setMoods = useMoodStore(state => state.setMoods)
@@ -206,17 +202,20 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                     const currentMood = moods.find(mood => format(mood.day, 'yyyy-MM-dd') === currentDay)
                     if (currentMood && currentMood.conversation) {
                         try {
-                            const parsedConversation = JSON.parse(currentMood.conversation as string)
-                            // Ensure each message has the required properties for Message type
-                            const validMessages = parsedConversation.map((msg: any) => ({
-                                id: msg.id,
-                                content: msg.content,
-                                role: msg.role,
-                                // Preserve additional properties that might be needed
-                                createdAt: msg.createdAt,
-                                toolInvocations: msg.toolInvocations
-                            }))
-                            setStoredMessages(validMessages as UIMessage[])
+                            // Hydrate conversation, parsing JSON and mapping to UIMessage structure (including parts)
+                            const parsedConversation = JSON.parse(currentMood.conversation as string)?.map((msg: any) => {
+                                // If legacy structure with just content, wrap as a text part
+                                if (!msg.parts && msg.content) {
+                                    return {
+                                        ...msg,
+                                        parts: [{ type: 'text', text: msg.content }],
+                                    }
+                                }
+                                // Ensure modern messages already have .parts array
+                                return msg
+                            }) || []
+
+                            setStoredMessages(parsedConversation as UIMessage[])
                             setIsStarted(true)
                         } catch (e) {
                             console.error('Failed to parse conversation:', e)
@@ -245,9 +244,9 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                     timezone,
                 },
             }),
-            onFinish: async ({ message }) => {
+            onFinish: async ({ messages }) => {
                 if (!user?.id) return
-                const updatedMood = await saveChat([...storedMessages, message])
+                const updatedMood = await saveChat(messages)
                 if (updatedMood) {
                     // Find current day in moods
                     const currentDay = format(new Date(), 'yyyy-MM-dd')
@@ -263,7 +262,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                         setMoods([...moods, updatedMood])
                     }
                 }
-                setStoredMessages([...storedMessages, message])
+                setStoredMessages(messages)
             },
         })
 
@@ -308,7 +307,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                         <AnimatePresence mode="popLayout">
                             {error && (
                                 <motion.div
-                                    className="p-3 rounded-lg break-words overflow-hidden bg-destructive/10 text-destructive border border-destructive/20 mb-4"
+                                    className="p-3 rounded-lg wrap-break-word overflow-hidden bg-destructive/10 text-destructive border border-destructive/20 mb-4"
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}

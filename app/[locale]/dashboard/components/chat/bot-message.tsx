@@ -46,7 +46,7 @@ export function BotMessage({ children, status }: { children: React.ReactNode, st
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <div className="flex flex-col gap-2">
-        <div className="text-pretty break-words max-w-[90%] bg-muted/50 p-4 rounded-lg rounded-tl-none border border-muted">
+        <div className="text-pretty wrap-break-word max-w-[90%] bg-muted/50 p-4 rounded-lg rounded-tl-none border border-muted">
           {content}
         </div>
         {typeof children === "string" && status === "ready" && (

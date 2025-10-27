@@ -383,8 +383,10 @@ export default function WidgetCanvas() {
     if (!layouts?.[activeLayout]) return {}
     
     const widgets = Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []
-    return widgets.reduce((acc, widget) => {
-      acc[widget.i] = getWidgetDimensions(widget, isMobile)
+    return widgets.reduce((acc: Record<string, WidgetDimensions>, widget) => {
+      if (widget && typeof widget === 'object' && 'i' in widget) {
+        acc[widget.i as string] = getWidgetDimensions(widget as unknown as Widget, isMobile)
+      }
       return acc
     }, {} as Record<string, WidgetDimensions>)
   }, [layouts, activeLayout, isMobile])
@@ -399,8 +401,8 @@ export default function WidgetCanvas() {
     // Filter out duplicate widgets by type, keep only the first occurrence
     const seenTypes = new Set()
     return (Array.isArray(layouts[activeLayout]) ? layouts[activeLayout] : []).filter(widget => {
-      if (seenTypes.has(widget.type)) return false
-      seenTypes.add(widget.type)
+      if (seenTypes.has(widget?.type)) return false
+      seenTypes.add(widget?.type)
       return true
     })
   }, [layouts, activeLayout])

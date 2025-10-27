@@ -132,8 +132,8 @@ export default async function proxy(req: NextRequest) {
     // Allow localhost for testing (remove in final production)
     const allowedOrigins = [
       "'self'",
-      "https://deltalytix.app", // Main domain
-      "https://beta.deltalytix.app", // Beta subdomain
+      "https://*.deltalytix.app", // Main domain
+      "https://*.beta.deltalytix.app", // Beta subdomain
       "http://localhost:*", // For local testing
       "http://127.0.0.1:*",  // For local testing
       "file:", // For local HTML file testing (may be ignored by some browsers)

@@ -7,7 +7,6 @@ import { revalidateTag } from "next/cache"
 import { getUserId } from "@/server/auth"
 
 export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
-  console.log('Saving chat', messages)
   const userId = await getUserId()
   
   // Check if user exists before proceeding
@@ -35,18 +34,16 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
       // If message has parts, only keep text parts
       const textParts = msg.parts
         .filter((part: any) => part.type === 'text')
-        .map((part: any) => part.text)
-        .join('')
       return {
         ...msg,
-        content: textParts,
-        parts: undefined // Remove parts since we've consolidated them into content
+        parts: textParts
       }
     }
     // If no parts, just use the content directly
     return msg
   })
 
+  console.log('Messages', JSON.stringify(textOnlyMessages))
   // Try to find existing mood entry for today
   const existingMood = await prisma.mood.findFirst({
     where: {
@@ -58,7 +55,8 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
     },
   })
 
-  revalidateTag(`user-data-${userId}`)
+  // Expire immediately so next time we load the user data, we get the latest data
+  revalidateTag(`user-data-${userId}`, { expire: 0 })
 
   if (existingMood) {
     // Update existing mood entry
@@ -118,9 +116,6 @@ export async function loadChat(): Promise<UIMessage[]> {
       },
     },
   })
-
-  revalidateTag(`user-data-${userId}`)
-  console.log('Mood', mood)
 
   // Return conversation if it exists, otherwise empty array
   return mood?.conversation ? JSON.parse(mood.conversation as string) : []
