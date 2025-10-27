@@ -245,7 +245,11 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
                 },
             }),
             onFinish: async ({ messages }) => {
+                if (messages[0].role !== "assistant") {
+                    messages.shift()
+                }
                 if (!user?.id) return
+                // Remove first message instruction if it exists
                 const updatedMood = await saveChat(messages)
                 if (updatedMood) {
                     // Find current day in moods

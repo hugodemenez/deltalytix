@@ -15,7 +15,7 @@ import { getPreviousConversation } from "./tools/get-previous-conversation";
 import { generateEquityChart } from "./tools/generate-equity-chart";
 import { startOfWeek, endOfWeek, subWeeks, format } from "date-fns";
 
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   try {
