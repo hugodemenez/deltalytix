@@ -20,6 +20,16 @@ type SubscriptionData = {
   trialEndsAt: Date | null;
 } | null;
 
+// Internal type with proper Widget[] types
+export type DashboardLayoutWithWidgets = {
+  id: string;
+  userId: string;
+  desktop: Widget[];
+  mobile: Widget[];
+  createdAt: Date;
+  updatedAt: Date;
+};
+
 type UserStore = {
   user: User | null;
   supabaseUser: SupabaseUser | null;
@@ -27,14 +37,7 @@ type UserStore = {
   tags: Tag[];
   accounts: Account[];
   groups: Group[];
-  dashboardLayout: {
-    id: string;
-    userId: string;
-    desktop: Widget[];
-    mobile: Widget[];
-    createdAt: Date;
-    updatedAt: Date;
-  } | null;
+  dashboardLayout: DashboardLayoutWithWidgets | null;
   isLoading: boolean;
   isMobile: boolean;
   isSharedView: boolean;

@@ -20,10 +20,19 @@ import { useAutoScroll } from '../hooks/use-auto-scroll'
 import { cn } from '@/lib/utils'
 import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
-import { useUserStore } from '../../../../store/user-store'
+import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user-store'
 import { toast } from "sonner"
 import { defaultLayouts } from "@/context/data-provider"
+import { Prisma, DashboardLayout } from "@prisma/client"
 
+// Helper function to convert internal layout to Prisma type
+const toPrismaLayout = (layout: DashboardLayoutWithWidgets): DashboardLayout => {
+  return {
+    ...layout,
+    desktop: layout.desktop as Prisma.JsonValue,
+    mobile: layout.mobile as Prisma.JsonValue,
+  }
+}
 
 // Update sizeToGrid to handle responsive sizes
 const sizeToGrid = (size: WidgetSize, isSmallScreen = false): { w: number, h: number } => {
@@ -455,7 +464,7 @@ export default function WidgetCanvas() {
       });
       
       // Always save to database when layout changes
-      saveDashboardLayout(updatedLayouts);
+      saveDashboardLayout(toPrismaLayout(updatedLayouts));
       
       // Reset user action flag
       if (isUserAction) {
@@ -571,7 +580,7 @@ export default function WidgetCanvas() {
             toast.success(t('widgets.widgetAdded'), {
               description: t('widgets.widgetAddedDescription'),
             })
-            await saveDashboardLayout(newLayouts)
+            await saveDashboardLayout(toPrismaLayout(newLayouts))
             return
           }
         }
@@ -602,7 +611,7 @@ export default function WidgetCanvas() {
     toast.success(t('widgets.widgetAdded'), {
       description: t('widgets.widgetAddedDescription'),
     })
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
 
   }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout, t, toast]);
 
@@ -616,7 +625,7 @@ export default function WidgetCanvas() {
       updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
   }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define changeWidgetType with all dependencies
@@ -631,7 +640,7 @@ export default function WidgetCanvas() {
       updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
   }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define changeWidgetSize with all dependencies
@@ -658,7 +667,7 @@ export default function WidgetCanvas() {
       updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
   }, [user?.id, layouts, activeLayout, setLayouts, saveDashboardLayout]);
 
   // Define removeAllWidgets with all dependencies
@@ -673,7 +682,7 @@ export default function WidgetCanvas() {
     }
     
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
   }, [user?.id, layouts, setLayouts, saveDashboardLayout]);
 
   // Restore default layout for both desktop and mobile
@@ -686,7 +695,7 @@ export default function WidgetCanvas() {
       updatedAt: new Date()
     }
     setLayouts(newLayouts)
-    await saveDashboardLayout(newLayouts)
+    await saveDashboardLayout(toPrismaLayout(newLayouts))
     toast.success(t('widgets.restoredDefaultsTitle'), {
       description: t('widgets.restoredDefaultsDescription')
     })
