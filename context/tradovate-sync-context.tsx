@@ -232,13 +232,14 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
 
   // Perform sync for all accounts
   const performSyncForAllAccounts = useCallback(async () => {
-    if (isAutoSyncing) return
+    if (isAutoSyncing) {
+      return
+    }
 
     setIsAutoSyncing(true)
     
     try {
-      const validAccounts = accounts.filter(acc => !acc.token)
-      
+      const validAccounts = accounts.filter(acc => acc.token)
       if (validAccounts.length === 0) {
         return
       }
