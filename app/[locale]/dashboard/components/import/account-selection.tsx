@@ -10,8 +10,8 @@ import { toast } from "sonner"
 
 interface AccountSelectionProps {
   accounts: string[]
-  accountNumber: string
-  setAccountNumber: React.Dispatch<React.SetStateAction<string>>
+  accountNumbers: string[]
+  setAccountNumbers: React.Dispatch<React.SetStateAction<string[]>>
   newAccountNumber: string
   setNewAccountNumber: React.Dispatch<React.SetStateAction<string>>
   onAddAccount?: (account: string) => void
@@ -19,8 +19,8 @@ interface AccountSelectionProps {
 
 export default function AccountSelection({
   accounts,
-  accountNumber,
-  setAccountNumber,
+  accountNumbers,
+  setAccountNumbers,
   newAccountNumber,
   setNewAccountNumber,
   onAddAccount
@@ -37,12 +37,12 @@ export default function AccountSelection({
         return
       }
       setLocalAccounts(prev => [...prev, newAccountNumber.trim()])
-      setAccountNumber(newAccountNumber.trim())
+      setAccountNumbers([...accountNumbers, newAccountNumber.trim()])
       onAddAccount?.(newAccountNumber.trim())
       setNewAccountNumber('')
       setIsAddingNewAccount(false)
     }
-  }, [newAccountNumber, localAccounts, setAccountNumber, onAddAccount, setNewAccountNumber, t, toast])
+  }, [newAccountNumber, localAccounts, setAccountNumbers, onAddAccount, setNewAccountNumber, t, toast])
 
   return (
     <div className="h-full flex flex-col">
@@ -62,9 +62,16 @@ export default function AccountSelection({
               key={account}
               className={cn(
                 "p-6 cursor-pointer hover:border-primary transition-colors relative group",
-                accountNumber === account ? "border-primary bg-primary/5" : ""
+                accountNumbers.includes(account) ? "border-primary bg-primary/5" : ""
               )}
-              onClick={() => setAccountNumber(account)}
+              onClick={() => {
+                // If already selected, remove it
+                if (accountNumbers.includes(account)) {
+                  setAccountNumbers(accountNumbers.filter(a => a !== account))
+                } else {
+                  setAccountNumbers([...accountNumbers, account])
+                }
+              }}
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
@@ -73,7 +80,7 @@ export default function AccountSelection({
                     {t('import.account.tradingAccount')}
                   </p>
                 </div>
-                {accountNumber === account && (
+                {accountNumbers.includes(account) && (
                   <CheckCircle2 className="h-5 w-5 text-primary" />
                 )}
               </div>

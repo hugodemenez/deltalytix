@@ -7,17 +7,11 @@ import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { TickDetails, Trade } from '@prisma/client'
 import { getTickDetails } from '@/server/tick-details'
+import { PlatformProcessorProps } from '../config/platforms'
 
 interface ContractSpec {
   tickSize: number;
   tickValue: number;
-}
-
-
-interface RithmicOrderProcessorProps {
-  csvData: string[][]
-  headers: string[]
-  setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>
 }
 
 interface Order {
@@ -93,8 +87,7 @@ function cleanCsvData(csvData: string[][], headers: string[]): [string[][], stri
   return [cleanData, cleanHeaders];
 }
 
-export default function RithmicOrderProcessor({ csvData, headers, setProcessedTrades }: RithmicOrderProcessorProps) {
-  const [trades, setTrades] = useState<Trade[]>([])
+export default function RithmicOrderProcessor({ csvData, headers, processedTrades, setProcessedTrades }: PlatformProcessorProps) {
   const [tickDetails, setTickDetails] = useState<TickDetails[]>([])
   const [incompleteTrades, setIncompleteTrades] = useState<IncompleteTrade[]>([])
   
@@ -320,7 +313,6 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     });
 
     console.log('processedTrades', processedTrades);
-    setTrades(processedTrades);
     setProcessedTrades(processedTrades);
     setIncompleteTrades(incompleteTradesArray);
 
@@ -335,7 +327,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     processOrders()
   }, [processOrders])
 
-  const uniqueSymbols = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades])
+  const uniqueSymbols = useMemo(() => Array.from(new Set(processedTrades.map(trade => trade.instrument))), [processedTrades])
 
   const tradedTickDetails = useMemo(() => 
     tickDetails.filter(detail => uniqueSymbols.includes(detail.ticker)),
@@ -355,8 +347,8 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
     setTickDetails(updatedTickDetails)
   }
 
-  const totalPnL = useMemo(() => trades.reduce((sum, trade) => sum + trade.pnl, 0), [trades])
-  const totalCommission = useMemo(() => trades.reduce((sum, trade) => sum + trade.commission, 0), [trades])
+  const totalPnL = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [processedTrades])
+  const totalCommission = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [processedTrades])
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -422,7 +414,7 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {trades.map((trade) => (
+                {processedTrades.map((trade) => (
                   <TableRow key={trade.id}>
                     <TableCell>{trade.accountNumber}</TableCell>
                     <TableCell>{trade.instrument}</TableCell>
@@ -430,11 +422,11 @@ export default function RithmicOrderProcessor({ csvData, headers, setProcessedTr
                     <TableCell>{trade.quantity}</TableCell>
                     <TableCell>{trade.entryPrice}</TableCell>
                     <TableCell>{trade.closePrice || '-'}</TableCell>
-                    <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                    <TableCell>{trade.entryDate ? new Date(trade.entryDate).toLocaleString() : '-'}</TableCell>
                     <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                    <TableCell>{trade.pnl.toFixed(2)}</TableCell>
-                    <TableCell>{`${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s`}</TableCell>
-                    <TableCell>{trade.commission.toFixed(2)}</TableCell>
+                    <TableCell>{trade.pnl ? trade.pnl.toFixed(2) : '-'}</TableCell>
+                    <TableCell>{trade.timeInPosition ? `${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s` : '-'}</TableCell>
+                    <TableCell>{trade.commission ? trade.commission.toFixed(2) : '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

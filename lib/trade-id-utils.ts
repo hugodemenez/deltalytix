@@ -41,32 +41,3 @@ export function generateDeterministicTradeId(tradeData: {
     hash.substring(20, 32)
   ].join('-')
 }
-
-// Helper function to create trade data object for ID generation
-export function createTradeDataForId(trade: {
-  accountNumber: string
-  entryId: string
-  closeId: string
-  instrument: string
-  entryPrice: string
-  closePrice: string
-  entryDate: string
-  closeDate: string
-  quantity: number
-  side: string
-  userId: string
-}) {
-  return {
-    accountNumber: trade.accountNumber,
-    entryId: trade.entryId,
-    closeId: trade.closeId,
-    instrument: trade.instrument,
-    entryPrice: trade.entryPrice,
-    closePrice: trade.closePrice,
-    entryDate: trade.entryDate,
-    closeDate: trade.closeDate,
-    quantity: trade.quantity,
-    side: trade.side,
-    userId: trade.userId
-  }
-}

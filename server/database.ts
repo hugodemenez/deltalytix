@@ -39,6 +39,7 @@ export async function revalidateCache(tags: string[]) {
 }
 
 export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
+  const userId = await getUserId()
   if (!Array.isArray(data) || data.length === 0) {
     return {
       error: 'INVALID_DATA',
@@ -57,6 +58,7 @@ export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
       return {
         ...cleanTrade,
         // Ensure required fields have default values
+        userId: userId,
         accountNumber: cleanTrade.accountNumber || '',
         instrument: cleanTrade.instrument || '',
         entryPrice: cleanTrade.entryPrice || '',
@@ -66,7 +68,6 @@ export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
         quantity: cleanTrade.quantity || 0,
         pnl: cleanTrade.pnl || 0,
         timeInPosition: cleanTrade.timeInPosition || 0,
-        userId: cleanTrade.userId || '',
         side: cleanTrade.side || '',
         commission: cleanTrade.commission || 0,
         entryId: cleanTrade.entryId || null,

@@ -48,8 +48,8 @@ type Trade = z.infer<typeof tradeSchema>
 interface PdfProcessingProps {
   setError: React.Dispatch<React.SetStateAction<string | null>>
   setStep: React.Dispatch<React.SetStateAction<any>>
-  processedTrades: PrismaTrade[]
-  setProcessedTrades: (trades: PrismaTrade[]) => void;
+  processedTrades: Partial<PrismaTrade>[]
+  setProcessedTrades: (trades: Partial<PrismaTrade>[]) => void;
   extractedText: string
   userId: string
 }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Trade } from '@prisma/client'
 import { useI18n } from '@/locales/client'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
+import { PlatformProcessorProps } from '../config/platforms'
 
 const formatDuration = (seconds: number): string => {
     if (seconds === 0) return '0s'
@@ -25,15 +26,7 @@ const formatDuration = (seconds: number): string => {
     return parts.join(' ')
 }
 
-interface FtmoProcessorProps {
-    headers: string[];
-    csvData: string[][];
-    setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
-    accountNumber: string;
-}
-
-export default function FtmoProcessor({ headers, csvData, setProcessedTrades, accountNumber }: FtmoProcessorProps) {
-    const [trades, setTrades] = useState<Trade[]>([])
+export default function FtmoProcessor({ headers, csvData, processedTrades, setProcessedTrades }: PlatformProcessorProps) {
     const t = useI18n()
 
     const processTrades = useCallback(() => {
@@ -97,7 +90,6 @@ export default function FtmoProcessor({ headers, csvData, setProcessedTrades, ac
             const totalCommission = Math.abs(commission) - swap
 
             const trade = createTradeWithDefaults({
-                accountNumber,
                 quantity,
                 instrument: symbol,
                 entryPrice: entryPrice.toString(),
@@ -116,26 +108,25 @@ export default function FtmoProcessor({ headers, csvData, setProcessedTrades, ac
             newTrades.push(trade as Trade)
         }
 
-        setTrades(newTrades);
         setProcessedTrades(newTrades);
-    }, [csvData, accountNumber, setProcessedTrades]);
+    }, [csvData, setProcessedTrades]);
 
     useEffect(() => {
         processTrades();
     }, [processTrades]);
 
 
-    const totalPnL = useMemo(() => trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [trades]);
-    const totalCommission = useMemo(() => trades.reduce((sum, trade) => sum + ((trade as any).commissionOnly || 0), 0), [trades]);
-    const totalSwap = useMemo(() => trades.reduce((sum, trade) => sum + ((trade as any).swap || 0), 0), [trades]);
-    const totalCost = useMemo(() => trades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [trades]);
-    const uniqueInstruments = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades]);
+    const totalPnL = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [processedTrades]);
+    const totalCommission = useMemo(() => processedTrades.reduce((sum, trade) => sum + ((trade as any).commissionOnly || 0), 0), [processedTrades]);
+    const totalSwap = useMemo(() => processedTrades.reduce((sum, trade) => sum + ((trade as any).swap || 0), 0), [processedTrades]);
+    const totalCost = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [processedTrades]);
+    const uniqueInstruments = useMemo(() => Array.from(new Set(processedTrades.map(trade => trade.instrument))), [processedTrades]);
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <div className="flex-1 overflow-auto">
                 <div className="space-y-4 p-6">
-                    {trades.length === 0 && (
+                    {processedTrades.length === 0 && (
                         <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
                             <p className="font-bold">{t('import.error.duplicateTrades')}</p>
                             <p>{t('import.error.duplicateTradesDescription')}</p>
@@ -162,7 +153,7 @@ export default function FtmoProcessor({ headers, csvData, setProcessedTrades, ac
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {trades.map((trade) => (
+                                {processedTrades.map((trade) => (
                                     <TableRow key={trade.id}>
                                         <TableCell>{trade.accountNumber}</TableCell>
                                         <TableCell>{trade.instrument}</TableCell>
@@ -170,7 +161,7 @@ export default function FtmoProcessor({ headers, csvData, setProcessedTrades, ac
                                         <TableCell>{trade.quantity}</TableCell>
                                         <TableCell>{trade.entryPrice}</TableCell>
                                         <TableCell>{trade.closePrice || '-'}</TableCell>
-                                        <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                                        <TableCell>{trade.entryDate ? new Date(trade.entryDate).toLocaleString() : '-'}</TableCell>
                                         <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
                                         <TableCell className={trade.pnl && trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
                                             {trade.pnl?.toFixed(2)}
