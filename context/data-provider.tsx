@@ -157,6 +157,10 @@ export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
   balanceToDate?: number
   group?: PrismaGroup | null
   aboveBuffer?: number
+  // When true, metrics and charts ignore trades until cumulative profit reaches `buffer`
+  considerBuffer?: boolean
+  // Filtered trades used for metrics/charts (not to be sent to server actions)
+  trades?: PrismaTrade[]
   
   // Computed metrics
   metrics?: {
@@ -958,10 +962,14 @@ export const DataProvider: React.FC<{
       const currentAccount = accounts.find(acc => acc.number === newAccount.number) as Account
       // If the account is not found, create it
       if (!currentAccount) {
-        const createdAccount = await setupAccountAction(newAccount)
+        // Never send client-only fields to server
+        const { trades: _trades, considerBuffer: _considerBuffer, ...serverAccount } = newAccount
+        const createdAccount = await setupAccountAction(serverAccount as Account)
         
         // Recalculate metrics for the new account (optimistic, client-side)
-        const accountsWithMetrics = computeMetricsForAccounts([createdAccount], trades)
+        const accountsWithMetrics = computeMetricsForAccounts([
+          { ...createdAccount, considerBuffer: _considerBuffer ?? true }
+        ], trades)
         const accountWithMetrics = accountsWithMetrics[0]
         
         setAccounts([...accounts, accountWithMetrics])
@@ -982,10 +990,14 @@ export const DataProvider: React.FC<{
       }
 
       // Update the account in the database
-      const updatedAccount = await setupAccountAction(newAccount)
+      // Strip client-only fields
+      const { trades: _trades2, considerBuffer: _considerBuffer2, ...serverAccount2 } = newAccount
+      const updatedAccount = await setupAccountAction(serverAccount2 as Account)
       
       // Recalculate metrics for the updated account (optimistic, client-side)
-      const accountsWithMetrics = computeMetricsForAccounts([updatedAccount], trades)
+      const accountsWithMetrics = computeMetricsForAccounts([
+        { ...updatedAccount, considerBuffer: _considerBuffer2 ?? true }
+      ], trades)
       const accountWithMetrics = accountsWithMetrics[0]
       
       // Update the account in the local state with recalculated metrics

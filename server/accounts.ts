@@ -204,6 +204,8 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     metrics,
     dailyMetrics,
     aboveBuffer,
+    considerBuffer,
+    trades,
     ...baseAccountData 
   } = account
 

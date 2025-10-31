@@ -42,11 +42,12 @@ export function TradeProgressChart({
 }: TradeProgressChartProps) {
   const t = useI18n()
   
-  // Get trades for this account from store
+  // Prefer filtered trades from account (buffer-aware), fallback to store
   const allTrades = useTradesStore(state => state.trades)
   const trades = useMemo(() => {
+    if (account.trades && account.trades.length > 0) return account.trades
     return allTrades.filter(trade => trade.accountNumber === account.number)
-  }, [allTrades, account.number])
+  }, [allTrades, account.trades, account.number])
 
   const chartConfig = {
     balance: {

@@ -384,6 +384,34 @@ export function AccountConfigurator({
                       onChange={(e) => handleInputChange('buffer', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
                       placeholder="0.00"
                     />
+
+                    {/* Consider buffer in metrics switch */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm text-muted-foreground">
+                          {t('propFirm.configurator.fields.considerBuffer')}
+                        </Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center h-4 w-4 text-muted-foreground cursor-pointer"
+                              aria-label="Consider buffer information"
+                            >
+                              <Info className="h-4 w-4" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="max-w-sm text-sm p-3">
+                            <p>{t('propFirm.configurator.tooltips.considerBuffer')}</p>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <Switch
+                        id="considerBuffer"
+                        checked={pendingChanges?.considerBuffer ?? account.considerBuffer ?? true}
+                        onCheckedChange={(checked) => handleInputChange('considerBuffer', checked)}
+                      />
+                    </div>
                   </div>
               </div>
 

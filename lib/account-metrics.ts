@@ -53,7 +53,7 @@ function toDate(d: string | Date | null | undefined): Date | null {
 export function computeAccountMetrics(
   account: Account,
   allTrades: PrismaTrade[]
-): { balanceToDate: number; metrics: NonNullable<Account['metrics']>; dailyMetrics: NonNullable<Account['dailyMetrics']> } {
+): { balanceToDate: number; metrics: NonNullable<Account['metrics']>; dailyMetrics: NonNullable<Account['dailyMetrics']>; trades: PrismaTrade[]; aboveBuffer: number } {
   const resetDate = toDate(account.resetDate)
   const relevantTrades = allTrades.filter(t => {
     if (t.accountNumber !== account.number) return false
@@ -66,9 +66,63 @@ export function computeAccountMetrics(
     return (toDate(a.entryDate)!.getTime()) - (toDate(b.entryDate)!.getTime())
   })
 
+  // Apply buffer filtering if enabled (default to true)
+  const considerBuffer = account.considerBuffer ?? true
+  let filteredTrades = sortedTrades
+  let aboveBuffer = 0
+  if (considerBuffer && (account.buffer ?? 0) > 0) {
+    // Build time-ordered event stream of trades and payouts (paid/validated)
+    const validPayouts = (account.payouts || [])
+      .filter(p => ['PAID', 'VALIDATED'].includes(p.status))
+      .map(p => ({ date: toDate(p.date)!, amount: p.amount }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+
+    type Event =
+      | { kind: 'trade'; date: Date; pnl: number; trade: PrismaTrade }
+      | { kind: 'payout'; date: Date; amount: number }
+
+    const tradeEvents: Event[] = sortedTrades.map(tr => ({
+      kind: 'trade',
+      date: toDate(tr.entryDate)!,
+      pnl: tr.pnl - (tr.commission || 0),
+      trade: tr,
+    }))
+    const payoutEvents: Event[] = validPayouts.map(p => ({
+      kind: 'payout',
+      date: p.date,
+      amount: p.amount,
+    }))
+    const events: Event[] = [...tradeEvents, ...payoutEvents].sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    )
+
+    const out: PrismaTrade[] = []
+    let accProfit = 0 // accumulated profit since last baseline (reset/payouts effect included)
+    const threshold = account.buffer || 0
+
+    for (const ev of events) {
+      if (ev.kind === 'payout') {
+        // Payout reduces accumulated profit; can push us back under buffer
+        accProfit -= ev.amount
+        continue
+      }
+
+      const next = accProfit + ev.pnl
+      const wasAbove = accProfit >= threshold
+      const crossesNow = accProfit < threshold && next >= threshold
+      if (wasAbove || crossesNow) {
+        out.push(ev.trade)
+      }
+      accProfit = next
+    }
+
+    filteredTrades = out
+    aboveBuffer = Math.max(0, accProfit - threshold)
+  }
+
   const dailyPnL: { [date: string]: number } = {}
   let totalProfit = 0
-  for (const trade of relevantTrades) {
+  for (const trade of filteredTrades) {
     const d = toDate(trade.entryDate)!
     const key = d.toISOString().split('T')[0]
     const pnl = trade.pnl - (trade.commission || 0)
@@ -93,7 +147,7 @@ export function computeAccountMetrics(
   let runningBalance = account.startingBalance || 0
   let highestBalance = account.startingBalance || 0
 
-  for (const trade of sortedTrades) {
+  for (const trade of filteredTrades) {
     const pnl = trade.pnl - (trade.commission || 0)
     runningBalance += pnl
     if (runningBalance > highestBalance) highestBalance = runningBalance
@@ -123,7 +177,7 @@ export function computeAccountMetrics(
 
   // Trading days metrics
   const dailyTrades: { [date: string]: PrismaTrade[] } = {}
-  for (const trade of relevantTrades) {
+  for (const trade of filteredTrades) {
     const key = toDate(trade.entryDate)!.toISOString().split('T')[0]
     if (!dailyTrades[key]) dailyTrades[key] = []
     dailyTrades[key].push(trade)
@@ -136,7 +190,7 @@ export function computeAccountMetrics(
 
   // Daily metrics (merge trade and payout dates)
   const allDates = new Set<string>()
-  relevantTrades.forEach(t => allDates.add(toDate(t.entryDate)!.toISOString().split('T')[0]))
+  filteredTrades.forEach(t => allDates.add(toDate(t.entryDate)!.toISOString().split('T')[0]))
   ;(account.payouts || []).forEach(p => allDates.add(toDate(p.date)!.toISOString().split('T')[0]))
 
   let dailyRunningBalance = account.startingBalance || 0
@@ -191,7 +245,9 @@ export function computeAccountMetrics(
       totalTradingDays,
       validTradingDays,
     } as NonNullable<Account['metrics']>,
-    dailyMetrics
+    dailyMetrics,
+    trades: filteredTrades,
+    aboveBuffer
   }
 }
 
@@ -206,6 +262,8 @@ export function computeMetricsForAccounts(
       balanceToDate: computed.balanceToDate,
       metrics: computed.metrics,
       dailyMetrics: computed.dailyMetrics,
+      trades: computed.trades,
+      aboveBuffer: computed.aboveBuffer,
     }
   })
 }
