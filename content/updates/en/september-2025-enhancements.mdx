@@ -1,0 +1,149 @@
+---
+title: September 2025 Platform Enhancements
+description: Streamlined broker synchronization for Rithmic and Tradovate with improved multi-account support, custom token management, and enhanced import workflows. Featuring drag-and-drop account grouping and better locale support.
+date: 2025-09-26
+status: completed
+completedDate: 2025-09-26
+---
+
+# September 2025 Platform Enhancements
+
+This month brings significant improvements to broker integrations and account management, making it easier to sync your trades and organize your accounts.
+
+## Broker Synchronization Improvements
+
+### Tradovate Multi-Account Support
+Manage multiple Tradovate accounts with ease:
+
+**Custom Token Manager UI:**
+- Add, test, save, reveal, copy, and remove custom access tokens
+- Option to use OAuth or custom tokens for authentication
+- Per-account synchronization controls
+- Clear visual feedback for token validity
+
+**Enhanced Account Management:**
+- Connect multiple Tradovate accounts per user
+- Tokens associated per account for better identification
+- Individual sync controls for each connected account
+- "Sync All" option for bulk synchronization
+- Progress tracking and toast feedback during sync operations
+
+**Background Token Renewal:**
+- Automatic cron job for renewing Tradovate tokens
+- Prevents authentication expiration
+- Optimized trade fetching for better performance
+- Improved error logging for easier diagnostics
+
+### Rithmic Sync Simplification
+The Rithmic import experience has been streamlined:
+
+**Simplified Workflow:**
+- Removed countdown timers
+- Per-credential sync controls
+- Manual/immediate sync trigger
+- New sync progress and feedback panel
+- Extended lookback window from 300 to 400 days
+- Uses database synchronization state (similar to Tradovate)
+
+**Better Feedback:**
+- Real-time sync notifications
+- Progress tracking for each account
+- Clear error messages when issues occur
+- Sync state persistence across sessions
+
+### FTMO Import Improvements
+Enhanced handling of FTMO imports:
+- Swap and commission display values now default when not provided
+- Better error handling for missing data
+- Improved validation and feedback
+
+## Account Organization
+
+### Drag-and-Drop Account Grouping
+A completely redesigned account grouping experience:
+
+**Interactive Dragging:**
+- Draggable "account coins" for visual organization
+- Clear placeholders show where accounts will drop
+- Unassigned drop zone for ungrouped accounts
+- Smooth animations and hover effects
+
+**Keyboard Shortcuts:**
+- Press **Enter** to create a new group
+- Press **Escape** to cancel grouping operation
+- Navigate with arrow keys for accessibility
+
+**Group Management Panel:**
+- Account groups moved to a right-side sheet panel
+- Contextual tooltips for guidance
+- Polished coin animations
+- Clear visual hierarchy
+
+**Hidden Accounts:**
+- Hidden account groups display a "Hidden accounts" title
+- Better organization of archived or inactive accounts
+- Easy visibility management
+
+## Localization & UX
+
+### Enhanced Weekday Translation
+Improved handling of weekday translations across the platform:
+- Utility functions for consistent weekday display
+- Calendar and WeekdayPNLChart components updated
+- Locale-aware weekday labels
+- Widget registry uses translation utility
+
+### New Translations
+Expanded translation coverage:
+- Account grouping operations
+- Common actions and buttons
+- Sync status messages
+- Error messages and feedback
+
+## Support & Communication
+
+### Improved Support Chat
+The support chat now provides better assistance:
+- Clearly states its role and capabilities
+- Asks targeted questions to gather complete context
+- Better understanding of user issues
+- More relevant responses and suggestions
+
+## Technical Improvements
+
+### Database Enhancements
+- New migrations for Synchronization model
+- Better state management for sync operations
+- Improved token storage and retrieval
+- Per-account sync state tracking
+
+### Code Organization
+- Shared synchronization logic between Rithmic and Tradovate
+- Cleaner separation of concerns
+- Better error handling throughout sync flows
+- Removed redundant account comparison dialogs
+
+### Performance Optimizations
+- Optimized trade fetching algorithms
+- Better caching strategies
+- Reduced redundant API calls
+- Improved memory usage during large imports
+
+## Import Flow Refinements
+
+### Cleaner UI
+- Removed "Coming Soon" labels from completed features
+- Streamlined import selection screens
+- Better visual feedback during operations
+- Clearer progress indicators
+
+### Account Comparison
+- Removed redundant account comparison dialog from import flow
+- Streamlined decision-making process
+- Faster import completion
+
+---
+
+These improvements make managing multiple trading accounts across different brokers significantly easier. Whether you're syncing a single account or managing dozens, the new workflows are faster, clearer, and more reliable.
+
+Thank you for your continued feedback that helps shape these improvements!

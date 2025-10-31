@@ -1,0 +1,229 @@
+---
+title: AI-Powered Editor & Embed Analytics
+description: Introducing streaming AI completions in the journal editor, multi-language embed support, and customizable analytics widgets. Enhanced with full-screen editing, real-time collaboration, and theme customization.
+date: 2025-10-18
+status: completed
+completedDate: 2025-10-18
+---
+
+# AI-Powered Editor & Embed Analytics
+
+We're thrilled to announce a major enhancement to our platform with AI-powered writing assistance and embeddable analytics that can be integrated anywhere.
+
+## Intelligent Journal Editor
+
+### Live AI Assistance
+The journal editor now features streaming AI completions that help you write better trading journals:
+
+**AI Actions:**
+- **Explain**: Get AI to explain selected text or concepts
+- **Improve**: Enhance your writing clarity and professionalism
+- **Suggest Question**: Generate thoughtful questions based on your content
+- **Trades Summary**: Automatically summarize your trading session
+
+**Real-Time Streaming:**
+- AI suggestions appear directly in the editor as they're generated
+- No separate windows or modals - seamless inline experience
+- Loading states show when AI is processing
+- Optimistic updates for instant feedback
+
+### Enhanced Editing Experience
+
+**Full-Screen Mode:**
+- Distraction-free writing environment
+- Focus on your thoughts without UI clutter
+- Toggle on/off with a single click
+
+**Real-Time Collaboration:**
+- Optional Yjs-based collaboration support
+- Multiple users can edit simultaneously
+- Ideal for team analysis or mentorship sessions
+
+**Responsive Toolbar:**
+- Automatically adapts to screen width
+- Excess controls move to overflow menu on narrow screens
+- Touch-friendly on mobile devices
+
+**Improved Image Handling:**
+- SHA-256 hash-based image deduplication (no more duplicate uploads)
+- File size validation (max 5MB with clear error messages)
+- Supported formats: JPEG, PNG, WebP
+- Drag-and-drop and paste support
+- In-memory cache for instant reuse of recently uploaded images
+
+**News & Events Integration:**
+- Embed inline news snippets directly in journal entries
+- Remove previously added news items by ID
+- Perfect for linking market events to trading decisions
+
+### Advanced Content Features
+
+**Table Support:**
+- Improved table editing with grid layouts
+- Column resize handles
+- Selected cell highlighting
+- Fixed layout for consistent rendering
+- Clean borders and responsive design
+
+**Content Alignment:**
+- Left, center, right alignment for images and text
+- Keyboard shortcuts for quick adjustments
+- Visual feedback during editing
+
+## Embeddable Analytics
+
+### Multi-Language Support
+Embed pages now support 11 languages through the `lang` parameter:
+- 🇬🇧 English (en)
+- 🇫🇷 French (fr)
+- 🇩🇪 German (de)
+- 🇪🇸 Spanish (es)
+- 🇮🇹 Italian (it)
+- 🇵🇹 Portuguese (pt)
+- 🇻🇳 Vietnamese (vi)
+- 🇮🇳 Hindi (hi)
+- 🇯🇵 Japanese (ja)
+- 🇨🇳 Chinese (zh)
+- Nigeria Yoruba (yo)
+
+**Usage Example:**
+```html
+<iframe 
+  src="https://deltalytix.app/embed?lang=fr&charts=trade-distribution"
+  width="100%" 
+  height="400">
+</iframe>
+```
+
+### Comprehensive Chart Collection
+
+**Performance Charts:**
+- Time Range Performance - Track equity over time
+- Daily PnL - Visualize daily profit/loss patterns
+- Time of Day Performance - Identify profitable trading hours
+- Time in Position - Analyze how long you hold positions
+- Weekday PnL - Discover your best trading days
+
+**Trade Analysis:**
+- Trade Distribution - Win/loss/breakeven breakdown
+- Tick Distribution - Per-instrument tick analysis
+- PnL by Side - Compare long vs. short performance
+- Average PnL per Contract - Contract-level profitability
+- Contracts by Hour - Trading volume patterns
+
+**Advanced Metrics:**
+- Commissions vs Net PnL - Understand fee impact
+- Daily Average per Contract - Instrument-specific daily performance
+
+### Theme Customization
+
+**Built-in Presets:**
+- Ocean: Cool blue tones
+- Sunset: Warm orange/red palette
+- Default: System theme
+
+**Custom Variables via URL:**
+```
+?preset=ocean
+&bg-color=0a0a0a
+&border-color=27272a
+&radius=0.5rem
+```
+
+**PostMessage API:**
+Send theme updates dynamically from parent frame:
+```javascript
+iframe.contentWindow.postMessage({
+  type: 'updateTheme',
+  preset: 'sunset',
+  overrides: { '--bg-color': '#1a1a1a' }
+}, '*');
+```
+
+### Selective Chart Display
+
+**Single Chart:**
+```html
+<iframe src="https://deltalytix.app/embed?chart=pnl-per-contract-daily"></iframe>
+```
+
+**Multiple Charts:**
+```html
+<iframe src="https://deltalytix.app/embed?charts=trade-distribution,weekday-pnl,time-of-day"></iframe>
+```
+
+**All Charts:**
+```html
+<iframe src="https://deltalytix.app/embed"></iframe>
+```
+
+### Data Integration
+
+**PostMessage Trade Updates:**
+```javascript
+// Add trades from your platform
+iframe.contentWindow.postMessage({
+  type: 'addTrades',
+  trades: [
+    { pnl: 150, timestamp: '2025-10-18T10:30:00Z', ... }
+  ]
+}, '*');
+
+// Generate demo data
+iframe.contentWindow.postMessage({
+  type: 'generateDemo'
+}, '*');
+
+// Reset all data
+iframe.contentWindow.postMessage({
+  type: 'reset'
+}, '*');
+```
+
+**Phoenix Orders Import:**
+Import historical orders from Phoenix-compatible platforms with full trade details including entry date, side, quantity, commission, and instrument.
+
+## Account Analysis
+
+### Persisted Analysis
+Account performance analysis is now saved locally:
+- Generated insights persist across sessions
+- View past analysis results anytime
+- Loading states tracked and reported
+- Tool call details visible for transparency
+
+### Multi-Image Trade Support
+Trades can now have multiple images:
+- Hash-based uploads prevent duplicates
+- Maximum image count enforced
+- Per-image and bulk delete flows
+- Legacy single-image field compatibility maintained
+
+## Technical Improvements
+
+### Editor Architecture
+- Optimized bubble menu with lightweight state reader
+- Bold/italic/underline/strike/highlight state reflection
+- Dynamic dropdown positioning based on viewport
+- Menu organization with clear separators
+- Preserves external content updates (except in collaboration mode)
+
+### Chart Enhancements
+- Formatted currency labels
+- Interactive tooltips with counts and dates
+- Legend/labels for clarity
+- Color intensity reflects trade counts
+- Average vs. total toggles where applicable
+- Instrument selector for per-instrument charts
+
+### Security & Validation
+- File type and size validation
+- SHA-256 image hashing for deduplication
+- Clear error messages for validation failures
+- Secure PostMessage handling with origin validation
+
+---
+
+These features transform how you document, analyze, and share your trading journey. Whether you're writing detailed journal entries or embedding analytics in your own applications, Deltalytix provides the tools you need.
+
+We're excited to see how you use these new capabilities!
