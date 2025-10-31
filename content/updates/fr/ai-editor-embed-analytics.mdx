@@ -1,0 +1,229 @@
+---
+title: Éditeur IA et analyses intégrables
+description: Introduction des complétions IA en streaming dans l'éditeur de journal, support multi-langues pour l'intégration, et widgets d'analyse personnalisables. Amélioré avec édition plein écran, collaboration en temps réel et personnalisation de thème.
+date: 2025-10-18
+status: completed
+completedDate: 2025-10-18
+---
+
+# Éditeur IA et analyses intégrables
+
+Nous sommes ravis d'annoncer une amélioration majeure de notre plateforme avec l'assistance à l'écriture alimentée par l'IA et des analyses intégrables qui peuvent être intégrées n'importe où.
+
+## Éditeur de journal intelligent
+
+### Assistance IA en direct
+L'éditeur de journal dispose désormais de complétions IA en streaming qui vous aident à rédiger de meilleurs journaux de trading :
+
+**Actions IA :**
+- **Expliquer** : L'IA explique le texte sélectionné ou les concepts
+- **Améliorer** : Améliore la clarté et le professionnalisme de votre écriture
+- **Suggérer une question** : Génère des questions réfléchies basées sur votre contenu
+- **Résumé des trades** : Résume automatiquement votre session de trading
+
+**Streaming en temps réel :**
+- Les suggestions de l'IA apparaissent directement dans l'éditeur au fur et à mesure de leur génération
+- Pas de fenêtres ou de modales séparées - expérience inline transparente
+- Les états de chargement montrent quand l'IA traite
+- Mises à jour optimistes pour un retour instantané
+
+### Expérience d'édition améliorée
+
+**Mode plein écran :**
+- Environnement d'écriture sans distraction
+- Concentrez-vous sur vos pensées sans encombrement d'interface
+- Activez/désactivez d'un simple clic
+
+**Collaboration en temps réel :**
+- Support de collaboration optionnel basé sur Yjs
+- Plusieurs utilisateurs peuvent éditer simultanément
+- Idéal pour l'analyse en équipe ou les sessions de mentorat
+
+**Barre d'outils réactive :**
+- S'adapte automatiquement à la largeur de l'écran
+- Les contrôles en excès se déplacent vers le menu de débordement sur les écrans étroits
+- Convivial au toucher sur les appareils mobiles
+
+**Gestion d'images améliorée :**
+- Déduplication d'images basée sur le hachage SHA-256 (plus de téléchargements en double)
+- Validation de la taille du fichier (max 5MB avec messages d'erreur clairs)
+- Formats pris en charge : JPEG, PNG, WebP
+- Support du glisser-déposer et du collage
+- Cache en mémoire pour la réutilisation instantanée des images récemment téléchargées
+
+**Intégration actualités et événements :**
+- Intégrez des extraits d'actualités directement dans les entrées de journal
+- Supprimez les éléments d'actualités précédemment ajoutés par ID
+- Parfait pour lier les événements du marché aux décisions de trading
+
+### Fonctionnalités de contenu avancées
+
+**Support des tableaux :**
+- Édition de tableau améliorée avec mises en page en grille
+- Poignées de redimensionnement de colonnes
+- Mise en évidence de la cellule sélectionnée
+- Mise en page fixe pour un rendu cohérent
+- Bordures propres et design réactif
+
+**Alignement du contenu :**
+- Alignement gauche, centre, droite pour les images et le texte
+- Raccourcis clavier pour des ajustements rapides
+- Retour visuel pendant l'édition
+
+## Analyses intégrables
+
+### Support multi-langues
+Les pages intégrables prennent désormais en charge 11 langues via le paramètre `lang` :
+- 🇬🇧 Anglais (en)
+- 🇫🇷 Français (fr)
+- 🇩🇪 Allemand (de)
+- 🇪🇸 Espagnol (es)
+- 🇮🇹 Italien (it)
+- 🇵🇹 Portugais (pt)
+- 🇻🇳 Vietnamien (vi)
+- 🇮🇳 Hindi (hi)
+- 🇯🇵 Japonais (ja)
+- 🇨🇳 Chinois (zh)
+- Nigeria Yoruba (yo)
+
+**Exemple d'utilisation :**
+```html
+<iframe 
+  src="https://deltalytix.app/embed?lang=fr&charts=trade-distribution"
+  width="100%" 
+  height="400">
+</iframe>
+```
+
+### Collection complète de graphiques
+
+**Graphiques de performance :**
+- Performance par plage de temps - Suivez l'équité au fil du temps
+- PnL quotidien - Visualisez les modèles de profit/perte quotidiens
+- Performance par heure de la journée - Identifiez les heures de trading rentables
+- Temps en position - Analysez combien de temps vous conservez les positions
+- PnL par jour de la semaine - Découvrez vos meilleurs jours de trading
+
+**Analyse des trades :**
+- Distribution des trades - Répartition gains/pertes/équilibre
+- Distribution des ticks - Analyse des ticks par instrument
+- PnL par côté - Comparez les performances long vs. short
+- PnL moyen par contrat - Rentabilité au niveau du contrat
+- Contrats par heure - Modèles de volume de trading
+
+**Métriques avancées :**
+- Commissions vs PnL net - Comprendre l'impact des frais
+- Moyenne quotidienne par contrat - Performance quotidienne spécifique à l'instrument
+
+### Personnalisation du thème
+
+**Préréglages intégrés :**
+- Ocean : Tons bleus frais
+- Sunset : Palette orange/rouge chaude
+- Par défaut : Thème système
+
+**Variables personnalisées via URL :**
+```
+?preset=ocean
+&bg-color=0a0a0a
+&border-color=27272a
+&radius=0.5rem
+```
+
+**API PostMessage :**
+Envoyez des mises à jour de thème dynamiquement depuis le cadre parent :
+```javascript
+iframe.contentWindow.postMessage({
+  type: 'updateTheme',
+  preset: 'sunset',
+  overrides: { '--bg-color': '#1a1a1a' }
+}, '*');
+```
+
+### Affichage sélectif de graphiques
+
+**Graphique unique :**
+```html
+<iframe src="https://deltalytix.app/embed?chart=pnl-per-contract-daily"></iframe>
+```
+
+**Plusieurs graphiques :**
+```html
+<iframe src="https://deltalytix.app/embed?charts=trade-distribution,weekday-pnl,time-of-day"></iframe>
+```
+
+**Tous les graphiques :**
+```html
+<iframe src="https://deltalytix.app/embed"></iframe>
+```
+
+### Intégration de données
+
+**Mises à jour de trades via PostMessage :**
+```javascript
+// Ajoutez des trades depuis votre plateforme
+iframe.contentWindow.postMessage({
+  type: 'addTrades',
+  trades: [
+    { pnl: 150, timestamp: '2025-10-18T10:30:00Z', ... }
+  ]
+}, '*');
+
+// Générez des données de démonstration
+iframe.contentWindow.postMessage({
+  type: 'generateDemo'
+}, '*');
+
+// Réinitialisez toutes les données
+iframe.contentWindow.postMessage({
+  type: 'reset'
+}, '*');
+```
+
+**Import d'ordres Phoenix :**
+Importez des ordres historiques depuis des plateformes compatibles Phoenix avec des détails complets de trade incluant la date d'entrée, le côté, la quantité, la commission et l'instrument.
+
+## Analyse de compte
+
+### Analyse persistante
+L'analyse de performance du compte est désormais sauvegardée localement :
+- Les insights générés persistent entre les sessions
+- Consultez les résultats d'analyse passés à tout moment
+- États de chargement suivis et rapportés
+- Détails des appels d'outils visibles pour la transparence
+
+### Support multi-images pour les trades
+Les trades peuvent désormais avoir plusieurs images :
+- Les téléchargements basés sur le hachage empêchent les doublons
+- Nombre maximum d'images appliqué
+- Flux de suppression par image et en masse
+- Compatibilité avec le champ image unique hérité maintenue
+
+## Améliorations techniques
+
+### Architecture de l'éditeur
+- Menu contextuel optimisé avec lecteur d'état léger
+- Réflexion de l'état gras/italique/souligné/barré/surligné
+- Positionnement dynamique du menu déroulant basé sur la fenêtre d'affichage
+- Organisation du menu avec séparateurs clairs
+- Préserve les mises à jour de contenu externes (sauf en mode collaboration)
+
+### Améliorations des graphiques
+- Étiquettes monétaires formatées
+- Infobulles interactives avec comptes et dates
+- Légende/étiquettes pour la clarté
+- L'intensité de la couleur reflète les comptes de trades
+- Bascules moyenne vs. total le cas échéant
+- Sélecteur d'instrument pour les graphiques par instrument
+
+### Sécurité et validation
+- Validation du type et de la taille de fichier
+- Hachage d'image SHA-256 pour la déduplication
+- Messages d'erreur clairs pour les échecs de validation
+- Gestion sécurisée de PostMessage avec validation d'origine
+
+---
+
+Ces fonctionnalités transforment la façon dont vous documentez, analysez et partagez votre parcours de trading. Que vous rédigiez des entrées de journal détaillées ou intégriez des analyses dans vos propres applications, Deltalytix fournit les outils dont vous avez besoin.
+
+Nous sommes impatients de voir comment vous utilisez ces nouvelles capacités !
