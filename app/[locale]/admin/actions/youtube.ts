@@ -85,7 +85,7 @@ export async function getLatestVideoFromPlaylist(): Promise<string | null> {
       return null;
     }
     
-    const data = await response.json();
+    const data = await response.json() as YouTubePlaylistResponse;
     
     if (!data.items || data.items.length === 0) {
       console.error('No videos found in playlist');
@@ -93,7 +93,7 @@ export async function getLatestVideoFromPlaylist(): Promise<string | null> {
     }
 
     // Sort items by published date in descending order to get the latest one
-    const sortedItems = data.items.sort((a: any, b: any) => 
+    const sortedItems = data.items.sort((a, b) => 
       new Date(b.snippet.publishedAt).getTime() - new Date(a.snippet.publishedAt).getTime()
     );
     
@@ -117,6 +117,20 @@ interface PlaylistVideo {
   videoId: string;
   publishedAt: string;
   title: string;
+}
+
+interface YouTubePlaylistItem {
+  snippet: {
+    publishedAt: string;
+    title: string;
+  };
+  contentDetails: {
+    videoId: string;
+  };
+}
+
+interface YouTubePlaylistResponse {
+  items: YouTubePlaylistItem[];
 }
 
 /**
@@ -164,7 +178,7 @@ export async function getAllVideosFromPlaylistAction(): Promise<Map<string, Play
       return null;
     }
     
-    const data = await response.json();
+    const data = await response.json() as YouTubePlaylistResponse;
     
     if (!data.items || data.items.length === 0) {
       console.error('No videos found in playlist');
@@ -174,7 +188,7 @@ export async function getAllVideosFromPlaylistAction(): Promise<Map<string, Play
     // Create a map of videos by their ISO date string
     const videoMap = new Map<string, PlaylistVideo>();
     
-    data.items.forEach((item: any) => {
+    data.items.forEach((item) => {
       const videoId = item.contentDetails?.videoId;
       const publishedAt = item.snippet?.publishedAt;
       const title = item.snippet?.title;
@@ -211,7 +225,7 @@ export async function findVideoIdForPostDateAction(postDate: string): Promise<st
     const postDateObj = new Date(postDate);
     
     // Try to find a video published in the same week
-    for (const [dateKey, video] of videoMap.entries()) {
+    for (const [, video] of videoMap.entries()) {
       const videoDate = new Date(video.publishedAt);
       if (isSameWeek(postDateObj, videoDate)) {
         console.log(`Matched post date ${postDate} with video published on ${video.publishedAt} (${video.title})`);

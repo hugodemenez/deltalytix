@@ -1,10 +1,6 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { Badge } from "@/components/ui/badge"
-import { motion } from "framer-motion"
-import { useI18n, useCurrentLocale } from '@/locales/client'
-import { TranslationKeys } from "@/app/[locale]/(landing)/types/translations"
 import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -23,9 +19,7 @@ interface TimelineItem {
 export default function CompletedTimeline({ milestones, locale }: { milestones: TimelineItem[], locale: string }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const observerRefs = useRef<(HTMLDivElement | null)[]>([])
-  const t = useI18n()
-  const currentLocale = useCurrentLocale()
-  const dateLocale = currentLocale === 'fr' ? fr : enUS
+  const dateLocale = locale === 'fr' ? fr : enUS
 
   useEffect(() => {
     const observers = observerRefs.current.map((ref, index) => {
@@ -61,7 +55,7 @@ export default function CompletedTimeline({ milestones, locale }: { milestones: 
       <div className="absolute left-4 top-0 h-full w-0.5 bg-neutral-200 dark:bg-neutral-800" />
       
       <div className="space-y-12 pl-12">
-        {completedMilestones.map((milestone, index) => (
+        {completedMilestones.map((milestone) => (
           <div key={milestone.id} className="relative">
             <div className="absolute -left-[44px] flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
               <div className="h-3 w-3 rounded-full bg-neutral-300 dark:bg-neutral-700" />
@@ -110,9 +104,4 @@ export default function CompletedTimeline({ milestones, locale }: { milestones: 
       </div>
     </div>
   )
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
