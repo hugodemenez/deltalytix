@@ -111,4 +111,118 @@ export async function getLatestVideoFromPlaylist(): Promise<string | null> {
     console.error('Error fetching latest video from playlist:', error);
     return null;
   }
+}
+
+interface PlaylistVideo {
+  videoId: string;
+  publishedAt: string;
+  title: string;
+}
+
+/**
+ * Get the week number and year for a given date
+ */
+function getWeekInfo(date: Date): { week: number; year: number } {
+  const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+  const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+  const week = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  return { week, year: date.getFullYear() };
+}
+
+/**
+ * Check if two dates are in the same week
+ */
+function isSameWeek(date1: Date, date2: Date): boolean {
+  const week1 = getWeekInfo(date1);
+  const week2 = getWeekInfo(date2);
+  return week1.week === week2.week && week1.year === week2.year;
+}
+
+/**
+ * Fetch all videos from the Deltalytix YouTube playlist
+ * Returns a map of video IDs indexed by publish date
+ */
+export async function getAllVideosFromPlaylistAction(): Promise<Map<string, PlaylistVideo> | null> {
+  try {
+    const playlistId = 'PLHyK_WJWO5vcsSKePM0GvJmeY5QRBW40S';
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    
+    if (!apiKey) {
+      console.error('YouTube API key not found in environment variables');
+      return null;
+    }
+    
+    // Get all items from the playlist
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&maxResults=50&playlistId=${playlistId}&key=${apiKey}`,
+      { cache: 'force-cache' } // Cache for build time
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('YouTube API error:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    
+    if (!data.items || data.items.length === 0) {
+      console.error('No videos found in playlist');
+      return null;
+    }
+
+    // Create a map of videos by their ISO date string
+    const videoMap = new Map<string, PlaylistVideo>();
+    
+    data.items.forEach((item: any) => {
+      const videoId = item.contentDetails?.videoId;
+      const publishedAt = item.snippet?.publishedAt;
+      const title = item.snippet?.title;
+      
+      if (videoId && publishedAt) {
+        const dateKey = publishedAt.split('T')[0]; // Use just the date part as key
+        videoMap.set(dateKey, {
+          videoId,
+          publishedAt,
+          title: title || ''
+        });
+      }
+    });
+    
+    return videoMap;
+  } catch (error) {
+    console.error('Error fetching videos from playlist:', error);
+    return null;
+  }
+}
+
+/**
+ * Find the YouTube video ID that matches a given post date (same week)
+ * This should be called at build time to match videos to posts
+ */
+export async function findVideoIdForPostDateAction(postDate: string): Promise<string | null> {
+  try {
+    const videoMap = await getAllVideosFromPlaylistAction();
+    
+    if (!videoMap) {
+      return null;
+    }
+    
+    const postDateObj = new Date(postDate);
+    
+    // Try to find a video published in the same week
+    for (const [dateKey, video] of videoMap.entries()) {
+      const videoDate = new Date(video.publishedAt);
+      if (isSameWeek(postDateObj, videoDate)) {
+        console.log(`Matched post date ${postDate} with video published on ${video.publishedAt} (${video.title})`);
+        return video.videoId;
+      }
+    }
+    
+    console.log(`No video found for post date ${postDate}`);
+    return null;
+  } catch (error) {
+    console.error('Error finding video for post date:', error);
+    return null;
+  }
 } 

@@ -17,14 +17,15 @@ interface TimelineItem {
   completedDate: string
   status: 'completed' | 'in-progress' | 'upcoming'
   image?: string
+  youtubeVideoId?: string
 }
 
-export default function CompletedTimeline({ milestones }: { milestones: TimelineItem[] }) {
+export default function CompletedTimeline({ milestones, locale }: { milestones: TimelineItem[], locale: string }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const observerRefs = useRef<(HTMLDivElement | null)[]>([])
   const t = useI18n()
-  const locale = useCurrentLocale()
-  const dateLocale = locale === 'fr' ? fr : enUS
+  const currentLocale = useCurrentLocale()
+  const dateLocale = currentLocale === 'fr' ? fr : enUS
 
   useEffect(() => {
     const observers = observerRefs.current.map((ref, index) => {
@@ -76,7 +77,23 @@ export default function CompletedTimeline({ milestones }: { milestones: Timeline
               <p className="mt-2 text-neutral-600 dark:text-neutral-400">
                 {milestone.description}
               </p>
-              {milestone.image && (
+              
+              {/* Display YouTube video for French locale if available */}
+              {locale === 'fr' && milestone.youtubeVideoId && (
+                <div className="mt-4 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                  <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                    <iframe
+                      className="absolute top-0 left-0 w-full h-full"
+                      src={`https://www.youtube.com/embed/${milestone.youtubeVideoId}`}
+                      title={milestone.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {milestone.image && !milestone.youtubeVideoId && (
                 <div className="mt-4 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
                   <Image
                     src={milestone.image}
