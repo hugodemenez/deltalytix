@@ -11,7 +11,7 @@
   [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
   [![Discord](https://img.shields.io/discord/a5YVF5Ec2n?label=Discord&logo=discord)](https://discord.gg/a5YVF5Ec2n)
   
-  [🚀 Live Demo](#) • [📖 Documentation](#) • [💬 Discord Community](https://discord.gg/a5YVF5Ec2n) • [🐛 Report Bug](https://github.com/hugodemenez/deltalytix/issues)
+  [🚀 Live Demo](https://deltalytix.app) • [💬 Discord Community](https://discord.gg/a5YVF5Ec2n) • [🐛 Report Bug](https://github.com/hugodemenez/deltalytix/issues)
 </div>
 
 ---
@@ -406,10 +406,10 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 ---
 
 <div align="center">
-  <p>Made with ❤️ by the Deltalytix community</p>
+  <p>Made with ❤️ by Hugo DEMENEZ & the Deltalytix community</p>
   <p>
     <a href="https://github.com/hugodemenez/deltalytix">GitHub</a> •
     <a href="https://discord.gg/a5YVF5Ec2n">Discord</a> •
-    <a href="https://deltalytix.com">Website</a>
+    <a href="https://deltalytix.app">Website</a>
   </p>
 </div>
