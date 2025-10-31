@@ -43,7 +43,9 @@ import {
   setupAccountAction,
   savePayoutAction,
   calculateAccountBalanceAction,
+  calculateAccountMetricsAction,
 } from '@/server/accounts';
+import { computeMetricsForAccounts } from '@/lib/account-metrics'
 import {
   saveGroupAction,
   deleteGroupAction,
@@ -149,11 +151,55 @@ export interface Group extends PrismaGroup {
 }
 
 
-// Update Account type to include payouts and balanceToDate
+// Update Account type to include payouts, balanceToDate, and all computed metrics
 export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
   payouts?: PrismaPayout[]
   balanceToDate?: number
   group?: PrismaGroup | null
+  aboveBuffer?: number
+  
+  // Computed metrics
+  metrics?: {
+    // Balance and progress
+    currentBalance: number
+    remainingToTarget: number
+    progress: number
+    isConfigured: boolean
+    
+    // Drawdown metrics
+    drawdownProgress: number
+    remainingLoss: number
+    highestBalance: number
+    drawdownLevel: number
+    
+    // Consistency metrics
+    totalProfit: number
+    maxAllowedDailyProfit: number | null
+    highestProfitDay: number
+    isConsistent: boolean
+    hasProfitableData: boolean
+    dailyPnL: { [key: string]: number }
+    totalProfitableDays: number
+    
+    // Trading days metrics
+    totalTradingDays: number
+    validTradingDays: number
+  }
+  
+  // Daily metrics for account table
+  dailyMetrics?: Array<{
+    date: Date
+    pnl: number
+    totalBalance: number
+    percentageOfTarget: number
+    isConsistent: boolean
+    payout?: {
+      id: string
+      amount: number
+      date: Date
+      status: string
+    }
+  }>
 }
 
 // Add after the interfaces and before the UserDataContext
@@ -525,12 +571,11 @@ export const DataProvider: React.FC<{
               setTickDetails(sharedData.params.tickDetails);
             }
 
-            const accountsWithBalance = await calculateAccountBalanceAction(
-              sharedData.groups?.flatMap(group => group.accounts) || [],
-              processedSharedTrades
+            const accountsWithMetrics = await calculateAccountMetricsAction(
+              sharedData.groups?.flatMap(group => group.accounts) || []
             );
             setGroups(sharedData.groups || []);
-            setAccounts(accountsWithBalance);
+            setAccounts(accountsWithMetrics);
           };
 
           await updates();
@@ -606,11 +651,11 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      // Calculate balanceToDate for each account 
-      const accountsWithBalance = await calculateAccountBalanceAction(
-        data.accounts || [],
+      // Calculate metrics for each account 
+      const accountsWithMetrics = await calculateAccountMetricsAction(
+        data.accounts || []
       );
-      setAccounts(accountsWithBalance);
+      setAccounts(accountsWithMetrics);
 
 
       setUser(data.userData);
@@ -697,11 +742,11 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      // Calculate balanceToDate for each account 
-      const accountsWithBalance = await calculateAccountBalanceAction(
-        data.accounts || [],
+      // Calculate metrics for each account 
+      const accountsWithMetrics = await calculateAccountMetricsAction(
+        data.accounts || []
       );
-      setAccounts(accountsWithBalance);
+      setAccounts(accountsWithMetrics);
 
 
       setUser(data.userData);
@@ -752,6 +797,10 @@ export const DataProvider: React.FC<{
         if (hiddenAccountNumbers.includes(trade.accountNumber)) {
           return false;
         }
+
+        // We should identify when accounts pass their buffer
+        // We can get the index of the first trade whihch is after the buffer date of its account
+        const tradeAccount = accounts.find(acc => acc.number === trade.accountNumber);
 
         // Validate entry date
         const entryDate = new Date(formatInTimeZone(
@@ -910,15 +959,20 @@ export const DataProvider: React.FC<{
       // If the account is not found, create it
       if (!currentAccount) {
         const createdAccount = await setupAccountAction(newAccount)
-        setAccounts([...accounts, createdAccount])
+        
+        // Recalculate metrics for the new account (optimistic, client-side)
+        const accountsWithMetrics = computeMetricsForAccounts([createdAccount], trades)
+        const accountWithMetrics = accountsWithMetrics[0]
+        
+        setAccounts([...accounts, accountWithMetrics])
 
         // If the new account has a groupId, update the groups state to include it
-        if (createdAccount.groupId) {
+        if (accountWithMetrics.groupId) {
           setGroups(groups.map(group => {
-            if (group.id === createdAccount.groupId) {
+            if (group.id === accountWithMetrics.groupId) {
               return {
                 ...group,
-                accounts: [...group.accounts, createdAccount]
+                accounts: [...group.accounts, accountWithMetrics]
               }
             }
             return group
@@ -929,10 +983,15 @@ export const DataProvider: React.FC<{
 
       // Update the account in the database
       const updatedAccount = await setupAccountAction(newAccount)
-      // Update the account in the local state
+      
+      // Recalculate metrics for the updated account (optimistic, client-side)
+      const accountsWithMetrics = computeMetricsForAccounts([updatedAccount], trades)
+      const accountWithMetrics = accountsWithMetrics[0]
+      
+      // Update the account in the local state with recalculated metrics
       const updatedAccounts = accounts.map((account: Account) => {
-        if (account.number === updatedAccount.number) {
-          return { ...account, ...updatedAccount };
+        if (account.number === accountWithMetrics.number) {
+          return accountWithMetrics;
         }
         return account;
       });
@@ -941,7 +1000,7 @@ export const DataProvider: React.FC<{
       console.error('Error updating account:', error)
       throw error
     }
-  }, [supabaseUser?.id, accounts, setAccounts, groups, setGroups])
+  }, [supabaseUser?.id, accounts, setAccounts, groups, setGroups, trades])
 
 
   // Add createGroup function
@@ -1036,8 +1095,8 @@ export const DataProvider: React.FC<{
       // Add to database
       const newPayout = await savePayoutAction(payout);
 
-      // Update local state
-      setAccounts(accounts.map((account: Account) => {
+      // Update the account with the new/updated payout
+      const updatedAccounts = accounts.map((account: Account) => {
         if (account.number === payout.accountNumber) {
           const existingPayouts = account.payouts || [];
           const isUpdate = payout.id && existingPayouts.some(p => p.id === payout.id);
@@ -1057,14 +1116,27 @@ export const DataProvider: React.FC<{
           }
         }
         return account;
-      })
-      );
+      });
+
+      // Recalculate metrics for the affected account (optimistic, client-side)
+      const affectedAccount = updatedAccounts.find(acc => acc.number === payout.accountNumber);
+      if (affectedAccount) {
+        const accountsWithMetrics = computeMetricsForAccounts([affectedAccount], trades)
+        const accountWithMetrics = accountsWithMetrics[0]
+        
+        // Update accounts with recalculated metrics
+        setAccounts(updatedAccounts.map(acc => 
+          acc.number === payout.accountNumber ? accountWithMetrics : acc
+        ));
+      } else {
+        setAccounts(updatedAccounts);
+      }
 
     } catch (error) {
       console.error('Error saving payout:', error);
       throw error;
     }
-  }, [supabaseUser?.id, isSharedView, accounts, setAccounts]);
+  }, [supabaseUser?.id, isSharedView, accounts, setAccounts, trades]);
 
   // Add deleteAccount function
   const deleteAccount = useCallback(async (account: Account) => {
@@ -1086,20 +1158,43 @@ export const DataProvider: React.FC<{
     if (!supabaseUser?.id || isSharedView) return;
 
     try {
-      setAccounts(accounts.map((account: Account) => ({
+      // Find the account that has this payout
+      const affectedAccount = accounts.find(account => 
+        account.payouts?.some(p => p.id === payoutId)
+      );
+
+      // Update accounts with removed payout
+      const updatedAccounts = accounts.map((account: Account) => ({
         ...account,
         payouts: account.payouts?.filter(p => p.id !== payoutId) || []
-      })
-      ));
+      }));
 
       // Delete from database
       await deletePayoutAction(payoutId);
+
+      // Recalculate metrics for the affected account (optimistic, client-side)
+      if (affectedAccount) {
+        const accountToRecalculate = updatedAccounts.find(acc => acc.id === affectedAccount.id);
+        if (accountToRecalculate) {
+          const accountsWithMetrics = computeMetricsForAccounts([accountToRecalculate], trades)
+          const accountWithMetrics = accountsWithMetrics[0]
+          
+          // Update accounts with recalculated metrics
+          setAccounts(updatedAccounts.map(acc => 
+            acc.id === affectedAccount.id ? accountWithMetrics : acc
+          ));
+        } else {
+          setAccounts(updatedAccounts);
+        }
+      } else {
+        setAccounts(updatedAccounts);
+      }
 
     } catch (error) {
       console.error('Error deleting payout:', error);
       throw error;
     }
-  }, [supabaseUser?.id, isSharedView, accounts, setAccounts]);
+  }, [supabaseUser?.id, isSharedView, accounts, setAccounts, trades]);
 
   const changeIsFirstConnection = useCallback(async (isFirstConnection: boolean) => {
     if (!supabaseUser?.id) return

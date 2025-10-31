@@ -231,6 +231,7 @@ model Account {
   group                   Group?            @relation(fields: [groupId], references: [id])
   user                    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   payouts                 Payout[]
+  buffer                  Float             @default(0)
 
   @@unique([number, userId])
   @@index([number])
