@@ -1,136 +1,66 @@
 ---
-title: Améliorations de la plateforme octobre 2025
-description: Améliorations majeures des flux d'importation de trades, mises à jour en temps réel, gestion des dépendances et fonctionnalités du journal. Imports Excel ATAS améliorés, marquage par session et capacités de redimensionnement d'images.
+title: Améliorations octobre 2025
+description: Mises à jour en temps réel, imports ATAS améliorés, nettoyage du code, marquage par session et redimensionnement d'images dans le journal.
 date: 2025-10-27
 status: completed
 completedDate: 2025-10-27
 ---
 
-# Améliorations de la plateforme octobre 2025
+# Améliorations octobre 2025
 
-Nous sommes ravis de partager un ensemble complet d'améliorations qui enrichissent votre expérience d'analyse de trading. Cette mise à jour se concentre sur l'amélioration de votre flux de travail pour le rendre plus fluide, plus rapide et plus intuitif.
+Ensemble complet d'améliorations pour un workflow plus fluide et rapide.
 
-## Mises à jour immédiates et améliorations d'importation
+## Mises à jour en temps réel
 
-### Synchronisation des données en temps réel
-Les modifications de trades, messages de chat, mises à jour d'humeur et changements de données utilisateur déclenchent désormais des actualisations immédiates du serveur. Fini les données périmées - vos modifications apparaissent instantanément dans toutes les vues.
+Vos modifications (trades, chats, humeur) apparaissent instantanément. Plus de données périmées.
 
-### Améliorations de l'import Excel ATAS
-- Support des formats `.xlsx` et `.xls`
+## Imports améliorés
+
+### ATAS Excel
+- Support `.xlsx` et `.xls`
 - Détection automatique de la feuille "Journal"
-- Validation complète des colonnes requises (Compte, Instrument, Heures/prix/volumes d'ouverture/fermeture, PnL)
-- Messages d'erreur clairs et exploitables en cas de format de fichier incorrect
-- Nettement moins d'échecs d'importation
+- Messages d'erreur clairs
+- Moins d'échecs d'import
 
-### Retour amélioré sur l'upload de trades
-- Rapport clair du nombre de lignes ajoutées avec succès
-- Détection des trades en double avec résultats visibles au lieu d'un saut silencieux
-- Meilleure visibilité des opérations d'importation
+### Upload de trades
+- Rapport clair du nombre de lignes ajoutées
+- Détection des doublons avec résultats visibles
+- Meilleure visibilité des opérations
 
-### Persistance de la disposition du tableau de bord
-Les modifications de widgets (ajout/suppression/restauration) sont désormais enregistrées de manière fiable, garantissant que vos dispositions personnalisées persistent correctement sur les appareils de bureau et mobiles.
+### Disposition du tableau de bord
+Les widgets s'enregistrent correctement sur desktop et mobile.
 
-## Gestion des dépendances et qualité du code
+## Code plus propre
 
-### Base de code plus propre
-Nous avons supprimé 16 dépendances inutilisées tout en ajoutant 5 qui étaient réellement utilisées mais manquantes. Cela résulte en une réduction nette de 11 dépendances (empreinte 5,8% plus petite).
+Supprimé 16 dépendances inutilisées, ajouté 5 manquantes. Résultat : code 5,8% plus léger et meilleurs types TypeScript.
 
-**Packages supprimés non utilisés :**
-- Extensions TipTap non utilisées
-- Composants React Email
-- Gestion de thème héritée
-- Bibliothèques de génération PDF non utilisées
-- Dépendances de code commenté
+## Marquage par session
 
-**Packages manquants ajoutés :**
-- TipTap core et collaboration (Yjs)
-- PapaParse pour l'analyse CSV
-- Définitions de types MDX
+Appliquez des tags à tous les trades d'une journée en un clic :
+- Visualisez les tags existants avec compteurs (ex: "scalping (2/3)")
+- Un clic pour compléter les tags manquants
+- Créez de nouveaux tags à la volée
+- Retour instantané avec mises à jour optimistes
 
-### Types TypeScript améliorés
-- Refactorisation de widget-canvas pour utiliser des types `Widget[]` appropriés au lieu de `Prisma.JsonValue`
-- Création du type `DashboardLayoutWithWidgets` pour une meilleure sécurité de type interne
-- Ajout de la fonction d'aide `toPrismaLayout()` pour des conversions de type propres
-- Élimination du casting de type excessif dans toute la base de code
+## Images dans le journal
 
-## Améliorations du journal et du marquage
+### Redimensionnement
+- Poignées de redimensionnement interactives
+- Maintenez le rapport d'aspect
+- Effets visuels au survol
 
-### Gestion des tags basée sur les sessions
-Appliquez des tags à tous les trades d'un jour spécifique en une seule action :
-- Visualisez les tags existants avec le nombre de trades (par ex. "scalping (2/3)")
-- Un clic pour appliquer les tags incomplets aux trades restants
-- Créez de nouveaux tags à la volée et appliquez-les à tous les trades
-- Fonctionne même lorsqu'aucun trade n'existe encore (pour la planification)
-- Retour instantané de l'interface avec mises à jour optimistes
-- Coches visuelles pour les tags appliqués à tous les trades
+### Tableaux
+- Création en un clic (3×3 avec en-tête)
+- Menu contextuel pour ajouter/supprimer lignes et colonnes
+- Mises en page côte à côte pour comparaisons
 
-### Capacités d'images du journal
-Éditeur TipTap amélioré avec des fonctionnalités de mise en page professionnelles :
+## Calendrier interactif
 
-**Redimensionnement d'images :**
-- Poignées de redimensionnement interactives sur les images
-- Glissez les coins/bords tout en conservant le rapport d'aspect
-- Retour visuel avec effets de survol
-
-**Grilles et tableaux :**
-- Création de tableau en un clic (3×3 avec ligne d'en-tête)
-- Menu contextuel lorsque le curseur est dans les tableaux
-- Ajout/suppression de lignes et colonnes avant/après la position actuelle
-- Création de mises en page côte à côte pour les comparaisons avant/après
-
-**Alignement du contenu :**
-- Contrôles d'alignement gauche, centre et droite
-- Raccourcis clavier pour ajustements rapides
-- Fonctionne parfaitement avec les images redimensionnables
-
-Cela permet des mises en page professionnelles comme :
-- Captures d'écran de trading avant/après placées côte à côte
-- Images de configuration de trade avec texte d'analyse accompagnant
-- Comparaisons multi-images en format grille
-- Notes structurées avec contenu aligné
-
-## Améliorations du chat et du calendrier
-
-### Améliorations de l'historique des chats
-- Chargement et sauvegarde plus robustes des messages de chat
-- Meilleure gestion des formats de messages anciens et nouveaux
-- Réhydratation cohérente des conversations entre les sessions
-
-### Revue interactive des trades du calendrier
-Le modal du calendrier affiche maintenant le tableau complet interactif de revue des trades au lieu d'une liste statique :
-- Paginer, trier et sélectionner les trades
-- Grouper/dégrouper les trades
-- Supprimer et modifier les heures/instruments
-- Voir les images, tags, commentaires et liens vidéo
-- Tous les contrôles de tableau conservés pour le jour sélectionné
+Le modal du calendrier affiche maintenant le tableau complet des trades avec tous les contrôles (tri, sélection, groupage, édition, images, tags, commentaires).
 
 ## Améliorations techniques
 
-### Organisation du code
-- Création de trades standardisée utilisant la fonction factory `createTradeWithDefaults` pour les imports FTMO, IBKR PDF et Tradovate
-- Journalisation des erreurs améliorée dans la synchronisation Tradovate
-- Import Rithmic amélioré avec fenêtre de recherche étendue de 400 jours
-- Suppression des outils de débogage inutilisés et du code mort
-
-### Optimisations de performances
-- Meilleure gestion des dates pour les commentaires quotidiens (plus d'erreurs de chargement/sauvegarde)
-- Clés d'éditeur de journal améliorées empêchant l'affichage de contenu périmé
-- Défilement horizontal pour les tableaux empêchant les colonnes tronquées
-- Mises à jour de contenu d'éditeur plus stables
-
-## Expérience utilisateur
-
-### Mises à jour du proxy
-Autorise désormais les requêtes depuis les sous-domaines wildcard deltalytix.app, permettant des intégrations transparentes dans différents environnements.
-
-### Polissage de l'interface
-- Affichage de squelette de chargement pendant les opérations de récupération de données
-- Notifications de succès pour les opérations de sauvegarde
-- Recherche et messagerie améliorées pour le filtre de tags
-- Meilleure gestion des erreurs avec retour d'information convivial
-
----
-
-Ces améliorations reflètent notre engagement à fournir une plateforme d'analyse de trading robuste et conviviale. Chaque modification a été soigneusement testée et révisée pour s'assurer qu'elle améliore votre flux de travail sans perturber les fonctionnalités existantes.
-
-Merci pour vos retours et votre soutien continus !
+- Création de trades standardisée (FTMO, IBKR, Tradovate)
+- Meilleure gestion des dates pour les commentaires
+- Import Rithmic étendu à 400 jours
+- Proxy compatible avec les sous-domaines deltalytix.app

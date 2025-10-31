@@ -1,149 +1,56 @@
 ---
-title: Améliorations de la plateforme septembre 2025
-description: Synchronisation rationalisée des courtiers pour Rithmic et Tradovate avec support multi-comptes amélioré, gestion de jetons personnalisés et flux d'importation améliorés. Avec regroupement de comptes par glisser-déposer et meilleur support des locales.
+title: Améliorations septembre 2025
+description: Support multi-comptes Tradovate, simplification Rithmic, regroupement de comptes par glisser-déposer, et meilleur support des langues.
 date: 2025-09-26
 status: completed
 completedDate: 2025-09-26
 ---
 
-# Améliorations de la plateforme septembre 2025
+# Améliorations septembre 2025
 
-Ce mois-ci apporte des améliorations significatives aux intégrations de courtiers et à la gestion des comptes, facilitant la synchronisation de vos trades et l'organisation de vos comptes.
+Synchronisation facilitée avec les courtiers et meilleure organisation des comptes.
 
-## Améliorations de la synchronisation des courtiers
+## Tradovate multi-comptes
 
-### Support multi-comptes Tradovate
-Gérez facilement plusieurs comptes Tradovate :
-
-**Interface de gestion de jetons personnalisés :**
-- Ajouter, tester, sauvegarder, révéler, copier et supprimer des jetons d'accès personnalisés
-- Option d'utiliser OAuth ou des jetons personnalisés pour l'authentification
+### Gestion des tokens
+- Ajoutez, testez et gérez vos tokens personnalisés
+- OAuth ou tokens personnalisés au choix
 - Contrôles de synchronisation par compte
-- Retour visuel clair pour la validité des jetons
+- "Tout synchroniser" pour gagner du temps
 
-**Gestion de compte améliorée :**
-- Connectez plusieurs comptes Tradovate par utilisateur
-- Jetons associés par compte pour une meilleure identification
-- Contrôles de synchronisation individuels pour chaque compte connecté
-- Option "Tout synchroniser" pour la synchronisation en masse
-- Suivi de la progression et retour toast pendant les opérations de synchronisation
+### Renouvellement automatique
+Tâche automatique qui renouvelle vos tokens pour éviter les expirations.
 
-**Renouvellement automatique des jetons :**
-- Tâche cron automatique pour renouveler les jetons Tradovate
-- Empêche l'expiration de l'authentification
-- Récupération optimisée des trades pour de meilleures performances
-- Journalisation des erreurs améliorée pour faciliter le diagnostic
+## Rithmic simplifié
 
-### Simplification de la synchronisation Rithmic
-L'expérience d'importation Rithmic a été rationalisée :
-
-**Flux de travail simplifié :**
-- Suppression des minuteurs de compte à rebours
-- Contrôles de synchronisation par identifiants
-- Déclenchement de synchronisation manuel/immédiat
-- Nouveau panneau de progression et de retour de synchronisation
-- Fenêtre de recherche étendue de 300 à 400 jours
-- Utilise l'état de synchronisation de la base de données (similaire à Tradovate)
-
-**Meilleur retour d'information :**
-- Notifications de synchronisation en temps réel
-- Suivi de la progression pour chaque compte
-- Messages d'erreur clairs en cas de problèmes
-- Persistance de l'état de synchronisation entre les sessions
-
-### Améliorations de l'importation FTMO
-Gestion améliorée des importations FTMO :
-- Les valeurs d'affichage de swap et de commission sont désormais par défaut lorsqu'elles ne sont pas fournies
-- Meilleure gestion des erreurs pour les données manquantes
-- Validation et retour améliorés
+Fini les compte à rebours. Synchronisation immédiate avec :
+- Contrôles par identifiants
+- Panneau de progression
+- Historique étendu à 400 jours
+- Notifications en temps réel
 
 ## Organisation des comptes
 
-### Regroupement de comptes par glisser-déposer
-Une expérience de regroupement de comptes complètement repensée :
+### Glisser-déposer
+Nouvelle expérience intuitive :
+- Déplacez les "pièces de compte" visuellement
+- Indicateurs clairs des emplacements
+- Animations fluides
+- Raccourcis : Entrée (créer groupe), Échap (annuler)
 
-**Glissement interactif :**
-- "Pièces de compte" déplaçables pour une organisation visuelle
-- Des espaces réservés clairs montrent où les comptes seront déposés
-- Zone de dépôt non attribuée pour les comptes non groupés
-- Animations fluides et effets de survol
-
-**Raccourcis clavier :**
-- Appuyez sur **Entrée** pour créer un nouveau groupe
-- Appuyez sur **Échap** pour annuler l'opération de regroupement
-- Naviguez avec les touches fléchées pour l'accessibilité
-
-**Panneau de gestion de groupe :**
-- Groupes de comptes déplacés vers un panneau latéral droit
-- Infobulles contextuelles pour guidance
-- Animations de pièces polies
+### Panneau de gestion
+- Interface latérale droite
+- Infobulles contextuelles
 - Hiérarchie visuelle claire
+- Gestion des comptes masqués
 
-**Comptes masqués :**
-- Les groupes de comptes masqués affichent un titre "Comptes masqués"
-- Meilleure organisation des comptes archivés ou inactifs
-- Gestion facile de la visibilité
+## Traductions
 
-## Localisation et UX
+Support amélioré des jours de la semaine et nouvelles traductions pour :
+- Opérations de groupage
+- Messages de synchronisation
+- Actions communes
 
-### Traduction améliorée des jours de la semaine
-Gestion améliorée des traductions de jours de la semaine sur la plateforme :
-- Fonctions utilitaires pour un affichage cohérent des jours de la semaine
-- Composants Calendar et WeekdayPNLChart mis à jour
-- Étiquettes de jours de la semaine sensibles aux locales
-- Le registre de widgets utilise l'utilitaire de traduction
+## Support
 
-### Nouvelles traductions
-Couverture de traduction étendue :
-- Opérations de regroupement de comptes
-- Actions et boutons communs
-- Messages d'état de synchronisation
-- Messages d'erreur et retours
-
-## Support et communication
-
-### Chat de support amélioré
-Le chat de support fournit désormais une meilleure assistance :
-- Déclare clairement son rôle et ses capacités
-- Pose des questions ciblées pour rassembler le contexte complet
-- Meilleure compréhension des problèmes des utilisateurs
-- Réponses et suggestions plus pertinentes
-
-## Améliorations techniques
-
-### Améliorations de la base de données
-- Nouvelles migrations pour le modèle Synchronization
-- Meilleure gestion de l'état pour les opérations de synchronisation
-- Stockage et récupération de jetons améliorés
-- Suivi de l'état de synchronisation par compte
-
-### Organisation du code
-- Logique de synchronisation partagée entre Rithmic et Tradovate
-- Séparation des préoccupations plus propre
-- Meilleure gestion des erreurs dans les flux de synchronisation
-- Suppression des dialogues de comparaison de comptes redondants
-
-### Optimisations de performances
-- Algorithmes de récupération de trades optimisés
-- Meilleures stratégies de mise en cache
-- Réduction des appels API redondants
-- Utilisation de la mémoire améliorée lors de grandes importations
-
-## Raffinements du flux d'importation
-
-### Interface plus propre
-- Suppression des étiquettes "Coming Soon" des fonctionnalités terminées
-- Écrans de sélection d'importation rationalisés
-- Meilleur retour visuel pendant les opérations
-- Indicateurs de progression plus clairs
-
-### Comparaison de comptes
-- Suppression du dialogue de comparaison de comptes redondant du flux d'importation
-- Processus de prise de décision rationalisé
-- Achèvement d'importation plus rapide
-
----
-
-Ces améliorations facilitent considérablement la gestion de plusieurs comptes de trading auprès de différents courtiers. Que vous synchronisiez un seul compte ou que vous gériez des dizaines de comptes, les nouveaux flux de travail sont plus rapides, plus clairs et plus fiables.
-
-Merci pour vos retours continus qui aident à façonner ces améliorations !
+Chat amélioré avec questions ciblées pour mieux comprendre vos problèmes et proposer des solutions pertinentes.
