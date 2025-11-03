@@ -2,6 +2,29 @@
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
+/**
+ * Helper function to check if current time matches the configured daily sync time
+ * @param dailySyncTime The configured sync time from database
+ * @returns true if it's time to sync (within 15 minutes of configured time)
+ */
+function shouldPerformDailySync(dailySyncTime: Date | null): boolean {
+  if (!dailySyncTime) return false;
+  
+  const now = new Date();
+  const syncHour = dailySyncTime.getUTCHours();
+  const syncMinute = dailySyncTime.getUTCMinutes();
+  const currentHour = now.getUTCHours();
+  const currentMinute = now.getUTCMinutes();
+  
+  // Calculate difference in minutes
+  const syncTimeInMinutes = syncHour * 60 + syncMinute;
+  const currentTimeInMinutes = currentHour * 60 + currentMinute;
+  const diffInMinutes = Math.abs(currentTimeInMinutes - syncTimeInMinutes);
+  
+  // Check if we're within 15 minutes of the sync time (accounting for day wrap)
+  return diffInMinutes <= 15 || diffInMinutes >= (24 * 60 - 15);
+}
+
 export async function GET(request: NextRequest) {
   // Verify this is a cron request
   const authHeader = request.headers.get('authorization');
@@ -19,24 +42,43 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    const renewalPromises = synchronizations.map(async (synchronization) => {
+    let tokenRenewals = 0;
+    let dailySyncs = 0;
+
+    const promises = synchronizations.map(async (synchronization) => {
       const expiresAt = new Date(synchronization.tokenExpiresAt!);
       const now = new Date();
       
-      // If expires within 15 minutes, renew
+      let renewed = false;
+      let synced = false;
+      
+      // Check if token needs renewal (expires within 15 minutes)
       if (expiresAt.getTime() - now.getTime() < 15 * 60 * 1000) {
-        return renewUserToken(synchronization);
+        renewed = await renewUserToken(synchronization);
       }
-      return null;
+      
+      // Check if we should perform daily sync
+      if (shouldPerformDailySync(synchronization.dailySyncTime)) {
+        synced = await performDailySync(synchronization);
+      }
+      
+      return { renewed, synced };
     });
 
-    const results = await Promise.allSettled(renewalPromises);
-    const successful = results.filter(r => r.status === 'fulfilled' && r.value).length;
+    const results = await Promise.allSettled(promises);
+    
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value) {
+        if (result.value.renewed) tokenRenewals++;
+        if (result.value.synced) dailySyncs++;
+      }
+    });
     
     return Response.json({ 
       success: true, 
       processed: synchronizations.length,
-      renewed: successful 
+      tokenRenewals,
+      dailySyncs
     });
   } catch (error) {
     console.error('Cron job error:', error);
@@ -100,6 +142,34 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
     return true;
   } catch (error) {
     console.error(`Failed to renew token for user ${synchronization.userId}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Performs a daily sync for the given synchronization by fetching trades from Tradovate
+ * 
+ * @param synchronization The synchronization record containing user, token, and account info.
+ */
+async function performDailySync(synchronization: any): Promise<boolean> {
+  try {
+    console.log(`[CRON] Performing daily sync for account ${synchronization.accountId}`);
+    
+    // Dynamically import the getTradovateTrades action to avoid circular dependencies
+    const { getTradovateTrades } = await import('@/app/[locale]/dashboard/components/import/tradovate/actions');
+    
+    // Fetch and save trades
+    const result = await getTradovateTrades(synchronization.token);
+    
+    if (result.error) {
+      console.error(`[CRON] Failed to sync trades for account ${synchronization.accountId}:`, result.error);
+      return false;
+    }
+    
+    console.log(`[CRON] Successfully synced ${result.savedCount || 0} trades for account ${synchronization.accountId}`);
+    return true;
+  } catch (error) {
+    console.error(`[CRON] Error during daily sync for account ${synchronization.accountId}:`, error);
     return false;
   }
 }

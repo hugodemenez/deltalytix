@@ -23,23 +23,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useI18n } from "@/locales/client";
 import { toast } from "sonner";
 import {
   initiateTradovateOAuth,
+  updateDailySyncTimeAction,
 } from "./actions";
 import { useTradovateSyncStore } from "@/store/tradovate-sync-store";
 import { useData } from "@/context/data-provider";
 import { useTradovateSyncContext } from "@/context/tradovate-sync-context";
-
-interface TradovateAccount {
-  accountId: string;
-  token: string;
-  tokenExpiresAt: string;
-  lastSyncedAt: string;
-  isExpired: boolean;
-  environment: "demo" | "live";
-}
 
 export function TradovateCredentialsManager() {
   const {
@@ -50,12 +44,15 @@ export function TradovateCredentialsManager() {
     loadAccounts,
   } = useTradovateSyncContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
     null,
   );
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isReloading, setIsReloading] = useState(false);
+  const [dailySyncTime, setDailySyncTime] = useState<string>("");
+  const [isSavingTime, setIsSavingTime] = useState(false);
   const t = useI18n();
   const tradovateStore = useTradovateSyncStore();
 
@@ -117,6 +114,108 @@ export function TradovateCredentialsManager() {
       setIsReloading(false);
     }
   }, [loadAccounts, t]);
+
+  const handleSetDailySyncTime = useCallback((accountId: string, currentTime: Date | null) => {
+    setSelectedAccountId(accountId);
+    if (currentTime) {
+      // Convert UTC time to local time for display
+      const utcDate = new Date(currentTime);
+      const localHours = utcDate.getHours().toString().padStart(2, '0');
+      const localMinutes = utcDate.getMinutes().toString().padStart(2, '0');
+      setDailySyncTime(`${localHours}:${localMinutes}`);
+    } else {
+      setDailySyncTime("");
+    }
+    setIsTimeDialogOpen(true);
+  }, []);
+
+  const handleSaveDailySyncTime = useCallback(async () => {
+    if (!selectedAccountId) return;
+    
+    try {
+      setIsSavingTime(true);
+      
+      // Convert local time to UTC on client side
+      let utcTimeString: string | null = null;
+      if (dailySyncTime) {
+        const [hours, minutes] = dailySyncTime.split(':').map(Number);
+        const localDate = new Date();
+        localDate.setHours(hours, minutes, 0, 0);
+        utcTimeString = localDate.toISOString();
+      }
+      
+      const result = await updateDailySyncTimeAction(
+        selectedAccountId,
+        utcTimeString
+      );
+      
+      if (result.success) {
+        toast.success("Daily sync time updated successfully");
+        setIsTimeDialogOpen(false);
+        await loadAccounts(); // Reload to show updated time
+      } else {
+        toast.error(result.error || "Failed to update sync time");
+      }
+    } catch (error) {
+      toast.error("Failed to update sync time");
+      console.error("Update sync time error:", error);
+    } finally {
+      setIsSavingTime(false);
+    }
+  }, [selectedAccountId, dailySyncTime, loadAccounts]);
+
+  const handlePresetTime = useCallback((preset: string) => {
+    let hours: number;
+    let minutes: number;
+    
+    switch (preset) {
+      case 'midday':
+        hours = 12;
+        minutes = 0;
+        break;
+      case 'after-close':
+        // 22:00 UTC = 4:00 PM EST / 10:00 PM CET (after US market close)
+        // Convert to local time
+        const utcClose = new Date();
+        utcClose.setUTCHours(22, 0, 0, 0);
+        hours = utcClose.getHours();
+        minutes = utcClose.getMinutes();
+        break;
+      case 'midnight':
+        hours = 0;
+        minutes = 0;
+        break;
+      case 'morning':
+        hours = 8;
+        minutes = 0;
+        break;
+      default:
+        return;
+    }
+    
+    setDailySyncTime(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+  }, []);
+
+  function formatSyncTime(date: Date | null) {
+    if (!date) return "Not set";
+    
+    // The date from DB is stored with UTC hours/minutes
+    // We need to create a proper UTC date and convert to local
+    const utcDate = new Date(date);
+    const localHours = utcDate.getHours().toString().padStart(2, '0');
+    const localMinutes = utcDate.getMinutes().toString().padStart(2, '0');
+    
+    // Get timezone abbreviation
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const formatter = new Intl.DateTimeFormat('en-US', { 
+      timeZone, 
+      timeZoneName: 'short' 
+    });
+    const parts = formatter.formatToParts(new Date());
+    const tzName = parts.find(part => part.type === 'timeZoneName')?.value || '';
+    
+    return `${localHours}:${localMinutes} ${tzName}`;
+  }
 
   return (
     <div className="space-y-4">
@@ -181,6 +280,7 @@ export function TradovateCredentialsManager() {
                 {t("tradovateSync.multiAccount.environment")}
               </TableHead>
               <TableHead>{t("tradovateSync.multiAccount.lastSync")}</TableHead>
+              <TableHead>Daily Sync Time (Local)</TableHead>
               <TableHead>
                 {t("tradovateSync.multiAccount.tokenStatus")}
               </TableHead>
@@ -205,6 +305,16 @@ export function TradovateCredentialsManager() {
                   </span>
                 </TableCell>
                 <TableCell>{formatDate(account.lastSyncedAt.toISOString())}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSetDailySyncTime(account.accountId, account.dailySyncTime)}
+                    className="text-xs"
+                  >
+                    {formatSyncTime(account.dailySyncTime)}
+                  </Button>
+                </TableCell>
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded text-xs ${
@@ -268,7 +378,7 @@ export function TradovateCredentialsManager() {
             {accounts.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center text-muted-foreground py-6"
                 >
                   {t("tradovateSync.multiAccount.noSavedAccounts")}
@@ -306,6 +416,93 @@ export function TradovateCredentialsManager() {
             >
               {t("common.delete")}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Set Daily Sync Time</DialogTitle>
+            <DialogDescription>
+              Configure when this account should automatically sync each day (in your local time).
+              Leave empty to disable automatic syncing.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="syncTime">Sync Time (Local Time)</Label>
+              <Input
+                id="syncTime"
+                type="time"
+                value={dailySyncTime}
+                onChange={(e) => setDailySyncTime(e.target.value)}
+                placeholder="HH:mm"
+              />
+              <p className="text-sm text-muted-foreground">
+                Time is in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Quick Presets</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePresetTime('morning')}
+                >
+                  Morning (8:00 AM)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePresetTime('midday')}
+                >
+                  Midday (12:00 PM)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePresetTime('after-close')}
+                >
+                  After Market Close (22:00 UTC)
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePresetTime('midnight')}
+                >
+                  Midnight (12:00 AM)
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsTimeDialogOpen(false)}
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                onClick={handleSaveDailySyncTime}
+                disabled={isSavingTime}
+              >
+                {isSavingTime ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -114,6 +114,7 @@ model Synchronization {
   updatedAt      DateTime  @updatedAt
   token          String?
   tokenExpiresAt DateTime?
+  dailySyncTime  DateTime?
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, service, accountId])

@@ -8,15 +8,6 @@ import { useTradesStore } from '@/store/trades-store'
 import { getTradovateTrades, removeTradovateToken, getTradovateSynchronizations } from '@/app/[locale]/dashboard/components/import/tradovate/actions'
 import { Synchronization } from '@prisma/client'
 
-interface TradovateAccount {
-  accountId: string
-  token: string
-  tokenExpiresAt: string
-  lastSyncedAt: string
-  isExpired: boolean
-  environment: 'demo' | 'live'
-}
-
 interface TradovateSyncProgress {
   accountId: string
   isSyncing: boolean
