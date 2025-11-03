@@ -1,12 +1,13 @@
 "use client"
 
+import { signInWithDiscord, signInWithEmail, verifyOtp, signInWithGoogle, signInWithPasswordAction } from "@/server/auth"
+
 import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Icons } from "@/components/icons"
-import { signInWithDiscord, signInWithEmail, verifyOtp, signInWithGoogle } from "@/server/auth"
 import { z } from 'zod';
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -27,9 +28,14 @@ import {
     InputOTPSlot,
     InputOTPSeparator
 } from "@/components/ui/input-otp"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+// Link removed; unauthenticated users can't reach settings
+import { useAuthPreferenceStore } from "@/store/auth-preference-store"
 
 const formSchema = z.object({
     email: z.string().email(),
+    password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 })
 
 const otpFormSchema = z.object({
@@ -50,6 +56,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [showOtpInput, setShowOtpInput] = React.useState<boolean>(false)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
     const router = useRouter()
+    const { lastAuthPreference, setLastAuthPreference } = useAuthPreferenceStore()
+    const [tab, setTab] = React.useState<'magic' | 'password'>(lastAuthPreference)
     const t = useI18n()
     const locale = useCurrentLocale()
 
@@ -74,6 +82,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         resolver: zodResolver(formSchema),
         defaultValues: {
             email: "",
+            password: "",
         },
     })
 
@@ -101,6 +110,28 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             setIsLoading(false)
         }
     }
+
+    async function onSubmitPassword(values: z.infer<typeof formSchema>) {
+        setIsLoading(true)
+        setAuthMethod('email')
+        try {
+            await signInWithPasswordAction(values.email, values.password || '')
+            toast.success(t('success'), { description: t('auth.signIn') })
+            router.refresh()
+            router.push(nextUrl || '/dashboard')
+            setLastAuthPreference('password')
+        } catch (error) {
+            console.error(error)
+            toast.error(t('error'), {
+                description: error instanceof Error ? error.message : 'Failed to sign in',
+            })
+            setAuthMethod(null)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    // Signup handled via magic link; no password signup flow here
 
     async function onSubmitOtp(values: z.infer<typeof otpFormSchema>) {
         setIsLoading(true)
@@ -190,7 +221,25 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
     return (
         <div className={cn("grid gap-6", className)} {...props}>
-            <Form {...form}>
+            <Tabs value={tab} onValueChange={(v) => { setTab(v as 'magic' | 'password'); setLastAuthPreference(v as 'magic' | 'password'); }}>
+                <TabsList className="flex w-full overflow-x-auto gap-1 sm:grid sm:grid-cols-2 sm:gap-0">
+                    <TabsTrigger value="magic" className="flex-1 min-w-0 text-xs sm:text-sm px-2 py-1">
+                        <span className="truncate">{t('auth.tabs.magic')}</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="password" className="relative flex-1 min-w-0 text-xs sm:text-sm px-2 py-1">
+                        <span className="truncate">{t('auth.tabs.password')}</span>
+                        <Badge
+                            variant="secondary"
+                            className="hidden sm:inline-flex absolute -top-1 -right-1 text-[9px] leading-3 px-1 py-0.5"
+                        >
+                            {t('auth.new')}
+                        </Badge>
+                    </TabsTrigger>
+                    {/* Signup tab removed: handled by Magic Link */}
+                </TabsList>
+
+                <TabsContent value="magic">
+                <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmitEmail)} className="grid gap-2">
                     <FormField
                         control={form.control}
@@ -206,7 +255,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                                         autoCapitalize="none"
                                         autoComplete="email"
                                         autoCorrect="off"
-                                        disabled={isLoading || isEmailSent || authMethod === 'discord' || authMethod === 'google'}
+                                        disabled={isLoading || (isEmailSent || authMethod === 'discord' || authMethod === 'google')}
                                         {...field}
                                     />
                                 </FormControl>
@@ -215,44 +264,43 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                         )}
                     />
                     {!isEmailSent ? (
-                        <Button 
-                            disabled={isLoading || countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
-                            type="submit"
-                        >
-                            {isLoading && authMethod === 'email' && (
-                                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            {t('auth.signInWithEmail')}
-                        </Button>
-                    ) : (
-                        <div className="space-y-2">
                             <Button 
-                                type="button" 
-                                variant="outline" 
-                                className="w-full"
-                                onClick={openMailClient}
-                                disabled={authMethod === 'discord' || authMethod === 'google'}
-                            >
-                                <Icons.envelope className="mr-2 h-4 w-4" />
-                                {t('auth.openMailbox')}
-                            </Button>
-                            <Button
+                                disabled={isLoading || countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
                                 type="submit"
-                                variant="ghost"
-                                className="w-full"
-                                disabled={countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
                             >
-                                {countdown > 0 ? (
-                                    `${t('auth.resendIn')} ${countdown}s`
-                                ) : (
-                                    t('auth.resendEmail')
+                                {isLoading && authMethod === 'email' && (
+                                    <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
                                 )}
+                                {t('auth.signInWithEmail')}
                             </Button>
-                        </div>
-                    )}
+                        ) : (
+                            <div className="space-y-2">
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    className="w-full"
+                                    onClick={openMailClient}
+                                    disabled={authMethod === 'discord' || authMethod === 'google'}
+                                >
+                                    <Icons.envelope className="mr-2 h-4 w-4" />
+                                    {t('auth.openMailbox')}
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="ghost"
+                                    className="w-full"
+                                    disabled={countdown > 0 || authMethod === 'discord' || authMethod === 'google'}
+                                >
+                                    {countdown > 0 ? (
+                                        `${t('auth.resendIn')} ${countdown}s`
+                                    ) : (
+                                        t('auth.resendEmail')
+                                    )}
+                                </Button>
+                            </div>
+                        )}
                 </form>
             </Form>
-
             {showOtpInput && (
                 <Form {...otpForm}>
                     <form onSubmit={otpForm.handleSubmit(onSubmitOtp)} className="space-y-4">
@@ -301,6 +349,66 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                     </form>
                 </Form>
             )}
+            {/* Hint removed: settings not accessible unauthenticated */}
+                </TabsContent>
+
+                <TabsContent value="password">
+                <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmitPassword)} className="grid gap-2">
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="sr-only">Email</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        id="email_password"
+                                        placeholder={t('auth.emailPlaceholder')}
+                                        type="email"
+                                        autoCapitalize="none"
+                                        autoComplete="email"
+                                        autoCorrect="off"
+                                        disabled={isLoading}
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="sr-only">Password</FormLabel>
+                                <FormControl>
+                                    <Input
+                                        id="password_login"
+                                        placeholder={t('auth.passwordPlaceholder')}
+                                        type="password"
+                                        autoComplete="current-password"
+                                        disabled={isLoading}
+                                        {...field}
+                                    />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <Button disabled={isLoading} type="submit">
+                        {isLoading && authMethod === 'email' && (
+                            <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        {t('auth.signInWithPassword')}
+                    </Button>
+                </form>
+                </Form>
+                </TabsContent>
+
+                {/* Signup content removed */}
+            </Tabs>
 
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">

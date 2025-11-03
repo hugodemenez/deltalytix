@@ -101,6 +101,72 @@ export async function signInWithEmail(email: string, next: string | null = null,
   })
 }
 
+// Password-based authentication (login)
+export async function signInWithPasswordAction(
+  email: string,
+  password: string,
+  next: string | null = null,
+  locale?: string
+) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  if (error) {
+    throw new Error(error.message)
+  }
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await ensureUserInDatabase(user, locale)
+    }
+  } catch (e) {
+    // Non-fatal; still proceed
+    console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
+  }
+
+  // Optionally handle redirect on the client; return success and let client route
+  return { success: true, next }
+}
+
+// Password-based registration (optional) – sends confirmation if enabled
+export async function signUpWithPasswordAction(
+  email: string,
+  password: string,
+  next: string | null = null,
+  locale?: string
+) {
+  const supabase = await createClient()
+  const websiteURL = await getWebsiteURL()
+  const callbackParams = new URLSearchParams()
+  if (next) callbackParams.set('next', next)
+  if (locale) callbackParams.set('locale', locale)
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${websiteURL}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
+    },
+  })
+  if (error) {
+    throw new Error(error.message)
+  }
+  return { success: true }
+}
+
+// Allow a logged-in user (e.g., magic link users) to set or change a password
+export async function setPasswordAction(newPassword: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    throw new Error('User not authenticated')
+  }
+  const { data, error } = await supabase.auth.updateUser({ password: newPassword })
+  if (error) {
+    throw new Error(error.message)
+  }
+  return { success: true }
+}
+
 /**
  * ensureUserInDatabase
  *
