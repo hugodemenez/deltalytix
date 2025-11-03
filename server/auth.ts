@@ -90,13 +90,14 @@ export async function signOut() {
 
 export async function signInWithEmail(email: string, next: string | null = null, locale?: string) {
   const supabase = await createClient()
+  const websiteURL = await getWebsiteURL()
   const callbackParams = new URLSearchParams()
   if (next) callbackParams.set('next', next)
   if (locale) callbackParams.set('locale', locale)
   const { error } = await supabase.auth.signInWithOtp({
     email: email,
     options: {
-      emailRedirectTo: `${getWebsiteURL()}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
+      emailRedirectTo: `${websiteURL}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
     },
   })
 }
