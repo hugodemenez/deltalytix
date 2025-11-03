@@ -72,16 +72,11 @@ export function MindsetSummary({
     return tradeDateString === selectedDateString
   })
 
-  // Calculate trading statistics
-  const stats = {
-    totalTrades: dayTrades.length,
-    totalPnL: dayTrades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0),
-    winRate: dayTrades.length > 0 
-      ? (dayTrades.filter(trade => trade.pnl - trade.commission > 0).length / dayTrades.length) * 100 
-      : 0
-  }
+  const [emotion, setEmotion] = useState<{ label: string; color: string }>(getEmotionLabel(emotionValue))
 
-  const emotion = getEmotionLabel(emotionValue)
+  useEffect(() => {
+   setEmotion(getEmotionLabel(emotionValue))
+  }, [emotionValue])
 
   return (
     <div className="h-full flex flex-col gap-4 p-4 overflow-y-auto">

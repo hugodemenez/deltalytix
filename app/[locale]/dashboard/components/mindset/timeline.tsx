@@ -50,14 +50,6 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
     return 'bg-emerald-500'
   }
 
-  const getEmotionLabel = (value: number) => {
-    if (value < 20) return t('mindset.emotion.verySad')
-    if (value < 40) return t('mindset.emotion.sad')
-    if (value < 60) return t('mindset.emotion.neutral')
-    if (value < 80) return t('mindset.emotion.happy')
-    return t('mindset.emotion.veryHappy')
-  }
-
   const handleDeleteClick = (e: React.MouseEvent, date: Date) => {
     e.stopPropagation()
     setEntryToDelete(date)

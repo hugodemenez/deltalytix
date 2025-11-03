@@ -1,15 +1,10 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { useI18n } from "@/locales/client"
 import { EmotionSelector } from "./emotion-selector"
-import { HourlyFinancialTimeline } from "./hourly-financial-timeline"
 import { DayTagSelector } from "./day-tag-selector"
-import { Newspaper, X } from "lucide-react"
 import { FinancialEvent, Trade } from "@prisma/client"
-import { cn } from "@/lib/utils"
 import { TiptapEditor } from "@/components/tiptap-editor"
 
 interface JournalingProps {
@@ -40,13 +35,6 @@ export function Journaling({
   onApplyTagToAll,
 }: JournalingProps) {
   const t = useI18n()
-
-  const toggleNews = (eventId: string) => {
-    const newSelectedNews = selectedNews.includes(eventId)
-      ? selectedNews.filter(id => id !== eventId)
-      : [...selectedNews, eventId]
-    onNewsSelection(newSelectedNews)
-  }
 
   return (
     <div className="h-full flex flex-col">

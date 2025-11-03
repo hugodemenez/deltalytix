@@ -35,7 +35,7 @@ interface MindsetWidgetProps {
 export function MindsetWidget({ size }: MindsetWidgetProps) {
   const [api, setApi] = useState<CarouselApi>()
   const [current, setCurrent] = useState(0)
-  const [emotionValue, setEmotionValue] = useState(50)
+  const [emotionValue, setEmotionValue] = useState(0)
   const [selectedNews, setSelectedNews] = useState<string[]>([])
   const [journalContent, setJournalContent] = useState("")
   const [selectedDate, setSelectedDate] = useState(new Date())
@@ -92,7 +92,7 @@ export function MindsetWidget({ size }: MindsetWidgetProps) {
         api.scrollTo(1) // Summary is now index 1
       } else {
         // Reset all values if no mood data exists for the selected date
-        setEmotionValue(50)
+        setEmotionValue(0)
         setSelectedNews([])
         setJournalContent("")
       }
