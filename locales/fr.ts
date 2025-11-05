@@ -1708,6 +1708,33 @@ export default {
       description: "Gérez vos préférences email et paramètres d'abonnement",
       comingSoon:
         "Les fonctionnalités de gestion des préférences de la newsletter arrivent bientôt.",
+      emailLabel: "Adresse Email",
+      emailPlaceholder: "Entrez votre adresse email",
+      load: "Charger les Préférences",
+      save: "Enregistrer les Préférences",
+      saving: "Enregistrement...",
+      options: {
+        monthlyStats: {
+          title: "Mise à Jour Mensuelle des Statistiques",
+          description: "Recevez un résumé mensuel de vos performances et statistiques de trading",
+        },
+        weeklyUpdates: {
+          title: "Mises à Jour Hebdomadaires Deltalytix",
+          description: "Recevez les dernières mises à jour produit, fonctionnalités et conseils de trading chaque semaine",
+        },
+        renewalNotifications: {
+          title: "Notifications de Renouvellement",
+          description: "Recevez des rappels concernant vos renouvellements d'abonnement et mises à jour de compte",
+        },
+      },
+      success: {
+        saved: "Préférences enregistrées avec succès",
+      },
+      error: {
+        load: "Échec du chargement des préférences",
+        save: "Échec de l'enregistrement des préférences",
+        emailRequired: "L'adresse email est requise",
+      },
     },
     admin: {
       inferNames: "Inférer les Noms",
