@@ -14,9 +14,6 @@ interface PageProps {
   }>
 }
 
-// Force page to be statically generated
-export const dynamic = 'force-static'
-export const dynamicParams = false // Don't generate pages for non-existent slugs
 
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
@@ -109,6 +106,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function Page({ params }: PageProps) {
+  'use cache'
   try {
     const resolvedParams = await params
     if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
