@@ -200,7 +200,7 @@ export function BusinessManagement({
     if (firstBusinessId) {
       redirect(`/business/dashboard/${firstBusinessId}`)
     }
-  }, [firstBusinessId])
+  }, [firstBusinessId, pathname])
   const t = useI18n()
   const { currency, symbol } = useCurrency()
 
