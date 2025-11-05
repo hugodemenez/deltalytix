@@ -218,7 +218,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "calendarWidget",
       "size": "large",
       "x": 0,
-      "y": 8,
+      "y": 9,
       "w": 6,
       "h": 8
     },
@@ -226,8 +226,8 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "i": "widget1751715494609",
       "type": "tradeDistribution",
       "size": "small",
-      "x": 6,
-      "y": 0,
+      "x": 0,
+      "y": 1,
       "w": 3,
       "h": 4
     },
@@ -236,35 +236,35 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "pnlChart",
       "size": "medium",
       "x": 0,
-      "y": 16,
+      "y": 17,
       "w": 6,
       "h": 4
     },
     {
       "i": "widget1752135357688",
       "type": "weekdayPnlChart",
-      "size": "medium",
-      "x": 0,
-      "y": 4,
-      "w": 6,
+      "size": "small",
+      "x": 3,
+      "y": 1,
+      "w": 3,
       "h": 4
     },
     {
       "i": "widget1752135359621",
       "type": "timeOfDayChart",
-      "size": "medium",
+      "size": "small",
       "x": 0,
-      "y": 20,
-      "w": 6,
+      "y": 21,
+      "w": 3,
       "h": 4
     },
     {
       "i": "widget1752135361015",
       "type": "timeInPositionChart",
-      "size": "medium",
-      "x": 6,
-      "y": 4,
-      "w": 6,
+      "size": "small",
+      "x": 9,
+      "y": 9,
+      "w": 3,
       "h": 4
     },
     {
@@ -272,17 +272,17 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "equityChart",
       "size": "large",
       "x": 6,
-      "y": 8,
+      "y": 1,
       "w": 6,
       "h": 8
     },
     {
       "i": "widget1752135365730",
       "type": "pnlBySideChart",
-      "size": "medium",
+      "size": "small",
       "x": 6,
-      "y": 16,
-      "w": 6,
+      "y": 9,
+      "w": 3,
       "h": 4
     },
     {
@@ -290,7 +290,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "tickDistribution",
       "size": "medium",
       "x": 6,
-      "y": 20,
+      "y": 13,
       "w": 6,
       "h": 4
     },
@@ -299,17 +299,17 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "commissionsPnl",
       "size": "medium",
       "x": 6,
-      "y": 24,
+      "y": 17,
       "w": 6,
       "h": 4
     },
     {
       "i": "widget1752135378584",
       "type": "timeRangePerformance",
-      "size": "medium",
-      "x": 0,
-      "y": 24,
-      "w": 6,
+      "size": "small",
+      "x": 6,
+      "y": 21,
+      "w": 3,
       "h": 4
     },
     {
@@ -326,7 +326,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "statisticsWidget",
       "size": "medium",
       "x": 0,
-      "y": 0,
+      "y": 5,
       "w": 6,
       "h": 4
     },
@@ -334,17 +334,26 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "i": "widget1752135397611",
       "type": "profitFactor",
       "size": "tiny",
-      "x": 9,
-      "y": 1,
+      "x": 6,
+      "y": 0,
       "w": 3,
       "h": 1
     },
     {
-      "i": "widget1752135401717",
+      "i": "widget1762369988555",
+      "type": "averagePositionTime",
+      "size": "tiny",
+      "x": 3,
+      "y": 0,
+      "w": 3,
+      "h": 1
+    },
+    {
+      "i": "widget1762369989742",
       "type": "cumulativePnl",
       "size": "tiny",
-      "x": 9,
-      "y": 2,
+      "x": 0,
+      "y": 0,
       "w": 3,
       "h": 1
     }
