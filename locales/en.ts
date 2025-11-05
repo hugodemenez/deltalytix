@@ -53,6 +53,7 @@ export default {
   "updates.inProgress": "In Progress",
   "updates.upcoming": "Upcoming Features",
   "updates.completed": "Completed Features",
+  "updates.weeklyVideo": "📺 Latest Weekly Video",
   "notification.title": "Rithmic Sync Progress",
   "notification.noAccount": "No account being processed",
   "notification.processingAccount": "Processing account: {account}",

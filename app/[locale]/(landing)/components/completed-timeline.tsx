@@ -1,10 +1,6 @@
 'use client'
 
 import React, { useEffect, useRef, useState } from 'react'
-import { Badge } from "@/components/ui/badge"
-import { motion } from "framer-motion"
-import { useI18n, useCurrentLocale } from '@/locales/client'
-import { TranslationKeys } from "@/app/[locale]/(landing)/types/translations"
 import Image from 'next/image'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -17,13 +13,12 @@ interface TimelineItem {
   completedDate: string
   status: 'completed' | 'in-progress' | 'upcoming'
   image?: string
+  youtubeVideoId?: string
 }
 
-export default function CompletedTimeline({ milestones }: { milestones: TimelineItem[] }) {
+export default function CompletedTimeline({ milestones, locale }: { milestones: TimelineItem[], locale: string }) {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const observerRefs = useRef<(HTMLDivElement | null)[]>([])
-  const t = useI18n()
-  const locale = useCurrentLocale()
   const dateLocale = locale === 'fr' ? fr : enUS
 
   useEffect(() => {
@@ -60,7 +55,7 @@ export default function CompletedTimeline({ milestones }: { milestones: Timeline
       <div className="absolute left-4 top-0 h-full w-0.5 bg-neutral-200 dark:bg-neutral-800" />
       
       <div className="space-y-12 pl-12">
-        {completedMilestones.map((milestone, index) => (
+        {completedMilestones.map((milestone) => (
           <div key={milestone.id} className="relative">
             <div className="absolute -left-[44px] flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
               <div className="h-3 w-3 rounded-full bg-neutral-300 dark:bg-neutral-700" />
@@ -76,7 +71,23 @@ export default function CompletedTimeline({ milestones }: { milestones: Timeline
               <p className="mt-2 text-neutral-600 dark:text-neutral-400">
                 {milestone.description}
               </p>
-              {milestone.image && (
+              
+              {/* Display YouTube video for French locale if available */}
+              {locale === 'fr' && milestone.youtubeVideoId && (
+                <div className="mt-4 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+                  <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                    <iframe
+                      className="absolute top-0 left-0 w-full h-full"
+                      src={`https://www.youtube.com/embed/${milestone.youtubeVideoId}`}
+                      title={milestone.title}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {milestone.image && !milestone.youtubeVideoId && (
                 <div className="mt-4 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
                   <Image
                     src={milestone.image}
@@ -93,9 +104,4 @@ export default function CompletedTimeline({ milestones }: { milestones: Timeline
       </div>
     </div>
   )
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }

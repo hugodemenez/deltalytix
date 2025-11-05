@@ -9,6 +9,7 @@ export interface PostMeta {
   estimatedDate?: string;
   image?: string;
   slug: string;
+  youtubeVideoId?: string;
 }
 
 export interface Post {
