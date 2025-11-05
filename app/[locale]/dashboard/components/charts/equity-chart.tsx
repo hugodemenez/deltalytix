@@ -1031,7 +1031,6 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
           {showIndividual &&
             !isSharedView &&
-            availableAccountNumbers.length > 1 &&
             size !== "small" && (
               <AccountsLegend
                 accountNumbers={availableAccountNumbers}
