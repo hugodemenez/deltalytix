@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 import createMDX from '@next/mdx';
 
 const nextConfig: NextConfig = {
-  cacheComponents: true, // Enable Cache Components (Next.js 16+)
+  // cacheComponents: true, // Enable Cache Components (Next.js 16+)
   images: {
     remotePatterns: [
       {
