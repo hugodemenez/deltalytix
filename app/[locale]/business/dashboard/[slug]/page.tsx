@@ -1,8 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { BusinessEquityDashboard } from '../../components/user-equity/business-equity-dashboard'
-import { BusinessManagement } from '../../components/business-management'
+import { BusinessEquityGridClient } from '../../components/user-equity/business-equity-grid-client'
 
 interface BusinessDashboardPageProps {
   params: Promise<{
@@ -24,15 +23,9 @@ export default function BusinessDashboardPage({ params }: BusinessDashboardPageP
   
   return (
     <div className="space-y-6">
-      {/* Business Management Section */}
-      <Suspense fallback={<div>Loading business management...</div>}>
-        <BusinessManagement
-        />
-      </Suspense>
-
       {/* Business Equity Dashboard */}
       <Suspense fallback={<div>Loading dashboard...</div>}>
-        <BusinessEquityDashboard businessId={slug} />
+        <BusinessEquityGridClient businessId={slug} />
       </Suspense>
     </div>
   )

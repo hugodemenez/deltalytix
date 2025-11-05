@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { getBusinessEquityData } from '../../actions/stats'
+import { getBusinessEquityData, exportBusinessTradesAction } from '../../actions/stats'
 import { Suspense } from 'react'
 import { Card } from '@/components/ui/card'
 import { UserEquityChart } from '../../../admin/components/user-equity/user-equity-chart'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Download } from 'lucide-react'
 import Link from 'next/link'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Filter, X } from 'lucide-react'
 import { useI18n } from '@/locales/client'
+import { toast } from 'sonner'
 
 interface UserEquityData {
   userId: string
@@ -58,6 +59,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
   const [isInitialLoading, setIsInitialLoading] = useState(true)
   const [showDailyView, setShowDailyView] = useState(true)
   const [showFilters, setShowFilters] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
   const [filters, setFilters] = useState<Filters>({
     minTrades: 0,
     minTradedDays: 0,
@@ -159,6 +161,33 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
     })
   }
 
+  const handleExportTrades = async () => {
+    setIsExporting(true)
+    try {
+      const csv = await exportBusinessTradesAction(businessId)
+      
+      // Create a blob and download the CSV
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      
+      link.setAttribute('href', url)
+      link.setAttribute('download', `business-trades-${businessId}-${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = 'hidden'
+      
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast.success(t('business.equity.exportSuccess'))
+    } catch (error) {
+      console.error('Error exporting trades:', error)
+      toast.error(t('business.equity.exportError'))
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const hasActiveFilters = filters.minTrades > 0 || filters.minTradedDays > 0 || filters.equityFilter !== 'all'
 
   if (isInitialLoading) {
@@ -189,18 +218,31 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
             </span>
           </div>
           
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2"
-          >
-            <Filter className="h-4 w-4" />
-            {t('business.equity.filters')}
-            {hasActiveFilters && (
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportTrades}
+              disabled={isExporting || users.length === 0}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {isExporting ? t('business.equity.exporting') : t('business.equity.exportTrades')}
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2"
+            >
+              <Filter className="h-4 w-4" />
+              {t('business.equity.filters')}
+              {hasActiveFilters && (
+                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Filters Panel */}

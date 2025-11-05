@@ -20,15 +20,13 @@ import {
 import { useTheme } from '@/context/theme-provider'
 import { cn } from '@/lib/utils'
 import { useChangeLocale, useI18n } from "@/locales/client"
-import { useRouter, usePathname } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { useCurrentLocale } from '@/locales/client'
 import { LanguageSelector } from "@/components/ui/language-selector"
 import { Badge } from "@/components/ui/badge"
 
 const ListItem = React.forwardRef<
-    React.ElementRef<"a">,
+    React.ComponentRef<"a">,
     React.ComponentPropsWithoutRef<"a"> & {
         title: string;
         icon?: React.ReactNode;
@@ -71,9 +69,6 @@ export default function BusinessNavbar() {
     const [isVisible, setIsVisible] = useState(true)
     const [lastScrollY, setLastScrollY] = useState(0)
     const t = useI18n()
-    const router = useRouter()
-    const pathname = usePathname()
-    const currentLocale = useCurrentLocale()
 
     const toggleMenu = () => setIsOpen(!isOpen)
     const closeMenu = () => setIsOpen(false)

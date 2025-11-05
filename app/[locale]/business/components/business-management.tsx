@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { 
-  Building2, 
-  Plus, 
-  UserPlus, 
-  UserMinus, 
+import {
+  Building2,
+  Plus,
+  UserPlus,
+  UserMinus,
   Eye,
   Settings,
   CheckCircle,
@@ -116,21 +116,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { 
-  joinBusiness, 
-  leaveBusiness, 
-  getUserBusinesses, 
-  addManagerToBusiness, 
-  removeManagerFromBusiness, 
-  updateManagerAccess, 
-  getUserBusinessAccess, 
-  deleteBusiness, 
-  renameBusiness, 
-  sendBusinessInvitation, 
-  getBusinessInvitations, 
-  removeTraderFromBusiness, 
-  cancelBusinessInvitation 
+import {
+  joinBusiness,
+  leaveBusiness,
+  getUserBusinesses,
+  addManagerToBusiness,
+  removeManagerFromBusiness,
+  updateManagerAccess,
+  getUserBusinessAccess,
+  deleteBusiness,
+  renameBusiness,
+  sendBusinessInvitation,
+  getBusinessInvitations,
+  removeTraderFromBusiness,
+  cancelBusinessInvitation
 } from '@/app/[locale]/dashboard/settings/actions'
+import { redirect, usePathname } from 'next/navigation'
+import Link from 'next/link'
 
 interface Business {
   id: string
@@ -160,35 +162,74 @@ export function BusinessManagement({
   onManageClick,
   onViewClick,
 }: BusinessManagementProps) {
+
+  const pathname = usePathname()
+  const [firstBusinessId, setFirstBusinessId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      // If we are not yet on a business dashboard, we try to redirect to the first business
+      if (!pathname.endsWith('/business/dashboard')) {
+        return;
+      }
+      // Get user's businesses
+      const businessesResult = await getUserBusinesses()
+      const managedResult = await getUserBusinessAccess()
+
+      if (businessesResult.success) {
+        // Check owned businesses first
+        if (businessesResult.ownedBusinesses && businessesResult.ownedBusinesses.length > 0) {
+          setFirstBusinessId(businessesResult.ownedBusinesses[0].id)
+          return
+        }
+        // If no owned businesses, check joined businesses
+        else if (businessesResult.joinedBusinesses && businessesResult.joinedBusinesses.length > 0) {
+          setFirstBusinessId(businessesResult.joinedBusinesses[0].id)
+          return
+        }
+      }
+
+      // If still no business found, check managed businesses
+      if (!firstBusinessId && managedResult.success && managedResult.managedBusinesses && managedResult.managedBusinesses.length > 0) {
+        setFirstBusinessId(managedResult.managedBusinesses[0].id)
+      }
+
+    }
+    loadInitialData()
+    // If we found a business, redirect to it
+    if (firstBusinessId) {
+      redirect(`/business/dashboard/${firstBusinessId}`)
+    }
+  }, [firstBusinessId])
   const t = useI18n()
   const { currency, symbol } = useCurrency()
-  
+
   // Get subscription price based on detected currency
   const subscriptionPrice = currency === 'EUR' ? '€500/month per business' : '$500/month per business'
-  
+
   // Get subscription features from translations
   const subscriptionFeatures = [
     t('business.management.teamCollaboration'),
-    t('business.management.sharedAnalytics'), 
+    t('business.management.sharedAnalytics'),
     t('business.management.managerAccessControls'),
     t('business.management.businessReporting')
   ]
-  
+
   // State
   const [userBusinesses, setUserBusinesses] = useState<{
     ownedBusinesses: Business[]
     joinedBusinesses: Business[]
   }>({ ownedBusinesses: [], joinedBusinesses: [] })
-  
+
   const [managedBusinesses, setManagedBusinesses] = useState<ManagedBusiness[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  
+
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
-  
+
   // Form states
   const [newBusinessName, setNewBusinessName] = useState('')
   const [joinBusinessId, setJoinBusinessId] = useState('')
@@ -241,17 +282,17 @@ export function BusinessManagement({
       const form = document.createElement('form')
       form.method = 'POST'
       form.action = '/api/stripe/create-business-checkout-session'
-      
+
       const businessNameInput = document.createElement('input')
       businessNameInput.type = 'hidden'
       businessNameInput.name = 'businessName'
       businessNameInput.value = newBusinessName.trim()
-      
+
       const currencyInput = document.createElement('input')
       currencyInput.type = 'hidden'
       currencyInput.name = 'currency'
       currencyInput.value = currency
-      
+
       form.appendChild(businessNameInput)
       form.appendChild(currencyInput)
       document.body.appendChild(form)
@@ -317,7 +358,7 @@ export function BusinessManagement({
       const result = await addManagerToBusiness(selectedBusiness.id, newManagerEmail.trim(), newManagerAccess)
       if (result.success) {
         toast.success(t('dashboard.business.managerAdded'))
-        
+
         // Update the selected business locally
         const newManager = {
           id: `temp-${Date.now()}`, // Temporary ID
@@ -325,7 +366,7 @@ export function BusinessManagement({
           access: newManagerAccess,
           email: newManagerEmail.trim(),
         }
-        
+
         const updatedSelectedBusiness = {
           ...selectedBusiness,
           managers: [...selectedBusiness.managers, newManager]
@@ -334,29 +375,29 @@ export function BusinessManagement({
 
         // Update the businesses in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
+          ownedBusinesses: prev.ownedBusinesses.map(business =>
+            business.id === selectedBusiness.id
               ? updatedSelectedBusiness
               : business
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
-              ? updatedSelectedBusiness  
+          joinedBusinesses: prev.joinedBusinesses.map(business =>
+            business.id === selectedBusiness.id
+              ? updatedSelectedBusiness
               : business
           )
         }))
 
-        setManagedBusinesses(prev => 
-          prev.map(business => 
-            business.id === selectedBusiness.id 
+        setManagedBusinesses(prev =>
+          prev.map(business =>
+            business.id === selectedBusiness.id
               ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
               : business
           )
         )
-        
+
         setNewManagerEmail('')
         setNewManagerAccess('viewer')
-        
+
         // Note: We don't reload data immediately to keep the dialog open
         // Data will be refreshed when the dialog is closed or when needed
       } else {
@@ -377,7 +418,7 @@ export function BusinessManagement({
       const result = await removeManagerFromBusiness(selectedBusiness.id, managerId)
       if (result.success) {
         toast.success(t('dashboard.business.managerRemoved'))
-        
+
         // Update the selected business locally
         const updatedSelectedBusiness = {
           ...selectedBusiness,
@@ -387,26 +428,26 @@ export function BusinessManagement({
 
         // Update the businesses in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
+          ownedBusinesses: prev.ownedBusinesses.map(business =>
+            business.id === selectedBusiness.id
               ? updatedSelectedBusiness
               : business
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
-              ? updatedSelectedBusiness  
+          joinedBusinesses: prev.joinedBusinesses.map(business =>
+            business.id === selectedBusiness.id
+              ? updatedSelectedBusiness
               : business
           )
         }))
 
-        setManagedBusinesses(prev => 
-          prev.map(business => 
-            business.id === selectedBusiness.id 
+        setManagedBusinesses(prev =>
+          prev.map(business =>
+            business.id === selectedBusiness.id
               ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
               : business
           )
         )
-        
+
         // Note: We don't reload data immediately to keep the dialog open
         // Data will be refreshed when the dialog is closed
       } else {
@@ -425,12 +466,12 @@ export function BusinessManagement({
       const result = await updateManagerAccess(selectedBusiness.id, managerId, access)
       if (result.success) {
         toast.success(t('dashboard.business.accessUpdated'))
-        
+
         // Update the selected business locally
         const updatedSelectedBusiness = {
           ...selectedBusiness,
-          managers: selectedBusiness.managers.map(manager => 
-            manager.managerId === managerId 
+          managers: selectedBusiness.managers.map(manager =>
+            manager.managerId === managerId
               ? { ...manager, access }
               : manager
           )
@@ -439,26 +480,26 @@ export function BusinessManagement({
 
         // Update the businesses in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
+          ownedBusinesses: prev.ownedBusinesses.map(business =>
+            business.id === selectedBusiness.id
               ? updatedSelectedBusiness
               : business
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
-              ? updatedSelectedBusiness  
+          joinedBusinesses: prev.joinedBusinesses.map(business =>
+            business.id === selectedBusiness.id
+              ? updatedSelectedBusiness
               : business
           )
         }))
 
-        setManagedBusinesses(prev => 
-          prev.map(business => 
-            business.id === selectedBusiness.id 
+        setManagedBusinesses(prev =>
+          prev.map(business =>
+            business.id === selectedBusiness.id
               ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
               : business
           )
         )
-        
+
         // Note: We don't reload data immediately to keep the dialog open
         // Data will be refreshed when the dialog is closed or when needed
       } else {
@@ -496,7 +537,7 @@ export function BusinessManagement({
       const result = await renameBusiness(selectedBusiness.id, renameBusinessName.trim())
       if (result.success) {
         toast.success(t('business.rename.success'))
-        
+
         // Update the selected business name locally
         const updatedSelectedBusiness = {
           ...selectedBusiness,
@@ -506,26 +547,26 @@ export function BusinessManagement({
 
         // Update the businesses in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
+          ownedBusinesses: prev.ownedBusinesses.map(business =>
+            business.id === selectedBusiness.id
               ? updatedSelectedBusiness
               : business
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
-              ? updatedSelectedBusiness  
+          joinedBusinesses: prev.joinedBusinesses.map(business =>
+            business.id === selectedBusiness.id
+              ? updatedSelectedBusiness
               : business
           )
         }))
 
-        setManagedBusinesses(prev => 
-          prev.map(business => 
-            business.id === selectedBusiness.id 
+        setManagedBusinesses(prev =>
+          prev.map(business =>
+            business.id === selectedBusiness.id
               ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
               : business
           )
         )
-        
+
         // Keep the modal open and reset the rename input
         setRenameBusinessName('')
       } else {
@@ -566,7 +607,7 @@ export function BusinessManagement({
 
   const loadPendingInvitations = async () => {
     if (!selectedBusiness) return
-    
+
     try {
       const result = await getBusinessInvitations(selectedBusiness.id)
       if (result.success) {
@@ -584,7 +625,7 @@ export function BusinessManagement({
       const removeResult = await removeTraderFromBusiness(selectedBusiness.id, traderId)
       if (removeResult.success) {
         toast.success('Trader removed successfully')
-        
+
         // Update the selected business locally
         const updatedSelectedBusiness = {
           ...selectedBusiness,
@@ -595,21 +636,21 @@ export function BusinessManagement({
 
         // Update the businesses in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
+          ownedBusinesses: prev.ownedBusinesses.map(business =>
+            business.id === selectedBusiness.id
               ? updatedSelectedBusiness
               : business
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business => 
-            business.id === selectedBusiness.id 
-              ? updatedSelectedBusiness  
+          joinedBusinesses: prev.joinedBusinesses.map(business =>
+            business.id === selectedBusiness.id
+              ? updatedSelectedBusiness
               : business
           )
         }))
 
-        setManagedBusinesses(prev => 
-          prev.map(business => 
-            business.id === selectedBusiness.id 
+        setManagedBusinesses(prev =>
+          prev.map(business =>
+            business.id === selectedBusiness.id
               ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
               : business
           )
@@ -680,19 +721,19 @@ export function BusinessManagement({
 
   // Deduplicate businesses to prevent showing the same business twice
   const allBusinesses = new Map<string, Business>()
-  
+
   // Add owned businesses first (highest priority)
   userBusinesses.ownedBusinesses.forEach(business => {
     allBusinesses.set(business.id, { ...business, userAccess: 'admin' })
   })
-  
+
   // Add joined businesses (medium priority)
   userBusinesses.joinedBusinesses.forEach(business => {
     if (!allBusinesses.has(business.id)) {
       allBusinesses.set(business.id, { ...business, userAccess: 'viewer' })
     }
   })
-  
+
   // Add managed businesses (lowest priority - only if not already added)
   managedBusinesses.forEach(business => {
     if (!allBusinesses.has(business.id)) {
@@ -728,9 +769,15 @@ export function BusinessManagement({
           const isJoined = userBusinesses.joinedBusinesses.some(b => b.id === business.id)
           const isManaged = managedBusinesses.some(b => b.id === business.id)
           const access = business.userAccess || (isOwner ? 'admin' : 'viewer')
+          const isActive = pathname.includes(`/business/dashboard/${business.id}`)
 
           return (
-            <Card key={business.id} className="cursor-pointer hover:border-primary/50 transition-colors shadow-xs hover:shadow-md">
+            <Card key={business.id} className={cn(
+              "cursor-pointer transition-colors shadow-xs hover:shadow-md",
+              isActive 
+                ? "border-primary ring-2 ring-primary/20" 
+                : "hover:border-primary/50"
+            )}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -739,7 +786,17 @@ export function BusinessManagement({
                       getStatusIndicator(access, isOwner)
                     )} />
                     <div className="min-w-0 flex-1">
-                      <CardTitle className="text-sm truncate">{business.name}</CardTitle>
+                      <CardTitle className={cn(
+                        "text-sm truncate flex items-center gap-2",
+                        isActive && "text-primary"
+                      )}>
+                        {business.name}
+                        {isActive && (
+                          <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
+                            {t('business.management.active')}
+                          </Badge>
+                        )}
+                      </CardTitle>
                       <p className="text-xs text-muted-foreground mt-1">
                         {getAccessLabel(access, isOwner)}
                       </p>
@@ -752,7 +809,7 @@ export function BusinessManagement({
                   <span className="text-muted-foreground">{t('dashboard.business.traders')}</span>
                   <span className="font-medium">{business.traderIds.length}</span>
                 </div>
-                
+
                 <div className="flex justify-between items-baseline text-sm">
                   <span className="text-muted-foreground">{t('business.management.created')}</span>
                   <span className="text-xs">{formatDate(business.createdAt)}</span>
@@ -777,27 +834,23 @@ export function BusinessManagement({
                           }, 100)
                         }}
                       >
-                                              <Settings className="h-3 w-3 mr-1" />
-                      {t('business.management.manage')}
-                    </Button>
+                        <Settings className="h-3 w-3 mr-1" />
+                        {t('business.management.manage')}
+                      </Button>
                       <Button
+                        asChild
                         variant="outline"
                         size="sm"
                         className="flex-1 text-xs"
-                        onClick={() => {
-                          if (onViewClick) {
-                            onViewClick(business)
-                          } else {
-                            window.location.href = `/business/dashboard/${business.id}`
-                          }
-                        }}
                       >
-                        <Eye className="h-3 w-3 mr-1" />
-                        {t('business.dashboard.view')}
+                        <Link href={`/business/dashboard/${business.id}`} className="flex items-center">
+                          <Eye className="h-3 w-3 mr-1" />
+                          {t('business.dashboard.view')}
+                        </Link>
                       </Button>
                     </>
                   )}
-                  
+
                   {isOwner && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -825,7 +878,7 @@ export function BusinessManagement({
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
-                  
+
                   {(isJoined || isManaged) && !isOwner && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -892,7 +945,7 @@ export function BusinessManagement({
                     placeholder={t('business.management.enterBusinessName')}
                   />
                 </div>
-                
+
                 {/* Payment Information */}
                 <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
@@ -907,7 +960,7 @@ export function BusinessManagement({
                     <ul className="text-sm text-muted-foreground space-y-1">
                       {[
                         t('business.management.teamCollaboration'),
-                        t('business.management.sharedAnalytics'), 
+                        t('business.management.sharedAnalytics'),
                         t('business.management.managerAccessControls'),
                         t('business.management.businessReporting')
                       ].map((feature: string, index: number) => (
@@ -968,7 +1021,7 @@ export function BusinessManagement({
                       placeholder={t('business.management.enterBusinessName')}
                     />
                   </div>
-                  
+
                   {/* Payment Information */}
                   <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
@@ -983,7 +1036,7 @@ export function BusinessManagement({
                       <ul className="text-sm text-muted-foreground space-y-1">
                         {[
                           t('business.management.teamCollaboration'),
-                          t('business.management.sharedAnalytics'), 
+                          t('business.management.sharedAnalytics'),
                           t('business.management.managerAccessControls'),
                           t('business.management.businessReporting')
                         ].map((feature: string, index: number) => (
@@ -1025,7 +1078,7 @@ export function BusinessManagement({
               {t('business.management.manageDescription')}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6 overflow-y-auto flex-1 pr-2 -mr-2 px-1">
             {/* Rename Business Section */}
             <div>
@@ -1037,8 +1090,8 @@ export function BusinessManagement({
                   onChange={(e) => setRenameBusinessName(e.target.value)}
                   className="flex-1"
                 />
-                <Button 
-                  onClick={handleRenameBusiness} 
+                <Button
+                  onClick={handleRenameBusiness}
                   disabled={isSubmitting || !renameBusinessName.trim()}
                   size="sm"
                 >
@@ -1052,7 +1105,7 @@ export function BusinessManagement({
             {/* Traders Section */}
             <div>
               <h4 className="font-medium mb-3">{t('business.traders')}</h4>
-              
+
               {/* Current Traders */}
               <div className="mb-4">
                 <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.traders.current')}</h5>
@@ -1073,12 +1126,12 @@ export function BusinessManagement({
                                 </Button>
                               </AlertDialogTrigger>
                               <AlertDialogContent className="w-[95vw] sm:w-full">
-                                                              <AlertDialogHeader>
-                                <AlertDialogTitle>{t('business.management.removeTrader')}</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  {t('business.management.removeTraderConfirm').replace('{email}', trader.email)}
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>{t('business.management.removeTrader')}</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {t('business.management.removeTraderConfirm').replace('{email}', trader.email)}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
                                 <AlertDialogFooter>
                                   <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                                   <AlertDialogAction
@@ -1111,8 +1164,8 @@ export function BusinessManagement({
                     onChange={(e) => setNewTraderEmail(e.target.value)}
                     className="flex-1"
                   />
-                  <Button 
-                    onClick={handleAddTrader} 
+                  <Button
+                    onClick={handleAddTrader}
                     disabled={isSubmitting || !newTraderEmail.trim()}
                     size="sm"
                   >
@@ -1148,12 +1201,12 @@ export function BusinessManagement({
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                                                                  <AlertDialogAction
-                                    onClick={() => handleCancelInvitation(invitation.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    {t('business.management.cancelInvitationAction')}
-                                  </AlertDialogAction>
+                                <AlertDialogAction
+                                  onClick={() => handleCancelInvitation(invitation.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {t('business.management.cancelInvitationAction')}
+                                </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
                           </AlertDialog>
@@ -1170,7 +1223,7 @@ export function BusinessManagement({
             {/* Managers Section */}
             <div>
               <h4 className="font-medium mb-3">{t('business.managers')}</h4>
-              
+
               {/* Current Managers */}
               <div className="mb-4">
                 <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.managers.current')}</h5>
@@ -1186,8 +1239,8 @@ export function BusinessManagement({
                             <Badge variant="outline">
                               {manager.access === 'admin' ? t('dashboard.business.admin') : t('dashboard.business.viewer')}
                             </Badge>
-                            <Select 
-                              value={manager.access} 
+                            <Select
+                              value={manager.access}
                               onValueChange={(value: 'admin' | 'viewer') => handleUpdateManagerAccess(manager.managerId, value)}
                             >
                               <SelectTrigger className="w-20 h-6 text-xs">
