@@ -100,23 +100,6 @@ export default function BusinessPage() {
     },
   ]
 
-  const testimonials = [
-    {
-      quote: t('business.testimonials.quote1'),
-      author: t('business.testimonials.author1'),
-      role: t('business.testimonials.role1'),
-    },
-    {
-      quote: t('business.testimonials.quote2'),
-      author: t('business.testimonials.author2'),
-      role: t('business.testimonials.role2'),
-    },
-    {
-      quote: t('business.testimonials.quote3'),
-      author: t('business.testimonials.author3'),
-      role: t('business.testimonials.role3'),
-    },
-  ]
 
   const stats = [
     { value: '500+', label: t('business.stats.traders') },
@@ -124,55 +107,6 @@ export default function BusinessPage() {
     { value: '50+', label: t('business.stats.brokers') },
   ]
 
-  const roadmap = [
-    {
-      quarter: t('business.roadmap.q1.title'),
-      description: t('business.roadmap.q1.description'),
-      features: [
-        'Multi-account dashboard',
-        'Team analytics',
-        'Basic reporting',
-        'API foundation'
-      ],
-      status: 'completed',
-      icon: CheckCircle2,
-    },
-    {
-      quarter: t('business.roadmap.q2.title'),
-      description: t('business.roadmap.q2.description'),
-      features: [
-        'Real-time monitoring',
-        'Risk management tools',
-        'Compliance reporting',
-        'Advanced team analytics'
-      ],
-      status: 'inProgress',
-      icon: Clock3,
-    },
-    {
-      quarter: t('business.roadmap.q3.title'),
-      description: t('business.roadmap.q3.description'),
-      features: [
-        'Enterprise API',
-        'Custom integrations',
-        'Advanced security'
-      ],
-      status: 'coming',
-      icon: Play,
-    },
-    {
-      quarter: t('business.roadmap.q4.title'),
-      description: t('business.roadmap.q4.description'),
-      features: [
-        'Complete enterprise suite',
-        'Dedicated support',
-        'Custom onboarding',
-        'Enterprise pricing'
-      ],
-      status: 'coming',
-      icon: Calendar,
-    },
-  ]
 
   return (
     <div className="flex flex-col min-h-dvh text-gray-900 dark:text-white transition-colors duration-300">
@@ -322,7 +256,7 @@ export default function BusinessPage() {
                 {t('business.cta.createAccount.description')}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/authentication" className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                <Link href="/authentication&next=business/dashboard" className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
                   <span className="font-medium text-sm text-white">{t('business.cta.createAccount.button')}</span>
                 </Link>
                 <button 

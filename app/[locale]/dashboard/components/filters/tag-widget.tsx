@@ -290,7 +290,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
         <CardHeader 
           className={cn(
             "flex flex-row items-center justify-between space-y-0 pb-2 shrink-0",
-            size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
+            size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
           )}
         >
           <div className="flex items-center justify-between w-full">
@@ -298,7 +298,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
               <CardTitle 
                 className={cn(
                   "line-clamp-1",
-                  size === 'small-long' ? "text-sm" : "text-base"
+                  size === 'small' ? "text-sm" : "text-base"
                 )}
               >
                 {t('widgets.tags.title')}
@@ -308,12 +308,12 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                   <TooltipTrigger asChild>
                     <Info className={cn(
                       "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                      size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                     )} />
                   </TooltipTrigger>
                   <TooltipContent side="top" className="max-w-[300px]">
                     <div className="space-y-1">
-                      <p className="font-medium break-words">{t('widgets.tags.description')}</p>
+                      <p className="font-medium wrap-break-word">{t('widgets.tags.description')}</p>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -326,7 +326,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                   size="sm"
                   className={cn(
                     "h-8 px-2 lg:px-3 text-xs hover:bg-muted/50",
-                    size === 'small-long' ? "h-6" : "h-8"
+                    size === 'small' ? "h-6" : "h-8"
                   )}
                   onClick={() => setTagFilter({ tags: [] })}
                 >
@@ -340,12 +340,12 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                     size="icon"
                     className={cn(
                       "shrink-0 hover:bg-muted/50",
-                      size === 'small-long' ? "h-6 w-6" : "h-8 w-8"
+                      size === 'small' ? "h-6 w-6" : "h-8 w-8"
                     )}
                     disabled={isLoading}
                   >
                     <Plus className={cn(
-                      size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                      size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                     )} />
                   </Button>
                 </DialogTrigger>
@@ -419,7 +419,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
         <CardContent 
           className={cn(
             "flex-1 min-h-0 overflow-hidden pt-0",
-            size === 'small-long' ? "px-1" : "px-2 sm:px-4"
+            size === 'small' ? "px-1" : "px-2 sm:px-4"
           )}
         >
           <div className="flex flex-col h-full space-y-3">
@@ -427,7 +427,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
             <div className="flex items-center gap-2 shrink-0 bg-muted/30 rounded-md px-2">
               <Search className={cn(
                 "text-muted-foreground",
-                size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
               )} />
               <Input
                 placeholder={t('widgets.tags.searchPlaceholder')}
@@ -435,7 +435,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
                   "flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0",
-                  size === 'small-long' ? "h-7 text-xs" : "h-8 text-sm"
+                  size === 'small' ? "h-7 text-xs" : "h-8 text-sm"
                 )}
               />
             </div>
@@ -448,14 +448,14 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
               >
                 <div className={cn(
                   "space-y-0.5",
-                  size === 'small-long' ? "min-h-[150px]" : "min-h-[200px]"
+                  size === 'small' ? "min-h-[150px]" : "min-h-[200px]"
                 )}>
                   {filteredTags.map((tag) => (
                     <div
                       key={tag.id}
                       className={cn(
                         "flex items-center justify-between rounded-md hover:bg-muted/50 transition-colors group",
-                        size === 'small-long' ? "p-1" : "p-1.5"
+                        size === 'small' ? "p-1" : "p-1.5"
                       )}
                     >
                       <div className="flex items-center gap-2 min-w-0">
@@ -470,13 +470,13 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                           }}
                           id={`tag-${tag.id}`}
                           className={cn(
-                            size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                            size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                           )}
                         />
                         <div
                           className={cn(
                             "rounded-full shrink-0",
-                            size === 'small-long' ? "w-2.5 h-2.5" : "w-3 h-3"
+                            size === 'small' ? "w-2.5 h-2.5" : "w-3 h-3"
                           )}
                           style={{ backgroundColor: tag.color || '#CBD5E1' }}
                         />
@@ -484,7 +484,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                           htmlFor={`tag-${tag.id}`}
                           className={cn(
                             "font-medium cursor-pointer truncate flex-1",
-                            size === 'small-long' ? "text-xs" : "text-sm"
+                            size === 'small' ? "text-xs" : "text-sm"
                           )}
                         >
                           <TooltipProvider>
@@ -492,16 +492,16 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                               <TooltipTrigger asChild>
                                 <span className={cn(
                                   "font-medium cursor-pointer truncate flex-1",
-                                  size === 'small-long' ? "text-xs" : "text-sm"
+                                  size === 'small' ? "text-xs" : "text-sm"
                                 )}>
                                   {tag.name.length > 35 ? `${tag.name.slice(0, 35)}...` : tag.name}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-[300px]">
                                 <div className="space-y-1">
-                                  <p className="font-medium break-words">{tag.name}</p>
+                                  <p className="font-medium wrap-break-word">{tag.name}</p>
                                   {tag.description && (
-                                    <p className="text-sm text-muted-foreground break-words whitespace-pre-wrap">{tag.description}</p>
+                                    <p className="text-sm text-muted-foreground wrap-break-word whitespace-pre-wrap">{tag.description}</p>
                                   )}
                                 </div>
                               </TooltipContent>
@@ -515,13 +515,13 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                           size="icon"
                           className={cn(
                             "hover:bg-muted",
-                            size === 'small-long' ? "h-6 w-6" : "h-7 w-7"
+                            size === 'small' ? "h-6 w-6" : "h-7 w-7"
                           )}
                           onClick={() => handleEdit(tag)}
                           disabled={isLoading}
                         >
                           <Edit2 className={cn(
-                            size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                            size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                           )} />
                         </Button>
                         <Button
@@ -529,13 +529,13 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                           size="icon"
                           className={cn(
                             "text-destructive hover:text-destructive hover:bg-destructive/10",
-                            size === 'small-long' ? "h-6 w-6" : "h-7 w-7"
+                            size === 'small' ? "h-6 w-6" : "h-7 w-7"
                           )}
                           onClick={() => handleDelete(tag)}
                           disabled={isLoading}
                         >
                           <Trash2 className={cn(
-                            size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                            size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                           )} />
                         </Button>
                       </div>
@@ -544,7 +544,7 @@ export function TagWidget({ size = 'medium', onTagSelectionChange }: TagWidgetPr
                   {filteredTags.length === 0 && (
                     <div className={cn(
                       "flex items-center justify-center text-muted-foreground h-[200px]",
-                      size === 'small-long' ? "text-xs" : "text-sm"
+                      size === 'small' ? "text-xs" : "text-sm"
                     )}>
                       {searchQuery ? t('widgets.tags.noResults') : t('widgets.tags.noTags')}
                     </div>

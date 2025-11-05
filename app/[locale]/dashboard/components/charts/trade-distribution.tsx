@@ -90,7 +90,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
       <CardHeader 
         className={cn(
           "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
+          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
         )}
       >
         <div className="flex items-center justify-between w-full">
@@ -98,7 +98,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
             <CardTitle 
               className={cn(
                 "line-clamp-1",
-                size === 'small-long' ? "text-sm" : "text-base"
+                size === 'small' ? "text-sm" : "text-base"
               )}
             >
               {t('tradeDistribution.title')}
@@ -108,7 +108,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
                 <TooltipTrigger asChild>
                   <Info className={cn(
                     "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                    size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">
@@ -122,7 +122,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
       <CardContent 
         className={cn(
           "flex-1 min-h-0",
-          size === 'small-long' ? "p-1" : "p-2 sm:p-4"
+          size === 'small' ? "p-1" : "p-2 sm:p-4"
         )}
       >
         <div className="w-full h-full">
@@ -132,8 +132,8 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
                 data={chartData}
                 cx="50%"
                 cy="45%"
-                innerRadius={size === 'small-long' ? "60%" : "65%"}
-                outerRadius={size === 'small-long' ? "80%" : "85%"}
+                innerRadius={size === 'small' ? "60%" : "65%"}
+                outerRadius={size === 'small' ? "80%" : "85%"}
                 paddingAngle={2}
                 dataKey="value"
                 startAngle={90}
@@ -158,7 +158,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
                     const cy = viewBox.cy;
 
                     // Use a percentage of the distance from center to edge for label positioning
-                    const labelRadius = Math.min(cx, cy) * (size === 'small-long' ? 0.95 : 1.1); // Position labels at 95% or 100% of available space
+                    const labelRadius = Math.min(cx, cy) * (size === 'small' ? 0.95 : 1.1); // Position labels at 95% or 100% of available space
 
                     return chartData.map((entry, index) => {
                       const angle = -90 + (360 * (entry.value / 100) / 2) + (360 * chartData.slice(0, index).reduce((acc, curr) => acc + curr.value, 0) / 100);
@@ -173,7 +173,7 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
                           dominantBaseline="middle"
                           className="fill-muted-foreground font-medium translate-y-2"
                           style={{ 
-                            fontSize: size === 'small-long' ? '10px' : '12px'
+                            fontSize: size === 'small' ? '10px' : '12px'
                           }}
                         >
                           {entry.value > 5 ? `${Math.round(entry.value)}%` : ''}
@@ -190,13 +190,13 @@ export default function TradeDistributionChart({ size = 'medium' }: TradeDistrib
                 iconType="circle"
                 formatter={renderColorfulLegendText}
                 wrapperStyle={{
-                  paddingTop: size === 'small-long' ? 0 : 16
+                  paddingTop: size === 'small' ? 0 : 16
                 }}
               />
               <Tooltip 
                 content={<CustomTooltip />}
                 wrapperStyle={{ 
-                  fontSize: size === 'small-long' ? '10px' : '12px',
+                  fontSize: size === 'small' ? '10px' : '12px',
                   zIndex: 1000
                 }} 
               />

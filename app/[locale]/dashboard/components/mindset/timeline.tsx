@@ -114,7 +114,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                   )}
                   onClick={handleTodayClick}
                 >
-                  <div className="flex flex-col items-center justify-center gap-1 min-w-[40px]">
+                  <div className="flex flex-col items-center justify-center gap-1 min-w-10">
                     <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
                   </div>
                   <div className="flex-1 text-left min-w-0 flex items-center">
@@ -156,7 +156,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                       )}
                       onClick={() => onSelectDate(moodDate)}
                     >
-                      <div className="flex flex-col items-center justify-center gap-1 min-w-[40px]">
+                      <div className="flex flex-col items-center justify-center gap-1 min-w-10">
                         <div className={cn(
                           "w-2 h-2 rounded-full transition-colors",
                           getEmotionColor(mood.emotionValue)

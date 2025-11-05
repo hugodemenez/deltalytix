@@ -504,7 +504,7 @@ const AccountsLegend = React.memo(
                       <span className="text-xs text-muted-foreground leading-tight">
                         {formatCurrency(equity)}
                       </span>
-                      <div className="min-h-[14px] flex flex-col">
+                      <div className="min-h-3.5 flex flex-col">
                         {hasPayout && (
                           <span
                             className="text-xs leading-tight"
@@ -749,7 +749,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     <Card className="h-full flex flex-col">
       <CardHeader
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0 h-[56px]",
+          "flex flex-col items-stretch space-y-0 border-b shrink-0 h-14",
           size === "small" ? "p-2" : "p-3 sm:p-4",
         )}
       >
@@ -758,7 +758,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === "small-long" ? "text-sm" : "text-base",
+                size === "small" ? "text-sm" : "text-base",
               )}
             >
               {t("equity.title")}
@@ -769,7 +769,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                   <Info
                     className={cn(
                       "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small-long" ? "h-3.5 w-3.5" : "h-4 w-4",
+                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
                     )}
                   />
                 </TooltipTrigger>

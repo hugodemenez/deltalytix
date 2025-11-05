@@ -172,9 +172,10 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --chart-6: 150 63% 45%;
-    --chart-7: 260 60% 55%;
-    --chart-8: 320 70% 60%;
+    /* Refined to keep palette consistency beyond first five */
+    --chart-6: 206 72% 50%; /* blue */
+    --chart-7: 260 60% 55%; /* purple */
+    --chart-8: 336 70% 58%; /* rose */
     --chart-loss: 12 76% 61%;
     --chart-win: 173 58% 39%;
   }
@@ -209,16 +210,17 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --chart-6: 190 65% 50%;
-    --chart-7: 120 60% 45%;
-    --chart-8: 60 75% 55%;
-    --chart-loss: 30 80% 55%;
-    --chart-win: 160 60% 45%;
+    /* Dark theme realigned to mirror light theme hues for consistency */
+    --chart-1: 12 75% 65%;   /* red-orange */
+    --chart-2: 173 60% 55%;  /* teal-green */
+    --chart-3: 197 55% 60%;  /* blue-gray */
+    --chart-4: 43 85% 60%;   /* golden yellow */
+    --chart-5: 27 85% 60%;   /* orange */
+    --chart-6: 206 80% 60%;  /* blue */
+    --chart-7: 260 65% 65%;  /* purple */
+    --chart-8: 336 70% 65%;  /* rose */
+    --chart-loss: 12 75% 65%;
+    --chart-win: 173 60% 55%;
   }
 }
 

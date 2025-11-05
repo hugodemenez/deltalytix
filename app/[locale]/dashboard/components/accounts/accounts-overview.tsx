@@ -855,7 +855,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       <CardHeader
         className={cn(
           "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small-long' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
+          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
         )}
       >
         <div className="flex items-center justify-between w-full">
@@ -863,7 +863,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === 'small-long' ? "text-sm" : "text-base"
+                size === 'small' ? "text-sm" : "text-base"
               )}
             >
               {t('propFirm.title')}
@@ -873,7 +873,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 <TooltipTrigger asChild>
                   <Info className={cn(
                     "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                    size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">

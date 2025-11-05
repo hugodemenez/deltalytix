@@ -713,12 +713,13 @@ export function BusinessManagement({
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="mx-auto py-8">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">{t('business.management.component.title')}</h1>
         <p className="text-muted-foreground mt-2">{t('business.management.component.description')}</p>
       </div>
+
 
       {/* Businesses Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

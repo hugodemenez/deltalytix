@@ -1,6 +1,6 @@
 'use server'
 
-import { Trade, Prisma, PrismaClient, Group } from '@prisma/client'
+import { Trade, Prisma, PrismaClient, Group, TickDetails } from '@prisma/client'
 import { endOfDay, startOfDay } from 'date-fns'
 import { parseISO, isValid } from 'date-fns'
 import { revalidatePath } from 'next/cache'
@@ -22,7 +22,7 @@ export interface SharedParams {
   expiresAt?: Date
   viewCount?: number
   createdAt?: Date
-  tickDetails?: Record<string, number>
+  tickDetails?: TickDetails[]
 }
 
 interface DateRange {
@@ -116,7 +116,7 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
       const toDate = dateRange.to ? new Date(dateRange.to) : undefined
 
       // Parallel fetch of trades, tick details, and groups
-      const [trades, tickDetailsData, groups] = await Promise.all([
+      const [trades, tickDetails, groups] = await Promise.all([
         tx.trade.findMany({
           where: {
             userId: shared.userId,
@@ -144,11 +144,6 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
           },
         })
       ])
-
-      const tickDetails = tickDetailsData.reduce((acc, detail) => {
-        acc[detail.ticker] = detail.tickValue
-        return acc
-      }, {} as Record<string, number>)
 
       return {
         params: {

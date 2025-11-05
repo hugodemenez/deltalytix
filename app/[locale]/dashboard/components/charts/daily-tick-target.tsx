@@ -172,7 +172,7 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
       <CardHeader 
         className={cn(
           "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
+          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
         )}
       >
         <div className="flex items-center justify-between w-full">
@@ -180,7 +180,7 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
             <CardTitle 
               className={cn(
                 "line-clamp-1",
-                size === 'small-long' ? "text-sm" : "text-base"
+                size === 'small' ? "text-sm" : "text-base"
               )}
             >
               {t('widgets.dailyTickTarget.title')}
@@ -190,7 +190,7 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
                 <TooltipTrigger asChild>
                   <Info className={cn(
                     "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                    size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">
@@ -302,7 +302,7 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
       <CardContent 
         className={cn(
           "flex-1 min-h-0",
-          size === 'small-long' ? "p-1" : "p-2 sm:p-4"
+          size === 'small' ? "p-1" : "p-2 sm:p-4"
         )}
       >
         <div className="w-full h-full flex flex-col justify-center gap-4">
@@ -311,14 +311,14 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
             <div className="flex flex-col items-center gap-1">
               <span className={cn(
                 "text-muted-foreground uppercase tracking-wide",
-                size === 'small-long' ? "text-xs" : "text-sm"
+                size === 'small' ? "text-xs" : "text-sm"
               )}>
                 {t('widgets.dailyTickTarget.current')}
               </span>
               <span className={cn(
                 "font-bold",
                 isOverTarget ? "text-green-500" : "text-foreground",
-                size === 'small-long' ? "text-xl" : "text-3xl"
+                size === 'small' ? "text-xl" : "text-3xl"
               )}>
                 {Math.round(convertToDisplayValue(progress.current))}
                 <span className="text-sm font-normal ml-1 text-muted-foreground">
@@ -334,13 +334,13 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
             <div className="flex flex-col items-center gap-1">
               <span className={cn(
                 "text-muted-foreground uppercase tracking-wide",
-                size === 'small-long' ? "text-xs" : "text-sm"
+                size === 'small' ? "text-xs" : "text-sm"
               )}>
                 {t('widgets.dailyTickTarget.target')}
               </span>
               <span className={cn(
                 "font-bold",
-                size === 'small-long' ? "text-xl" : "text-3xl"
+                size === 'small' ? "text-xl" : "text-3xl"
               )}>
                 {Math.round(convertToDisplayValue(progress.target))}
                 <span className="text-sm font-normal ml-1 text-muted-foreground">
@@ -357,13 +357,13 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
               <div className="flex flex-col gap-0.5">
                 <span className={cn(
                   "text-xs text-muted-foreground",
-                  size === 'small-long' ? "text-2xs" : "text-xs"
+                  size === 'small' ? "text-2xs" : "text-xs"
                 )}>
                   {t('widgets.dailyTickTarget.positive')}
                 </span>
                 <span className={cn(
                   "font-semibold text-green-500",
-                  size === 'small-long' ? "text-sm" : "text-base"
+                  size === 'small' ? "text-sm" : "text-base"
                 )}>
                   {Math.round(convertToDisplayValue(progress.positive))}
                 </span>
@@ -375,13 +375,13 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
               <div className="flex flex-col gap-0.5">
                 <span className={cn(
                   "text-xs text-muted-foreground",
-                  size === 'small-long' ? "text-2xs" : "text-xs"
+                  size === 'small' ? "text-2xs" : "text-xs"
                 )}>
                   {t('widgets.dailyTickTarget.negative')}
                 </span>
                 <span className={cn(
                   "font-semibold text-red-500",
-                  size === 'small-long' ? "text-sm" : "text-base"
+                  size === 'small' ? "text-sm" : "text-base"
                 )}>
                   {Math.round(convertToDisplayValue(progress.negative))}
                 </span>
@@ -395,14 +395,14 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
               <div className="flex justify-between items-center">
                 <span className={cn(
                   "text-muted-foreground",
-                  size === 'small-long' ? "text-2xs" : "text-xs"
+                  size === 'small' ? "text-2xs" : "text-xs"
                 )}>
                   {t('widgets.dailyTickTarget.progress')}
                 </span>
                 <span className={cn(
                   "font-medium",
                   isOverTarget ? "text-green-500" : "text-foreground",
-                  size === 'small-long' ? "text-2xs" : "text-xs"
+                  size === 'small' ? "text-2xs" : "text-xs"
                 )}>
                   {Math.round(progress.percentage)}%
                 </span>
@@ -423,7 +423,7 @@ export default function DailyTickTargetChart({ size = 'medium' }: DailyTickTarge
               <Target className="h-6 w-6 text-muted-foreground/50" />
               <span className={cn(
                 "text-muted-foreground",
-                size === 'small-long' ? "text-xs" : "text-sm"
+                size === 'small' ? "text-xs" : "text-sm"
               )}>
                 {t('widgets.dailyTickTarget.noTargetSet')}
               </span>

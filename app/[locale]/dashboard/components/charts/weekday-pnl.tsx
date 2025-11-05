@@ -97,7 +97,7 @@ export default function WeekdayPNLChart({
 
   const getColor = (value: number) => {
     const ratio = Math.abs((value - minPnL) / (maxPnL - minPnL));
-    const baseColorVar = value >= 0 ? "--chart-win" : "--chart-4";
+    const baseColorVar = value >= 0 ? "--chart-win" : "--chart-loss";
     const intensity = darkMode
       ? Math.max(0.3, ratio) // Higher minimum intensity in dark mode
       : Math.max(0.2, ratio); // Lower minimum intensity in light mode
@@ -164,7 +164,7 @@ export default function WeekdayPNLChart({
       <CardHeader
         className={cn(
           "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === "small-long" ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]",
+          size === "small" ? "p-2 h-10" : "p-3 sm:p-4 h-14",
         )}
       >
         <div className="flex items-center justify-between w-full">
@@ -172,7 +172,7 @@ export default function WeekdayPNLChart({
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === "small-long" ? "text-sm" : "text-base",
+                size === "small" ? "text-sm" : "text-base",
               )}
             >
               {t("weekdayPnl.title")}
@@ -183,7 +183,7 @@ export default function WeekdayPNLChart({
                   <Info
                     className={cn(
                       "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small-long" ? "h-3.5 w-3.5" : "h-4 w-4",
+                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
                     )}
                   />
                 </TooltipTrigger>
@@ -208,7 +208,7 @@ export default function WeekdayPNLChart({
       <CardContent
         className={cn(
           "flex-1 min-h-0",
-          size === "small-long" ? "p-1" : "p-2 sm:p-4",
+          size === "small" ? "p-1" : "p-2 sm:p-4",
         )}
       >
         <div className="w-full h-full cursor-pointer" onClick={handleClick}>
@@ -216,7 +216,7 @@ export default function WeekdayPNLChart({
             <BarChart
               data={weekdayData}
               margin={
-                size === "small-long"
+                size === "small"
                   ? { left: 0, right: 4, top: 4, bottom: 20 }
                   : { left: 0, right: 8, top: 8, bottom: 24 }
               }
@@ -229,15 +229,15 @@ export default function WeekdayPNLChart({
                 dataKey="day"
                 tickLine={false}
                 axisLine={false}
-                height={size === "small-long" ? 20 : 24}
-                tickMargin={size === "small-long" ? 4 : 8}
+                height={size === "small" ? 20 : 24}
+                tickMargin={size === "small" ? 4 : 8}
                 tick={{
-                  fontSize: size === "small-long" ? 9 : 11,
+                  fontSize: size === "small" ? 9 : 11,
                   fill: "currentColor",
                 }}
                 tickFormatter={(value) => {
                   const dayName = translateWeekdayPnL(t, value);
-                  return size === "small-long" ? dayName.slice(0, 3) : dayName;
+                  return size === "small" ? dayName.slice(0, 3) : dayName;
                 }}
               />
               <YAxis
@@ -246,7 +246,7 @@ export default function WeekdayPNLChart({
                 width={45}
                 tickMargin={4}
                 tick={{
-                  fontSize: size === "small-long" ? 9 : 11,
+                  fontSize: 8,
                   fill: "currentColor",
                 }}
                 tickFormatter={formatCurrency}
@@ -254,15 +254,14 @@ export default function WeekdayPNLChart({
               <Tooltip
                 content={<CustomTooltip />}
                 wrapperStyle={{
-                  fontSize: size === "small-long" ? "10px" : "12px",
+                  fontSize: size === "small" ? "10px" : "12px",
                   zIndex: 1000,
                 }}
               />
               <Bar
                 dataKey="pnl"
-                fill={chartConfig.pnl.color}
                 radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small-long" ? 25 : 40}
+                maxBarSize={size === "small" ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
                 opacity={weekdayFilter.day !== null ? 0.3 : 1}
               >
@@ -270,13 +269,6 @@ export default function WeekdayPNLChart({
                   <Cell
                     key={`cell-${entry.day}`}
                     fill={getColor(entry.pnl)}
-                    opacity={
-                      weekdayFilter.day === entry.day
-                        ? 1
-                        : weekdayFilter.day !== null
-                          ? 0.3
-                          : 1
-                    }
                   />
                 ))}
               </Bar>

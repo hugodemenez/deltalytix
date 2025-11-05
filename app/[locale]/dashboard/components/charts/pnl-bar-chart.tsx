@@ -128,7 +128,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
 
   const getChartHeight = () => {
     switch (size) {
-      case "small-long":
+      case "small":
         return "h-[140px]";
       case "medium":
         return "h-[200px]";
@@ -141,7 +141,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
 
   const getChartMargins = () => {
     switch (size) {
-      case "small-long":
+      case "small":
         return { left: 10, right: 4, top: 4, bottom: 20 };
       case "medium":
         return { left: 10, right: 8, top: 8, bottom: 24 };
@@ -157,7 +157,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
       <CardHeader
         className={cn(
           "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small-long" ? "p-2" : "p-3 sm:p-4",
+          size === "small" ? "p-2" : "p-3 sm:p-4",
         )}
       >
         <div className="flex items-center justify-between">
@@ -165,7 +165,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === "small-long" ? "text-sm" : "text-base",
+                size === "small" ? "text-sm" : "text-base",
               )}
             >
               {t("pnl.title")}
@@ -176,7 +176,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
                   <Info
                     className={cn(
                       "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small-long" ? "h-3.5 w-3.5" : "h-4 w-4",
+                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
                     )}
                   />
                 </TooltipTrigger>
@@ -191,7 +191,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
       <CardContent
         className={cn(
           "flex-1 min-h-0",
-          size === "small-long" ? "p-1" : "p-2 sm:p-4",
+          size === "small" ? "p-1" : "p-2 sm:p-4",
         )}
       >
         <div className={cn("w-full h-full")}>
@@ -205,13 +205,13 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
                 dataKey="date"
                 tickLine={false}
                 axisLine={false}
-                height={size === "small-long" ? 20 : 24}
-                tickMargin={size === "small-long" ? 4 : 8}
+                height={size === "small" ? 20 : 24}
+                tickMargin={size === "small" ? 4 : 8}
                 tick={{
-                  fontSize: size === "small-long" ? 9 : 11,
+                  fontSize: size === "small" ? 9 : 11,
                   fill: "currentColor",
                 }}
-                minTickGap={size === "small-long" ? 30 : 50}
+                minTickGap={size === "small" ? 30 : 50}
                 tickFormatter={(value) => {
                   const date = new Date(value + "T00:00:00Z");
                   return formatInTimeZone(date, timezone, "MMM d", {
@@ -225,7 +225,7 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
                 width={60}
                 tickMargin={4}
                 tick={{
-                  fontSize: size === "small-long" ? 9 : 11,
+                  fontSize: size === "small" ? 9 : 11,
                   fill: "currentColor",
                 }}
                 tickFormatter={formatCurrency}
@@ -233,14 +233,14 @@ export default function PNLChart({ size = "medium" }: PNLChartProps) {
               <Tooltip
                 content={<CustomTooltip />}
                 wrapperStyle={{
-                  fontSize: size === "small-long" ? "10px" : "12px",
+                  fontSize: size === "small" ? "10px" : "12px",
                   zIndex: 1000,
                 }}
               />
               <Bar
                 dataKey="pnl"
                 radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small-long" ? 25 : 40}
+                maxBarSize={size === "small" ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
               >
                 {chartData.map((entry, index) => (

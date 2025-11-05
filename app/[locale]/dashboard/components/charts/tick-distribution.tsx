@@ -25,8 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useI18n } from "@/locales/client";
 import { Button } from "@/components/ui/button";
-import { useTickDetailsStore } from "../../../../../store/tick-details-store";
-import { useUserStore } from "../../../../../store/user-store";
+import { useTickDetailsStore } from "@/store/tick-details-store";
 
 interface TickDistributionProps {
   size?: WidgetSize;
@@ -154,7 +153,7 @@ export default function TickDistributionChart({
       <CardHeader
         className={cn(
           "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === "small-long" ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]",
+          size === "small" ? "p-2 h-10" : "p-3 sm:p-4 h-14",
         )}
       >
         <div className="flex items-center justify-between w-full">
@@ -162,7 +161,7 @@ export default function TickDistributionChart({
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === "small-long" ? "text-sm" : "text-base",
+                size === "small" ? "text-sm" : "text-base",
               )}
             >
               {t("tickDistribution.title")}
@@ -173,7 +172,7 @@ export default function TickDistributionChart({
                   <Info
                     className={cn(
                       "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small-long" ? "h-3.5 w-3.5" : "h-4 w-4",
+                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
                     )}
                   />
                 </TooltipTrigger>
@@ -198,7 +197,7 @@ export default function TickDistributionChart({
       <CardContent
         className={cn(
           "flex-1 min-h-0",
-          size === "small-long" ? "p-1" : "p-2 sm:p-4",
+          size === "small" ? "p-1" : "p-2 sm:p-4",
         )}
       >
         <div className={cn("w-full h-full")}>
@@ -206,7 +205,7 @@ export default function TickDistributionChart({
             <BarChart
               data={chartData}
               margin={
-                size === "small-long"
+                size === "small"
                   ? { left: 0, right: 4, top: 4, bottom: 20 }
                   : { left: 0, right: 8, top: 8, bottom: 24 }
               }
@@ -222,8 +221,8 @@ export default function TickDistributionChart({
                 dataKey="ticks"
                 tickLine={false}
                 axisLine={false}
-                height={size === "small-long" ? 20 : 24}
-                tickMargin={size === "small-long" ? 4 : 8}
+                height={size === "small" ? 20 : 24}
+                tickMargin={size === "small" ? 4 : 8}
                 tick={(props) => {
                   const { x, y, payload } = props;
                   return (
@@ -231,12 +230,12 @@ export default function TickDistributionChart({
                       <text
                         x={0}
                         y={0}
-                        dy={size === "small-long" ? 8 : 4}
-                        textAnchor={size === "small-long" ? "end" : "middle"}
+                        dy={size === "small" ? 8 : 4}
+                        textAnchor={size === "small" ? "end" : "middle"}
                         fill="currentColor"
-                        fontSize={size === "small-long" ? 9 : 11}
+                        fontSize={size === "small" ? 9 : 11}
                         transform={
-                          size === "small-long" ? "rotate(-45)" : "rotate(0)"
+                          size === "small" ? "rotate(-45)" : "rotate(0)"
                         }
                       >
                         {payload.value}
@@ -254,14 +253,14 @@ export default function TickDistributionChart({
                 tickMargin={4}
                 tickFormatter={formatCount}
                 tick={{
-                  fontSize: size === "small-long" ? 9 : 11,
+                  fontSize: size === "small" ? 9 : 11,
                   fill: "currentColor",
                 }}
               />
               <Tooltip
                 content={<CustomTooltip />}
                 wrapperStyle={{
-                  fontSize: size === "small-long" ? "10px" : "12px",
+                  fontSize: size === "small" ? "10px" : "12px",
                   zIndex: 1000,
                 }}
               />
@@ -269,7 +268,7 @@ export default function TickDistributionChart({
                 dataKey="count"
                 fill={chartConfig.count.color}
                 radius={[3, 3, 0, 0]}
-                maxBarSize={size === "small-long" ? 25 : 40}
+                maxBarSize={size === "small" ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
                 opacity={tickFilter.value ? 0.3 : 1}
               >
