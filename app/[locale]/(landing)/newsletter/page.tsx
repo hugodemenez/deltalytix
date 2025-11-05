@@ -19,6 +19,7 @@ export default async function NewsletterPage(
 
   const isUnsubscribed = searchParams?.status === "unsubscribed"
   const email = searchParams?.email
+  const token = searchParams?.token
 
   return (
     <main className="min-h-[calc(100vh-4rem)] flex items-start">
@@ -43,7 +44,7 @@ export default async function NewsletterPage(
             </Card>
           )}
 
-          <NewsletterPreferences email={email} />
+          <NewsletterPreferences email={email} token={token} />
         </div>
       </div>
     </main>

@@ -1621,6 +1621,10 @@ export default {
         load: "Failed to load preferences",
         save: "Failed to save preferences",
         emailRequired: "Email address is required",
+        noToken: "Access link is required. Please use the link sent to your email to manage your preferences.",
+        invalidToken: "Invalid or expired access link. Please request a new link from your email.",
+        tokenExpired: "Your access link has expired. Please request a new link from your email.",
+        tokenRequired: "Access token is required to update preferences.",
       },
     },
     admin: {

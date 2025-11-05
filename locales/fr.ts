@@ -1734,6 +1734,10 @@ export default {
         load: "Échec du chargement des préférences",
         save: "Échec de l'enregistrement des préférences",
         emailRequired: "L'adresse email est requise",
+        noToken: "Un lien d'accès est requis. Veuillez utiliser le lien envoyé à votre email pour gérer vos préférences.",
+        invalidToken: "Lien d'accès invalide ou expiré. Veuillez demander un nouveau lien depuis votre email.",
+        tokenExpired: "Votre lien d'accès a expiré. Veuillez demander un nouveau lien depuis votre email.",
+        tokenRequired: "Un token d'accès est requis pour mettre à jour les préférences.",
       },
     },
     admin: {

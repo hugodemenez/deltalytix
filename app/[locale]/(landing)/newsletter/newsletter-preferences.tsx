@@ -4,14 +4,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertCircle } from "lucide-react"
 import { useScopedI18n } from "@/locales/client"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface NewsletterPreferencesProps {
   email?: string
+  token?: string
 }
 
 interface Preferences {
@@ -20,19 +21,20 @@ interface Preferences {
   renewalNotifications: boolean
 }
 
-export function NewsletterPreferences({ email: initialEmail }: NewsletterPreferencesProps) {
+export function NewsletterPreferences({ email: initialEmail, token: initialToken }: NewsletterPreferencesProps) {
   const t = useScopedI18n('newsletter')
-  const [email, setEmail] = useState(initialEmail || "")
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [preferences, setPreferences] = useState<Preferences | null>(null)
+  const [tokenError, setTokenError] = useState(false)
 
-  const loadPreferences = async (emailToLoad: string) => {
-    if (!emailToLoad) return
+  const loadPreferences = async (emailToLoad: string, tokenToUse: string) => {
+    if (!emailToLoad || !tokenToUse) return
     
     setLoading(true)
+    setTokenError(false)
     try {
-      const response = await fetch(`/api/email/preferences?email=${encodeURIComponent(emailToLoad)}`)
+      const response = await fetch(`/api/email/preferences?email=${encodeURIComponent(emailToLoad)}&token=${encodeURIComponent(tokenToUse)}`)
       
       if (response.ok) {
         const data = await response.json()
@@ -41,6 +43,9 @@ export function NewsletterPreferences({ email: initialEmail }: NewsletterPrefere
           weeklyUpdates: data.weeklyUpdates ?? true,
           renewalNotifications: data.renewalNotifications ?? true,
         })
+      } else if (response.status === 401) {
+        setTokenError(true)
+        toast.error(t("preferences.error.invalidToken"))
       } else if (response.status === 404) {
         // Email not found, show default preferences
         setPreferences({
@@ -60,14 +65,14 @@ export function NewsletterPreferences({ email: initialEmail }: NewsletterPrefere
   }
 
   useEffect(() => {
-    if (initialEmail) {
-      loadPreferences(initialEmail)
+    if (initialEmail && initialToken) {
+      loadPreferences(initialEmail, initialToken)
     }
-  }, [initialEmail])
+  }, [initialEmail, initialToken])
 
   const handleSavePreferences = async () => {
-    if (!email) {
-      toast.error(t("preferences.error.emailRequired"))
+    if (!initialEmail || !initialToken) {
+      toast.error(t("preferences.error.tokenRequired"))
       return
     }
 
@@ -81,13 +86,17 @@ export function NewsletterPreferences({ email: initialEmail }: NewsletterPrefere
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
+          email: initialEmail,
+          token: initialToken,
           ...preferences,
         }),
       })
 
       if (response.ok) {
         toast.success(t("preferences.success.saved"))
+      } else if (response.status === 401) {
+        setTokenError(true)
+        toast.error(t("preferences.error.invalidToken"))
       } else {
         toast.error(t("preferences.error.save"))
       }
@@ -99,12 +108,28 @@ export function NewsletterPreferences({ email: initialEmail }: NewsletterPrefere
     }
   }
 
-  const handleLoadPreferences = () => {
-    loadPreferences(email)
-  }
-
   const handlePreferenceChange = (key: keyof Preferences, value: boolean) => {
     setPreferences(prev => prev ? { ...prev, [key]: value } : null)
+  }
+
+  // Show error if no token is provided
+  if (!initialToken || !initialEmail) {
+    return (
+      <Card className="shadow-xs">
+        <CardHeader className="space-y-3 sm:space-y-4">
+          <CardTitle className="text-lg sm:text-xl">{t("preferences.title")}</CardTitle>
+          <CardDescription className="text-sm sm:text-base">{t("preferences.description")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {t("preferences.error.noToken")}
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
@@ -114,30 +139,16 @@ export function NewsletterPreferences({ email: initialEmail }: NewsletterPrefere
         <CardDescription className="text-sm sm:text-base">{t("preferences.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {!initialEmail && (
-          <div className="space-y-3">
-            <Label htmlFor="email">{t("preferences.emailLabel")}</Label>
-            <div className="flex gap-2">
-              <Input
-                id="email"
-                type="email"
-                placeholder={t("preferences.emailPlaceholder")}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-              />
-              <Button
-                onClick={handleLoadPreferences}
-                disabled={loading || !email}
-                variant="outline"
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("preferences.load")}
-              </Button>
-            </div>
-          </div>
+        {tokenError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {t("preferences.error.tokenExpired")}
+            </AlertDescription>
+          </Alert>
         )}
 
-        {preferences && (
+        {preferences && !tokenError && (
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between space-x-2">
@@ -194,7 +205,7 @@ export function NewsletterPreferences({ email: initialEmail }: NewsletterPrefere
 
             <Button
               onClick={handleSavePreferences}
-              disabled={saving}
+              disabled={saving || tokenError}
               className="w-full sm:w-auto"
             >
               {saving ? (
