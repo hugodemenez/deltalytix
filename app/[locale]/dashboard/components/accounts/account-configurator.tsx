@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon, X, Trash2, Check, ChevronsUpDown, Info } from "lucide-react"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+// Tooltips replaced by Popovers
 import { format, Locale } from "date-fns"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
@@ -181,6 +181,7 @@ export function AccountConfigurator({
                 startingBalance: 0,
                 profitTarget: 0,
                 drawdownThreshold: 0,
+                buffer: 0,
                 consistencyPercentage: 30,
                 trailingDrawdown: false,
                 trailingStopProfit: 0,
@@ -311,14 +312,20 @@ export function AccountConfigurator({
                       onCheckedChange={(checked) => handleInputChange('trailingDrawdown', checked)}
                     />
                     <Label htmlFor="trailingDrawdown" className="cursor-pointer">{t('propFirm.configurator.fields.trailingDrawdown')}</Label>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-sm">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center h-4 w-4 text-muted-foreground cursor-pointer"
+                            aria-label="Trailing drawdown information"
+                          >
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="max-w-sm text-sm p-3">
                           <p>{t('propFirm.configurator.tooltips.trailingDrawdown')}</p>
-                        </TooltipContent>
-                      </Tooltip>
+                        </PopoverContent>
+                      </Popover>
                   </div>
                 </div>
 
@@ -350,6 +357,62 @@ export function AccountConfigurator({
                     </SelectContent>
                   </Select>
                 </div>
+
+                  {/* Buffer Configuration */}
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-muted-foreground">Buffer</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center justify-center h-4 w-4 text-muted-foreground cursor-pointer"
+                            aria-label="Buffer information"
+                          >
+                            <Info className="h-4 w-4" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="max-w-sm text-sm p-3">
+                          <p>Optional safety buffer applied alongside drawdown rules.</p>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={pendingChanges?.buffer ?? account.buffer ?? ''}
+                      onChange={(e) => handleInputChange('buffer', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
+                    />
+
+                    {/* Consider buffer in metrics switch */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm text-muted-foreground">
+                          {t('propFirm.configurator.fields.considerBuffer')}
+                        </Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center h-4 w-4 text-muted-foreground cursor-pointer"
+                              aria-label="Consider buffer information"
+                            >
+                              <Info className="h-4 w-4" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="max-w-sm text-sm p-3">
+                            <p>{t('propFirm.configurator.tooltips.considerBuffer')}</p>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <Switch
+                        id="considerBuffer"
+                        checked={pendingChanges?.considerBuffer ?? account.considerBuffer ?? true}
+                        onCheckedChange={(checked) => handleInputChange('considerBuffer', checked)}
+                      />
+                    </div>
+                  </div>
               </div>
 
               {/* Daily Loss Rules */}
@@ -366,14 +429,20 @@ export function AccountConfigurator({
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <Label className="text-sm text-muted-foreground">{t('propFirm.configurator.fields.minPnlToCountAsDay')}</Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-sm">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center h-4 w-4 text-muted-foreground cursor-pointer"
+                          aria-label="Minimum PnL information"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="max-w-sm text-sm p-3">
                         <p>{t('propFirm.configurator.tooltips.minPnlToCountAsDay')}</p>
-                      </TooltipContent>
-                    </Tooltip>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <Input
                     type="number"

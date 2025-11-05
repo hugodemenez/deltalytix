@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 
 import { formatTimestamp, formatDateToTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
+import { getUserId } from '@/server/auth'
 
 // Helper function to format dates in the required format: 2025-06-05T08:38:40+00:00
 function formatDateForAPI(date: Date): string {
@@ -1588,6 +1589,43 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
   } catch (error) {
     logger.error('Failed to get Tradovate trades:', error)
     return { error: 'Failed to get trades' }
+  }
+}
+
+/**
+ * Updates the daily sync time for a Tradovate synchronization
+ * @param accountId The account ID to update
+ * @param utcTimeString The time to perform daily sync (ISO string with UTC time)
+ */
+export async function updateDailySyncTimeAction(
+  accountId: string,
+  utcTimeString: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const userId = await getUserId()
+    
+    // Parse the UTC time string
+    let syncDateTime: Date | null = null
+    if (utcTimeString) {
+      syncDateTime = new Date(utcTimeString)
+    }
+    
+    // Update the synchronization record
+    await prisma.synchronization.updateMany({
+      where: {
+        userId,
+        service: 'tradovate',
+        accountId
+      },
+      data: {
+        dailySyncTime: syncDateTime
+      }
+    })
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error updating daily sync time:', error)
+    return { success: false, error: 'Failed to update daily sync time' }
   }
 }
 

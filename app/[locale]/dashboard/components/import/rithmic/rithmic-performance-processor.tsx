@@ -5,12 +5,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Trade } from '@prisma/client'
+import { PlatformProcessorProps } from '../config/platforms'
 
-interface RithmicPerformanceProcessorProps {
-    headers: string[];
-    csvData: string[][];
-    setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
-}
 const newMappings: { [key: string]: string } = {
     "AccountNumber": "accountNumber",
     "Instrument": "instrument",
@@ -27,8 +23,7 @@ const newMappings: { [key: string]: string } = {
     "Exit Time": "closeDate",
 }
 
-export default function RithmicPerformanceProcessor({ headers, csvData, setProcessedTrades }: RithmicPerformanceProcessorProps) {
-    const [trades, setTrades] = useState<Trade[]>([])
+export default function RithmicPerformanceProcessor({ headers, csvData, processedTrades, setProcessedTrades }: PlatformProcessorProps) {
 
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
@@ -94,7 +89,6 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
             newTrades.push(item as Trade);
         });
 
-        setTrades(newTrades);
         setProcessedTrades(newTrades);
     }, [csvData, headers, setProcessedTrades]);
 
@@ -102,9 +96,9 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
         processTrades();
     }, [processTrades]);
 
-    const totalPnL = useMemo(() => trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [trades]);
-    const totalCommission = useMemo(() => trades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [trades]);
-    const uniqueInstruments = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades]);
+    const totalPnL = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [processedTrades]);
+    const totalCommission = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [processedTrades]);
+    const uniqueInstruments = useMemo(() => Array.from(new Set(processedTrades.map(trade => trade.instrument))), [processedTrades]);
 
     return (
         <div className="space-y-4">
@@ -126,14 +120,14 @@ export default function RithmicPerformanceProcessor({ headers, csvData, setProce
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {trades.map((trade) => (
+                        {processedTrades.map((trade) => (
                             <TableRow key={trade.id}>
                                 <TableCell>{trade.instrument}</TableCell>
                                 <TableCell>{trade.side}</TableCell>
                                 <TableCell>{trade.quantity}</TableCell>
                                 <TableCell>{trade.entryPrice}</TableCell>
                                 <TableCell>{trade.closePrice || '-'}</TableCell>
-                                <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                                <TableCell>{trade.entryDate ? new Date(trade.entryDate).toLocaleString() : '-'}</TableCell>
                                 <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
                                 <TableCell>{trade.pnl?.toFixed(2)}</TableCell>
                                 <TableCell>{`${Math.floor((trade.timeInPosition || 0) / 60)}m ${Math.floor((trade.timeInPosition || 0) % 60)}s`}</TableCell>

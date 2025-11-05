@@ -44,7 +44,10 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  DragStartEvent,
+  DragMoveEvent,
 } from '@dnd-kit/core'
+import { restrictToHorizontalAxis } from '@dnd-kit/modifiers'
 import {
   arrayMove,
   SortableContext,
@@ -103,10 +106,6 @@ const localeMap: { [key: string]: Locale } = {
 // Draggable Account Card Component
 interface DraggableAccountCardProps {
   account: Account
-  trades: any[]
-  allTrades: any[]
-  metrics?: any
-  tradingDaysMetrics?: any
   onClick: () => void
   size: WidgetSize
   isDragDisabled?: boolean
@@ -114,10 +113,6 @@ interface DraggableAccountCardProps {
 
 function DraggableAccountCard({ 
   account, 
-  trades, 
-  allTrades, 
-  metrics, 
-  tradingDaysMetrics, 
   onClick, 
   size,
   isDragDisabled = false 
@@ -152,10 +147,6 @@ function DraggableAccountCard({
       <div className="relative group">
         <AccountCard
           account={account}
-          trades={trades}
-          allTrades={allTrades}
-          metrics={metrics}
-          tradingDaysMetrics={tradingDaysMetrics}
           onClick={onClick}
           size={size}
         />
@@ -573,6 +564,7 @@ function PayoutDialog({
 export function AccountsOverview({ size }: { size: WidgetSize }) {
   const trades = useTradesStore(state => state.trades)
   const user = useUserStore(state => state.user)
+  const isLoading = useUserStore(state => state.isLoading)
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
   const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout, refreshTrades } = useData()
@@ -662,10 +654,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     if (shouldUpdateSelectedAccount.current && selectedAccountForTable) {
       const updatedAccount = accounts.find(acc => acc.number === selectedAccountForTable.number)
       if (updatedAccount) {
-        setSelectedAccountForTable({
-          ...selectedAccountForTable,
-          payouts: updatedAccount.payouts || []
-        })
+        // Update with the full account including recalculated metrics and daily metrics
+        setSelectedAccountForTable(updatedAccount)
       }
       shouldUpdateSelectedAccount.current = false
     }
@@ -686,24 +676,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         !hiddenAccountNumbers.has(accountNumber)
       )
       .forEach(accountNumber => {
-        const accountTrades = trades.filter(t => t.accountNumber === accountNumber)
         const dbAccount = accounts.find(acc => acc.number === accountNumber)
 
         if (dbAccount) {
-          // Filter trades based on reset date if it exists
-          const relevantTrades = dbAccount.resetDate
-            ? accountTrades.filter(t => new Date(t.entryDate) >= new Date(dbAccount.resetDate!))
-            : accountTrades
-
-          const balance = relevantTrades.reduce((total, trade) => total + trade.pnl - (trade.commission || 0), 0)
-          const totalPayouts = dbAccount.payouts?.reduce((sum: number, payout: { status: string, amount: number }) =>
-            sum + (payout.status === 'PAID' ? payout.amount : 0), 0) || 0
-
-          configuredAccounts.push({
-            ...dbAccount,
-            balanceToDate: balance - totalPayouts,
-            payouts: dbAccount.payouts ?? []
-          })
+          // Account is configured - use it with all its pre-computed metrics
+          configuredAccounts.push(dbAccount)
         } else {
           // Account exists in trades but not configured in database
           unconfiguredAccounts.push(accountNumber)
@@ -713,157 +690,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     return { filteredAccounts: configuredAccounts, unconfiguredAccounts }
   }, [trades, accounts, accountNumbers, groups])
 
-  const consistencyMetrics = useMemo(() => {
-    return filteredAccounts.map(account => {
-      // Filter trades based on reset date if it exists
-      const relevantTrades = account.resetDate
-        ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
-        : trades.filter(t => t.accountNumber === account.number)
-
-      const dailyPnL: { [key: string]: number } = {}
-
-      // First calculate total profit including commissions
-      const totalProfit = relevantTrades.reduce((sum, trade) => sum + trade.pnl - (trade.commission || 0), 0)
-      const hasProfitableData = totalProfit > 0
-
-      // Check if account is properly configured
-      const isConfigured = (account.profitTarget ?? 0) > 0 && (account.consistencyPercentage ?? 0) > 0
-
-      // Then calculate daily PnLs
-      relevantTrades.forEach(trade => {
-        const date = new Date(trade.entryDate).toISOString().split('T')[0]
-        if (!dailyPnL[date]) dailyPnL[date] = 0
-        dailyPnL[date] += trade.pnl - (trade.commission || 0)
-      })
-
-      const highestProfitDay = Math.max(...Object.values(dailyPnL))
-
-      // Only calculate consistency metrics if we have profitable data and account is configured
-      if (hasProfitableData && isConfigured) {
-        // Use profit target as base until profits exceed it
-        const baseAmount = totalProfit <= (account.profitTarget ?? 0)
-          ? (account.profitTarget ?? 0)
-          : totalProfit
-
-        const maxAllowedDailyProfit = baseAmount * ((account.consistencyPercentage ?? 0) / 100)
-        const isConsistent = highestProfitDay <= maxAllowedDailyProfit
-
-        return {
-          accountNumber: account.number,
-          totalProfit,
-          maxAllowedDailyProfit,
-          highestProfitDay,
-          isConsistent,
-          hasProfitableData,
-          isConfigured,
-          dailyPnL,
-          totalProfitableDays: Object.values(dailyPnL).filter(pnl => pnl > 0).length
-        }
-      }
-
-      // Return default values for unconfigured or unprofitable accounts
-      return {
-        accountNumber: account.number,
-        totalProfit,
-        maxAllowedDailyProfit: null,
-        highestProfitDay,
-        isConsistent: false,
-        hasProfitableData,
-        isConfigured,
-        dailyPnL,
-        totalProfitableDays: Object.values(dailyPnL).filter(pnl => pnl > 0).length
-      }
-    })
-  }, [trades, filteredAccounts])
-
-  const tradingDaysMetrics = useMemo(() => {
-    return filteredAccounts.map(account => {
-      // Filter trades based on reset date if it exists
-      const relevantTrades = account.resetDate
-        ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
-        : trades.filter(t => t.accountNumber === account.number)
-
-      const { totalTradingDays, validTradingDays } = calculateTradingDays(relevantTrades, account.minPnlToCountAsDay)
-
-      return {
-        accountNumber: account.number,
-        totalTradingDays,
-        validTradingDays,
-        minPnlToCountAsDay: account.minPnlToCountAsDay
-      }
-    })
-  }, [trades, filteredAccounts])
-
   const dailyMetrics = useMemo(() => {
     if (!selectedAccountForTable) return []
-
-    // Filter trades based on reset date if it exists
-    const relevantTrades = selectedAccountForTable.resetDate
-      ? trades.filter(t => t.accountNumber === selectedAccountForTable.number && new Date(t.entryDate) >= new Date(selectedAccountForTable.resetDate!))
-      : trades.filter(t => t.accountNumber === selectedAccountForTable.number)
-
-    const dailyPnL: { [key: string]: number[] } = {}
-
-    // Calculate total profit first
-    const totalProfit = relevantTrades.reduce((sum, trade) => sum + trade.pnl - (trade.commission || 0), 0)
-
-    // First, get all unique dates from both trades and payouts
-    const allDates = new Set<string>()
-
-    // Add trade dates
-    relevantTrades.forEach(trade => {
-      const date = new Date(trade.entryDate).toISOString().split('T')[0]
-      allDates.add(date)
-      if (!dailyPnL[date]) dailyPnL[date] = []
-      dailyPnL[date].push(trade.pnl - (trade.commission || 0))
-    })
-
-    // Add payout dates
-    selectedAccountForTable.payouts?.forEach(payout => {
-      const date = new Date(payout.date).toISOString().split('T')[0]
-      allDates.add(date)
-      // Only initialize the array if it doesn't exist
-      if (!dailyPnL[date]) dailyPnL[date] = []
-    })
-
-    let runningBalance = selectedAccountForTable.startingBalance || 0
-    const metrics: DailyMetric[] = Array.from(allDates)
-      .sort()
-      .map(date => {
-        // Calculate daily PnL from trades
-        const dailyTradesPnL = dailyPnL[date]?.reduce((sum, pnl) => sum + pnl, 0) || 0
-        runningBalance += dailyTradesPnL
-
-        // Check consistency against total profit, not running balance
-        const isConsistent = totalProfit <= 0 ? true : dailyTradesPnL <= (totalProfit * ((selectedAccountForTable.consistencyPercentage || 30) / 100))
-
-        // Find payout for this date if it exists
-        const payout = selectedAccountForTable.payouts?.find(p =>
-          new Date(p.date).toISOString().split('T')[0] === date
-        )
-
-        // If there's a payout, deduct it from the running balance
-        if (payout?.status === 'PAID') {
-          runningBalance -= payout.amount
-        }
-
-        return {
-          date: new Date(date),
-          pnl: dailyTradesPnL,
-          totalBalance: runningBalance,
-          percentageOfTarget: selectedAccountForTable.profitTarget ? (totalProfit / selectedAccountForTable.profitTarget) * 100 : 0,
-          isConsistent,
-          payout: payout ? {
-            id: payout.id,
-            amount: payout.amount,
-            date: payout.date,
-            status: payout.status
-          } : undefined
-        }
-      })
-
-    return metrics
-  }, [selectedAccountForTable, trades])
+    // Use pre-computed daily metrics from account
+    return selectedAccountForTable.dailyMetrics || []
+  }, [selectedAccountForTable])
 
   const handleAddPayout = async (payout: Payout) => {
     console.log('handleAddPayout', payout)
@@ -1024,7 +855,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       <CardHeader
         className={cn(
           "flex flex-row items-center justify-between space-y-0 border-b shrink-0",
-          size === 'small-long' ? "p-2 h-[40px]" : "p-3 sm:p-4 h-[56px]"
+          size === 'small' ? "p-2 h-10" : "p-3 sm:p-4 h-14"
         )}
       >
         <div className="flex items-center justify-between w-full">
@@ -1032,7 +863,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === 'small-long' ? "text-sm" : "text-base"
+                size === 'small' ? "text-sm" : "text-base"
               )}
             >
               {t('propFirm.title')}
@@ -1042,7 +873,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                 <TooltipTrigger asChild>
                   <Info className={cn(
                     "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                    size === 'small-long' ? "h-3.5 w-3.5" : "h-4 w-4"
+                    size === 'small' ? "h-3.5 w-3.5" : "h-4 w-4"
                   )} />
                 </TooltipTrigger>
                 <TooltipContent side="top">
@@ -1055,7 +886,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       </CardHeader>
 
       {/* Unconfigured accounts banner */}
-      {unconfiguredAccounts.length > 0 && (
+      {(unconfiguredAccounts.length > 0 && !isLoading) && (
         <div className="border-b border-orange-200/30 bg-orange-50/40 dark:border-orange-700/30 dark:bg-orange-950/30">
           <div className="px-4 py-2 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -1166,6 +997,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                         sensors={sensors}
                         collisionDetection={closestCenter}
                         onDragEnd={handleDragEnd}
+                        modifiers={[restrictToHorizontalAxis]}
                       >
                         <SortableContext
                           items={orderedAccounts.map(acc => acc.number)}
@@ -1173,23 +1005,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                         >
                           <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
                             {orderedAccounts.map(account => {
-                              const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
-                              const tradingDays = tradingDaysMetrics.find(m => m.accountNumber === account.number)
-                              // Filter trades based on reset date if it exists (for metrics)
-                              const accountTrades = account.resetDate
-                                ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
-                                : trades.filter(t => t.accountNumber === account.number)
-                              // All trades for the chart
-                              const allAccountTrades = trades.filter(t => t.accountNumber === account.number)
                               if (!account.number) return null;
                               return (
                                 <DraggableAccountCard
                                   key={account.number}
                                   account={account as Account}
-                                  trades={accountTrades}
-                                  allTrades={allAccountTrades}
-                                  metrics={metrics}
-                                  tradingDaysMetrics={tradingDays}
                                   onClick={() => setSelectedAccountForTable(account as Account)}
                                   size={size}
                                 />
@@ -1244,6 +1064,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                         sensors={sensors}
                         collisionDetection={closestCenter}
                         onDragEnd={handleDragEnd}
+                        modifiers={[restrictToHorizontalAxis]}
                       >
                         <SortableContext
                           items={orderedUngroupedAccounts.map(acc => acc.number)}
@@ -1251,23 +1072,11 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                         >
                           <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
                             {orderedUngroupedAccounts.map(account => {
-                              const metrics = consistencyMetrics.find(m => m.accountNumber === account.number)
-                              const tradingDays = tradingDaysMetrics.find(m => m.accountNumber === account.number)
-                              // Filter trades based on reset date if it exists (for metrics)
-                              const accountTrades = account.resetDate
-                                ? trades.filter(t => t.accountNumber === account.number && new Date(t.entryDate) >= new Date(account.resetDate!))
-                                : trades.filter(t => t.accountNumber === account.number)
-                              // All trades for the chart
-                              const allAccountTrades = trades.filter(t => t.accountNumber === account.number)
                               if (!account.number) return null;
                               return (
                                 <DraggableAccountCard
                                   key={account.number}
                                   account={account as Account}
-                                  trades={accountTrades}
-                                  allTrades={allAccountTrades}
-                                  metrics={metrics}
-                                  tradingDaysMetrics={tradingDays}
                                   onClick={() => setSelectedAccountForTable(account as Account)}
                                   size={size}
                                 />
@@ -1369,11 +1178,10 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                         try {
                           await deletePayout(payoutId)
 
-                          // Update the selected account by removing the deleted payout from local state
-                          setSelectedAccountForTable({
-                            ...selectedAccountForTable,
-                            payouts: (selectedAccountForTable.payouts || []).filter(p => p.id !== payoutId)
-                          })
+                          // Force refresh of accounts data to get the latest payout information
+                          // This ensures the account table shows the updated data immediately
+                          shouldUpdateSelectedAccount.current = true
+                          await refreshTrades()
 
                           toast.success(t('propFirm.payout.deleteSuccess'), {
                             description: t('propFirm.payout.deleteSuccessDescription'),

@@ -4,116 +4,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
-import { useMemo } from "react"
 import { TradeProgressChart } from "./trade-progress-chart"
 import { Account } from "@/context/data-provider"
 import { WidgetSize } from '../../types/dashboard'
 
-interface Trade {
-  accountNumber: string
-  entryDate: string | Date
-  pnl: number
-  commission?: number
-}
-
 interface AccountCardProps {
   account: Account
-  trades: Trade[]
-  allTrades?: Trade[] // All trades for the chart
-  metrics?: {
-    hasProfitableData: boolean
-    isConsistent: boolean
-    highestProfitDay?: number
-    maxAllowedDailyProfit?: number | null
-  }
-  tradingDaysMetrics?: {
-    totalTradingDays: number
-    validTradingDays: number
-    minPnlToCountAsDay?: number | null
-  }
   onClick?: () => void
   size?: WidgetSize
 }
 
-export function AccountCard({ account, trades, allTrades, metrics, tradingDaysMetrics, onClick, size = 'large' }: AccountCardProps) {
+export function AccountCard({ account, onClick, size = 'large' }: AccountCardProps) {
   const t = useI18n()
-
-  // Use allTrades for the chart if provided, otherwise fall back to filtered trades
-  const chartTrades = allTrades || trades
-
-  const { drawdownProgress, remainingLoss, progress, isConfigured, currentBalance, remainingToTarget } = useMemo(() => {
-    const isConfigured = (account.profitTarget !== undefined && account.profitTarget !== null) || (account.drawdownThreshold !== undefined && account.drawdownThreshold !== null)
-    const progress = account.profitTarget > 0
-      ? ((account.balanceToDate ?? account.startingBalance) / account.profitTarget) * 100
-      : 0
-
-    // Calculate remaining amount to target
-    const remainingToTarget = account.profitTarget > 0
-      ? Math.max(0, account.profitTarget - (account.balanceToDate ?? account.startingBalance))
-      : 0
-
-    // Sort trades by date
-    const sortedTrades = [...trades].sort((a, b) =>
-      new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
-    )
-
-    // Get valid payouts (PAID or VALIDATED)
-    const validPayouts = account.payouts?.filter(p =>
-      ['PAID', 'VALIDATED'].includes(p.status)
-    ) ?? []
-
-    // Calculate running balance and track highest point
-    let runningBalance = account.startingBalance
-    let highestBalance = account.startingBalance
-
-    // Process all trades to find highest balance
-    for (const trade of sortedTrades) {
-      const tradePnL = trade.pnl - (trade.commission || 0)
-      runningBalance += tradePnL
-
-      if (runningBalance > highestBalance) {
-        highestBalance = runningBalance
-      }
-    }
-
-    // Calculate total payouts
-    const totalPayouts = validPayouts.reduce((sum, payout) => sum + payout.amount, 0)
-
-    // Adjust running balance for payouts
-    runningBalance -= totalPayouts
-
-    // Calculate drawdown level based on trailing or fixed drawdown
-    let drawdownLevel
-    if (account.trailingDrawdown) {
-      const profitMade = Math.max(0, highestBalance - account.startingBalance)
-
-      // If we've hit trailing stop profit, lock the drawdown to that level
-      if (account.trailingStopProfit && profitMade >= account.trailingStopProfit) {
-        drawdownLevel = (account.startingBalance + account.trailingStopProfit) - account.drawdownThreshold
-      } else {
-        // Otherwise, drawdown level trails the highest balance
-        drawdownLevel = highestBalance - account.drawdownThreshold
-      }
-    } else {
-      // Fixed drawdown - always relative to starting balance
-      drawdownLevel = account.startingBalance - account.drawdownThreshold
-    }
-
-    // Calculate remaining loss as distance between current balance and drawdown level
-    const remainingLoss = Math.max(0, runningBalance - drawdownLevel)
-
-    // Calculate drawdown progress percentage
-    const drawdownProgress = ((account.drawdownThreshold - remainingLoss) / account.drawdownThreshold) * 100
-
-    return {
-      drawdownProgress,
-      remainingLoss,
-      progress,
-      isConfigured,
-      currentBalance: runningBalance,
-      remainingToTarget
-    }
-  }, [account, trades, allTrades])
+  
+  // Extract metrics from account (computed server-side)
+  const metrics = account.metrics
+  const isConfigured = metrics?.isConfigured ?? false
+  const currentBalance = metrics?.currentBalance ?? account.startingBalance ?? 0
+  const remainingToTarget = metrics?.remainingToTarget ?? 0
+  const progress = metrics?.progress ?? 0
+  const drawdownProgress = metrics?.drawdownProgress ?? 0
+  const remainingLoss = metrics?.remainingLoss ?? 0
 
   return (
     <Card
@@ -180,16 +91,9 @@ export function AccountCard({ account, trades, allTrades, metrics, tradingDaysMe
             size === 'small' || size === 'small-long' ? "space-y-1.5" : "space-y-2"
           )}>
             {/* Trade Progress Chart - only show for larger sizes */}
-            {(size === 'large' || size === 'extra-large') && (
+            {(size === 'large' || size === 'extra-large') && account.payouts && (
               <TradeProgressChart
-                trades={chartTrades}
-                startingBalance={account.startingBalance}
-                drawdownThreshold={account.drawdownThreshold}
-                profitTarget={account.profitTarget}
-                trailingDrawdown={account.trailingDrawdown}
-                trailingStopProfit={account.trailingStopProfit ?? undefined}
-                payouts={account.payouts}
-                resetDate={account.resetDate}
+                account={account}
               />
             )}
 
@@ -271,17 +175,17 @@ export function AccountCard({ account, trades, allTrades, metrics, tradingDaysMe
                 </div>
                 
                 {/* Trading Days Section */}
-                {tradingDaysMetrics && (
+                {metrics && (
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{t('propFirm.card.tradingDays')}</span>
                     <span className={cn(
                       "font-medium",
-                      tradingDaysMetrics.validTradingDays === tradingDaysMetrics.totalTradingDays ? "text-success" : "text-warning"
+                      metrics.validTradingDays === metrics.totalTradingDays ? "text-success" : "text-warning"
                     )}>
-                      {tradingDaysMetrics.validTradingDays}/{tradingDaysMetrics.totalTradingDays}
-                      {tradingDaysMetrics.minPnlToCountAsDay && tradingDaysMetrics.minPnlToCountAsDay > 0 && (
+                      {metrics.validTradingDays}/{metrics.totalTradingDays}
+                      {account.minPnlToCountAsDay && account.minPnlToCountAsDay > 0 && (
                         <span className="ml-1 text-xs opacity-75">
-                          (≥${tradingDaysMetrics.minPnlToCountAsDay})
+                          (≥${account.minPnlToCountAsDay})
                         </span>
                       )}
                     </span>

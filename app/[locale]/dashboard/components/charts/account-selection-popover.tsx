@@ -39,6 +39,11 @@ export const AccountSelectionPopover = React.memo(({
     )
   }, [accountNumbers, searchTerm])
   
+  // Calculate actual selected count (only accounts that exist in accountNumbers)
+  const actualSelectedCount = React.useMemo(() => {
+    return selectedAccounts.filter(account => accountNumbers.includes(account)).length
+  }, [selectedAccounts, accountNumbers])
+  
   // Clear search
   const clearSearch = () => {
     setSearchTerm('')
@@ -61,7 +66,7 @@ export const AccountSelectionPopover = React.memo(({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-xs font-medium">
-                  {t('equity.legend.selected')} {selectedAccounts?.length || 0} {t('equity.legend.of')} {accountNumbers.length}
+                  {t('equity.legend.selected')} {actualSelectedCount} {t('equity.legend.of')} {accountNumbers.length}
                 </Label>
                 {searchTerm && (
                   <Button

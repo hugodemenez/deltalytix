@@ -50,14 +50,6 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
     return 'bg-emerald-500'
   }
 
-  const getEmotionLabel = (value: number) => {
-    if (value < 20) return t('mindset.emotion.verySad')
-    if (value < 40) return t('mindset.emotion.sad')
-    if (value < 60) return t('mindset.emotion.neutral')
-    if (value < 80) return t('mindset.emotion.happy')
-    return t('mindset.emotion.veryHappy')
-  }
-
   const handleDeleteClick = (e: React.MouseEvent, date: Date) => {
     e.stopPropagation()
     setEntryToDelete(date)
@@ -122,7 +114,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                   )}
                   onClick={handleTodayClick}
                 >
-                  <div className="flex flex-col items-center justify-center gap-1 min-w-[40px]">
+                  <div className="flex flex-col items-center justify-center gap-1 min-w-10">
                     <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
                   </div>
                   <div className="flex-1 text-left min-w-0 flex items-center">
@@ -164,7 +156,7 @@ export function Timeline({ onSelectDate, selectedDate, moodHistory, className, o
                       )}
                       onClick={() => onSelectDate(moodDate)}
                     >
-                      <div className="flex flex-col items-center justify-center gap-1 min-w-[40px]">
+                      <div className="flex flex-col items-center justify-center gap-1 min-w-10">
                         <div className={cn(
                           "w-2 h-2 rounded-full transition-colors",
                           getEmotionColor(mood.emotionValue)

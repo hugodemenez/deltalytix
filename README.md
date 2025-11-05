@@ -11,7 +11,7 @@
   [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
   [![Discord](https://img.shields.io/discord/a5YVF5Ec2n?label=Discord&logo=discord)](https://discord.gg/a5YVF5Ec2n)
   
-  [🚀 Live Demo](#) • [📖 Documentation](#) • [💬 Discord Community](https://discord.gg/a5YVF5Ec2n) • [🐛 Report Bug](https://github.com/hugodemenez/deltalytix/issues)
+  [🚀 Live Demo](https://deltalytix.app) • [💬 Discord Community](https://discord.gg/a5YVF5Ec2n) • [🐛 Report Bug](https://github.com/hugodemenez/deltalytix/issues)
 </div>
 
 ---
@@ -42,6 +42,7 @@
 - **Sentiment analysis** of trading patterns and market conditions
 - **Automated trade journal** with AI-generated insights
 - **Pattern recognition** for identifying trading opportunities
+- **Rich text editor** with image resizing and table support for structured journaling
 
 <!-- TODO: Add GIF showing AI chat assistant helping with trade analysis -->
 
@@ -226,6 +227,7 @@ deltalytix/
 │   ├── ui/               # Base UI components (Radix UI)
 │   ├── ai-elements/      # AI-powered components
 │   ├── emails/           # Email templates
+│   ├── tiptap/           # TipTap editor components
 │   └── magicui/          # Custom UI components
 ├── server/               # Server-side business logic
 ├── store/                # Zustand state management
@@ -234,6 +236,8 @@ deltalytix/
 ├── lib/                  # Utility functions
 ├── hooks/                # Custom React hooks
 ├── context/              # React Context providers
+├── docs/                 # Feature documentation
+│   └── JOURNAL_EDITOR.md # Journal editor feature guide
 └── content/              # MDX content for updates
 ```
 
@@ -402,10 +406,10 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 ---
 
 <div align="center">
-  <p>Made with ❤️ by the Deltalytix community</p>
+  <p>Made with ❤️ by Hugo DEMENEZ & the Deltalytix community</p>
   <p>
     <a href="https://github.com/hugodemenez/deltalytix">GitHub</a> •
     <a href="https://discord.gg/a5YVF5Ec2n">Discord</a> •
-    <a href="https://deltalytix.com">Website</a>
+    <a href="https://deltalytix.app">Website</a>
   </p>
 </div>

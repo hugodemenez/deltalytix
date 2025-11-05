@@ -55,8 +55,8 @@ export function SubscriptionBadge({ className }: { className?: string }) {
     return diffDays > 0 ? diffDays : 0
   })()
 
-  // Show loading state if loading or no subscription data yet
-  if (isLoading || !stripeSubscription) {
+  // Show loading state only when actually loading
+  if (isLoading) {
     return (
       <Badge
         variant="secondary"
@@ -67,6 +67,22 @@ export function SubscriptionBadge({ className }: { className?: string }) {
         )}
       >
         {t('pricing.loading')}
+      </Badge>
+    )
+  }
+
+  // If no subscription data after loading, user is on Free plan
+  if (!stripeSubscription) {
+    return (
+      <Badge
+        variant="secondary"
+        className={cn(
+          "px-2 py-0.5 text-xs whitespace-nowrap",
+          "bg-secondary text-secondary-foreground",
+          className
+        )}
+      >
+        {t('pricing.free.name')}
       </Badge>
     )
   }

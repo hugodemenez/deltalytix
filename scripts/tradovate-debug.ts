@@ -20,7 +20,7 @@
   - /v1/auth/me is only available on LIVE base; other endpoints depend on chosen env.
 */
 
-/* eslint-disable no-console */
+ 
 
 type Environment = 'demo'
 type AuthMethod = 'oauth' | 'password'

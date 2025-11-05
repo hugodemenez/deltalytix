@@ -5,19 +5,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Trade } from '@prisma/client'
 import { generateTradeHash } from '@/lib/utils'
+import { PlatformProcessorProps } from '../config/platforms'
 
-interface NinjaTraderPerformanceProcessorProps {
-  headers: string[];
-  csvData: string[][];
-  setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
-}
 
 const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: string } => {
   if (typeof pnl !== 'string' || pnl.trim() === '') {
     return { pnl: 0, error: 'Invalid PNL value' };
   }
 
-  let formattedPnl = pnl.trim();
+  const formattedPnl = pnl.trim();
   const numericValue = parseFloat(formattedPnl.replace(/[$]/g, '').replace(',', '.'));
   
   if (isNaN(numericValue)) {
@@ -31,7 +27,7 @@ const formatPriceValue = (price: string | undefined): { price: number, error?: s
     return { price: 0, error: 'Invalid price value' };
   }
 
-  let formattedPrice = price.trim();
+  const formattedPrice = price.trim();
   const numericValue = parseFloat(formattedPrice.replace(',', '.'));
   
   if (isNaN(numericValue)) {
@@ -70,7 +66,7 @@ const frenchMappings: { [key: string]: string } = {
   "Profit": "pnl",
 }
 
-export default function NinjaTraderPerformanceProcessor({ headers, csvData, setProcessedTrades }: NinjaTraderPerformanceProcessorProps) {
+export default function NinjaTraderPerformanceProcessor({ headers, csvData, setProcessedTrades }: PlatformProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
 
   const processTrades = useCallback(() => {

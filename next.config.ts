@@ -14,6 +14,15 @@ const nextConfig: NextConfig = {
     useCache: true,
     mdxRs: true,
   },
+  outputFileTracingIncludes: {
+    '/*': [
+      '**/node_modules/@prisma/engines/libquery_engine-rhel-openssl-3.0.x.so.node',
+      '**/node_modules/.prisma/client/libquery_engine-rhel-openssl-3.0.x.so.node',
+    ],
+    '/app/api/**': [  // For App Router API routes (your auth callback)
+      '**/node_modules/.prisma/client/**',
+    ],
+  },
 }
 
 const withMDX = createMDX({

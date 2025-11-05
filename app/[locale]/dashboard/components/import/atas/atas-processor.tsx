@@ -9,13 +9,8 @@ import { Trade } from '@prisma/client'
 import { useI18n } from '@/locales/client'
 import { useTradesStore } from '@/store/trades-store'
 import { generateTradeHash } from '@/lib/utils'
+import { PlatformProcessorProps } from '../config/platforms'
 
-interface AtasProcessorProps {
-    headers: string[];
-    csvData: string[][];
-    setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
-    accountNumber: string;
-}
 
 const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
     if (!pnl || String(pnl).trim() === '') {
@@ -113,7 +108,6 @@ const parseAtasDate = (dateValue: any): string | undefined => {
 
 // ATAS column mappings - only map fields that exist in the database schema
 const atasMappings: { [key: string]: string } = {
-    "Account": "accountNumber",
     "Instrument": "instrument",
     "Open time": "entryDate",
     "Open price": "entryPrice",
@@ -124,7 +118,7 @@ const atasMappings: { [key: string]: string } = {
     "Comment": "comment"
 }
 
-export default function AtasProcessor({ headers, csvData, setProcessedTrades, accountNumber }: AtasProcessorProps) {
+export default function AtasProcessor({ csvData, headers, processedTrades, setProcessedTrades, accountNumbers }: PlatformProcessorProps) {
     const existingTrades = useTradesStore((state => state.trades))
     const [trades, setTrades] = useState<Trade[]>([])
     const [missingCommissions, setMissingCommissions] = useState<{ [key: string]: number }>({})
@@ -133,22 +127,25 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
 
     const existingCommissions = useMemo(() => {
         const commissions: { [key: string]: number } = {}
+        if (!accountNumbers) {
+            return commissions;
+        }
         existingTrades
-            .filter(trade => trade.accountNumber === accountNumber)
+            .filter(trade => accountNumbers.includes(trade.accountNumber))
             .forEach(trade => {
                 if (trade.instrument && trade.commission && trade.quantity) {
                     commissions[trade.instrument] = trade.commission / trade.quantity
                 }
             })
         return commissions
-    }, [existingTrades, accountNumber])
+    }, [existingTrades, accountNumbers])
 
     const totalPnL = useMemo(() => trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [trades]);
     const totalCommission = useMemo(() => trades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [trades]);
     const uniqueInstruments = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades]);
 
     const processTrades = useCallback(() => {
-        if (!accountNumber) {
+        if (!accountNumbers) {
             console.error('No account number provided');
             return;
         }
@@ -192,8 +189,7 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
                             }
                             break;
                         case 'accountNumber':
-                            // Use the provided account number instead of the one from the file
-                            item[key] = accountNumber || 'unknown';
+                            // Do nothing here, account number will be set later
                             break;
                         default:
                             // Convert to string for text fields, or keep as is for other types
@@ -294,7 +290,7 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
             }, {} as { [key: string]: number }));
             setShowCommissionPrompt(true);
         }
-    }, [csvData, headers, accountNumber, existingTrades, existingCommissions, setProcessedTrades, t]);
+    }, [csvData, headers, accountNumbers, existingTrades, existingCommissions, setProcessedTrades, t]);
 
     const handleCommissionChange = (instrument: string, value: string) => {
         setMissingCommissions(prev => ({
@@ -371,7 +367,6 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Account</TableHead>
                                     <TableHead>Instrument</TableHead>
                                     <TableHead>Side</TableHead>
                                     <TableHead>Quantity</TableHead>
@@ -387,7 +382,6 @@ export default function AtasProcessor({ headers, csvData, setProcessedTrades, ac
                             <TableBody>
                                 {trades.map((trade, index) => (
                                     <TableRow key={`atas-trade-${index}-${trade.entryId}-${trade.closeId}`}>
-                                        <TableCell>{trade.accountNumber}</TableCell>
                                         <TableCell>{trade.instrument}</TableCell>
                                         <TableCell>{trade.side}</TableCell>
                                         <TableCell>{trade.quantity}</TableCell>

@@ -31,13 +31,11 @@ export default async function BusinessLayout(
     params
   } = props;
   
-  const { locale } = await params;
-
   return (
     <ThemeProvider>
         <div className="px-2 sm:px-6 lg:px-32">
           <BusinessNavbar />
-          <div className="mt-8 sm:mt-20 max-w-(--breakpoint-xl) mx-auto">
+          <div className="mt-8 sm:mt-20 mx-auto">
             {children}
           </div>
         </div>

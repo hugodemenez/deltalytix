@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { toast } from "sonner"
@@ -26,6 +26,7 @@ import PdfUpload from './ibkr-pdf/pdf-upload'
 import PdfProcessing from './ibkr-pdf/pdf-processing'
 import AtasFileUpload from './atas/atas-file-upload'
 import { generateTradeHash } from '@/lib/utils'
+import { createTradeWithDefaults } from '@/lib/trade-factory'
 
 type ColumnConfig = {
   [key: string]: {
@@ -34,23 +35,7 @@ type ColumnConfig = {
   };
 };
 
-const columnConfig: ColumnConfig = {
-  "accountNumber": { defaultMapping: ["account", "accountnumber"], required: false },
-  "instrument": { defaultMapping: ["symbol", "ticker"], required: true },
-  "entryId": { defaultMapping: ["entryId", "entryorderid"], required: false },
-  "closeId": { defaultMapping: ["closeId", "closeorderid"], required: false },
-  "quantity": { defaultMapping: ["qty", "amount"], required: true },
-  "entryPrice": { defaultMapping: ["entryprice", "entryprice"], required: true },
-  "closePrice": { defaultMapping: ["closeprice", "exitprice"], required: true },
-  "entryDate": { defaultMapping: ["entrydate", "entrydate"], required: true },
-  "closeDate": { defaultMapping: ["closedate", "exitdate"], required: true },
-  "pnl": { defaultMapping: ["pnl", "profit"], required: true },
-  "timeInPosition": { defaultMapping: ["timeinposition", "duration"], required: false },
-  "side": { defaultMapping: ["side", "direction"], required: false },
-  "commission": { defaultMapping: ["commission", "fee"], required: false },
-}
-
-export type Step = 
+export type Step =
   | 'select-import-type'
   | 'upload-file'
   | 'select-headers'
@@ -69,11 +54,11 @@ export default function ImportButton() {
   const [csvData, setCsvData] = useState<string[][]>([])
   const [headers, setHeaders] = useState<string[]>([])
   const [mappings, setMappings] = useState<{ [key: string]: string }>({})
-  const [accountNumber, setAccountNumber] = useState<string>('')
+  const [accountNumbers, setAccountNumbers] = useState<string[]>([])
   const [newAccountNumber, setNewAccountNumber] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState<boolean>(false)
-  const [processedTrades, setProcessedTrades] = useState<Trade[]>([])
+  const [processedTrades, setProcessedTrades] = useState<Partial<Trade>[]>([])
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const uploadIconRef = useRef<UploadIconHandle>(null)
   const [text, setText] = useState<string>('')
@@ -96,82 +81,47 @@ export default function ImportButton() {
     setIsSaving(true)
     try {
       let newTrades: Trade[] = []
-          console.log('[ImportButton] Processing trades:', processedTrades)
-          newTrades = processedTrades.map(trade => {
-            // Clean up the trade object to remove undefined values
-            const cleanTrade = Object.fromEntries(
-              Object.entries(trade).filter(([_, value]) => value !== undefined)
-            ) as Partial<Trade>
-            
-            return {
-              ...cleanTrade,
-              accountNumber: cleanTrade.accountNumber || accountNumber || newAccountNumber,
-              userId: supabaseUser.id,
-              id: generateTradeHash({ ...cleanTrade, userId: supabaseUser.id }),
-              // Ensure required fields have default values
-              instrument: cleanTrade.instrument || '',
-              entryPrice: cleanTrade.entryPrice || '',
-              closePrice: cleanTrade.closePrice || '',
-              entryDate: cleanTrade.entryDate || '',
-              closeDate: cleanTrade.closeDate || '',
-              quantity: cleanTrade.quantity || 0,
-              pnl: cleanTrade.pnl || 0,
-              timeInPosition: cleanTrade.timeInPosition || 0,
-              side: cleanTrade.side || '',
-              commission: cleanTrade.commission || 0,
-              entryId: cleanTrade.entryId || null,
-              closeId: cleanTrade.closeId || null,
-              comment: cleanTrade.comment || null,
-              videoUrl: cleanTrade.videoUrl || null,
-              tags: cleanTrade.tags || [],
-              imageBase64: cleanTrade.imageBase64 || null,
-              imageBase64Second: cleanTrade.imageBase64Second || null,
-              groupId: cleanTrade.groupId || null,
-              createdAt: cleanTrade.createdAt || new Date(),
-            } as Trade
-          })
-     
-          // Filter out empty trades
-          newTrades = newTrades.filter(trade => {
-            // Check if all required fields are present and not empty
-            !trade.accountNumber && console.log('trade.accountNumber missing', trade)
-            !trade.instrument && console.log('trade.instrument missing', trade)
-            trade.quantity === 0 && console.log('trade.quantity is 0', trade)
-            !trade.entryPrice && console.log('trade.entryPrice missing', trade)
-            !trade.closePrice && console.log('trade.closePrice missing', trade)
-            !trade.entryDate && console.log('trade.entryDate missing', trade)
-            !trade.closeDate && console.log('trade.closeDate missing', trade)
-            return trade.accountNumber &&
-              trade.instrument &&
-              trade.quantity !== 0 &&
-              (trade.entryPrice || trade.closePrice) &&
-              (trade.entryDate || trade.closeDate);
-          });
+      for (const accountNumber of accountNumbers) {
+        newTrades = processedTrades.map(trade => {
+            // Assign account number from selection or new account number
+          trade.accountNumber = accountNumber
 
-      console.log('[ImportButton] Saving trades:', newTrades)
-      const result = await saveTradesAction(newTrades)
-      if(result.error){
-        if (result.error === "DUPLICATE_TRADES") {
-          toast.error(t('import.error.duplicateTrades'), {
-            description: t('import.error.duplicateTradesDescription'),
+          // Use function to generate a full trade object with defaults
+          return createTradeWithDefaults({
+            ...trade,
+            // Generate a unique ID for the trade based on its content
+            // Using its content ensures that exacte duplicate trades will have the same ID
+            id: generateTradeHash({ ...trade, userId: supabaseUser.id }),
           })
-        } else if (result.error === "NO_TRADES_ADDED") {
-          toast.error(t('import.error.noTradesAdded'), {
-            description: t('import.error.noTradesAddedDescription'),
-          })
-        } else {
-          toast.error(t('import.error.failed'), {
-            description: t('import.error.failedDescription'),
-          })
+
+        })
+
+        console.log('[ImportButton] Saving trades:', newTrades)
+        const result = await saveTradesAction(newTrades)
+        if (result.error) {
+          if (result.error === "DUPLICATE_TRADES") {
+            toast.error(t('import.error.duplicateTrades'), {
+              description: t('import.error.duplicateTradesDescription'),
+            })
+          } else if (result.error === "NO_TRADES_ADDED") {
+            toast.error(t('import.error.noTradesAdded'), {
+              description: t('import.error.noTradesAddedDescription'),
+            })
+          } else {
+            toast.error(t('import.error.failed'), {
+              description: t('import.error.failedDescription'),
+            })
+          }
+          // Don't proceed further if there's an error
+          // return
         }
-        return
+        toast.success(t('import.success'), {
+          description: t('import.successDescription', { numberOfTradesAdded: result.numberOfTradesAdded }),
+        })
       }
       // Update the trades
       await refreshTrades()
       setIsOpen(false)
-      toast.success(t('import.success'), {
-        description: t('import.successDescription', { numberOfTradesAdded: result.numberOfTradesAdded }),
-      })
       // Reset the import process
       resetImportState()
 
@@ -192,13 +142,13 @@ export default function ImportButton() {
     setCsvData([])
     setHeaders([])
     setMappings({})
-    setAccountNumber('')
+    setAccountNumbers([])
     setNewAccountNumber('')
     setProcessedTrades([])
     setError(null)
   }
 
-  const handleNextStep = () => {
+  const handleNextStep = useCallback(async () => {
     const platform = platforms.find(p => p.type === importType) || platforms.find(p => p.platformName === 'csv-ai')
     if (!platform) return
 
@@ -218,12 +168,12 @@ export default function ImportButton() {
     // Handle standard flow
     const nextStep = platform.steps[currentStepIndex + 1]
     if (!nextStep) {
-      handleSave()
+      await handleSave()
       return
     }
 
     setStep(nextStep.id)
-  }
+  }, [step, importType, files, t, handleSave])
 
   const handleBackStep = () => {
     const platform = platforms.find(p => p.type === importType) || platforms.find(p => p.platformName === 'csv-ai')
@@ -309,8 +259,8 @@ export default function ImportButton() {
       return (
         <Component
           accounts={Array.from(new Set(trades.map(trade => trade.accountNumber)))}
-          accountNumber={accountNumber}
-          setAccountNumber={setAccountNumber}
+          accountNumbers={accountNumbers}
+          setAccountNumbers={setAccountNumbers}
           newAccountNumber={newAccountNumber}
           setNewAccountNumber={setNewAccountNumber}
         />
@@ -343,7 +293,7 @@ export default function ImportButton() {
         />
       )
     }
-    
+
     if (Component === PdfProcessing) {
       return (
         <Component
@@ -356,15 +306,16 @@ export default function ImportButton() {
         />
       )
     }
-    
+
     // Handle processor components - only if the current step component is the processor
     if (platform.processorComponent && Component === platform.processorComponent) {
       return (
         <platform.processorComponent
           csvData={csvData}
           headers={headers}
+          processedTrades={processedTrades}
           setProcessedTrades={setProcessedTrades}
-          accountNumber={accountNumber || newAccountNumber}
+          accountNumbers={accountNumbers}
         />
       )
     }
@@ -379,7 +330,7 @@ export default function ImportButton() {
 
   const isNextDisabled = () => {
     if (isLoading) return true
-    
+
     const platform = platforms.find(p => p.type === importType) || platforms.find(p => p.platformName === 'csv-ai')
     if (!platform) return true
 
@@ -388,23 +339,23 @@ export default function ImportButton() {
 
     // File upload step
     if (currentStep.component === FileUpload && csvData.length === 0) return true
-    
+
     // PDF upload step
     if (currentStep.component === PdfUpload && text.length === 0) return true
-    
+
     // Account selection for Tradovate
-    if (currentStep.component === AccountSelection && importType === 'tradovate' && !accountNumber && !newAccountNumber) return true
-    
+    if (currentStep.component === AccountSelection && importType === 'tradovate' && accountNumbers.length === 0 && !newAccountNumber) return true
+
     // Account selection for other platforms
-    if (currentStep.component === AccountSelection && !accountNumber && !newAccountNumber) return true
+    if (currentStep.component === AccountSelection && accountNumbers.length === 0 && !newAccountNumber) return true
 
     return false
   }
 
   return (
     <div>
-      <Button 
-        onClick={() => setIsOpen(true)} 
+      <Button
+        onClick={() => setIsOpen(true)}
         variant="default"
         className={cn(
           "justify-start text-left font-normal w-full",
@@ -413,14 +364,14 @@ export default function ImportButton() {
         onMouseEnter={() => uploadIconRef.current?.startAnimation()}
         onMouseLeave={() => uploadIconRef.current?.stopAnimation()}
       >
-        <UploadIcon ref={uploadIconRef} className="h-4 w-4 mr-2" /> 
+        <UploadIcon ref={uploadIconRef} className="h-4 w-4 mr-2" />
         <span className='hidden md:block'>{t('import.button')}</span>
       </Button>
-      
+
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="flex flex-col max-w-[80vw] h-[80vh] p-0">
           <ImportDialogHeader step={step} importType={importType} />
-          
+
           <div className="flex-1 overflow-hidden p-6">
             {renderStep()}
           </div>

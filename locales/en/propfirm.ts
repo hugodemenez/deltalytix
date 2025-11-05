@@ -64,6 +64,7 @@ export default {
                 rulesDailyLoss: 'Rules Daily Loss',
                 tradingNewsAllowed: 'Trading News Allowed',
                 allowNewsTrading: 'Allow News Trading',
+                considerBuffer: 'Exclude pre-buffer trades',
                 price: 'Price',
                 basePrice: 'Base Price',
                 promo: 'Promo',
@@ -106,7 +107,8 @@ export default {
             tooltips: {
                 trailingDrawdown: 'Trailing drawdown follows your profits upward but never moves down when you lose money. When enabled with a trailing stop, it stops following profits once you reach the specified profit amount. The calculation can be done intraday (real-time) or end-of-day (computed once daily based on total daily profit/loss).',
                 trailingStopProfit: 'Example: If you set $3,000, once you reach $3,000 in profits, the trailing drawdown will stop increasing and lock at that level. This means your stop loss will no longer follow your profits upward beyond this point.',
-                minPnlToCountAsDay: 'Minimum PnL required for a day to be counted as a trading day. Days with PnL below this threshold will not count towards minimum trading day requirements.'
+                minPnlToCountAsDay: 'Minimum PnL required for a day to be counted as a trading day. Days with PnL below this threshold will not count towards minimum trading day requirements.',
+                considerBuffer: 'When enabled, metrics and charts ignore trades before accumulated profit reaches the buffer amount.'
             },
             placeholders: {
                 enterPrice: 'Enter price',

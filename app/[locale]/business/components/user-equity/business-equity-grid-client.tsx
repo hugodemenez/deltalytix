@@ -313,7 +313,9 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
                       {user.statistics.totalPnL >= 0 ? '+' : ''}{user.statistics.totalPnL.toFixed(2)}
                     </div>
                     <Link 
-                      href={`/business/dashboard/${user.userId}`}
+                      href={`/business/dashboard/trader/${user.userId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="p-1 hover:bg-gray-100 rounded transition-colors"
                       title={t('business.equity.viewTraderDetails')}
                     >

@@ -4,21 +4,9 @@ import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Refe
 import { ChartContainer } from "@/components/ui/chart"
 import { cn } from "@/lib/utils"
 import { useI18n } from "@/locales/client"
-import { ReactElement } from "react"
-
-interface Trade {
-  accountNumber: string
-  entryDate: string | Date
-  pnl: number
-  commission?: number
-}
-
-interface Payout {
-  id: string
-  amount: number
-  date: Date
-  status: string
-}
+import { useMemo } from "react"
+import { Account } from "@/context/data-provider"
+import { useTradesStore } from "@/store/trades-store"
 
 // Add interface for event type
 interface ChartEvent {
@@ -44,29 +32,22 @@ interface ChartDataPoint {
 }
 
 interface TradeProgressChartProps {
-  trades: Trade[]
-  startingBalance: number
-  drawdownThreshold: number
-  profitTarget: number
-  trailingDrawdown?: boolean
-  trailingStopProfit?: number
-  payouts?: Payout[]
-  resetDate?: Date | string | null
+  account: Account
   className?: string
 }
 
 export function TradeProgressChart({
-  trades,
-  startingBalance,
-  drawdownThreshold,
-  profitTarget,
-  trailingDrawdown = false,
-  trailingStopProfit = 0,
-  payouts = [],
-  resetDate,
+  account,
   className
 }: TradeProgressChartProps) {
   const t = useI18n()
+  
+  // Prefer filtered trades from account (buffer-aware), fallback to store
+  const allTrades = useTradesStore(state => state.trades)
+  const trades = useMemo(() => {
+    if (account.trades && account.trades.length > 0) return account.trades
+    return allTrades.filter(trade => trade.accountNumber === account.number)
+  }, [allTrades, account.trades, account.number])
 
   const chartConfig = {
     balance: {
@@ -86,6 +67,17 @@ export function TradeProgressChart({
       color: "#9333ea",
     }
   }
+
+  // Extract account properties
+  const { 
+    startingBalance, 
+    drawdownThreshold, 
+    profitTarget, 
+    trailingDrawdown = false, 
+    trailingStopProfit,
+    payouts = [],
+    resetDate
+  } = account
 
   // Create combined events array with trades, payouts, and resets
   const allEvents: ChartEvent[] = [
@@ -134,7 +126,7 @@ export function TradeProgressChart({
       const profitMade = Math.max(0, highestBalance - startingBalance)
       
       // If we've hit trailing stop profit, lock the drawdown to that level
-      if (profitMade >= trailingStopProfit) {
+      if (trailingStopProfit && profitMade >= trailingStopProfit) {
         drawdownLevel = (startingBalance + trailingStopProfit) - drawdownThreshold
       } else {
         // Otherwise, drawdown level trails the highest balance

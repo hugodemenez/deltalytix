@@ -4,6 +4,7 @@
 .cursorrules
 .cursor
 WARP.md
+.github/instructions/
 
 # dependencies
 /node_modules

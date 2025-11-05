@@ -74,6 +74,8 @@ interface TrackerProps extends React.HTMLAttributes<HTMLDivElement> {
   defaultBackgroundColor?: string
   hoverEffect?: boolean
   onSelectionChange?: (index: number) => void
+  // Optional externally-controlled selected index for initial/controlled state
+  valueIndex?: number | null
 }
 
 // Pre-computed color arrays for performance
@@ -111,12 +113,21 @@ const COLOR_MAPS = {
 
 const Tracker = React.forwardRef<HTMLDivElement, TrackerProps>(
   (
-    { data = [], defaultBackgroundColor = "bg-gray-300", className, hoverEffect, onSelectionChange, ...props },
+    { data = [], defaultBackgroundColor = "bg-gray-300", className, hoverEffect, onSelectionChange, valueIndex, ...props },
     forwardedRef,
   ) => {
     const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null)
     const [hoveredIndex, setHoveredIndex] = React.useState<number | null>(null)
     const [animationKey, setAnimationKey] = React.useState(0)
+
+    // Sync internal selection with external valueIndex when provided
+    React.useEffect(() => {
+      if (typeof valueIndex === 'number') {
+        setSelectedIndex(valueIndex)
+      } else if (valueIndex === null) {
+        setSelectedIndex(null)
+      }
+    }, [valueIndex])
 
     // Fast color computation using pre-computed maps
     const getColorForIndex = React.useCallback((index: number, totalBlocks: number) => {

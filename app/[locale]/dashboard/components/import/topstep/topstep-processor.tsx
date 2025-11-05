@@ -3,14 +3,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Trade } from '@prisma/client'
 import { Button } from "@/components/ui/button"
 import { formatInTimeZone } from 'date-fns-tz'
-import { useUserStore } from '../../../../../../store/user-store'
-
-interface TopstepProcessorProps {
-    headers: string[];
-    csvData: string[][];
-    setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
-    accountNumber: string;
-}
+import { useUserStore } from '@/store/user-store'
+import { PlatformProcessorProps } from '../config/platforms'
+import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 
 const mappings: { [key: string]: string } = {
     "ContractName": "instrument",
@@ -25,8 +20,7 @@ const mappings: { [key: string]: string } = {
     "ExitedAt": "closeDate",
 }
 
-export default function TopstepProcessor({ headers, csvData, setProcessedTrades, accountNumber }: TopstepProcessorProps) {
-    const [trades, setTrades] = useState<Trade[]>([])
+export default function TopstepProcessor({ headers, csvData, processedTrades, setProcessedTrades }: PlatformProcessorProps) {
     const timezone = useUserStore(state => state.timezone)
 
     const processTrades = useCallback(() => {
@@ -141,26 +135,25 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades,
                 return;
             }
 
+            // Create a unique temp ID to use it as key in our table
+            item.id = `${item.instrument}-${item.entryId}-${item.closeId}-${item.quantity}`
+
             // Only add valid trades
             if (isValidTrade) {
-                item.userId = '';
-                item.accountNumber = accountNumber;
-                item.id = `${item.entryId}-${item.closeId}`;
                 newTrades.push(item as Trade);
             }
         });
 
-        setTrades(newTrades);
         setProcessedTrades(newTrades);
-    }, [csvData, headers, setProcessedTrades, accountNumber]);
+    }, [csvData, headers, setProcessedTrades]);
 
     useEffect(() => {
         processTrades();
     }, [processTrades]);
 
-    const totalPnL = trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
-    const totalCommission = trades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
-    const uniqueInstruments = Array.from(new Set(trades.map(trade => trade.instrument)));
+    const totalPnL = processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0);
+    const totalCommission = processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0);
+    const uniqueInstruments = Array.from(new Set(processedTrades.map(trade => trade.instrument)));
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -171,7 +164,6 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades,
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Account</TableHead>
                                     <TableHead>Instrument</TableHead>
                                     <TableHead>Side</TableHead>
                                     <TableHead>Quantity</TableHead>
@@ -184,21 +176,20 @@ export default function TopstepProcessor({ headers, csvData, setProcessedTrades,
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {trades.map((trade) => (
+                                {processedTrades.map((trade) => (
                                     <TableRow key={trade.id}>
-                                        <TableCell>{trade.accountNumber}</TableCell>
                                         <TableCell>{trade.instrument}</TableCell>
                                         <TableCell>{trade.side}</TableCell>
                                         <TableCell>{trade.quantity}</TableCell>
                                         <TableCell>{trade.entryPrice}</TableCell>
                                         <TableCell>{trade.closePrice}</TableCell>
                                         <TableCell>
-                                            {formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ss')}
+                                            {trade.entryDate ? formatInTimeZone(new Date(trade.entryDate), timezone, 'yyyy-MM-dd HH:mm:ss') : '-'}
                                         </TableCell>
                                         <TableCell>
                                             {trade.closeDate ? formatInTimeZone(new Date(trade.closeDate), timezone, 'yyyy-MM-dd HH:mm:ss') : '-'}
                                         </TableCell>
-                                        <TableCell className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
+                                        <TableCell className={trade.pnl ? trade.pnl < 0 ? 'text-red-600' : 'text-green-600' : ''}>
                                             {trade.pnl?.toFixed(2)}
                                         </TableCell>
                                         <TableCell>{trade.commission?.toFixed(2)}</TableCell>

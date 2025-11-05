@@ -205,7 +205,7 @@ export default function PnLPerContractDailyChart({
       <CardHeader
         className={cn(
           "flex flex-col items-stretch space-y-0 border-b shrink-0",
-          size === "small-long" ? "p-2" : "p-3 sm:p-4",
+          size === "small" ? "p-2" : "p-3 sm:p-4",
         )}
       >
         <div className="flex items-center justify-between">
@@ -213,7 +213,7 @@ export default function PnLPerContractDailyChart({
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === "small-long" ? "text-sm" : "text-base",
+                size === "small" ? "text-sm" : "text-base",
               )}
             >
               {t("pnlPerContractDaily.title")}
@@ -224,7 +224,7 @@ export default function PnLPerContractDailyChart({
                   <Info
                     className={cn(
                       "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small-long" ? "h-3.5 w-3.5" : "h-4 w-4",
+                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
                     )}
                   />
                 </TooltipTrigger>
@@ -242,7 +242,7 @@ export default function PnLPerContractDailyChart({
               <SelectTrigger
                 className={cn(
                   "w-[120px]",
-                  size === "small-long" ? "h-7 text-xs" : "h-8 text-sm",
+                  size === "small" ? "h-7 text-xs" : "h-8 text-sm",
                 )}
               >
                 <SelectValue
@@ -263,7 +263,7 @@ export default function PnLPerContractDailyChart({
       <CardContent
         className={cn(
           "flex-1 min-h-0",
-          size === "small-long" ? "p-1" : "p-2 sm:p-4",
+          size === "small" ? "p-1" : "p-2 sm:p-4",
         )}
       >
         <div className={cn("w-full h-full")}>
@@ -560,11 +560,11 @@ export default function PnLPerContractDailyChart({
               const domainMin = Math.min(minP * 1.1, 0);
               const domainMax = Math.max(maxP * 1.1, 0);
               const margin =
-                size === "small-long"
+                size === "small"
                   ? { left: 10, right: 4, top: 4, bottom: 20 }
                   : { left: 10, right: 8, top: 8, bottom: 24 };
               const yAxisWidth = 60;
-              const xAxisHeight = size === "small-long" ? 20 : 24;
+              const xAxisHeight = size === "small" ? 20 : 24;
               return (
                 <div className={cn("w-full h-full animate-pulse relative")}>
                   {/* Axis tick skeletons */}
@@ -594,7 +594,7 @@ export default function PnLPerContractDailyChart({
                       <Skeleton
                         key={i}
                         className={cn(
-                          size === "small-long" ? "h-3 w-8" : "h-3.5 w-10",
+                          size === "small" ? "h-3 w-8" : "h-3.5 w-10",
                         )}
                       />
                     ))}
@@ -609,9 +609,9 @@ export default function PnLPerContractDailyChart({
                         dataKey="date"
                         tickLine={false}
                         axisLine={false}
-                        height={size === "small-long" ? 20 : 24}
+                        height={size === "small" ? 20 : 24}
                         tick={false}
-                        minTickGap={size === "small-long" ? 30 : 50}
+                        minTickGap={size === "small" ? 30 : 50}
                       />
                       <YAxis
                         tickLine={false}
@@ -625,7 +625,7 @@ export default function PnLPerContractDailyChart({
                       <Bar
                         dataKey="averagePnl"
                         radius={[3, 3, 0, 0]}
-                        maxBarSize={size === "small-long" ? 25 : 40}
+                        maxBarSize={size === "small" ? 25 : 40}
                         className="transition-none"
                         fill="hsl(var(--muted-foreground) / 0.35)"
                       >
@@ -646,7 +646,7 @@ export default function PnLPerContractDailyChart({
               <BarChart
                 data={chartData}
                 margin={
-                  size === "small-long"
+                  size === "small"
                     ? { left: 10, right: 4, top: 4, bottom: 20 }
                     : { left: 10, right: 8, top: 8, bottom: 24 }
                 }
@@ -659,13 +659,13 @@ export default function PnLPerContractDailyChart({
                   dataKey="date"
                   tickLine={false}
                   axisLine={false}
-                  height={size === "small-long" ? 20 : 24}
-                  tickMargin={size === "small-long" ? 4 : 8}
+                  height={size === "small" ? 20 : 24}
+                  tickMargin={size === "small" ? 4 : 8}
                   tick={{
-                    fontSize: size === "small-long" ? 9 : 11,
+                    fontSize: size === "small" ? 9 : 11,
                     fill: "currentColor",
                   }}
-                  minTickGap={size === "small-long" ? 30 : 50}
+                  minTickGap={size === "small" ? 30 : 50}
                   tickFormatter={(value) => {
                     const date = new Date(value);
                     return formatInTimeZone(date, timezone, "MMM d", {
@@ -679,7 +679,7 @@ export default function PnLPerContractDailyChart({
                   width={60}
                   tickMargin={4}
                   tick={{
-                    fontSize: size === "small-long" ? 9 : 11,
+                    fontSize: size === "small" ? 9 : 11,
                     fill: "currentColor",
                   }}
                   tickFormatter={formatCurrency}
@@ -692,14 +692,14 @@ export default function PnLPerContractDailyChart({
                 <Tooltip
                   content={<CustomTooltip />}
                   wrapperStyle={{
-                    fontSize: size === "small-long" ? "10px" : "12px",
+                    fontSize: size === "small" ? "10px" : "12px",
                     zIndex: 1000,
                   }}
                 />
                 <Bar
                   dataKey="averagePnl"
                   radius={[3, 3, 0, 0]}
-                  maxBarSize={size === "small-long" ? 25 : 40}
+                  maxBarSize={size === "small" ? 25 : 40}
                   className="transition-all duration-300 ease-in-out"
                 >
                   {chartData.map((entry, index) => (

@@ -10,7 +10,7 @@ import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/context/data-provider'
 import { formatTimestamp } from '@/lib/date-utils'
 
-type TradeError = 
+type TradeError =
   | 'DUPLICATE_TRADES'
   | 'NO_TRADES_ADDED'
   | 'DATABASE_ERROR'
@@ -24,104 +24,105 @@ interface TradeResponse {
 
 export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Starting cache invalidation for tags:`, tags)
-  
+
   tags.forEach(tag => {
     try {
       console.log(`[revalidateCache] Revalidating tag: ${tag}`)
-      revalidateTag(tag)
+      revalidateTag(tag, { expire: 0 })
       console.log(`[revalidateCache] Successfully revalidated tag: ${tag}`)
     } catch (error) {
       console.error(`[revalidateCache] Error revalidating tag ${tag}:`, error)
     }
   })
-  
+
   console.log(`[revalidateCache] Completed cache invalidation for ${tags.length} tags`)
 }
 
 export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
-    if (!Array.isArray(data) || data.length === 0) {
-      return {
-        error: 'INVALID_DATA',
-        numberOfTradesAdded: 0,
-        details: 'No trades provided'
-      }
+  const userId = await getUserId()
+  if (!Array.isArray(data) || data.length === 0) {
+    return {
+      error: 'INVALID_DATA',
+      numberOfTradesAdded: 0,
+      details: 'No trades provided'
     }
+  }
 
-    try {
-      // Clean the data to remove undefined values and ensure all required fields are present
-      const cleanedData = data.map(trade => {
-        const cleanTrade = Object.fromEntries(
-          Object.entries(trade).filter(([_, value]) => value !== undefined)
-        ) as Partial<Trade>
-        
+  try {
+    // Clean the data to remove undefined values and ensure all required fields are present
+    const cleanedData = data.map(trade => {
+      const cleanTrade = Object.fromEntries(
+        Object.entries(trade).filter(([_, value]) => value !== undefined)
+      ) as Partial<Trade>
+
+      return {
+        ...cleanTrade,
+        // Ensure required fields have default values
+        userId: userId,
+        accountNumber: cleanTrade.accountNumber || '',
+        instrument: cleanTrade.instrument || '',
+        entryPrice: cleanTrade.entryPrice || '',
+        closePrice: cleanTrade.closePrice || '',
+        entryDate: cleanTrade.entryDate || '',
+        closeDate: cleanTrade.closeDate || '',
+        quantity: cleanTrade.quantity || 0,
+        pnl: cleanTrade.pnl || 0,
+        timeInPosition: cleanTrade.timeInPosition || 0,
+        side: cleanTrade.side || '',
+        commission: cleanTrade.commission || 0,
+        entryId: cleanTrade.entryId || null,
+        closeId: cleanTrade.closeId || null,
+        comment: cleanTrade.comment || null,
+        videoUrl: cleanTrade.videoUrl || null,
+        tags: cleanTrade.tags || [],
+        imageBase64: cleanTrade.imageBase64 || null,
+        imageBase64Second: cleanTrade.imageBase64Second || null,
+        groupId: cleanTrade.groupId || null,
+        createdAt: cleanTrade.createdAt || new Date(),
+      } as Trade
+    })
+
+    const result = await prisma.trade.createMany({
+      data: cleanedData,
+      skipDuplicates: true
+    })
+
+    // Log potential duplicates if no trades were added
+    if (result.count === 0) {
+      console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
+      const tradeIds = data.map(trade => trade.id)
+      const existingTrades = await prisma.trade.findMany({
+        where: { id: { in: tradeIds } },
+        select: {
+          id: true,
+          entryDate: true,
+          instrument: true
+        }
+      })
+
+      if (existingTrades.length > 0) {
+        console.log('[saveTrades] Found existing trades:', existingTrades)
         return {
-          ...cleanTrade,
-          // Ensure required fields have default values
-          accountNumber: cleanTrade.accountNumber || '',
-          instrument: cleanTrade.instrument || '',
-          entryPrice: cleanTrade.entryPrice || '',
-          closePrice: cleanTrade.closePrice || '',
-          entryDate: cleanTrade.entryDate || '',
-          closeDate: cleanTrade.closeDate || '',
-          quantity: cleanTrade.quantity || 0,
-          pnl: cleanTrade.pnl || 0,
-          timeInPosition: cleanTrade.timeInPosition || 0,
-          userId: cleanTrade.userId || '',
-          side: cleanTrade.side || '',
-          commission: cleanTrade.commission || 0,
-          entryId: cleanTrade.entryId || null,
-          closeId: cleanTrade.closeId || null,
-          comment: cleanTrade.comment || null,
-          videoUrl: cleanTrade.videoUrl || null,
-          tags: cleanTrade.tags || [],
-          imageBase64: cleanTrade.imageBase64 || null,
-          imageBase64Second: cleanTrade.imageBase64Second || null,
-          groupId: cleanTrade.groupId || null,
-          createdAt: cleanTrade.createdAt || new Date(),
-        } as Trade
-      })
-
-      const result = await prisma.trade.createMany({
-        data: cleanedData,
-        skipDuplicates: true
-      })
-      
-      // Log potential duplicates if no trades were added
-      if (result.count === 0) {
-        console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
-        const tradeIds = data.map(trade => trade.id)
-        const existingTrades = await prisma.trade.findMany({
-          where: { id: { in: tradeIds } },
-          select: {
-            id: true,
-            entryDate: true,
-            instrument: true
-          }
-        })
-
-        if (existingTrades.length > 0) {
-          console.log('[saveTrades] Found existing trades:', existingTrades)
-          return {
-            error: 'DUPLICATE_TRADES',
-            numberOfTradesAdded: 0,
-            details: existingTrades
-          }
+          error: 'DUPLICATE_TRADES',
+          numberOfTradesAdded: 0,
+          details: existingTrades
         }
       }
-
-      revalidatePath('/')
-      return {
-        error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
-        numberOfTradesAdded: result.count
-      }
-    } catch(error) {
-      console.error('[saveTrades] Database error:', error)
-      return { 
-        error: 'DATABASE_ERROR', 
-        numberOfTradesAdded: 0,
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }
     }
+
+    revalidatePath('/')
+    return {
+      error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
+      numberOfTradesAdded: result.count
+    }
+  } catch (error) {
+    console.error('[saveTrades] Database error:', error)
+    return {
+      error: 'DATABASE_ERROR',
+      numberOfTradesAdded: 0,
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }
+  }
 }
 
 // Create cache function dynamically for each user/subscription combination
@@ -129,7 +130,7 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
   return unstable_cache(
     async () => {
       console.log(`[Cache MISS] Fetching trades for user ${userId}, subscribed: ${isSubscribed}`)
-      
+
       const query: any = {
         where: { userId },
         orderBy: { entryDate: 'desc' },
@@ -147,7 +148,7 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
     },
     // Static string array - this is the cache key
     [`trades-${userId}-${isSubscribed}-${page}`],
-    { 
+    {
       tags: [`trades-${userId}`], // User-specific tag for revalidation
       revalidate: 3600 // Revalidate every hour (3600 seconds)
     }
@@ -156,72 +157,72 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
 
 
 export async function getTradesAction(userId: string | null = null, forceRefresh: boolean = false): Promise<Trade[]> {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user && !userId) {
-      throw new Error('User not found')
-    }
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user && !userId) {
+    throw new Error('User not found')
+  }
 
-    const subscriptionDetails = await getSubscriptionDetails()
-    const isSubscribed = subscriptionDetails?.isActive || false
+  const subscriptionDetails = await getSubscriptionDetails()
+  const isSubscribed = subscriptionDetails?.isActive || false
 
-    // If forceRefresh is true, bypass cache and fetch directly
-    if (forceRefresh) {
-      console.log(`[getTrades] Force refresh - bypassing cache for user ${userId || user?.id}`)
-      revalidateTag(`trades-${userId || user?.id}`)
-      
-      const query: any = {
-        where: { 
-          userId: userId || user?.id,
-        },
-        orderBy: { entryDate: 'desc' }
-      }
-      if (!isSubscribed) {
-        const oneWeekAgo = startOfDay(new Date())
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-        query.where.entryDate = { gte: oneWeekAgo.toISOString() }
-      }
-      
-      const trades = await prisma.trade.findMany(query)
-      console.log(`[getTrades] Force refresh - Found ${trades.length} trades`)
-      
-      return trades.map(trade => ({
-        ...trade,
-        entryDate: new Date(trade.entryDate).toISOString(),
-        exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
-      }))
-    }
+  // If forceRefresh is true, bypass cache and fetch directly
+  if (forceRefresh) {
+    console.log(`[getTrades] Force refresh - bypassing cache for user ${userId || user?.id}`)
+    revalidateTag(`trades-${userId || user?.id}`, { expire: 0 })
 
-    // Get cached trades
-    // Per page
     const query: any = {
-      where: { 
+      where: {
         userId: userId || user?.id,
-       }
+      },
+      orderBy: { entryDate: 'desc' }
     }
     if (!isSubscribed) {
       const oneWeekAgo = startOfDay(new Date())
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
       query.where.entryDate = { gte: oneWeekAgo.toISOString() }
     }
-    const count = await prisma.trade.count(query)
-    // Split pages by chunks of 1000
-    const chunkSize = 1000
-    const totalPages = Math.ceil(count / chunkSize)
-    const trades: Trade[] = []
-    for (let page = 1; page <= totalPages; page++) {
-      const pageTrades = await getCachedTrades(userId || user?.id || '', isSubscribed, page, chunkSize)
-      trades.push(...pageTrades)
-    }
-    console.log(`[getTrades] Found ${count} trades fetched ${trades.length}`)
 
-    // Tell the server that the trades have changed
-    // Next page reload will fetch the new trades instead of using the cached data
+    const trades = await prisma.trade.findMany(query)
+    console.log(`[getTrades] Force refresh - Found ${trades.length} trades`)
+
     return trades.map(trade => ({
       ...trade,
       entryDate: new Date(trade.entryDate).toISOString(),
       exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
     }))
+  }
+
+  // Get cached trades
+  // Per page
+  const query: any = {
+    where: {
+      userId: userId || user?.id,
+    }
+  }
+  if (!isSubscribed) {
+    const oneWeekAgo = startOfDay(new Date())
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
+    query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+  }
+  const count = await prisma.trade.count(query)
+  // Split pages by chunks of 1000
+  const chunkSize = 1000
+  const totalPages = Math.ceil(count / chunkSize)
+  const trades: Trade[] = []
+  for (let page = 1; page <= totalPages; page++) {
+    const pageTrades = await getCachedTrades(userId || user?.id || '', isSubscribed, page, chunkSize)
+    trades.push(...pageTrades)
+  }
+  console.log(`[getTrades] Found ${count} trades fetched ${trades.length}`)
+
+  // Tell the server that the trades have changed
+  // Next page reload will fetch the new trades instead of using the cached data
+  return trades.map(trade => ({
+    ...trade,
+    entryDate: new Date(trade.entryDate).toISOString(),
+    exitDate: trade.closeDate ? new Date(trade.closeDate).toISOString() : null
+  }))
 }
 
 export async function updateTradesAction(tradesIds: string[], update: Partial<Trade> & {
@@ -232,93 +233,93 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
   instrumentSuffix?: string
 }): Promise<number> {
   try {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const userId = user?.id
-  if (!userId) {
-    return 0
-  }
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const userId = user?.id
+    if (!userId) {
+      return 0
+    }
 
-  // Handle special offset operations
-  if (update.entryDateOffset !== undefined || update.closeDateOffset !== undefined) {
-    const trades = await prisma.trade.findMany({
-      where: { id: { in: tradesIds }, userId },
-      select: { id: true, entryDate: true, closeDate: true }
-    })
+    // Handle special offset operations
+    if (update.entryDateOffset !== undefined || update.closeDateOffset !== undefined) {
+      const trades = await prisma.trade.findMany({
+        where: { id: { in: tradesIds }, userId },
+        select: { id: true, entryDate: true, closeDate: true }
+      })
 
-    for (const trade of trades) {
-      const updateData: any = {}
-      
-      if (update.entryDateOffset !== undefined && update.entryDateOffset !== 0) {
-        const entryDate = new Date(trade.entryDate)
-        entryDate.setHours(entryDate.getHours() + update.entryDateOffset)
-        updateData.entryDate = formatTimestamp(entryDate.toISOString())
+      for (const trade of trades) {
+        const updateData: any = {}
+
+        if (update.entryDateOffset !== undefined && update.entryDateOffset !== 0) {
+          const entryDate = new Date(trade.entryDate)
+          entryDate.setHours(entryDate.getHours() + update.entryDateOffset)
+          updateData.entryDate = formatTimestamp(entryDate.toISOString())
+        }
+
+        if (update.closeDateOffset !== undefined && update.closeDateOffset !== 0) {
+          const closeDate = new Date(trade.closeDate)
+          closeDate.setHours(closeDate.getHours() + update.closeDateOffset)
+          updateData.closeDate = formatTimestamp(closeDate.toISOString())
+        }
+
+        if (Object.keys(updateData).length > 0) {
+          await prisma.trade.update({
+            where: { id: trade.id },
+            data: updateData
+          })
+        }
       }
-      
-      if (update.closeDateOffset !== undefined && update.closeDateOffset !== 0) {
-        const closeDate = new Date(trade.closeDate)
-        closeDate.setHours(closeDate.getHours() + update.closeDateOffset)
-        updateData.closeDate = formatTimestamp(closeDate.toISOString())
-      }
+    }
 
-      if (Object.keys(updateData).length > 0) {
+    // Handle instrument modifications
+    if (update.instrumentTrim || update.instrumentPrefix || update.instrumentSuffix) {
+      const trades = await prisma.trade.findMany({
+        where: { id: { in: tradesIds }, userId },
+        select: { id: true, instrument: true }
+      })
+
+      for (const trade of trades) {
+        let newInstrument = trade.instrument
+
+        if (update.instrumentTrim) {
+          const { fromStart, fromEnd } = update.instrumentTrim
+          newInstrument = newInstrument.substring(fromStart, newInstrument.length - fromEnd)
+        }
+
+        if (update.instrumentPrefix) {
+          newInstrument = update.instrumentPrefix + newInstrument
+        }
+
+        if (update.instrumentSuffix) {
+          newInstrument = newInstrument + update.instrumentSuffix
+        }
+
         await prisma.trade.update({
           where: { id: trade.id },
-          data: updateData
+          data: { instrument: newInstrument }
         })
       }
     }
-  }
 
-  // Handle instrument modifications
-  if (update.instrumentTrim || update.instrumentPrefix || update.instrumentSuffix) {
-    const trades = await prisma.trade.findMany({
-      where: { id: { in: tradesIds }, userId },
-      select: { id: true, instrument: true }
-    })
+    // Handle normal updates (excluding special fields)
+    const normalUpdate = { ...update }
+    delete normalUpdate.entryDateOffset
+    delete normalUpdate.closeDateOffset
+    delete normalUpdate.instrumentTrim
+    delete normalUpdate.instrumentPrefix
+    delete normalUpdate.instrumentSuffix
 
-    for (const trade of trades) {
-      let newInstrument = trade.instrument
-      
-      if (update.instrumentTrim) {
-        const { fromStart, fromEnd } = update.instrumentTrim
-        newInstrument = newInstrument.substring(fromStart, newInstrument.length - fromEnd)
-      }
-      
-      if (update.instrumentPrefix) {
-        newInstrument = update.instrumentPrefix + newInstrument
-      }
-      
-      if (update.instrumentSuffix) {
-        newInstrument = newInstrument + update.instrumentSuffix
-      }
-
-      await prisma.trade.update({
-        where: { id: trade.id },
-        data: { instrument: newInstrument }
+    let result = { count: 0 }
+    if (Object.keys(normalUpdate).length > 0) {
+      result = await prisma.trade.updateMany({
+        where: { id: { in: tradesIds }, userId },
+        data: normalUpdate
       })
     }
-  }
 
-  // Handle normal updates (excluding special fields)
-  const normalUpdate = { ...update }
-  delete normalUpdate.entryDateOffset
-  delete normalUpdate.closeDateOffset
-  delete normalUpdate.instrumentTrim
-  delete normalUpdate.instrumentPrefix
-  delete normalUpdate.instrumentSuffix
+    revalidateTag(`trades-${userId}`, { expire: 0 })
 
-  let result = { count: 0 }
-  if (Object.keys(normalUpdate).length > 0) {
-    result = await prisma.trade.updateMany({
-      where: { id: { in: tradesIds }, userId },
-      data: normalUpdate
-    })
-  }
-
-  revalidateTag(`trades-${userId}`)
-
-  return tradesIds.length // Return the number of trades processed
+    return tradesIds.length // Return the number of trades processed
   } catch (error) {
     console.error('[updateTrades] Database error:', error)
     return 0
@@ -376,7 +377,7 @@ export async function loadDashboardLayoutAction(): Promise<Layouts | null> {
     const dashboard = await prisma.dashboardLayout.findUnique({
       where: { userId },
     })
-    
+
     if (!dashboard) {
       console.log('[loadDashboardLayout] No layout found for user:', userId)
       return null
@@ -429,7 +430,7 @@ export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promi
         mobile: JSON.stringify(mobileLayout)
       },
     })
-    
+
   } catch (error) {
     console.error('[saveDashboardLayout] Database error:', error)
   }
@@ -472,7 +473,7 @@ export async function groupTradesAction(tradeIds: string[]): Promise<boolean> {
 
     // Update all selected trades with the new group ID
     await prisma.trade.updateMany({
-      where: { 
+      where: {
         id: { in: tradeIds },
         userId // Ensure we only update the user's own trades
       },
@@ -492,7 +493,7 @@ export async function ungroupTradesAction(tradeIds: string[]): Promise<boolean> 
     const userId = await getUserId()
     // Remove group ID from selected trades
     await prisma.trade.updateMany({
-      where: { 
+      where: {
         id: { in: tradeIds },
         userId // Ensure we only update the user's own trades
       },

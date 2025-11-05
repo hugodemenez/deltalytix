@@ -35,6 +35,7 @@ import {
 import {
   WidgetType,
   WidgetSize,
+  Widget,
 } from '@/app/[locale]/dashboard/types/dashboard';
 import {
   deletePayoutAction,
@@ -42,7 +43,9 @@ import {
   setupAccountAction,
   savePayoutAction,
   calculateAccountBalanceAction,
+  calculateAccountMetricsAction,
 } from '@/server/accounts';
+import { computeMetricsForAccounts } from '@/lib/account-metrics'
 import {
   saveGroupAction,
   deleteGroupAction,
@@ -52,7 +55,7 @@ import {
 import { createClient } from '@/lib/supabase';
 import { prisma } from '@/lib/prisma';
 import { signOut, getUserId, updateUserLanguage } from '@/server/auth';
-import { useUserStore } from '@/store/user-store';
+import { DashboardLayoutWithWidgets, useUserStore } from '@/store/user-store';
 import { useTickDetailsStore } from '@/store/tick-details-store';
 import { useFinancialEventsStore } from '@/store/financial-events-store';
 import { useTradesStore } from '@/store/trades-store';
@@ -148,11 +151,59 @@ export interface Group extends PrismaGroup {
 }
 
 
-// Update Account type to include payouts and balanceToDate
+// Update Account type to include payouts, balanceToDate, and all computed metrics
 export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
   payouts?: PrismaPayout[]
   balanceToDate?: number
   group?: PrismaGroup | null
+  aboveBuffer?: number
+  // When true, metrics and charts ignore trades until cumulative profit reaches `buffer`
+  considerBuffer?: boolean
+  // Filtered trades used for metrics/charts (not to be sent to server actions)
+  trades?: PrismaTrade[]
+  
+  // Computed metrics
+  metrics?: {
+    // Balance and progress
+    currentBalance: number
+    remainingToTarget: number
+    progress: number
+    isConfigured: boolean
+    
+    // Drawdown metrics
+    drawdownProgress: number
+    remainingLoss: number
+    highestBalance: number
+    drawdownLevel: number
+    
+    // Consistency metrics
+    totalProfit: number
+    maxAllowedDailyProfit: number | null
+    highestProfitDay: number
+    isConsistent: boolean
+    hasProfitableData: boolean
+    dailyPnL: { [key: string]: number }
+    totalProfitableDays: number
+    
+    // Trading days metrics
+    totalTradingDays: number
+    validTradingDays: number
+  }
+  
+  // Daily metrics for account table
+  dailyMetrics?: Array<{
+    date: Date
+    pnl: number
+    totalBalance: number
+    percentageOfTarget: number
+    isConsistent: boolean
+    payout?: {
+      id: string
+      amount: number
+      date: Date
+      status: string
+    }
+  }>
 }
 
 // Add after the interfaces and before the UserDataContext
@@ -167,7 +218,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "calendarWidget",
       "size": "large",
       "x": 0,
-      "y": 8,
+      "y": 9,
       "w": 6,
       "h": 8
     },
@@ -175,8 +226,8 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "i": "widget1751715494609",
       "type": "tradeDistribution",
       "size": "small",
-      "x": 6,
-      "y": 0,
+      "x": 0,
+      "y": 1,
       "w": 3,
       "h": 4
     },
@@ -185,35 +236,35 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "pnlChart",
       "size": "medium",
       "x": 0,
-      "y": 16,
+      "y": 17,
       "w": 6,
       "h": 4
     },
     {
       "i": "widget1752135357688",
       "type": "weekdayPnlChart",
-      "size": "medium",
-      "x": 0,
-      "y": 4,
-      "w": 6,
+      "size": "small",
+      "x": 3,
+      "y": 1,
+      "w": 3,
       "h": 4
     },
     {
       "i": "widget1752135359621",
       "type": "timeOfDayChart",
-      "size": "medium",
+      "size": "small",
       "x": 0,
-      "y": 20,
-      "w": 6,
+      "y": 21,
+      "w": 3,
       "h": 4
     },
     {
       "i": "widget1752135361015",
       "type": "timeInPositionChart",
-      "size": "medium",
-      "x": 6,
-      "y": 4,
-      "w": 6,
+      "size": "small",
+      "x": 9,
+      "y": 9,
+      "w": 3,
       "h": 4
     },
     {
@@ -221,17 +272,17 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "equityChart",
       "size": "large",
       "x": 6,
-      "y": 8,
+      "y": 1,
       "w": 6,
       "h": 8
     },
     {
       "i": "widget1752135365730",
       "type": "pnlBySideChart",
-      "size": "medium",
+      "size": "small",
       "x": 6,
-      "y": 16,
-      "w": 6,
+      "y": 9,
+      "w": 3,
       "h": 4
     },
     {
@@ -239,7 +290,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "tickDistribution",
       "size": "medium",
       "x": 6,
-      "y": 20,
+      "y": 13,
       "w": 6,
       "h": 4
     },
@@ -248,17 +299,17 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "commissionsPnl",
       "size": "medium",
       "x": 6,
-      "y": 24,
+      "y": 17,
       "w": 6,
       "h": 4
     },
     {
       "i": "widget1752135378584",
       "type": "timeRangePerformance",
-      "size": "medium",
-      "x": 0,
-      "y": 24,
-      "w": 6,
+      "size": "small",
+      "x": 6,
+      "y": 21,
+      "w": 3,
       "h": 4
     },
     {
@@ -275,7 +326,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "statisticsWidget",
       "size": "medium",
       "x": 0,
-      "y": 0,
+      "y": 5,
       "w": 6,
       "h": 4
     },
@@ -283,17 +334,26 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "i": "widget1752135397611",
       "type": "profitFactor",
       "size": "tiny",
-      "x": 9,
-      "y": 1,
+      "x": 6,
+      "y": 0,
       "w": 3,
       "h": 1
     },
     {
-      "i": "widget1752135401717",
+      "i": "widget1762369988555",
+      "type": "averagePositionTime",
+      "size": "tiny",
+      "x": 3,
+      "y": 0,
+      "w": 3,
+      "h": 1
+    },
+    {
+      "i": "widget1762369989742",
       "type": "cumulativePnl",
       "size": "tiny",
-      "x": 9,
-      "y": 2,
+      "x": 0,
+      "y": 0,
       "w": 3,
       "h": 1
     }
@@ -524,12 +584,11 @@ export const DataProvider: React.FC<{
               setTickDetails(sharedData.params.tickDetails);
             }
 
-            const accountsWithBalance = await calculateAccountBalanceAction(
-              sharedData.groups?.flatMap(group => group.accounts) || [],
-              processedSharedTrades
+            const accountsWithMetrics = await calculateAccountMetricsAction(
+              sharedData.groups?.flatMap(group => group.accounts) || []
             );
             setGroups(sharedData.groups || []);
-            setAccounts(accountsWithBalance);
+            setAccounts(accountsWithMetrics);
           };
 
           await updates();
@@ -556,8 +615,8 @@ export const DataProvider: React.FC<{
           userId: 'admin',
           createdAt: new Date(),
           updatedAt: new Date(),
-          desktop: defaultLayouts.desktop,
-          mobile: defaultLayouts.mobile
+          desktop: defaultLayouts.desktop as unknown as Widget[],
+          mobile: defaultLayouts.mobile as unknown as Widget[]
         });
         return;
       }
@@ -580,11 +639,11 @@ export const DataProvider: React.FC<{
         const userId = await getUserId()
         const dashboardLayoutResponse = await getDashboardLayout(userId)
         if (dashboardLayoutResponse) {
-          setDashboardLayout(dashboardLayoutResponse)
+          setDashboardLayout(dashboardLayoutResponse as unknown as DashboardLayoutWithWidgets)
         }
         else {
           // If no layout exists in database, use default layout
-          setDashboardLayout(defaultLayouts)
+          setDashboardLayout(defaultLayouts as unknown as DashboardLayoutWithWidgets)
         }
       }
 
@@ -605,11 +664,11 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      // Calculate balanceToDate for each account 
-      const accountsWithBalance = await calculateAccountBalanceAction(
-        data.accounts || [],
+      // Calculate metrics for each account 
+      const accountsWithMetrics = await calculateAccountMetricsAction(
+        data.accounts || []
       );
-      setAccounts(accountsWithBalance);
+      setAccounts(accountsWithMetrics);
 
 
       setUser(data.userData);
@@ -664,11 +723,14 @@ export const DataProvider: React.FC<{
 
   // Persist language changes without blocking UI
   useEffect(() => {
-    if (!supabaseUser?.id || !locale) return
-    // Fire and forget; do not block UI
-    updateUserLanguage(locale).catch((e) => {
-      console.error('[DataProvider] Failed to update user language', e)
-    })
+    const updateLanguage = async () => {
+      if (!supabaseUser?.id || !locale) return
+      // Fire and forget; do not block UI
+      await updateUserLanguage(locale).catch((e) => {
+        console.error('[DataProvider] Failed to update user language', e)
+      })
+    }
+    updateLanguage()
   }, [locale, supabaseUser?.id])
 
   const refreshTrades = useCallback(async () => {
@@ -693,11 +755,11 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      // Calculate balanceToDate for each account 
-      const accountsWithBalance = await calculateAccountBalanceAction(
-        data.accounts || [],
+      // Calculate metrics for each account 
+      const accountsWithMetrics = await calculateAccountMetricsAction(
+        data.accounts || []
       );
-      setAccounts(accountsWithBalance);
+      setAccounts(accountsWithMetrics);
 
 
       setUser(data.userData);
@@ -748,6 +810,10 @@ export const DataProvider: React.FC<{
         if (hiddenAccountNumbers.includes(trade.accountNumber)) {
           return false;
         }
+
+        // We should identify when accounts pass their buffer
+        // We can get the index of the first trade whihch is after the buffer date of its account
+        const tradeAccount = accounts.find(acc => acc.number === trade.accountNumber);
 
         // Validate entry date
         const entryDate = new Date(formatInTimeZone(
@@ -905,16 +971,25 @@ export const DataProvider: React.FC<{
       const currentAccount = accounts.find(acc => acc.number === newAccount.number) as Account
       // If the account is not found, create it
       if (!currentAccount) {
-        const createdAccount = await setupAccountAction(newAccount)
-        setAccounts([...accounts, createdAccount])
+        // Never send client-only fields to server
+        const { trades: _trades, considerBuffer: _considerBuffer, ...serverAccount } = newAccount
+        const createdAccount = await setupAccountAction(serverAccount as Account)
+        
+        // Recalculate metrics for the new account (optimistic, client-side)
+        const accountsWithMetrics = computeMetricsForAccounts([
+          { ...createdAccount, considerBuffer: _considerBuffer ?? true }
+        ], trades)
+        const accountWithMetrics = accountsWithMetrics[0]
+        
+        setAccounts([...accounts, accountWithMetrics])
 
         // If the new account has a groupId, update the groups state to include it
-        if (createdAccount.groupId) {
+        if (accountWithMetrics.groupId) {
           setGroups(groups.map(group => {
-            if (group.id === createdAccount.groupId) {
+            if (group.id === accountWithMetrics.groupId) {
               return {
                 ...group,
-                accounts: [...group.accounts, createdAccount]
+                accounts: [...group.accounts, accountWithMetrics]
               }
             }
             return group
@@ -924,11 +999,20 @@ export const DataProvider: React.FC<{
       }
 
       // Update the account in the database
-      const updatedAccount = await setupAccountAction(newAccount)
-      // Update the account in the local state
+      // Strip client-only fields
+      const { trades: _trades2, considerBuffer: _considerBuffer2, ...serverAccount2 } = newAccount
+      const updatedAccount = await setupAccountAction(serverAccount2 as Account)
+      
+      // Recalculate metrics for the updated account (optimistic, client-side)
+      const accountsWithMetrics = computeMetricsForAccounts([
+        { ...updatedAccount, considerBuffer: _considerBuffer2 ?? true }
+      ], trades)
+      const accountWithMetrics = accountsWithMetrics[0]
+      
+      // Update the account in the local state with recalculated metrics
       const updatedAccounts = accounts.map((account: Account) => {
-        if (account.number === updatedAccount.number) {
-          return { ...account, ...updatedAccount };
+        if (account.number === accountWithMetrics.number) {
+          return accountWithMetrics;
         }
         return account;
       });
@@ -937,7 +1021,7 @@ export const DataProvider: React.FC<{
       console.error('Error updating account:', error)
       throw error
     }
-  }, [supabaseUser?.id, accounts, setAccounts, groups, setGroups])
+  }, [supabaseUser?.id, accounts, setAccounts, groups, setGroups, trades])
 
 
   // Add createGroup function
@@ -1032,8 +1116,8 @@ export const DataProvider: React.FC<{
       // Add to database
       const newPayout = await savePayoutAction(payout);
 
-      // Update local state
-      setAccounts(accounts.map((account: Account) => {
+      // Update the account with the new/updated payout
+      const updatedAccounts = accounts.map((account: Account) => {
         if (account.number === payout.accountNumber) {
           const existingPayouts = account.payouts || [];
           const isUpdate = payout.id && existingPayouts.some(p => p.id === payout.id);
@@ -1053,14 +1137,27 @@ export const DataProvider: React.FC<{
           }
         }
         return account;
-      })
-      );
+      });
+
+      // Recalculate metrics for the affected account (optimistic, client-side)
+      const affectedAccount = updatedAccounts.find(acc => acc.number === payout.accountNumber);
+      if (affectedAccount) {
+        const accountsWithMetrics = computeMetricsForAccounts([affectedAccount], trades)
+        const accountWithMetrics = accountsWithMetrics[0]
+        
+        // Update accounts with recalculated metrics
+        setAccounts(updatedAccounts.map(acc => 
+          acc.number === payout.accountNumber ? accountWithMetrics : acc
+        ));
+      } else {
+        setAccounts(updatedAccounts);
+      }
 
     } catch (error) {
       console.error('Error saving payout:', error);
       throw error;
     }
-  }, [supabaseUser?.id, isSharedView, accounts, setAccounts]);
+  }, [supabaseUser?.id, isSharedView, accounts, setAccounts, trades]);
 
   // Add deleteAccount function
   const deleteAccount = useCallback(async (account: Account) => {
@@ -1082,20 +1179,43 @@ export const DataProvider: React.FC<{
     if (!supabaseUser?.id || isSharedView) return;
 
     try {
-      setAccounts(accounts.map((account: Account) => ({
+      // Find the account that has this payout
+      const affectedAccount = accounts.find(account => 
+        account.payouts?.some(p => p.id === payoutId)
+      );
+
+      // Update accounts with removed payout
+      const updatedAccounts = accounts.map((account: Account) => ({
         ...account,
         payouts: account.payouts?.filter(p => p.id !== payoutId) || []
-      })
-      ));
+      }));
 
       // Delete from database
       await deletePayoutAction(payoutId);
+
+      // Recalculate metrics for the affected account (optimistic, client-side)
+      if (affectedAccount) {
+        const accountToRecalculate = updatedAccounts.find(acc => acc.id === affectedAccount.id);
+        if (accountToRecalculate) {
+          const accountsWithMetrics = computeMetricsForAccounts([accountToRecalculate], trades)
+          const accountWithMetrics = accountsWithMetrics[0]
+          
+          // Update accounts with recalculated metrics
+          setAccounts(updatedAccounts.map(acc => 
+            acc.id === affectedAccount.id ? accountWithMetrics : acc
+          ));
+        } else {
+          setAccounts(updatedAccounts);
+        }
+      } else {
+        setAccounts(updatedAccounts);
+      }
 
     } catch (error) {
       console.error('Error deleting payout:', error);
       throw error;
     }
-  }, [supabaseUser?.id, isSharedView, accounts, setAccounts]);
+  }, [supabaseUser?.id, isSharedView, accounts, setAccounts, trades]);
 
   const changeIsFirstConnection = useCallback(async (isFirstConnection: boolean) => {
     if (!supabaseUser?.id) return
@@ -1139,10 +1259,7 @@ export const DataProvider: React.FC<{
     if (!supabaseUser?.id) return
 
     try {
-      // Get the correct user ID from server
-      const userId = await getUserId()
-
-      setDashboardLayout(layout)
+      setDashboardLayout(layout as unknown as DashboardLayoutWithWidgets)
       await saveDashboardLayoutAction(layout)
     } catch (error) {
       console.error('Error saving dashboard layout:', error)

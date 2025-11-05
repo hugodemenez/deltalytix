@@ -356,7 +356,9 @@ function parseDateTime(dateTimeStr: string): string {
 
 interface QuantowerOrderProcessorProps {
   csvData: string[][]
-  setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>
+  headers: string[]
+  processedTrades: Partial<Trade>[]
+  setProcessedTrades: React.Dispatch<React.SetStateAction<Partial<Trade>[]>>
 }
 
 interface Order {
@@ -382,8 +384,7 @@ interface OpenPosition {
   openingOrderDetails?: string;
 }
 
-export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }: QuantowerOrderProcessorProps) {
-  const [trades, setTrades] = useState<Trade[]>([])
+export default function QuantowerOrderProcessor({ csvData, headers, processedTrades, setProcessedTrades }: QuantowerOrderProcessorProps) {
   const [contractSpecs, setContractSpecs] = useState<{ [key: string]: ContractSpec }>(defaultContractSpecs)
   const [incompleteTrades, setIncompleteTrades] = useState<OpenPosition[]>([])
   const [unknownSymbols, setUnknownSymbols] = useState<string[]>([])
@@ -403,7 +404,7 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
   }
 
   const processOrders = useCallback(() => {
-    const processedTrades: Trade[] = []
+    const processedTrades: Partial<Trade>[] = []
     const openPositions: { [key: string]: OpenPosition } = {}
     const incompleteTradesArray: OpenPosition[] = []
     const unknownSymbolsSet = new Set<string>()
@@ -462,7 +463,6 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
             const pnl = calculatePnL(openPosition.entryOrders, openPosition.exitOrders, contractSpec, openPosition.side)
 
             const trade: Partial<Trade> = {
-              id: `${openPosition.entryOrders.map(o => o.orderId).join('-')}-${openPosition.exitOrders.map(o => o.orderId).join('-')}`,
               accountNumber: openPosition.accountNumber,
               quantity: openPosition.originalQuantity,
               entryId: openPosition.entryOrders.map(o => o.orderId).join('-'),
@@ -478,16 +478,9 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
               userId: openPosition.userId,
               side: openPosition.side,
               commission: openPosition.totalCommission,
-              createdAt: new Date(),
-              comment: null,
-              videoUrl: null,
-              tags: [],
-              imageBase64: null,
-              imageBase64Second: null,
-              groupId: null,
             }
 
-            processedTrades.push(trade as Trade)
+            processedTrades.push(trade)
 
             if (openPosition.quantity < 0) {
               // Reverse position
@@ -544,7 +537,6 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
       incompleteTradesArray.push(position)
     })
 
-    setTrades(processedTrades)
     setProcessedTrades(processedTrades)
     setIncompleteTrades(incompleteTradesArray)
 
@@ -561,10 +553,10 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
     processOrders()
   }, [processOrders])
 
-  const uniqueSymbols = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades])
+  const uniqueSymbols = useMemo(() => Array.from(new Set(processedTrades.map(trade => trade.instrument).filter(Boolean))), [processedTrades])
 
-  const totalPnL = useMemo(() => trades.reduce((sum, trade) => sum + trade.pnl, 0), [trades])
-  const totalCommission = useMemo(() => trades.reduce((sum, trade) => sum + trade.commission, 0), [trades])
+  const totalPnL = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [processedTrades])
+  const totalCommission = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [processedTrades])
 
   const handleContractSpecChange = (symbol: string, field: keyof ContractSpec, value: string) => {
     setContractSpecs(prev => ({
@@ -643,20 +635,20 @@ export default function QuantowerOrderProcessor({ csvData, setProcessedTrades }:
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {trades.map((trade) => (
-                  <TableRow key={trade.id}>
+                {processedTrades.map((trade, index) => (
+                  <TableRow key={trade.entryId || index}>
                     <TableCell>{trade.instrument}</TableCell>
                     <TableCell>{trade.side}</TableCell>
                     <TableCell>{trade.quantity}</TableCell>
                     <TableCell>{trade.entryPrice}</TableCell>
                     <TableCell>{trade.closePrice || '-'}</TableCell>
-                    <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                    <TableCell>{trade.entryDate ? new Date(trade.entryDate).toLocaleString() : '-'}</TableCell>
                     <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                    <TableCell className={trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      {trade.pnl.toFixed(2)}
+                    <TableCell className={(trade.pnl || 0) >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      {(trade.pnl || 0).toFixed(2)}
                     </TableCell>
-                    <TableCell>{`${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s`}</TableCell>
-                    <TableCell>{trade.commission.toFixed(2)}</TableCell>
+                    <TableCell>{trade.timeInPosition ? `${Math.floor(trade.timeInPosition / 60)}m ${Math.floor(trade.timeInPosition % 60)}s` : '-'}</TableCell>
+                    <TableCell>{(trade.commission || 0).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

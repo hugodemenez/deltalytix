@@ -9,13 +9,7 @@ import { Trade } from '@prisma/client'
 import { useI18n } from '@/locales/client'
 import { useTradesStore } from '@/store/trades-store'
 import { generateTradeHash } from '@/lib/utils'
-
-interface TradovateProcessorProps {
-    headers: string[];
-    csvData: string[][];
-    setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
-    accountNumber: string;
-}
+import { PlatformProcessorProps } from '../config/platforms'
 
 const formatPnl = (pnl: string | undefined): { pnl: number, error?: string } => {
     if (typeof pnl !== 'string' || pnl.trim() === '') {
@@ -72,9 +66,8 @@ const newMappings: { [key: string]: string } = {
 }
 
 
-export default function TradovateProcessor({ headers, csvData, setProcessedTrades, accountNumber }: TradovateProcessorProps) {
+export default function TradovateProcessor({ headers, csvData, processedTrades, setProcessedTrades, accountNumbers }: PlatformProcessorProps) {
     const existingTrades = useTradesStore((state => state.trades))
-    const [trades, setTrades] = useState<Trade[]>([])
     const [missingCommissions, setMissingCommissions] = useState<{ [key: string]: number }>({})
     const [showCommissionPrompt, setShowCommissionPrompt] = useState(false)
     const t = useI18n()
@@ -82,15 +75,18 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
 
     const existingCommissions = useMemo(() => {
         const commissions: { [key: string]: number } = {}
+        if (!accountNumbers) {
+            return commissions;
+        }
         existingTrades
-            .filter(trade => trade.accountNumber === accountNumber)
+            .filter(trade => accountNumbers.includes(trade.accountNumber))
             .forEach(trade => {
                 if (trade.instrument && trade.commission && trade.quantity) {
                     commissions[trade.instrument] = trade.commission / trade.quantity
                 }
             })
         return commissions
-    }, [existingTrades, accountNumber])
+    }, [existingTrades, accountNumbers])
 
     const processTrades = useCallback(() => {
         const newTrades: Trade[] = [];
@@ -199,19 +195,17 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
                 item.side = 'long'
             }
 
-            item.accountNumber = accountNumber;
             item.id = generateTradeHash(item as Trade).toString();
             newTrades.push(item as Trade);
         })
 
-        setTrades(newTrades);
         setProcessedTrades(newTrades);
         setMissingCommissions(Object.keys(missingCommissionsTemp).reduce((acc, key) => ({
             ...acc,
             [key]: existingCommissions[key] || 0
         }), {}));
         setShowCommissionPrompt(Object.keys(missingCommissionsTemp).length > 0);
-    }, [csvData, headers, existingCommissions, accountNumber, setProcessedTrades]);
+    }, [csvData, headers, existingCommissions, setProcessedTrades]);
 
     useEffect(() => {
         processTrades();
@@ -222,7 +216,8 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
     };
 
     const applyCommissions = () => {
-        const updatedTrades = trades.map(trade => {
+        const updatedTrades = processedTrades.map(trade => {
+            if (trade.instrument && trade.quantity && trade.commission === undefined) {
             if (missingCommissions.hasOwnProperty(trade.instrument)) {
                 return {
                     ...trade,
@@ -230,8 +225,9 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
                 };
             }
             return trade;
+        }
+            return trade;
         });
-        setTrades(updatedTrades);
         setProcessedTrades(updatedTrades);
         setShowCommissionPrompt(false);
         toast.success(t('import.commission.success.title'), {
@@ -239,9 +235,9 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
         });
     };
 
-    const totalPnL = useMemo(() => trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [trades]);
-    const totalCommission = useMemo(() => trades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [trades]);
-    const uniqueInstruments = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades]);
+    const totalPnL = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0), [processedTrades]);
+    const totalCommission = useMemo(() => processedTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0), [processedTrades]);
+    const uniqueInstruments = useMemo(() => Array.from(new Set(processedTrades.map(trade => trade.instrument))), [processedTrades]);
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -275,7 +271,7 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
                             </Button>
                         </div>
                     )}
-                    {trades.length === 0 && (
+                    {processedTrades.length === 0 && (
                         <div className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r" role="alert">
                             <p className="font-bold">{t('import.error.duplicateTrades')}</p>
                             <p>{t('import.error.duplicateTradesDescription')}</p>
@@ -286,7 +282,6 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Account</TableHead>
                                     <TableHead>Instrument</TableHead>
                                     <TableHead>Side</TableHead>
                                     <TableHead>Quantity</TableHead>
@@ -300,15 +295,14 @@ export default function TradovateProcessor({ headers, csvData, setProcessedTrade
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {trades.map((trade) => (
+                                {processedTrades.map((trade) => (
                                     <TableRow key={trade.id}>
-                                        <TableCell>{trade.accountNumber}</TableCell>
                                         <TableCell>{trade.instrument}</TableCell>
                                         <TableCell>{trade.side}</TableCell>
                                         <TableCell>{trade.quantity}</TableCell>
                                         <TableCell>{trade.entryPrice}</TableCell>
                                         <TableCell>{trade.closePrice || '-'}</TableCell>
-                                        <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
+                                        <TableCell>{trade.entryDate ? new Date(trade.entryDate).toLocaleString() : '-'}</TableCell>
                                         <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
                                         <TableCell className={trade.pnl && trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}>
                                             {trade.pnl?.toFixed(2)}

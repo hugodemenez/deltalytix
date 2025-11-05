@@ -2,6 +2,7 @@
 
 import { getUserId } from '@/server/auth'
 import { PrismaClient, Trade, Payout } from '@prisma/client'
+import { computeMetricsForAccounts } from '@/lib/account-metrics'
 import { Account } from '@/context/data-provider'
 
 const globalForPrisma = globalThis as unknown as {
@@ -182,7 +183,7 @@ export async function deleteTradesByIdsAction(tradeIds: string[]): Promise<void>
   })
 }
 
-export async function setupAccountAction(account: Account) {
+export async function setupAccountAction(account: Account): Promise<Account> {
   const userId = await getUserId()
   const existingAccount = await prisma.account.findFirst({
     where: {
@@ -192,6 +193,7 @@ export async function setupAccountAction(account: Account) {
   })
 
   // Extract fields that should not be included in the database operation
+  // Remove computed fields (metrics, dailyMetrics) and relation fields
   const { 
     id, 
     userId: _, 
@@ -199,6 +201,11 @@ export async function setupAccountAction(account: Account) {
     groupId,
     balanceToDate,
     group,
+    metrics,
+    dailyMetrics,
+    aboveBuffer,
+    considerBuffer,
+    trades,
     ...baseAccountData 
   } = account
 
@@ -214,23 +221,53 @@ export async function setupAccountAction(account: Account) {
     })
   }
 
+  let savedAccount
   if (existingAccount) {
-    return await prisma.account.update({
+    savedAccount = await prisma.account.update({
       where: { id: existingAccount.id },
-      data: accountDataWithGroup
+      data: accountDataWithGroup,
+      include: {
+        payouts: {
+          select: {
+            id: true,
+            amount: true,
+            date: true,
+            status: true,
+          }
+        },
+        group: true,
+      }
+    })
+  } else {
+    savedAccount = await prisma.account.create({
+      data: {
+        ...accountDataWithGroup,
+        user: {
+          connect: {
+            id: userId
+          }
+        }
+      },
+      include: {
+        payouts: {
+          select: {
+            id: true,
+            amount: true,
+            date: true,
+            status: true,
+          }
+        },
+        group: true,
+      }
     })
   }
 
-  return await prisma.account.create({
-    data: {
-      ...accountDataWithGroup,
-      user: {
-        connect: {
-          id: userId
-        }
-      }
-    }
-  })
+  // Return the saved account with the original shape
+  return {
+    ...savedAccount,
+    payouts: savedAccount.payouts,
+    group: savedAccount.group,
+  } as Account
 }
 
 export async function deleteAccountAction(account: Account) {
@@ -514,9 +551,45 @@ function calculateAccountBalance(
   balance += tradesPnL;
   
   // Add payouts
-  const payouts = account.payouts || [];
-  const payoutsSum = payouts.reduce((sum, payout) => sum + payout.amount, 0);
-  balance += payoutsSum;
+  // const payouts = account.payouts || [];
+  // const payoutsSum = payouts.reduce((sum, payout) => sum + payout.amount, 0);
+  // balance += payoutsSum;
   
   return balance;
+}
+
+/**
+ * Calculate comprehensive metrics for accounts including consistency, trading days, and daily metrics
+ * Fetches trades from database internally to avoid passing large data to server action
+ * @param accounts Array of accounts to calculate metrics for
+ * @returns Array of accounts with computed metrics
+ */
+export async function calculateAccountMetricsAction(
+  accounts: Account[]
+): Promise<Account[]> {
+  if (accounts.length === 0) {
+    return [];
+  }
+
+  const userId = await getUserId();
+  const accountNumbers = accounts.map(account => account.number);
+
+  // Fetch trades from database internally
+  const trades = await prisma.trade.findMany({
+    where: {
+      accountNumber: {
+        in: accountNumbers,
+      },
+      userId: userId
+    },
+    select: {
+      accountNumber: true,
+      entryDate: true,
+      pnl: true,
+      commission: true,
+    },
+  });
+
+  // Delegate to shared utility so both server and client compute identically
+  return computeMetricsForAccounts(accounts, trades as Trade[])
 }

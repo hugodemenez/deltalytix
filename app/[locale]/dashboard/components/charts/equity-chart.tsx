@@ -240,6 +240,7 @@ const OptimizedTooltip = React.memo(
     t,
     onHover,
     dateLocale,
+    isSharedView,
   }: {
     active?: boolean;
     payload?: any[];
@@ -250,18 +251,50 @@ const OptimizedTooltip = React.memo(
     t: any;
     onHover?: (data: ChartDataPoint | null) => void;
     dateLocale: any;
+    isSharedView?: boolean;
   }) => {
+    // In shared view, always show grouped tooltip (never individual)
+    const effectiveShowIndividual = isSharedView ? false : showIndividual;
+
     // Only update hovered data for legend in individual mode
     React.useEffect(() => {
-      if (onHover && showIndividual) {
+      if (onHover && effectiveShowIndividual) {
         onHover(active && data ? data : null);
       }
-    }, [active, data, onHover, showIndividual]);
+    }, [active, data, onHover, effectiveShowIndividual]);
 
     // Don't show tooltip in individual mode - legend shows all the data
-    if (showIndividual) return null;
+    if (effectiveShowIndividual) return null;
 
     if (!active || !payload || !payload.length || !data) return null;
+
+    // In shared view, show simplified tooltip without payouts/resets
+    if (isSharedView) {
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-xs">
+          <div className="grid gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {t("equity.tooltip.date")}
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {format(new Date(data.date), "MMM d, yyyy", {
+                  locale: dateLocale,
+                })}
+              </span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                {t("equity.tooltip.totalEquity")}
+              </span>
+              <span className="font-bold text-foreground">
+                {formatCurrency(data.equity || 0)}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     // Find accounts with resets and payouts for this date
     const resetAccounts: string[] = [];
@@ -504,7 +537,7 @@ const AccountsLegend = React.memo(
                       <span className="text-xs text-muted-foreground leading-tight">
                         {formatCurrency(equity)}
                       </span>
-                      <div className="min-h-[14px] flex flex-col">
+                      <div className="min-h-3.5 flex flex-col">
                         {hasPayout && (
                           <span
                             className="text-xs leading-tight"
@@ -552,6 +585,8 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     weekdayFilter,
     hourFilter,
     tagFilter,
+    isSharedView,
+    formattedTrades,
   } = useData();
   const accounts = useUserStore((state) => state.accounts);
   const timezone = useUserStore((state) => state.timezone);
@@ -620,13 +655,113 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     [availableAccountNumbers],
   );
 
+  // Client-side computation for shared view
+  const computeClientSideData = React.useCallback(() => {
+    if (!formattedTrades || formattedTrades.length === 0) {
+      console.log('[EquityChart] No formatted trades available');
+      return {
+        chartData: [],
+        accountNumbers: [],
+      };
+    }
+
+    console.log('[EquityChart] Computing client-side data for', formattedTrades.length, 'trades');
+
+    // Sort trades by date
+    const sortedTrades = [...formattedTrades].sort(
+      (a, b) =>
+        parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime(),
+    );
+
+    // Calculate date boundaries
+    const dates = sortedTrades.map((t) =>
+      formatInTimeZone(new Date(t.entryDate), timezone, "yyyy-MM-dd"),
+    );
+    const startDate = dates.reduce((min, date) => (date < min ? date : min));
+    const endDate = dates.reduce((max, date) => (date > max ? date : max));
+
+    const start = parseISO(startDate);
+    const end = parseISO(endDate);
+    end.setDate(end.getDate() + 1);
+
+    const allDates = eachDayOfInterval({ start, end });
+
+    // Pre-process trades by date for faster lookup
+    const tradesMap = new Map<string, typeof sortedTrades>();
+    sortedTrades.forEach((trade) => {
+      const dateKey = formatInTimeZone(
+        new Date(trade.entryDate),
+        timezone,
+        "yyyy-MM-dd",
+      );
+      if (!tradesMap.has(dateKey)) {
+        tradesMap.set(dateKey, []);
+      }
+      tradesMap.get(dateKey)!.push(trade);
+    });
+
+    // Calculate cumulative equity
+    let cumulativeEquity = 0;
+    const chartData: ChartDataPoint[] = [];
+
+    allDates.forEach((date) => {
+      const dateKey = formatInTimeZone(date, timezone, "yyyy-MM-dd");
+      const dayTrades = tradesMap.get(dateKey) || [];
+
+      // Add net PnL from all trades on this day
+      dayTrades.forEach((trade) => {
+        cumulativeEquity += trade.pnl - (trade.commission || 0);
+      });
+
+      chartData.push({
+        date: dateKey,
+        equity: cumulativeEquity,
+      });
+    });
+
+    // Get unique account numbers
+    const uniqueAccountNumbers = Array.from(
+      new Set(sortedTrades.map((trade) => trade.accountNumber)),
+    );
+
+    console.log('[EquityChart] Computed chart data:', chartData.length, 'points');
+    console.log('[EquityChart] Sample data:', chartData.slice(0, 3));
+
+    return {
+      chartData,
+      accountNumbers: uniqueAccountNumbers,
+    };
+  }, [formattedTrades, timezone]);
+
   // Fetch chart data when filters or config change
   React.useEffect(() => {
-    // Don't fetch if we don't have accounts data yet
-    if (!accounts || accounts.length === 0) {
+    // Use client-side computation for shared view
+    if (isSharedView) {
+      console.log('[EquityChart] Using client-side computation (shared view)');
+      setIsLoading(true);
+      try {
+        const { chartData: computedData, accountNumbers: accNumbers } =
+          computeClientSideData();
+        console.log('[EquityChart] Setting chart data:', computedData.length, 'points');
+        setChartData(computedData);
+        setAvailableAccountNumbers(accNumbers);
+      } catch (error) {
+        console.error("Failed to compute client-side equity chart data:", error);
+        setChartData([]);
+        setAvailableAccountNumbers([]);
+      } finally {
+        setIsLoading(false);
+      }
       return;
     }
 
+    // Don't fetch if we don't have accounts data yet
+    if (!accounts || accounts.length === 0) {
+      console.log('[EquityChart] No accounts available, skipping fetch');
+      return;
+    }
+
+    console.log('[EquityChart] Fetching server-side data');
     const fetchChartData = async () => {
       setIsLoading(true);
       try {
@@ -664,6 +799,8 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     };
     fetchChartData();
   }, [
+    isSharedView,
+    computeClientSideData,
     instruments,
     accountNumbers,
     dateRange,
@@ -683,7 +820,8 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
   // Optimized chart config with consistent color mapping
   const chartConfig = React.useMemo(() => {
-    if (!showIndividual) {
+    // Force grouped view in shared mode
+    if (!showIndividual || isSharedView) {
       return {
         equity: {
           label: "Total Equity",
@@ -703,11 +841,12 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       };
       return acc;
     }, {} as ChartConfig);
-  }, [selectedAccounts, showIndividual, accountColorMap]);
+  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView]);
 
   // Memoized chart lines with consistent color mapping
   const chartLines = React.useMemo(() => {
-    if (!showIndividual) {
+    // Force grouped view in shared mode
+    if (!showIndividual || isSharedView) {
       return (
         <Line
           type="monotone"
@@ -743,13 +882,21 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         />
       );
     });
-  }, [selectedAccounts, showIndividual, accountColorMap]);
+  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView]);
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('[EquityChart Render] isSharedView:', isSharedView);
+    console.log('[EquityChart Render] showIndividual:', showIndividual);
+    console.log('[EquityChart Render] chartData length:', chartData.length);
+    console.log('[EquityChart Render] First 3 data points:', chartData.slice(0, 3));
+  }, [isSharedView, showIndividual, chartData]);
 
   return (
     <Card className="h-full flex flex-col">
       <CardHeader
         className={cn(
-          "flex flex-col items-stretch space-y-0 border-b shrink-0 h-[56px]",
+          "flex flex-col items-stretch space-y-0 border-b shrink-0 h-14",
           size === "small" ? "p-2" : "p-3 sm:p-4",
         )}
       >
@@ -758,7 +905,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === "small-long" ? "text-sm" : "text-base",
+                size === "small" ? "text-sm" : "text-base",
               )}
             >
               {t("equity.title")}
@@ -769,7 +916,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                   <Info
                     className={cn(
                       "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small-long" ? "h-3.5 w-3.5" : "h-4 w-4",
+                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
                     )}
                   />
                 </TooltipTrigger>
@@ -779,17 +926,19 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               </Tooltip>
             </TooltipProvider>
           </div>
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="view-mode"
-              checked={showIndividual}
-              onCheckedChange={setShowIndividual}
-              className="shrink-0"
-            />
-            <Label htmlFor="view-mode" className="text-sm">
-              {t("equity.toggle.individual")}
-            </Label>
-          </div>
+          {!isSharedView && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="view-mode"
+                checked={showIndividual}
+                onCheckedChange={setShowIndividual}
+                className="shrink-0"
+              />
+              <Label htmlFor="view-mode" className="text-sm">
+                {t("equity.toggle.individual")}
+              </Label>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent
@@ -869,6 +1018,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                           t={t}
                           onHover={throttledSetHoveredData}
                           dateLocale={dateLocale}
+                          isSharedView={isSharedView}
                         />
                       )}
                     />
@@ -880,7 +1030,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
           </div>
 
           {showIndividual &&
-            availableAccountNumbers.length > 1 &&
+            !isSharedView &&
             size !== "small" && (
               <AccountsLegend
                 accountNumbers={availableAccountNumbers}

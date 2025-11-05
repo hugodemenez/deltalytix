@@ -378,9 +378,10 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
       chartData.push(point)
     })
 
+    console.log('AccountNumber', limitedAccountNumbers)
     return {
       chartData,
-      accountNumbers: allAccountNumbers,
+      accountNumbers: limitedAccountNumbers,
       dateRange: { startDate, endDate }
     }
 

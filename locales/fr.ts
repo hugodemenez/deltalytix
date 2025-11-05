@@ -38,7 +38,7 @@ export default {
   "footer.copyright": "© {year} Deltalytix. Tous droits réservés.",
   "authentication.title": "Authentification",
   "authentication.description":
-    "Entrez votre email, nous vous enverrons un lien magique dans votre boîte de réception et créerons un nouveau compte si vous n'en avez pas.",
+    "Entrez votre email pour vous connecter. Si vous n'avez pas encore de compte, nous le créerons automatiquement.",
   "authentication.testimonial":
     "Deltalytix m'a aidé à comprendre mes comportements de trading et à trouver de nouvelles stratégies rentables.",
   "authentication.testimonialAuthor": "Hugo DEMENEZ",

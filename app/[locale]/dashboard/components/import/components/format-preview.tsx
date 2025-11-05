@@ -39,8 +39,8 @@ import { Progress } from "@/components/ui/progress";
 
 interface FormatPreviewProps {
   trades: string[][];
-  processedTrades: Trade[];
-  setProcessedTrades: (trades: Trade[]) => void;
+  processedTrades: Partial<Trade>[];
+  setProcessedTrades: (trades: Partial<Trade>[]) => void;
   setIsLoading: (isLoading: boolean) => void;
   isLoading: boolean;
   headers: string[];
@@ -128,7 +128,7 @@ export function FormatPreview({
   const totalBatches = Math.ceil(validTrades.length / batchSize);
 
   // Use refs to avoid infinite loops in useEffect
-  const processedTradesRef = useRef<Trade[]>(processedTrades);
+  const processedTradesRef = useRef<Partial<Trade>[]>(processedTrades);
   const completedBatchesRef = useRef<Set<number>>(completedBatches);
   const batchSet1Ref = useRef<number[]>(batchSet1);
   const batchSet2Ref = useRef<number[]>(batchSet2);

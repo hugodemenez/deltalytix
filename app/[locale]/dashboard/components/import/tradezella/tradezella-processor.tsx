@@ -4,13 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Trade } from '@prisma/client'
-import { generateTradeHash } from '@/lib/utils'
-
-interface TradezellaProcessorProps {
-  headers: string[];
-  csvData: string[][];
-  setProcessedTrades: React.Dispatch<React.SetStateAction<Trade[]>>;
-}
+import { PlatformProcessorProps } from '../config/platforms'
 
 const newMappings: { [key: string]: string } = {
   "Account Name": "accountNumber",
@@ -34,26 +28,9 @@ const newMappings: { [key: string]: string } = {
 
 
 
-export default function TradezellaProcessor({ headers, csvData, setProcessedTrades }: TradezellaProcessorProps) {
+export default function TradezellaProcessor({ headers, csvData, setProcessedTrades }: PlatformProcessorProps) {
   const [trades, setTrades] = useState<Trade[]>([])
 
-
-
-  // Account Name: "accountNumber"
-  // Close Date: "closeDate"
-  // Commission: "commission"
-  // Duration: "timeInPosition"
-  // Entry Price: "entryPrice"
-  // Exit Price: "closePrice"
-  // Fee: "commission"
-  // Gross P&L: "pnl"
-  // Instrument: "instrument"
-  // Open Date: "entryDate"
-  // Quantity: "quantity"
-  // Side: "side"
-  // Symbol: "instrument"
-  // Adjusted Cost: "entryId"
-  // Adjusted Proceeds: "closeId"
   const processTrades = useCallback(() => {
     const newTrades: Trade[] = [];
     //TODO: Ask user for account number using account selection component
@@ -61,7 +38,7 @@ export default function TradezellaProcessor({ headers, csvData, setProcessedTrad
 
     csvData.forEach(row => {
       const item: Partial<Trade> = {};
-      let quantity = 0;
+      const quantity = 0;
       let entryTime = '';
       let closeTime = '';
       headers.forEach((header, index) => {
@@ -104,10 +81,6 @@ export default function TradezellaProcessor({ headers, csvData, setProcessedTrad
         item.closeDate = new Date(`${item.closeDate} ${closeTime.slice(0, 8)}`).toISOString();
       }
 
-      if (!item.accountNumber) {
-        item.accountNumber = accountNumber;
-      }
-      item.id = generateTradeHash(item as Trade).toString();
       newTrades.push(item as Trade);
     })
 

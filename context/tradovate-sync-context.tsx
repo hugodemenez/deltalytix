@@ -8,15 +8,6 @@ import { useTradesStore } from '@/store/trades-store'
 import { getTradovateTrades, removeTradovateToken, getTradovateSynchronizations } from '@/app/[locale]/dashboard/components/import/tradovate/actions'
 import { Synchronization } from '@prisma/client'
 
-interface TradovateAccount {
-  accountId: string
-  token: string
-  tokenExpiresAt: string
-  lastSyncedAt: string
-  isExpired: boolean
-  environment: 'demo' | 'live'
-}
-
 interface TradovateSyncProgress {
   accountId: string
   isSyncing: boolean
@@ -232,13 +223,14 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
 
   // Perform sync for all accounts
   const performSyncForAllAccounts = useCallback(async () => {
-    if (isAutoSyncing) return
+    if (isAutoSyncing) {
+      return
+    }
 
     setIsAutoSyncing(true)
     
     try {
-      const validAccounts = accounts.filter(acc => !acc.token)
-      
+      const validAccounts = accounts.filter(acc => acc.token)
       if (validAccounts.length === 0) {
         return
       }

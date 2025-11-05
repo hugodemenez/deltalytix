@@ -18,7 +18,7 @@ interface StripeSubscriptionStore {
 export const useStripeSubscriptionStore = create<StripeSubscriptionStore>()((set, get) => ({
   // Initial state
   stripeSubscription: null,
-  isLoading: false,
+  isLoading: true,
   error: null,
   
   // Actions

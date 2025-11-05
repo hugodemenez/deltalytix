@@ -26,9 +26,11 @@ import {
   Database,
   LifeBuoy,
   LogOut,
-  Building2
+  Building2,
+  Eye,
+  EyeOff
 } from "lucide-react"
-import { signOut } from "@/server/auth"
+import { signOut, setPasswordAction } from "@/server/auth"
 import Link from 'next/link'
 import { useChangeLocale, useCurrentLocale } from "@/locales/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -86,6 +88,10 @@ export default function SettingsPage() {
   const [pushNotifications, setPushNotifications] = useState(false)
   const [tradingAlerts, setTradingAlerts] = useState(true)
   const [weeklyReports, setWeeklyReports] = useState(true)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   // Business state
   const [userBusinesses, setUserBusinesses] = useState<{
@@ -498,6 +504,95 @@ export default function SettingsPage() {
 
         {/* Linked Accounts Section */}
         <LinkedAccounts />
+
+        {/* Password (Migration) Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              {t('auth.setPassword')}
+            </CardTitle>
+            <CardDescription>
+              {t('auth.setPasswordDescription')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4">
+              <div>
+                <Label htmlFor="newPassword">{t('auth.newPassword')}</Label>
+                <div className="relative">
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    onClick={() => setShowNewPassword((v) => !v)}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <Button onClick={async () => {
+                const newPwd = newPassword || ''
+                const confirmPwd = confirmPassword || ''
+                if (!newPwd || newPwd.length < 6) {
+                  toast.error(t('error'), { description: t('auth.passwordMinLength') })
+                  return
+                }
+                if (newPwd !== confirmPwd) {
+                  toast.error(t('error'), { description: t('auth.passwordsDoNotMatch') })
+                  return
+                }
+                try {
+                  await setPasswordAction(newPwd)
+                  toast.success(t('success'), { description: t('auth.passwordUpdated') })
+                  setNewPassword('')
+                  setConfirmPassword('')
+                } catch (e: any) {
+                  toast.error(t('error'), { description: e?.message || 'Failed to update password' })
+                }
+              }}>{t('auth.setPassword')}</Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Account Management Section */}
         <Card>
