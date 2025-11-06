@@ -54,6 +54,7 @@ export default {
   "updates.inProgress": "En cours",
   "updates.upcoming": "Fonctionnalités à venir",
   "updates.completed": "Fonctionnalités terminées",
+  "updates.weeklyVideo": "📺 Dernière vidéo de la semaine",
   "notification.title": "Progrès de synchronisation Rithmic",
   "notification.noAccount": "Aucun compte en cours de traitement",
   "notification.processingAccount": "Traitement du compte : {account}",

@@ -1,4 +1,3 @@
-export const dynamic = "force-static";
 
 const YT_QUALITIES = [
   "maxresdefault",
@@ -22,6 +21,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug?: string[] }> }
 ) {
+  'use cache'
   const { slug: slugFromParams } = await params;
   const slug = slugFromParams || [];
   const [videoId, requestedQuality] = slug;

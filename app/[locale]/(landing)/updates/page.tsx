@@ -1,11 +1,8 @@
 import React from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { Badge } from "@/components/ui/badge"
 import { getI18n } from '@/locales/server'
 import CompletedTimeline from '../components/completed-timeline'
 import { getAllPosts } from '@/lib/posts'
-import { Post } from '@/app/[locale]/(landing)/types/post'
+import { getLatestVideoFromPlaylist } from '@/app/[locale]/admin/actions/youtube'
 
 interface PageProps {
   params: Promise<{
@@ -23,12 +20,14 @@ export default async function UpdatesPage(props: PageProps) {
   const t = await getI18n()
   const posts = await getAllPosts(locale)
 
-  const upcomingPosts = posts
-    .filter(post => post.meta.status === 'upcoming')
-    .sort((a, b) => (a.meta.estimatedDate || '') > (b.meta.estimatedDate || '') ? 1 : -1)
-
-  const inProgressPosts = posts.filter(post => post.meta.status === 'in-progress')
+  // Only show completed posts as per requirement
   const completedPosts = posts.filter(post => post.meta.status === 'completed')
+
+  // Get the latest video for French locale
+  let latestVideoId: string | null = null
+  if (locale === 'fr') {
+    latestVideoId = await getLatestVideoFromPlaylist()
+  }
 
   return (
     <div className="min-h-screen">
@@ -38,15 +37,25 @@ export default async function UpdatesPage(props: PageProps) {
           {t('updates.description')}
         </p>
 
-        <h2 className="text-2xl font-semibold mt-12 mb-6 text-gray-800 dark:text-gray-200">{t('updates.inProgress')}</h2>
-        {inProgressPosts.map((post) => (
-          <UpdateCard key={post.meta.slug} post={post} />
-        ))}
-
-        <h2 className="text-2xl font-semibold mt-12 mb-6 text-gray-800 dark:text-gray-200">{t('updates.upcoming')}</h2>
-        {upcomingPosts.map((post) => (
-          <UpdateCard key={post.meta.slug} post={post} />
-        ))}
+        {/* Display latest weekly video for French locale */}
+        {locale === 'fr' && latestVideoId && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">
+              {t('updates.weeklyVideo')}
+            </h2>
+            <div className="rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800 shadow-lg">
+              <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${latestVideoId}`}
+                  title="Dernière vidéo de la semaine"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <h2 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-gray-200">{t('updates.completed')}</h2>
         <CompletedTimeline milestones={completedPosts.map(post => ({
@@ -55,56 +64,10 @@ export default async function UpdatesPage(props: PageProps) {
           description: post.meta.description,
           status: 'completed',
           completedDate: post.meta.completedDate || post.meta.date,
-          image: post.meta.image
-        }))} />
+          image: post.meta.image,
+          youtubeVideoId: post.meta.youtubeVideoId
+        }))} locale={locale} />
       </div>
     </div>
-  )
-}
-
-function UpdateCard({ post }: { post: Post }) {
-  const { meta } = post
-
-  return (
-    <Link href={`/updates/${meta.slug}`} className="block mb-16 hover:opacity-90 transition-opacity">
-      <div>
-        <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">
-          {meta.title}
-        </h3>
-        <div className="flex items-center gap-2 mb-4">
-          <Badge 
-            variant={meta.status === 'in-progress' ? "secondary" : "outline"}
-            className="flex items-center"
-          >
-            {meta.status === 'in-progress' && (
-              <span className="relative flex h-3 w-3 mr-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-              </span>
-            )}
-            {meta.status === 'in-progress' ? 'In Progress' : 'Upcoming'}
-          </Badge>
-          {meta.estimatedDate && (
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {meta.estimatedDate}
-            </span>
-          )}
-        </div>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          {meta.description}
-        </p>
-        {meta.image && (
-          <div className="rounded-lg overflow-hidden mb-6 bg-gray-100 dark:bg-gray-800">
-            <Image
-              src={meta.image}
-              alt={`${meta.title} preview`}
-              width={800}
-              height={400}
-              className="w-full h-auto"
-            />
-          </div>
-        )}
-      </div>
-    </Link>
   )
 }

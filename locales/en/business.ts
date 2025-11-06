@@ -278,6 +278,10 @@ export default {
   'business.equity.scrollToLoadMore': 'Scroll to load more...',
   'business.equity.noMoreUsers': 'No more users to load',
   'business.equity.noUsersFound': 'No users found',
+  'business.equity.exportTrades': 'Export All Trades',
+  'business.equity.exporting': 'Exporting...',
+  'business.equity.exportSuccess': 'Trades exported successfully',
+  'business.equity.exportError': 'Failed to export trades',
   
   // Business Management Component
   'business.management.createBusiness': 'Create a new business',
@@ -306,6 +310,7 @@ export default {
   'business.management.created': 'Created',
   'business.management.member': 'Member',
   'business.management.pending': 'Pending',
+  'business.management.active': 'Active',
   'business.management.removeTrader': 'Remove trader',
   'business.management.removeTraderConfirm': 'Are you sure you want to remove "{email}" from this business? They will lose access to the business data.',
   'business.management.removeTraderAction': 'Remove trader',

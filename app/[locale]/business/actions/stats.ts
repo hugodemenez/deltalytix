@@ -550,3 +550,127 @@ function calculateMaxDrawdown(equityCurve: { cumulativePnL: number }[]): number 
 
   return maxDrawdown
 }
+
+export async function exportBusinessTradesAction(businessId: string): Promise<string> {
+  console.log(`Starting exportBusinessTradesAction for business ${businessId}`)
+
+  // Get the business to find trader IDs
+  const business = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: { traderIds: true }
+  })
+
+  if (!business) {
+    throw new Error(`Business ${businessId} not found`)
+  }
+
+  console.log(`Found business with ${business.traderIds.length} traders`)
+
+  if (business.traderIds.length === 0) {
+    throw new Error('No traders found in this business')
+  }
+
+  // Get user data from Supabase for all traders
+  console.log('Fetching user data from Supabase...')
+  const userPromises = business.traderIds.map(userId => 
+    supabase.auth.admin.getUserById(userId)
+  )
+  
+  const userResults = await Promise.all(userPromises)
+  const users = userResults
+    .map(result => result.data?.user)
+    .filter(user => user !== null) as User[]
+
+  // Create a map of userId to email
+  const userEmailMap = users.reduce((acc, user) => {
+    acc[user.id] = user.email || 'Unknown'
+    return acc
+  }, {} as Record<string, string>)
+
+  console.log(`Retrieved ${users.length} users from Supabase`)
+
+  // Get all trades for these users
+  console.log('Fetching trades for all users...')
+  const trades = await prisma.trade.findMany({
+    where: {
+      userId: {
+        in: business.traderIds
+      }
+    },
+    select: {
+      id: true,
+      userId: true,
+      pnl: true,
+      createdAt: true,
+      entryDate: true,
+      closeDate: true,
+      instrument: true,
+      side: true,
+      entryPrice: true,
+      closePrice: true,
+      quantity: true,
+      commission: true,
+      groupId: true,
+      tags: true,
+      comment: true
+    },
+    orderBy: [
+      { userId: 'asc' },
+      { entryDate: 'asc' }
+    ]
+  })
+
+  console.log(`Found ${trades.length} trades for export`)
+
+  // Generate CSV content
+  const csvHeaders = [
+    'Trader Email',
+    'Trade ID',
+    'Entry Date',
+    'Close Date',
+    'Instrument',
+    'Side',
+    'Quantity',
+    'Entry Price',
+    'Close Price',
+    'PnL',
+    'Commission',
+    'Net PnL',
+    'Tags',
+    'Comment',
+    'Created At'
+  ]
+
+  const csvRows = trades.map(trade => {
+    const netPnl = trade.pnl - (trade.commission || 0)
+    return [
+      userEmailMap[trade.userId] || 'Unknown',
+      trade.id,
+      trade.entryDate,
+      trade.closeDate,
+      trade.instrument,
+      trade.side || '',
+      trade.quantity?.toString() || '',
+      trade.entryPrice?.toString() || '',
+      trade.closePrice?.toString() || '',
+      trade.pnl.toString(),
+      (trade.commission || 0).toString(),
+      netPnl.toString(),
+      trade.tags.join('; '),
+      trade.comment || '',
+      trade.createdAt.toISOString()
+    ].map(field => {
+      // Convert to string and escape fields that contain commas, quotes, or newlines
+      const fieldStr = String(field)
+      if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n')) {
+        return `"${fieldStr.replace(/"/g, '""')}"`
+      }
+      return fieldStr
+    }).join(',')
+  })
+
+  const csv = [csvHeaders.join(','), ...csvRows].join('\n')
+  
+  console.log(`Generated CSV with ${csvRows.length} rows`)
+  return csv
+}

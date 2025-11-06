@@ -1,5 +1,4 @@
 'use client'
-
 import { useState } from 'react'
 import { Post, PostType, PostStatus } from '@prisma/client'
 import { PostCard } from './post-card'
