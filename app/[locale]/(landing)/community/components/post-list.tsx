@@ -1,3 +1,4 @@
+'use client'
 import { useState } from 'react'
 import { Post, PostType, PostStatus } from '@prisma/client'
 import { PostCard } from './post-card'
@@ -11,12 +12,12 @@ import {
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { useI18n } from '@/locales/client'
-import { getPosts } from '../../actions/community'
 
+type Props = {
+  initialPosts: ExtendedPost[]
+}
 
-export async function PostList() {
-  'use cache'
-  const initialPosts = await getPosts()
+export function PostList({ initialPosts }: Props) {
   const t = useI18n()
   const [filter, setFilter] = useState<PostType | 'ALL'>('ALL')
   const [search, setSearch] = useState('')
