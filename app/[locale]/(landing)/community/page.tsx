@@ -17,7 +17,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CommunityPage() {
-  const posts = await getPosts()
   const t = await getI18n()
 
   return (
@@ -36,7 +35,8 @@ export default async function CommunityPage() {
           </Button>
         </CreatePost>
       </div>
-      <PostList initialPosts={posts} />
+
+      <PostList/>
     </div>
   )
 } 
