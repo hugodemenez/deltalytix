@@ -35,14 +35,14 @@ async function handleBusinessCheckoutSession(user: any, websiteURL: string, busi
             lookup_keys: ['business_monthly_usd'],
             expand: ['data.product'],
         });
-        
+
         if (!fallbackPrices.data.length) {
             return NextResponse.json({ message: "Business price not found" }, { status: 404 });
         }
-        
+
         // Use USD price but keep the detected currency for metadata
         const price = fallbackPrices.data[0];
-        
+
         // Create session for business subscription
         const sessionConfig: any = {
             customer: customerId,
@@ -63,6 +63,7 @@ async function handleBusinessCheckoutSession(user: any, websiteURL: string, busi
             cancel_url: `${websiteURL}dashboard/settings?canceled=business_creation`,
             allow_promotion_codes: true,
             subscription_data: {
+                trial_period_days: 7,
                 metadata: {
                     businessName: businessName || '',
                     userId: user.id,
@@ -96,6 +97,7 @@ async function handleBusinessCheckoutSession(user: any, websiteURL: string, busi
         cancel_url: `${websiteURL}dashboard/settings?canceled=business_creation`,
         allow_promotion_codes: true,
         subscription_data: {
+            trial_period_days: 7,
             metadata: {
                 businessName: businessName || '',
                 userId: user.id,
@@ -111,7 +113,7 @@ async function handleBusinessCheckoutSession(user: any, websiteURL: string, busi
 export async function POST(req: Request) {
     const body = await req.formData();
     const websiteURL = await getWebsiteURL();
-    
+
     // Only use currency from form data, default to USD if not provided
     const formCurrency = body.get('currency') as string | null;
     const currency = formCurrency ? (formCurrency.toUpperCase() as 'USD' | 'EUR') : 'USD';
@@ -119,8 +121,8 @@ export async function POST(req: Request) {
     const businessName = body.get('businessName') as string | null;
 
     const supabase = await createClient();
-    const {data:{user}} = await supabase.auth.getUser();
-    
+    const { data: { user } } = await supabase.auth.getUser();
+
     if (!user) {
         return NextResponse.redirect(
             `${websiteURL}authentication?subscription=true&plan=business`,
@@ -139,8 +141,8 @@ export async function GET(req: Request) {
     const currency: 'USD' | 'EUR' = 'USD';
 
     const supabase = await createClient();
-    const {data:{user}} = await supabase.auth.getUser();
-    
+    const { data: { user } } = await supabase.auth.getUser();
+
     if (!user) {
         return NextResponse.redirect(
             `${websiteURL}authentication?subscription=true&plan=business`,
