@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Logo } from '@/components/logo'
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Home, Search, Sun, Moon, Monitor } from "lucide-react"
+import { useDebounce } from '@/hooks/use-debounce'
 
 // Define translations locally to avoid I18nProvider dependency
 const translations = {
@@ -96,6 +97,14 @@ function NotFoundContent() {
   const [isClient, setIsClient] = useState(false)
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system')
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light')
+  const [allRoutes, setAllRoutes] = useState<string[]>([])
+  const [query, setQuery] = useState('')
+  const debouncedQuery = useDebounce(query, 150)
+  const [isLoadingRoutes, setIsLoadingRoutes] = useState(false)
+  const [showResults, setShowResults] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const resultsRef = useRef<HTMLUListElement | null>(null)
+  const blurTimeout = useRef<number | null>(null)
 
   useEffect(() => {
     setIsClient(true)
@@ -103,7 +112,7 @@ function NotFoundContent() {
     setLocale(detectedLocale)
     
     // Set page title
-    document.title = translations[detectedLocale].title + ' | Deltalytix'
+    document.title = 'Deltalytix | ' + translations[detectedLocale].title
     
     // Apply theme from localStorage
     const savedTheme = getThemeFromLocalStorage()
@@ -126,6 +135,88 @@ function NotFoundContent() {
     mediaQuery.addEventListener('change', handleThemeChange)
     return () => mediaQuery.removeEventListener('change', handleThemeChange)
   }, [])
+
+  // Fetch routes from public/routes.json (generated at build time)
+  useEffect(() => {
+    let cancelled = false
+    async function loadRoutes() {
+      try {
+        setIsLoadingRoutes(true)
+        const res = await fetch('/routes.json', { cache: 'no-cache' })
+        if (!res.ok) return
+        const json: string[] = await res.json()
+        if (!cancelled) setAllRoutes(json)
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setIsLoadingRoutes(false)
+      }
+    }
+    loadRoutes()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Utilities for routes
+  const isDynamic = (route: string) => /\[[^\]]+\]/.test(route)
+  const localizeRoute = (route: string, loc: 'en' | 'fr') =>
+    route.replace('/[locale]', `/${loc}`)
+
+  const concreteRoutesForLocale = useMemo(() => {
+    // Replace [locale] and drop remaining dynamics (e.g., [slug], catch-alls)
+    const replaced = allRoutes
+      .map(r => localizeRoute(r, locale))
+      .filter(r => !isDynamic(r))
+      // Also filter out obvious 404-related routes if present
+      .filter(r => !/not-found/.test(r))
+    return Array.from(new Set(replaced)).sort()
+  }, [allRoutes, locale])
+
+  const filteredRoutes = useMemo(() => {
+    const q = debouncedQuery.trim().toLowerCase()
+    if (!q) {
+      const suggestions = concreteRoutesForLocale
+      if (selectedIndex >= suggestions.length) setSelectedIndex(0)
+      return suggestions
+    }
+    // Lightweight fuzzy scoring: sequential character matching with bonuses
+    const score = (target: string, queryStr: string): number => {
+      if (target.startsWith(queryStr)) return 1000 + queryStr.length // big boost for prefix
+      let tIdx = 0
+      let qIdx = 0
+      let contiguous = 0
+      let total = 0
+      const tLower = target.toLowerCase()
+      while (tIdx < tLower.length && qIdx < queryStr.length) {
+        if (tLower[tIdx] === queryStr[qIdx]) {
+          // base match
+          let add = 10
+          // contiguous bonus
+          if (tIdx === 0) add += 15
+          if (tLower[tIdx - 1] === '/' || tLower[tIdx - 1] === '-') add += 8 // segment/word start
+          contiguous += 1
+          add += contiguous * 2
+          total += add
+          qIdx++
+        } else {
+          contiguous = 0
+        }
+        tIdx++
+      }
+      if (qIdx !== queryStr.length) return 0 // didn't match all chars in sequence
+      // length penalty (shorter targets slightly preferred)
+      total -= Math.max(0, tLower.length - queryStr.length) * 0.5
+      return total
+    }
+    const scored = concreteRoutesForLocale.map(r => ({ r, s: score(r, q) }))
+      .filter(o => o.s > 0)
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 50) // More results available, user can scroll
+      .map(o => o.r)
+    if (selectedIndex >= scored.length) setSelectedIndex(0)
+    return scored
+  }, [concreteRoutesForLocale, debouncedQuery, selectedIndex])
 
   const t = translations[locale]
 
@@ -155,6 +246,40 @@ function NotFoundContent() {
     if (theme === 'system') return <Monitor className="w-4 h-4" />
     if (effectiveTheme === 'dark') return <Moon className="w-4 h-4" />
     return <Sun className="w-4 h-4" />
+  }
+
+  const displayLabel = (route: string) => {
+    const stripped = route.replace(new RegExp(`^/${locale}`), '') || '/'
+    return stripped === '' ? '/' : stripped
+  }
+
+  const handleSelectRoute = (route: string) => {
+    setShowResults(false)
+    setQuery('')
+    router.push(route)
+  }
+
+  const onKeyDownSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!filteredRoutes.length) return
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setSelectedIndex(i => (i + 1) % filteredRoutes.length)
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setSelectedIndex(i => (i - 1 + filteredRoutes.length) % filteredRoutes.length)
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      const route = filteredRoutes[selectedIndex] || filteredRoutes[0]
+      if (route) handleSelectRoute(route)
+    } else if (e.key === 'Escape') {
+      setShowResults(false)
+    }
+  }
+
+  const onBlurSearch = () => {
+    // Delay to allow click on results without instantly closing
+    if (blurTimeout.current) window.clearTimeout(blurTimeout.current)
+    blurTimeout.current = window.setTimeout(() => setShowResults(false), 100)
   }
 
   // Show fallback during hydration with French as default (respects system theme)
@@ -231,19 +356,63 @@ function NotFoundContent() {
         </Button>
       </div>
       
-      {/* Optional search placeholder for future enhancement */}
+      {/* Search box */}
       <div className="mt-8 w-full max-w-md">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <input
             type="text"
+            aria-label={t.searchPlaceholder}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setShowResults(true)
+            }}
+            onKeyDown={onKeyDownSearch}
+            onBlur={onBlurSearch}
+            onFocus={() => setShowResults(true)}
             placeholder={t.searchPlaceholder}
-            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:border-transparent"
-            disabled
+            className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder-muted-foreground focus:outline-hidden focus:ring-2 focus:ring-ring focus:border-transparent transition-[box-shadow,opacity] duration-200 ease-out"
+            autoComplete="off"
           />
+          {(() => {
+            const shouldShow = showResults && (query.length > 0 || isLoadingRoutes || filteredRoutes.length > 0)
+            return (
+              <ul
+                ref={resultsRef}
+                role="listbox"
+                aria-hidden={!shouldShow}
+                style={{ maxHeight: '200px' }} // ~5 items visible (40px each)
+                className={`absolute z-10 mt-2 w-full overflow-y-auto overflow-x-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-md origin-top will-change-[opacity,transform] transition duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none ${shouldShow ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'}`}
+              >
+                {isLoadingRoutes && (
+                  <li className="px-3 py-2 text-sm text-muted-foreground">Loading…</li>
+                )}
+                {!isLoadingRoutes && filteredRoutes.length === 0 && query.length > 0 && (
+                  <li className="px-3 py-2 text-sm text-muted-foreground">No results</li>
+                )}
+                {!isLoadingRoutes && filteredRoutes.map((r, idx) => (
+                  <li
+                    key={r}
+                    role="option"
+                    aria-selected={idx === selectedIndex}
+                    className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-200 ease-out ${idx === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleSelectRoute(r)}
+                    title={r}
+                  >
+                    {displayLabel(r)}
+                  </li>
+                ))}
+              </ul>
+            )
+          })()}
         </div>
         <p className="text-xs text-muted-foreground mt-2 text-center">
-          {t.searchComingSoon}
+          {concreteRoutesForLocale.length > 0
+            ? `${concreteRoutesForLocale.length} pages available`
+            : t.searchComingSoon}
         </p>
       </div>
     </div>
