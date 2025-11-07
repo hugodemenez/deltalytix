@@ -434,7 +434,8 @@ const AccountsLegend = React.memo(
     t: any;
     dateLocale: any;
   }) => {
-    if (!accountNumbers.length || accountNumbers.length <= 1) return null;
+    // Show legend if we have at least one account (useful for payouts/resets even with single account)
+    if (!accountNumbers.length) return null;
 
     // Use hovered data if available, otherwise use latest data
     const displayData = hoveredData || chartData[chartData.length - 1];
@@ -630,14 +631,23 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     [toggleAccountSelection],
   );
 
-  // Initialize selected accounts if empty
+  // Initialize selected accounts if empty OR validate existing selections
   React.useEffect(() => {
-    if (
-      (!config.selectedAccountsToDisplay ||
-        config.selectedAccountsToDisplay.length === 0) &&
-      availableAccountNumbers.length > 0
-    ) {
+    if (availableAccountNumbers.length === 0) return;
+
+    // Filter to only valid accounts that actually exist
+    const validSelection = config.selectedAccountsToDisplay?.filter(acc => 
+      availableAccountNumbers.includes(acc)
+    ) || [];
+    
+    // Reset if empty OR if none of the selected accounts are valid
+    if (validSelection.length === 0) {
+      console.log('[EquityChart] Resetting account selection to all available accounts');
       setSelectedAccountsToDisplay(availableAccountNumbers);
+    } else if (validSelection.length !== config.selectedAccountsToDisplay?.length) {
+      // Some accounts were invalid, update to only valid ones
+      console.log('[EquityChart] Updating account selection to remove invalid accounts');
+      setSelectedAccountsToDisplay(validSelection);
     }
   }, [
     config.selectedAccountsToDisplay,
