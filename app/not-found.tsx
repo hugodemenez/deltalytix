@@ -32,12 +32,12 @@ const translations = {
 
 function getLocaleFromGeolocation(): 'en' | 'fr' {
   if (typeof window === 'undefined') return 'fr' // Default for SSR
-  
+
   // Get country from cookie set by middleware
   const cookies = document.cookie.split(';')
   const countryCookie = cookies.find(cookie => cookie.trim().startsWith('user-country='))
   const country = countryCookie?.split('=')[1]?.trim()
-  
+
   // Use French for France and French-speaking countries, English for others
   const frenchCountries = ['FR', 'CA', 'BE', 'CH', 'LU', 'MC']
   return frenchCountries.includes(country || '') ? 'fr' : 'en'
@@ -45,7 +45,7 @@ function getLocaleFromGeolocation(): 'en' | 'fr' {
 
 function getThemeFromLocalStorage(): 'light' | 'dark' | 'system' {
   if (typeof window === 'undefined') return 'system'
-  
+
   try {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | 'system' | null
     return savedTheme || 'system'
@@ -66,7 +66,7 @@ function getEffectiveTheme(theme: 'light' | 'dark' | 'system'): 'light' | 'dark'
 
 function applyThemeToDocument(effectiveTheme: 'light' | 'dark', intensity: number) {
   if (typeof window === 'undefined') return
-  
+
   const root = document.documentElement
   root.classList.remove('light', 'dark')
   root.classList.add(effectiveTheme)
@@ -75,19 +75,19 @@ function applyThemeToDocument(effectiveTheme: 'light' | 'dark', intensity: numbe
 
 function detectLocaleFromBrowser(): 'en' | 'fr' {
   if (typeof window === 'undefined') return 'fr'
-  
+
   // First try geolocation from middleware
   const geoLocale = getLocaleFromGeolocation()
-  
+
   // If no country detected, fall back to browser language
   const cookies = document.cookie.split(';')
   const countryCookie = cookies.find(cookie => cookie.trim().startsWith('user-country='))
-  
+
   if (!countryCookie) {
     const browserLang = navigator.language.toLowerCase()
     return browserLang.startsWith('en') ? 'en' : 'fr'
   }
-  
+
   return geoLocale
 }
 
@@ -110,10 +110,10 @@ function NotFoundContent() {
     setIsClient(true)
     const detectedLocale = detectLocaleFromBrowser()
     setLocale(detectedLocale)
-    
+
     // Set page title
     document.title = 'Deltalytix | ' + translations[detectedLocale].title
-    
+
     // Apply theme from localStorage
     const savedTheme = getThemeFromLocalStorage()
     const savedIntensity = parseInt(localStorage.getItem('intensity') || '100')
@@ -121,7 +121,7 @@ function NotFoundContent() {
     setTheme(savedTheme)
     setEffectiveTheme(currentEffectiveTheme)
     applyThemeToDocument(currentEffectiveTheme, savedIntensity)
-    
+
     // Listen for system theme changes
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handleThemeChange = () => {
@@ -131,7 +131,7 @@ function NotFoundContent() {
         applyThemeToDocument(newEffectiveTheme, savedIntensity)
       }
     }
-    
+
     mediaQuery.addEventListener('change', handleThemeChange)
     return () => mediaQuery.removeEventListener('change', handleThemeChange)
   }, [])
@@ -232,11 +232,11 @@ function NotFoundContent() {
     const themeOrder: ('light' | 'dark' | 'system')[] = ['light', 'dark', 'system']
     const currentIndex = themeOrder.indexOf(theme)
     const nextTheme = themeOrder[(currentIndex + 1) % themeOrder.length]
-    
+
     setTheme(nextTheme)
     const newEffectiveTheme = getEffectiveTheme(nextTheme)
     setEffectiveTheme(newEffectiveTheme)
-    
+
     const intensity = parseInt(localStorage.getItem('intensity') || '100')
     applyThemeToDocument(newEffectiveTheme, intensity)
     localStorage.setItem('theme', nextTheme)
@@ -323,20 +323,20 @@ function NotFoundContent() {
       </Button>
 
       <Logo className="w-16 h-16 mb-8 fill-primary" />
-      
+
       {/* Large 404 */}
       <h1 className="text-6xl font-bold mb-4 text-foreground">404</h1>
-      
+
       {/* Heading */}
       <h2 className="text-2xl font-semibold text-muted-foreground mb-6 text-center">
         {t.heading}
       </h2>
-      
+
       {/* Description */}
       <p className="text-muted-foreground mb-8 text-center max-w-md leading-relaxed">
         {t.description}
       </p>
-      
+
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row gap-4 w-full max-w-sm">
         <Button asChild variant="default" className="flex-1">
@@ -345,9 +345,9 @@ function NotFoundContent() {
             {t.goHome}
           </Link>
         </Button>
-        
-        <Button 
-          variant="outline" 
+
+        <Button
+          variant="outline"
           onClick={handleGoBack}
           className="flex-1"
         >
@@ -355,7 +355,7 @@ function NotFoundContent() {
           {t.goBack}
         </Button>
       </div>
-      
+
       {/* Search box */}
       <div className="mt-8 w-full max-w-md">
         <div className="relative">
@@ -392,18 +392,29 @@ function NotFoundContent() {
                   <li className="px-3 py-2 text-sm text-muted-foreground">No results</li>
                 )}
                 {!isLoadingRoutes && filteredRoutes.map((r, idx) => (
-                  <li
+                  <Link
+                    onClick={
+                      () => {
+                        setShowResults(false)
+                        setQuery('Redirecting...')
+                      }
+                    }
                     key={r}
-                    role="option"
-                    aria-selected={idx === selectedIndex}
-                    className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-200 ease-out ${idx === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}
-                    onMouseEnter={() => setSelectedIndex(idx)}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleSelectRoute(r)}
-                    title={r}
+                    href={r}
                   >
-                    {displayLabel(r)}
-                  </li>
+                    <li
+
+                      key={r}
+                      className={`px-3 py-2 text-sm cursor-pointer transition-colors duration-200 ease-out ${idx === selectedIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground'}`}
+                      role="option"
+                      aria-selected={idx === selectedIndex}
+                      onMouseEnter={() => setSelectedIndex(idx)}
+                      onMouseDown={(e) => e.preventDefault()}
+                      title={r}
+                    >
+                      {displayLabel(r)}
+                    </li>
+                  </Link>
                 ))}
               </ul>
             )
