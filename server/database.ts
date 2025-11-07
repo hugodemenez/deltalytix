@@ -139,9 +139,9 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
       }
 
       if (!isSubscribed) {
-        const oneWeekAgo = startOfDay(new Date())
-        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-        query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+        const twoWeeksAgo = startOfDay(new Date())
+        twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+        query.where.entryDate = { gte: twoWeeksAgo.toISOString() }
       }
 
       return await prisma.trade.findMany(query)
@@ -178,9 +178,9 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
       orderBy: { entryDate: 'desc' }
     }
     if (!isSubscribed) {
-      const oneWeekAgo = startOfDay(new Date())
-      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-      query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+      const twoWeeksAgo = startOfDay(new Date())
+      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+      query.where.entryDate = { gte: twoWeeksAgo.toISOString() }
     }
 
     const trades = await prisma.trade.findMany(query)
@@ -201,9 +201,9 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
     }
   }
   if (!isSubscribed) {
-    const oneWeekAgo = startOfDay(new Date())
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7)
-    query.where.entryDate = { gte: oneWeekAgo.toISOString() }
+    const twoWeeksAgo = startOfDay(new Date())
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+    query.where.entryDate = { gte: twoWeeksAgo.toISOString() }
   }
   const count = await prisma.trade.count(query)
   // Split pages by chunks of 1000
