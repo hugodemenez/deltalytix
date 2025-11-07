@@ -152,7 +152,7 @@ export default function BusinessNavbar() {
 
             </Accordion>
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
-                <Link href={"/dashboard"}>{t('business.cta')}</Link>
+                <Link href={"/business/dashboard"}>{t('business.cta')}</Link>
             </Button>
             <div className="py-4 border-t space-y-4">
                 <Popover>
@@ -260,7 +260,7 @@ export default function BusinessNavbar() {
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
                         <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
-                            <Link href={"/dashboard"}>{t('business.cta')}</Link>
+                            <Link href={"/business/dashboard"}>{t('business.cta')}</Link>
                         </Button>
                     </NavigationMenu>
                 </div>

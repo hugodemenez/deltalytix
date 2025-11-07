@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "ts-node scripts/generate-routes.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -162,6 +163,7 @@
     "postcss": "^8.5.6",
     "react-email": "4.3.2",
     "tailwindcss": "^4.1.16",
+    "ts-node": "^10.9.2",
     "tw-animate-css": "latest",
     "typescript": "5.9.3"
   }

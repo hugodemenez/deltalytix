@@ -50,6 +50,7 @@ import { useEquityChartStore } from "@/store/equity-chart-store";
 import { Payout as PrismaPayout } from "@prisma/client";
 import { AccountSelectionPopover } from "./account-selection-popover";
 import { getEquityChartDataAction } from "@/server/equity-chart";
+import { usePathname } from "next/navigation";
 
 interface EquityChartProps {
   size?: WidgetSize;
@@ -434,7 +435,8 @@ const AccountsLegend = React.memo(
     t: any;
     dateLocale: any;
   }) => {
-    if (!accountNumbers.length || accountNumbers.length <= 1) return null;
+    // Show legend if we have at least one account (useful for payouts/resets even with single account)
+    if (!accountNumbers.length) return null;
 
     // Use hovered data if available, otherwise use latest data
     const displayData = hoveredData || chartData[chartData.length - 1];
@@ -574,6 +576,8 @@ const AccountsLegend = React.memo(
 AccountsLegend.displayName = "AccountsLegend";
 
 export default function EquityChart({ size = "medium" }: EquityChartProps) {
+  const pathname = usePathname();
+  const isBusinessView = pathname.includes('business');
   const {
     instruments,
     accountNumbers,
@@ -630,14 +634,23 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     [toggleAccountSelection],
   );
 
-  // Initialize selected accounts if empty
+  // Initialize selected accounts if empty OR validate existing selections
   React.useEffect(() => {
-    if (
-      (!config.selectedAccountsToDisplay ||
-        config.selectedAccountsToDisplay.length === 0) &&
-      availableAccountNumbers.length > 0
-    ) {
+    if (availableAccountNumbers.length === 0) return;
+
+    // Filter to only valid accounts that actually exist
+    const validSelection = config.selectedAccountsToDisplay?.filter(acc => 
+      availableAccountNumbers.includes(acc)
+    ) || [];
+    
+    // Reset if empty OR if none of the selected accounts are valid
+    if (validSelection.length === 0) {
+      console.log('[EquityChart] Resetting account selection to all available accounts');
       setSelectedAccountsToDisplay(availableAccountNumbers);
+    } else if (validSelection.length !== config.selectedAccountsToDisplay?.length) {
+      // Some accounts were invalid, update to only valid ones
+      console.log('[EquityChart] Updating account selection to remove invalid accounts');
+      setSelectedAccountsToDisplay(validSelection);
     }
   }, [
     config.selectedAccountsToDisplay,
@@ -736,7 +749,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   // Fetch chart data when filters or config change
   React.useEffect(() => {
     // Use client-side computation for shared view
-    if (isSharedView) {
+    if (isSharedView || isBusinessView) {
       console.log('[EquityChart] Using client-side computation (shared view)');
       setIsLoading(true);
       try {
@@ -821,7 +834,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   // Optimized chart config with consistent color mapping
   const chartConfig = React.useMemo(() => {
     // Force grouped view in shared mode
-    if (!showIndividual || isSharedView) {
+    if (!showIndividual || isSharedView || isBusinessView) {
       return {
         equity: {
           label: "Total Equity",
@@ -841,7 +854,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       };
       return acc;
     }, {} as ChartConfig);
-  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView]);
+  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView, isBusinessView]);
 
   // Memoized chart lines with consistent color mapping
   const chartLines = React.useMemo(() => {
@@ -926,7 +939,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               </Tooltip>
             </TooltipProvider>
           </div>
-          {!isSharedView && (
+          {(!isSharedView && !isBusinessView) && (
             <div className="flex items-center space-x-2">
               <Switch
                 id="view-mode"
@@ -1031,6 +1044,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
           {showIndividual &&
             !isSharedView &&
+            !isBusinessView &&
             size !== "small" && (
               <AccountsLegend
                 accountNumbers={availableAccountNumbers}
