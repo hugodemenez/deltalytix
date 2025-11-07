@@ -50,6 +50,7 @@ import { useEquityChartStore } from "@/store/equity-chart-store";
 import { Payout as PrismaPayout } from "@prisma/client";
 import { AccountSelectionPopover } from "./account-selection-popover";
 import { getEquityChartDataAction } from "@/server/equity-chart";
+import { usePathname } from "next/navigation";
 
 interface EquityChartProps {
   size?: WidgetSize;
@@ -575,6 +576,7 @@ const AccountsLegend = React.memo(
 AccountsLegend.displayName = "AccountsLegend";
 
 export default function EquityChart({ size = "medium" }: EquityChartProps) {
+  const pathname = usePathname();
   const {
     instruments,
     accountNumbers,
@@ -746,7 +748,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   // Fetch chart data when filters or config change
   React.useEffect(() => {
     // Use client-side computation for shared view
-    if (isSharedView) {
+    if (isSharedView || pathname.includes('business')) {
       console.log('[EquityChart] Using client-side computation (shared view)');
       setIsLoading(true);
       try {
