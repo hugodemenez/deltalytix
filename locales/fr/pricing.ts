@@ -32,7 +32,7 @@ export default {
             name: 'Basique',
             description: 'Parfait pour essayer Deltalytix et débuter avec l\'analyse de trading.',
             feature1: 'Comptes de trading multiples',
-            feature2: '2 semaines de stockage incluse',
+            feature2: '2 semaines de stockage incluses',
             feature3: 'Imports CSV basiques uniquement',
             feature4: 'Toutes les statistiques et graphiques (données limitées à 2 semaines)',
             feature5: 'Pas de fonctionnalités IA',
