@@ -218,7 +218,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "calendarWidget",
       "size": "large",
       "x": 0,
-      "y": 13,
+      "y": 17,
       "w": 6,
       "h": 8
     },
@@ -236,7 +236,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "pnlChart",
       "size": "medium",
       "x": 6,
-      "y": 1,
+      "y": 9,
       "w": 6,
       "h": 4
     },
@@ -254,7 +254,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "timeOfDayChart",
       "size": "small",
       "x": 6,
-      "y": 21,
+      "y": 13,
       "w": 3,
       "h": 4
     },
@@ -272,7 +272,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "equityChart",
       "size": "large",
       "x": 6,
-      "y": 5,
+      "y": 1,
       "w": 6,
       "h": 8
     },
@@ -280,8 +280,8 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "i": "widget1752135365730",
       "type": "pnlBySideChart",
       "size": "small",
-      "x": 6,
-      "y": 13,
+      "x": 9,
+      "y": 17,
       "w": 3,
       "h": 4
     },
@@ -290,7 +290,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "tickDistribution",
       "size": "medium",
       "x": 6,
-      "y": 17,
+      "y": 21,
       "w": 6,
       "h": 4
     },
@@ -326,7 +326,7 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "type": "statisticsWidget",
       "size": "medium",
       "x": 0,
-      "y": 9,
+      "y": 13,
       "w": 6,
       "h": 4
     },
@@ -356,6 +356,24 @@ export const defaultLayouts: PrismaDashboardLayout = {
       "y": 0,
       "w": 3,
       "h": 1
+    },
+    {
+      "i": "widget1762520220168",
+      "type": "pnlPerContractChart",
+      "size": "small",
+      "x": 6,
+      "y": 17,
+      "w": 3,
+      "h": 4
+    },
+    {
+      "i": "widget1762520253990",
+      "type": "pnlPerContractDailyChart",
+      "size": "medium",
+      "x": 0,
+      "y": 9,
+      "w": 6,
+      "h": 4
     }
   ],
   mobile: [

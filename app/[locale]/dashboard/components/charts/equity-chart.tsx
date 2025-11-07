@@ -577,6 +577,7 @@ AccountsLegend.displayName = "AccountsLegend";
 
 export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const pathname = usePathname();
+  const isBusinessView = pathname.includes('business');
   const {
     instruments,
     accountNumbers,
@@ -748,7 +749,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   // Fetch chart data when filters or config change
   React.useEffect(() => {
     // Use client-side computation for shared view
-    if (isSharedView || pathname.includes('business')) {
+    if (isSharedView || isBusinessView) {
       console.log('[EquityChart] Using client-side computation (shared view)');
       setIsLoading(true);
       try {
@@ -833,7 +834,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   // Optimized chart config with consistent color mapping
   const chartConfig = React.useMemo(() => {
     // Force grouped view in shared mode
-    if (!showIndividual || isSharedView) {
+    if (!showIndividual || isSharedView || isBusinessView) {
       return {
         equity: {
           label: "Total Equity",
@@ -853,7 +854,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       };
       return acc;
     }, {} as ChartConfig);
-  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView]);
+  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView, isBusinessView]);
 
   // Memoized chart lines with consistent color mapping
   const chartLines = React.useMemo(() => {
@@ -938,7 +939,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               </Tooltip>
             </TooltipProvider>
           </div>
-          {!isSharedView && (
+          {(!isSharedView && !isBusinessView) && (
             <div className="flex items-center space-x-2">
               <Switch
                 id="view-mode"
@@ -1043,6 +1044,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
           {showIndividual &&
             !isSharedView &&
+            !isBusinessView &&
             size !== "small" && (
               <AccountsLegend
                 accountNumbers={availableAccountNumbers}
