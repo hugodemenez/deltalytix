@@ -478,7 +478,7 @@ export default function SettingsPage() {
                 <p>No business linked</p>
                 <p className="text-sm mt-2">Contact your business administrator to get an invitation to join a business.</p>
                 <div className="mt-4">
-                  <Link href="/business/manage">
+                  <Link href="/business/dashboard">
                     <Button>
                       <Building2 className="mr-2 h-4 w-4" />
                       Manage Businesses
@@ -491,7 +491,7 @@ export default function SettingsPage() {
             {/* Business Management Link */}
             {(userBusinesses.ownedBusinesses.length > 0 || userBusinesses.joinedBusinesses.length > 0) && (
               <div className="mt-4">
-                <Link href="/business/manage">
+                <Link href="/business/dashboard">
                   <Button variant="outline" className="w-full">
                     <Settings className="mr-2 h-4 w-4" />
                     Manage Businesses

@@ -452,7 +452,7 @@ export async function deleteBusiness(businessId: string) {
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/manage')
+    revalidatePath('/business/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error deleting business:', error)
@@ -503,7 +503,7 @@ export async function renameBusiness(businessId: string, newName: string) {
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/manage')
+    revalidatePath('/business/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error renaming business:', error)
@@ -568,7 +568,7 @@ export async function addTraderToBusiness(businessId: string, traderEmail: strin
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/manage')
+    revalidatePath('/business/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error adding trader to business:', error)
@@ -644,7 +644,7 @@ export async function sendBusinessInvitation(businessId: string, traderEmail: st
     }
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/manage')
+    revalidatePath('/business/dashboard')
     return { success: true, invitationId: result.invitationId }
   } catch (error) {
     console.error('Error sending business invitation:', error)
@@ -749,7 +749,7 @@ export async function removeTraderFromBusiness(businessId: string, traderId: str
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/manage')
+    revalidatePath('/business/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error removing trader from business:', error)
@@ -798,7 +798,7 @@ export async function cancelBusinessInvitation(businessId: string, invitationId:
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/manage')
+    revalidatePath('/business/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error canceling business invitation:', error)
@@ -927,7 +927,7 @@ export async function joinBusinessByInvitation(invitationToken: string) {
     ])
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/manage')
+    revalidatePath('/business/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error joining business by invitation:', error)

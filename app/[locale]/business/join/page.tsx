@@ -7,9 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { 
-  Building2, 
-  Users, 
+import {
+  Building2,
+  Users,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { joinBusinessByInvitation, getBusinessInvitationDetails } from '../../dashboard/settings/actions'
+import Link from 'next/link'
 
 interface BusinessInvitation {
   id: string
@@ -33,7 +34,7 @@ interface BusinessInvitation {
 export default function BusinessJoinPage() {
   const t = useI18n()
   const searchParams = useSearchParams()
-  
+
   // State
   const [invitation, setInvitation] = useState<BusinessInvitation | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -57,7 +58,7 @@ export default function BusinessJoinPage() {
 
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const result = await getBusinessInvitationDetails(invitationToken)
       if (result.success && result.invitation) {
@@ -158,13 +159,11 @@ export default function BusinessJoinPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <Button 
-                variant="outline" 
-                onClick={() => window.location.href = '/business/manage'}
-                className="w-full"
-              >
-                {t('business.join.goToManage')}
-              </Button>
+              <Link href="/business/dashboard">
+                <Button variant="outline" className="w-full">
+                  {t('business.join.goToManage')}
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -185,13 +184,14 @@ export default function BusinessJoinPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <Button 
-                variant="outline" 
-                onClick={() => window.location.href = '/business/manage'}
-                className="w-full"
-              >
-                {t('business.join.goToManage')}
-              </Button>
+              <Link href="/business/dashboard">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                >
+                  {t('business.join.goToManage')}
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         </div>
@@ -224,7 +224,7 @@ export default function BusinessJoinPage() {
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent className="space-y-6">
             {/* Invitation Status */}
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
@@ -233,13 +233,13 @@ export default function BusinessJoinPage() {
                 <div>
                   <p className="font-medium">{t('business.join.status.title')}</p>
                   <p className="text-sm text-muted-foreground">
-                    {invitation.status === 'pending' && !isExpired 
+                    {invitation.status === 'pending' && !isExpired
                       ? t('business.join.status.ready')
                       : invitation.status === 'pending' && isExpired
-                      ? t('business.join.status.expired')
-                      : invitation.status === 'accepted'
-                      ? t('business.join.status.accepted')
-                      : t('business.join.status.unknown')
+                        ? t('business.join.status.expired')
+                        : invitation.status === 'accepted'
+                          ? t('business.join.status.accepted')
+                          : t('business.join.status.unknown')
                     }
                   </p>
                 </div>
@@ -252,18 +252,18 @@ export default function BusinessJoinPage() {
             {/* Invitation Details */}
             <div className="space-y-4">
               <h3 className="font-medium">{t('business.join.details.title')}</h3>
-              
+
               <div className="grid gap-4">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{t('business.join.details.invitedEmail')}</span>
                   <span className="font-medium">{invitation.email}</span>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{t('business.join.details.invitedOn')}</span>
                   <span className="text-sm">{formatDate(invitation.createdAt)}</span>
                 </div>
-                
+
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">{t('business.join.details.expiresOn')}</span>
                   <span className={cn(
@@ -285,8 +285,8 @@ export default function BusinessJoinPage() {
                   <p className="text-muted-foreground">
                     {t('business.join.action.description')}
                   </p>
-                  <Button 
-                    onClick={handleJoinBusiness} 
+                  <Button
+                    onClick={handleJoinBusiness}
                     disabled={isJoining}
                     size="lg"
                     className="w-full"
@@ -309,21 +309,22 @@ export default function BusinessJoinPage() {
                   <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <XCircle className="h-5 w-5" />
                     <span>
-                      {invitation.status === 'accepted' 
+                      {invitation.status === 'accepted'
                         ? t('business.join.action.alreadyAccepted')
                         : isExpired
-                        ? t('business.join.action.expired')
-                        : t('business.join.action.invalid')
+                          ? t('business.join.action.expired')
+                          : t('business.join.action.invalid')
                       }
                     </span>
                   </div>
-                  <Button 
-                    variant="outline"
-                    onClick={() => window.location.href = '/business/manage'}
-                    className="w-full"
-                  >
-                    {t('business.join.goToManage')}
-                  </Button>
+                  <Link href="/business/dashboard">
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {t('business.join.goToManage')}
+                    </Button>
+                  </Link>
                 </div>
               )}
             </div>
