@@ -1,6 +1,6 @@
 
 import { AuthProfileButton } from "../components/auth-profile-button";
-import BusinessNavbar from "../components/business-navbar";
+import TeamNavbar from "../components/team-navbar";
 import { Metadata } from 'next';
 
 type Locale = 'en' | 'fr';
@@ -20,7 +20,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: Locale
   };
 }
 
-export default async function BusinessLayout({
+export default async function TeamLayout({
   children
 }: {
   children: React.ReactNode,
@@ -29,7 +29,7 @@ export default async function BusinessLayout({
   return (
     <div className="px-2 sm:px-6 lg:px-32">
       <div className="flex justify-between items-center py-4">
-      <BusinessNavbar />
+      <TeamNavbar />
       <AuthProfileButton />
       </div>
       <div className="mt-8 sm:mt-20 mx-auto">

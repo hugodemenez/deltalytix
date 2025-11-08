@@ -577,7 +577,7 @@ AccountsLegend.displayName = "AccountsLegend";
 
 export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const pathname = usePathname();
-  const isBusinessView = pathname.includes('business');
+  const isBusinessView = pathname.includes('team');
   const {
     instruments,
     accountNumbers,

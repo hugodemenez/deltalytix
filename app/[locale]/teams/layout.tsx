@@ -22,7 +22,7 @@ export async function generateMetadata(props: { params: Promise<{ locale: Locale
   };
 }
 
-export default async function BusinessLayout({
+export default async function TeamLayout({
   children
 }: {
   children: React.ReactNode,

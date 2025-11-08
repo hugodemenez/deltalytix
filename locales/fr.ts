@@ -8,7 +8,7 @@ import propfirm from "./fr/propfirm";
 import chat from "./fr/chat";
 import terms from "./fr/terms";
 import embed from "./fr/embed";
-import teams from "./fr/business";
+import teams from "./fr/teams";
 
 export default {
   ...shared,

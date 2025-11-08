@@ -33,13 +33,13 @@ import { useTheme } from '@/context/theme-provider'
 import Footer from '../../(landing)/components/footer'
 import Image from 'next/image'
 
-export default function BusinessPage() {
+export default function TeamPage() {
   const t = useI18n()
 
   useEffect(() => {
     // Cal.com initialization
     (async function () {
-      const cal = await getCalApi({"namespace":"deltalytix-business"});
+      const cal = await getCalApi({"namespace":"deltalytix-team"});
       cal("ui", {"hideEventTypeDetails":false,"layout":"month_view"});
     })();
   }, [])
@@ -47,64 +47,64 @@ export default function BusinessPage() {
   const features = [
     {
       icon: Users,
-      title: t('business.features.multiAccount.title'),
-      description: t('business.features.multiAccount.description'),
+      title: t('team.features.multiAccount.title'),
+      description: t('team.features.multiAccount.description'),
     },
     {
       icon: BarChart3,
-      title: t('business.features.teamAnalytics.title'),
-      description: t('business.features.teamAnalytics.description'),
+      title: t('team.features.teamAnalytics.title'),
+      description: t('team.features.teamAnalytics.description'),
     },
     {
       icon: Clock,
-      title: t('business.features.realTime.title'),
-      description: t('business.features.realTime.description'),
+      title: t('team.features.realTime.title'),
+      description: t('team.features.realTime.description'),
     },
     {
       icon: Shield,
-      title: t('business.features.riskManagement.title'),
-      description: t('business.features.riskManagement.description'),
+      title: t('team.features.riskManagement.title'),
+      description: t('team.features.riskManagement.description'),
     },
     {
       icon: FileText,
-      title: t('business.features.compliance.title'),
-      description: t('business.features.compliance.description'),
+      title: t('team.features.compliance.title'),
+      description: t('team.features.compliance.description'),
     },
     {
       icon: Code,
-      title: t('business.features.api.title'),
-      description: t('business.features.api.description'),
+      title: t('team.features.api.title'),
+      description: t('team.features.api.description'),
     },
   ]
 
   const useCases = [
     {
       icon: Building2,
-      title: t('business.usecases.fund.title'),
-      description: t('business.usecases.fund.description'),
+      title: t('team.usecases.fund.title'),
+      description: t('team.usecases.fund.description'),
     },
     {
       icon: Target,
-      title: t('business.usecases.prop.title'),
-      description: t('business.usecases.prop.description'),
+      title: t('team.usecases.prop.title'),
+      description: t('team.usecases.prop.description'),
     },
     {
       icon: Users,
-      title: t('business.usecases.family.title'),
-      description: t('business.usecases.family.description'),
+      title: t('team.usecases.family.title'),
+      description: t('team.usecases.family.description'),
     },
     {
       icon: Globe,
-      title: t('business.usecases.institutional.title'),
-      description: t('business.usecases.institutional.description'),
+      title: t('team.usecases.institutional.title'),
+      description: t('team.usecases.institutional.description'),
     },
   ]
 
 
   const stats = [
-    { value: '500+', label: t('business.stats.traders') },
-    { value: '2,000+', label: t('business.stats.accounts') },
-    { value: '50+', label: t('business.stats.brokers') },
+    { value: '500+', label: t('team.stats.traders') },
+    { value: '2,000+', label: t('team.stats.accounts') },
+    { value: '50+', label: t('team.stats.brokers') },
   ]
 
 
@@ -118,31 +118,31 @@ export default function BusinessPage() {
               <div className="mt-8 sm:mt-12 lg:mt-8">
                 <a href="#" className="inline-flex space-x-6">
                   <span className="rounded-full bg-[#2E9987]/10 dark:bg-[hsl(var(--chart-1))]/10 px-3 py-1 text-sm/6 font-semibold text-[#2E9987] dark:text-[hsl(var(--chart-1))] ring-1 ring-[#2E9987]/10 dark:ring-[hsl(var(--chart-1))]/10 ring-inset">
-                    {t('business.badge')}
+                    {t('team.badge')}
                   </span>
                   <span className="inline-flex items-center space-x-2 text-sm/6 font-medium text-gray-600 dark:text-gray-400">
-                    <span>{t('business.badge.description')}</span>
+                    <span>{t('team.badge.description')}</span>
                     <ChevronRight aria-hidden="true" className="size-5 text-gray-400" />
                   </span>
                 </a>
               </div>
               <h1 className="mt-6 text-5xl font-semibold tracking-tight text-pretty text-gray-900 dark:text-white sm:text-7xl">
-                {t('business.hero.title')}
+                {t('team.hero.title')}
               </h1>
               <p className="mt-6 text-lg font-medium text-pretty text-gray-500 dark:text-gray-400 sm:text-xl/8">
-                {t('business.hero.description')}
+                {t('team.hero.description')}
               </p>
               <div className="mt-8 flex items-center gap-x-6">
-                <Link href="/authentication?next=business/dashboard" className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
-                  <span className="font-medium text-sm text-white">{t('business.cta')}</span>
+                <Link href="/authentication?next=team/dashboard" className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                  <span className="font-medium text-sm text-white">{t('team.cta')}</span>
                 </Link>
                 <button 
                   className="flex justify-center items-center px-8 py-2.5 h-10 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-[0_0_0_6px_rgba(107,114,128,0.1),0_0_0_2px_rgba(107,114,128,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(107,114,128,0.2),0_0_0_2px_rgba(107,114,128,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_rgba(156,163,175,0.1),0_0_0_2px_rgba(156,163,175,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_rgba(156,163,175,0.2),0_0_0_2px_rgba(156,163,175,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200"
-                  data-cal-namespace="deltalytix-business"
-                  data-cal-link="hugo-demenez/deltalytix-business"
+                  data-cal-namespace="deltalytix-team"
+                  data-cal-link="hugo-demenez/deltalytix-team"
                   data-cal-config='{"layout":"month_view"}'
                 >
-                  <span className="font-medium text-sm text-gray-900 dark:text-white">{t('business.cta.secondary')} <span aria-hidden="true">→</span></span>
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">{t('team.cta.secondary')} <span aria-hidden="true">→</span></span>
                 </button>
               </div>
               
@@ -165,14 +165,14 @@ export default function BusinessPage() {
                 <div className="-m-2 rounded-xl bg-gray-900/5 dark:bg-gray-100/5 p-2 ring-1 ring-gray-900/10 dark:ring-gray-100/10 ring-inset lg:-m-4 lg:rounded-2xl lg:p-4">
                   <Image
                     alt="Dashboard screenshot"
-                    src="/business-dark.png"
+                    src="/team-dark.png"
                     width={2432}
                     height={1442}
                     className="w-304 rounded-md shadow-2xl ring-1 ring-gray-900/10 dark:ring-gray-100/10 hidden dark:block"
                   />
                   <Image
                     alt="Dashboard screenshot"
-                    src="/business-light.png"
+                    src="/team-light.png"
                     width={2432}
                     height={1442}
                     className="w-304 rounded-md shadow-2xl ring-1 ring-gray-900/10 dark:hidden"
@@ -188,10 +188,10 @@ export default function BusinessPage() {
           <div className="container px-4 md:px-6 mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                {t('business.features.title')}
+                {t('team.features.title')}
               </h2>
               <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mt-4">
-                {t('business.features.description')}
+                {t('team.features.description')}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -219,10 +219,10 @@ export default function BusinessPage() {
           <div className="container px-4 md:px-6 mx-auto">
             <div className="text-center mb-16">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl">
-                {t('business.usecases.title')}
+                {t('team.usecases.title')}
               </h2>
               <p className="mx-auto max-w-[600px] text-muted-foreground md:text-xl mt-4">
-                {t('business.usecases.description')}
+                {t('team.usecases.description')}
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -250,26 +250,26 @@ export default function BusinessPage() {
           <div className="container px-4 md:px-6 mx-auto">
             <div className="text-center">
               <h2 className="text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl mb-4">
-                {t('business.cta.createAccount.title')}
+                {t('team.cta.createAccount.title')}
               </h2>
               <p className="mx-auto max-w-[600px] text-gray-500 dark:text-gray-400 md:text-xl mb-8">
-                {t('business.cta.createAccount.description')}
+                {t('team.cta.createAccount.description')}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/authentication&next=business/dashboard" className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
-                  <span className="font-medium text-sm text-white">{t('business.cta.createAccount.button')}</span>
+                <Link href="/authentication&next=team/dashboard" className="flex justify-center items-center px-8 py-2.5 h-10 bg-[#2E9987] hover:bg-[#267a6d] dark:bg-[hsl(var(--chart-1))] dark:hover:bg-[hsl(var(--chart-1)/0.9)] shadow-[0_0_0_6px_rgba(50,169,151,0.1),0_0_0_2px_rgba(50,169,151,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(50,169,151,0.2),0_0_0_2px_rgba(50,169,151,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.1),0_0_0_2px_hsl(var(--chart-1)/0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_hsl(var(--chart-1)/0.2),0_0_0_2px_hsl(var(--chart-1)/0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200">
+                  <span className="font-medium text-sm text-white">{t('team.cta.createAccount.button')}</span>
                 </Link>
                 <button 
                   className="flex justify-center items-center px-8 py-2.5 h-10 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-[0_0_0_6px_rgba(107,114,128,0.1),0_0_0_2px_rgba(107,114,128,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] hover:shadow-[0_0_0_6px_rgba(107,114,128,0.2),0_0_0_2px_rgba(107,114,128,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] dark:shadow-[0_0_0_6px_rgba(156,163,175,0.1),0_0_0_2px_rgba(156,163,175,0.25),0_1px_3px_rgba(0,0,0,0.1),0_1px_2px_-1px_rgba(0,0,0,0.1)] dark:hover:shadow-[0_0_0_6px_rgba(156,163,175,0.2),0_0_0_2px_rgba(156,163,175,0.35),0_2px_4px_rgba(0,0,0,0.2),0_2px_3px_-1px_rgba(0,0,0,0.2)] rounded-xl transition-all duration-200"
-                  data-cal-namespace="deltalytix-business"
-                  data-cal-link="hugo-demenez/deltalytix-business"
+                  data-cal-namespace="deltalytix-team"
+                  data-cal-link="hugo-demenez/deltalytix-team"
                   data-cal-config='{"layout":"month_view"}'
                 >
-                  <span className="font-medium text-sm text-gray-900 dark:text-white">{t('business.cta.demo.button')}</span>
+                  <span className="font-medium text-sm text-gray-900 dark:text-white">{t('team.cta.demo.button')}</span>
                 </button>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-                {t('business.cta.createAccount.subtext')}
+                {t('team.cta.createAccount.subtext')}
               </p>
             </div>
           </div>

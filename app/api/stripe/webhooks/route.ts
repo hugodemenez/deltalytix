@@ -102,25 +102,25 @@ export async function POST(req: Request) {
               where: { email: data.customer_details?.email as string },
             });
 
-            // Check if this is a business subscription
-            const isBusinessSubscription = data.metadata?.plan === 'business_monthly_usd' || 
+            // Check if this is a team subscription
+            const isBusinessSubscription = data.metadata?.plan === 'team_monthly_usd' || 
                                         subscriptionPlan === 'BUSINESS' || 
-                                        price.lookup_key === 'business_monthly_usd';
+                                        price.lookup_key === 'team_monthly_usd';
 
             if (isBusinessSubscription) {
-              // Handle business subscription
-              console.log('Business subscription completed')
+              // Handle team subscription
+              console.log('Team subscription completed')
               
-              // Create the business after successful payment
-              const businessName = data.metadata?.businessName || subscription.metadata?.businessName || 'My Business';
+              // Create the team after successful payment
+              const teamName = data.metadata?.teamName || subscription.metadata?.teamName || 'My Team';
               const userId = data.metadata?.userId || subscription.metadata?.userId;
 
               if (userId) {
                 try {
-                  // Create the business
-                  const business = await prisma.business.create({
+                  // Create the team
+                  const team = await prisma.team.create({
                     data: {
-                      name: businessName,
+                      name: teamName,
                       userId: userId,
                       traderIds: [userId], // Add the creator as the first trader
                       managers: {
@@ -132,9 +132,9 @@ export async function POST(req: Request) {
                     },
                   });
 
-                  console.log('Business created:', business);
+                  console.log('Team created:', team);
                 } catch (error) {
-                  console.error('Error creating business:', error);
+                  console.error('Error creating team:', error);
                 }
               }
             }

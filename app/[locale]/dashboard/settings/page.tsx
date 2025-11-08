@@ -45,7 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Slider } from "@/components/ui/slider"
-import { createBusiness, joinBusiness, leaveBusiness, getUserBusinesses } from './actions'
+import { createTeam, joinTeam, leaveTeam, getUserBusinesses } from './actions'
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -93,7 +93,7 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
-  // Business state
+  // Team state
   const [userBusinesses, setUserBusinesses] = useState<{
     ownedBusinesses: any[]
     joinedBusinesses: any[]
@@ -118,7 +118,7 @@ export default function SettingsPage() {
     return <Laptop className="h-4 w-4" />;
   };
 
-  // Load user businesses on component mount
+  // Load user teams on component mount
   useEffect(() => {
     const loadBusinesses = async () => {
       const result = await getUserBusinesses()
@@ -134,11 +134,11 @@ export default function SettingsPage() {
 
 
 
-  const handleLeaveBusiness = async (businessId: string) => {
-    const result = await leaveBusiness(businessId)
+  const handleLeaveTeam = async (teamId: string) => {
+    const result = await leaveTeam(teamId)
     if (result.success) {
-      toast.success(t('dashboard.business.leaveSuccess'))
-      // Reload businesses
+      toast.success(t('dashboard.team.leaveSuccess'))
+      // Reload teams
       const updatedBusinesses = await getUserBusinesses()
       if (updatedBusinesses.success && updatedBusinesses.ownedBusinesses && updatedBusinesses.joinedBusinesses) {
         setUserBusinesses({
@@ -147,7 +147,7 @@ export default function SettingsPage() {
         })
       }
     } else {
-      toast.error(result.error || t('dashboard.business.error'))
+      toast.error(result.error || t('dashboard.team.error'))
     }
   }
 
@@ -402,15 +402,15 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Business Section */}
+        {/* Team Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Building2 className="h-5 w-5" />
-              Business
+              Team
             </CardTitle>
             <CardDescription>
-              Manage your business connections
+              Manage your team connections
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -421,12 +421,12 @@ export default function SettingsPage() {
                 <Label className="text-base font-medium">Current Businesses</Label>
                 <div className="mt-2 space-y-2">
                   {/* Owned Businesses */}
-                  {userBusinesses.ownedBusinesses.map((business) => (
-                    <div key={business.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  {userBusinesses.ownedBusinesses.map((team) => (
+                    <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
-                        <p className="font-medium">{business.name}</p>
+                        <p className="font-medium">{team.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {business.traderIds.length} traders
+                          {team.traderIds.length} traders
                         </p>
                       </div>
                       <Badge variant="secondary">Owner</Badge>
@@ -434,34 +434,34 @@ export default function SettingsPage() {
                   ))}
                   
                   {/* Joined Businesses */}
-                  {userBusinesses.joinedBusinesses.map((business) => (
-                    <div key={business.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  {userBusinesses.joinedBusinesses.map((team) => (
+                    <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
-                        <p className="font-medium">{business.name}</p>
+                        <p className="font-medium">{team.name}</p>
                         <p className="text-sm text-muted-foreground">
-                          {business.traderIds.length} traders
+                          {team.traderIds.length} traders
                         </p>
                       </div>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" size="sm">
-                            Leave Business
+                            Leave Team
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
-                            <AlertDialogTitle>Leave Business</AlertDialogTitle>
+                            <AlertDialogTitle>Leave Team</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Are you sure you want to leave this business?
+                              Are you sure you want to leave this team?
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
-                              onClick={() => handleLeaveBusiness(business.id)}
+                              onClick={() => handleLeaveTeam(team.id)}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
-                              Leave Business
+                              Leave Team
                             </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
@@ -475,10 +475,10 @@ export default function SettingsPage() {
             {/* No Businesses */}
             {userBusinesses.ownedBusinesses.length === 0 && userBusinesses.joinedBusinesses.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
-                <p>No business linked</p>
-                <p className="text-sm mt-2">Contact your business administrator to get an invitation to join a business.</p>
+                <p>No team linked</p>
+                <p className="text-sm mt-2">Contact your team administrator to get an invitation to join a team.</p>
                 <div className="mt-4">
-                  <Link href="/business/dashboard">
+                  <Link href="/team/dashboard">
                     <Button>
                       <Building2 className="mr-2 h-4 w-4" />
                       Manage Businesses
@@ -488,10 +488,10 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* Business Management Link */}
+            {/* Team Management Link */}
             {(userBusinesses.ownedBusinesses.length > 0 || userBusinesses.joinedBusinesses.length > 0) && (
               <div className="mt-4">
-                <Link href="/business/dashboard">
+                <Link href="/team/dashboard">
                   <Button variant="outline" className="w-full">
                     <Settings className="mr-2 h-4 w-4" />
                     Manage Businesses

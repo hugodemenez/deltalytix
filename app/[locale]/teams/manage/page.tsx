@@ -1,11 +1,11 @@
 'use client'
 
-import { BusinessManagement } from "@/app/[locale]/business/components/business-management"
+import { TeamManagement } from "@/app/[locale]/team/components/team-management"
 
-export default function BusinessManagePage() {
+export default function TeamManagePage() {
 
   return (
-    <BusinessManagement
+    <TeamManagement
     />
   )
 }

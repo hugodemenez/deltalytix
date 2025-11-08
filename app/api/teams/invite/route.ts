@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 import { Resend } from 'resend'
 import { createClient } from '@/server/auth'
-import BusinessInvitationEmail from '@/components/emails/business-invitation'
+import TeamInvitationEmail from '@/components/emails/team-invitation'
 import { render } from "@react-email/render"
 
 const prisma = new PrismaClient()
@@ -11,41 +11,41 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 export async function POST(req: Request) {
   try {
 
-    const { businessId, email, inviterId } = await req.json()
+    const { teamId, email, inviterId } = await req.json()
 
-    console.log('Debug - Business ID:', businessId)
+    console.log('Debug - Team ID:', teamId)
     console.log('Debug - Trader Email:', email)
     console.log('Debug - Inviter ID:', inviterId)
 
-    if (!businessId || !email || !inviterId) {
+    if (!teamId || !email || !inviterId) {
       return NextResponse.json(
-        { error: 'Business ID, email, and inviter ID are required' },
+        { error: 'Team ID, email, and inviter ID are required' },
         { status: 400 }
       )
     }
 
-    // Check if user is the owner or admin of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if user is the owner or admin of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    console.log('Debug - Business:', business)
+    console.log('Debug - Team:', team)
 
-    if (!business) {
+    if (!team) {
       return NextResponse.json(
-        { error: 'Business not found' },
+        { error: 'Team not found' },
         { status: 404 }
       )
     }
 
-    // Check if user is already a trader in this business
+    // Check if user is already a trader in this team
     const existingUser = await prisma.user.findUnique({
       where: { email },
     })
 
-    if (existingUser && business.traderIds.includes(existingUser.id)) {
+    if (existingUser && team.traderIds.includes(existingUser.id)) {
       return NextResponse.json(
-        { error: 'User is already a member of this business' },
+        { error: 'User is already a member of this team' },
         { status: 400 }
       )
     }
@@ -53,8 +53,8 @@ export async function POST(req: Request) {
     // Check if there's already a pending invitation
     const existingInvitation = await prisma.businessInvitation.findUnique({
       where: {
-        businessId_email: {
-          businessId,
+        teamId_email: {
+          teamId,
           email,
         }
       }
@@ -70,8 +70,8 @@ export async function POST(req: Request) {
     // Create or update invitation
     const invitation = await prisma.businessInvitation.upsert({
       where: {
-        businessId_email: {
-          businessId,
+        teamId_email: {
+          teamId,
           email,
         }
       },
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
         invitedBy: inviterId,
       },
       create: {
-        businessId,
+        teamId,
         email,
         invitedBy: inviterId,
         status: 'PENDING',
@@ -95,13 +95,13 @@ export async function POST(req: Request) {
     })
 
     // Generate join URL
-    const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL}/business/join?invitation=${invitation.id}`
+    const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL}/team/join?invitation=${invitation.id}`
 
     // Render email
     const emailHtml = await render(
-      BusinessInvitationEmail({
+      TeamInvitationEmail({
         email,
-        businessName: business.name,
+        teamName: team.name,
         inviterName: inviter?.email?.split('@')[0] || 'trader',
         inviterEmail: inviter?.email || 'trader@example.com',
         joinUrl,
@@ -111,11 +111,11 @@ export async function POST(req: Request) {
 
     // Send email
     const { data, error } = await resend.emails.send({
-      from: 'Deltalytix Business <business@eu.updates.deltalytix.app>',
+      from: 'Deltalytix Team <team@eu.updates.deltalytix.app>',
       to: email,
       subject: existingUser?.language === 'fr' 
-        ? `Invitation à rejoindre ${business.name} sur Deltalytix`
-        : `Invitation to join ${business.name} on Deltalytix`,
+        ? `Invitation à rejoindre ${team.name} sur Deltalytix`
+        : `Invitation to join ${team.name} on Deltalytix`,
       html: emailHtml,
       replyTo: 'hugo.demenez@deltalytix.app',
     })
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
     )
 
   } catch (error) {
-    console.error('Error sending business invitation:', error)
+    console.error('Error sending team invitation:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

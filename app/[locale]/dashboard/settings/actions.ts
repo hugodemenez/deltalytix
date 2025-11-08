@@ -5,7 +5,7 @@ import auth from '@/locales/en/auth'
 import { createClient } from '@/server/auth'
 import { revalidatePath } from 'next/cache'
 
-export async function createBusiness(name: string, currency: 'USD' | 'EUR' = 'USD') {
+export async function createTeam(name: string, currency: 'USD' | 'EUR' = 'USD') {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -13,12 +13,12 @@ export async function createBusiness(name: string, currency: 'USD' | 'EUR' = 'US
       throw new Error('Unauthorized')
     }
 
-    // Redirect to Stripe checkout for business subscription
+    // Redirect to Stripe checkout for team subscription
     const formData = new FormData()
-    formData.append('businessName', name)
+    formData.append('teamName', name)
     formData.append('currency', currency)
     
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/create-business-checkout-session`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/create-team-checkout-session`, {
       method: 'POST',
       body: formData,
     })
@@ -32,12 +32,12 @@ export async function createBusiness(name: string, currency: 'USD' | 'EUR' = 'US
 
     return { success: false, error: 'Failed to create checkout session' }
   } catch (error) {
-    console.error('Error creating business checkout session:', error)
-    return { success: false, error: 'Failed to create business' }
+    console.error('Error creating team checkout session:', error)
+    return { success: false, error: 'Failed to create team' }
   }
 }
 
-export async function joinBusiness(businessId: string) {
+export async function joinTeam(teamId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -45,21 +45,21 @@ export async function joinBusiness(businessId: string) {
       throw new Error('Unauthorized')
     }
 
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
     // Add the user to the traderIds array if not already present
-    const updatedTraderIds = business.traderIds.includes(user.id)
-      ? business.traderIds
-      : [...business.traderIds, user.id]
+    const updatedTraderIds = team.traderIds.includes(user.id)
+      ? team.traderIds
+      : [...team.traderIds, user.id]
 
-    await prisma.business.update({
-      where: { id: businessId },
+    await prisma.team.update({
+      where: { id: teamId },
       data: {
         traderIds: updatedTraderIds,
       },
@@ -68,12 +68,12 @@ export async function joinBusiness(businessId: string) {
     revalidatePath('/dashboard/settings')
     return { success: true }
   } catch (error) {
-    console.error('Error joining business:', error)
-    return { success: false, error: 'Failed to join business' }
+    console.error('Error joining team:', error)
+    return { success: false, error: 'Failed to join team' }
   }
 }
 
-export async function leaveBusiness(businessId: string) {
+export async function leaveTeam(teamId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -81,19 +81,19 @@ export async function leaveBusiness(businessId: string) {
       throw new Error('Unauthorized')
     }
 
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
     // Remove the user from the traderIds array
-    const updatedTraderIds = business.traderIds.filter(id => id !== user.id)
+    const updatedTraderIds = team.traderIds.filter(id => id !== user.id)
 
-    await prisma.business.update({
-      where: { id: businessId },
+    await prisma.team.update({
+      where: { id: teamId },
       data: {
         traderIds: updatedTraderIds,
       },
@@ -102,12 +102,12 @@ export async function leaveBusiness(businessId: string) {
     revalidatePath('/dashboard/settings')
     return { success: true }
   } catch (error) {
-    console.error('Error leaving business:', error)
-    return { success: false, error: 'Failed to leave business' }
+    console.error('Error leaving team:', error)
+    return { success: false, error: 'Failed to leave team' }
   }
 }
 
-export async function getUserBusinesses() {
+export async function getUserTeams() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -115,8 +115,8 @@ export async function getUserBusinesses() {
       throw new Error('Unauthorized')
     }
 
-    // Get businesses where the user is the owner
-    const ownedBusinesses = await prisma.business.findMany({
+    // Get teams where the user is the owner
+    const ownedBusinesses = await prisma.team.findMany({
       where: { userId: user.id },
       include: {
         managers: {
@@ -129,14 +129,14 @@ export async function getUserBusinesses() {
       },
     })
 
-    // Get businesses where the user is a trader
-    const joinedBusinesses = await prisma.business.findMany({
+    // Get teams where the user is a trader
+    const joinedBusinesses = await prisma.team.findMany({
       where: {
         traderIds: {
           has: user.id,
         },
         userId: {
-          not: user.id, // Exclude businesses where user is the owner
+          not: user.id, // Exclude teams where user is the owner
         },
       },
       include: {
@@ -150,7 +150,7 @@ export async function getUserBusinesses() {
       },
     })
 
-    // Get all unique trader IDs and manager IDs from all businesses
+    // Get all unique trader IDs and manager IDs from all teams
     const allBusinesses = [...ownedBusinesses, ...joinedBusinesses]
     const allTraderIds = Array.from(new Set(allBusinesses.flatMap(b => b.traderIds)))
     const allManagerIds = Array.from(new Set(allBusinesses.flatMap(b => b.managers.map(m => m.managerId))))
@@ -172,20 +172,20 @@ export async function getUserBusinesses() {
     // Create a map for quick lookup
     const usersMap = new Map(users.map(u => [u.id, u]))
 
-    // Enhance businesses with trader and manager details
-    const enhancedOwnedBusinesses = ownedBusinesses.map(business => ({
-      ...business,
-      traders: business.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
-      managers: business.managers.map(manager => ({
+    // Enhance teams with trader and manager details
+    const enhancedOwnedBusinesses = ownedBusinesses.map(team => ({
+      ...team,
+      traders: team.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      managers: team.managers.map(manager => ({
         ...manager,
         email: usersMap.get(manager.managerId)?.email || 'Unknown',
       })),
     }))
 
-    const enhancedJoinedBusinesses = joinedBusinesses.map(business => ({
-      ...business,
-      traders: business.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
-      managers: business.managers.map(manager => ({
+    const enhancedJoinedBusinesses = joinedBusinesses.map(team => ({
+      ...team,
+      traders: team.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      managers: team.managers.map(manager => ({
         ...manager,
         email: usersMap.get(manager.managerId)?.email || 'Unknown',
       })),
@@ -197,12 +197,12 @@ export async function getUserBusinesses() {
       joinedBusinesses: enhancedJoinedBusinesses,
     }
   } catch (error) {
-    console.error('Error getting user businesses:', error)
-    return { success: false, error: 'Failed to get businesses' }
+    console.error('Error getting user teams:', error)
+    return { success: false, error: 'Failed to get teams' }
   }
 }
 
-export async function addManagerToBusiness(businessId: string, managerEmail: string, access: 'admin' | 'viewer' = 'viewer') {
+export async function addManagerToTeam(teamId: string, managerEmail: string, access: 'admin' | 'viewer' = 'viewer') {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -210,28 +210,28 @@ export async function addManagerToBusiness(businessId: string, managerEmail: str
       throw new Error('Unauthorized')
     }
 
-    // Check if current user is owner or admin of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if current user is owner or admin of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
     // Check if current user is owner or admin manager
-    const isOwner = business.userId === user.id
+    const isOwner = team.userId === user.id
     const isAdminManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: user.id,
         }
       }
     })
 
     if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
-      throw new Error('Unauthorized: Only business owners and admin managers can add managers')
+      throw new Error('Unauthorized: Only team owners and admin managers can add managers')
     }
 
     // Find the user by email
@@ -246,8 +246,8 @@ export async function addManagerToBusiness(businessId: string, managerEmail: str
     // Check if manager already exists
     const existingManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: managerUser.id,
         }
       }
@@ -260,7 +260,7 @@ export async function addManagerToBusiness(businessId: string, managerEmail: str
     // Add new manager
     await prisma.businessManager.create({
       data: {
-        businessId,
+        teamId,
         managerId: managerUser.id,
         access,
       },
@@ -269,12 +269,12 @@ export async function addManagerToBusiness(businessId: string, managerEmail: str
     revalidatePath('/dashboard/settings')
     return { success: true }
   } catch (error) {
-    console.error('Error adding manager to business:', error)
+    console.error('Error adding manager to team:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to add manager' }
   }
 }
 
-export async function removeManagerFromBusiness(businessId: string, managerId: string) {
+export async function removeManagerFromTeam(teamId: string, managerId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -282,11 +282,11 @@ export async function removeManagerFromBusiness(businessId: string, managerId: s
       throw new Error('Unauthorized')
     }
 
-    // Check if current user is admin of this business
+    // Check if current user is admin of this team
     const currentUserManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: user.id,
         }
       }
@@ -299,8 +299,8 @@ export async function removeManagerFromBusiness(businessId: string, managerId: s
     // Remove manager
     await prisma.businessManager.delete({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId,
         }
       }
@@ -309,12 +309,12 @@ export async function removeManagerFromBusiness(businessId: string, managerId: s
     revalidatePath('/dashboard/settings')
     return { success: true }
   } catch (error) {
-    console.error('Error removing manager from business:', error)
+    console.error('Error removing manager from team:', error)
     return { success: false, error: 'Failed to remove manager' }
   }
 }
 
-export async function updateManagerAccess(businessId: string, managerId: string, access: 'admin' | 'viewer') {
+export async function updateManagerAccess(teamId: string, managerId: string, access: 'admin' | 'viewer') {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -322,11 +322,11 @@ export async function updateManagerAccess(businessId: string, managerId: string,
       throw new Error('Unauthorized')
     }
 
-    // Check if current user is admin of this business
+    // Check if current user is admin of this team
     const currentUserManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: user.id,
         }
       }
@@ -339,8 +339,8 @@ export async function updateManagerAccess(businessId: string, managerId: string,
     // Update manager access
     await prisma.businessManager.update({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId,
         }
       },
@@ -357,7 +357,7 @@ export async function updateManagerAccess(businessId: string, managerId: string,
   }
 }
 
-export async function getUserBusinessAccess() {
+export async function getUserTeamAccess() {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -365,11 +365,11 @@ export async function getUserBusinessAccess() {
       throw new Error('Unauthorized')
     }
 
-    // Get businesses where user is a manager - much more efficient query!
+    // Get teams where user is a manager - much more efficient query!
     const managedBusinesses = await prisma.businessManager.findMany({
       where: { managerId: user.id },
       include: { 
-        business: {
+        team: {
           include: {
             managers: {
               select: {
@@ -383,9 +383,9 @@ export async function getUserBusinessAccess() {
       }
     })
 
-    // Get all unique trader IDs and manager IDs from managed businesses
-    const allTraderIds = Array.from(new Set(managedBusinesses.flatMap(bm => bm.business.traderIds)))
-    const allManagerIds = Array.from(new Set(managedBusinesses.flatMap(bm => bm.business.managers.map(m => m.managerId))))
+    // Get all unique trader IDs and manager IDs from managed teams
+    const allTraderIds = Array.from(new Set(managedBusinesses.flatMap(bm => bm.team.traderIds)))
+    const allManagerIds = Array.from(new Set(managedBusinesses.flatMap(bm => bm.team.managers.map(m => m.managerId))))
     const allUserIds = Array.from(new Set([...allTraderIds, ...allManagerIds]))
     
     // Fetch all user details in one query
@@ -405,11 +405,11 @@ export async function getUserBusinessAccess() {
     const usersMap = new Map(users.map(u => [u.id, u]))
 
     // Transform to include access level, trader details, and manager details
-    const businessesWithAccess = managedBusinesses.map(bm => ({
-      ...bm.business,
+    const teamsWithAccess = managedBusinesses.map(bm => ({
+      ...bm.team,
       userAccess: bm.access,
-      traders: bm.business.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
-      managers: bm.business.managers.map(manager => ({
+      traders: bm.team.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
+      managers: bm.team.managers.map(manager => ({
         ...manager,
         email: usersMap.get(manager.managerId)?.email || 'Unknown',
       })),
@@ -417,15 +417,15 @@ export async function getUserBusinessAccess() {
 
     return {
       success: true,
-      managedBusinesses: businessesWithAccess,
+      managedBusinesses: teamsWithAccess,
     }
   } catch (error) {
-    console.error('Error getting user business access:', error)
-    return { success: false, error: 'Failed to get business access' }
+    console.error('Error getting user team access:', error)
+    return { success: false, error: 'Failed to get team access' }
   }
 }
 
-export async function deleteBusiness(businessId: string) {
+export async function deleteTeam(teamId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -433,34 +433,34 @@ export async function deleteBusiness(businessId: string) {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is the owner of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if user is the owner of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
-    if (business.userId !== user.id) {
-      throw new Error('Unauthorized: Only business owners can delete businesses')
+    if (team.userId !== user.id) {
+      throw new Error('Unauthorized: Only team owners can delete teams')
     }
 
-    // Delete the business (this will cascade delete all related records)
-    await prisma.business.delete({
-      where: { id: businessId },
+    // Delete the team (this will cascade delete all related records)
+    await prisma.team.delete({
+      where: { id: teamId },
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/dashboard')
+    revalidatePath('/team/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('Error deleting business:', error)
-    return { success: false, error: 'Failed to delete business' }
+    console.error('Error deleting team:', error)
+    return { success: false, error: 'Failed to delete team' }
   }
 }
 
-export async function renameBusiness(businessId: string, newName: string) {
+export async function renameTeam(teamId: string, newName: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -468,50 +468,50 @@ export async function renameBusiness(businessId: string, newName: string) {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is the owner of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if user is the owner of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
-    if (business.userId !== user.id) {
-      throw new Error('Unauthorized: Only business owners can rename businesses')
+    if (team.userId !== user.id) {
+      throw new Error('Unauthorized: Only team owners can rename teams')
     }
 
     // Check if the new name is already taken by this user
-    const existingBusiness = await prisma.business.findFirst({
+    const existingTeam = await prisma.team.findFirst({
       where: {
         name: newName,
         userId: user.id,
-        id: { not: businessId }, // Exclude the current business
+        id: { not: teamId }, // Exclude the current team
       },
     })
 
-    if (existingBusiness) {
-      throw new Error('A business with this name already exists')
+    if (existingTeam) {
+      throw new Error('A team with this name already exists')
     }
 
-    // Update the business name
-    await prisma.business.update({
-      where: { id: businessId },
+    // Update the team name
+    await prisma.team.update({
+      where: { id: teamId },
       data: {
         name: newName,
       },
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/dashboard')
+    revalidatePath('/team/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('Error renaming business:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to rename business' }
+    console.error('Error renaming team:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to rename team' }
   }
 }
 
-export async function addTraderToBusiness(businessId: string, traderEmail: string) {
+export async function addTraderToTeam(teamId: string, traderEmail: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -519,28 +519,28 @@ export async function addTraderToBusiness(businessId: string, traderEmail: strin
       throw new Error('Unauthorized')
     }
 
-    // Check if user is the owner or admin of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if user is the owner or admin of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
     // Check if current user is owner or admin manager
-    const isOwner = business.userId === user.id
+    const isOwner = team.userId === user.id
     const isAdminManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: user.id,
         }
       }
     })
 
     if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
-      throw new Error('Unauthorized: Only business owners and admin managers can add traders')
+      throw new Error('Unauthorized: Only team owners and admin managers can add traders')
     }
 
     // Find the user by email
@@ -552,14 +552,14 @@ export async function addTraderToBusiness(businessId: string, traderEmail: strin
       throw new Error('User with this email not found')
     }
 
-    // Check if trader is already in the business
-    if (business.traderIds.includes(traderUser.id)) {
-      throw new Error('Trader is already a member of this business')
+    // Check if trader is already in the team
+    if (team.traderIds.includes(traderUser.id)) {
+      throw new Error('Trader is already a member of this team')
     }
 
-    // Add trader to the business
-    await prisma.business.update({
-      where: { id: businessId },
+    // Add trader to the team
+    await prisma.team.update({
+      where: { id: teamId },
       data: {
         traderIds: {
           push: traderUser.id,
@@ -568,16 +568,16 @@ export async function addTraderToBusiness(businessId: string, traderEmail: strin
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/dashboard')
+    revalidatePath('/team/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('Error adding trader to business:', error)
+    console.error('Error adding trader to team:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to add trader' }
   }
 }
 
-export async function sendBusinessInvitation(businessId: string, traderEmail: string) {
-  console.log('Debug - Business ID:', businessId)
+export async function sendTeamInvitation(teamId: string, traderEmail: string) {
+  console.log('Debug - Team ID:', teamId)
   console.log('Debug - Trader Email:', traderEmail)
   try {
     const supabase = await createClient()
@@ -586,35 +586,35 @@ export async function sendBusinessInvitation(businessId: string, traderEmail: st
       throw new Error('Unauthorized')
     }
 
-    // Check if user is the owner or admin of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if user is the owner or admin of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
     // Check if current user is owner or admin manager
-    const isOwner = business.userId === user.id
+    const isOwner = team.userId === user.id
     const isAdminManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: user.id,
         }
       }
     })
 
     if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
-      throw new Error('Unauthorized: Only business owners and admin managers can send invitations')
+      throw new Error('Unauthorized: Only team owners and admin managers can send invitations')
     }
 
     // Check if there's already a pending invitation
     const existingInvitation = await prisma.businessInvitation.findUnique({
       where: {
-        businessId_email: {
-          businessId,
+        teamId_email: {
+          teamId,
           email: traderEmail,
         }
       }
@@ -625,13 +625,13 @@ export async function sendBusinessInvitation(businessId: string, traderEmail: st
     }
 
     // Send invitation via API
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/business/invite`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/team/invite`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        businessId,
+        teamId,
         email: traderEmail,
         inviterId: user.id,
       }),
@@ -644,15 +644,15 @@ export async function sendBusinessInvitation(businessId: string, traderEmail: st
     }
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/dashboard')
+    revalidatePath('/team/dashboard')
     return { success: true, invitationId: result.invitationId }
   } catch (error) {
-    console.error('Error sending business invitation:', error)
+    console.error('Error sending team invitation:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to send invitation' }
   }
 }
 
-export async function getBusinessInvitations(businessId: string) {
+export async function getTeamInvitations(teamId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -660,34 +660,34 @@ export async function getBusinessInvitations(businessId: string) {
       throw new Error('Unauthorized')
     }
 
-    // Check if user is the owner or admin of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if user is the owner or admin of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
     // Check if current user is owner or admin manager
-    const isOwner = business.userId === user.id
+    const isOwner = team.userId === user.id
     const isAdminManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: user.id,
         }
       }
     })
 
     if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
-      throw new Error('Unauthorized: Only business owners and admin managers can view invitations')
+      throw new Error('Unauthorized: Only team owners and admin managers can view invitations')
     }
 
     // Get pending invitations
     const invitations = await prisma.businessInvitation.findMany({
       where: {
-        businessId,
+        teamId,
         status: 'PENDING',
         expiresAt: {
           gt: new Date(),
@@ -703,12 +703,12 @@ export async function getBusinessInvitations(businessId: string) {
       invitations,
     }
   } catch (error) {
-    console.error('Error getting business invitations:', error)
+    console.error('Error getting team invitations:', error)
         return { success: false, error: error instanceof Error ? error.message : 'Failed to get invitations' }
   }
 }
 
-export async function removeTraderFromBusiness(businessId: string, traderId: string) {
+export async function removeTraderFromTeam(teamId: string, traderId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -716,48 +716,48 @@ export async function removeTraderFromBusiness(businessId: string, traderId: str
       throw new Error('Unauthorized')
     }
 
-    // Check if user is the owner or admin of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if user is the owner or admin of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
     // Check if current user is owner or admin manager
-    const isOwner = business.userId === user.id
+    const isOwner = team.userId === user.id
     const isAdminManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: user.id,
         }
       }
     })
 
     if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
-      throw new Error('Unauthorized: Only business owners and admin managers can remove traders')
+      throw new Error('Unauthorized: Only team owners and admin managers can remove traders')
     }
 
-    // Remove trader from the business
-    await prisma.business.update({
-      where: { id: businessId },
+    // Remove trader from the team
+    await prisma.team.update({
+      where: { id: teamId },
       data: {
-        traderIds: business.traderIds.filter(id => id !== traderId),
+        traderIds: team.traderIds.filter(id => id !== traderId),
       },
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/dashboard')
+    revalidatePath('/team/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('Error removing trader from business:', error)
+    console.error('Error removing trader from team:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to remove trader' }
   }
 }
 
-export async function cancelBusinessInvitation(businessId: string, invitationId: string) {
+export async function cancelTeamInvitation(teamId: string, invitationId: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -765,48 +765,48 @@ export async function cancelBusinessInvitation(businessId: string, invitationId:
       throw new Error('Unauthorized')
     }
 
-    // Check if user is the owner or admin of this business
-    const business = await prisma.business.findUnique({
-      where: { id: businessId },
+    // Check if user is the owner or admin of this team
+    const team = await prisma.team.findUnique({
+      where: { id: teamId },
     })
 
-    if (!business) {
-      throw new Error('Business not found')
+    if (!team) {
+      throw new Error('Team not found')
     }
 
     // Check if current user is owner or admin manager
-    const isOwner = business.userId === user.id
+    const isOwner = team.userId === user.id
     const isAdminManager = await prisma.businessManager.findUnique({
       where: {
-        businessId_managerId: {
-          businessId,
+        teamId_managerId: {
+          teamId,
           managerId: user.id,
         }
       }
     })
 
     if (!isOwner && (!isAdminManager || isAdminManager.access !== 'admin')) {
-      throw new Error('Unauthorized: Only business owners and admin managers can cancel invitations')
+      throw new Error('Unauthorized: Only team owners and admin managers can cancel invitations')
     }
 
     // Delete the invitation
     await prisma.businessInvitation.delete({
       where: {
         id: invitationId,
-        businessId: businessId, // Extra security check
+        teamId: teamId, // Extra security check
       },
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/dashboard')
+    revalidatePath('/team/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('Error canceling business invitation:', error)
+    console.error('Error canceling team invitation:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to cancel invitation' }
   }
 }
 
-export async function getBusinessInvitationDetails(invitationToken: string) {
+export async function getTeamInvitationDetails(invitationToken: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -818,7 +818,7 @@ export async function getBusinessInvitationDetails(invitationToken: string) {
     const invitation = await prisma.businessInvitation.findUnique({
       where: { id: invitationToken },
       include: {
-        business: {
+        team: {
           select: {
             id: true,
             name: true,
@@ -850,8 +850,8 @@ export async function getBusinessInvitationDetails(invitationToken: string) {
       success: true,
       invitation: {
         id: invitation.id,
-        businessId: invitation.businessId,
-        businessName: invitation.business.name,
+        teamId: invitation.teamId,
+        teamName: invitation.team.name,
         email: invitation.email,
         status: invitation.status.toLowerCase(),
         createdAt: invitation.createdAt.toISOString(),
@@ -859,12 +859,12 @@ export async function getBusinessInvitationDetails(invitationToken: string) {
       }
     }
   } catch (error) {
-    console.error('Error getting business invitation details:', error)
+    console.error('Error getting team invitation details:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to get invitation details' }
   }
 }
 
-export async function joinBusinessByInvitation(invitationToken: string) {
+export async function joinTeamByInvitation(invitationToken: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -876,7 +876,7 @@ export async function joinBusinessByInvitation(invitationToken: string) {
     const invitation = await prisma.businessInvitation.findUnique({
       where: { id: invitationToken },
       include: {
-        business: {
+        team: {
           select: {
             id: true,
             name: true,
@@ -905,32 +905,32 @@ export async function joinBusinessByInvitation(invitationToken: string) {
       throw new Error('This invitation was sent to a different email address')
     }
 
-    // Check if user is already a member of this business
-    if (invitation.business.traderIds.includes(user.id)) {
-      throw new Error('You are already a member of this business')
+    // Check if user is already a member of this team
+    if (invitation.team.traderIds.includes(user.id)) {
+      throw new Error('You are already a member of this team')
     }
 
-    // Accept the invitation by updating its status and adding user to business
+    // Accept the invitation by updating its status and adding user to team
     await prisma.$transaction([
       // Update invitation status
       prisma.businessInvitation.update({
         where: { id: invitationToken },
         data: { status: 'ACCEPTED' }
       }),
-      // Add user to business
-      prisma.business.update({
-        where: { id: invitation.businessId },
+      // Add user to team
+      prisma.team.update({
+        where: { id: invitation.teamId },
         data: {
-          traderIds: [...invitation.business.traderIds, user.id]
+          traderIds: [...invitation.team.traderIds, user.id]
         }
       })
     ])
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/business/dashboard')
+    revalidatePath('/team/dashboard')
     return { success: true }
   } catch (error) {
-    console.error('Error joining business by invitation:', error)
-    return { success: false, error: error instanceof Error ? error.message : 'Failed to join business' }
+    console.error('Error joining team by invitation:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to join team' }
   }
 }

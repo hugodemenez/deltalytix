@@ -11,7 +11,7 @@ import Link from "next/link"
 import { getI18n } from "@/locales/server"
 import type { Subscription } from '@prisma/client'
 
-export async function BusinessSubscriptionBadge({ 
+export async function TeamSubscriptionBadge({ 
   subscription,
   className 
 }: { 

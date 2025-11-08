@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     // Find the invitation
     const invitation = await prisma.businessInvitation.findUnique({
       where: { id: invitationId },
-      include: { business: true }
+      include: { team: true }
     })
 
     if (!invitation) {
@@ -60,11 +60,11 @@ export async function POST(req: Request) {
       )
     }
 
-    // Add user to the business
-    const updatedTraderIds = [...invitation.business.traderIds, user.id]
+    // Add user to the team
+    const updatedTraderIds = [...invitation.team.traderIds, user.id]
 
-    await prisma.business.update({
-      where: { id: invitation.businessId },
+    await prisma.team.update({
+      where: { id: invitation.teamId },
       data: {
         traderIds: updatedTraderIds,
       },
@@ -79,12 +79,12 @@ export async function POST(req: Request) {
     })
 
     return NextResponse.json(
-      { success: true, businessId: invitation.businessId },
+      { success: true, teamId: invitation.teamId },
       { status: 200 }
     )
 
   } catch (error) {
-    console.error('Error accepting business invitation:', error)
+    console.error('Error accepting team invitation:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

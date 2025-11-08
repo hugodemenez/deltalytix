@@ -1,15 +1,15 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { BusinessEquityGridClient } from '../../components/user-equity/business-equity-grid-client'
+import { TeamEquityGridClient } from '../../components/user-equity/team-equity-grid-client'
 
-interface BusinessDashboardPageProps {
+interface TeamDashboardPageProps {
   params: Promise<{
     slug: string
   }>
 }
 
-export default function BusinessDashboardPage({ params }: BusinessDashboardPageProps) {
+export default function TeamDashboardPage({ params }: TeamDashboardPageProps) {
   const [slug, setSlug] = useState<string>('')
 
   // Handle async params
@@ -23,9 +23,9 @@ export default function BusinessDashboardPage({ params }: BusinessDashboardPageP
   
   return (
     <div className="space-y-6">
-      {/* Business Equity Dashboard */}
+      {/* Team Equity Dashboard */}
       <Suspense fallback={<div>Loading dashboard...</div>}>
-        <BusinessEquityGridClient businessId={slug} />
+        <TeamEquityGridClient teamId={slug} />
       </Suspense>
     </div>
   )

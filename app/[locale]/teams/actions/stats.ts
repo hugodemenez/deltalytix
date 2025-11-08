@@ -388,17 +388,17 @@ export async function getIndividualUserEquityData(userId: string) {
   }
 }
 
-export async function getBusinessEquityData(businessId: string, page: number = 1, limit: number = 100) {
-  console.log(`Starting getBusinessEquityData for business ${businessId}`)
+export async function getTeamEquityData(teamId: string, page: number = 1, limit: number = 100) {
+  console.log(`Starting getTeamEquityData for team ${teamId}`)
 
-  // First, get the business to find trader IDs
-  const business = await prisma.business.findUnique({
-    where: { id: businessId },
+  // First, get the team to find trader IDs
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
     select: { traderIds: true }
   })
 
-  if (!business) {
-    console.error(`Business ${businessId} not found`)
+  if (!team) {
+    console.error(`Team ${teamId} not found`)
     return {
       users: [],
       totalUsers: 0,
@@ -406,9 +406,9 @@ export async function getBusinessEquityData(businessId: string, page: number = 1
     }
   }
 
-  console.log(`Found business with ${business.traderIds.length} traders`)
+  console.log(`Found team with ${team.traderIds.length} traders`)
 
-  if (business.traderIds.length === 0) {
+  if (team.traderIds.length === 0) {
     return {
       users: [],
       totalUsers: 0,
@@ -419,7 +419,7 @@ export async function getBusinessEquityData(businessId: string, page: number = 1
   // Apply pagination to trader IDs
   const startIndex = (page - 1) * limit
   const endIndex = startIndex + limit
-  const paginatedTraderIds = business.traderIds.slice(startIndex, endIndex)
+  const paginatedTraderIds = team.traderIds.slice(startIndex, endIndex)
 
   console.log(`Processing ${paginatedTraderIds.length} traders for page ${page}`)
 
@@ -526,11 +526,11 @@ export async function getBusinessEquityData(businessId: string, page: number = 1
     }
   }).filter(user => user.email !== 'Unknown' && user.email !== '')
 
-  console.log(`Returning ${userEquityData.length} users with equity data for business ${businessId}, page ${page}`)
+  console.log(`Returning ${userEquityData.length} users with equity data for team ${teamId}, page ${page}`)
   return {
     users: userEquityData,
-    totalUsers: business.traderIds.length,
-    hasMore: (page * limit) < business.traderIds.length
+    totalUsers: team.traderIds.length,
+    hasMore: (page * limit) < team.traderIds.length
   }
 }
 
@@ -551,28 +551,28 @@ function calculateMaxDrawdown(equityCurve: { cumulativePnL: number }[]): number 
   return maxDrawdown
 }
 
-export async function exportBusinessTradesAction(businessId: string): Promise<string> {
-  console.log(`Starting exportBusinessTradesAction for business ${businessId}`)
+export async function exportTeamTradesAction(teamId: string): Promise<string> {
+  console.log(`Starting exportTeamTradesAction for team ${teamId}`)
 
-  // Get the business to find trader IDs
-  const business = await prisma.business.findUnique({
-    where: { id: businessId },
+  // Get the team to find trader IDs
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
     select: { traderIds: true }
   })
 
-  if (!business) {
-    throw new Error(`Business ${businessId} not found`)
+  if (!team) {
+    throw new Error(`Team ${teamId} not found`)
   }
 
-  console.log(`Found business with ${business.traderIds.length} traders`)
+  console.log(`Found team with ${team.traderIds.length} traders`)
 
-  if (business.traderIds.length === 0) {
-    throw new Error('No traders found in this business')
+  if (team.traderIds.length === 0) {
+    throw new Error('No traders found in this team')
   }
 
   // Get user data from Supabase for all traders
   console.log('Fetching user data from Supabase...')
-  const userPromises = business.traderIds.map(userId => 
+  const userPromises = team.traderIds.map(userId => 
     supabase.auth.admin.getUserById(userId)
   )
   
@@ -594,7 +594,7 @@ export async function exportBusinessTradesAction(businessId: string): Promise<st
   const trades = await prisma.trade.findMany({
     where: {
       userId: {
-        in: business.traderIds
+        in: team.traderIds
       }
     },
     select: {

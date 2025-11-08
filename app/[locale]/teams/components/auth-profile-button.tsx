@@ -14,7 +14,7 @@ import {
 import Link from 'next/link'
 import { getI18n } from "@/locales/server"
 import { getUserProfileAction } from "@/server/user-profile"
-import { BusinessSubscriptionBadge } from './business-subscription-badge-client'
+import { TeamSubscriptionBadge } from './team-subscription-badge-client'
 import { LogoutButton } from './logout-button'
 
 
@@ -34,7 +34,7 @@ export async function AuthProfileButton() {
               {user?.email?.[0]}
             </AvatarFallback>
           </Avatar>
-          <BusinessSubscriptionBadge 
+          <TeamSubscriptionBadge 
             subscription={subscription} 
             className="absolute -bottom-1 -right-1 px-1 py-0 text-[10px] leading-3" 
           />

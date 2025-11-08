@@ -13,7 +13,7 @@ import Link from "next/link"
 import { useI18n } from "@/locales/client"
 import type { Subscription } from '@prisma/client'
 
-export function BusinessSubscriptionBadge({ 
+export function TeamSubscriptionBadge({ 
   subscription,
   className 
 }: { 

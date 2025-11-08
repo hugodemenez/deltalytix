@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { getBusinessEquityData, exportBusinessTradesAction } from '../../actions/stats'
+import { getTeamEquityData, exportTeamTradesAction } from '../../actions/stats'
 import { Suspense } from 'react'
 import { Card } from '@/components/ui/card'
 import { UserEquityChart } from '../../../admin/components/user-equity/user-equity-chart'
@@ -40,8 +40,8 @@ interface UserEquityData {
   }
 }
 
-interface BusinessEquityGridClientProps {
-  businessId: string
+interface TeamEquityGridClientProps {
+  teamId: string
 }
 
 interface Filters {
@@ -50,7 +50,7 @@ interface Filters {
   equityFilter: 'all' | 'positive' | 'negative'
 }
 
-export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClientProps) {
+export function TeamEquityGridClient({ teamId }: TeamEquityGridClientProps) {
   const t = useI18n()
   const [users, setUsers] = useState<UserEquityData[]>([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -97,7 +97,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
 
     setIsLoadingMore(true)
     try {
-      const data = await getBusinessEquityData(businessId, currentPage, 10)
+      const data = await getTeamEquityData(teamId, currentPage, 10)
       
       // Store the user data for rendering
       setUsers(prev => [...prev, ...data.users])
@@ -108,14 +108,14 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
     } finally {
       setIsLoadingMore(false)
     }
-  }, [businessId, currentPage, hasMore, isLoadingMore])
+  }, [teamId, currentPage, hasMore, isLoadingMore])
 
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
       setIsInitialLoading(true)
       try {
-        const data = await getBusinessEquityData(businessId, 1, 10)
+        const data = await getTeamEquityData(teamId, 1, 10)
         setUsers(data.users)
         setHasMore(data.hasMore)
         setCurrentPage(2)
@@ -127,7 +127,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
     }
 
     loadInitialData()
-  }, [businessId])
+  }, [teamId])
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -164,7 +164,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
   const handleExportTrades = async () => {
     setIsExporting(true)
     try {
-      const csv = await exportBusinessTradesAction(businessId)
+      const csv = await exportTeamTradesAction(teamId)
       
       // Create a blob and download the CSV
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -172,17 +172,17 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
       const url = URL.createObjectURL(blob)
       
       link.setAttribute('href', url)
-      link.setAttribute('download', `business-trades-${businessId}-${new Date().toISOString().split('T')[0]}.csv`)
+      link.setAttribute('download', `team-trades-${teamId}-${new Date().toISOString().split('T')[0]}.csv`)
       link.style.visibility = 'hidden'
       
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       
-      toast.success(t('business.equity.exportSuccess'))
+      toast.success(t('team.equity.exportSuccess'))
     } catch (error) {
       console.error('Error exporting trades:', error)
-      toast.error(t('business.equity.exportError'))
+      toast.error(t('team.equity.exportError'))
     } finally {
       setIsExporting(false)
     }
@@ -211,10 +211,10 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
               onCheckedChange={setShowDailyView}
             />
             <Label htmlFor="view-mode" className="text-sm font-medium">
-              {showDailyView ? t('business.equity.dailyView') : t('business.equity.tradeView')}
+              {showDailyView ? t('team.equity.dailyView') : t('team.equity.tradeView')}
             </Label>
             <span className="text-xs text-muted-foreground ml-2">
-              {showDailyView ? t('business.equity.groupedByDay') : t('business.equity.individualTrades')}
+              {showDailyView ? t('team.equity.groupedByDay') : t('team.equity.individualTrades')}
             </span>
           </div>
           
@@ -227,7 +227,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
               className="flex items-center gap-2"
             >
               <Download className="h-4 w-4" />
-              {isExporting ? t('business.equity.exporting') : t('business.equity.exportTrades')}
+              {isExporting ? t('team.equity.exporting') : t('team.equity.exportTrades')}
             </Button>
             
             <Button
@@ -237,7 +237,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
               className="flex items-center gap-2"
             >
               <Filter className="h-4 w-4" />
-              {t('business.equity.filters')}
+              {t('team.equity.filters')}
               {hasActiveFilters && (
                 <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               )}
@@ -249,7 +249,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
         {showFilters && (
           <Card className="p-4 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium">{t('business.equity.filters')}</h3>
+              <h3 className="text-sm font-medium">{t('team.equity.filters')}</h3>
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
@@ -258,7 +258,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
                   className="flex items-center gap-1 text-xs"
                 >
                   <X className="h-3 w-3" />
-                  {t('business.equity.clear')}
+                  {t('team.equity.clear')}
                 </Button>
               )}
             </div>
@@ -266,7 +266,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Minimum Trades */}
               <div className="space-y-2">
-                <Label htmlFor="min-trades" className="text-xs">{t('business.equity.minimumTrades')}</Label>
+                <Label htmlFor="min-trades" className="text-xs">{t('team.equity.minimumTrades')}</Label>
                 <Input
                   id="min-trades"
                   type="number"
@@ -280,7 +280,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
 
               {/* Minimum Traded Days */}
               <div className="space-y-2">
-                <Label htmlFor="min-days" className="text-xs">{t('business.equity.minimumTradedDays')}</Label>
+                <Label htmlFor="min-days" className="text-xs">{t('team.equity.minimumTradedDays')}</Label>
                 <Input
                   id="min-days"
                   type="number"
@@ -294,7 +294,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
 
               {/* Equity Filter */}
               <div className="space-y-2">
-                <Label htmlFor="equity-filter" className="text-xs">{t('business.equity.equity')}</Label>
+                <Label htmlFor="equity-filter" className="text-xs">{t('team.equity.equity')}</Label>
                 <Select
                   value={filters.equityFilter}
                   onValueChange={(value: 'all' | 'positive' | 'negative') => 
@@ -305,9 +305,9 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">{t('business.equity.all')}</SelectItem>
-                    <SelectItem value="positive">{t('business.equity.positive')}</SelectItem>
-                    <SelectItem value="negative">{t('business.equity.negative')}</SelectItem>
+                    <SelectItem value="all">{t('team.equity.all')}</SelectItem>
+                    <SelectItem value="positive">{t('team.equity.positive')}</SelectItem>
+                    <SelectItem value="negative">{t('team.equity.negative')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -315,7 +315,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
 
             {/* Results Summary */}
             <div className="text-xs text-muted-foreground">
-              {hasActiveFilters && ` (${t('business.equity.filteredFrom')} ${users.length} ${t('business.equity.total')})`}
+              {hasActiveFilters && ` (${t('team.equity.filteredFrom')} ${users.length} ${t('team.equity.total')})`}
             </div>
           </Card>
         )}
@@ -340,7 +340,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
                       {new Date(user.createdAt).toLocaleDateString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {(t as any)('business.equity.tradeStats', { 
+                      {(t as any)('team.equity.tradeStats', { 
                         days: tradedDays, 
                         trades: user.statistics.totalTrades 
                       })}
@@ -355,11 +355,11 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
                       {user.statistics.totalPnL >= 0 ? '+' : ''}{user.statistics.totalPnL.toFixed(2)}
                     </div>
                     <Link 
-                      href={`/business/dashboard/trader/${user.userId}`}
+                      href={`/team/dashboard/trader/${user.userId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1 hover:bg-gray-100 rounded transition-colors"
-                      title={t('business.equity.viewTraderDetails')}
+                      title={t('team.equity.viewTraderDetails')}
                     >
                       <ExternalLink className="h-4 w-4 text-gray-500 hover:text-gray-700" />
                     </Link>
@@ -378,15 +378,15 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="space-y-1">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('business.equity.trades')}:</span>
+                      <span className="text-muted-foreground">{t('team.equity.trades')}:</span>
                       <span className="font-medium">{user.statistics.totalTrades}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('business.equity.winRate')}:</span>
+                      <span className="text-muted-foreground">{t('team.equity.winRate')}:</span>
                       <span className="font-medium">{user.statistics.winRate.toFixed(1)}%</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('business.equity.avgWin')}:</span>
+                      <span className="text-muted-foreground">{t('team.equity.avgWin')}:</span>
                       <span className="font-medium text-green-600">
                         {user.statistics.averageWin.toFixed(2)}
                       </span>
@@ -394,15 +394,15 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
                   </div>
                   <div className="space-y-1">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('business.equity.wins')}:</span>
+                      <span className="text-muted-foreground">{t('team.equity.wins')}:</span>
                       <span className="font-medium text-green-600">{user.statistics.winningTrades}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('business.equity.losses')}:</span>
+                      <span className="text-muted-foreground">{t('team.equity.losses')}:</span>
                       <span className="font-medium text-red-600">{user.statistics.losingTrades}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('business.equity.avgLoss')}:</span>
+                      <span className="text-muted-foreground">{t('team.equity.avgLoss')}:</span>
                       <span className="font-medium text-red-600">
                         {user.statistics.averageLoss.toFixed(2)}
                       </span>
@@ -414,13 +414,13 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
                 <div className="pt-2 border-t">
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('business.equity.maxDD')}:</span>
+                      <span className="text-muted-foreground">{t('team.equity.maxDD')}:</span>
                       <span className="font-medium text-red-600">
                         {user.statistics.maxDrawdown.toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">{t('business.equity.profitFactor')}:</span>
+                      <span className="text-muted-foreground">{t('team.equity.profitFactor')}:</span>
                       <span className="font-medium">
                         {user.statistics.profitFactor.toFixed(2)}
                       </span>
@@ -440,7 +440,7 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
               <div className="h-8 bg-gray-200 rounded w-32"></div>
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground">{t('business.equity.scrollToLoadMore')}</div>
+            <div className="text-sm text-muted-foreground">{t('team.equity.scrollToLoadMore')}</div>
           )}
         </div>
       )}
@@ -448,14 +448,14 @@ export function BusinessEquityGridClient({ businessId }: BusinessEquityGridClien
       {/* End of results */}
       {!hasMore && filteredUsers.length > 0 && (
         <div className="text-center py-4 text-sm text-muted-foreground">
-          {t('business.equity.noMoreUsers')}
+          {t('team.equity.noMoreUsers')}
         </div>
       )}
 
       {/* No results */}
       {!isInitialLoading && filteredUsers.length === 0 && (
         <div className="text-center py-8 text-sm text-muted-foreground">
-          {t('business.equity.noUsersFound')}
+          {t('team.equity.noUsersFound')}
         </div>
       )}
     </>

@@ -117,24 +117,24 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  joinBusiness,
-  leaveBusiness,
-  getUserBusinesses,
-  addManagerToBusiness,
-  removeManagerFromBusiness,
+  joinTeam,
+  leaveTeam,
+  getUserTeams,
+  addManagerToTeam,
+  removeManagerFromTeam,
   updateManagerAccess,
-  getUserBusinessAccess,
-  deleteBusiness,
-  renameBusiness,
-  sendBusinessInvitation,
-  getBusinessInvitations,
-  removeTraderFromBusiness,
-  cancelBusinessInvitation
+  getUserTeamAccess,
+  deleteTeam,
+  renameTeam,
+  sendTeamInvitation,
+  getTeamInvitations,
+  removeTraderFromTeam,
+  cancelTeamInvitation
 } from '@/app/[locale]/dashboard/settings/actions'
 import { redirect, usePathname } from 'next/navigation'
 import Link from 'next/link'
 
-interface Business {
+interface Team {
   id: string
   name: string
   userId: string
@@ -146,89 +146,89 @@ interface Business {
   userAccess?: string
 }
 
-interface ManagedBusiness extends Business {
+interface ManagedTeam extends Team {
   userAccess: string
 }
 
-interface BusinessManagementProps {
+interface TeamManagementProps {
   // Event handlers
-  onBusinessClick?: (business: Business) => void
-  onManageClick?: (business: Business) => void
-  onViewClick?: (business: Business) => void
+  onBusinessClick?: (team: Team) => void
+  onManageClick?: (team: Team) => void
+  onViewClick?: (team: Team) => void
 }
 
-export function BusinessManagement({
+export function TeamManagement({
   onBusinessClick,
   onManageClick,
   onViewClick,
-}: BusinessManagementProps) {
+}: TeamManagementProps) {
 
   const pathname = usePathname()
   const [firstBusinessId, setFirstBusinessId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadInitialData = async () => {
-      // If we are not yet on a business dashboard, we try to redirect to the first business
-      if (!pathname.endsWith('/business/dashboard')) {
+      // If we are not yet on a team dashboard, we try to redirect to the first team
+      if (!pathname.endsWith('/team/dashboard')) {
         return;
       }
-      // Get user's businesses
-      const businessesResult = await getUserBusinesses()
-      const managedResult = await getUserBusinessAccess()
+      // Get user's teams
+      const teamsResult = await getUserTeams()
+      const managedResult = await getUserTeamAccess()
 
-      if (businessesResult.success) {
-        // Check owned businesses first
-        if (businessesResult.ownedBusinesses && businessesResult.ownedBusinesses.length > 0) {
-          setFirstBusinessId(businessesResult.ownedBusinesses[0].id)
+      if (teamsResult.success) {
+        // Check owned teams first
+        if (teamsResult.ownedBusinesses && teamsResult.ownedBusinesses.length > 0) {
+          setFirstBusinessId(teamsResult.ownedBusinesses[0].id)
           return
         }
-        // If no owned businesses, check joined businesses
-        else if (businessesResult.joinedBusinesses && businessesResult.joinedBusinesses.length > 0) {
-          setFirstBusinessId(businessesResult.joinedBusinesses[0].id)
+        // If no owned teams, check joined teams
+        else if (teamsResult.joinedBusinesses && teamsResult.joinedBusinesses.length > 0) {
+          setFirstBusinessId(teamsResult.joinedBusinesses[0].id)
           return
         }
       }
 
-      // If still no business found, check managed businesses
+      // If still no team found, check managed teams
       if (!firstBusinessId && managedResult.success && managedResult.managedBusinesses && managedResult.managedBusinesses.length > 0) {
         setFirstBusinessId(managedResult.managedBusinesses[0].id)
       }
 
     }
     loadInitialData()
-    // If we found a business, redirect to it
+    // If we found a team, redirect to it
     if (firstBusinessId) {
-      redirect(`/business/dashboard/${firstBusinessId}`)
+      redirect(`/team/dashboard/${firstBusinessId}`)
     }
   }, [firstBusinessId, pathname])
   const t = useI18n()
   const { currency, symbol } = useCurrency()
 
   // Get subscription price based on detected currency
-  const subscriptionPrice = currency === 'EUR' ? '€500/month per business' : '$500/month per business'
+  const subscriptionPrice = currency === 'EUR' ? '€500/month per team' : '$500/month per team'
 
   // Get subscription features from translations
   const subscriptionFeatures = [
-    t('business.management.teamCollaboration'),
-    t('business.management.sharedAnalytics'),
-    t('business.management.managerAccessControls'),
-    t('business.management.businessReporting')
+    t('team.management.teamCollaboration'),
+    t('team.management.sharedAnalytics'),
+    t('team.management.managerAccessControls'),
+    t('team.management.businessReporting')
   ]
 
   // State
   const [userBusinesses, setUserBusinesses] = useState<{
-    ownedBusinesses: Business[]
-    joinedBusinesses: Business[]
+    ownedBusinesses: Team[]
+    joinedBusinesses: Team[]
   }>({ ownedBusinesses: [], joinedBusinesses: [] })
 
-  const [managedBusinesses, setManagedBusinesses] = useState<ManagedBusiness[]>([])
+  const [managedBusinesses, setManagedBusinesses] = useState<ManagedTeam[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [joinDialogOpen, setJoinDialogOpen] = useState(false)
   const [manageDialogOpen, setManageDialogOpen] = useState(false)
-  const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null)
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
 
   // Form states
   const [newBusinessName, setNewBusinessName] = useState('')
@@ -248,31 +248,31 @@ export function BusinessManagement({
   const loadBusinessData = async () => {
     setIsLoading(true)
     try {
-      // Load owned and joined businesses
-      const businessesResult = await getUserBusinesses()
-      if (businessesResult.success) {
+      // Load owned and joined teams
+      const teamsResult = await getUserTeams()
+      if (teamsResult.success) {
         setUserBusinesses({
-          ownedBusinesses: businessesResult.ownedBusinesses || [],
-          joinedBusinesses: businessesResult.joinedBusinesses || [],
+          ownedBusinesses: teamsResult.ownedBusinesses || [],
+          joinedBusinesses: teamsResult.joinedBusinesses || [],
         })
       }
 
-      // Load managed businesses
-      const managedResult = await getUserBusinessAccess()
+      // Load managed teams
+      const managedResult = await getUserTeamAccess()
       if (managedResult.success) {
         setManagedBusinesses(managedResult.managedBusinesses || [])
       }
     } catch (error) {
-      console.error('Error loading business data:', error)
-      toast.error(t('dashboard.business.error'))
+      console.error('Error loading team data:', error)
+      toast.error(t('dashboard.team.error'))
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleCreateBusiness = async () => {
+  const handleCreateTeam = async () => {
     if (!newBusinessName.trim()) {
-      toast.error('Business name is required')
+      toast.error('Team name is required')
       return
     }
 
@@ -281,85 +281,85 @@ export function BusinessManagement({
       // Create a form and submit it directly to the Stripe checkout endpoint
       const form = document.createElement('form')
       form.method = 'POST'
-      form.action = '/api/stripe/create-business-checkout-session'
+      form.action = '/api/stripe/create-team-checkout-session'
 
-      const businessNameInput = document.createElement('input')
-      businessNameInput.type = 'hidden'
-      businessNameInput.name = 'businessName'
-      businessNameInput.value = newBusinessName.trim()
+      const teamNameInput = document.createElement('input')
+      teamNameInput.type = 'hidden'
+      teamNameInput.name = 'teamName'
+      teamNameInput.value = newBusinessName.trim()
 
       const currencyInput = document.createElement('input')
       currencyInput.type = 'hidden'
       currencyInput.name = 'currency'
       currencyInput.value = currency
 
-      form.appendChild(businessNameInput)
+      form.appendChild(teamNameInput)
       form.appendChild(currencyInput)
       document.body.appendChild(form)
       form.submit()
     } catch (error) {
-      console.error('Error creating business:', error)
-      toast.error(t('dashboard.business.error'))
+      console.error('Error creating team:', error)
+      toast.error(t('dashboard.team.error'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleJoinBusiness = async () => {
+  const handleJoinTeam = async () => {
     if (!joinBusinessId.trim()) {
-      toast.error('Business ID is required')
+      toast.error('Team ID is required')
       return
     }
 
     setIsSubmitting(true)
     try {
-      const result = await joinBusiness(joinBusinessId.trim())
+      const result = await joinTeam(joinBusinessId.trim())
       if (result.success) {
-        toast.success('Joined business successfully')
+        toast.success('Joined team successfully')
         setJoinDialogOpen(false)
         setJoinBusinessId('')
         await loadBusinessData()
       } else {
-        toast.error(result.error || t('dashboard.business.error'))
+        toast.error(result.error || t('dashboard.team.error'))
       }
     } catch (error) {
-      console.error('Error joining business:', error)
-      toast.error(t('dashboard.business.error'))
+      console.error('Error joining team:', error)
+      toast.error(t('dashboard.team.error'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleLeaveBusiness = async (businessId: string) => {
+  const handleLeaveTeam = async (teamId: string) => {
     try {
-      const result = await leaveBusiness(businessId)
+      const result = await leaveTeam(teamId)
       if (result.success) {
-        toast.success(t('dashboard.business.leaveSuccess'))
+        toast.success(t('dashboard.team.leaveSuccess'))
         await loadBusinessData()
       } else {
-        toast.error(result.error || t('dashboard.business.error'))
+        toast.error(result.error || t('dashboard.team.error'))
       }
     } catch (error) {
-      console.error('Error leaving business:', error)
-      toast.error(t('dashboard.business.error'))
+      console.error('Error leaving team:', error)
+      toast.error(t('dashboard.team.error'))
     }
   }
 
   const handleAddManager = async () => {
     if (!newManagerEmail.trim()) {
-      toast.error(t('dashboard.business.managerEmail'))
+      toast.error(t('dashboard.team.managerEmail'))
       return
     }
 
-    if (!selectedBusiness) return
+    if (!selectedTeam) return
 
     setIsSubmitting(true)
     try {
-      const result = await addManagerToBusiness(selectedBusiness.id, newManagerEmail.trim(), newManagerAccess)
+      const result = await addManagerToTeam(selectedTeam.id, newManagerEmail.trim(), newManagerAccess)
       if (result.success) {
-        toast.success(t('dashboard.business.managerAdded'))
+        toast.success(t('dashboard.team.managerAdded'))
 
-        // Update the selected business locally
+        // Update the selected team locally
         const newManager = {
           id: `temp-${Date.now()}`, // Temporary ID
           managerId: 'temp-manager-id', // This will be updated when we reload the data
@@ -367,31 +367,31 @@ export function BusinessManagement({
           email: newManagerEmail.trim(),
         }
 
-        const updatedSelectedBusiness = {
-          ...selectedBusiness,
-          managers: [...selectedBusiness.managers, newManager]
+        const updatedSelectedTeam = {
+          ...selectedTeam,
+          managers: [...selectedTeam.managers, newManager]
         }
-        setSelectedBusiness(updatedSelectedBusiness)
+        setSelectedTeam(updatedSelectedTeam)
 
-        // Update the businesses in the main state to keep everything in sync
+        // Update the teams in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          ownedBusinesses: prev.ownedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          joinedBusinesses: prev.joinedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           )
         }))
 
         setManagedBusinesses(prev =>
-          prev.map(business =>
-            business.id === selectedBusiness.id
-              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
-              : business
+          prev.map(team =>
+            team.id === selectedTeam.id
+              ? { ...updatedSelectedTeam, userAccess: team.userAccess }
+              : team
           )
         )
 
@@ -401,215 +401,215 @@ export function BusinessManagement({
         // Note: We don't reload data immediately to keep the dialog open
         // Data will be refreshed when the dialog is closed or when needed
       } else {
-        toast.error(result.error || t('dashboard.business.error'))
+        toast.error(result.error || t('dashboard.team.error'))
       }
     } catch (error) {
       console.error('Error adding manager:', error)
-      toast.error(t('dashboard.business.error'))
+      toast.error(t('dashboard.team.error'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleRemoveManager = async (managerId: string) => {
-    if (!selectedBusiness) return
+    if (!selectedTeam) return
 
     try {
-      const result = await removeManagerFromBusiness(selectedBusiness.id, managerId)
+      const result = await removeManagerFromTeam(selectedTeam.id, managerId)
       if (result.success) {
-        toast.success(t('dashboard.business.managerRemoved'))
+        toast.success(t('dashboard.team.managerRemoved'))
 
-        // Update the selected business locally
-        const updatedSelectedBusiness = {
-          ...selectedBusiness,
-          managers: selectedBusiness.managers.filter(manager => manager.managerId !== managerId)
+        // Update the selected team locally
+        const updatedSelectedTeam = {
+          ...selectedTeam,
+          managers: selectedTeam.managers.filter(manager => manager.managerId !== managerId)
         }
-        setSelectedBusiness(updatedSelectedBusiness)
+        setSelectedTeam(updatedSelectedTeam)
 
-        // Update the businesses in the main state to keep everything in sync
+        // Update the teams in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          ownedBusinesses: prev.ownedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          joinedBusinesses: prev.joinedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           )
         }))
 
         setManagedBusinesses(prev =>
-          prev.map(business =>
-            business.id === selectedBusiness.id
-              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
-              : business
+          prev.map(team =>
+            team.id === selectedTeam.id
+              ? { ...updatedSelectedTeam, userAccess: team.userAccess }
+              : team
           )
         )
 
         // Note: We don't reload data immediately to keep the dialog open
         // Data will be refreshed when the dialog is closed
       } else {
-        toast.error(result.error || t('dashboard.business.error'))
+        toast.error(result.error || t('dashboard.team.error'))
       }
     } catch (error) {
       console.error('Error removing manager:', error)
-      toast.error(t('dashboard.business.error'))
+      toast.error(t('dashboard.team.error'))
     }
   }
 
   const handleUpdateManagerAccess = async (managerId: string, access: 'admin' | 'viewer') => {
-    if (!selectedBusiness) return
+    if (!selectedTeam) return
 
     try {
-      const result = await updateManagerAccess(selectedBusiness.id, managerId, access)
+      const result = await updateManagerAccess(selectedTeam.id, managerId, access)
       if (result.success) {
-        toast.success(t('dashboard.business.accessUpdated'))
+        toast.success(t('dashboard.team.accessUpdated'))
 
-        // Update the selected business locally
-        const updatedSelectedBusiness = {
-          ...selectedBusiness,
-          managers: selectedBusiness.managers.map(manager =>
+        // Update the selected team locally
+        const updatedSelectedTeam = {
+          ...selectedTeam,
+          managers: selectedTeam.managers.map(manager =>
             manager.managerId === managerId
               ? { ...manager, access }
               : manager
           )
         }
-        setSelectedBusiness(updatedSelectedBusiness)
+        setSelectedTeam(updatedSelectedTeam)
 
-        // Update the businesses in the main state to keep everything in sync
+        // Update the teams in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          ownedBusinesses: prev.ownedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          joinedBusinesses: prev.joinedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           )
         }))
 
         setManagedBusinesses(prev =>
-          prev.map(business =>
-            business.id === selectedBusiness.id
-              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
-              : business
+          prev.map(team =>
+            team.id === selectedTeam.id
+              ? { ...updatedSelectedTeam, userAccess: team.userAccess }
+              : team
           )
         )
 
         // Note: We don't reload data immediately to keep the dialog open
         // Data will be refreshed when the dialog is closed or when needed
       } else {
-        toast.error(result.error || t('dashboard.business.error'))
+        toast.error(result.error || t('dashboard.team.error'))
       }
     } catch (error) {
       console.error('Error updating manager access:', error)
-      toast.error(t('dashboard.business.error'))
+      toast.error(t('dashboard.team.error'))
     }
   }
 
-  const handleDeleteBusiness = async (businessId: string) => {
+  const handleDeleteTeam = async (teamId: string) => {
     try {
-      const result = await deleteBusiness(businessId)
+      const result = await deleteTeam(teamId)
       if (result.success) {
-        toast.success('Business deleted successfully')
+        toast.success('Team deleted successfully')
         await loadBusinessData()
       } else {
-        toast.error(result.error || 'Failed to delete business')
+        toast.error(result.error || 'Failed to delete team')
       }
     } catch (error) {
-      console.error('Error deleting business:', error)
-      toast.error('Failed to delete business')
+      console.error('Error deleting team:', error)
+      toast.error('Failed to delete team')
     }
   }
 
-  const handleRenameBusiness = async () => {
-    if (!selectedBusiness || !renameBusinessName.trim()) {
-      toast.error(t('business.rename.nameRequired'))
+  const handleRenameTeam = async () => {
+    if (!selectedTeam || !renameBusinessName.trim()) {
+      toast.error(t('team.rename.nameRequired'))
       return
     }
 
     setIsSubmitting(true)
     try {
-      const result = await renameBusiness(selectedBusiness.id, renameBusinessName.trim())
+      const result = await renameTeam(selectedTeam.id, renameBusinessName.trim())
       if (result.success) {
-        toast.success(t('business.rename.success'))
+        toast.success(t('team.rename.success'))
 
-        // Update the selected business name locally
-        const updatedSelectedBusiness = {
-          ...selectedBusiness,
+        // Update the selected team name locally
+        const updatedSelectedTeam = {
+          ...selectedTeam,
           name: renameBusinessName.trim()
         }
-        setSelectedBusiness(updatedSelectedBusiness)
+        setSelectedTeam(updatedSelectedTeam)
 
-        // Update the businesses in the main state to keep everything in sync
+        // Update the teams in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          ownedBusinesses: prev.ownedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          joinedBusinesses: prev.joinedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           )
         }))
 
         setManagedBusinesses(prev =>
-          prev.map(business =>
-            business.id === selectedBusiness.id
-              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
-              : business
+          prev.map(team =>
+            team.id === selectedTeam.id
+              ? { ...updatedSelectedTeam, userAccess: team.userAccess }
+              : team
           )
         )
 
         // Keep the modal open and reset the rename input
         setRenameBusinessName('')
       } else {
-        toast.error(result.error || t('business.rename.error'))
+        toast.error(result.error || t('team.rename.error'))
       }
     } catch (error) {
-      console.error('Error renaming business:', error)
-      toast.error(t('business.rename.error'))
+      console.error('Error renaming team:', error)
+      toast.error(t('team.rename.error'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleAddTrader = async () => {
-    if (!selectedBusiness || !newTraderEmail.trim()) {
-      toast.error(t('business.traders.add.emailRequired'))
+    if (!selectedTeam || !newTraderEmail.trim()) {
+      toast.error(t('team.traders.add.emailRequired'))
       return
     }
 
     setIsSubmitting(true)
     try {
-      const result = await sendBusinessInvitation(selectedBusiness.id, newTraderEmail.trim())
+      const result = await sendTeamInvitation(selectedTeam.id, newTraderEmail.trim())
       if (result.success) {
-        toast.success(t('business.invitations.sent'))
+        toast.success(t('team.invitations.sent'))
         setNewTraderEmail('')
-        // Only reload pending invitations, no need to reload all business data
+        // Only reload pending invitations, no need to reload all team data
         await loadPendingInvitations()
       } else {
-        toast.error(result.error || t('business.traders.add.error'))
+        toast.error(result.error || t('team.traders.add.error'))
       }
     } catch (error) {
       console.error('Error adding trader:', error)
-      toast.error(t('business.traders.add.error'))
+      toast.error(t('team.traders.add.error'))
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const loadPendingInvitations = async () => {
-    if (!selectedBusiness) return
+    if (!selectedTeam) return
 
     try {
-      const result = await getBusinessInvitations(selectedBusiness.id)
+      const result = await getTeamInvitations(selectedTeam.id)
       if (result.success) {
         setPendingInvitations(result.invitations || [])
       }
@@ -619,65 +619,65 @@ export function BusinessManagement({
   }
 
   const handleRemoveTrader = async (traderId: string) => {
-    if (!selectedBusiness) return
+    if (!selectedTeam) return
 
     try {
-      const removeResult = await removeTraderFromBusiness(selectedBusiness.id, traderId)
+      const removeResult = await removeTraderFromTeam(selectedTeam.id, traderId)
       if (removeResult.success) {
         toast.success('Trader removed successfully')
 
-        // Update the selected business locally
-        const updatedSelectedBusiness = {
-          ...selectedBusiness,
-          traderIds: selectedBusiness.traderIds.filter(id => id !== traderId),
-          traders: selectedBusiness.traders.filter(trader => trader.id !== traderId)
+        // Update the selected team locally
+        const updatedSelectedTeam = {
+          ...selectedTeam,
+          traderIds: selectedTeam.traderIds.filter(id => id !== traderId),
+          traders: selectedTeam.traders.filter(trader => trader.id !== traderId)
         }
-        setSelectedBusiness(updatedSelectedBusiness)
+        setSelectedTeam(updatedSelectedTeam)
 
-        // Update the businesses in the main state to keep everything in sync
+        // Update the teams in the main state to keep everything in sync
         setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          ownedBusinesses: prev.ownedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(business =>
-            business.id === selectedBusiness.id
+          joinedBusinesses: prev.joinedBusinesses.map(team =>
+            team.id === selectedTeam.id
               ? updatedSelectedBusiness
-              : business
+              : team
           )
         }))
 
         setManagedBusinesses(prev =>
-          prev.map(business =>
-            business.id === selectedBusiness.id
-              ? { ...updatedSelectedBusiness, userAccess: business.userAccess }
-              : business
+          prev.map(team =>
+            team.id === selectedTeam.id
+              ? { ...updatedSelectedTeam, userAccess: team.userAccess }
+              : team
           )
         )
       } else {
-        toast.error(removeResult.error || t('dashboard.business.error'))
+        toast.error(removeResult.error || t('dashboard.team.error'))
       }
     } catch (error) {
       console.error('Error removing trader:', error)
-      toast.error(t('dashboard.business.error'))
+      toast.error(t('dashboard.team.error'))
     }
   }
 
   const handleCancelInvitation = async (invitationId: string) => {
-    if (!selectedBusiness) return
+    if (!selectedTeam) return
 
     try {
-      const cancelResult = await cancelBusinessInvitation(selectedBusiness.id, invitationId)
+      const cancelResult = await cancelTeamInvitation(selectedTeam.id, invitationId)
       if (cancelResult.success) {
         toast.success('Invitation canceled successfully')
         await loadPendingInvitations()
       } else {
-        toast.error(cancelResult.error || t('dashboard.business.error'))
+        toast.error(cancelResult.error || t('dashboard.team.error'))
       }
     } catch (error) {
       console.error('Error canceling invitation:', error)
-      toast.error(t('dashboard.business.error'))
+      toast.error(t('dashboard.team.error'))
     }
   }
 
@@ -697,13 +697,13 @@ export function BusinessManagement({
 
   const getAccessLabel = (access: string, isOwner: boolean) => {
     if (isOwner) {
-      return t('dashboard.business.owner')
+      return t('dashboard.team.owner')
     }
     switch (access) {
       case 'admin':
-        return t('dashboard.business.admin')
+        return t('dashboard.team.admin')
       case 'viewer':
-        return t('dashboard.business.viewer')
+        return t('dashboard.team.viewer')
       default:
         return access
     }
@@ -719,25 +719,25 @@ export function BusinessManagement({
     return 'Unknown date'
   }
 
-  // Deduplicate businesses to prevent showing the same business twice
-  const allBusinesses = new Map<string, Business>()
+  // Deduplicate teams to prevent showing the same team twice
+  const allBusinesses = new Map<string, Team>()
 
-  // Add owned businesses first (highest priority)
-  userBusinesses.ownedBusinesses.forEach(business => {
-    allBusinesses.set(business.id, { ...business, userAccess: 'admin' })
+  // Add owned teams first (highest priority)
+  userBusinesses.ownedBusinesses.forEach(team => {
+    allBusinesses.set(team.id, { ...team, userAccess: 'admin' })
   })
 
-  // Add joined businesses (medium priority)
-  userBusinesses.joinedBusinesses.forEach(business => {
-    if (!allBusinesses.has(business.id)) {
-      allBusinesses.set(business.id, { ...business, userAccess: 'viewer' })
+  // Add joined teams (medium priority)
+  userBusinesses.joinedBusinesses.forEach(team => {
+    if (!allBusinesses.has(team.id)) {
+      allBusinesses.set(team.id, { ...team, userAccess: 'viewer' })
     }
   })
 
-  // Add managed businesses (lowest priority - only if not already added)
-  managedBusinesses.forEach(business => {
-    if (!allBusinesses.has(business.id)) {
-      allBusinesses.set(business.id, business)
+  // Add managed teams (lowest priority - only if not already added)
+  managedBusinesses.forEach(team => {
+    if (!allBusinesses.has(team.id)) {
+      allBusinesses.set(team.id, team)
     }
   })
 
@@ -757,22 +757,22 @@ export function BusinessManagement({
     <div className="mx-auto py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{t('business.management.component.title')}</h1>
-        <p className="text-muted-foreground mt-2">{t('business.management.component.description')}</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('team.management.component.title')}</h1>
+        <p className="text-muted-foreground mt-2">{t('team.management.component.description')}</p>
       </div>
 
 
       {/* Businesses Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredBusinesses.map((business) => {
-          const isOwner = userBusinesses.ownedBusinesses.some(b => b.id === business.id)
-          const isJoined = userBusinesses.joinedBusinesses.some(b => b.id === business.id)
-          const isManaged = managedBusinesses.some(b => b.id === business.id)
-          const access = business.userAccess || (isOwner ? 'admin' : 'viewer')
-          const isActive = pathname.includes(`/business/dashboard/${business.id}`)
+        {filteredBusinesses.map((team) => {
+          const isOwner = userBusinesses.ownedBusinesses.some(b => b.id === team.id)
+          const isJoined = userBusinesses.joinedBusinesses.some(b => b.id === team.id)
+          const isManaged = managedBusinesses.some(b => b.id === team.id)
+          const access = team.userAccess || (isOwner ? 'admin' : 'viewer')
+          const isActive = pathname.includes(`/team/dashboard/${team.id}`)
 
           return (
-            <Card key={business.id} className={cn(
+            <Card key={team.id} className={cn(
               "cursor-pointer transition-colors shadow-xs hover:shadow-md",
               isActive 
                 ? "border-primary ring-2 ring-primary/20" 
@@ -790,10 +790,10 @@ export function BusinessManagement({
                         "text-sm truncate flex items-center gap-2",
                         isActive && "text-primary"
                       )}>
-                        {business.name}
+                        {team.name}
                         {isActive && (
                           <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
-                            {t('business.management.active')}
+                            {t('team.management.active')}
                           </Badge>
                         )}
                       </CardTitle>
@@ -806,13 +806,13 @@ export function BusinessManagement({
               </CardHeader>
               <CardContent className="pt-0 space-y-3">
                 <div className="flex justify-between items-baseline text-sm">
-                  <span className="text-muted-foreground">{t('dashboard.business.traders')}</span>
-                  <span className="font-medium">{business.traderIds.length}</span>
+                  <span className="text-muted-foreground">{t('dashboard.team.traders')}</span>
+                  <span className="font-medium">{team.traderIds.length}</span>
                 </div>
 
                 <div className="flex justify-between items-baseline text-sm">
-                  <span className="text-muted-foreground">{t('business.management.created')}</span>
-                  <span className="text-xs">{formatDate(business.createdAt)}</span>
+                  <span className="text-muted-foreground">{t('team.management.created')}</span>
+                  <span className="text-xs">{formatDate(team.createdAt)}</span>
                 </div>
 
                 <Separator />
@@ -825,8 +825,8 @@ export function BusinessManagement({
                         size="sm"
                         className="flex-1 text-xs"
                         onClick={async () => {
-                          setSelectedBusiness(business)
-                          setRenameBusinessName(business.name)
+                          setSelectedTeam(team)
+                          setRenameBusinessName(team.name)
                           setManageDialogOpen(true)
                           // Load pending invitations when dialog opens
                           setTimeout(async () => {
@@ -835,7 +835,7 @@ export function BusinessManagement({
                         }}
                       >
                         <Settings className="h-3 w-3 mr-1" />
-                        {t('business.management.manage')}
+                        {t('team.management.manage')}
                       </Button>
                       <Button
                         asChild
@@ -843,9 +843,9 @@ export function BusinessManagement({
                         size="sm"
                         className="flex-1 text-xs"
                       >
-                        <Link href={`/business/dashboard/${business.id}`} className="flex items-center">
+                        <Link href={`/team/dashboard/${team.id}`} className="flex items-center">
                           <Eye className="h-3 w-3 mr-1" />
-                          {t('business.dashboard.view')}
+                          {t('team.dashboard.view')}
                         </Link>
                       </Button>
                     </>
@@ -856,23 +856,23 @@ export function BusinessManagement({
                       <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="sm" className="flex-1 text-xs">
                           <Trash2 className="h-3 w-3 mr-1" />
-                          {t('business.management.delete')}
+                          {t('team.management.delete')}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="w-[95vw] sm:w-full">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>{t('business.management.deleteBusiness')}</AlertDialogTitle>
+                          <AlertDialogTitle>{t('team.management.deleteTeam')}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            {t('business.management.deleteConfirm').replace('{name}', business.name)}
+                            {t('team.management.deleteConfirm').replace('{name}', team.name)}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => handleDeleteBusiness(business.id)}
+                            onClick={() => handleDeleteTeam(team.id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            {t('business.management.deleteBusiness')}
+                            {t('team.management.deleteTeam')}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -884,23 +884,23 @@ export function BusinessManagement({
                       <AlertDialogTrigger asChild>
                         <Button variant="outline" size="sm" className="flex-1 text-xs">
                           <UserMinus className="h-3 w-3 mr-1" />
-                          {t('business.management.leave')}
+                          {t('team.management.leave')}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent className="w-[95vw] sm:w-full">
                         <AlertDialogHeader>
-                          <AlertDialogTitle>{t('business.management.leave')}</AlertDialogTitle>
+                          <AlertDialogTitle>{t('team.management.leave')}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            {t('business.management.leaveConfirm')}
+                            {t('team.management.leaveConfirm')}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => handleLeaveBusiness(business.id)}
+                            onClick={() => handleLeaveTeam(team.id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            {t('business.management.leave')}
+                            {t('team.management.leave')}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -912,7 +912,7 @@ export function BusinessManagement({
           )
         })}
 
-        {/* Create New Business Card - only show if there's at least one business */}
+        {/* Create New Team Card - only show if there's at least one team */}
         {filteredBusinesses.length > 0 && (
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
@@ -920,49 +920,49 @@ export function BusinessManagement({
                 <CardContent className="flex flex-col items-center justify-center h-48 p-6">
                   <Plus className="h-12 w-12 text-muted-foreground mb-4" />
                   <CardTitle className="text-lg text-center mb-2">
-                    {t('business.management.component.createButtonText')}
+                    {t('team.management.component.createButtonText')}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground text-center">
-                    {t('business.management.createBusinessDescription')}
+                    {t('team.management.createBusinessDescription')}
                   </p>
                 </CardContent>
               </Card>
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
               <DialogHeader>
-                <DialogTitle>{t('business.management.createBusinessTitle')}</DialogTitle>
+                <DialogTitle>{t('team.management.createBusinessTitle')}</DialogTitle>
                 <DialogDescription>
-                  {t('business.management.createBusinessDialogDescription')}
+                  {t('team.management.createBusinessDialogDescription')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="business-name">{t('business.management.businessName')}</Label>
+                  <Label htmlFor="team-name">{t('team.management.teamName')}</Label>
                   <Input
-                    id="business-name"
+                    id="team-name"
                     value={newBusinessName}
                     onChange={(e) => setNewBusinessName(e.target.value)}
-                    placeholder={t('business.management.enterBusinessName')}
+                    placeholder={t('team.management.enterBusinessName')}
                   />
                 </div>
 
                 {/* Payment Information */}
                 <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{t('business.management.subscriptionRequired')}</span>
-                    <Badge variant="secondary">{currency === 'EUR' ? '€500/month per business' : '$500/month per business'}</Badge>
+                    <span className="font-medium">{t('team.management.subscriptionRequired')}</span>
+                    <Badge variant="secondary">{currency === 'EUR' ? '€500/month per team' : '$500/month per team'}</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {t('business.management.subscriptionDescription')}
+                    {t('team.management.subscriptionDescription')}
                   </p>
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">{t('business.management.includes')}</p>
+                    <p className="text-sm font-medium">{t('team.management.includes')}</p>
                     <ul className="text-sm text-muted-foreground space-y-1">
                       {[
-                        t('business.management.teamCollaboration'),
-                        t('business.management.sharedAnalytics'),
-                        t('business.management.managerAccessControls'),
-                        t('business.management.businessReporting')
+                        t('team.management.teamCollaboration'),
+                        t('team.management.sharedAnalytics'),
+                        t('team.management.managerAccessControls'),
+                        t('team.management.businessReporting')
                       ].map((feature: string, index: number) => (
                         <li key={index} className="flex items-center gap-2">
                           <CheckCircle className="h-3 w-3 text-green-500" />
@@ -975,10 +975,10 @@ export function BusinessManagement({
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                  {t('business.management.cancel')}
+                  {t('team.management.cancel')}
                 </Button>
-                <Button onClick={handleCreateBusiness} disabled={isSubmitting}>
-                  {isSubmitting ? t('business.management.saving') : t('business.management.startSubscription')}
+                <Button onClick={handleCreateTeam} disabled={isSubmitting}>
+                  {isSubmitting ? t('team.management.saving') : t('team.management.startSubscription')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -991,54 +991,54 @@ export function BusinessManagement({
         <div className="text-center py-12">
           <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">
-            {t('business.management.component.emptyStateMessage')}
+            {t('team.management.component.emptyStateMessage')}
           </h3>
           <p className="text-muted-foreground mb-4">
-            {t('business.management.getStarted')}
+            {t('team.management.getStarted')}
           </p>
           {(
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  {t('business.management.component.createButtonText')}
+                  {t('team.management.component.createButtonText')}
                 </Button>
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
                 <DialogHeader>
-                  <DialogTitle>{t('business.management.createBusinessTitle')}</DialogTitle>
+                  <DialogTitle>{t('team.management.createBusinessTitle')}</DialogTitle>
                   <DialogDescription>
-                    {t('business.management.createBusinessDialogDescription')}
+                    {t('team.management.createBusinessDialogDescription')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="business-name">{t('business.management.businessName')}</Label>
+                    <Label htmlFor="team-name">{t('team.management.teamName')}</Label>
                     <Input
-                      id="business-name"
+                      id="team-name"
                       value={newBusinessName}
                       onChange={(e) => setNewBusinessName(e.target.value)}
-                      placeholder={t('business.management.enterBusinessName')}
+                      placeholder={t('team.management.enterBusinessName')}
                     />
                   </div>
 
                   {/* Payment Information */}
                   <div className="bg-muted/50 p-4 rounded-lg space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{t('business.management.subscriptionRequired')}</span>
-                      <Badge variant="secondary">{currency === 'EUR' ? '€500/month per business' : '$500/month per business'}</Badge>
+                      <span className="font-medium">{t('team.management.subscriptionRequired')}</span>
+                      <Badge variant="secondary">{currency === 'EUR' ? '€500/month per team' : '$500/month per team'}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {t('business.management.subscriptionDescription')}
+                      {t('team.management.subscriptionDescription')}
                     </p>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">{t('business.management.includes')}</p>
+                      <p className="text-sm font-medium">{t('team.management.includes')}</p>
                       <ul className="text-sm text-muted-foreground space-y-1">
                         {[
-                          t('business.management.teamCollaboration'),
-                          t('business.management.sharedAnalytics'),
-                          t('business.management.managerAccessControls'),
-                          t('business.management.businessReporting')
+                          t('team.management.teamCollaboration'),
+                          t('team.management.sharedAnalytics'),
+                          t('team.management.managerAccessControls'),
+                          t('team.management.businessReporting')
                         ].map((feature: string, index: number) => (
                           <li key={index} className="flex items-center gap-2">
                             <CheckCircle className="h-3 w-3 text-green-500" />
@@ -1051,10 +1051,10 @@ export function BusinessManagement({
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                    {t('business.management.cancel')}
+                    {t('team.management.cancel')}
                   </Button>
-                  <Button onClick={handleCreateBusiness} disabled={isSubmitting}>
-                    {isSubmitting ? t('business.management.saving') : t('business.management.startSubscription')}
+                  <Button onClick={handleCreateTeam} disabled={isSubmitting}>
+                    {isSubmitting ? t('team.management.saving') : t('team.management.startSubscription')}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -1063,7 +1063,7 @@ export function BusinessManagement({
         </div>
       )}
 
-      {/* Manage Business Dialog */}
+      {/* Manage Team Dialog */}
       <Dialog open={manageDialogOpen} onOpenChange={(open) => {
         setManageDialogOpen(open)
         // Refresh data when dialog is closed to get updated manager IDs
@@ -1073,29 +1073,29 @@ export function BusinessManagement({
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col w-[95vw] sm:w-full">
           <DialogHeader className="shrink-0">
-            <DialogTitle>{t('business.management.manageTitle').replace('{name}', selectedBusiness?.name || '')}</DialogTitle>
+            <DialogTitle>{t('team.management.manageTitle').replace('{name}', selectedTeam?.name || '')}</DialogTitle>
             <DialogDescription>
-              {t('business.management.manageDescription')}
+              {t('team.management.manageDescription')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6 overflow-y-auto flex-1 pr-2 -mr-2 px-1">
-            {/* Rename Business Section */}
+            {/* Rename Team Section */}
             <div>
-              <h4 className="font-medium mb-3">{t('business.rename.title')}</h4>
+              <h4 className="font-medium mb-3">{t('team.rename.title')}</h4>
               <div className="flex gap-2">
                 <Input
-                  placeholder={t('business.rename.placeholder')}
+                  placeholder={t('team.rename.placeholder')}
                   value={renameBusinessName}
                   onChange={(e) => setRenameBusinessName(e.target.value)}
                   className="flex-1"
                 />
                 <Button
-                  onClick={handleRenameBusiness}
+                  onClick={handleRenameTeam}
                   disabled={isSubmitting || !renameBusinessName.trim()}
                   size="sm"
                 >
-                  {isSubmitting ? t('business.management.saving') : t('business.management.rename')}
+                  {isSubmitting ? t('team.management.saving') : t('team.management.rename')}
                 </Button>
               </div>
             </div>
@@ -1104,21 +1104,21 @@ export function BusinessManagement({
 
             {/* Traders Section */}
             <div>
-              <h4 className="font-medium mb-3">{t('business.traders')}</h4>
+              <h4 className="font-medium mb-3">{t('team.traders')}</h4>
 
               {/* Current Traders */}
               <div className="mb-4">
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.traders.current')}</h5>
+                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('team.traders.current')}</h5>
                 <div className="space-y-2">
-                  {(selectedBusiness?.traders.length || 0) === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t('business.traders.noTraders')}</p>
+                  {(selectedTeam?.traders.length || 0) === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t('team.traders.noTraders')}</p>
                   ) : (
                     <div className="space-y-1">
-                      {selectedBusiness?.traders.map((trader: { id: string; email: string }) => (
+                      {selectedTeam?.traders.map((trader: { id: string; email: string }) => (
                         <div key={trader.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
                           <span>{trader.email}</span>
                           <div className="flex items-center gap-2">
-                            <Badge variant="outline">{t('business.management.member')}</Badge>
+                            <Badge variant="outline">{t('team.management.member')}</Badge>
                             <AlertDialog>
                               <AlertDialogTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground">
@@ -1127,9 +1127,9 @@ export function BusinessManagement({
                               </AlertDialogTrigger>
                               <AlertDialogContent className="w-[95vw] sm:w-full">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>{t('business.management.removeTrader')}</AlertDialogTitle>
+                                  <AlertDialogTitle>{t('team.management.removeTrader')}</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    {t('business.management.removeTraderConfirm').replace('{email}', trader.email)}
+                                    {t('team.management.removeTraderConfirm').replace('{email}', trader.email)}
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -1138,7 +1138,7 @@ export function BusinessManagement({
                                     onClick={() => handleRemoveTrader(trader.id)}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    {t('business.management.removeTraderAction')}
+                                    {t('team.management.removeTraderAction')}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -1153,13 +1153,13 @@ export function BusinessManagement({
 
               {/* Add New Trader */}
               <div>
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.traders.addNew')}</h5>
+                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('team.traders.addNew')}</h5>
                 <p className="text-sm text-muted-foreground mb-3">
-                  {t('business.traders.add.description')}
+                  {t('team.traders.add.description')}
                 </p>
                 <div className="flex gap-2">
                   <Input
-                    placeholder={t('business.traders.add.placeholder')}
+                    placeholder={t('team.traders.add.placeholder')}
                     value={newTraderEmail}
                     onChange={(e) => setNewTraderEmail(e.target.value)}
                     className="flex-1"
@@ -1169,23 +1169,23 @@ export function BusinessManagement({
                     disabled={isSubmitting || !newTraderEmail.trim()}
                     size="sm"
                   >
-                    {isSubmitting ? t('business.management.saving') : <UserPlus className="h-4 w-4" />}
+                    {isSubmitting ? t('team.management.saving') : <UserPlus className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
 
               {/* Pending Invitations */}
               <div className="mt-4">
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.invitations.pending')}</h5>
+                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('team.invitations.pending')}</h5>
                 {pendingInvitations.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">{t('business.management.noPendingInvitations')}</p>
+                  <p className="text-sm text-muted-foreground">{t('team.management.noPendingInvitations')}</p>
                 ) : (
                   <div className="space-y-1">
                     {pendingInvitations.map((invitation) => (
                       <div key={invitation.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
                         <span>{invitation.email}</span>
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline">{t('business.management.pending')}</Badge>
+                          <Badge variant="outline">{t('team.management.pending')}</Badge>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground">
@@ -1194,9 +1194,9 @@ export function BusinessManagement({
                             </AlertDialogTrigger>
                             <AlertDialogContent className="w-[95vw] sm:w-full">
                               <AlertDialogHeader>
-                                <AlertDialogTitle>{t('business.management.cancelInvitation')}</AlertDialogTitle>
+                                <AlertDialogTitle>{t('team.management.cancelInvitation')}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  {t('business.management.cancelInvitationConfirm').replace('{email}', invitation.email)}
+                                  {t('team.management.cancelInvitationConfirm').replace('{email}', invitation.email)}
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
@@ -1205,7 +1205,7 @@ export function BusinessManagement({
                                   onClick={() => handleCancelInvitation(invitation.id)}
                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                 >
-                                  {t('business.management.cancelInvitationAction')}
+                                  {t('team.management.cancelInvitationAction')}
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -1222,22 +1222,22 @@ export function BusinessManagement({
 
             {/* Managers Section */}
             <div>
-              <h4 className="font-medium mb-3">{t('business.managers')}</h4>
+              <h4 className="font-medium mb-3">{t('team.managers')}</h4>
 
               {/* Current Managers */}
               <div className="mb-4">
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.managers.current')}</h5>
+                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('team.managers.current')}</h5>
                 <div className="space-y-2">
-                  {(selectedBusiness?.managers.length || 0) === 0 ? (
-                    <p className="text-sm text-muted-foreground">{t('business.managers.noManagers')}</p>
+                  {(selectedTeam?.managers.length || 0) === 0 ? (
+                    <p className="text-sm text-muted-foreground">{t('team.managers.noManagers')}</p>
                   ) : (
                     <div className="space-y-1">
-                      {selectedBusiness?.managers.map((manager) => (
+                      {selectedTeam?.managers.map((manager) => (
                         <div key={manager.id} className="flex items-center justify-between bg-muted/50 p-2 rounded-md text-sm">
                           <span>{manager.email}</span>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">
-                              {manager.access === 'admin' ? t('dashboard.business.admin') : t('dashboard.business.viewer')}
+                              {manager.access === 'admin' ? t('dashboard.team.admin') : t('dashboard.team.viewer')}
                             </Badge>
                             <Select
                               value={manager.access}
@@ -1247,8 +1247,8 @@ export function BusinessManagement({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="viewer">{t('dashboard.business.viewer')}</SelectItem>
-                                <SelectItem value="admin">{t('dashboard.business.admin')}</SelectItem>
+                                <SelectItem value="viewer">{t('dashboard.team.viewer')}</SelectItem>
+                                <SelectItem value="admin">{t('dashboard.team.admin')}</SelectItem>
                               </SelectContent>
                             </Select>
                             <AlertDialog>
@@ -1259,9 +1259,9 @@ export function BusinessManagement({
                               </AlertDialogTrigger>
                               <AlertDialogContent className="w-[95vw] sm:w-full">
                                 <AlertDialogHeader>
-                                  <AlertDialogTitle>{t('business.management.removeManager')}</AlertDialogTitle>
+                                  <AlertDialogTitle>{t('team.management.removeManager')}</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    {t('business.management.removeManagerConfirm').replace('{email}', manager.email)}
+                                    {t('team.management.removeManagerConfirm').replace('{email}', manager.email)}
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
@@ -1270,7 +1270,7 @@ export function BusinessManagement({
                                     onClick={() => handleRemoveManager(manager.managerId)}
                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                   >
-                                    {t('business.management.removeManagerAction')}
+                                    {t('team.management.removeManagerAction')}
                                   </AlertDialogAction>
                                 </AlertDialogFooter>
                               </AlertDialogContent>
@@ -1285,10 +1285,10 @@ export function BusinessManagement({
 
               {/* Add New Manager */}
               <div>
-                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('business.managers.addNew')}</h5>
+                <h5 className="text-sm font-medium text-muted-foreground mb-2">{t('team.managers.addNew')}</h5>
                 <div className="flex gap-2">
                   <Input
-                    placeholder={t('dashboard.business.managerEmail')}
+                    placeholder={t('dashboard.team.managerEmail')}
                     value={newManagerEmail}
                     onChange={(e) => setNewManagerEmail(e.target.value)}
                     className="flex-1"
@@ -1298,12 +1298,12 @@ export function BusinessManagement({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="viewer">{t('dashboard.business.viewer')}</SelectItem>
-                      <SelectItem value="admin">{t('dashboard.business.admin')}</SelectItem>
+                      <SelectItem value="viewer">{t('dashboard.team.viewer')}</SelectItem>
+                      <SelectItem value="admin">{t('dashboard.team.admin')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button onClick={handleAddManager} disabled={isSubmitting}>
-                    {isSubmitting ? t('business.management.saving') : <UserPlus className="h-4 w-4" />}
+                    {isSubmitting ? t('team.management.saving') : <UserPlus className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -1312,7 +1312,7 @@ export function BusinessManagement({
 
           <DialogFooter className="shrink-0 mt-4">
             <Button variant="outline" onClick={() => setManageDialogOpen(false)}>
-              {t('business.management.close')}
+              {t('team.management.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

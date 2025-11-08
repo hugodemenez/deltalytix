@@ -13,9 +13,9 @@ import {
   Text,
 } from '@react-email/components';
 
-interface BusinessInvitationEmailProps {
+interface TeamInvitationEmailProps {
   email: string;
-  businessName: string;
+  teamName: string;
   inviterName: string;
   inviterEmail: string;
   joinUrl: string;
@@ -24,39 +24,39 @@ interface BusinessInvitationEmailProps {
 
 const content = {
   en: {
-    preview: "You've been invited to join a business on Deltalytix",
+    preview: "You've been invited to join a team on Deltalytix",
     greeting: "Hello",
-    invitation: "You've been invited to join a business on Deltalytix",
-    businessName: "Business Name",
+    invitation: "You've been invited to join a team on Deltalytix",
+    teamName: "Team Name",
     inviter: "Invited by",
-    joinDescription: "Join this business to collaborate with your team and access shared analytics.",
-    joinButton: "Join Business →",
+    joinDescription: "Join this team to collaborate with your team and access shared analytics.",
+    joinButton: "Join Team →",
     footer: "This email was sent by Deltalytix",
     unsubscribe: "Unsubscribe",
     days: ["Mon", "Tue", "Wed", "Thu", "Fri"]
   },
   fr: {
-    preview: "Vous avez été invité à rejoindre une entreprise sur Deltalytix",
+    preview: "Vous avez été invité à rejoindre une équipe sur Deltalytix",
     greeting: "Bonjour",
-    invitation: "Vous avez été invité à rejoindre une entreprise sur Deltalytix",
-    businessName: "Nom de l'entreprise",
+    invitation: "Vous avez été invité à rejoindre une équipe sur Deltalytix",
+    teamName: "Nom de l'équipe",
     inviter: "Invité par",
-    joinDescription: "Rejoignez cette entreprise pour collaborer avec votre équipe et accéder aux analyses partagées.",
-    joinButton: "Rejoindre l'entreprise →",
+    joinDescription: "Rejoignez cette équipe pour collaborer avec votre équipe et accéder aux analyses partagées.",
+    joinButton: "Rejoindre l'équipe →",
     footer: "Cet email vous a été envoyé par Deltalytix",
     unsubscribe: "Se désabonner",
     days: ["Lun", "Mar", "Mer", "Jeu", "Ven"]
   }
 };
 
-export default function BusinessInvitationEmail({
+export default function TeamInvitationEmail({
   email = "jean.dupont@example.com",
-  businessName = "My Business",
+  teamName = "My Team",
   inviterName = "trader",
   inviterEmail = "trader@example.com",
-  joinUrl = "https://deltalytix.app/business/join",
+  joinUrl = "https://deltalytix.app/team/join",
   language = "fr",
-}: BusinessInvitationEmailProps) {
+}: TeamInvitationEmailProps) {
   const lang = language === "en" ? "en" : "fr";
   const t = content[lang];
   const unsubscribeUrl = email
@@ -79,12 +79,12 @@ export default function BusinessInvitationEmail({
                 {t.invitation}
               </Text>
 
-              {/* Business Information */}
+              {/* Team Information */}
               <Section className="bg-blue-50 rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <Text className="text-sm text-gray-600 mb-1">{t.businessName}</Text>
-                    <Text className="text-lg font-semibold text-gray-900">{businessName}</Text>
+                    <Text className="text-sm text-gray-600 mb-1">{t.teamName}</Text>
+                    <Text className="text-lg font-semibold text-gray-900">{teamName}</Text>
                   </div>
                   <div className="text-right">
                     <Text className="text-sm text-gray-600 mb-1">{t.inviter}</Text>
