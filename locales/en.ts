@@ -8,7 +8,7 @@ import propfirm from "./en/propfirm";
 import chat from "./en/chat";
 import terms from "./en/terms";
 import embed from "./en/embed";
-import business from "./en/business";
+import teams from "./en/business";
 export default {
   ...shared,
   ...landing,
@@ -20,13 +20,13 @@ export default {
   ...chat,
   ...terms,
   ...embed,
-  ...business,
+  ...teams,
   "footer.heading": "Footer",
   "footer.description": "Advanced analytics for modern traders.",
   "footer.product.title": "Product",
   "footer.product.features": "Features",
   "footer.product.pricing": "Pricing",
-  "footer.product.business": "Business",
+  "footer.product.business": "Teams",
   "footer.product.support": "Support",
   "footer.company.title": "Company",
   "footer.company.about": "About",
@@ -132,7 +132,7 @@ export default {
   "dashboard.settings": "Settings",
   "dashboard.settings.description":
     "Manage your account settings and preferences",
-  "dashboard.business": "Business",
+  "dashboard.teams": "Business",
   "dashboard.business.description": "Manage your business connections",
   "dashboard.business.current": "Current Businesses",
   "dashboard.business.owner": "Business Owner",
