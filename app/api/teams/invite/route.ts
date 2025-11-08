@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     }
 
     // Check if there's already a pending invitation
-    const existingInvitation = await prisma.businessInvitation.findUnique({
+    const existingInvitation = await prisma.teamInvitation.findUnique({
       where: {
         teamId_email: {
           teamId,
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
     }
 
     // Create or update invitation
-    const invitation = await prisma.businessInvitation.upsert({
+    const invitation = await prisma.teamInvitation.upsert({
       where: {
         teamId_email: {
           teamId,

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/actions/stripe";
 
-async function handleBusinessCheckoutSession(user: any, websiteURL: string, teamName?: string, currency: 'USD' | 'EUR' = 'USD') {
+async function handleTeamCheckoutSession(user: any, websiteURL: string, teamName?: string, currency: 'USD' | 'EUR' = 'USD') {
     // First, try to find existing customer
     const existingCustomers = await stripe.customers.list({
         email: user.email,
@@ -130,7 +130,7 @@ export async function POST(req: Request) {
         );
     }
 
-    return handleBusinessCheckoutSession(user, websiteURL, teamName || undefined, currency);
+    return handleTeamCheckoutSession(user, websiteURL, teamName || undefined, currency);
 }
 
 export async function GET(req: Request) {
@@ -150,5 +150,5 @@ export async function GET(req: Request) {
         );
     }
 
-    return handleBusinessCheckoutSession(user, websiteURL, teamName || undefined, currency);
+    return handleTeamCheckoutSession(user, websiteURL, teamName || undefined, currency);
 } 

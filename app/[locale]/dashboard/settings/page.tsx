@@ -45,7 +45,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Slider } from "@/components/ui/slider"
-import { createTeam, joinTeam, leaveTeam, getUserBusinesses } from './actions'
+import { createTeam, joinTeam, leaveTeam, getUserTeams } from './actions'
 import { toast } from "sonner"
 import {
   AlertDialog,
@@ -94,10 +94,10 @@ export default function SettingsPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   
   // Team state
-  const [userBusinesses, setUserBusinesses] = useState<{
-    ownedBusinesses: any[]
-    joinedBusinesses: any[]
-  }>({ ownedBusinesses: [], joinedBusinesses: [] })
+  const [userTeams, setUserTeams] = useState<{
+    ownedTeams: any[]
+    joinedTeams: any[]
+  }>({ ownedTeams: [], joinedTeams: [] })
 
   const languages: { value: Locale; label: string }[] = [
     { value: 'en', label: 'English' },
@@ -120,16 +120,16 @@ export default function SettingsPage() {
 
   // Load user teams on component mount
   useEffect(() => {
-    const loadBusinesses = async () => {
-      const result = await getUserBusinesses()
-      if (result.success && result.ownedBusinesses && result.joinedBusinesses) {
-        setUserBusinesses({
-          ownedBusinesses: result.ownedBusinesses,
-          joinedBusinesses: result.joinedBusinesses,
+    const loadTeams = async () => {
+      const result = await getUserTeams()
+      if (result.success && result.ownedTeams && result.joinedTeams) {
+        setUserTeams({
+          ownedTeams: result.ownedTeams,
+          joinedTeams: result.joinedTeams,
         })
       }
     }
-    loadBusinesses()
+    loadTeams()
   }, [])
 
 
@@ -139,11 +139,11 @@ export default function SettingsPage() {
     if (result.success) {
       toast.success(t('dashboard.team.leaveSuccess'))
       // Reload teams
-      const updatedBusinesses = await getUserBusinesses()
-      if (updatedBusinesses.success && updatedBusinesses.ownedBusinesses && updatedBusinesses.joinedBusinesses) {
-        setUserBusinesses({
-          ownedBusinesses: updatedBusinesses.ownedBusinesses,
-          joinedBusinesses: updatedBusinesses.joinedBusinesses,
+      const updatedTeams = await getUserTeams()
+      if (updatedTeams.success && updatedTeams.ownedTeams && updatedTeams.joinedTeams) {
+        setUserTeams({
+          ownedTeams: updatedTeams.ownedTeams,
+          joinedTeams: updatedTeams.joinedTeams,
         })
       }
     } else {
@@ -415,13 +415,13 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
 
-            {/* Current Businesses */}
-            {(userBusinesses.ownedBusinesses.length > 0 || userBusinesses.joinedBusinesses.length > 0) && (
+            {/* Current Teams */}
+            {(userTeams.ownedTeams.length > 0 || userTeams.joinedTeams.length > 0) && (
               <div>
-                <Label className="text-base font-medium">Current Businesses</Label>
+                <Label className="text-base font-medium">Current Teams</Label>
                 <div className="mt-2 space-y-2">
-                  {/* Owned Businesses */}
-                  {userBusinesses.ownedBusinesses.map((team) => (
+                  {/* Owned Teams */}
+                  {userTeams.ownedTeams.map((team) => (
                     <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{team.name}</p>
@@ -433,8 +433,8 @@ export default function SettingsPage() {
                     </div>
                   ))}
                   
-                  {/* Joined Businesses */}
-                  {userBusinesses.joinedBusinesses.map((team) => (
+                  {/* Joined Teams */}
+                  {userTeams.joinedTeams.map((team) => (
                     <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">{team.name}</p>
@@ -472,8 +472,8 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* No Businesses */}
-            {userBusinesses.ownedBusinesses.length === 0 && userBusinesses.joinedBusinesses.length === 0 && (
+            {/* No Teams */}
+            {userTeams.ownedTeams.length === 0 && userTeams.joinedTeams.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <p>No team linked</p>
                 <p className="text-sm mt-2">Contact your team administrator to get an invitation to join a team.</p>
@@ -481,7 +481,7 @@ export default function SettingsPage() {
                   <Link href="/team/dashboard">
                     <Button>
                       <Building2 className="mr-2 h-4 w-4" />
-                      Manage Businesses
+                      Manage Teams
                     </Button>
                   </Link>
                 </div>
@@ -489,12 +489,12 @@ export default function SettingsPage() {
             )}
 
             {/* Team Management Link */}
-            {(userBusinesses.ownedBusinesses.length > 0 || userBusinesses.joinedBusinesses.length > 0) && (
+            {(userTeams.ownedTeams.length > 0 || userTeams.joinedTeams.length > 0) && (
               <div className="mt-4">
                 <Link href="/team/dashboard">
                   <Button variant="outline" className="w-full">
                     <Settings className="mr-2 h-4 w-4" />
-                    Manage Businesses
+                    Manage Teams
                   </Button>
                 </Link>
               </div>

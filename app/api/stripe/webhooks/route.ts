@@ -103,11 +103,11 @@ export async function POST(req: Request) {
             });
 
             // Check if this is a team subscription
-            const isBusinessSubscription = data.metadata?.plan === 'team_monthly_usd' || 
+            const isTeamSubscription = data.metadata?.plan === 'team_monthly_usd' || 
                                         subscriptionPlan === 'BUSINESS' || 
                                         price.lookup_key === 'team_monthly_usd';
 
-            if (isBusinessSubscription) {
+            if (isTeamSubscription) {
               // Handle team subscription
               console.log('Team subscription completed')
               

@@ -25,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     // Find the invitation
-    const invitation = await prisma.businessInvitation.findUnique({
+    const invitation = await prisma.teamInvitation.findUnique({
       where: { id: invitationId },
       include: { team: true }
     })
@@ -71,7 +71,7 @@ export async function POST(req: Request) {
     })
 
     // Update invitation status
-    await prisma.businessInvitation.update({
+    await prisma.teamInvitation.update({
       where: { id: invitationId },
       data: {
         status: 'ACCEPTED',

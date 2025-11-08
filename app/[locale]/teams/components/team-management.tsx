@@ -152,19 +152,19 @@ interface ManagedTeam extends Team {
 
 interface TeamManagementProps {
   // Event handlers
-  onBusinessClick?: (team: Team) => void
+  onTeamClick?: (team: Team) => void
   onManageClick?: (team: Team) => void
   onViewClick?: (team: Team) => void
 }
 
 export function TeamManagement({
-  onBusinessClick,
+  onTeamClick,
   onManageClick,
   onViewClick,
 }: TeamManagementProps) {
 
   const pathname = usePathname()
-  const [firstBusinessId, setFirstBusinessId] = useState<string | null>(null);
+  const [firstTeamId, setFirstTeamId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -178,29 +178,29 @@ export function TeamManagement({
 
       if (teamsResult.success) {
         // Check owned teams first
-        if (teamsResult.ownedBusinesses && teamsResult.ownedBusinesses.length > 0) {
-          setFirstBusinessId(teamsResult.ownedBusinesses[0].id)
+        if (teamsResult.ownedTeams && teamsResult.ownedTeams.length > 0) {
+          setFirstTeamId(teamsResult.ownedTeams[0].id)
           return
         }
         // If no owned teams, check joined teams
-        else if (teamsResult.joinedBusinesses && teamsResult.joinedBusinesses.length > 0) {
-          setFirstBusinessId(teamsResult.joinedBusinesses[0].id)
+        else if (teamsResult.joinedTeams && teamsResult.joinedTeams.length > 0) {
+          setFirstTeamId(teamsResult.joinedTeams[0].id)
           return
         }
       }
 
       // If still no team found, check managed teams
-      if (!firstBusinessId && managedResult.success && managedResult.managedBusinesses && managedResult.managedBusinesses.length > 0) {
-        setFirstBusinessId(managedResult.managedBusinesses[0].id)
+      if (!firstTeamId && managedResult.success && managedResult.managedTeams && managedResult.managedTeams.length > 0) {
+        setFirstTeamId(managedResult.managedTeams[0].id)
       }
 
     }
     loadInitialData()
     // If we found a team, redirect to it
-    if (firstBusinessId) {
-      redirect(`/team/dashboard/${firstBusinessId}`)
+    if (firstTeamId) {
+      redirect(`/team/dashboard/${firstTeamId}`)
     }
-  }, [firstBusinessId, pathname])
+  }, [firstTeamId, pathname])
   const t = useI18n()
   const { currency, symbol } = useCurrency()
 
@@ -212,16 +212,16 @@ export function TeamManagement({
     t('team.management.teamCollaboration'),
     t('team.management.sharedAnalytics'),
     t('team.management.managerAccessControls'),
-    t('team.management.businessReporting')
+    t('team.management.teamReporting')
   ]
 
   // State
-  const [userBusinesses, setUserBusinesses] = useState<{
-    ownedBusinesses: Team[]
-    joinedBusinesses: Team[]
-  }>({ ownedBusinesses: [], joinedBusinesses: [] })
+  const [userTeams, setUserTeams] = useState<{
+    ownedTeams: Team[]
+    joinedTeams: Team[]
+  }>({ ownedTeams: [], joinedTeams: [] })
 
-  const [managedBusinesses, setManagedBusinesses] = useState<ManagedTeam[]>([])
+  const [managedTeams, setManagedTeams] = useState<ManagedTeam[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   // Dialog states
@@ -231,36 +231,36 @@ export function TeamManagement({
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null)
 
   // Form states
-  const [newBusinessName, setNewBusinessName] = useState('')
-  const [joinBusinessId, setJoinBusinessId] = useState('')
+  const [newTeamName, setNewTeamName] = useState('')
+  const [joinTeamId, setJoinTeamId] = useState('')
   const [newManagerEmail, setNewManagerEmail] = useState('')
   const [newManagerAccess, setNewManagerAccess] = useState<'admin' | 'viewer'>('viewer')
-  const [renameBusinessName, setRenameBusinessName] = useState('')
+  const [renameTeamName, setRenameTeamName] = useState('')
   const [newTraderEmail, setNewTraderEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([])
 
   // Load data on component mount
   useEffect(() => {
-    loadBusinessData()
+    loadTeamData()
   }, [])
 
-  const loadBusinessData = async () => {
+  const loadTeamData = async () => {
     setIsLoading(true)
     try {
       // Load owned and joined teams
       const teamsResult = await getUserTeams()
       if (teamsResult.success) {
-        setUserBusinesses({
-          ownedBusinesses: teamsResult.ownedBusinesses || [],
-          joinedBusinesses: teamsResult.joinedBusinesses || [],
+        setUserTeams({
+          ownedTeams: teamsResult.ownedTeams || [],
+          joinedTeams: teamsResult.joinedTeams || [],
         })
       }
 
       // Load managed teams
       const managedResult = await getUserTeamAccess()
       if (managedResult.success) {
-        setManagedBusinesses(managedResult.managedBusinesses || [])
+        setManagedTeams(managedResult.managedTeams || [])
       }
     } catch (error) {
       console.error('Error loading team data:', error)
@@ -271,7 +271,7 @@ export function TeamManagement({
   }
 
   const handleCreateTeam = async () => {
-    if (!newBusinessName.trim()) {
+    if (!newTeamName.trim()) {
       toast.error('Team name is required')
       return
     }
@@ -286,7 +286,7 @@ export function TeamManagement({
       const teamNameInput = document.createElement('input')
       teamNameInput.type = 'hidden'
       teamNameInput.name = 'teamName'
-      teamNameInput.value = newBusinessName.trim()
+      teamNameInput.value = newTeamName.trim()
 
       const currencyInput = document.createElement('input')
       currencyInput.type = 'hidden'
@@ -306,19 +306,19 @@ export function TeamManagement({
   }
 
   const handleJoinTeam = async () => {
-    if (!joinBusinessId.trim()) {
+    if (!joinTeamId.trim()) {
       toast.error('Team ID is required')
       return
     }
 
     setIsSubmitting(true)
     try {
-      const result = await joinTeam(joinBusinessId.trim())
+      const result = await joinTeam(joinTeamId.trim())
       if (result.success) {
         toast.success('Joined team successfully')
         setJoinDialogOpen(false)
-        setJoinBusinessId('')
-        await loadBusinessData()
+        setJoinTeamId('')
+        await loadTeamData()
       } else {
         toast.error(result.error || t('dashboard.team.error'))
       }
@@ -335,7 +335,7 @@ export function TeamManagement({
       const result = await leaveTeam(teamId)
       if (result.success) {
         toast.success(t('dashboard.team.leaveSuccess'))
-        await loadBusinessData()
+        await loadTeamData()
       } else {
         toast.error(result.error || t('dashboard.team.error'))
       }
@@ -374,20 +374,20 @@ export function TeamManagement({
         setSelectedTeam(updatedSelectedTeam)
 
         // Update the teams in the main state to keep everything in sync
-        setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(team =>
+        setUserTeams(prev => ({
+          ownedTeams: prev.ownedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(team =>
+          joinedTeams: prev.joinedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           )
         }))
 
-        setManagedBusinesses(prev =>
+        setManagedTeams(prev =>
           prev.map(team =>
             team.id === selectedTeam.id
               ? { ...updatedSelectedTeam, userAccess: team.userAccess }
@@ -427,20 +427,20 @@ export function TeamManagement({
         setSelectedTeam(updatedSelectedTeam)
 
         // Update the teams in the main state to keep everything in sync
-        setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(team =>
+        setUserTeams(prev => ({
+          ownedTeams: prev.ownedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(team =>
+          joinedTeams: prev.joinedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           )
         }))
 
-        setManagedBusinesses(prev =>
+        setManagedTeams(prev =>
           prev.map(team =>
             team.id === selectedTeam.id
               ? { ...updatedSelectedTeam, userAccess: team.userAccess }
@@ -479,20 +479,20 @@ export function TeamManagement({
         setSelectedTeam(updatedSelectedTeam)
 
         // Update the teams in the main state to keep everything in sync
-        setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(team =>
+        setUserTeams(prev => ({
+          ownedTeams: prev.ownedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(team =>
+          joinedTeams: prev.joinedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           )
         }))
 
-        setManagedBusinesses(prev =>
+        setManagedTeams(prev =>
           prev.map(team =>
             team.id === selectedTeam.id
               ? { ...updatedSelectedTeam, userAccess: team.userAccess }
@@ -516,7 +516,7 @@ export function TeamManagement({
       const result = await deleteTeam(teamId)
       if (result.success) {
         toast.success('Team deleted successfully')
-        await loadBusinessData()
+        await loadTeamData()
       } else {
         toast.error(result.error || 'Failed to delete team')
       }
@@ -527,39 +527,39 @@ export function TeamManagement({
   }
 
   const handleRenameTeam = async () => {
-    if (!selectedTeam || !renameBusinessName.trim()) {
+    if (!selectedTeam || !renameTeamName.trim()) {
       toast.error(t('team.rename.nameRequired'))
       return
     }
 
     setIsSubmitting(true)
     try {
-      const result = await renameTeam(selectedTeam.id, renameBusinessName.trim())
+      const result = await renameTeam(selectedTeam.id, renameTeamName.trim())
       if (result.success) {
         toast.success(t('team.rename.success'))
 
         // Update the selected team name locally
         const updatedSelectedTeam = {
           ...selectedTeam,
-          name: renameBusinessName.trim()
+          name: renameTeamName.trim()
         }
         setSelectedTeam(updatedSelectedTeam)
 
         // Update the teams in the main state to keep everything in sync
-        setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(team =>
+        setUserTeams(prev => ({
+          ownedTeams: prev.ownedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(team =>
+          joinedTeams: prev.joinedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           )
         }))
 
-        setManagedBusinesses(prev =>
+        setManagedTeams(prev =>
           prev.map(team =>
             team.id === selectedTeam.id
               ? { ...updatedSelectedTeam, userAccess: team.userAccess }
@@ -568,7 +568,7 @@ export function TeamManagement({
         )
 
         // Keep the modal open and reset the rename input
-        setRenameBusinessName('')
+        setRenameTeamName('')
       } else {
         toast.error(result.error || t('team.rename.error'))
       }
@@ -635,20 +635,20 @@ export function TeamManagement({
         setSelectedTeam(updatedSelectedTeam)
 
         // Update the teams in the main state to keep everything in sync
-        setUserBusinesses(prev => ({
-          ownedBusinesses: prev.ownedBusinesses.map(team =>
+        setUserTeams(prev => ({
+          ownedTeams: prev.ownedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           ),
-          joinedBusinesses: prev.joinedBusinesses.map(team =>
+          joinedTeams: prev.joinedTeams.map(team =>
             team.id === selectedTeam.id
-              ? updatedSelectedBusiness
+              ? updatedSelectedTeam
               : team
           )
         }))
 
-        setManagedBusinesses(prev =>
+        setManagedTeams(prev =>
           prev.map(team =>
             team.id === selectedTeam.id
               ? { ...updatedSelectedTeam, userAccess: team.userAccess }
@@ -720,28 +720,28 @@ export function TeamManagement({
   }
 
   // Deduplicate teams to prevent showing the same team twice
-  const allBusinesses = new Map<string, Team>()
+  const allTeams = new Map<string, Team>()
 
   // Add owned teams first (highest priority)
-  userBusinesses.ownedBusinesses.forEach(team => {
-    allBusinesses.set(team.id, { ...team, userAccess: 'admin' })
+  userTeams.ownedTeams.forEach(team => {
+    allTeams.set(team.id, { ...team, userAccess: 'admin' })
   })
 
   // Add joined teams (medium priority)
-  userBusinesses.joinedBusinesses.forEach(team => {
-    if (!allBusinesses.has(team.id)) {
-      allBusinesses.set(team.id, { ...team, userAccess: 'viewer' })
+  userTeams.joinedTeams.forEach(team => {
+    if (!allTeams.has(team.id)) {
+      allTeams.set(team.id, { ...team, userAccess: 'viewer' })
     }
   })
 
   // Add managed teams (lowest priority - only if not already added)
-  managedBusinesses.forEach(team => {
-    if (!allBusinesses.has(team.id)) {
-      allBusinesses.set(team.id, team)
+  managedTeams.forEach(team => {
+    if (!allTeams.has(team.id)) {
+      allTeams.set(team.id, team)
     }
   })
 
-  const filteredBusinesses = Array.from(allBusinesses.values())
+  const filteredTeams = Array.from(allTeams.values())
 
   if (isLoading) {
     return (
@@ -762,12 +762,12 @@ export function TeamManagement({
       </div>
 
 
-      {/* Businesses Grid */}
+      {/* Teams Grid */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredBusinesses.map((team) => {
-          const isOwner = userBusinesses.ownedBusinesses.some(b => b.id === team.id)
-          const isJoined = userBusinesses.joinedBusinesses.some(b => b.id === team.id)
-          const isManaged = managedBusinesses.some(b => b.id === team.id)
+        {filteredTeams.map((team) => {
+          const isOwner = userTeams.ownedTeams.some(b => b.id === team.id)
+          const isJoined = userTeams.joinedTeams.some(b => b.id === team.id)
+          const isManaged = managedTeams.some(b => b.id === team.id)
           const access = team.userAccess || (isOwner ? 'admin' : 'viewer')
           const isActive = pathname.includes(`/team/dashboard/${team.id}`)
 
@@ -826,7 +826,7 @@ export function TeamManagement({
                         className="flex-1 text-xs"
                         onClick={async () => {
                           setSelectedTeam(team)
-                          setRenameBusinessName(team.name)
+                          setRenameTeamName(team.name)
                           setManageDialogOpen(true)
                           // Load pending invitations when dialog opens
                           setTimeout(async () => {
@@ -913,7 +913,7 @@ export function TeamManagement({
         })}
 
         {/* Create New Team Card - only show if there's at least one team */}
-        {filteredBusinesses.length > 0 && (
+        {filteredTeams.length > 0 && (
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
               <Card className="cursor-pointer transition-colors shadow-xs hover:shadow-md border-dashed border-2 border-muted-foreground/25 hover:border-primary/50">
@@ -923,16 +923,16 @@ export function TeamManagement({
                     {t('team.management.component.createButtonText')}
                   </CardTitle>
                   <p className="text-sm text-muted-foreground text-center">
-                    {t('team.management.createBusinessDescription')}
+                    {t('team.management.createTeamDescription')}
                   </p>
                 </CardContent>
               </Card>
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
               <DialogHeader>
-                <DialogTitle>{t('team.management.createBusinessTitle')}</DialogTitle>
+                <DialogTitle>{t('team.management.createTeamTitle')}</DialogTitle>
                 <DialogDescription>
-                  {t('team.management.createBusinessDialogDescription')}
+                  {t('team.management.createTeamDialogDescription')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
@@ -940,9 +940,9 @@ export function TeamManagement({
                   <Label htmlFor="team-name">{t('team.management.teamName')}</Label>
                   <Input
                     id="team-name"
-                    value={newBusinessName}
-                    onChange={(e) => setNewBusinessName(e.target.value)}
-                    placeholder={t('team.management.enterBusinessName')}
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    placeholder={t('team.management.enterTeamName')}
                   />
                 </div>
 
@@ -962,7 +962,7 @@ export function TeamManagement({
                         t('team.management.teamCollaboration'),
                         t('team.management.sharedAnalytics'),
                         t('team.management.managerAccessControls'),
-                        t('team.management.businessReporting')
+                        t('team.management.teamReporting')
                       ].map((feature: string, index: number) => (
                         <li key={index} className="flex items-center gap-2">
                           <CheckCircle className="h-3 w-3 text-green-500" />
@@ -987,7 +987,7 @@ export function TeamManagement({
       </div>
 
       {/* Empty State */}
-      {filteredBusinesses.length === 0 && (
+      {filteredTeams.length === 0 && (
         <div className="text-center py-12">
           <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">
@@ -1006,9 +1006,9 @@ export function TeamManagement({
               </DialogTrigger>
               <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
                 <DialogHeader>
-                  <DialogTitle>{t('team.management.createBusinessTitle')}</DialogTitle>
+                  <DialogTitle>{t('team.management.createTeamTitle')}</DialogTitle>
                   <DialogDescription>
-                    {t('team.management.createBusinessDialogDescription')}
+                    {t('team.management.createTeamDialogDescription')}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
@@ -1016,9 +1016,9 @@ export function TeamManagement({
                     <Label htmlFor="team-name">{t('team.management.teamName')}</Label>
                     <Input
                       id="team-name"
-                      value={newBusinessName}
-                      onChange={(e) => setNewBusinessName(e.target.value)}
-                      placeholder={t('team.management.enterBusinessName')}
+                      value={newTeamName}
+                      onChange={(e) => setNewTeamName(e.target.value)}
+                      placeholder={t('team.management.enterTeamName')}
                     />
                   </div>
 
@@ -1038,7 +1038,7 @@ export function TeamManagement({
                           t('team.management.teamCollaboration'),
                           t('team.management.sharedAnalytics'),
                           t('team.management.managerAccessControls'),
-                          t('team.management.businessReporting')
+                          t('team.management.teamReporting')
                         ].map((feature: string, index: number) => (
                           <li key={index} className="flex items-center gap-2">
                             <CheckCircle className="h-3 w-3 text-green-500" />
@@ -1068,7 +1068,7 @@ export function TeamManagement({
         setManageDialogOpen(open)
         // Refresh data when dialog is closed to get updated manager IDs
         if (!open) {
-          loadBusinessData()
+          loadTeamData()
         }
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col w-[95vw] sm:w-full">
@@ -1086,13 +1086,13 @@ export function TeamManagement({
               <div className="flex gap-2">
                 <Input
                   placeholder={t('team.rename.placeholder')}
-                  value={renameBusinessName}
-                  onChange={(e) => setRenameBusinessName(e.target.value)}
+                  value={renameTeamName}
+                  onChange={(e) => setRenameTeamName(e.target.value)}
                   className="flex-1"
                 />
                 <Button
                   onClick={handleRenameTeam}
-                  disabled={isSubmitting || !renameBusinessName.trim()}
+                  disabled={isSubmitting || !renameTeamName.trim()}
                   size="sm"
                 >
                   {isSubmitting ? t('team.management.saving') : t('team.management.rename')}

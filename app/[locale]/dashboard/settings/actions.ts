@@ -116,7 +116,7 @@ export async function getUserTeams() {
     }
 
     // Get teams where the user is the owner
-    const ownedBusinesses = await prisma.team.findMany({
+    const ownedTeams = await prisma.team.findMany({
       where: { userId: user.id },
       include: {
         managers: {
@@ -130,7 +130,7 @@ export async function getUserTeams() {
     })
 
     // Get teams where the user is a trader
-    const joinedBusinesses = await prisma.team.findMany({
+    const joinedTeams = await prisma.team.findMany({
       where: {
         traderIds: {
           has: user.id,
@@ -151,9 +151,9 @@ export async function getUserTeams() {
     })
 
     // Get all unique trader IDs and manager IDs from all teams
-    const allBusinesses = [...ownedBusinesses, ...joinedBusinesses]
-    const allTraderIds = Array.from(new Set(allBusinesses.flatMap(b => b.traderIds)))
-    const allManagerIds = Array.from(new Set(allBusinesses.flatMap(b => b.managers.map(m => m.managerId))))
+    const allTeams = [...ownedTeams, ...joinedTeams]
+    const allTraderIds = Array.from(new Set(allTeams.flatMap(b => b.traderIds)))
+    const allManagerIds = Array.from(new Set(allTeams.flatMap(b => b.managers.map(m => m.managerId))))
     const allUserIds = Array.from(new Set([...allTraderIds, ...allManagerIds]))
     
     // Fetch all user details in one query
@@ -173,7 +173,7 @@ export async function getUserTeams() {
     const usersMap = new Map(users.map(u => [u.id, u]))
 
     // Enhance teams with trader and manager details
-    const enhancedOwnedBusinesses = ownedBusinesses.map(team => ({
+    const enhancedOwnedTeams = ownedTeams.map(team => ({
       ...team,
       traders: team.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
       managers: team.managers.map(manager => ({
@@ -182,7 +182,7 @@ export async function getUserTeams() {
       })),
     }))
 
-    const enhancedJoinedBusinesses = joinedBusinesses.map(team => ({
+    const enhancedJoinedTeams = joinedTeams.map(team => ({
       ...team,
       traders: team.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
       managers: team.managers.map(manager => ({
@@ -193,8 +193,8 @@ export async function getUserTeams() {
 
     return {
       success: true,
-      ownedBusinesses: enhancedOwnedBusinesses,
-      joinedBusinesses: enhancedJoinedBusinesses,
+      ownedTeams: enhancedOwnedTeams,
+      joinedTeams: enhancedJoinedTeams,
     }
   } catch (error) {
     console.error('Error getting user teams:', error)
@@ -221,7 +221,7 @@ export async function addManagerToTeam(teamId: string, managerEmail: string, acc
 
     // Check if current user is owner or admin manager
     const isOwner = team.userId === user.id
-    const isAdminManager = await prisma.businessManager.findUnique({
+    const isAdminManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -244,7 +244,7 @@ export async function addManagerToTeam(teamId: string, managerEmail: string, acc
     }
 
     // Check if manager already exists
-    const existingManager = await prisma.businessManager.findUnique({
+    const existingManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -258,7 +258,7 @@ export async function addManagerToTeam(teamId: string, managerEmail: string, acc
     }
 
     // Add new manager
-    await prisma.businessManager.create({
+    await prisma.teamManager.create({
       data: {
         teamId,
         managerId: managerUser.id,
@@ -283,7 +283,7 @@ export async function removeManagerFromTeam(teamId: string, managerId: string) {
     }
 
     // Check if current user is admin of this team
-    const currentUserManager = await prisma.businessManager.findUnique({
+    const currentUserManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -297,7 +297,7 @@ export async function removeManagerFromTeam(teamId: string, managerId: string) {
     }
 
     // Remove manager
-    await prisma.businessManager.delete({
+    await prisma.teamManager.delete({
       where: {
         teamId_managerId: {
           teamId,
@@ -323,7 +323,7 @@ export async function updateManagerAccess(teamId: string, managerId: string, acc
     }
 
     // Check if current user is admin of this team
-    const currentUserManager = await prisma.businessManager.findUnique({
+    const currentUserManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -337,7 +337,7 @@ export async function updateManagerAccess(teamId: string, managerId: string, acc
     }
 
     // Update manager access
-    await prisma.businessManager.update({
+    await prisma.teamManager.update({
       where: {
         teamId_managerId: {
           teamId,
@@ -366,7 +366,7 @@ export async function getUserTeamAccess() {
     }
 
     // Get teams where user is a manager - much more efficient query!
-    const managedBusinesses = await prisma.businessManager.findMany({
+    const managedTeams = await prisma.teamManager.findMany({
       where: { managerId: user.id },
       include: { 
         team: {
@@ -384,8 +384,8 @@ export async function getUserTeamAccess() {
     })
 
     // Get all unique trader IDs and manager IDs from managed teams
-    const allTraderIds = Array.from(new Set(managedBusinesses.flatMap(bm => bm.team.traderIds)))
-    const allManagerIds = Array.from(new Set(managedBusinesses.flatMap(bm => bm.team.managers.map(m => m.managerId))))
+    const allTraderIds = Array.from(new Set(managedTeams.flatMap(bm => bm.team.traderIds)))
+    const allManagerIds = Array.from(new Set(managedTeams.flatMap(bm => bm.team.managers.map(m => m.managerId))))
     const allUserIds = Array.from(new Set([...allTraderIds, ...allManagerIds]))
     
     // Fetch all user details in one query
@@ -405,7 +405,7 @@ export async function getUserTeamAccess() {
     const usersMap = new Map(users.map(u => [u.id, u]))
 
     // Transform to include access level, trader details, and manager details
-    const teamsWithAccess = managedBusinesses.map(bm => ({
+    const teamsWithAccess = managedTeams.map(bm => ({
       ...bm.team,
       userAccess: bm.access,
       traders: bm.team.traderIds.map(id => usersMap.get(id)).filter((trader): trader is { id: string; email: string } => trader !== undefined),
@@ -417,7 +417,7 @@ export async function getUserTeamAccess() {
 
     return {
       success: true,
-      managedBusinesses: teamsWithAccess,
+      managedTeams: teamsWithAccess,
     }
   } catch (error) {
     console.error('Error getting user team access:', error)
@@ -530,7 +530,7 @@ export async function addTraderToTeam(teamId: string, traderEmail: string) {
 
     // Check if current user is owner or admin manager
     const isOwner = team.userId === user.id
-    const isAdminManager = await prisma.businessManager.findUnique({
+    const isAdminManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -597,7 +597,7 @@ export async function sendTeamInvitation(teamId: string, traderEmail: string) {
 
     // Check if current user is owner or admin manager
     const isOwner = team.userId === user.id
-    const isAdminManager = await prisma.businessManager.findUnique({
+    const isAdminManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -611,7 +611,7 @@ export async function sendTeamInvitation(teamId: string, traderEmail: string) {
     }
 
     // Check if there's already a pending invitation
-    const existingInvitation = await prisma.businessInvitation.findUnique({
+    const existingInvitation = await prisma.teamInvitation.findUnique({
       where: {
         teamId_email: {
           teamId,
@@ -671,7 +671,7 @@ export async function getTeamInvitations(teamId: string) {
 
     // Check if current user is owner or admin manager
     const isOwner = team.userId === user.id
-    const isAdminManager = await prisma.businessManager.findUnique({
+    const isAdminManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -685,7 +685,7 @@ export async function getTeamInvitations(teamId: string) {
     }
 
     // Get pending invitations
-    const invitations = await prisma.businessInvitation.findMany({
+    const invitations = await prisma.teamInvitation.findMany({
       where: {
         teamId,
         status: 'PENDING',
@@ -727,7 +727,7 @@ export async function removeTraderFromTeam(teamId: string, traderId: string) {
 
     // Check if current user is owner or admin manager
     const isOwner = team.userId === user.id
-    const isAdminManager = await prisma.businessManager.findUnique({
+    const isAdminManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -776,7 +776,7 @@ export async function cancelTeamInvitation(teamId: string, invitationId: string)
 
     // Check if current user is owner or admin manager
     const isOwner = team.userId === user.id
-    const isAdminManager = await prisma.businessManager.findUnique({
+    const isAdminManager = await prisma.teamManager.findUnique({
       where: {
         teamId_managerId: {
           teamId,
@@ -790,7 +790,7 @@ export async function cancelTeamInvitation(teamId: string, invitationId: string)
     }
 
     // Delete the invitation
-    await prisma.businessInvitation.delete({
+    await prisma.teamInvitation.delete({
       where: {
         id: invitationId,
         teamId: teamId, // Extra security check
@@ -815,7 +815,7 @@ export async function getTeamInvitationDetails(invitationToken: string) {
     }
 
     // Find the invitation by token
-    const invitation = await prisma.businessInvitation.findUnique({
+    const invitation = await prisma.teamInvitation.findUnique({
       where: { id: invitationToken },
       include: {
         team: {
@@ -873,7 +873,7 @@ export async function joinTeamByInvitation(invitationToken: string) {
     }
 
     // Find the invitation by token
-    const invitation = await prisma.businessInvitation.findUnique({
+    const invitation = await prisma.teamInvitation.findUnique({
       where: { id: invitationToken },
       include: {
         team: {
@@ -913,7 +913,7 @@ export async function joinTeamByInvitation(invitationToken: string) {
     // Accept the invitation by updating its status and adding user to team
     await prisma.$transaction([
       // Update invitation status
-      prisma.businessInvitation.update({
+      prisma.teamInvitation.update({
         where: { id: invitationToken },
         data: { status: 'ACCEPTED' }
       }),
