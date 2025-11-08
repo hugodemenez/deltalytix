@@ -87,7 +87,7 @@ model User {
   language          String            @default("en")
   thorToken         String?
   accounts          Account[]
-  businesses        Business[]
+  teams             Team[]
   comments          Comment[]
   dashboardLayout   DashboardLayout?
   groups            Group[]
@@ -123,50 +123,50 @@ model Synchronization {
   @@schema("public")
 }
 
-model Business {
-  id          String               @id @default(uuid())
+model Team {
+  id          String             @id @default(uuid())
   name        String
   userId      String
-  traderIds   String[]             @default([])
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  invitations BusinessInvitation[]
-  managers    BusinessManager[]
+  traderIds   String[]           @default([])
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitations TeamInvitation[]
+  managers    TeamManager[]
 
   @@unique([name, userId])
   @@index([userId])
   @@schema("public")
 }
 
-model BusinessManager {
-  id         String   @id @default(uuid())
-  businessId String
-  managerId  String
-  access     String   @default("viewer")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+model TeamManager {
+  id        String   @id @default(uuid())
+  teamId    String
+  managerId String
+  access    String   @default("viewer")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  @@unique([businessId, managerId])
-  @@index([businessId])
+  @@unique([teamId, managerId])
+  @@index([teamId])
   @@index([managerId])
   @@schema("public")
 }
 
-model BusinessInvitation {
-  id         String   @id @default(uuid())
-  businessId String
-  email      String
-  invitedBy  String
-  status     String   @default("PENDING")
-  expiresAt  DateTime @default(dbgenerated("(now() + '7 days'::interval)"))
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+model TeamInvitation {
+  id        String   @id @default(uuid())
+  teamId    String
+  email     String
+  invitedBy String
+  status    String   @default("PENDING")
+  expiresAt DateTime @default(dbgenerated("(now() + '7 days'::interval)"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
-  @@unique([businessId, email])
-  @@index([businessId])
+  @@unique([teamId, email])
+  @@index([teamId])
   @@index([email])
   @@index([status])
   @@schema("public")
