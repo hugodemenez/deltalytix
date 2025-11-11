@@ -781,7 +781,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         const result = await getEquityChartDataAction({
           instruments,
           accountNumbers,
-          dateRange: dateRange
+          dateRange: dateRange && dateRange.from && dateRange.to
             ? {
                 from: dateRange.from.toISOString(),
                 to: dateRange.to.toISOString(),

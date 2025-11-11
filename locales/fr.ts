@@ -238,6 +238,7 @@ export default {
   "filters.thisMonth": "Ce mois",
   "filters.lastThreeMonths": "Derniers 3 mois",
   "filters.lastSixMonths": "Les 6 derniers mois",
+  "filters.uniqueDay": "Jour unique",
   "filters.pickDate": "Choisir une date",
   "notFound.title": "404 - Page introuvable",
   "notFound.heading": "Oups ! Page introuvable",

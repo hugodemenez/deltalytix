@@ -21,6 +21,7 @@ export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
   const { dateRange, setDateRange } = useData()
   const [fromCalendarOpen, setFromCalendarOpen] = useState(false)
   const [toCalendarOpen, setToCalendarOpen] = useState(false)
+  const [uniqueDayCalendarOpen, setUniqueDayCalendarOpen] = useState(false)
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
@@ -38,6 +39,13 @@ export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
       setDateRange({ from: dateRange?.from, to: date })
     }
     setToCalendarOpen(false)
+  }
+
+  const handleUniqueDaySelect = (date: Date | undefined) => {
+    if (date) {
+      setDateRange({ from: date, to: date })
+    }
+    setUniqueDayCalendarOpen(false)
   }
 
   const formatDate = (date: Date) => {
@@ -61,8 +69,10 @@ export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
   // Filter "from" and "to" labels based on search
   const fromLabel = t('filters.commandMenu.dateRange.from')
   const toLabel = t('filters.commandMenu.dateRange.to')
+  const uniqueDayLabel = t('filters.uniqueDay')
   const showFrom = !searchValue || fromLabel.toLowerCase().includes(searchValue.toLowerCase())
   const showTo = !searchValue || toLabel.toLowerCase().includes(searchValue.toLowerCase())
+  const showUniqueDay = !searchValue || uniqueDayLabel.toLowerCase().includes(searchValue.toLowerCase())
 
   return (
     <>
@@ -168,6 +178,56 @@ export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
         </Popover>
       )}
 
+      {/* Unique Day Calendar Popover */}
+      {showUniqueDay && (
+        <Popover open={uniqueDayCalendarOpen} onOpenChange={setUniqueDayCalendarOpen}>
+          <PopoverTrigger asChild>
+            <CommandItem
+              onSelect={() => {
+                setUniqueDayCalendarOpen(true)
+              }}
+              className="flex items-center gap-2 px-2 group"
+            >
+              <CalendarIcon className="h-4 w-4" />
+              <span className="text-sm">{uniqueDayLabel}</span>
+              <div className="ml-auto flex items-center gap-1.5">
+                <span className={cn(
+                  "text-xs text-muted-foreground min-w-[100px] text-right",
+                  (!dateRange?.from || !dateRange?.to || dateRange.from.getTime() !== dateRange.to.getTime()) && "invisible"
+                )}>
+                  {dateRange?.from && dateRange?.to && dateRange.from.getTime() === dateRange.to.getTime() ? formatDate(dateRange.from) : "\u00A0"}
+                </span>
+                {dateRange?.from && dateRange?.to && dateRange.from.getTime() === dateRange.to.getTime() && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setDateRange({ from: undefined, to: undefined })
+                    }}
+                  >
+                    <X className="h-3 w-3 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            </CommandItem>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <div className="p-4">
+              <Calendar
+                initialFocus
+                mode="single"
+                defaultMonth={dateRange?.from || dateRange?.to}
+                selected={dateRange?.from && dateRange?.to && dateRange.from.getTime() === dateRange.to.getTime() ? dateRange.from : undefined}
+                onSelect={handleUniqueDaySelect}
+                className="rounded-md border"
+                locale={dateLocale}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* Quick Selectors */}
       {filteredQuickSelectors.map((selector, index) => (

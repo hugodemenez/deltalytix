@@ -366,6 +366,7 @@ export default {
     thisMonth: "This Month",
     lastThreeMonths: "Last 3 Months",
     lastSixMonths: "Last 6 Months",
+    uniqueDay: "Unique Day",
     accounts: "Accounts",
     propfirms: "Prop Firms",
     instruments: "Instruments",
