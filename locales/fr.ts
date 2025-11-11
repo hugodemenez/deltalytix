@@ -419,7 +419,7 @@ export default {
     min: "Min",
     max: "Max",
     apply: "Appliquer",
-    customRange: "Période personnalisée",
+    customRange: "Autre",
     // Account management related
     accountGroups: "Groupes de Comptes",
     loading: "Chargement...",
@@ -440,6 +440,23 @@ export default {
     create: "Créer",
     newGroup: "Nouveau groupe",
     createAccount: "Créer un compte",
+    commandMenu: {
+      placeholder: "Rechercher des filtres...",
+      searchPlaceholder: "Rechercher des filtres...",
+      sections: {
+        accounts: "Comptes",
+        dateRange: "Période",
+        pnl: "PnL",
+        instruments: "Instruments",
+        tags: "Tags",
+      },
+      dateRange: {
+        naturalLanguage: "Tapez une date (ex: 'la semaine dernière', 'ce mois')",
+        openCalendar: "Ouvrir le calendrier",
+        from: "De",
+        to: "À",
+      },
+    },
     selectGroup: "Sélectionner un groupe",
     noGroup: "Sans groupe",
     move: "Déplacer",
@@ -1105,6 +1122,7 @@ export default {
       deleteError: "Échec de la suppression du tag",
       fetchError: "Échec de la récupération des tags",
       clearFilter: "Effacer le filtre",
+      selectAll: "Sélectionner tous les tags",
       tagExists: "Un tag avec ce nom existe déjà",
       deleteConfirmTitle: "Supprimer le Tag",
       deleteConfirmDescription:

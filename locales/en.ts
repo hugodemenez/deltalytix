@@ -404,6 +404,23 @@ export default {
     create: "Create",
     newGroup: "New Group",
     createAccount: "Create Account",
+    commandMenu: {
+      placeholder: "Search filters...",
+      searchPlaceholder: "Search filters...",
+      sections: {
+        accounts: "Accounts",
+        dateRange: "Date Range",
+        pnl: "PnL",
+        instruments: "Instruments",
+        tags: "Tags",
+      },
+      dateRange: {
+        naturalLanguage: "Type date (e.g., 'last week', 'this month')",
+        openCalendar: "Open Calendar",
+        from: "From",
+        to: "To",
+      },
+    },
     selectGroup: "Select Group",
     noGroup: "No Group",
     move: "Move",

@@ -7,7 +7,7 @@ import { useData } from "@/context/data-provider"
 import { Pencil, Trash2, RotateCcw } from "lucide-react"
 import { ShareButton } from "./share-button"
 import { AddWidgetSheet } from "./add-widget-sheet"
-import FilterLeftPane from "./filters/filter-left-pane"
+import { FilterCommandMenu } from "./filters/filter-command-menu"
 import { WidgetType, WidgetSize } from "../types/dashboard"
 import {
   AlertDialog,
@@ -27,7 +27,6 @@ import {
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
 import { useState, useEffect, useRef } from "react"
-import { FilterDropdown } from "./filters/filter-dropdown"
 import { useToolbarSettingsStore } from "@/store/toolbar-settings-store"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
@@ -248,11 +247,7 @@ export function Toolbar({
 
                 <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
 
-                {isMobile ? (
-                  <FilterLeftPane />
-                ) : (
-                  <FilterDropdown />
-                )}
+                <FilterCommandMenu variant="toolbar" />
                 
                 {isCustomizing && (
                   <div className="flex items-center gap-2">

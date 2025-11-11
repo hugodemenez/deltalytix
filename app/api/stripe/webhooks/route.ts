@@ -13,7 +13,7 @@ function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {
   if (subscription.items && subscription.items.data && subscription.items.data.length > 0) {
     return subscription.items.data[0].current_period_end;
   }
-  
+
   // Fallback to billing_cycle_anchor if no items available
   return subscription.billing_cycle_anchor;
 }
@@ -25,24 +25,24 @@ function getCurrentPeriodEndFromEventData(data: Stripe.Subscription): number {
   if ('current_period_end' in data && typeof data.current_period_end === 'number') {
     return data.current_period_end;
   }
-  
+
   // Fallback to billing_cycle_anchor
   return data.billing_cycle_anchor;
 }
 
 export async function GET(request: NextRequest) {
-    return NextResponse.json({ message: 'Hello, world!' })
+  return NextResponse.json({ message: 'Hello, world!' })
 }
 
 export async function POST(req: Request) {
   let event: Stripe.Event | undefined;
   try {
-     event = stripe.webhooks.constructEvent(
+    event = stripe.webhooks.constructEvent(
       await (await req.blob()).text(),
       req.headers.get("stripe-signature") as string,
       process.env.STRIPE_WEBHOOK_SECRET as string,
     );
-  } 
+  }
   catch (err) {
     // On error, log and return the error message.
     console.log('err', err)
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         case "checkout.session.completed":
           console.log('checkout.session.completed')
           data = event.data.object as Stripe.Checkout.Session;
-          
+
           // Handle different modes: subscription vs payment (one-time)
           if (data.mode === 'subscription' && data.subscription) {
             // Handle recurring subscription
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
             const subscriptionItems = await stripe.subscriptionItems.list({
               subscription: data.subscription as string,
             });
-            
+
             const priceId = subscriptionItems.data[0]?.price.id;
             const price = await stripe.prices.retrieve(priceId, {
               expand: ['product'],
@@ -97,20 +97,21 @@ export async function POST(req: Request) {
             const subscriptionPlan = productName.toUpperCase() || 'FREE';
             // If interval_count is 3 then it is quarterly
             const interval = price.recurring?.interval_count === 3 ? 'quarter' : price.recurring?.interval || 'month';
-            
+
             const user = await prisma.user.findUnique({
               where: { email: data.customer_details?.email as string },
             });
 
             // Check if this is a business subscription
-            const isBusinessSubscription = data.metadata?.plan === 'business_monthly_usd' || 
-                                        subscriptionPlan === 'BUSINESS' || 
-                                        price.lookup_key === 'business_monthly_usd';
+            const isBusinessSubscription = data.metadata?.plan === 'business_monthly_usd' ||
+              subscriptionPlan === 'BUSINESS' ||
+              price.lookup_key === 'business_monthly_usd';
+              const currentPeriodEnd = getCurrentPeriodEnd(subscription);
 
             if (isBusinessSubscription) {
               // Handle business subscription
               console.log('Business subscription completed')
-              
+
               // Create the business after successful payment
               const businessName = data.metadata?.businessName || subscription.metadata?.businessName || 'My Business';
               const userId = data.metadata?.userId || subscription.metadata?.userId;
@@ -133,14 +134,50 @@ export async function POST(req: Request) {
                   });
 
                   console.log('Business created:', business);
+
+                  // Register subscription as a business subscription
+            // We should register subscription as a business subscription if it is a business subscription
+            // Otherwise it will interfer with the user subscription (! user can have both a business subscription and a user subscription)
+            // And multiple business subscriptions for the same user will be registered as different subscriptions in the database
+            
+            // We should identify the business subscription by the business name and the user id
+            await prisma.businessSubscription.upsert({
+              where: {
+                businessId: business.id,
+              },
+              update: {
+                plan: subscriptionPlan,
+                endDate: new Date(currentPeriodEnd * 1000),
+                status: 'ACTIVE',
+                trialEndsAt: null,
+                interval: interval,
+              },
+              create: {
+                email: data.customer_details?.email as string,
+                plan: subscriptionPlan,
+                user: { connect: { id: user?.id } },
+                endDate: new Date(currentPeriodEnd * 1000),
+                business: { connect: { id: business.id } },
+                status: 'ACTIVE',
+                trialEndsAt: null,
+                interval: interval,
+              }
+            });
+
+            console.log('business subscription created/updated', subscription)
+
+            // Return. No need to continue the flow.
+            return NextResponse.json({ message: 'Business subscription created/updated' }, { status: 200 });
                 } catch (error) {
                   console.error('Error creating business:', error);
                 }
               }
             }
 
-            const currentPeriodEnd = getCurrentPeriodEnd(subscription);
-            
+
+            // We should register subscription as a business subscription if it is a business subscription
+            // Otherwise it will interfer with the user subscription (! user can have both a business subscription and a user subscription)
+            // And multiple business subscriptions for the same user will be registered as different subscriptions in the database
             await prisma.subscription.upsert({
               where: {
                 email: data.customer_details?.email as string,
@@ -167,7 +204,7 @@ export async function POST(req: Request) {
           } else if (data.mode === 'payment') {
             // Handle one-time payment (lifetime plan)
             console.log('One-time payment completed')
-            
+
             // Get line items to find the price
             const lineItems = data.line_items?.data || [];
             if (lineItems.length === 0) {
@@ -178,7 +215,7 @@ export async function POST(req: Request) {
               );
               lineItems.push(...(session.line_items?.data || []));
             }
-            
+
             if (lineItems.length > 0) {
               const priceId = lineItems[0].price?.id;
               if (priceId) {
@@ -188,7 +225,7 @@ export async function POST(req: Request) {
                 console.log('LIFETIME PRICE', price)
                 const productName = (price.product as Stripe.Product).name;
                 const subscriptionPlan = productName.toUpperCase() || 'LIFETIME';
-                
+
                 const user = await prisma.user.findUnique({
                   where: { email: data.customer_details?.email as string },
                 });
@@ -235,11 +272,11 @@ export async function POST(req: Request) {
           const customerData = await stripe.customers.retrieve(
             data.customer as string
           ) as Stripe.Customer;
-          
+
           if (customerData.email) {
             await prisma.subscription.update({
               where: { email: customerData.email },
-              data: { 
+              data: {
                 plan: 'FREE',
                 status: "CANCELLED",
                 endDate: new Date(data.ended_at! * 1000)
@@ -255,7 +292,7 @@ export async function POST(req: Request) {
           const updatedCustomerData = await stripe.customers.retrieve(
             data.customer as string
           ) as Stripe.Customer;
-          
+
           if (updatedCustomerData.email) {
             // Get the current price information
             const currentItems = await stripe.subscriptionItems.list({
@@ -296,7 +333,7 @@ export async function POST(req: Request) {
             if (data.cancel_at_period_end) {
               // Update subscription status first
               const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
-              
+
               await prisma.subscription.update({
                 where: { email: updatedCustomerData.email },
                 data: {
@@ -307,10 +344,10 @@ export async function POST(req: Request) {
 
               // Then try to save feedback if it exists and has meaningful content
               const cancellationDetails = data.cancellation_details as Stripe.Subscription.CancellationDetails | null;
-              
-              if ((cancellationDetails?.reason && cancellationDetails.reason !== 'cancellation_requested') || 
-                  cancellationDetails?.feedback || 
-                  cancellationDetails?.comment) {
+
+              if ((cancellationDetails?.reason && cancellationDetails.reason !== 'cancellation_requested') ||
+                cancellationDetails?.feedback ||
+                cancellationDetails?.comment) {
                 await prisma.subscriptionFeedback.create({
                   data: {
                     email: updatedCustomerData.email,
@@ -324,13 +361,13 @@ export async function POST(req: Request) {
               console.log(`Subscription scheduled for cancellation: ${data.id}`);
             } else {
               const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
-              
+
               await prisma.subscription.update({
                 where: { email: updatedCustomerData.email },
                 data: {
                   status: subscriptionStatus,
                   plan: data.ended_at ? 'free' : updatedPlan,
-                  endDate: data.ended_at 
+                  endDate: data.ended_at
                     ? new Date(data.ended_at * 1000)
                     : new Date(currentPeriodEnd * 1000),
                   trialEndsAt: data.trial_end ? new Date(data.trial_end * 1000) : null
@@ -346,7 +383,7 @@ export async function POST(req: Request) {
           const newCustomerData = await stripe.customers.retrieve(
             data.customer as string
           ) as Stripe.Customer;
-          
+
           if (newCustomerData.email) {
             const user = await prisma.user.findUnique({
               where: { email: newCustomerData.email },
@@ -357,10 +394,10 @@ export async function POST(req: Request) {
               const subscriptionItems = await stripe.subscriptionItems.list({
                 subscription: data.id,
               });
-              
+
               const priceId = subscriptionItems.data[0]?.price.id;
               let subscriptionPlan = 'FREE'; // Default fallback
-              
+
               if (priceId) {
                 const price = await stripe.prices.retrieve(priceId, {
                   expand: ['product'],
@@ -370,7 +407,7 @@ export async function POST(req: Request) {
                 subscriptionPlan = productName.toUpperCase() || 'FREE';
               }
               const currentPeriodEnd = getCurrentPeriodEndFromEventData(data);
-              
+
               await prisma.subscription.upsert({
                 where: { email: newCustomerData.email },
                 update: {
@@ -396,11 +433,11 @@ export async function POST(req: Request) {
           console.log('invoice.payment_failed')
           data = event.data.object as Stripe.Invoice;
           const customerEmail = (await stripe.customers.retrieve(data.customer as string) as Stripe.Customer).email;
-          
+
           if (customerEmail) {
             await prisma.subscription.update({
               where: { email: customerEmail },
-              data: { 
+              data: {
                 status: "PAYMENT_FAILED",
               }
             });
