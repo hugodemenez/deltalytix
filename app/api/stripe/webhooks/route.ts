@@ -201,6 +201,24 @@ export async function POST(req: Request) {
             });
 
             console.log('subscription created/updated', subscription)
+            
+            // Apply referral code if present in metadata
+            if (data.metadata?.referral_code && user?.id) {
+              try {
+                const { getReferralBySlug, addReferredUser } = await import('@/server/referral')
+                const referral = await getReferralBySlug(data.metadata.referral_code)
+                if (referral && referral.userId !== user.id) {
+                  // Check if user is already in the referral list
+                  if (!referral.referredUserIds.includes(user.id)) {
+                    await addReferredUser(referral.id, user.id)
+                    console.log('Referral code applied successfully for user:', user.id)
+                  }
+                }
+              } catch (error) {
+                console.error('Error applying referral code in webhook:', error)
+                // Non-fatal - don't block subscription creation
+              }
+            }
           } else if (data.mode === 'payment') {
             // Handle one-time payment (lifetime plan)
             console.log('One-time payment completed')
@@ -257,6 +275,24 @@ export async function POST(req: Request) {
                 });
 
                 console.log('lifetime subscription created/updated')
+                
+                // Apply referral code if present in metadata (for lifetime plans too)
+                if (data.metadata?.referral_code && user?.id) {
+                  try {
+                    const { getReferralBySlug, addReferredUser } = await import('@/server/referral')
+                    const referral = await getReferralBySlug(data.metadata.referral_code)
+                    if (referral && referral.userId !== user.id) {
+                      // Check if user is already in the referral list
+                      if (!referral.referredUserIds.includes(user.id)) {
+                        await addReferredUser(referral.id, user.id)
+                        console.log('Referral code applied successfully for lifetime user:', user.id)
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Error applying referral code in webhook (lifetime):', error)
+                    // Non-fatal - don't block subscription creation
+                  }
+                }
               }
             }
           }

@@ -20,6 +20,7 @@ import { UsersIcon, type UsersIconHandle } from '@/components/animated-icons/use
 import { useModalStateStore } from '@/store/modal-state-store'
 import { useUserStore } from '@/store/user-store'
 import UserMenu from './user-menu'
+import ReferralButton from './referral-button'
 
 export default function Navbar() {
   const  user = useUserStore(state => state.supabaseUser)
@@ -96,6 +97,7 @@ export default function Navbar() {
               <ImportButton />
             </div>
             <div className="flex items-center gap-2">
+              <ReferralButton />
               <UserMenu />
             </div>
           </div>

@@ -130,8 +130,21 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
   const [isLoading, setIsLoading] = useState(false)
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false)
   const [pendingLookupKey, setPendingLookupKey] = useState<string>('')
+  const [referralCode, setReferralCode] = useState<string | null>(null)
   const t = useI18n()
   const { currency, symbol } = useCurrency()
+
+  // Read referral code from URL params or localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      import('@/lib/referral-storage').then(({ getReferralCode }) => {
+        const ref = getReferralCode()
+        if (ref) {
+          setReferralCode(ref)
+        }
+      })
+    }
+  }, [])
 
   // Function to check if current plan matches lookup key
   const isCurrentPlan = (lookupKey: string) => {
@@ -199,8 +212,17 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
       input.type = 'hidden'
       input.name = 'lookup_key'
       input.value = lookupKey
-      
       form.appendChild(input)
+      
+      // Add referral code if present
+      if (referralCode) {
+        const referralInput = document.createElement('input')
+        referralInput.type = 'hidden'
+        referralInput.name = 'referral'
+        referralInput.value = referralCode
+        form.appendChild(referralInput)
+      }
+      
       document.body.appendChild(form)
       form.submit()
       return
@@ -265,8 +287,17 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
         input.type = 'hidden'
         input.name = 'lookup_key'
         input.value = result.lookupKey || lookupKey
-        
         form.appendChild(input)
+        
+        // Add referral code if present
+        if (referralCode) {
+          const referralInput = document.createElement('input')
+          referralInput.type = 'hidden'
+          referralInput.name = 'referral'
+          referralInput.value = referralCode
+          form.appendChild(referralInput)
+        }
+        
         document.body.appendChild(form)
         form.submit()
       } else {

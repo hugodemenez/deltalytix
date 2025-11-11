@@ -120,6 +120,7 @@ model User {
   tags                  Tag[]
   votes                 Vote[]
   businessSubscriptions BusinessSubscription[]
+  referral              Referral?
 
   @@index([email])
   @@schema("public")
@@ -336,6 +337,20 @@ model Shared {
   dateRange      Json
   desktop        Json      @default("[]")
   mobile         Json      @default("[]")
+
+  @@index([userId])
+  @@index([slug])
+  @@schema("public")
+}
+
+model Referral {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  slug             String   @unique
+  referredUserIds String[] @default([])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([slug])

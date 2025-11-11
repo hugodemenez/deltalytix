@@ -9,6 +9,7 @@ import chat from "./en/chat";
 import terms from "./en/terms";
 import embed from "./en/embed";
 import business from "./en/business";
+import referral from "./en/referral";
 export default {
   ...shared,
   ...landing,
@@ -21,6 +22,7 @@ export default {
   ...terms,
   ...embed,
   ...business,
+  ...referral,
   "footer.heading": "Footer",
   "footer.description": "Advanced analytics for modern traders.",
   "footer.product.title": "Product",

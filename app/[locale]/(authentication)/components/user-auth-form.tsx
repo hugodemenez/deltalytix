@@ -52,6 +52,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [countdown, setCountdown] = React.useState<number>(0)
     const [isSubscription, setIsSubscription] = React.useState<boolean>(false)
     const [lookupKey, setLookupKey] = React.useState<string | null>(null)
+    const [referralCode, setReferralCode] = React.useState<string | null>(null)
     const [authMethod, setAuthMethod] = React.useState<AuthMethod>(null)
     const [showOtpInput, setShowOtpInput] = React.useState<boolean>(false)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
@@ -65,10 +66,23 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         const urlParams = new URLSearchParams(window.location.search)
         const subscription = urlParams.get('subscription')
         const next = urlParams.get('next')
+        const referral = urlParams.get('referral')
         setIsSubscription(subscription === 'true')
         const lookup_key = urlParams.get('lookup_key')
         setLookupKey(lookup_key)
         setNextUrl(next)
+        
+        // Get referral code from URL or localStorage
+        if (referral) {
+            setReferralCode(referral)
+        } else {
+            import('@/lib/referral-storage').then(({ getReferralCode }) => {
+                const storedRef = getReferralCode()
+                if (storedRef) {
+                    setReferralCode(storedRef)
+                }
+            })
+        }
     }, [])
 
     React.useEffect(() => {
@@ -99,7 +113,11 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setIsLoading(true)
         setAuthMethod('email')
         try {
-            await signInWithEmail(values.email, isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl, locale)
+            const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
+            const next = isSubscription 
+                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}` 
+                : nextUrl;
+            await signInWithEmail(values.email, next, locale)
             setIsEmailSent(true)
             setShowOtpInput(true)
             setCountdown(15)
@@ -159,7 +177,11 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('discord')
 
         try {
-            await signInWithDiscord(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl, locale)
+            const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
+            const next = isSubscription 
+                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}` 
+                : nextUrl;
+            await signInWithDiscord(next, locale)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
@@ -173,7 +195,11 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('google')
 
         try {
-            await signInWithGoogle(isSubscription ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}` : nextUrl, locale)
+            const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
+            const next = isSubscription 
+                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}` 
+                : nextUrl;
+            await signInWithGoogle(next, locale)
         } catch (error) {
             console.error(error)
             setAuthMethod(null)
