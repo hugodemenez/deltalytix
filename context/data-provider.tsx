@@ -207,7 +207,7 @@ export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
 }
 
 // Add after the interfaces and before the UserDataContext
-export const defaultLayouts: PrismaDashboardLayout = {
+export const defaultLayouts: DashboardLayoutWithWidgets = {
   id: '',
   userId: '',
   createdAt: new Date(),
@@ -587,16 +587,7 @@ export const DataProvider: React.FC<{
             setTrades(processedSharedTrades);
             setSharedParams(sharedData.params);
 
-            if (sharedData.params.desktop || sharedData.params.mobile) {
-              setDashboardLayout({
-                id: 'shared-layout',
-                userId: 'shared',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                desktop: sharedData.params.desktop || defaultLayouts.desktop,
-                mobile: sharedData.params.mobile || defaultLayouts.mobile
-              });
-            }
+            setDashboardLayout(defaultLayouts)
 
             if (sharedData.params.tickDetails) {
               setTickDetails(sharedData.params.tickDetails);
@@ -633,8 +624,8 @@ export const DataProvider: React.FC<{
           userId: 'admin',
           createdAt: new Date(),
           updatedAt: new Date(),
-          desktop: defaultLayouts.desktop as unknown as Widget[],
-          mobile: defaultLayouts.mobile as unknown as Widget[]
+          desktop: defaultLayouts.desktop,
+          mobile: defaultLayouts.mobile
         });
         return;
       }
@@ -661,7 +652,7 @@ export const DataProvider: React.FC<{
         }
         else {
           // If no layout exists in database, use default layout
-          setDashboardLayout(defaultLayouts as unknown as DashboardLayoutWithWidgets)
+          setDashboardLayout(defaultLayouts)
         }
       }
 
