@@ -132,6 +132,90 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         }
     }
 
+    // Helper function to parse Supabase errors and return user-friendly messages
+    function parseAuthError(error: unknown): { message: string; field?: 'email' | 'password' } {
+        if (!(error instanceof Error)) {
+            return { message: t('auth.errors.signInFailed') }
+        }
+
+        const errorMessage = error.message.toLowerCase()
+
+        // Password validation errors
+        if (errorMessage.includes('password should contain') || 
+            errorMessage.includes('password must contain') ||
+            errorMessage.includes('password requirements')) {
+            return {
+                message: t('auth.errors.passwordTooWeak'),
+                field: 'password'
+            }
+        }
+
+        if (errorMessage.includes('password must be at least') ||
+            errorMessage.includes('password is too short')) {
+            return {
+                message: t('auth.errors.passwordMinLength'),
+                field: 'password'
+            }
+        }
+
+        // Account exists but password is wrong or not set yet
+        if (errorMessage.includes('invalid_credentials_or_no_password') ||
+            errorMessage.includes('password is incorrect, or this account doesn\'t have a password set')) {
+            return {
+                message: t('auth.errors.invalidCredentialsOrNoPassword'),
+                field: 'password'
+            }
+        }
+
+        // Email/credential errors (generic - check this after specific cases)
+        if (errorMessage.includes('invalid login credentials') ||
+            errorMessage.includes('invalid_credentials') ||
+            errorMessage.includes('invalid email or password')) {
+            return {
+                message: t('auth.errors.invalidCredentials'),
+                field: 'password'
+            }
+        }
+
+        if (errorMessage.includes('email not confirmed') ||
+            errorMessage.includes('email_not_confirmed')) {
+            return {
+                message: t('auth.errors.emailNotConfirmed'),
+                field: 'email'
+            }
+        }
+
+        if (errorMessage.includes('user not found') ||
+            errorMessage.includes('no user found')) {
+            return {
+                message: t('auth.errors.userNotFound'),
+                field: 'email'
+            }
+        }
+
+        if (errorMessage.includes('already registered') ||
+            errorMessage.includes('user already registered')) {
+            return {
+                message: t('auth.errors.accountExists'),
+                field: 'email'
+            }
+        }
+
+        // Account exists but no password set (created via magic link)
+        if (errorMessage.includes('account_exists_no_password') ||
+            errorMessage.includes('doesn\'t have a password set')) {
+            return {
+                message: t('auth.errors.accountExistsNoPassword'),
+                field: 'email'
+            }
+        }
+
+        // Default: return the original error message but make it more user-friendly
+        return {
+            message: error.message || t('auth.errors.signInFailed')
+        }
+    }
+
     async function onSubmitPassword(values: z.infer<typeof formSchema>) {
         setIsLoading(true)
         setAuthMethod('email')
@@ -143,8 +227,24 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
             setLastAuthPreference('password')
         } catch (error) {
             console.error(error)
+            const parsedError = parseAuthError(error)
+            
+            // Set form field error if applicable
+            if (parsedError.field === 'password') {
+                form.setError('password', {
+                    type: 'manual',
+                    message: parsedError.message
+                })
+            } else if (parsedError.field === 'email') {
+                form.setError('email', {
+                    type: 'manual',
+                    message: parsedError.message
+                })
+            }
+            
+            // Show toast with user-friendly message
             toast.error(t('error'), {
-                description: error instanceof Error ? error.message : 'Failed to sign in',
+                description: parsedError.message,
             })
             setAuthMethod(null)
         } finally {

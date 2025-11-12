@@ -57,6 +57,19 @@ export default {
         discordMethod: 'Discord',
         googleMethod: 'Google',
         cancel: 'Cancel',
-        primary: 'Primary'
+        primary: 'Primary',
+        // Error messages
+        errors: {
+            invalidCredentials: 'Invalid email or password',
+            passwordTooWeak: 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character',
+            passwordMinLength: 'Password must be at least 6 characters',
+            emailNotConfirmed: 'Please confirm your email address before signing in',
+            userNotFound: 'No account found with this email address',
+            signInFailed: 'Failed to sign in. Please try again',
+            signUpFailed: 'Failed to create account. Please try again',
+            accountExists: 'An account with this email already exists',
+            accountExistsNoPassword: 'This account exists but doesn\'t have a password set. Please sign in with a magic link first, then set a password in your settings, or use the magic link to sign in.',
+            invalidCredentialsOrNoPassword: 'The password is incorrect, or this account doesn\'t have a password set yet. If you created your account with a magic link, please sign in using "Email only" first, then set a password in your settings.',
+        }
     },
 } as const;
