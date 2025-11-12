@@ -35,7 +35,10 @@ import { useAuthPreferenceStore } from "@/store/auth-preference-store"
 
 const formSchema = z.object({
     email: z.string().email(),
-    password: z.string().min(6, 'Password must be at least 6 characters').optional(),
+    password: z.union([
+        z.string().min(6, 'Password must be at least 6 characters'),
+        z.literal('')
+    ]).optional(),
 })
 
 const otpFormSchema = z.object({
