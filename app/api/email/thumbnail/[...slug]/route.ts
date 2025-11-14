@@ -21,7 +21,6 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ slug?: string[] }> }
 ) {
-  'use cache'
   const { slug: slugFromParams } = await params;
   const slug = slugFromParams || [];
   const [videoId, requestedQuality] = slug;
@@ -34,7 +33,7 @@ export async function GET(
     ? [requestedQuality, ...YT_QUALITIES.filter((q) => q !== requestedQuality)]
     : [...YT_QUALITIES];
 
-  let lastError: unknown = null;
+  let lastErrorMessage: string | null = null;
   for (const quality of qualitiesToTry) {
     const url = buildYouTubeUrl(videoId, quality);
     try {
@@ -47,7 +46,7 @@ export async function GET(
       });
 
       if (!res.ok) {
-        lastError = new Error(`Upstream responded ${res.status}`);
+        lastErrorMessage = `Upstream responded ${res.status}`;
         continue;
       }
 
@@ -62,13 +61,12 @@ export async function GET(
         },
       });
     } catch (err) {
-      lastError = err;
+      lastErrorMessage = err instanceof Error ? err.message : "Failed to fetch thumbnail";
       continue;
     }
   }
 
-  const message =
-    lastError instanceof Error ? lastError.message : "Failed to fetch thumbnail";
+  const message = lastErrorMessage || "Failed to fetch thumbnail";
   return new Response(message, { status: 502 });
 }
 
