@@ -37,13 +37,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
           width: 1200,
           height: 630,
           alt: 'Deltalytix Open Graph Image',
-        },
-        {
-          url: '/twitter-image.png',
-          width: 1200,
-          height: 630,
-          alt: 'Deltalytix Twitter Image',
-        },
+        }
       ],
     },
 
