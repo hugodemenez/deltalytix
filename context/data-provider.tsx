@@ -928,7 +928,8 @@ export const DataProvider: React.FC<{
     weekdayFilter,
     hourFilter,
     tagFilter,
-    timezone
+    timezone,
+    isLoading
   ]);
 
   const statistics = useMemo(() => {
