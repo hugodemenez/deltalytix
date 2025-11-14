@@ -532,12 +532,12 @@ export const platforms: PlatformConfig[] = [
         description: 'import.steps.uploadFileDescription',
         component: FileUpload
       },
-      {
-        id: 'select-headers',
-        title: 'import.steps.selectHeaders',
-        description: 'import.steps.selectHeadersDescription',
-        component: HeaderSelection
-      },
+      // {
+      //   id: 'select-headers',
+      //   title: 'import.steps.selectHeaders',
+      //   description: 'import.steps.selectHeadersDescription',
+      //   component: HeaderSelection
+      // },
       {
         id: 'preview-trades',
         title: 'import.steps.processTrades',
