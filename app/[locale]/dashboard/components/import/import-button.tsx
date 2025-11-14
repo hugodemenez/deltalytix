@@ -70,8 +70,8 @@ export default function ImportButton() {
   const t = useI18n()
 
 
-  const handleSave = async () => {
-    console.log('[ImportButton] Saving trades:', processedTrades)
+  const handleSave = useCallback(async () => {
+    console.log('[ImportButton] First:', processedTrades)
     if (!user || !supabaseUser) {
       toast.error(t('import.error.auth'), {
         description: t('import.error.authDescription'),
@@ -93,18 +93,19 @@ export default function ImportButton() {
       } else {
         for (const accountNumber of accountNumbers) {
           console.log('[ImportButton] Account number:', accountNumber)
-          const tradesForAccount = processedTrades.map(trade => {
+          newTrades = [...newTrades, ...processedTrades.map(trade => {
             return createTradeWithDefaults({
               ...trade,
-              accountNumber: accountNumber,
+              accountNumber: accountNumber
             })
-          })
-          newTrades = [...newTrades, ...tradesForAccount]
+          })]
         }
       }
 
       console.log('[ImportButton] Saving trades:', newTrades)
       const result = await saveTradesAction(newTrades)
+      // Update the trades now because it shows a toast, and requires some time before showing the trades
+      await refreshTrades()
       if (result.error) {
         if (result.error === "DUPLICATE_TRADES") {
           toast.error(t('import.error.duplicateTrades'), {
@@ -120,13 +121,12 @@ export default function ImportButton() {
           })
         }
         // Don't proceed further if there's an error
-        // return
+        return
       }
+      // Show success message
       toast.success(t('import.success'), {
         description: t('import.successDescription', { numberOfTradesAdded: result.numberOfTradesAdded }),
       })
-      // Update the trades
-      await refreshTrades()
       setIsOpen(false)
       // Reset the import process
       resetImportState()
@@ -139,7 +139,7 @@ export default function ImportButton() {
     } finally {
       setIsSaving(false)
     }
-  }
+  }, [processedTrades, accountNumbers, user, supabaseUser, t, refreshTrades])
 
   const resetImportState = () => {
     setImportType('')
