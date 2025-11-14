@@ -93,12 +93,13 @@ export default function ImportButton() {
       } else {
         for (const accountNumber of accountNumbers) {
           console.log('[ImportButton] Account number:', accountNumber)
-          newTrades = processedTrades.map(trade => {
+          const tradesForAccount = processedTrades.map(trade => {
             return createTradeWithDefaults({
               ...trade,
               accountNumber: accountNumber,
             })
           })
+          newTrades = [...newTrades, ...tradesForAccount]
         }
       }
 
