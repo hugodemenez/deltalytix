@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { XCircle, CheckCircle2, Info, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { CheckCircle2, Info, ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Progress } from "@/components/ui/progress"
-import { useData } from '@/context/data-provider'
 import { Button } from "@/components/ui/button"
 import { useNotificationStore } from '@/store/notification'
 import { useI18n } from '@/locales/client'
@@ -27,10 +26,6 @@ interface Notification {
   }
 }
 
-interface RithmicSyncNotificationsProps {
-  isMockMode?: boolean
-}
-
 function formatYYYYMMDD(dateStr: string): string {
   if (!dateStr || dateStr.length !== 8) return dateStr
   const year = dateStr.slice(0, 4)
@@ -39,7 +34,7 @@ function formatYYYYMMDD(dateStr: string): string {
   return `${day}/${month}/${year}`
 }
 
-export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNotificationsProps) {
+export function RithmicSyncNotifications() {
   const t = useI18n()
   const [notifications, setNotifications] = useState<Record<string, Notification>>({
     progress: {
@@ -58,93 +53,14 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
   const [isComplete, setIsComplete] = useState(false)
   const { isCollapsed, setIsCollapsed } = useNotificationStore()
   const { isConnected } = useRithmicSyncContext()
-  const { lastMessage, accountsProgress, currentAccount, clearMessageHistory, selectedAccounts, processingStats } = useRithmicSyncStore()
-  const { refreshTrades } = useData()
-  const refreshTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const mockIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
-  const isMountedRef = useRef(true)
-
-  // Mock synchronization logic
-  useEffect(() => {
-    if (isMockMode) {
-      let currentDay = 1
-      const totalDays = 300
-      let ordersProcessed = 0
-      const mockAccount = 'MOCK-ACCOUNT-123'
-
-      // Reset state
-      setIsComplete(false)
-      setNotifications(prev => ({
-        ...prev,
-        progress: {
-          ...prev.progress,
-          type: 'info',
-          message: t('notification.processingAccount', { account: mockAccount }),
-          timestamp: Date.now(),
-          progress: {
-            current: 0,
-            total: totalDays,
-            ordersProcessed: 0
-          }
-        }
-      }))
-
-      // Start mock progress
-      mockIntervalRef.current = setInterval(() => {
-        const currentDate = new Date()
-        currentDate.setDate(currentDate.getDate() - (totalDays - currentDay))
-        const formattedDate = currentDate.toISOString().slice(0, 10).replace(/-/g, '')
-
-        ordersProcessed += Math.floor(Math.random() * 10) + 1
-
-        setNotifications(prev => ({
-          ...prev,
-          progress: {
-            ...prev.progress,
-            type: 'info',
-            message: t('notification.processingDate', { date: formatYYYYMMDD(formattedDate) }),
-            timestamp: Date.now(),
-            progress: {
-              current: currentDay,
-              total: totalDays,
-              ordersProcessed,
-              currentDate: formattedDate,
-              currentDayNumber: currentDay
-            }
-          }
-        }))
-
-        currentDay++
-
-        if (currentDay > totalDays) {
-          clearInterval(mockIntervalRef.current)
-          setIsComplete(true)
-          setNotifications(prev => ({
-            ...prev,
-            progress: {
-              ...prev.progress,
-              type: 'success',
-              message: t('notification.completed'),
-              timestamp: Date.now()
-            }
-          }))
-        }
-      }, 2000) // Update every 2 seconds
-
-      return () => {
-        if (mockIntervalRef.current) {
-          clearInterval(mockIntervalRef.current)
-        }
-      }
-    }
-  }, [isMockMode, t])
+  const { lastMessage, accountsProgress, currentAccount, selectedAccounts, processingStats } = useRithmicSyncStore()
 
   // Reset complete state when connection is established
   useEffect(() => {
-    if (isConnected && !isMockMode) {
+    if (isConnected) {
       setIsComplete(false)
     }
-  }, [isConnected, isMockMode])
+  }, [isConnected])
 
   // Update progress notification when current account changes
   useEffect(() => {
@@ -258,7 +174,7 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
         }
       }
     }
-  }, [lastMessage, refreshTrades, t])
+  }, [lastMessage, t])
 
   // Remove stale notifications
   useEffect(() => {
@@ -287,53 +203,6 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
 
     return () => clearInterval(interval)
   }, [t])
-
-  // Setup debounced refresh
-  useEffect(() => {
-    if (lastMessage?.type === 'complete') {
-      console.log('Last message:', lastMessage)
-      // CLEAR MESSAGE HISTORY
-      clearMessageHistory()
-
-      // Clear any existing timeout
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current)
-      }
-
-      // Set new timeout
-      refreshTimeoutRef.current = setTimeout(() => {
-        // Only call refreshTrades if component is still mounted
-        if (isMountedRef.current) {
-          refreshTrades()
-        }
-      }, 5000)
-    }
-
-    // Cleanup timeout on unmount
-    return () => {
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current)
-        refreshTimeoutRef.current = undefined
-      }
-    }
-  }, [lastMessage, refreshTrades])
-
-  // Track mount state
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-      // Clear any pending timeouts on unmount
-      if (refreshTimeoutRef.current) {
-        clearTimeout(refreshTimeoutRef.current)
-        refreshTimeoutRef.current = undefined
-      }
-      if (mockIntervalRef.current) {
-        clearInterval(mockIntervalRef.current)
-        mockIntervalRef.current = undefined
-      }
-    }
-  }, [])
 
   // Don't render if process is complete or no active notifications
   if (isComplete || notifications.progress.message === t('notification.noAccount')) {
