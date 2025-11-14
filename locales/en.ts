@@ -9,6 +9,7 @@ import chat from "./en/chat";
 import terms from "./en/terms";
 import embed from "./en/embed";
 import business from "./en/business";
+import referral from "./en/referral";
 export default {
   ...shared,
   ...landing,
@@ -21,6 +22,7 @@ export default {
   ...terms,
   ...embed,
   ...business,
+  ...referral,
   "footer.heading": "Footer",
   "footer.description": "Advanced analytics for modern traders.",
   "footer.product.title": "Product",
@@ -366,6 +368,7 @@ export default {
     thisMonth: "This Month",
     lastThreeMonths: "Last 3 Months",
     lastSixMonths: "Last 6 Months",
+    uniqueDay: "Unique Day",
     accounts: "Accounts",
     propfirms: "Prop Firms",
     instruments: "Instruments",
@@ -404,6 +407,29 @@ export default {
     create: "Create",
     newGroup: "New Group",
     createAccount: "Create Account",
+    commandMenu: {
+      placeholder: "Search filters...",
+      searchPlaceholder: "Search filters...",
+      sections: {
+        accounts: "Accounts",
+        dateRange: "Date Range",
+        pnl: "PnL",
+        instruments: "Instruments",
+        tags: "Tags",
+      },
+      dateRange: {
+        naturalLanguage: "Type date (e.g., 'last week', 'this month')",
+        openCalendar: "Open Calendar",
+        from: "From",
+        to: "To",
+        year: "Year",
+        month: "Month",
+        day: "Day",
+        placeholderYear: "Year",
+        placeholderMonth: "Month",
+        placeholderDay: "Day",
+      },
+    },
     selectGroup: "Select Group",
     noGroup: "No Group",
     move: "Move",

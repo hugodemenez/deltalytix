@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useMemo } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays, isSameDay, getYear } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { fr, enUS } from 'date-fns/locale'
@@ -341,7 +341,127 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
     setCurrentDate(addMonths(currentDate, 1))
   }, [currentDate])
 
-  const calculateMonthlyTotal = React.useCallback(() => {
+  // Memoize countries array
+  const countries = useMemo(() => {
+    return Array.from(new Set(monthEvents
+      .map(event => event.country)
+      .filter((country): country is string => country !== null && country !== undefined)
+    )).sort((a, b) => {
+      if (a === "United States") return -1;
+      if (b === "United States") return 1;
+      return a.localeCompare(b);
+    });
+  }, [monthEvents]);
+
+  // Pre-compute events map by date
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, FinancialEvent[]>();
+    monthEvents.forEach(event => {
+      if (!event.date) return;
+      try {
+        const eventDateObj = new Date(event.date);
+        eventDateObj.setHours(0, 0, 0, 0);
+        const dateKey = formatInTimeZone(eventDateObj, timezone, 'yyyy-MM-dd');
+        if (!map.has(dateKey)) {
+          map.set(dateKey, []);
+        }
+        map.get(dateKey)!.push(event);
+      } catch (error) {
+        console.error('Error parsing event date:', error);
+      }
+    });
+    return map;
+  }, [monthEvents, timezone]);
+
+  // Pre-compute renewals map by date
+  const renewalsByDate = useMemo(() => {
+    const hiddenGroup = groups.find(g => g.name === HIDDEN_GROUP_NAME);
+    const hiddenAccountIds = hiddenGroup ? new Set(hiddenGroup.accounts.map(a => a.id)) : new Set();
+    
+    const map = new Map<string, Account[]>();
+    accounts.forEach(account => {
+      if (hiddenAccountIds.has(account.id) || !account.nextPaymentDate) return;
+      try {
+        const renewalDateObj = new Date(account.nextPaymentDate);
+        renewalDateObj.setHours(0, 0, 0, 0);
+        const dateKey = formatInTimeZone(renewalDateObj, timezone, 'yyyy-MM-dd');
+        if (!map.has(dateKey)) {
+          map.set(dateKey, []);
+        }
+        map.get(dateKey)!.push(account);
+      } catch (error) {
+        console.error('Error parsing renewal date:', error);
+      }
+    });
+    return map;
+  }, [accounts, timezone, groups]);
+
+  // Pre-compute day calculations (maxProfit, maxDrawdown) for all days
+  const dayCalculations = useMemo(() => {
+    const calculations = new Map<string, { maxProfit: number; maxDrawdown: number }>();
+    
+    Object.entries(calendarData).forEach(([dateString, dayData]) => {
+      if (!dayData.trades || dayData.trades.length === 0) {
+        calculations.set(dateString, { maxProfit: 0, maxDrawdown: 0 });
+        return;
+      }
+
+      // Create a copy to avoid mutating original
+      const sortedTrades = [...dayData.trades].sort((a, b) => 
+        new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime()
+      );
+      
+      const equity = [0];
+      let cumulative = 0;
+      sortedTrades.forEach(trade => {
+        cumulative += trade.pnl - (trade.commission || 0);
+        equity.push(cumulative);
+      });
+
+      // Max drawdown
+      let peak = -Infinity;
+      let maxDD = 0;
+      equity.forEach(val => {
+        if (val > peak) peak = val;
+        const dd = peak - val;
+        if (dd > maxDD) maxDD = dd;
+      });
+
+      // Max profit (runup)
+      let trough = Infinity;
+      let maxRU = 0;
+      equity.forEach(val => {
+        if (val < trough) trough = val;
+        const ru = val - trough;
+        if (ru > maxRU) maxRU = ru;
+      });
+
+      calculations.set(dateString, { maxProfit: maxRU, maxDrawdown: maxDD });
+    });
+    
+    return calculations;
+  }, [calendarData]);
+
+  // Filter events by impact level and country - memoized
+  const filteredEventsByDate = useMemo(() => {
+    const filtered = new Map<string, FinancialEvent[]>();
+    eventsByDate.forEach((events, dateKey) => {
+      const filteredEvents = events.filter(e => {
+        const matchesImpact = impactLevels.length === 0 ||
+          impactLevels.includes(getEventImportanceStars(e.importance));
+        const matchesCountry = selectedCountries.length === 0 ||
+          (e.country && selectedCountries.includes(e.country));
+        return matchesImpact && matchesCountry;
+      });
+      if (filteredEvents.length > 0) {
+        filtered.set(dateKey, filteredEvents);
+      }
+    });
+    return filtered;
+  }, [eventsByDate, impactLevels, selectedCountries]);
+
+  // Memoize monthly and yearly totals
+  const monthlyTotal = useMemo(() => {
     return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
       const date = new Date(dateString)
       if (isSameMonth(date, currentDate)) {
@@ -351,9 +471,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
     }, 0)
   }, [calendarData, currentDate])
 
-  const monthlyTotal = calculateMonthlyTotal()
-
-  const calculateYearTotal = React.useCallback(() => {
+  const yearTotal = useMemo(() => {
     return Object.entries(calendarData).reduce((total, [dateString, dayData]) => {
       const date = new Date(dateString)
       if (getYear(date) === getYear(currentDate)) {
@@ -363,63 +481,6 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
     }, 0)
   }, [calendarData, currentDate])
 
-  const yearTotal = calculateYearTotal()
-
-  const getEventsForDate = React.useCallback((date: Date) => {
-    return monthEvents.filter(event => {
-      if (!event.date) return false;
-      try {
-        // Create new Date objects to avoid modifying the originals
-        const eventDateObj = new Date(event.date)
-        const compareDateObj = new Date(date)
-
-        // Set hours to start of day
-        eventDateObj.setHours(0, 0, 0, 0)
-        compareDateObj.setHours(0, 0, 0, 0)
-
-        // Format dates in the user's timezone
-        const eventDate = formatInTimeZone(eventDateObj, timezone, 'yyyy-MM-dd')
-        const compareDate = formatInTimeZone(compareDateObj, timezone, 'yyyy-MM-dd')
-
-        return eventDate === compareDate
-      } catch (error) {
-        console.error('Error parsing event date:', error)
-        return false
-      }
-    })
-  }, [monthEvents, timezone])
-
-  const getRenewalsForDate = React.useCallback((date: Date) => {
-    // Get hidden group to filter out hidden accounts
-    const hiddenGroup = groups.find(g => g.name === HIDDEN_GROUP_NAME)
-    const hiddenAccountIds = hiddenGroup ? new Set(hiddenGroup.accounts.map(a => a.id)) : new Set()
-    
-    return accounts.filter(account => {
-      // Skip hidden accounts
-      if (hiddenAccountIds.has(account.id)) return false;
-      
-      if (!account.nextPaymentDate) return false;
-      try {
-        // Create new Date objects to avoid modifying the originals
-        const renewalDateObj = new Date(account.nextPaymentDate)
-        const compareDateObj = new Date(date)
-
-        // Set hours to start of day
-        renewalDateObj.setHours(0, 0, 0, 0)
-        compareDateObj.setHours(0, 0, 0, 0)
-
-        // Format dates in the user's timezone
-        const renewalDate = formatInTimeZone(renewalDateObj, timezone, 'yyyy-MM-dd')
-        const compareDate = formatInTimeZone(compareDateObj, timezone, 'yyyy-MM-dd')
-
-        return renewalDate === compareDate
-      } catch (error) {
-        console.error('Error parsing renewal date:', error)
-        return false
-      }
-    })
-  }, [accounts, timezone, groups])
-
   const calculateWeeklyTotal = React.useCallback((index: number, calendarDays: Date[], calendarData: CalendarData) => {
     const startOfWeekIndex = index - 6
     const weekDays = calendarDays.slice(startOfWeekIndex, index + 1)
@@ -428,31 +489,6 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
       return total + (dayData ? dayData.pnl : 0)
     }, 0)
   }, [timezone])
-
-  // Get unique countries from events
-  const countries = Array.from(new Set(monthEvents
-    .map(event => event.country)
-    .filter((country): country is string => country !== null && country !== undefined)
-  )).sort((a, b) => {
-    if (a === "United States") return -1;
-    if (b === "United States") return 1;
-    return a.localeCompare(b);
-  });
-
-  // Filter events by impact level and country
-  function filterByImpactLevel(events: FinancialEvent[]) {
-    const { impactLevels, selectedCountries } = useNewsFilterStore.getState()
-
-    return events.filter(e => {
-      const matchesImpact = impactLevels.length === 0 ||
-        impactLevels.includes(getEventImportanceStars(e.importance))
-
-      const matchesCountry = selectedCountries.length === 0 ||
-        (e.country && selectedCountries.includes(e.country))
-
-      return matchesImpact && matchesCountry
-    })
-  }
 
   return (
     <Card className="h-full flex flex-col">
@@ -533,41 +569,11 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
                 const dayData = calendarData[dateString]
                 const isLastDayOfWeek = getDay(date) === 6
                 const isCurrentMonth = isSameMonth(date, currentDate)
-                const dateEvents = filterByImpactLevel(getEventsForDate(date))
-                const dateRenewals = getRenewalsForDate(date)
-
-                // Add calculations if dayData exists
-                let maxProfit = 0;
-                let maxDrawdown = 0;
-                if (dayData) {
-                  const sortedTrades = dayData.trades.sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime());
-                  const equity = [0];
-                  let cumulative = 0;
-                  sortedTrades.forEach(trade => {
-                    cumulative += trade.pnl - (trade.commission || 0);
-                    equity.push(cumulative);
-                  });
-
-                  // Max drawdown
-                  let peak = -Infinity;
-                  let maxDD = 0;
-                  equity.forEach(val => {
-                    if (val > peak) peak = val;
-                    const dd = peak - val;
-                    if (dd > maxDD) maxDD = dd;
-                  });
-                  maxDrawdown = maxDD;
-
-                  // Max profit (runup)
-                  let trough = Infinity;
-                  let maxRU = 0;
-                  equity.forEach(val => {
-                    if (val < trough) trough = val;
-                    const ru = val - trough;
-                    if (ru > maxRU) maxRU = ru;
-                  });
-                  maxProfit = maxRU;
-                }
+                const dateEvents = filteredEventsByDate.get(dateString) || []
+                const dateRenewals = renewalsByDate.get(dateString) || []
+                const calculations = dayCalculations.get(dateString) || { maxProfit: 0, maxDrawdown: 0 }
+                const maxProfit = calculations.maxProfit
+                const maxDrawdown = calculations.maxDrawdown
 
                 return (
                   <React.Fragment key={dateString}>

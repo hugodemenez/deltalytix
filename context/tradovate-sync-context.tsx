@@ -269,7 +269,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
         }
       }
     } catch (error) {
-      console.error('Error during auto-sync check:', error)
+      console.warn('Error during tradovate auto-sync check:', error)
     }
   }, [enableAutoSync, isAutoSyncing, accounts, syncInterval, performSyncForAccount])
 

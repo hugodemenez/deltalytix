@@ -10,6 +10,7 @@ import PricingPage from './pricing/page'
 import Partners from './components/partners'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useI18n } from '@/locales/client'
+import { getReferralCode } from '@/lib/referral-storage'
 
 
 export default function LandingPage() {
@@ -18,6 +19,11 @@ export default function LandingPage() {
     const [videoLoaded, setVideoLoaded] = useState(false);
     const [videoError, setVideoError] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
+
+    // Store referral code from URL on mount
+    useEffect(() => {
+        getReferralCode()
+    }, [])
 
     useEffect(() => {
         setVideoLoaded(false);

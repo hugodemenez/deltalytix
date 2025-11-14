@@ -112,6 +112,9 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
 
       // Parse the date range
       const dateRange = shared.dateRange as unknown as DateRange
+      if (!dateRange?.from) {
+        throw new Error('Invalid date range: from date is required')
+      }
       const fromDate = new Date(dateRange.from)
       const toDate = dateRange.to ? new Date(dateRange.to) : undefined
 

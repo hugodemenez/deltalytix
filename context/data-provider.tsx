@@ -106,8 +106,8 @@ type CalendarData = {
 }
 
 interface DateRange {
-  from: Date
-  to: Date
+  from?: Date
+  to?: Date
 }
 
 interface TickRange {
@@ -207,7 +207,7 @@ export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
 }
 
 // Add after the interfaces and before the UserDataContext
-export const defaultLayouts: PrismaDashboardLayout = {
+export const defaultLayouts: DashboardLayoutWithWidgets = {
   id: '',
   userId: '',
   createdAt: new Date(),
@@ -587,16 +587,7 @@ export const DataProvider: React.FC<{
             setTrades(processedSharedTrades);
             setSharedParams(sharedData.params);
 
-            if (sharedData.params.desktop || sharedData.params.mobile) {
-              setDashboardLayout({
-                id: 'shared-layout',
-                userId: 'shared',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-                desktop: sharedData.params.desktop || defaultLayouts.desktop,
-                mobile: sharedData.params.mobile || defaultLayouts.mobile
-              });
-            }
+            setDashboardLayout(defaultLayouts)
 
             if (sharedData.params.tickDetails) {
               setTickDetails(sharedData.params.tickDetails);
@@ -633,8 +624,8 @@ export const DataProvider: React.FC<{
           userId: 'admin',
           createdAt: new Date(),
           updatedAt: new Date(),
-          desktop: defaultLayouts.desktop as unknown as Widget[],
-          mobile: defaultLayouts.mobile as unknown as Widget[]
+          desktop: defaultLayouts.desktop,
+          mobile: defaultLayouts.mobile
         });
         return;
       }
@@ -661,7 +652,7 @@ export const DataProvider: React.FC<{
         }
         else {
           // If no layout exists in database, use default layout
-          setDashboardLayout(defaultLayouts as unknown as DashboardLayoutWithWidgets)
+          setDashboardLayout(defaultLayouts)
         }
       }
 
@@ -852,20 +843,34 @@ export const DataProvider: React.FC<{
         }
 
         // Date range filter
-        if (dateRange?.from && dateRange?.to) {
+        if (dateRange?.from || dateRange?.to) {
           const tradeDate = startOfDay(entryDate);
-          const fromDate = startOfDay(dateRange.from);
-          const toDate = endOfDay(dateRange.to);
-
-          if (fromDate.getTime() === startOfDay(toDate).getTime()) {
-            // Single day selection
-            if (tradeDate.getTime() !== fromDate.getTime()) {
+          
+          // Filter from date (keep all trades from this date forward)
+          if (dateRange?.from) {
+            const fromDate = startOfDay(dateRange.from);
+            if (entryDate < fromDate) {
               return false;
             }
-          } else {
-            // Date range selection
-            if (entryDate < fromDate || entryDate > toDate) {
+          }
+          
+          // Filter to date (keep all trades up to this date)
+          if (dateRange?.to) {
+            const toDate = endOfDay(dateRange.to);
+            if (entryDate > toDate) {
               return false;
+            }
+          }
+          
+          // If both are set and it's a single day, ensure exact match
+          if (dateRange?.from && dateRange?.to) {
+            const fromDate = startOfDay(dateRange.from);
+            const toDate = endOfDay(dateRange.to);
+            if (fromDate.getTime() === startOfDay(toDate).getTime()) {
+              // Single day selection - already handled above, but ensure exact match
+              if (tradeDate.getTime() !== fromDate.getTime()) {
+                return false;
+              }
             }
           }
         }
@@ -937,7 +942,8 @@ export const DataProvider: React.FC<{
     weekdayFilter,
     hourFilter,
     tagFilter,
-    timezone
+    timezone,
+    isLoading
   ]);
 
   const statistics = useMemo(() => {

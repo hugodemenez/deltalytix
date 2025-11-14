@@ -9,9 +9,22 @@ import { useRef, useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from 'framer-motion'
+import { useUserStore } from "@/store/user-store"
 
 export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: boolean }) {
-  const { accountNumbers, instruments, setAccountNumbers, setInstruments } = useData()
+  const { 
+    accountNumbers, 
+    instruments, 
+    dateRange, 
+    pnlRange,
+    tagFilter,
+    setAccountNumbers, 
+    setInstruments,
+    setDateRange,
+    setPnlRange,
+    setTagFilter
+  } = useData()
+  const tags = useUserStore(state => state.tags)
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
@@ -51,7 +64,7 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
       const { scrollWidth, clientWidth } = scrollRef.current
       setCanScroll(scrollWidth > clientWidth)
     }
-  }, [accountNumbers, instruments])
+  }, [accountNumbers, instruments, dateRange, pnlRange, tagFilter])
 
   const scrollToNext = () => {
     if (!scrollRef.current) return
@@ -100,12 +113,67 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     }
   }
 
-  if (!accountNumbers?.length && !instruments?.length) {
+  const handleRemoveTag = (tagName: string) => {
+    setTagFilter(prev => ({
+      tags: prev.tags.filter(t => t !== tagName)
+    }))
+  }
+
+  const handleRemoveDateRange = () => {
+    setDateRange(undefined)
+  }
+
+  const handleRemovePnlRange = () => {
+    setPnlRange({ min: undefined, max: undefined })
+  }
+
+  // Get tag color by name
+  const getTagColor = (tagName: string) => {
+    const tag = tags?.find(t => t.name === tagName)
+    return tag?.color || '#CBD5E1'
+  }
+
+  // Format date range for display
+  const formatDateRange = () => {
+    if (!dateRange?.from) return null
+    if (dateRange.from && dateRange.to && dateRange.from.getTime() === dateRange.to.getTime()) {
+      return format(dateRange.from, "LLL dd, y", { locale: dateLocale })
+    }
+    if (dateRange.from && dateRange.to) {
+      return `${format(dateRange.from, "LLL dd", { locale: dateLocale })} - ${format(dateRange.to, "LLL dd, y", { locale: dateLocale })}`
+    }
+    return format(dateRange.from, "LLL dd, y", { locale: dateLocale })
+  }
+
+  // Format PnL range for display
+  const formatPnlRange = () => {
+    if (!pnlRange) return null
+    if (pnlRange.min !== undefined && pnlRange.max !== undefined) {
+      return `${pnlRange.min} ≤ PnL ≤ ${pnlRange.max}`
+    }
+    if (pnlRange.min !== undefined) {
+      return `PnL ≥ ${pnlRange.min}`
+    }
+    if (pnlRange.max !== undefined) {
+      return `PnL ≤ ${pnlRange.max}`
+    }
+    return null
+  }
+
+  const hasActiveFilters = 
+    (accountNumbers?.length || 0) > 0 || 
+    (instruments?.length || 0) > 0 || 
+    (dateRange && (dateRange.from || dateRange.to)) || 
+    (pnlRange && (pnlRange.min !== undefined || pnlRange.max !== undefined)) ||
+    (tagFilter?.tags?.length || 0) > 0
+
+  if (!hasActiveFilters) {
     return null
   }
 
   return (
     <motion.div
+      key="active-filter-tags"
       initial={{ height: 0, opacity: 0 }}
       animate={{ height: "auto", opacity: 1 }}
       exit={{ height: 0, opacity: 0 }}
@@ -119,6 +187,53 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
             className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar pr-8"
           >
             <AnimatePresence mode="popLayout">
+              {/* Date Range Badge */}
+              {dateRange && formatDateRange() && (
+                <motion.div
+                  key="date-range"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15 }}
+                  layout
+                >
+                  <Badge 
+                    variant="secondary" 
+                    className="gap-1 shrink-0 badge cursor-pointer"
+                    onClick={handleRemoveDateRange}
+                  >
+                    {formatDateRange()}
+                    <X 
+                      className="h-3 w-3" 
+                    />
+                  </Badge>
+                </motion.div>
+              )}
+
+              {/* PnL Range Badge */}
+              {pnlRange && formatPnlRange() && (
+                <motion.div
+                  key="pnl-range"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15 }}
+                  layout
+                >
+                  <Badge 
+                    variant="secondary" 
+                    className="gap-1 shrink-0 badge cursor-pointer"
+                    onClick={handleRemovePnlRange}
+                  >
+                    {formatPnlRange()}
+                    <X 
+                      className="h-3 w-3" 
+                    />
+                  </Badge>
+                </motion.div>
+              )}
+
+              {/* Account Badges */}
               {accountNumbers?.map(account => (
                 <motion.div
                   key={account}
@@ -128,15 +243,20 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
                   transition={{ duration: 0.15 }}
                   layout
                 >
-                  <Badge variant="secondary" className="gap-1 shrink-0 badge">
+                  <Badge 
+                    variant="secondary" 
+                    className="gap-1 shrink-0 badge cursor-pointer"
+                    onClick={() => handleRemoveFilter('account', account)}
+                  >
                     {anonymizeAccount(account)}
                     <X 
-                      className="h-3 w-3 cursor-pointer" 
-                      onClick={() => handleRemoveFilter('account', account)}
+                      className="h-3 w-3" 
                     />
                   </Badge>
                 </motion.div>
               ))}
+
+              {/* Instrument Badges */}
               {instruments?.map(instrument => (
                 <motion.div
                   key={instrument}
@@ -146,15 +266,53 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
                   transition={{ duration: 0.15 }}
                   layout
                 >
-                  <Badge variant="secondary" className="gap-1 shrink-0 badge">
+                  <Badge 
+                    variant="secondary" 
+                    className="gap-1 shrink-0 badge cursor-pointer"
+                    onClick={() => handleRemoveFilter('instrument', instrument)}
+                  >
                     {instrument}
                     <X 
-                      className="h-3 w-3 cursor-pointer" 
-                      onClick={() => handleRemoveFilter('instrument', instrument)}
+                      className="h-3 w-3" 
                     />
                   </Badge>
                 </motion.div>
               ))}
+
+              {/* Tag Badges */}
+              {tagFilter?.tags?.map(tagName => {
+                const tagColor = getTagColor(tagName)
+                return (
+                  <motion.div
+                    key={tagName}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.15 }}
+                    layout
+                  >
+                    <Badge 
+                      variant="secondary" 
+                      className="gap-1 shrink-0 badge cursor-pointer"
+                      style={{
+                        backgroundColor: `${tagColor}20`,
+                        borderColor: tagColor,
+                        color: tagColor,
+                      }}
+                      onClick={() => handleRemoveTag(tagName)}
+                    >
+                      <div
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: tagColor }}
+                      />
+                      {tagName}
+                      <X 
+                        className="h-3 w-3" 
+                      />
+                    </Badge>
+                  </motion.div>
+                )
+              })}
             </AnimatePresence>
           </div>
           <motion.div 

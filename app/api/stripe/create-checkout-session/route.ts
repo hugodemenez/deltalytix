@@ -4,9 +4,28 @@ import { NextResponse } from "next/server";
 import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/actions/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
+import { getReferralBySlug } from "@/server/referral";
 
 async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null) {
     const subscriptionDetails = await getSubscriptionDetails();
+    
+    // If referral code is provided, validate it (but don't block checkout if invalid)
+    if (referral) {
+        try {
+            const referralData = await getReferralBySlug(referral);
+            if (!referralData) {
+                // Invalid referral code, but don't block checkout - just remove it
+                referral = null;
+            } else if (user?.id && referralData.userId === user.id) {
+                // User trying to use their own code, remove it
+                referral = null;
+            }
+        } catch (error) {
+            console.error('Error validating referral code:', error);
+            // Don't block checkout if validation fails
+            referral = null;
+        }
+    }
 
     if (subscriptionDetails?.isActive) {
         return NextResponse.redirect(
@@ -79,6 +98,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         customer: customerId,
         metadata: {
             plan: lookup_key,
+            ...(referral && { referral_code: referral }),
         },
         line_items: [
             {
@@ -86,7 +106,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
                 quantity: 1,
             },
         ],
-        success_url: `${websiteURL}dashboard?success=true`,
+        success_url: `${websiteURL}dashboard?success=true&referral_applied=${referral ? 'true' : 'false'}`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
         allow_promotion_codes: true,
     };
@@ -127,8 +147,9 @@ export async function POST(req: Request) {
     const {data:{user}} = await supabase.auth.getUser();
     
     if (!user) {
+        const referralParam = referral ? `&referral=${encodeURIComponent(referral)}` : '';
         return NextResponse.redirect(
-            `${websiteURL}authentication?subscription=true&lookup_key=${lookup_key}`,
+            `${websiteURL}authentication?subscription=true&lookup_key=${lookup_key}${referralParam}`,
             303
         );
     }
@@ -140,6 +161,7 @@ export async function GET(req: Request) {
     const websiteURL = await getWebsiteURL();
     const { searchParams } = new URL(req.url);
     const lookup_key = searchParams.get('lookup_key');
+    const referral = searchParams.get('referral');
 
     if (!lookup_key) {
         return NextResponse.json({ message: "Lookup key is required" }, { status: 400 });
@@ -149,11 +171,12 @@ export async function GET(req: Request) {
     const {data:{user}} = await supabase.auth.getUser();
     
     if (!user) {
+        const referralParam = referral ? `&referral=${encodeURIComponent(referral)}` : '';
         return NextResponse.redirect(
-            `${websiteURL}authentication?subscription=true&lookup_key=${lookup_key}`,
+            `${websiteURL}authentication?subscription=true&lookup_key=${lookup_key}${referralParam}`,
             303
         );
     }
 
-    return handleCheckoutSession(lookup_key, user, websiteURL);
+    return handleCheckoutSession(lookup_key, user, websiteURL, referral);
 }

@@ -9,6 +9,7 @@ import chat from "./fr/chat";
 import terms from "./fr/terms";
 import embed from "./fr/embed";
 import business from "./fr/business";
+import referral from "./fr/referral";
 
 export default {
   ...shared,
@@ -22,6 +23,7 @@ export default {
   ...terms,
   ...embed,
   ...business,
+  ...referral,
   "footer.heading": "Pied de page",
   "footer.description": "Analyses avancées pour les traders modernes.",
   "footer.product.title": "Produit",
@@ -238,6 +240,7 @@ export default {
   "filters.thisMonth": "Ce mois",
   "filters.lastThreeMonths": "Derniers 3 mois",
   "filters.lastSixMonths": "Les 6 derniers mois",
+  "filters.uniqueDay": "Jour unique",
   "filters.pickDate": "Choisir une date",
   "notFound.title": "404 - Page introuvable",
   "notFound.heading": "Oups ! Page introuvable",
@@ -419,7 +422,7 @@ export default {
     min: "Min",
     max: "Max",
     apply: "Appliquer",
-    customRange: "Période personnalisée",
+    customRange: "Autre",
     // Account management related
     accountGroups: "Groupes de Comptes",
     loading: "Chargement...",
@@ -440,6 +443,29 @@ export default {
     create: "Créer",
     newGroup: "Nouveau groupe",
     createAccount: "Créer un compte",
+    commandMenu: {
+      placeholder: "Rechercher des filtres...",
+      searchPlaceholder: "Rechercher des filtres...",
+      sections: {
+        accounts: "Comptes",
+        dateRange: "Période",
+        pnl: "PnL",
+        instruments: "Instruments",
+        tags: "Tags",
+      },
+      dateRange: {
+        naturalLanguage: "Tapez une date (ex: 'la semaine dernière', 'ce mois')",
+        openCalendar: "Ouvrir le calendrier",
+        from: "De",
+        to: "À",
+        year: "Année",
+        month: "Mois",
+        day: "Jour",
+        placeholderYear: "Année",
+        placeholderMonth: "Mois",
+        placeholderDay: "Jour",
+      },
+    },
     selectGroup: "Sélectionner un groupe",
     noGroup: "Sans groupe",
     move: "Déplacer",
@@ -1105,6 +1131,7 @@ export default {
       deleteError: "Échec de la suppression du tag",
       fetchError: "Échec de la récupération des tags",
       clearFilter: "Effacer le filtre",
+      selectAll: "Sélectionner tous les tags",
       tagExists: "Un tag avec ce nom existe déjà",
       deleteConfirmTitle: "Supprimer le Tag",
       deleteConfirmDescription:

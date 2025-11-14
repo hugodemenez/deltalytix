@@ -386,6 +386,20 @@
   [data-accordion-trigger] [data-accordion-icon] {
     display: none;
   }
+
+  /* Shimmer animation for AI loading states */
+  @keyframes shimmer {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+  }
 }
 
 @utility touch-hitbox {

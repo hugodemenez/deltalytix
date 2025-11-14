@@ -57,6 +57,19 @@ export default {
         discordMethod: 'Discord',
         googleMethod: 'Google',
         cancel: 'Annuler',
-        primary: 'Principal'
+        primary: 'Principal',
+        // Error messages
+        errors: {
+            invalidCredentials: 'Email ou mot de passe invalide',
+            passwordTooWeak: 'Le mot de passe doit contenir au moins une lettre minuscule, une lettre majuscule, un chiffre et un caractère spécial',
+            passwordMinLength: 'Le mot de passe doit contenir au moins 6 caractères',
+            emailNotConfirmed: 'Veuillez confirmer votre adresse email avant de vous connecter',
+            userNotFound: 'Aucun compte trouvé avec cette adresse email',
+            signInFailed: 'Échec de la connexion. Veuillez réessayer',
+            signUpFailed: 'Échec de la création du compte. Veuillez réessayer',
+            accountExists: 'Un compte avec cet email existe déjà',
+            accountExistsNoPassword: 'Ce compte existe mais n\'a pas de mot de passe défini. Veuillez d\'abord vous connecter avec un lien magique, puis définir un mot de passe dans vos paramètres, ou utilisez le lien magique pour vous connecter.',
+            invalidCredentialsOrNoPassword: 'Le mot de passe est incorrect, ou ce compte n\'a pas encore de mot de passe défini. Si vous avez créé votre compte avec un lien magique, veuillez d\'abord vous connecter en utilisant "Email uniquement", puis définir un mot de passe dans vos paramètres.',
+        }
     }
 } as const;

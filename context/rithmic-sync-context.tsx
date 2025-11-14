@@ -682,7 +682,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
         }
       }
     } catch (error) {
-      console.error('Error during auto-sync check:', error)
+      console.warn('Error during rithmic auto-sync check:', error)
     }
   }, [syncInterval, performSyncForCredential])
 

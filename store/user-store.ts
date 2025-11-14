@@ -198,6 +198,7 @@ export const useUserStore = create<UserStore>()(
       storage: createJSONStorage(() => localStorage),
       // Only persist timezone and other non-sensitive settings
       partialize: (state) => ({
+        dashboardLayout: state.dashboardLayout,
         timezone: state.timezone,
         isMobile: state.isMobile,
         isSharedView: state.isSharedView,

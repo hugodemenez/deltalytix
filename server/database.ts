@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/context/data-provider'
 import { formatTimestamp } from '@/lib/date-utils'
+import { v5 as uuidv5 } from 'uuid'
 
 type TradeError =
   | 'DUPLICATE_TRADES'
@@ -38,7 +39,38 @@ export async function revalidateCache(tags: string[]) {
   console.log(`[revalidateCache] Completed cache invalidation for ${tags.length} tags`)
 }
 
+// Namespace UUID for deterministic trade ID generation
+const TRADE_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'
+
+/**
+ * Generates a deterministic UUID v5 from all trade fields
+ * This ensures the same trade always gets the same UUID
+ */
+function generateTradeUUID(trade: Partial<Trade>): string {
+  // Create a deterministic string from all trade fields
+  const tradeSignature = [
+    trade.userId || '',
+    trade.accountNumber || '',
+    trade.instrument || '',
+    trade.entryDate || '',
+    trade.closeDate || '',
+    trade.entryPrice || '',
+    trade.closePrice || '',
+    (trade.quantity || 0).toString(),
+    trade.entryId || '',
+    trade.closeId || '',
+    (trade.timeInPosition || 0).toString(),
+    trade.side || '',
+    (trade.pnl || 0).toString(),
+    (trade.commission || 0).toString(),
+  ].join('|')
+  
+  // Generate UUID v5 from the signature
+  return uuidv5(tradeSignature, TRADE_NAMESPACE)
+}
+
 export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
+  console.log('[saveTrades] Saving trades:', data.length)
   const userId = await getUserId()
   if (!Array.isArray(data) || data.length === 0) {
     return {
@@ -50,47 +82,24 @@ export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
 
   try {
     // Clean the data to remove undefined values and ensure all required fields are present
-    const cleanedData = data.map(trade => {
-      const cleanTrade = Object.fromEntries(
-        Object.entries(trade).filter(([_, value]) => value !== undefined)
-      ) as Partial<Trade>
+    const userAssignedTrades = data.map(trade => {
 
       return {
-        ...cleanTrade,
-        // Ensure required fields have default values
+        ...trade,
         userId: userId,
-        accountNumber: cleanTrade.accountNumber || '',
-        instrument: cleanTrade.instrument || '',
-        entryPrice: cleanTrade.entryPrice || '',
-        closePrice: cleanTrade.closePrice || '',
-        entryDate: cleanTrade.entryDate || '',
-        closeDate: cleanTrade.closeDate || '',
-        quantity: cleanTrade.quantity || 0,
-        pnl: cleanTrade.pnl || 0,
-        timeInPosition: cleanTrade.timeInPosition || 0,
-        side: cleanTrade.side || '',
-        commission: cleanTrade.commission || 0,
-        entryId: cleanTrade.entryId || null,
-        closeId: cleanTrade.closeId || null,
-        comment: cleanTrade.comment || null,
-        videoUrl: cleanTrade.videoUrl || null,
-        tags: cleanTrade.tags || [],
-        imageBase64: cleanTrade.imageBase64 || null,
-        imageBase64Second: cleanTrade.imageBase64Second || null,
-        groupId: cleanTrade.groupId || null,
-        createdAt: cleanTrade.createdAt || new Date(),
+        id: generateTradeUUID({...trade, userId: userId}), // Generate a unique ID for the trade using UUID v5 based on all trade properties
       } as Trade
     })
 
     const result = await prisma.trade.createMany({
-      data: cleanedData,
+      data: userAssignedTrades,
       skipDuplicates: true
     })
 
     // Log potential duplicates if no trades were added
     if (result.count === 0) {
       console.log('[saveTrades] No trades added. Checking for duplicates:', { attempted: data.length })
-      const tradeIds = data.map(trade => trade.id)
+      const tradeIds = userAssignedTrades.map(trade => trade.id)
       const existingTrades = await prisma.trade.findMany({
         where: { id: { in: tradeIds } },
         select: {

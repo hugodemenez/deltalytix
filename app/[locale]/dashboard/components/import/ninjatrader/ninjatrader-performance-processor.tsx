@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Trade } from '@prisma/client'
 import { generateTradeHash } from '@/lib/utils'
 import { PlatformProcessorProps } from '../config/platforms'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 
 
 const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: string } => {
@@ -34,6 +41,49 @@ const formatPriceValue = (price: string | undefined): { price: number, error?: s
     return { price: 0, error: 'Unable to parse price value' };
   }
   return { price: numericValue };
+};
+
+const convertToValidDate = (dateString: string): Date | null => {
+  if (!dateString) return null;
+
+  // Try DD/MM/YYYY HH:MM:SS format (with seconds)
+  const dateRegexWithSeconds = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})$/;
+  const matchWithSeconds = dateString.match(dateRegexWithSeconds);
+  
+  if (matchWithSeconds) {
+    const [, day, month, year, hours, minutes, seconds] = matchWithSeconds;
+    // Create date in local timezone
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      parseInt(hours),
+      parseInt(minutes),
+      parseInt(seconds)
+    );
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  // Try DD/MM/YYYY HH:MM format (without seconds)
+  const dateRegexWithoutSeconds = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2})$/;
+  const matchWithoutSeconds = dateString.match(dateRegexWithoutSeconds);
+  
+  if (matchWithoutSeconds) {
+    const [, day, month, year, hours, minutes] = matchWithoutSeconds;
+    // Create date in local timezone
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      parseInt(hours),
+      parseInt(minutes),
+      0 // default seconds to 0
+    );
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  // If neither format matches, return null
+  return null;
 };
 
 const englishMappings: { [key: string]: string } = {
@@ -134,6 +184,13 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
             case 'side':
               item[key] = cellValue.toLowerCase()
               break;
+              case 'instrument':
+                if (typeof cellValue === 'string' && cellValue.trim() !== '') {
+                  item[key] = cellValue.split(' ')[0];
+                } else {
+                  item[key] = '';
+                }
+                break;
             default:
               item[key] = cellValue as any;
           }
@@ -143,22 +200,6 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
       if (!hasValidData || !item.instrument) {
         return;
       }
-
-      const convertToValidDate = (dateString: string): Date | null => {
-        if (!dateString) return null;
-
-        const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})$/;
-        const match = dateString.match(dateRegex);
-
-        if (match) {
-          const [, day, month, year, hours, minutes, seconds] = match;
-          const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
-          return new Date(isoString);
-        } else {
-          const date = new Date(dateString);
-          return isNaN(date.getTime()) ? null : date;
-        }
-      };
 
       const entryDate = convertToValidDate(item.entryDate as string);
       const closeDate = convertToValidDate(item.closeDate as string);
@@ -201,69 +242,138 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
   const uniqueInstruments = useMemo(() => Array.from(new Set(trades.map(trade => trade.instrument))), [trades]);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Processed Trades</h3>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Instrument</TableHead>
-              <TableHead>Side</TableHead>
-              <TableHead>Quantity</TableHead>
-              <TableHead>Entry Price</TableHead>
-              <TableHead>Close Price</TableHead>
-              <TableHead>Entry Date</TableHead>
-              <TableHead>Close Date</TableHead>
-              <TableHead>PnL</TableHead>
-              <TableHead>Time in Position</TableHead>
-              <TableHead>Commission</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {trades.map((trade) => (
-              <TableRow key={trade.id}>
-                <TableCell>{trade.instrument}</TableCell>
-                <TableCell>{trade.side}</TableCell>
-                <TableCell>{trade.quantity}</TableCell>
-                <TableCell>{trade.entryPrice}</TableCell>
-                <TableCell>{trade.closePrice || '-'}</TableCell>
-                <TableCell>{new Date(trade.entryDate).toLocaleString()}</TableCell>
-                <TableCell>{trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}</TableCell>
-                <TableCell>{trade.pnl?.toFixed(2)}</TableCell>
-                <TableCell>{`${Math.floor((trade.timeInPosition || 0) / 60)}m ${Math.floor((trade.timeInPosition || 0) % 60)}s`}</TableCell>
-                <TableCell>{trade.commission?.toFixed(2)}</TableCell>
+    <Card className="h-full flex flex-col w-full overflow-x-scroll">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
+        <CardTitle className="line-clamp-1 text-base">
+          Processed Trades NinjaTrader
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 min-h-0 overflow-auto p-0">
+        <div className="flex h-full flex-col min-w-fit">
+          <Table className="w-full h-full border-separate border-spacing-0">
+            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b">
+              <TableRow>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Account
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Instrument
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Side
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Quantity
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Entry Price
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Close Price
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Entry Date
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Close Date
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  PnL
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Time in Position
+                </TableHead>
+                <TableHead className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l">
+                  Commission
+                </TableHead>
               </TableRow>
+            </TableHeader>
+            <TableBody className="flex-1 overflow-auto bg-background">
+              {trades.length > 0 ? (
+                trades.map((trade) => (
+                  <TableRow
+                    key={trade.id}
+                    className="border-b border-border transition-all duration-75 hover:bg-muted/40"
+                  >
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {trade.accountNumber}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {trade.instrument}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {trade.side}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {trade.quantity}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {trade.entryPrice}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {trade.closePrice || '-'}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {new Date(trade.entryDate).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {trade.closeDate ? new Date(trade.closeDate).toLocaleString() : '-'}
+                    </TableCell>
+                    <TableCell className={`whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l ${trade.pnl && trade.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {trade.pnl?.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {`${Math.floor((trade.timeInPosition || 0) / 60)}m ${Math.floor((trade.timeInPosition || 0) % 60)}s`}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l">
+                      {trade.commission?.toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={10}
+                    className="h-24 text-center"
+                  >
+                    No trades found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+      <CardFooter className="flex items-center justify-between border-t bg-background px-4 py-3 shrink-0">
+        <div className="flex items-center gap-6">
+          <div>
+            <h3 className="text-sm font-semibold mb-1">Total PnL</h3>
+            <p className={`text-lg font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ${totalPnL.toFixed(2)}
+            </p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold mb-1">Total Commission</h3>
+            <p className="text-lg font-bold text-blue-600">
+              ${totalCommission.toFixed(2)}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-semibold">Instruments:</h3>
+          <div className="flex flex-wrap gap-2">
+            {uniqueInstruments.map((instrument) => (
+              <Button
+                key={instrument}
+                variant="outline"
+                size="sm"
+              >
+                {instrument}
+              </Button>
             ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex justify-between">
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Total PnL</h3>
-          <p className={`text-xl font-bold ${totalPnL >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {totalPnL.toFixed(2)}
-          </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-semibold mb-2">Total Commission</h3>
-          <p className="text-xl font-bold text-blue-600">
-            {totalCommission.toFixed(2)}
-          </p>
-        </div>
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold mb-2">Instruments Traded</h3>
-        <div className="flex flex-wrap gap-2">
-          {uniqueInstruments.map((instrument) => (
-            <Button
-              key={instrument}
-              variant="outline"
-            >
-              {instrument}
-            </Button>
-          ))}
-        </div>
-      </div>
-    </div>
+      </CardFooter>
+    </Card>
   )
 }

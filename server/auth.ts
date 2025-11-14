@@ -103,6 +103,7 @@ export async function signInWithEmail(email: string, next: string | null = null,
 }
 
 // Password-based authentication (login)
+// If user doesn't exist, automatically creates account and signs in
 export async function signInWithPasswordAction(
   email: string,
   password: string,
@@ -111,10 +112,77 @@ export async function signInWithPasswordAction(
 ) {
   const supabase = await createClient()
   const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+  
+  // If sign-in fails, try to create account (user might not exist)
   if (error) {
+    // Check if error indicates invalid credentials (could be user doesn't exist or wrong password)
+    if (error.message.includes('Invalid login credentials') || 
+        error.message.includes('invalid_credentials') ||
+        error.message.includes('Email not confirmed')) {
+      
+      // Try to sign up - if user exists, this will fail and we'll know it's a wrong password
+      const websiteURL = await getWebsiteURL()
+      const callbackParams = new URLSearchParams()
+      if (next) callbackParams.set('next', next)
+      if (locale) callbackParams.set('locale', locale)
+      
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${websiteURL}api/auth/callback/${callbackParams.toString() ? `?${callbackParams.toString()}` : ''}`,
+        },
+      })
+      
+      if (signUpError) {
+        // If sign up fails, it means user already exists
+        // Since sign-in also failed with "Invalid login credentials", it could mean:
+        // 1. User exists but has no password set (created via magic link) - needs to set password
+        // 2. User exists and has password - wrong password was provided
+        // We can't distinguish these cases, so we provide a helpful error message covering both
+        // Check if it's a password validation error (should be shown separately)
+        const isPasswordValidationError = 
+          signUpError.message.toLowerCase().includes('password should contain') ||
+          signUpError.message.toLowerCase().includes('password must contain') ||
+          signUpError.message.toLowerCase().includes('password requirements') ||
+          signUpError.message.toLowerCase().includes('password is too short') ||
+          signUpError.message.toLowerCase().includes('password must be at least')
+        
+        // If it's not a password validation error, assume user exists
+        // (since sign-in also failed with "Invalid login credentials")
+        if (!isPasswordValidationError) {
+          // User exists but password sign-in failed - could be no password set or wrong password
+          throw new Error('INVALID_CREDENTIALS_OR_NO_PASSWORD: The password is incorrect, or this account doesn\'t have a password set yet. If you created your account with a magic link, please sign in using "Email only" first, then set a password in your settings.')
+        }
+        // Password validation errors - throw as-is so they can be displayed
+        throw new Error(signUpError.message)
+      }
+      
+      // Sign up succeeded, now sign in with the same credentials
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      if (signInError) {
+        throw new Error(signInError.message)
+      }
+      
+      // Continue with normal flow after successful sign-in
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await ensureUserInDatabase(user, locale)
+        }
+      } catch (e) {
+        // Non-fatal; still proceed
+        console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
+      }
+      
+      return { success: true, next }
+    }
+    
+    // For other errors, throw as-is
     throw new Error(error.message)
   }
 
+  // Sign-in succeeded normally
   try {
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {

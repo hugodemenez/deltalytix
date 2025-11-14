@@ -70,7 +70,8 @@ export default function ImportButton() {
   const t = useI18n()
 
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
+    console.log('[ImportButton] First:', processedTrades)
     if (!user || !supabaseUser) {
       toast.error(t('import.error.auth'), {
         description: t('import.error.authDescription'),
@@ -81,46 +82,51 @@ export default function ImportButton() {
     setIsSaving(true)
     try {
       let newTrades: Trade[] = []
-      for (const accountNumber of accountNumbers) {
+      // If accountNumbers is empty, we should just save processedTrades with the accountNumber from the processedTrades
+      if (accountNumbers.length === 0) {
         newTrades = processedTrades.map(trade => {
-            // Assign account number from selection or new account number
-          trade.accountNumber = accountNumber
-
-          // Use function to generate a full trade object with defaults
           return createTradeWithDefaults({
             ...trade,
-            // Generate a unique ID for the trade based on its content
-            // Using its content ensures that exacte duplicate trades will have the same ID
-            id: generateTradeHash({ ...trade, userId: supabaseUser.id }),
+            accountNumber: trade.accountNumber,
           })
-
         })
-
-        console.log('[ImportButton] Saving trades:', newTrades)
-        const result = await saveTradesAction(newTrades)
-        if (result.error) {
-          if (result.error === "DUPLICATE_TRADES") {
-            toast.error(t('import.error.duplicateTrades'), {
-              description: t('import.error.duplicateTradesDescription'),
+      } else {
+        for (const accountNumber of accountNumbers) {
+          console.log('[ImportButton] Account number:', accountNumber)
+          newTrades = [...newTrades, ...processedTrades.map(trade => {
+            return createTradeWithDefaults({
+              ...trade,
+              accountNumber: accountNumber
             })
-          } else if (result.error === "NO_TRADES_ADDED") {
-            toast.error(t('import.error.noTradesAdded'), {
-              description: t('import.error.noTradesAddedDescription'),
-            })
-          } else {
-            toast.error(t('import.error.failed'), {
-              description: t('import.error.failedDescription'),
-            })
-          }
-          // Don't proceed further if there's an error
-          // return
+          })]
         }
-        toast.success(t('import.success'), {
-          description: t('import.successDescription', { numberOfTradesAdded: result.numberOfTradesAdded }),
-        })
       }
-      // Update the trades
+
+      console.log('[ImportButton] Saving trades:', newTrades)
+      const result = await saveTradesAction(newTrades)
+      // Update the trades now because it shows a toast, and requires some time before showing the trades
       await refreshTrades()
+      if (result.error) {
+        if (result.error === "DUPLICATE_TRADES") {
+          toast.error(t('import.error.duplicateTrades'), {
+            description: t('import.error.duplicateTradesDescription'),
+          })
+        } else if (result.error === "NO_TRADES_ADDED") {
+          toast.error(t('import.error.noTradesAdded'), {
+            description: t('import.error.noTradesAddedDescription'),
+          })
+        } else {
+          toast.error(t('import.error.failed'), {
+            description: t('import.error.failedDescription'),
+          })
+        }
+        // Don't proceed further if there's an error
+        return
+      }
+      // Show success message
+      toast.success(t('import.success'), {
+        description: t('import.successDescription', { numberOfTradesAdded: result.numberOfTradesAdded }),
+      })
       setIsOpen(false)
       // Reset the import process
       resetImportState()
@@ -133,7 +139,7 @@ export default function ImportButton() {
     } finally {
       setIsSaving(false)
     }
-  }
+  }, [processedTrades, accountNumbers, user, supabaseUser, t, refreshTrades])
 
   const resetImportState = () => {
     setImportType('')

@@ -7,7 +7,7 @@ import { generateTradeHash } from "./utils";
  */
 export function createTradeWithDefaults(input: Partial<Trade>): Trade {
   return {
-    id: input.id ||generateTradeHash(input),
+    id: generateTradeHash(input),
     accountNumber: input.accountNumber || "",
     quantity: input.quantity || 0,
     entryId: input.entryId || null,
