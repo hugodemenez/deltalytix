@@ -123,20 +123,34 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
       }
 
       // Date range filter
-      if (params.dateRange?.from && params.dateRange?.to) {
+      if (params.dateRange?.from || params.dateRange?.to) {
         const tradeDate = startOfDay(entryDate)
-        const fromDate = startOfDay(new Date(params.dateRange.from))
-        const toDate = endOfDay(new Date(params.dateRange.to))
-
-        if (fromDate.getTime() === startOfDay(toDate).getTime()) {
-          // Single day selection
-          if (tradeDate.getTime() !== fromDate.getTime()) {
+        
+        // Filter from date (keep all trades from this date forward)
+        if (params.dateRange?.from) {
+          const fromDate = startOfDay(new Date(params.dateRange.from))
+          if (entryDate < fromDate) {
             return false
           }
-        } else {
-          // Date range selection
-          if (entryDate < fromDate || entryDate > toDate) {
+        }
+        
+        // Filter to date (keep all trades up to this date)
+        if (params.dateRange?.to) {
+          const toDate = endOfDay(new Date(params.dateRange.to))
+          if (entryDate > toDate) {
             return false
+          }
+        }
+        
+        // If both are set and it's a single day, ensure exact match
+        if (params.dateRange?.from && params.dateRange?.to) {
+          const fromDate = startOfDay(new Date(params.dateRange.from))
+          const toDate = endOfDay(new Date(params.dateRange.to))
+          if (fromDate.getTime() === startOfDay(toDate).getTime()) {
+            // Single day selection - already handled above, but ensure exact match
+            if (tradeDate.getTime() !== fromDate.getTime()) {
+              return false
+            }
           }
         }
       }
