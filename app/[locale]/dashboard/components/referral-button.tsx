@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Gift, Copy, Check, Users, Trophy, Sparkles } from 'lucide-react'
+import { Gift, Copy, Check, Users, Trophy, Sparkles, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Popover,
@@ -14,6 +14,8 @@ import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
+import Link from 'next/link'
+import { useParams } from 'next/navigation'
 
 interface ReferralData {
   referral: {
@@ -38,6 +40,8 @@ interface ReferralData {
 
 export default function ReferralButton() {
   const t = useI18n()
+  const params = useParams()
+  const locale = params?.locale as string || 'en'
   const [isOpen, setIsOpen] = useState(false)
   const [referralData, setReferralData] = useState<ReferralData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -125,6 +129,18 @@ export default function ReferralButton() {
               <h4 className="font-semibold text-lg">{t('referral.title')}</h4>
               {getTierIcon(referralData.referral.tier.level)}
             </div>
+
+            {/* How It Works Link */}
+            <Link 
+              href={`/${locale}/referral`}
+              className="text-sm text-primary hover:underline flex items-center gap-1 w-fit"
+              onClick={() => setIsOpen(false)}
+            >
+              <ExternalLink className="h-3 w-3" />
+              {t('referral.howItWorks')}
+            </Link>
+
+            <Separator />
 
             {/* Referral Link */}
             <div className="space-y-2">
@@ -219,9 +235,9 @@ export default function ReferralButton() {
                 {/* Tier Rewards */}
                 <div className="space-y-2 pt-4">
                   {[
-                    { count: 1, reward: '10% discount code' },
-                    { count: 3, reward: 'Free team creation' },
-                    { count: 5, reward: '50% discount' },
+                    { count: 1, reward: t('referral.landing.tier1Reward') },
+                    { count: 3, reward: t('referral.landing.tier2Reward') },
+                    { count: 5, reward: t('referral.landing.tier3Reward') },
                   ].map((tier) => {
                     const isCompleted = referralData.referral.count >= tier.count
                     return (
