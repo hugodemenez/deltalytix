@@ -43,6 +43,49 @@ const formatPriceValue = (price: string | undefined): { price: number, error?: s
   return { price: numericValue };
 };
 
+const convertToValidDate = (dateString: string): Date | null => {
+  if (!dateString) return null;
+
+  // Try DD/MM/YYYY HH:MM:SS format (with seconds)
+  const dateRegexWithSeconds = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})$/;
+  const matchWithSeconds = dateString.match(dateRegexWithSeconds);
+  
+  if (matchWithSeconds) {
+    const [, day, month, year, hours, minutes, seconds] = matchWithSeconds;
+    // Create date in local timezone
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      parseInt(hours),
+      parseInt(minutes),
+      parseInt(seconds)
+    );
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  // Try DD/MM/YYYY HH:MM format (without seconds)
+  const dateRegexWithoutSeconds = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2})$/;
+  const matchWithoutSeconds = dateString.match(dateRegexWithoutSeconds);
+  
+  if (matchWithoutSeconds) {
+    const [, day, month, year, hours, minutes] = matchWithoutSeconds;
+    // Create date in local timezone
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      parseInt(hours),
+      parseInt(minutes),
+      0 // default seconds to 0
+    );
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  // If neither format matches, return null
+  return null;
+};
+
 const englishMappings: { [key: string]: string } = {
   "Account": "accountNumber",
   "Entry name": "entryId",
@@ -142,7 +185,11 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
               item[key] = cellValue.toLowerCase()
               break;
               case 'instrument':
-                item[key] = cellValue.split(' ')[0]
+                if (typeof cellValue === 'string' && cellValue.trim() !== '') {
+                  item[key] = cellValue.split(' ')[0];
+                } else {
+                  item[key] = '';
+                }
                 break;
             default:
               item[key] = cellValue as any;
@@ -153,22 +200,6 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
       if (!hasValidData || !item.instrument) {
         return;
       }
-
-      const convertToValidDate = (dateString: string): Date | null => {
-        if (!dateString) return null;
-
-        const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})$/;
-        const match = dateString.match(dateRegex);
-
-        if (match) {
-          const [, day, month, year, hours, minutes, seconds] = match;
-          const isoString = `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
-          return new Date(isoString);
-        } else {
-          const date = new Date(dateString);
-          return isNaN(date.getTime()) ? null : date;
-        }
-      };
 
       const entryDate = convertToValidDate(item.entryDate as string);
       const closeDate = convertToValidDate(item.closeDate as string);
