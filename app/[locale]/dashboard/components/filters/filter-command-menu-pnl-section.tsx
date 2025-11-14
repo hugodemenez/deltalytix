@@ -119,6 +119,3 @@ export function PnlSection({ searchValue }: PnlSectionProps) {
     </>
   )
 }
-
-
-

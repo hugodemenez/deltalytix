@@ -64,6 +64,3 @@ export function getReferralCode(): string | null {
   // Fall back to localStorage
   return getStoredReferralCode()
 }
-
-
-

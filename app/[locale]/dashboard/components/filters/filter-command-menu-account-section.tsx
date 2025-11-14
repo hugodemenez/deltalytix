@@ -235,6 +235,3 @@ export function AccountSection({ searchValue }: AccountSectionProps) {
     </>
   )
 }
-
-
-
