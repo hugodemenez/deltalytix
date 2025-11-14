@@ -62,6 +62,7 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
   const { refreshTrades } = useData()
   const refreshTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const mockIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const isMountedRef = useRef(true)
 
   // Mock synchronization logic
   useEffect(() => {
@@ -301,7 +302,10 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
 
       // Set new timeout
       refreshTimeoutRef.current = setTimeout(() => {
-        refreshTrades()
+        // Only call refreshTrades if component is still mounted
+        if (isMountedRef.current) {
+          refreshTrades()
+        }
       }, 5000)
     }
 
@@ -309,9 +313,27 @@ export function RithmicSyncNotifications({ isMockMode = false }: RithmicSyncNoti
     return () => {
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current)
+        refreshTimeoutRef.current = undefined
       }
     }
   }, [lastMessage, refreshTrades])
+
+  // Track mount state
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      // Clear any pending timeouts on unmount
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current)
+        refreshTimeoutRef.current = undefined
+      }
+      if (mockIntervalRef.current) {
+        clearInterval(mockIntervalRef.current)
+        mockIntervalRef.current = undefined
+      }
+    }
+  }, [])
 
   // Don't render if process is complete or no active notifications
   if (isComplete || notifications.progress.message === t('notification.noAccount')) {
