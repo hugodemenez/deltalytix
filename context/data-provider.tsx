@@ -843,20 +843,34 @@ export const DataProvider: React.FC<{
         }
 
         // Date range filter
-        if (dateRange?.from && dateRange?.to) {
+        if (dateRange?.from || dateRange?.to) {
           const tradeDate = startOfDay(entryDate);
-          const fromDate = startOfDay(dateRange.from);
-          const toDate = endOfDay(dateRange.to);
-
-          if (fromDate.getTime() === startOfDay(toDate).getTime()) {
-            // Single day selection
-            if (tradeDate.getTime() !== fromDate.getTime()) {
+          
+          // Filter from date (keep all trades from this date forward)
+          if (dateRange?.from) {
+            const fromDate = startOfDay(dateRange.from);
+            if (entryDate < fromDate) {
               return false;
             }
-          } else {
-            // Date range selection
-            if (entryDate < fromDate || entryDate > toDate) {
+          }
+          
+          // Filter to date (keep all trades up to this date)
+          if (dateRange?.to) {
+            const toDate = endOfDay(dateRange.to);
+            if (entryDate > toDate) {
               return false;
+            }
+          }
+          
+          // If both are set and it's a single day, ensure exact match
+          if (dateRange?.from && dateRange?.to) {
+            const fromDate = startOfDay(dateRange.from);
+            const toDate = endOfDay(dateRange.to);
+            if (fromDate.getTime() === startOfDay(toDate).getTime()) {
+              // Single day selection - already handled above, but ensure exact match
+              if (tradeDate.getTime() !== fromDate.getTime()) {
+                return false;
+              }
             }
           }
         }
