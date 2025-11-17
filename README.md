@@ -11,6 +11,8 @@
   [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
   [![Discord](https://img.shields.io/discord/a5YVF5Ec2n?label=Discord&logo=discord)](https://discord.gg/a5YVF5Ec2n)
   
+  <a href="https://trustmrr.com/startup/deltalytix" target="_blank"><img src="https://trustmrr.com/api/embed/deltalytix?format=svg" alt="TrustMRR verified revenue badge" width="220" height="90" /></a>
+  
   [🚀 Live Demo](https://deltalytix.app) • [💬 Discord Community](https://discord.gg/a5YVF5Ec2n) • [🐛 Report Bug](https://github.com/hugodemenez/deltalytix/issues)
 </div>
 
