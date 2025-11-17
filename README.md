@@ -9,7 +9,7 @@
   [![Next.js](https://img.shields.io/badge/Next.js-15-black)](https://nextjs.org/)
   [![React](https://img.shields.io/badge/React-19-blue)](https://reactjs.org/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
-  [![Discord](https://img.shields.io/discord/a5YVF5Ec2n?label=Discord&logo=discord)](https://discord.gg/a5YVF5Ec2n)
+  [![Discord](https://img.shields.io/badge/Discord-Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/a5YVF5Ec2n)
   
   <a href="https://trustmrr.com/startup/deltalytix" target="_blank"><img src="https://trustmrr.com/api/embed/deltalytix?format=svg" alt="TrustMRR verified revenue badge" width="220" height="90" /></a>
   
