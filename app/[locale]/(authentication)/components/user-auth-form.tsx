@@ -210,10 +210,12 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         }
 
         // Account exists but no password set (created via magic link)
+        // Password reset email has been sent
         if (errorMessage.includes('account_exists_no_password') ||
-            errorMessage.includes('doesn\'t have a password set')) {
+            errorMessage.includes('doesn\'t have a password set') ||
+            errorMessage.includes('password reset email has been sent')) {
             return {
-                message: t('auth.errors.accountExistsNoPassword'),
+                message: t('auth.errors.accountExistsNoPasswordResetSent'),
                 field: 'email'
             }
         }

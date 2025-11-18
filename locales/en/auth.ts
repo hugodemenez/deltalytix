@@ -69,6 +69,7 @@ export default {
             signUpFailed: 'Failed to create account. Please try again',
             accountExists: 'An account with this email already exists',
             accountExistsNoPassword: 'This account exists but doesn\'t have a password set. Please sign in with a magic link first, then set a password in your settings, or use the magic link to sign in.',
+            accountExistsNoPasswordResetSent: 'This account exists but doesn\'t have a password set. A password reset email has been sent to your email address. Please check your inbox to set a password.',
             invalidCredentialsOrNoPassword: 'The password is incorrect, or this account doesn\'t have a password set yet. If you created your account with a magic link, please sign in using "Email only" first, then set a password in your settings.',
         }
     },

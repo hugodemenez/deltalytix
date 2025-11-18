@@ -135,11 +135,6 @@ export async function signInWithPasswordAction(
       })
       
       if (signUpError) {
-        // If sign up fails, it means user already exists
-        // Since sign-in also failed with "Invalid login credentials", it could mean:
-        // 1. User exists but has no password set (created via magic link) - needs to set password
-        // 2. User exists and has password - wrong password was provided
-        // We can't distinguish these cases, so we provide a helpful error message covering both
         // Check if it's a password validation error (should be shown separately)
         const isPasswordValidationError = 
           signUpError.message.toLowerCase().includes('password should contain') ||
@@ -148,19 +143,65 @@ export async function signInWithPasswordAction(
           signUpError.message.toLowerCase().includes('password is too short') ||
           signUpError.message.toLowerCase().includes('password must be at least')
         
-        // If it's not a password validation error, assume user exists
-        // (since sign-in also failed with "Invalid login credentials")
-        if (!isPasswordValidationError) {
-          // User exists but password sign-in failed - could be no password set or wrong password
-          throw new Error('INVALID_CREDENTIALS_OR_NO_PASSWORD: The password is incorrect, or this account doesn\'t have a password set yet. If you created your account with a magic link, please sign in using "Email only" first, then set a password in your settings.')
+        // If it's a password validation error, throw as-is so they can be displayed
+        if (isPasswordValidationError) {
+          throw new Error(signUpError.message)
         }
-        // Password validation errors - throw as-is so they can be displayed
-        throw new Error(signUpError.message)
+        
+        // If sign up fails, it means user already exists
+        // Since sign-in also failed with "Invalid login credentials", it could mean:
+        // 1. User exists but has no password set (created via magic link) - needs to set password
+        // 2. User exists and has password - wrong password was provided
+        
+        // Check if error indicates user already registered (not just any error)
+        const isUserAlreadyRegistered = 
+          signUpError.message.toLowerCase().includes('user already registered') ||
+          signUpError.message.toLowerCase().includes('already registered') ||
+          signUpError.message.toLowerCase().includes('email address is already registered') ||
+          signUpError.message.toLowerCase().includes('user already exists')
+        
+        if (isUserAlreadyRegistered) {
+          // User exists but password sign-in failed - likely no password set
+          // Send password reset email to allow them to set a password
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${websiteURL}api/auth/callback?type=recovery${callbackParams.toString() ? `&${callbackParams.toString()}` : ''}`,
+          })
+          
+          if (resetError) {
+            // If reset fails, fall back to the original error message
+            throw new Error('ACCOUNT_EXISTS_NO_PASSWORD: This account exists but doesn\'t have a password set. A password reset email has been sent to your email address. Please check your inbox to set a password.')
+          }
+          
+          // Successfully sent reset email
+          throw new Error('ACCOUNT_EXISTS_NO_PASSWORD: This account exists but doesn\'t have a password set. A password reset email has been sent to your email address. Please check your inbox to set a password.')
+        }
+        
+        // For other sign-up errors, assume wrong password (user exists with password)
+        throw new Error('INVALID_CREDENTIALS: The password is incorrect. Please try again or use "Forgot password" to reset it.')
       }
       
-      // Sign up succeeded, now sign in with the same credentials
+      // Sign up succeeded
+      // If email confirmation is disabled, Supabase automatically signs the user in
+      // Check if user is already signed in (session exists)
+      if (signUpData.user && signUpData.session) {
+        // User is automatically signed in (email confirmation disabled)
+        try {
+          await ensureUserInDatabase(signUpData.user, locale)
+        } catch (e) {
+          // Non-fatal; still proceed
+          console.error('[signInWithPasswordAction] ensureUserInDatabase failed:', e)
+        }
+        return { success: true, next }
+      }
+      
+      // If email confirmation is enabled, user needs to confirm email first
+      // Try to sign in - this will fail if email is not confirmed
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
       if (signInError) {
+        // If sign-in fails, it might be because email is not confirmed
+        if (signInError.message.includes('Email not confirmed') || signInError.message.includes('email_not_confirmed')) {
+          throw new Error('EMAIL_NOT_CONFIRMED: Please check your email and confirm your account before signing in.')
+        }
         throw new Error(signInError.message)
       }
       
@@ -197,7 +238,7 @@ export async function signInWithPasswordAction(
   return { success: true, next }
 }
 
-// Password-based registration (optional) – sends confirmation if enabled
+// Password-based registration – auto signs in if email confirmation is disabled
 export async function signUpWithPasswordAction(
   email: string,
   password: string,
@@ -219,7 +260,18 @@ export async function signUpWithPasswordAction(
   if (error) {
     throw new Error(error.message)
   }
-  return { success: true }
+  
+  // If email confirmation is disabled, user is automatically signed in
+  if (data.user && data.session) {
+    try {
+      await ensureUserInDatabase(data.user, locale)
+    } catch (e) {
+      // Non-fatal; still proceed
+      console.error('[signUpWithPasswordAction] ensureUserInDatabase failed:', e)
+    }
+  }
+  
+  return { success: true, next }
 }
 
 // Allow a logged-in user (e.g., magic link users) to set or change a password

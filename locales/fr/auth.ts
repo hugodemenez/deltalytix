@@ -69,6 +69,7 @@ export default {
             signUpFailed: 'Échec de la création du compte. Veuillez réessayer',
             accountExists: 'Un compte avec cet email existe déjà',
             accountExistsNoPassword: 'Ce compte existe mais n\'a pas de mot de passe défini. Veuillez d\'abord vous connecter avec un lien magique, puis définir un mot de passe dans vos paramètres, ou utilisez le lien magique pour vous connecter.',
+            accountExistsNoPasswordResetSent: 'Ce compte existe mais n\'a pas de mot de passe défini. Un email de réinitialisation de mot de passe a été envoyé à votre adresse email. Veuillez vérifier votre boîte de réception pour définir un mot de passe.',
             invalidCredentialsOrNoPassword: 'Le mot de passe est incorrect, ou ce compte n\'a pas encore de mot de passe défini. Si vous avez créé votre compte avec un lien magique, veuillez d\'abord vous connecter en utilisant "Email uniquement", puis définir un mot de passe dans vos paramètres.',
         }
     }
