@@ -6,7 +6,7 @@ import { stripe } from "@/actions/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
 
-async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null) {
+async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null, promo_code?: string | null) {
     const subscriptionDetails = await getSubscriptionDetails();
     
     // If referral code is provided, validate it (but don't block checkout if invalid)
@@ -93,12 +93,17 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         }
     }
 
+    // Apply Black Friday promo code for lifetime plans (EUR and USD)
+    const BLACKFRIDAY_PROMO_CODE_ID = 'promo_1SUSBwCgu8zCkThC883wLEU2';
+    const shouldApplyBlackFridayPromo = isLifetimePlan && promo_code === 'BLACKFRIDAY';
+
     // Create session with appropriate mode based on price type
     const sessionConfig: any = {
         customer: customerId,
         metadata: {
             plan: lookup_key,
             ...(referral && { referral_code: referral }),
+            ...(promo_code && { promo_code: promo_code }),
         },
         line_items: [
             {
@@ -110,6 +115,11 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         cancel_url: `${websiteURL}pricing?canceled=true`,
         allow_promotion_codes: true,
     };
+
+    // Apply Black Friday promo code discount for lifetime EUR plans
+    if (shouldApplyBlackFridayPromo) {
+        sessionConfig.discounts = [{ promotion_code: BLACKFRIDAY_PROMO_CODE_ID }];
+    }
 
     if (isLifetimePlan) {
         // One-time payment mode for lifetime plans
@@ -142,19 +152,21 @@ export async function POST(req: Request) {
 
     const lookup_key = body.get('lookup_key') as string;
     const referral = body.get('referral') as string | null;
+    const promo_code = body.get('promo_code') as string | null;
 
     const supabase = await createClient();
     const {data:{user}} = await supabase.auth.getUser();
     
     if (!user) {
         const referralParam = referral ? `&referral=${encodeURIComponent(referral)}` : '';
+        const promoParam = promo_code ? `&promo_code=${encodeURIComponent(promo_code)}` : '';
         return NextResponse.redirect(
-            `${websiteURL}authentication?subscription=true&lookup_key=${lookup_key}${referralParam}`,
+            `${websiteURL}authentication?subscription=true&lookup_key=${lookup_key}${referralParam}${promoParam}`,
             303
         );
     }
 
-    return handleCheckoutSession(lookup_key, user, websiteURL, referral);
+    return handleCheckoutSession(lookup_key, user, websiteURL, referral, promo_code);
 }
 
 export async function GET(req: Request) {
@@ -162,6 +174,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const lookup_key = searchParams.get('lookup_key');
     const referral = searchParams.get('referral');
+    const promo_code = searchParams.get('promo_code');
 
     if (!lookup_key) {
         return NextResponse.json({ message: "Lookup key is required" }, { status: 400 });
@@ -172,11 +185,12 @@ export async function GET(req: Request) {
     
     if (!user) {
         const referralParam = referral ? `&referral=${encodeURIComponent(referral)}` : '';
+        const promoParam = promo_code ? `&promo_code=${encodeURIComponent(promo_code)}` : '';
         return NextResponse.redirect(
-            `${websiteURL}authentication?subscription=true&lookup_key=${lookup_key}${referralParam}`,
+            `${websiteURL}authentication?subscription=true&lookup_key=${lookup_key}${referralParam}${promoParam}`,
             303
         );
     }
 
-    return handleCheckoutSession(lookup_key, user, websiteURL, referral);
+    return handleCheckoutSession(lookup_key, user, websiteURL, referral, promo_code);
 }

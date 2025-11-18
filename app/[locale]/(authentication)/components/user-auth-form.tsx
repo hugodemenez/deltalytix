@@ -56,6 +56,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const [isSubscription, setIsSubscription] = React.useState<boolean>(false)
     const [lookupKey, setLookupKey] = React.useState<string | null>(null)
     const [referralCode, setReferralCode] = React.useState<string | null>(null)
+    const [promoCode, setPromoCode] = React.useState<string | null>(null)
     const [authMethod, setAuthMethod] = React.useState<AuthMethod>(null)
     const [showOtpInput, setShowOtpInput] = React.useState<boolean>(false)
     const [nextUrl, setNextUrl] = React.useState<string | null>(null)
@@ -70,10 +71,16 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         const subscription = urlParams.get('subscription')
         const next = urlParams.get('next')
         const referral = urlParams.get('referral')
+        const promo_code = urlParams.get('promo_code')
         setIsSubscription(subscription === 'true')
         const lookup_key = urlParams.get('lookup_key')
         setLookupKey(lookup_key)
         setNextUrl(next)
+        
+        // Get promo code from URL
+        if (promo_code) {
+            setPromoCode(promo_code)
+        }
         
         // Get referral code from URL or localStorage
         if (referral) {
@@ -117,8 +124,9 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         setAuthMethod('email')
         try {
             const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
+            const promoParam = promoCode ? `&promo_code=${encodeURIComponent(promoCode)}` : '';
             const next = isSubscription 
-                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}` 
+                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}` 
                 : nextUrl;
             await signInWithEmail(values.email, next, locale)
             setIsEmailSent(true)
@@ -281,8 +289,9 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
         try {
             const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
+            const promoParam = promoCode ? `&promo_code=${encodeURIComponent(promoCode)}` : '';
             const next = isSubscription 
-                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}` 
+                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}` 
                 : nextUrl;
             await signInWithDiscord(next, locale)
         } catch (error) {
@@ -299,8 +308,9 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
         try {
             const referralParam = referralCode ? `&referral=${encodeURIComponent(referralCode)}` : '';
+            const promoParam = promoCode ? `&promo_code=${encodeURIComponent(promoCode)}` : '';
             const next = isSubscription 
-                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}` 
+                ? `api/stripe/create-checkout-session?lookup_key=${lookupKey}${referralParam}${promoParam}` 
                 : nextUrl;
             await signInWithGoogle(next, locale)
         } catch (error) {
