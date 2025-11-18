@@ -544,6 +544,9 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                   <span className="absolute -top-3 -right-2 bg-black text-white text-[10px] sm:text-xs font-medium px-1 py-0.5 sm:px-1.5 rounded-full">
                     BLACKFRIDAY
                   </span>
+                  <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap animate-pulse">
+                    {t('pricing.limitedTimeOffer')}
+                  </span>
                 </div>
               </div>
             </div>
@@ -582,6 +585,10 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                         {currency === 'EUR' ? '-50€' : '-$54'}
                       </span>
                     </div>
+                    {/* Limited offer notice */}
+                    <p className="text-xs font-semibold text-red-600 dark:text-red-400 mt-2 animate-pulse">
+                      ⚡ {t('pricing.veryLimitedOffer')}
+                    </p>
                   </div>
                 </div>
               ) : (

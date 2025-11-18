@@ -15,6 +15,8 @@ export default {
         new: 'NOUVEAU',
         previousPrice: 'Prix habituel',
         offerValidUntil: 'Offre limitée - valable jusqu\'au 30 juin',
+        limitedTimeOffer: 'OFFRE LIMITÉE',
+        veryLimitedOffer: 'Offre très limitée - Ne la manquez pas !',
         brandNew: 'Tout nouveau',
         oneTimePayment: 'Paiement unique',
         year: 'an',
