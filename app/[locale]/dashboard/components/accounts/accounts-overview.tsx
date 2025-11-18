@@ -828,7 +828,9 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         isRecursively: pendingChanges?.isRecursively ?? selectedAccountForTable.isRecursively,
         balanceRequired: pendingChanges?.balanceRequired ?? selectedAccountForTable.balanceRequired,
         minTradingDaysForPayout: pendingChanges?.minTradingDaysForPayout ?? selectedAccountForTable.minTradingDaysForPayout,
-        groupId: 'groupId' in pendingChanges ? pendingChanges.groupId : selectedAccountForTable.groupId
+        groupId: 'groupId' in pendingChanges 
+          ? (pendingChanges.groupId ?? null)
+          : (selectedAccountForTable.groupId ?? null)
       }
       await saveAccount(accountUpdate)
 
