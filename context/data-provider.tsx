@@ -1033,6 +1033,11 @@ export const DataProvider: React.FC<{
       ], trades)
       const accountWithMetrics = accountsWithMetrics[0]
       
+      // Check if groupId changed
+      const oldGroupId = currentAccount.groupId
+      const newGroupId = accountWithMetrics.groupId
+      const groupIdChanged = oldGroupId !== newGroupId
+      
       // Update the account in the local state with recalculated metrics
       const updatedAccounts = accounts.map((account: Account) => {
         if (account.number === accountWithMetrics.number) {
@@ -1041,6 +1046,25 @@ export const DataProvider: React.FC<{
         return account;
       });
       setAccounts(updatedAccounts);
+
+      // Update groups state if groupId changed
+      if (groupIdChanged) {
+        setGroups(groups.map(group => {
+          // If this is the new target group, add the account only if it's not already there
+          if (group.id === newGroupId) {
+            const accountExists = group.accounts.some(acc => acc.id === accountWithMetrics.id || acc.number === accountWithMetrics.number)
+            return {
+              ...group,
+              accounts: accountExists ? group.accounts : [...group.accounts, accountWithMetrics]
+            }
+          }
+          // For all other groups (including the old group), remove the account if it exists
+          return {
+            ...group,
+            accounts: group.accounts.filter(acc => acc.id !== accountWithMetrics.id && acc.number !== accountWithMetrics.number)
+          }
+        }))
+      }
     } catch (error) {
       console.error('Error updating account:', error)
       throw error
