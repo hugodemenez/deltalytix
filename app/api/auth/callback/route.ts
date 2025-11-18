@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const type = searchParams.get('type') // 'recovery' for password reset
   // if "next" is in param, use it as the redirect URL
   const next = searchParams.get('next')
   const action = searchParams.get('action')
@@ -31,6 +32,17 @@ export async function GET(request: Request) {
 
 
     if (!error) {
+      // Handle password recovery redirect
+      if (type === 'recovery') {
+        const forwardedHost = request.headers.get('x-forwarded-host')
+        const isLocalEnv = process.env.NODE_ENV === 'development'
+        const baseUrl = isLocalEnv
+          ? `${origin}/dashboard/settings`
+          : `https://${forwardedHost || origin}/dashboard/settings`
+        const redirectUrl = `${baseUrl}?passwordReset=true`
+        return NextResponse.redirect(redirectUrl)
+      }
+
       // Handle identity linking redirect
       if (action === 'link') {
         const forwardedHost = request.headers.get('x-forwarded-host')

@@ -67,10 +67,31 @@ export default function Modals() {
     localStorage.setItem('paywall_last_shown', Date.now().toString());
   }, []);
 
+  const handleOnboardingDismiss = useCallback(() => {
+    // Open import trades dialog if user has no trades
+    // Use a slightly longer delay to ensure onboarding state has updated
+    setTimeout(() => {
+      // Check current trades state - trades is initialized as empty array []
+      const currentTrades = useTradesStore.getState().trades
+      const currentIsLoading = useUserStore.getState().isLoading
+      const hasNoTrades = !currentTrades || currentTrades.length === 0
+      
+      console.log('Onboarding dismissed - checking trades:', { 
+        tradesCount: currentTrades?.length || 0, 
+        isLoading: currentIsLoading,
+        willOpen: hasNoTrades && !currentIsLoading 
+      })
+      
+      if (hasNoTrades && !currentIsLoading) {
+        setIsTradesDialogOpen(true)
+      }
+    }, 300)
+  }, [])
+
   if (!user) return null
   return (
     <>
-      <OnboardingModal />
+      <OnboardingModal onDismiss={handleOnboardingDismiss} />
 
       {/* Tooltip Portal for Sheet */}
       <div id="sheet-tooltip-portal" className="fixed inset-0 pointer-events-none z-100" />
@@ -114,10 +135,10 @@ export default function Modals() {
         </DialogContent>
       </Dialog>
 
-      {!user?.isFirstConnection && (
-        <Dialog open={isTradesDialogOpen} onOpenChange={setIsTradesDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
+      {/* Show import trades dialog if no trades, regardless of isFirstConnection when explicitly opened */}
+      <Dialog open={isTradesDialogOpen} onOpenChange={setIsTradesDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
             <DialogTitle>{t('modals.noTrades.title')}</DialogTitle>
             <DialogDescription>
               {t('modals.noTrades.description')}
@@ -126,7 +147,6 @@ export default function Modals() {
           <ImportButton />
         </DialogContent>
       </Dialog>
-      )}
 
       <Dialog 
         open={isPaywallOpen} 
