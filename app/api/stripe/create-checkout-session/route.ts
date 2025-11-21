@@ -113,12 +113,15 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         ],
         success_url: `${websiteURL}dashboard?success=true&referral_applied=${referral ? 'true' : 'false'}`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
-        allow_promotion_codes: true,
     };
 
     // Apply Black Friday promo code discount for lifetime EUR plans
     if (shouldApplyBlackFridayPromo) {
         sessionConfig.discounts = [{ promotion_code: BLACKFRIDAY_PROMO_CODE_ID }];
+    }
+
+    if (!sessionConfig.discounts) {
+        sessionConfig.allow_promotion_codes = true;
     }
 
     if (isLifetimePlan) {
