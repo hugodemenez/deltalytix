@@ -106,7 +106,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function Page({ params }: PageProps) {
-  'use cache'
   try {
     const resolvedParams = await params
     if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {

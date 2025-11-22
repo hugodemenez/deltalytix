@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   },
   pageExtensions: ['mdx', 'ts', 'tsx'],
   experimental: {
-    useCache: true,
+    // useCache: true,
     mdxRs: true,
   },
   outputFileTracingIncludes: {

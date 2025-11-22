@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 import { AuthProvider } from "@/context/auth-provider";
 import Script from "next/script"
 import { ReactNode } from "react";
+import { connection } from "next/server";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -93,6 +94,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  await connection()
   return (
     <html lang="en" className="bg-background" translate="no">
       <head>
