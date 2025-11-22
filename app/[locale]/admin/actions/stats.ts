@@ -157,7 +157,6 @@ export async function getFreeUsers(){
 }
 
 export async function getUserEquityData(page: number = 1, limit: number = 10) {
-  'use cache'
   console.log('Starting getUserEquityData function')
 
   // First, get all unique user IDs that have trades, with pagination
