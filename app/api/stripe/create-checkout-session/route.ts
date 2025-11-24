@@ -94,7 +94,7 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
     }
 
     // Apply Black Friday promo code for lifetime plans (EUR and USD)
-    const BLACKFRIDAY_PROMO_CODE_ID = 'promo_1SUSBwCgu8zCkThC883wLEU2';
+    const BLACKFRIDAY_PROMO_CODE_ID = 'promo_1SWw8aCgu8zCkThC0RO9qiou';
     const shouldApplyBlackFridayPromo = isLifetimePlan && promo_code === 'BLACKFRIDAY';
 
     // Create session with appropriate mode based on price type
