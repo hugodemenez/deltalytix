@@ -1033,6 +1033,11 @@ export const DataProvider: React.FC<{
       ], trades)
       const accountWithMetrics = accountsWithMetrics[0]
       
+      // Check if groupId changed
+      const oldGroupId = currentAccount.groupId
+      const newGroupId = accountWithMetrics.groupId
+      const groupIdChanged = oldGroupId !== newGroupId
+      
       // Update the account in the local state with recalculated metrics
       const updatedAccounts = accounts.map((account: Account) => {
         if (account.number === accountWithMetrics.number) {
@@ -1041,6 +1046,93 @@ export const DataProvider: React.FC<{
         return account;
       });
       setAccounts(updatedAccounts);
+
+      // Update groups state if groupId changed
+      if (groupIdChanged) {
+        // Get fresh groups from store to avoid stale closure references
+        const currentGroups = useUserStore.getState().groups
+        
+        // Check if the target group exists in the groups array
+        const targetGroupExists = currentGroups.some(g => g.id === newGroupId)
+        
+        if (targetGroupExists) {
+          // Update existing groups
+          setGroups(currentGroups.map(group => {
+            // If this is the new target group, add the account only if it's not already there
+            if (group.id === newGroupId) {
+              const accountExists = group.accounts.some(acc => acc.id === accountWithMetrics.id || acc.number === accountWithMetrics.number)
+              return {
+                ...group,
+                accounts: accountExists ? group.accounts : [...group.accounts, accountWithMetrics]
+              }
+            }
+            // For all other groups (including the old group), remove the account if it exists
+            return {
+              ...group,
+              accounts: group.accounts.filter(acc => acc.id !== accountWithMetrics.id && acc.number !== accountWithMetrics.number)
+            }
+          }))
+        } else if (newGroupId) {
+          // If the group doesn't exist yet (just created), we need to add it
+          // This can happen if a group was just created and saveAccount is called immediately
+          // Try to fetch the group from the database, or create a minimal group object
+          try {
+            const { getGroupsAction } = await import('@/server/groups')
+            const allGroups = await getGroupsAction()
+            const foundGroup = allGroups.find(g => g.id === newGroupId)
+            
+            if (foundGroup) {
+              // Use the actual group from database
+              const updatedGroups = currentGroups.map(group => ({
+                ...group,
+                accounts: group.accounts.filter(acc => acc.id !== accountWithMetrics.id && acc.number !== accountWithMetrics.number)
+              }))
+              setGroups([...updatedGroups, { ...foundGroup, accounts: [accountWithMetrics] }])
+            } else {
+              // Fallback: create minimal group object (shouldn't happen, but just in case)
+              const newGroup = {
+                id: newGroupId,
+                name: 'New Group', // Temporary name
+                userId: supabaseUser.id,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                accounts: [accountWithMetrics]
+              }
+              
+              const updatedGroups = currentGroups.map(group => ({
+                ...group,
+                accounts: group.accounts.filter(acc => acc.id !== accountWithMetrics.id && acc.number !== accountWithMetrics.number)
+              }))
+              
+              setGroups([...updatedGroups, newGroup])
+            }
+          } catch (error) {
+            console.error('Error fetching group:', error)
+            // Fallback: create minimal group object
+            const newGroup = {
+              id: newGroupId,
+              name: 'New Group',
+              userId: supabaseUser.id,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              accounts: [accountWithMetrics]
+            }
+            
+            const updatedGroups = currentGroups.map(group => ({
+              ...group,
+              accounts: group.accounts.filter(acc => acc.id !== accountWithMetrics.id && acc.number !== accountWithMetrics.number)
+            }))
+            
+            setGroups([...updatedGroups, newGroup])
+          }
+        } else {
+          // Removing from group (groupId is null)
+          setGroups(currentGroups.map(group => ({
+            ...group,
+            accounts: group.accounts.filter(acc => acc.id !== accountWithMetrics.id && acc.number !== accountWithMetrics.number)
+          })))
+        }
+      }
     } catch (error) {
       console.error('Error updating account:', error)
       throw error

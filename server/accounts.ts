@@ -209,16 +209,27 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     ...baseAccountData 
   } = account
 
-  // Handle group relation separately if groupId exists
+  // Handle group relation separately
+  // If groupId is provided, connect to that group
+  // If groupId is explicitly null, disconnect from current group
+  // If groupId is undefined, don't change the group relation
   const accountDataWithGroup = {
     ...baseAccountData,
-    ...(groupId && {
-      group: {
-        connect: {
-          id: groupId
-        }
-      }
-    })
+    ...(groupId !== undefined && (
+      groupId 
+        ? {
+            group: {
+              connect: {
+                id: groupId
+              }
+            }
+          }
+        : {
+            group: {
+              disconnect: true
+            }
+          }
+    ))
   }
 
   let savedAccount

@@ -221,9 +221,13 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
     const accountMap = new Map(accounts.map(acc => [acc.number, acc]))
 
     // Filter trades based on reset dates and selected accounts
+    const hasAccountSelection = params.selectedAccounts.length > 0
+
     const finalFilteredTrades = filteredTrades.filter(trade => {
-      if (!params.selectedAccounts.includes(trade.accountNumber) || 
-          !limitedAccountNumbers.includes(trade.accountNumber)) {
+      const isWhitelistedAccount = limitedAccountNumbers.includes(trade.accountNumber)
+      const isAccountSelected = !hasAccountSelection || params.selectedAccounts.includes(trade.accountNumber)
+
+      if (!isWhitelistedAccount || !isAccountSelected) {
         return false
       }
       
@@ -341,7 +345,7 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
 
       // Process each account
       for (const accountNumber of limitedAccountNumbers) {
-        if (!params.selectedAccounts.includes(accountNumber)) continue
+        if (hasAccountSelection && !params.selectedAccounts.includes(accountNumber)) continue
 
         const account = accountMap.get(accountNumber)
         const accountEvents = dateEvents.filter(event => event.accountNumber === accountNumber)

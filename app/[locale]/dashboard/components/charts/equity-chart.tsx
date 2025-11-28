@@ -768,12 +768,6 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       return;
     }
 
-    // Don't fetch if we don't have accounts data yet
-    if (!accounts || accounts.length === 0) {
-      console.log('[EquityChart] No accounts available, skipping fetch');
-      return;
-    }
-
     console.log('[EquityChart] Fetching server-side data');
     const fetchChartData = async () => {
       setIsLoading(true);

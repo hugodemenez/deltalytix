@@ -21,6 +21,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Account } from '@/context/data-provider'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import { useData } from '@/context/data-provider'
+import { useUserStore } from '@/store/user-store'
+import { Plus } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface AccountConfiguratorProps {
   account: Account
@@ -43,10 +47,15 @@ export function AccountConfigurator({
 }: AccountConfiguratorProps) {
   const t = useI18n()
   const params = useParams()
+  const { saveGroup } = useData()
+  const groups = useUserStore(state => state.groups)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [paymentCalendarOpen, setPaymentCalendarOpen] = useState(false)
   const [selectedAccountSize, setSelectedAccountSize] = useState<string>("")
   const [accountSizeOpen, setAccountSizeOpen] = useState(false)
+  const [showNewGroupInput, setShowNewGroupInput] = useState(false)
+  const [newGroupName, setNewGroupName] = useState("")
+  const [isCreatingGroup, setIsCreatingGroup] = useState(false)
 
   const handleTemplateChange = (firmKey: string, sizeKey: string) => {
     const firm = propFirms[firmKey]
@@ -94,6 +103,32 @@ export function AccountConfigurator({
       [field]: value
     }
     setPendingChanges(newChanges)
+  }
+
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return
+    
+    const groupNameToCreate = newGroupName.trim()
+    
+    try {
+      setIsCreatingGroup(true)
+      const newGroup = await saveGroup(groupNameToCreate)
+      if (newGroup) {
+        handleInputChange('groupId', newGroup.id)
+        setNewGroupName("")
+        setShowNewGroupInput(false)
+        toast.success(t("common.success"), {
+          description: t("filters.groupCreated", { name: groupNameToCreate })
+        })
+      }
+    } catch (error) {
+      console.error("Error creating group:", error)
+      toast.error(t("common.error"), {
+        description: t("filters.errorCreatingGroup", { name: groupNameToCreate })
+      })
+    } finally {
+      setIsCreatingGroup(false)
+    }
   }
 
   const isSaveDisabled = !pendingChanges || 
@@ -282,6 +317,78 @@ export function AccountConfigurator({
                     {pendingChanges?.isPerformance ?? account.isPerformance ? t('propFirm.configurator.fields.funded') : t('propFirm.configurator.fields.challenge')}
                   </Label>
                 </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>{t('filters.groupName')}</Label>
+                {showNewGroupInput ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder={t("filters.newGroup")}
+                      value={newGroupName}
+                      onChange={(e) => setNewGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleCreateGroup()
+                        } else if (e.key === "Escape") {
+                          setNewGroupName("")
+                          setShowNewGroupInput(false)
+                        }
+                      }}
+                      className="flex-1"
+                      autoFocus
+                    />
+                    <Button 
+                      size="sm" 
+                      onClick={handleCreateGroup} 
+                      disabled={!newGroupName.trim() || isCreatingGroup}
+                    >
+                      {isCreatingGroup ? t("common.saving") : t("common.create")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowNewGroupInput(false)
+                        setNewGroupName("")
+                      }}
+                    >
+                      {t("common.cancel")}
+                    </Button>
+                  </div>
+                ) : (
+                  <Select
+                    value={
+                      'groupId' in (pendingChanges || {})
+                        ? (pendingChanges?.groupId ?? "__no_group__")
+                        : (account.groupId ?? "__no_group__")
+                    }
+                    onValueChange={(value) => {
+                      if (value === "__create_new__") {
+                        setShowNewGroupInput(true)
+                      } else {
+                        handleInputChange('groupId', value === "__no_group__" ? null : value)
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("filters.selectGroup")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__no_group__">{t("filters.noGroup")}</SelectItem>
+                      {groups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="__create_new__" className="text-primary">
+                        <div className="flex items-center gap-2">
+                          <Plus className="h-4 w-4" />
+                          {t("filters.createGroup")}
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
           </AccordionContent>
