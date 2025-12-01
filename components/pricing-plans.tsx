@@ -126,7 +126,7 @@ interface PricingPlansProps {
 }
 
 export default function PricingPlans({ isModal, onClose, trigger, currentSubscription }: PricingPlansProps) {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('lifetime')
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly')
   const [isLoading, setIsLoading] = useState(false)
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false)
   const [pendingLookupKey, setPendingLookupKey] = useState<string>('')
@@ -214,15 +214,6 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
       input.value = lookupKey
       form.appendChild(input)
       
-      // Add promo code for Black Friday (lifetime plans)
-      if (lookupKey.includes('lifetime')) {
-        const promoInput = document.createElement('input')
-        promoInput.type = 'hidden'
-        promoInput.name = 'promo_code'
-        promoInput.value = 'BLACKFRIDAY'
-        form.appendChild(promoInput)
-      }
-      
       // Add referral code if present
       if (referralCode) {
         const referralInput = document.createElement('input')
@@ -298,15 +289,6 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
         input.name = 'lookup_key'
         input.value = finalLookupKey
         form.appendChild(input)
-        
-        // Add promo code for Black Friday (lifetime plans)
-        if (finalLookupKey.includes('lifetime')) {
-          const promoInput = document.createElement('input')
-          promoInput.type = 'hidden'
-          promoInput.name = 'promo_code'
-          promoInput.value = 'BLACKFRIDAY'
-          form.appendChild(promoInput)
-        }
         
         // Add referral code if present
         if (referralCode) {
@@ -453,26 +435,16 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     const [previousPrice, setPreviousPrice] = useState(0)
 
     useEffect(() => {
-      // Black Friday promo: 50 euros off lifetime plan (converted to USD for USD prices)
-      // Stripe will handle currency conversion automatically
-      const blackFridayDiscountEUR = billingPeriod === 'lifetime' ? 50 : 0
-      const blackFridayDiscountUSD = billingPeriod === 'lifetime' ? 54 : 0 // Approx conversion: 50 EUR ≈ 54 USD
-      const blackFridayDiscount = billingPeriod === 'lifetime' 
-        ? (currency === 'EUR' ? blackFridayDiscountEUR : blackFridayDiscountUSD)
-        : 0
-      const baseLifetimePrice = billingPeriod === 'lifetime' ? plan.price.lifetime : 0
-      const discountedLifetimePrice = baseLifetimePrice - blackFridayDiscount
-
       setCurrentPricing(billingPeriod === 'yearly' ? plan.price.yearly / 12 :
         billingPeriod === 'quarterly' ? plan.price.quarterly / 3 :
-          billingPeriod === 'lifetime' ? discountedLifetimePrice :
+          billingPeriod === 'lifetime' ? plan.price.lifetime :
             plan.price.monthly)
 
       setPreviousPrice(billingPeriod === 'yearly' ? previousPricing.yearly / 12 :
         billingPeriod === 'quarterly' ? previousPricing.quarterly / 3 :
-          billingPeriod === 'lifetime' ? plan.price.lifetime :
+          billingPeriod === 'lifetime' ? previousPricing.lifetime :
             previousPricing.monthly)
-    }, [billingPeriod, plan.price, currency])
+    }, [billingPeriod, plan.price])
 
     const t = useI18n()
 
@@ -532,31 +504,22 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
 
               {/* Separate lifetime button */}
               <div className="pt-2 border-t border-border">
-                <div className="relative">
-                  <Button
-                    variant={billingPeriod === 'lifetime' ? 'default' : 'outline'}
-                    size="sm"
-                    className="w-full"
-                    onClick={() => setBillingPeriod('lifetime')}
-                  >
-                    {t('pricing.lifetimeAccess')}
-                  </Button>
-                  <span className="absolute -top-3 -right-2 bg-black text-white text-[10px] sm:text-xs font-medium px-1 py-0.5 sm:px-1.5 rounded-full">
-                    BLACKFRIDAY
-                  </span>
-                  <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap animate-pulse">
-                    {t('pricing.limitedTimeOffer')}
-                  </span>
-                </div>
+                <Button
+                  variant={billingPeriod === 'lifetime' ? 'default' : 'outline'}
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setBillingPeriod('lifetime')}
+                >
+                  {t('pricing.lifetimeAccess')}
+                </Button>
               </div>
             </div>
 
             <div className="mb-4">
               {billingPeriod === 'lifetime' ? (
-                /* Lifetime pricing - show Black Friday discount for all currencies */
+                /* Lifetime pricing - show regular pricing */
                 <div className="text-center">
                   <div className="flex flex-col items-center mb-3">
-                    {/* Show discounted price with original price crossed out */}
                     <div className="flex items-center justify-center gap-4">
                       {/* Previous price (crossed out) */}
                       <div className="text-lg text-muted-foreground relative">
@@ -571,8 +534,8 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                         </div>
                       </div>
                       <div className="text-muted-foreground">→</div>
-                      {/* Discounted price */}
-                      <div className="flex items-baseline text-4xl font-bold text-green-600">
+                      {/* Current price */}
+                      <div className="flex items-baseline text-4xl font-bold">
                         <NumberFlow
                           prefix={currency === 'EUR' ? undefined : `${symbol}`}
                           suffix={currency === 'EUR' ? `${symbol}` : undefined}
@@ -580,14 +543,9 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                           format={{ minimumIntegerDigits: 3 }}
                         />
                       </div>
-                      {/* Savings badge */}
-                      <span className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 text-xs font-medium px-2 py-1 rounded-full whitespace-nowrap">
-                        {currency === 'EUR' ? '-50€' : '-$54'}
-                      </span>
                     </div>
-                    {/* Limited offer notice */}
-                    <p className="text-xs font-semibold text-red-600 dark:text-red-400 mt-2 animate-pulse">
-                      ⚡ {t('pricing.veryLimitedOffer')}
+                    <p className="text-xs text-center text-muted-foreground mt-2">
+                      {t('pricing.oneTimePayment')}
                     </p>
                   </div>
                 </div>

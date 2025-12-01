@@ -93,10 +93,6 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         }
     }
 
-    // Apply Black Friday promo code for lifetime plans (EUR and USD)
-    const BLACKFRIDAY_PROMO_CODE_ID = 'promo_1SWw8aCgu8zCkThC0RO9qiou';
-    const shouldApplyBlackFridayPromo = false;
-
     // Create session with appropriate mode based on price type
     const sessionConfig: any = {
         customer: customerId,
@@ -113,16 +109,8 @@ async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: 
         ],
         success_url: `${websiteURL}dashboard?success=true&referral_applied=${referral ? 'true' : 'false'}`,
         cancel_url: `${websiteURL}pricing?canceled=true`,
+        allow_promotion_codes: true,
     };
-
-    // Apply Black Friday promo code discount for lifetime EUR plans
-    if (shouldApplyBlackFridayPromo) {
-        sessionConfig.discounts = [{ promotion_code: BLACKFRIDAY_PROMO_CODE_ID }];
-    }
-
-    if (!sessionConfig.discounts) {
-        sessionConfig.allow_promotion_codes = true;
-    }
 
     if (isLifetimePlan) {
         // One-time payment mode for lifetime plans
