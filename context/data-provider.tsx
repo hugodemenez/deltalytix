@@ -1162,7 +1162,7 @@ export const DataProvider: React.FC<{
       console.error('Error renaming group:', error)
       throw error
     }
-  }, [supabaseUser?.id])
+  }, [supabaseUser?.id, groups, setGroups])
 
   // Add deleteGroup function
   const deleteGroup = useCallback(async (groupId: string) => {
