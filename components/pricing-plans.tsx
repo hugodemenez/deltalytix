@@ -334,7 +334,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     yearly: 300,
     quarterly: 82.5,
     monthly: 29.99,
-    lifetime: 999
+    lifetime: 500
   }
 
   const plans: Plans = {
