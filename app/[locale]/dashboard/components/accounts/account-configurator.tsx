@@ -23,7 +23,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
 import { useData } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
-import { Plus } from 'lucide-react'
+import { Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface AccountConfiguratorProps {
@@ -56,6 +56,7 @@ export function AccountConfigurator({
   const [showNewGroupInput, setShowNewGroupInput] = useState(false)
   const [newGroupName, setNewGroupName] = useState("")
   const [isCreatingGroup, setIsCreatingGroup] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   const handleTemplateChange = (firmKey: string, sizeKey: string) => {
     const firm = propFirms[firmKey]
@@ -140,6 +141,38 @@ export function AccountConfigurator({
     (pendingChanges?.trailingDrawdown && typeof pendingChanges?.trailingStopProfit === 'number' && pendingChanges.trailingStopProfit <= 0) ||
     isSaving
 
+  // Filter prop firms and account sizes based on search query
+  const filteredPropFirms = Object.entries(propFirms).filter(([firmKey, firm]) => {
+    if (!searchQuery.trim()) return true
+    
+    const query = searchQuery.toLowerCase().trim()
+    const firmNameMatch = firm.name.toLowerCase().includes(query)
+    
+    // Check if any account size matches
+    const hasMatchingAccountSize = Object.entries(firm.accountSizes).some(([sizeKey, accountSize]) => {
+      const sizeNameMatch = accountSize.name.toLowerCase().includes(query)
+      const balanceMatch = accountSize.balance.toString().includes(query)
+      const targetMatch = accountSize.target.toString().includes(query)
+      return sizeNameMatch || balanceMatch || targetMatch
+    })
+    
+    return firmNameMatch || hasMatchingAccountSize
+  })
+
+  // Filter account sizes within each firm
+  const getFilteredAccountSizes = (firm: typeof propFirms[string]) => {
+    if (!searchQuery.trim()) return Object.entries(firm.accountSizes)
+    
+    const query = searchQuery.toLowerCase().trim()
+    return Object.entries(firm.accountSizes).filter(([sizeKey, accountSize]) => {
+      const sizeNameMatch = accountSize.name.toLowerCase().includes(query)
+      const balanceMatch = accountSize.balance.toString().includes(query)
+      const targetMatch = accountSize.target.toString().includes(query)
+      const firmNameMatch = firm.name.toLowerCase().includes(query)
+      return sizeNameMatch || balanceMatch || targetMatch || firmNameMatch
+    })
+  }
+
   return (
     <div className="space-y-6">
       {/* Template Loading Section */}
@@ -151,6 +184,28 @@ export function AccountConfigurator({
           </div>
         </div>
         
+        {/* Search Input */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder={t('propFirm.configurator.template.searchPlaceholder')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-6 w-6"
+              onClick={() => setSearchQuery("")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        
         <div className="relative">
           <Carousel
             opts={{
@@ -160,46 +215,64 @@ export function AccountConfigurator({
             className="w-full"
           >
             <CarouselContent>
-              {Object.entries(propFirms).map(([firmKey, firm]) => (
-                <CarouselItem key={firmKey} className="basis-1/2 xl:basis-1/5">
-                  <Popover modal>
-                    <PopoverTrigger asChild>
-                      <Card className="cursor-pointer hover:bg-muted/50 transition-colors basis-1/2 xl:basis-1/5">
-                        <CardHeader>
-                          <CardTitle className='whitespace-nowrap text-sm'>{firm.name}</CardTitle>
-                        </CardHeader>
-                      </Card>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-4 max-h-[400px] overflow-y-auto">
-                      <div className="space-y-4">
-                        {Object.entries(firm.accountSizes).map(([sizeKey, accountSize]) => (
-                          <div
-                            key={`${firmKey}-${sizeKey}`}
-                            className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-                            onClick={() => {
-                              setSelectedAccountSize(sizeKey)
-                              handleTemplateChange(firmKey, sizeKey)
-                            }}
-                          >
-                            <div className="flex flex-col">
-                              <span className="font-medium">{accountSize.name}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {accountSize.balance.toLocaleString()} - {accountSize.target}$ {t('propFirm.configurator.template.target')}
-                              </span>
-                            </div>
-                            <Check
-                              className={cn(
-                                "h-4 w-4",
-                                selectedAccountSize === sizeKey && pendingChanges?.propfirm === firm.name ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+              {filteredPropFirms.length === 0 ? (
+                <CarouselItem className="basis-full">
+                  <div className="flex items-center justify-center p-8 text-muted-foreground">
+                    <p>{t('propFirm.configurator.template.noResults')}</p>
+                  </div>
                 </CarouselItem>
-              ))}
+              ) : (
+                filteredPropFirms.map(([firmKey, firm]) => {
+                  const filteredAccountSizes = getFilteredAccountSizes(firm)
+                  
+                  return (
+                    <CarouselItem key={firmKey} className="basis-1/2 xl:basis-1/5">
+                      <Popover modal>
+                        <PopoverTrigger asChild>
+                          <Card className="cursor-pointer hover:bg-muted/50 transition-colors basis-1/2 xl:basis-1/5">
+                            <CardHeader>
+                              <CardTitle className='whitespace-nowrap text-sm'>{firm.name}</CardTitle>
+                            </CardHeader>
+                          </Card>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-4 max-h-[400px] overflow-y-auto">
+                          <div className="space-y-4">
+                            {filteredAccountSizes.length === 0 ? (
+                              <div className="flex items-center justify-center p-4 text-muted-foreground text-sm">
+                                <p>{t('propFirm.configurator.template.noAccountSizes')}</p>
+                              </div>
+                            ) : (
+                              filteredAccountSizes.map(([sizeKey, accountSize]) => (
+                                <div
+                                  key={`${firmKey}-${sizeKey}`}
+                                  className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                                  onClick={() => {
+                                    setSelectedAccountSize(sizeKey)
+                                    handleTemplateChange(firmKey, sizeKey)
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{accountSize.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {accountSize.balance.toLocaleString()} - {accountSize.target}$ {t('propFirm.configurator.template.target')}
+                                    </span>
+                                  </div>
+                                  <Check
+                                    className={cn(
+                                      "h-4 w-4",
+                                      selectedAccountSize === sizeKey && pendingChanges?.propfirm === firm.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </CarouselItem>
+                  )
+                })
+              )}
             </CarouselContent>
             <CarouselPrevious className="left-0" />
             <CarouselNext className="right-0" />
