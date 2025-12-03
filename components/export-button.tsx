@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Calendar } from "@/components/ui/calendar"
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subMonths } from "date-fns"
 import { DateRange } from "react-day-picker"
-import { cn } from "@/lib/utils"
+import { cn, generateTradeHash } from "@/lib/utils"
 import {
   Table,
   TableBody,
@@ -77,9 +77,9 @@ export default function TradeExportDialog({ trades }: Props) {
 
     // Define CSV headers
     const headers = [
-      'Account Number', 'Quantity', 'Entry ID', 'Close ID', 'Instrument',
+      'Account Number', 'Quantity', 'Instrument',
       'Entry Price', 'Close Price', 'Entry Date', 'Close Date', 'PNL',
-      'Time in Position', 'User ID', 'Side', 'Commission', 'Created At', 'Comment'
+      'Time in Position', 'Side', 'Commission', 'Comment', 'Video URL', 'Tags'
     ]
 
     // Create CSV content
@@ -88,8 +88,6 @@ export default function TradeExportDialog({ trades }: Props) {
       ...filteredTrades.map((trade: Trade) => [
         trade.accountNumber,
         trade.quantity,
-        trade.entryId,
-        trade.closeId,
         trade.instrument,
         trade.entryPrice,
         trade.closePrice,
@@ -97,10 +95,10 @@ export default function TradeExportDialog({ trades }: Props) {
         trade.closeDate,
         trade.pnl,
         trade.timeInPosition,
-        trade.userId,
         trade.side,
         trade.commission,
-        trade.createdAt.toISOString(),
+        trade.videoUrl,
+        trade.tags.join(','),
         `"${trade.comment || ''}"`  // Wrap comment in quotes to handle potential commas
       ].join(','))
     ].join('\n')
@@ -307,7 +305,7 @@ export default function TradeExportDialog({ trades }: Props) {
                     </TableHeader>
                     <TableBody>
                       {currentTrades.map((trade) => (
-                        <TableRow key={`${trade.entryId}-${trade.closeId}`}>
+                        <TableRow key={generateTradeHash(trade)}>
                           <TableCell>{trade.accountNumber}</TableCell>
                           <TableCell>{trade.instrument}</TableCell>
                           <TableCell>{trade.side}</TableCell>
