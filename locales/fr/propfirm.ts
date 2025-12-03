@@ -39,7 +39,10 @@ export default {
                 description: 'Chargez rapidement des configurations prédéfinies de prop firm',
                 select: 'Sélectionner un modèle...',
                 search: 'Rechercher par prop firm ou modèle...',
+                searchPlaceholder: 'Rechercher des prop firms ou des tailles de compte...',
                 noTemplate: 'Aucun modèle trouvé.',
+                noResults: 'Aucun résultat trouvé',
+                noAccountSizes: 'Aucune taille de compte trouvée',
                 clear: 'Effacer le Modèle',
                 target: 'Objectif'
             },

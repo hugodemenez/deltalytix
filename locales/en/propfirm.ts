@@ -39,7 +39,10 @@ export default {
                 description: 'Quickly load predefined prop firm configurations',
                 select: 'Select a template...',
                 search: 'Search by prop firm or template...',
+                searchPlaceholder: 'Search prop firms or account sizes...',
                 noTemplate: 'No template found.',
+                noResults: 'No results found',
+                noAccountSizes: 'No account sizes found',
                 clear: 'Clear Template',
                 target: 'Target'
             },
