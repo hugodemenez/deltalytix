@@ -10,6 +10,7 @@ import terms from "./fr/terms";
 import embed from "./fr/embed";
 import business from "./fr/business";
 import referral from "./fr/referral";
+import admin from "./fr/admin";
 
 export default {
   ...shared,
@@ -24,6 +25,7 @@ export default {
   ...embed,
   ...business,
   ...referral,
+  ...admin,
   "footer.heading": "Pied de page",
   "footer.description": "Analyses avancées pour les traders modernes.",
   "footer.product.title": "Produit",
@@ -430,6 +432,16 @@ export default {
     moveTo: "Déplacer vers...",
     hiddenAccounts: "Comptes Masqués",
     moveToHidden: "Déplacer vers les comptes masqués",
+    clearSelection: "Effacer la sélection",
+    selectedCount: "{count} sélectionné(s)",
+    showingCount: "Affichage de {current} sur {total}",
+    selectAllFiltered: "Sélectionner les filtrés",
+    selected: "Sélectionnés",
+    groupLabel: "Groupe : {group}",
+    selectAccountsFirst: "Sélectionnez au moins un compte",
+    accountsMovedSuccess: "{count} comptes déplacés",
+    accountsMovedError: "Impossible de déplacer les comptes",
+    balanceLabel: "Solde : {balance}",
     groupRenamed: "Groupe renommé en {name}",
     errorRenamingGroup: "Erreur lors du renommage du groupe {name}",
     groupCreated: "Groupe {name} créé avec succès",
@@ -443,6 +455,8 @@ export default {
     create: "Créer",
     newGroup: "Nouveau groupe",
     createAccount: "Créer un compte",
+    createGroupFromSearch: 'Créer le groupe "{name}"',
+    createGroupHint: "Appuyez sur Entrée pour créer ce groupe",
     commandMenu: {
       placeholder: "Rechercher des filtres...",
       searchPlaceholder: "Rechercher des filtres...",
@@ -464,6 +478,9 @@ export default {
         placeholderYear: "Année",
         placeholderMonth: "Mois",
         placeholderDay: "Jour",
+      },
+      categories: {
+        title: "Aller à une catégorie",
       },
     },
     selectGroup: "Sélectionner un groupe",
@@ -490,12 +507,22 @@ export default {
     errorUpdatingGroup: 'Échec de la mise à jour du groupe "{name}"',
     groupDeleted: 'Groupe "{name}" supprimé avec succès',
     errorDeletingGroup: 'Échec de la suppression du groupe "{name}"',
+    deleteAccount: "Supprimer le compte {account}",
+    accountDeleted: "Compte {account} supprimé avec succès",
+    errorDeletingAccount: "Échec de la suppression du compte {account}",
+    deleteAccountTitle: "Supprimer le compte",
+    deleteAccountDescription:
+      'Êtes-vous sûr de vouloir supprimer le compte "{account}" ? Cette action est irréversible.',
+    confirmDeleteAccount: "Supprimer le compte",
     deleteGroupTitle: "Supprimer le Groupe",
     deleteGroupDescription:
       'Êtes-vous sûr de vouloir supprimer le groupe "{name}"? Cette action est irréversible.',
     dropAccountsHere: "Déposez les comptes ici",
     noGroupsCreated: "Aucun groupe créé pour le moment",
     account: "compte",
+    createGroupAndMoveDescription: "Créer un groupe et y déplacer les comptes sélectionnés.",
+    createAndMove: "Créer et déplacer",
+    createNewGroupPlaceholder: "Créer un nouveau groupe",
   },
   "chat.title": "Chat",
   "chat.resetConversation": "Réinitialiser la conversation",

@@ -36,6 +36,11 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
   const isMobileDevice = useMediaQuery("(max-width: 768px)")
   const inputRef = useRef<HTMLInputElement>(null)
   const commandRef = useRef<HTMLDivElement>(null)
+  const dateRangeSectionRef = useRef<HTMLDivElement>(null)
+  const pnlSectionRef = useRef<HTMLDivElement>(null)
+  const instrumentSectionRef = useRef<HTMLDivElement>(null)
+  const tagSectionRef = useRef<HTMLDivElement>(null)
+  const accountSectionRef = useRef<HTMLDivElement>(null)
   const params = useParams()
   const locale = params.locale as string
   const timezone = useUserStore(state => state.timezone)
@@ -260,6 +265,35 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
   // Check if search value contains date keywords to show hint
   const showDateHint = searchValue.trim().length >= 3 && containsDateKeywords(searchValue) && !isParsingDate
 
+  const handleCategoryClick = useCallback((sectionId: 'dateRange' | 'pnl' | 'instruments' | 'tags' | 'accounts') => {
+    const sectionMap = {
+      dateRange: dateRangeSectionRef,
+      pnl: pnlSectionRef,
+      instruments: instrumentSectionRef,
+      tags: tagSectionRef,
+      accounts: accountSectionRef,
+    }
+
+    const target = sectionMap[sectionId]?.current
+    if (!target) return
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    // Move focus to the first item inside the section for quick interaction
+    const firstItem = target.querySelector('[cmdk-item]') as HTMLElement | null
+    if (firstItem) {
+      requestAnimationFrame(() => firstItem.focus())
+    }
+  }, [])
+
+  const categories = [
+    { id: 'dateRange' as const, label: t('filters.commandMenu.sections.dateRange') },
+    { id: 'pnl' as const, label: t('filters.commandMenu.sections.pnl') },
+    { id: 'instruments' as const, label: t('filters.commandMenu.sections.instruments') },
+    { id: 'tags' as const, label: t('filters.commandMenu.sections.tags') },
+    { id: 'accounts' as const, label: t('filters.commandMenu.sections.accounts') },
+  ]
+
   // Trigger on desktop: real input that opens popover and controls search
   const DesktopTriggerInput = (
     <PopoverAnchor asChild>
@@ -405,6 +439,24 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
           )}
         </div>
       )}
+      <div className="px-3 pt-3 pb-2 border-b bg-muted/40">
+        <p className="text-xs font-medium text-muted-foreground mb-2">
+          {t('filters.commandMenu.categories.title')}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {categories.map(category => (
+            <Button
+              key={category.id}
+              variant="secondary"
+              size="sm"
+              className="h-8 rounded-full"
+              onClick={() => handleCategoryClick(category.id)}
+            >
+              {category.label}
+            </Button>
+          ))}
+        </div>
+      </div>
       <CommandList className={cn(
         "overflow-y-auto",
         (isMobileDevice || isMobile) 
@@ -416,35 +468,50 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
         </CommandEmpty>
         
         {/* Date Range Section */}
-        <CommandGroup heading={t('filters.commandMenu.sections.dateRange')}>
+        <CommandGroup
+          ref={dateRangeSectionRef}
+          heading={t('filters.commandMenu.sections.dateRange')}
+        >
           <DateRangeSection searchValue={searchValue} />
         </CommandGroup>
 
         <CommandSeparator />
 
         {/* PnL Section */}
-        <CommandGroup heading={t('filters.commandMenu.sections.pnl')}>
+        <CommandGroup
+          ref={pnlSectionRef}
+          heading={t('filters.commandMenu.sections.pnl')}
+        >
           <PnlSection searchValue={searchValue} />
         </CommandGroup>
 
         <CommandSeparator />
 
         {/* Instruments Section */}
-        <CommandGroup heading={t('filters.commandMenu.sections.instruments')}>
+        <CommandGroup
+          ref={instrumentSectionRef}
+          heading={t('filters.commandMenu.sections.instruments')}
+        >
           <InstrumentSection searchValue={searchValue} />
         </CommandGroup>
 
         <CommandSeparator />
 
         {/* Tags Section */}
-        <CommandGroup heading={t('filters.commandMenu.sections.tags')}>
+        <CommandGroup
+          ref={tagSectionRef}
+          heading={t('filters.commandMenu.sections.tags')}
+        >
           <TagSection searchValue={searchValue} />
         </CommandGroup>
 
         <CommandSeparator />
 
         {/* Accounts Section */}
-        <CommandGroup heading={t('filters.commandMenu.sections.accounts')}>
+        <CommandGroup
+          ref={accountSectionRef}
+          heading={t('filters.commandMenu.sections.accounts')}
+        >
           <AccountSection searchValue={searchValue} />
         </CommandGroup>
       </CommandList>

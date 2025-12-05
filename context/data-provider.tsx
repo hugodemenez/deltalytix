@@ -472,6 +472,7 @@ interface DataContextType {
   renameGroup: (groupId: string, name: string) => Promise<void>
   deleteGroup: (groupId: string) => Promise<void>
   moveAccountToGroup: (accountId: string, targetGroupId: string | null) => Promise<void>
+  moveAccountsToGroup: (accountIds: string[], targetGroupId: string | null) => Promise<void>
 
   // Payouts
   savePayout: (payout: PrismaPayout) => Promise<void>
@@ -1186,13 +1187,14 @@ export const DataProvider: React.FC<{
   // Add moveAccountToGroup function
   const moveAccountToGroup = useCallback(async (accountId: string, targetGroupId: string | null) => {
     try {
-      if (!accounts || accounts.length === 0) {
+      const { accounts: currentAccounts, groups: currentGroups } = useUserStore.getState()
+      if (!currentAccounts || currentAccounts.length === 0) {
         console.error('No accounts available to move');
         return;
       }
 
-      // Update accounts state
-      const updatedAccounts = accounts.map((account: Account) => {
+      // Update accounts state using the freshest snapshot
+      const updatedAccounts = currentAccounts.map((account: Account) => {
         if (account.id === accountId) {
           return { ...account, groupId: targetGroupId }
         }
@@ -1200,10 +1202,10 @@ export const DataProvider: React.FC<{
       })
       setAccounts(updatedAccounts)
 
-      // Update groups state
-      const accountToMove = accounts.find(acc => acc.id === accountId)
+      // Update groups state using the freshest snapshot
+      const accountToMove = currentAccounts.find(acc => acc.id === accountId)
       if (accountToMove) {
-        setGroups(groups.map(group => {
+        setGroups(currentGroups.map(group => {
           // If this is the target group, add the account only if it's not already there
           if (group.id === targetGroupId) {
             const accountExists = group.accounts.some(acc => acc.id === accountId)
@@ -1222,7 +1224,43 @@ export const DataProvider: React.FC<{
       console.error('Error moving account to group:', error)
       throw error
     }
-  }, [accounts, setAccounts, setGroups, groups])
+  }, [setAccounts, setGroups])
+
+  const moveAccountsToGroup = useCallback(
+    async (accountIds: string[], targetGroupId: string | null) => {
+      try {
+        const { accounts: currentAccounts, groups: currentGroups } = useUserStore.getState()
+        if (!currentAccounts || currentAccounts.length === 0 || accountIds.length === 0) return
+
+        const idSet = new Set(accountIds)
+        const accountsToMove = currentAccounts.filter(acc => idSet.has(acc.id))
+
+        // Update accounts state using the freshest snapshot
+        const updatedAccounts = currentAccounts.map(account =>
+          idSet.has(account.id) ? { ...account, groupId: targetGroupId } : account,
+        )
+        setAccounts(updatedAccounts)
+
+        // Update groups state using the freshest snapshot
+        setGroups(currentGroups.map(group => {
+          const remainingAccounts = group.accounts.filter(acc => !idSet.has(acc.id))
+          if (group.id === targetGroupId) {
+            const missingToAdd = accountsToMove.filter(
+              acc => !remainingAccounts.some(existing => existing.id === acc.id),
+            )
+            return { ...group, accounts: [...remainingAccounts, ...missingToAdd] }
+          }
+          return { ...group, accounts: remainingAccounts }
+        }))
+
+        await Promise.all(accountIds.map(id => moveAccountToGroupAction(id, targetGroupId)))
+      } catch (error) {
+        console.error("Error moving accounts to group:", error)
+        throw error
+      }
+    },
+    [setAccounts, setGroups],
+  )
 
   // Add savePayout function
   const savePayout = useCallback(async (payout: PrismaPayout) => {
@@ -1448,6 +1486,7 @@ export const DataProvider: React.FC<{
     renameGroup,
     deleteGroup,
     moveAccountToGroup,
+    moveAccountsToGroup,
 
     // Payout functions
     deletePayout,

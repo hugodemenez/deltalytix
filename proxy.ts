@@ -55,11 +55,24 @@ async function updateSession(request: NextRequest) {
     const result = (await Promise.race([authPromise, timeoutPromise])) as any
     user = result.data?.user || null
     error = result.error
-  } catch (authError) {
-    console.warn("Auth check failed:", authError)
-    // Don't throw - gracefully handle auth failures
-    user = null
-    error = authError
+  } catch (authError: any) {
+    // Handle JSON parsing errors from Supabase API (when API returns HTML instead of JSON)
+    if (
+      authError?.message?.includes('Unexpected token') ||
+      authError?.message?.includes('is not valid JSON') ||
+      authError?.originalError?.message?.includes('Unexpected token') ||
+      authError?.originalError?.message?.includes('is not valid JSON')
+    ) {
+      console.error("[Proxy] Supabase API returned non-JSON response:", authError)
+      // Don't throw - gracefully handle auth failures by treating as unauthenticated
+      user = null
+      error = new Error("Authentication service temporarily unavailable")
+    } else {
+      console.warn("Auth check failed:", authError)
+      // Don't throw - gracefully handle auth failures
+      user = null
+      error = authError
+    }
   }
 
   // Add user info to headers only if user exists

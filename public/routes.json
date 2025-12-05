@@ -22,6 +22,7 @@
   "/[locale]/newsletter",
   "/[locale]/pricing",
   "/[locale]/privacy",
+  "/[locale]/referral",
   "/[locale]/shared/[slug]",
   "/[locale]/support",
   "/[locale]/terms",

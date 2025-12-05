@@ -10,6 +10,7 @@ import terms from "./en/terms";
 import embed from "./en/embed";
 import business from "./en/business";
 import referral from "./en/referral";
+import admin from "./en/admin";
 export default {
   ...shared,
   ...landing,
@@ -23,6 +24,7 @@ export default {
   ...embed,
   ...business,
   ...referral,
+  ...admin,
   "footer.heading": "Footer",
   "footer.description": "Advanced analytics for modern traders.",
   "footer.product.title": "Product",
@@ -394,6 +396,16 @@ export default {
     moveTo: "Move to...",
     hiddenAccounts: "Hidden Accounts",
     moveToHidden: "Move to Hidden",
+    clearSelection: "Clear selection",
+    selectedCount: "{count} selected",
+    showingCount: "Showing {current} of {total}",
+    selectAllFiltered: "Select filtered",
+    selected: "Selected",
+    groupLabel: "Group: {group}",
+    selectAccountsFirst: "Select at least one account",
+    accountsMovedSuccess: "{count} accounts moved",
+    accountsMovedError: "Unable to move accounts",
+    balanceLabel: "Balance: {balance}",
     groupRenamed: "Group renamed to {name}",
     errorRenamingGroup: "Error renaming group {name}",
     groupCreated: "Group {name} created successfully",
@@ -407,6 +419,8 @@ export default {
     create: "Create",
     newGroup: "New Group",
     createAccount: "Create Account",
+    createGroupFromSearch: 'Create group "{name}"',
+    createGroupHint: "Press Enter to create this group",
     commandMenu: {
       placeholder: "Search filters...",
       searchPlaceholder: "Search filters...",
@@ -428,6 +442,9 @@ export default {
         placeholderYear: "Year",
         placeholderMonth: "Month",
         placeholderDay: "Day",
+      },
+      categories: {
+        title: "Jump to a category",
       },
     },
     selectGroup: "Select Group",
@@ -454,12 +471,21 @@ export default {
     errorUpdatingGroup: 'Failed to update group "{name}"',
     groupDeleted: 'Group "{name}" deleted successfully',
     errorDeletingGroup: 'Failed to delete group "{name}"',
+    deleteAccount: "Delete account {account}",
+    accountDeleted: "Account {account} deleted successfully",
+    errorDeletingAccount: "Failed to delete account {account}",
+    deleteAccountTitle: "Delete account",
+    deleteAccountDescription: 'Are you sure you want to delete account "{account}"? This action cannot be undone.',
+    confirmDeleteAccount: "Delete account",
     deleteGroupTitle: "Delete Group",
     deleteGroupDescription:
       'Are you sure you want to delete the group "{name}"? This action cannot be undone.',
     dropAccountsHere: "Drop accounts here",
     noGroupsCreated: "No groups created yet",
     account: "account",
+    createGroupAndMoveDescription: "Create a new group and move selected accounts to it.",
+    createAndMove: "Create and move",
+    createNewGroupPlaceholder: "Create new group",
   },
   "mood.question": "How are you feeling today?",
   "mood.bad": "Bad day",

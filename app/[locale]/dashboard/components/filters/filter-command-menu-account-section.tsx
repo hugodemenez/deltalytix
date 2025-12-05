@@ -1,14 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { CommandItem } from "@/components/ui/command"
-import { Settings } from "lucide-react"
+import { Settings, Trash2 } from "lucide-react"
 import { useI18n } from "@/locales/client"
 import { useData } from "@/context/data-provider"
 import { useTradesStore } from "../../../../../store/trades-store"
 import { useUserStore } from "../../../../../store/user-store"
 import { useModalStateStore } from "../../../../../store/modal-state-store"
+import { toast } from "sonner"
 
 interface Account {
   id: string
@@ -25,12 +27,13 @@ interface AccountSectionProps {
 }
 
 export function AccountSection({ searchValue }: AccountSectionProps) {
-  const { accountNumbers = [], setAccountNumbers } = useData()
+  const { accountNumbers = [], setAccountNumbers, deleteGroup } = useData()
   const groups = useUserStore(state => state.groups)
   const trades = useTradesStore(state => state.trades)
   const t = useI18n()
   const { setAccountGroupBoardOpen } = useModalStateStore()
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
+  const [deletingGroupId, setDeletingGroupId] = useState<string | null>(null)
 
   // Get unique account numbers from trades
   const tradeAccounts = Array.from(new Set(trades.map(trade => trade.accountNumber)))
@@ -139,6 +142,26 @@ export function AccountSection({ searchValue }: AccountSectionProps) {
     )
   }
 
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    const confirmed = window.confirm(t('filters.deleteGroupDescription', { name: groupName }))
+    if (!confirmed) return
+
+    try {
+      setDeletingGroupId(groupId)
+      await deleteGroup(groupId)
+      toast.success(t('common.success'), {
+        description: t('filters.groupDeleted', { name: groupName })
+      })
+    } catch (error) {
+      console.error("Error deleting group:", error)
+      toast.error(t('common.error'), {
+        description: t('filters.errorDeletingGroup', { name: groupName })
+      })
+    } finally {
+      setDeletingGroupId(null)
+    }
+  }
+
   return (
     <>
       <CommandItem
@@ -204,14 +227,29 @@ export function AccountSection({ searchValue }: AccountSectionProps) {
         <div key={group.id}>
           <CommandItem
             onSelect={() => handleSelectGroup(group.id, group.accounts)}
-            className="flex items-center gap-2 px-2 bg-muted/50"
+            className="flex items-center justify-between gap-2 px-2 bg-muted/50"
           >
-            <Checkbox
-              checked={isGroupSelected(group.accounts)}
-              className="h-4 w-4"
-              data-state={isGroupIndeterminate(group.accounts) ? 'indeterminate' : undefined}
-            />
-            <span className="text-sm font-medium">{group.name}</span>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                checked={isGroupSelected(group.accounts)}
+                className="h-4 w-4"
+                data-state={isGroupIndeterminate(group.accounts) ? 'indeterminate' : undefined}
+              />
+              <span className="text-sm font-medium">{group.name}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
+              disabled={deletingGroupId === group.id}
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDeleteGroup(group.id, group.name)
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              <span className="sr-only">{t('filters.deleteGroupTitle')}</span>
+            </Button>
           </CommandItem>
           {group.accounts.map(account => (
             <CommandItem

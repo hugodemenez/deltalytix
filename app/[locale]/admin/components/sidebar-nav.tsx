@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Mail, BarChart, UserPlus, Calendar, TrendingUp } from "lucide-react"
+import { Mail, BarChart, UserPlus, TrendingUp, Send } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +12,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarRail,
 } from "@/components/ui/sidebar"
 import { ThemeSwitcher } from "./theme-switcher"
 
@@ -37,6 +38,11 @@ export function SidebarNav({ className, ...props }: SidebarNavProps) {
       icon: UserPlus,
     },
     {
+      href: "/admin/send-email",
+      label: "Send Email",
+      icon: Send,
+    },
+    {
       href: "/admin/user-equity",
       label: "User Equity",
       icon: TrendingUp,
@@ -45,6 +51,7 @@ export function SidebarNav({ className, ...props }: SidebarNavProps) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
+      <SidebarRail className="after:transition-colors after:duration-200 hover:bg-sidebar-accent/10 hover:after:bg-sidebar-accent group-data-[collapsible=icon]:after:bg-sidebar-border" />
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Dashboard</SidebarGroupLabel>

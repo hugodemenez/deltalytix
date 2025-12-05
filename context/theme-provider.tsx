@@ -28,7 +28,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('system')
   const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>('light')
   const [intensity, setIntensityState] = useState<number>(100)
-  const [mounted, setMounted] = useState(false)
 
   const applyTheme = (newTheme: Theme) => {
     const root = window.document.documentElement
@@ -46,10 +45,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    setMounted(true)
     const savedTheme = localStorage.getItem('theme') as Theme | null
     const savedIntensity = localStorage.getItem('intensity')
-    
+
     if (savedTheme) {
       setThemeState(savedTheme)
     }
@@ -60,16 +58,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (mounted) {
-      applyTheme(theme)
-      localStorage.setItem('theme', theme)
-      localStorage.setItem('intensity', intensity.toString())
-      
-      // Set CSS variables for theme intensity
-      const root = window.document.documentElement
-      root.style.setProperty('--theme-intensity', `${intensity}%`)
-    }
-  }, [theme, intensity, mounted])
+    applyTheme(theme)
+    localStorage.setItem('theme', theme)
+    localStorage.setItem('intensity', intensity.toString())
+
+    // Set CSS variables for theme intensity
+    const root = window.document.documentElement
+    root.style.setProperty('--theme-intensity', `${intensity}%`)
+  }, [theme, intensity])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -107,10 +103,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setTheme,
     setIntensity,
     toggleTheme,
-  }
-
-  if (!mounted) {
-    return null
   }
 
   return (

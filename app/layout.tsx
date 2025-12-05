@@ -96,12 +96,44 @@ export default async function RootLayout({
 }) {
   await connection()
   return (
-    <html lang="en" className="bg-background" translate="no">
+    <html
+      lang="en"
+      className="bg-background"
+      translate="no"
+      suppressHydrationWarning
+      style={{ ['--theme-intensity' as string]: '100%' }}
+    >
       <head>
         {/* Prevent Google Translate */}
         <meta name="google" content="notranslate" />
         <meta name="googlebot" content="notranslate" />
         <meta name="googlebot-news" content="notranslate" />
+
+        {/* Apply stored theme before paint to avoid blank flash */}
+        <Script id="init-theme" strategy="beforeInteractive">
+          {`
+            (function() {
+              try {
+                var root = document.documentElement;
+                var savedTheme = localStorage.getItem('theme');
+                var resolvedTheme = savedTheme === 'dark'
+                  ? 'dark'
+                  : savedTheme === 'light'
+                    ? 'light'
+                    : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+
+                root.classList.remove('light', 'dark');
+                root.classList.add(resolvedTheme);
+
+                var savedIntensity = localStorage.getItem('intensity');
+                var intensity = savedIntensity ? Number(savedIntensity) : 100;
+                root.style.setProperty('--theme-intensity', intensity + '%');
+              } catch (e) {
+                // Fail silently to avoid blocking render
+              }
+            })();
+          `}
+        </Script>
 
         {/* Prevent Google Translate DOM manipulation */}
         <Script id="prevent-google-translate" strategy="beforeInteractive">

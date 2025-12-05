@@ -39,7 +39,6 @@ export default function RootLayout(
         <div className="flex min-h-screen w-screen">
           <SidebarNav />
           <main className="flex-1 overflow-y-auto p-6">
-              <SidebarTrigger />
               {children}
           </main>
         </div>
