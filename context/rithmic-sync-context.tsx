@@ -467,10 +467,29 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
     // Prevent multiple syncs at the same time
     if (!userId || isAutoSyncing) return
 
-    const savedData = getRithmicData(credentialId)
+    let savedData: RithmicCredentialSet | null = null
+    
+    try {
+      savedData = await getRithmicData(credentialId, userId)
+    } catch (error) {
+      console.error('Failed to retrieve credentials from localStorage:', error)
+    }
 
-    // If we do not find the credential, return
-    if (!savedData) return
+    // If we do not find the credential in localStorage, prompt user to re-enter credentials
+    if (!savedData) {
+      console.warn(`Credentials for ${credentialId} not found in localStorage`)
+      
+      toast.error('Credentials not found', {
+        description: 'Please re-enter your credentials to continue syncing.',
+        duration: 10000
+      })
+      
+      return {
+        success: false as const,
+        rateLimited: false,
+        message: 'Credentials not found in localStorage. Please re-enter your credentials.'
+      }
+    }
 
     // Set the auto sync flag
     setIsAutoSyncing(true)
@@ -545,7 +564,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
 
       // Connect and start syncing
       connect(wsUrl, data.token, accountsToSync, startDate)
-      updateLastSyncTime(credentialId)
+      await updateLastSyncTime(credentialId, userId)
 
       handleMessage({
         type: 'log',
@@ -583,7 +602,7 @@ export function RithmicSyncContextProvider({ children }: { children: ReactNode }
       setIsAutoSyncing(false)
 
     }
-  }, [isAutoSyncing, connect, handleMessage, getProtocols, getWebSocketUrl, t, resetProcessingState, clearMessageHistory, setAvailableAccounts, setIsAutoSyncing])
+  }, [isAutoSyncing, connect, handleMessage, getProtocols, getWebSocketUrl, t, resetProcessingState, clearMessageHistory, setAvailableAccounts, setIsAutoSyncing, setStep])
 
   // Update authenticateAndGetAccounts to return a rate limit response object
   const authenticateAndGetAccounts = useCallback(async (credentials: RithmicCredentials) => {

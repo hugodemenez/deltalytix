@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Loader2, Trash2, Plus, Edit2, RefreshCw, MoreVertical, History } from 'lucide-react'
 import { getAllRithmicData, clearRithmicData, RithmicCredentialSet, updateLastSyncTime } from '@/lib/rithmic-storage'
@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useUserStore } from '@/store/user-store'
+import { deleteRithmicSynchronization } from './actions'
 
 interface RithmicCredentialsManagerProps {
   onSelectCredential: (credential: RithmicCredentialSet) => void
@@ -45,14 +46,35 @@ interface RithmicCredentialsManagerProps {
 }
 
 export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: RithmicCredentialsManagerProps) {
-  const [credentials, setCredentials] = useState<Record<string, RithmicCredentialSet>>(getAllRithmicData())
+  const [credentials, setCredentials] = useState<Record<string, RithmicCredentialSet>>({})
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [selectedCredentialId, setSelectedCredentialId] = useState<string | null>(null)
   const { performSyncForCredential, connect, getWebSocketUrl, authenticateAndGetAccounts } = useRithmicSyncContext()
   const [syncingId, setSyncingId] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const t = useI18n()
   const user = useUserStore((state) => state.user)
   const { syncInterval, setSyncInterval, isAutoSyncing } = useRithmicSyncStore()
+
+  // Load credentials on mount
+  useEffect(() => {
+    const loadCredentials = async () => {
+      if (user?.id) {
+        try {
+          setIsLoading(true)
+          const data = await getAllRithmicData(user.id)
+          setCredentials(data)
+        } catch (error) {
+          console.error('Failed to load credentials:', error)
+          toast.error('Failed to load credentials')
+        } finally {
+          setIsLoading(false)
+        }
+      }
+    }
+    
+    loadCredentials()
+  }, [user?.id, t])
 
   const handleSync = useCallback(async (credential: RithmicCredentialSet) => {
 
@@ -68,8 +90,11 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
       
       console.log('Sync result:', result)
       
-      if (result?.success) {
-        updateLastSyncTime(credential.id)
+      if (result?.success && user?.id) {
+        await updateLastSyncTime(credential.id, user.id)
+        // Reload credentials to show updated sync time
+        const updatedData = await getAllRithmicData(user.id)
+        setCredentials(updatedData)
       }
 
     } catch (error) {
@@ -79,7 +104,7 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
       setSyncingId(null)
     }
 
-  }, [syncingId, performSyncForCredential, t])
+  }, [syncingId, performSyncForCredential, t, user?.id])
 
   const handleLoadMoreData = useCallback(async (credential: RithmicCredentialSet) => {
     if (syncingId === credential.id) {
@@ -119,7 +144,12 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
       connect(wsUrl, authResult.token, accountsToSync, formattedStartDate)
 
       // Update last sync time
-      updateLastSyncTime(credential.id)
+      if (user?.id) {
+        await updateLastSyncTime(credential.id, user.id)
+        // Reload credentials to show updated sync time
+        const updatedData = await getAllRithmicData(user.id)
+        setCredentials(updatedData)
+      }
 
 
 
@@ -132,10 +162,26 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
   }, [syncingId, authenticateAndGetAccounts, connect, getWebSocketUrl, t, user?.id])
 
 
-  function handleDelete(id: string) {
-    clearRithmicData(id)
-    setCredentials(getAllRithmicData())
-    setIsDeleteDialogOpen(false)
+  async function handleDelete(id: string) {
+    try {
+      // Delete from localStorage
+      clearRithmicData(id)
+      
+      // Delete from database
+      await deleteRithmicSynchronization(id)
+      
+      // Reload credentials
+      if (user?.id) {
+        const updatedData = await getAllRithmicData(user.id)
+        setCredentials(updatedData)
+      }
+      
+      setIsDeleteDialogOpen(false)
+      toast.success('Credentials deleted successfully')
+    } catch (error) {
+      console.error('Failed to delete credentials:', error)
+      toast.error('Failed to delete credentials')
+    }
   }
 
   function formatDate(dateString: string) {
@@ -189,106 +235,112 @@ export function RithmicCredentialsManager({ onSelectCredential, onAddNew }: Rith
         </div>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('rithmic.username')}</TableHead>
-              <TableHead>{t('rithmic.lastSync')}</TableHead>
-              <TableHead>{t('rithmic.nextSync')}</TableHead>
-              <TableHead>{t('rithmic.actions.title')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Object.entries(credentials).map(([id, cred]) => (
-              <TableRow key={id}>
-                <TableCell>{cred.credentials.username}</TableCell>
-                <TableCell>{formatDate(cred.lastSyncTime)}</TableCell>
-                <TableCell>
-                  <SyncCountdown 
-                    lastSyncTime={cred.lastSyncTime} 
-                    isAutoSyncing={isAutoSyncing && syncingId === id}
-                    credentialId={id}
-                  />
-                </TableCell>
-                <TableCell>
-                  <div className="flex justify-center items-center gap-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleSync(cred)}
-                      disabled={isAutoSyncing}
-                    >
-                      {syncingId === id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
-                    <Popover modal>
-                      <PopoverTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-48 p-2" align="end">
-                        <div className="flex flex-col space-y-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="justify-start"
-                            onClick={() => handleLoadMoreData(cred)}
-                            disabled={isAutoSyncing}
-                          >
-                            {syncingId === id ? (
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : (
-                              <History className="h-4 w-4 mr-2" />
-                            )}
-                            {t('rithmic.actions.loadMore')}
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="justify-start"
-                            onClick={() => onSelectCredential(cred)}
-                          >
-                            <Edit2 className="h-4 w-4 mr-2" />
-                            {t('rithmic.actions.edit')}
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            className="justify-start text-destructive hover:text-destructive"
-                            onClick={() => {
-                              setSelectedCredentialId(id)
-                              setIsDeleteDialogOpen(true)
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {t('rithmic.actions.delete')}
-                          </Button>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {Object.keys(credentials).length === 0 && (
+      {isLoading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        <div className="border rounded-lg">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
-                  {t('rithmic.noSavedCredentials')}
-                </TableCell>
+                <TableHead>{t('rithmic.username')}</TableHead>
+                <TableHead>{t('rithmic.lastSync')}</TableHead>
+                <TableHead>{t('rithmic.nextSync')}</TableHead>
+                <TableHead>{t('rithmic.actions.title')}</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {Object.entries(credentials).map(([id, cred]) => (
+                <TableRow key={id}>
+                  <TableCell>{cred.credentials.username}</TableCell>
+                  <TableCell>{formatDate(cred.lastSyncTime)}</TableCell>
+                  <TableCell>
+                    <SyncCountdown 
+                      lastSyncTime={cred.lastSyncTime} 
+                      isAutoSyncing={isAutoSyncing && syncingId === id}
+                      credentialId={id}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-center items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleSync(cred)}
+                        disabled={isAutoSyncing}
+                      >
+                        {syncingId === id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                      <Popover modal>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-2" align="end">
+                          <div className="flex flex-col space-y-1">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="justify-start"
+                              onClick={() => handleLoadMoreData(cred)}
+                              disabled={isAutoSyncing}
+                            >
+                              {syncingId === id ? (
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                              ) : (
+                                <History className="h-4 w-4 mr-2" />
+                              )}
+                              {t('rithmic.actions.loadMore')}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="justify-start"
+                              onClick={() => onSelectCredential(cred)}
+                            >
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              {t('rithmic.actions.edit')}
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="justify-start text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setSelectedCredentialId(id)
+                                setIsDeleteDialogOpen(true)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              {t('rithmic.actions.delete')}
+                            </Button>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {Object.keys(credentials).length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                    {t('rithmic.noSavedCredentials')}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
