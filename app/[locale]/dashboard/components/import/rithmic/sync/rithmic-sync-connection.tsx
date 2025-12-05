@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { toast } from 'sonner'
 import { RithmicSyncFeedback } from './rithmic-sync-progress'
-import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useSyncContext } from '@/context/sync-context'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { saveRithmicData, getRithmicData, clearRithmicData, generateCredentialId, getAllRithmicData, RithmicCredentialSet } from '@/lib/rithmic-storage'
 import { RithmicCredentialsManager } from './rithmic-credentials-manager'
@@ -33,6 +33,7 @@ interface RithmicSyncConnectionProps {
 
 export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps) {
   const user = useUserStore(state => state.user)
+  const { rithmic } = useSyncContext()
   const { 
     connect, 
     disconnect, 
@@ -40,7 +41,7 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
     handleMessage,
     authenticateAndGetAccounts,
     calculateStartDate
-  } = useRithmicSyncContext()
+  } = rithmic
   
   const {
     selectedAccounts,
@@ -90,6 +91,11 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
   const [allAccounts, setAllAccounts] = useState(true)
   const [accountSearch, setAccountSearch] = useState('')
   const t = useI18n()
+
+  const isLegacyCredentialId = useCallback(
+    (id: string | null) => !!id && id.startsWith('rithmic_'),
+    []
+  )
 
   const filteredAccounts = useMemo(() => {
     if (!accountSearch) return availableAccounts
@@ -204,6 +210,42 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
     setShowCredentialsManager(false)
     setShouldAutoConnect(true)
   }, [user?.id, setSelectedAccounts])
+
+  const handleLoginWithSyncId = useCallback((syncId: string) => {
+    if (isLegacyCredentialId(syncId)) {
+      toast.error(t('rithmic.error.legacySyncIdTitle'), {
+        description: t('rithmic.error.legacySyncIdDescription')
+      })
+      return
+    }
+
+    setCurrentCredentialId(syncId)
+    setShowCredentialsManager(false)
+    setStep('credentials')
+    setSelectedAccounts([])
+    setAvailableAccounts([])
+    setAllAccounts(true)
+    setAccountSearch('')
+    setShouldSaveCredentials(true)
+    setCredentials({
+      username: '',
+      password: '',
+      server_type: 'Rithmic Paper Trading',
+      location: 'Chicago Area',
+      userId: user?.id || ''
+    })
+  }, [
+    isLegacyCredentialId,
+    t,
+    user?.id,
+    setSelectedAccounts,
+    setAvailableAccounts,
+    setStep,
+    setAllAccounts,
+    setAccountSearch,
+    setShowCredentialsManager,
+    setShouldSaveCredentials
+  ])
 
   // Effect to handle auto-connect only when editing from credentials manager
   useEffect(() => {
@@ -410,6 +452,7 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
 
         <RithmicCredentialsManager
           onSelectCredential={handleSelectCredential}
+          onLoginMissingCredential={handleLoginWithSyncId}
           onAddNew={() => {
             setShowCredentialsManager(false)
             setSelectedAccounts([])

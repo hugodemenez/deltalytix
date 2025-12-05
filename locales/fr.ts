@@ -918,6 +918,8 @@ export default {
       syncAll: "Tout synchroniser",
       edit: "Modifier",
       delete: "Supprimer",
+      deleteSync: "Supprimer la synchro",
+      login: "Se connecter",
       loadMore: "Charger Plus",
     },
     noSavedCredentials: "Aucun identifiant sauvegardé",
@@ -952,7 +954,13 @@ export default {
       syncDataSaveFailed: "Échec de la Sauvegarde des Données de Sync",
       syncDataSaveFailedDescription:
         "Impossible de sauvegarder les données de synchronisation dans la base de données. La synchronisation continuera mais ces données peuvent ne pas être conservées.",
+      syncDeleteFailed:
+        "Impossible de supprimer la synchronisation. Veuillez réessayer.",
+      legacySyncIdTitle: "Synchronisation héritée",
+      legacySyncIdDescription:
+        "Cette synchronisation utilise un ancien identifiant. Veuillez la supprimer et créer une nouvelle connexion.",
     },
+    synchronizationRemoved: "Synchronisation supprimée",
     credentials: {
       updated: "Identifiants Mis à Jour",
       updatedDescription:
@@ -962,6 +970,9 @@ export default {
         "Vos identifiants en double ont été fusionnés en un seul ensemble.",
     },
     processingBanner: "Traitement de vos données Rithmic...",
+    missingCredentialsWarning: "Cette synchronisation a été configurée sur un autre appareil. Veuillez vous reconnecter si vous souhaitez synchroniser avec cet appareil également.",
+    neverSynced: "Jamais synchronisé",
+    noCredentials: "Aucun identifiant",
     editCredentials: "Modifier les Identifiants",
     addNewCredentials: "Ajouter de Nouveaux Identifiants",
     backToList: "Retour à la Liste",

@@ -1274,6 +1274,8 @@ export default {
       syncAll: "Sync All",
       edit: "Edit",
       delete: "Delete",
+      deleteSync: "Delete Sync",
+      login: "Log in",
       loadMore: "Load More",
     },
     noSavedCredentials: "No saved credentials",
@@ -1306,7 +1308,12 @@ export default {
       syncDataSaveFailed: "Failed to Save Sync Data",
       syncDataSaveFailedDescription:
         "Unable to save synchronization data to the database. The sync will continue but this data may not be preserved.",
+      syncDeleteFailed: "Failed to delete synchronization. Please try again.",
+      legacySyncIdTitle: "Legacy synchronization",
+      legacySyncIdDescription:
+        "This synchronization uses an old identifier. Please delete it and create a new connection.",
     },
+    synchronizationRemoved: "Synchronization removed",
     editCredentials: "Edit Credentials",
     addNewCredentials: "Add New Credentials",
     backToList: "Back to List",
@@ -1352,6 +1359,9 @@ export default {
         "Your duplicate credentials have been merged into a single set.",
     },
     processingBanner: "Processing your Rithmic data...",
+    missingCredentialsWarning: "This synchronization was set on another device. Please re-connect if you want to synchronize using this device too.",
+    neverSynced: "Never synced",
+    noCredentials: "No credentials",
   },
   timeRangePerformance: {
     title: "Time Range Performance",
