@@ -191,6 +191,16 @@ export default function TradovateProcessor({ headers, csvData, processedTrades, 
             // If entryDate is after closeDate (which is buy and sell on tradovate then it means it is short)
             if (item.entryDate && item.closeDate && new Date(item.entryDate) > new Date(item.closeDate)) {
                 item.side = 'short'
+                // For short trades, swap the dates because Tradovate's "boughtTimestamp" 
+                // is actually the sell (entry) and "soldTimestamp" is the buy (exit)
+                const tempDate = item.entryDate;
+                item.entryDate = item.closeDate;
+                item.closeDate = tempDate;
+
+                // Swap the buy and sell prices
+                const tempPrice = item.entryPrice;
+                item.entryPrice = item.closePrice;
+                item.closePrice = tempPrice;
             } else {
                 item.side = 'long'
             }
