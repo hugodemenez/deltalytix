@@ -6,18 +6,23 @@ import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import Script from 'next/script'
+import { setStaticParamsLocale } from 'next-international/server'
+import { getStaticParams as getLocaleStaticParams } from '@/locales/server'
 
 interface PageProps {
-  params: Promise<{
+  params: {
     slug: string
     locale: string
-  }>
+  }
 }
+
+export const dynamic = 'force-static'
+export const dynamicParams = false
 
 
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
-  const locales = ['en', 'fr']
+  const locales = getLocaleStaticParams().map((entry) => entry.locale)
   const paths: Array<{ locale: string; slug: string }> = []
 
   for (const locale of locales) {
@@ -33,15 +38,15 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   try {
-    const resolvedParams = await params
-    if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
+    if (!params || !params.slug || !params.locale) {
       return {
         title: 'Not Found',
         description: 'The page you are looking for does not exist.',
       }
     }
 
-    const { slug, locale } = resolvedParams
+    const { slug, locale } = params
+    setStaticParamsLocale(locale)
     
     try {
       const post = await getPost(slug, locale)
@@ -107,12 +112,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function Page({ params }: PageProps) {
   try {
-    const resolvedParams = await params
-    if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
+    if (!params || !params.slug || !params.locale) {
       notFound()
     }
 
-    const { slug, locale } = resolvedParams
+    const { slug, locale } = params
     
     try {
       const post = await getPost(slug, locale)
