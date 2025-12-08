@@ -102,26 +102,26 @@ export async function POST(req: Request) {
               where: { email: data.customer_details?.email as string },
             });
 
-            // Check if this is a business subscription
-            const isBusinessSubscription = data.metadata?.plan === 'business_monthly_usd' ||
-              subscriptionPlan === 'BUSINESS' ||
-              price.lookup_key === 'business_monthly_usd';
+            // Check if this is a team subscription
+            const isTeamSubscription = data.metadata?.plan === 'team_monthly_usd' ||
+              subscriptionPlan === 'TEAM' ||
+              price.lookup_key === 'team_monthly_usd';
               const currentPeriodEnd = getCurrentPeriodEnd(subscription);
 
-            if (isBusinessSubscription) {
-              // Handle business subscription
-              console.log('Business subscription completed')
+            if (isTeamSubscription) {
+              // Handle team subscription
+              console.log('Team subscription completed')
 
               // Create the business after successful payment
-              const businessName = data.metadata?.businessName || subscription.metadata?.businessName || 'My Business';
+              const teamName = data.metadata?.teamName || subscription.metadata?.teamName || 'My Team';
               const userId = data.metadata?.userId || subscription.metadata?.userId;
 
               if (userId) {
                 try {
-                  // Create the business
-                  const business = await prisma.business.create({
+                  // Create the team
+                  const team = await prisma.team.create({
                     data: {
-                      name: businessName,
+                      name: teamName,
                       userId: userId,
                       traderIds: [userId], // Add the creator as the first trader
                       managers: {
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
                     },
                   });
 
-                  console.log('Business created:', business);
+                  console.log('Team created:', team);
 
                   // Register subscription as a business subscription
             // We should register subscription as a business subscription if it is a business subscription
@@ -141,9 +141,9 @@ export async function POST(req: Request) {
             // And multiple business subscriptions for the same user will be registered as different subscriptions in the database
             
             // We should identify the business subscription by the business name and the user id
-            await prisma.businessSubscription.upsert({
+            await prisma.teamSubscription.upsert({
               where: {
-                businessId: business.id,
+                teamId: team.id,
               },
               update: {
                 plan: subscriptionPlan,
@@ -157,7 +157,7 @@ export async function POST(req: Request) {
                 plan: subscriptionPlan,
                 user: { connect: { id: user?.id } },
                 endDate: new Date(currentPeriodEnd * 1000),
-                business: { connect: { id: business.id } },
+                team: { connect: { id: team.id } },
                 status: 'ACTIVE',
                 trialEndsAt: null,
                 interval: interval,
@@ -167,9 +167,9 @@ export async function POST(req: Request) {
             console.log('business subscription created/updated', subscription)
 
             // Return. No need to continue the flow.
-            return NextResponse.json({ message: 'Business subscription created/updated' }, { status: 200 });
+            return NextResponse.json({ message: 'Team subscription created/updated' }, { status: 200 });
                 } catch (error) {
-                  console.error('Error creating business:', error);
+                  console.error('Error creating team:', error);
                 }
               }
             }

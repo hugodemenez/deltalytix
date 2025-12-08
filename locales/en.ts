@@ -8,7 +8,7 @@ import propfirm from "./en/propfirm";
 import chat from "./en/chat";
 import terms from "./en/terms";
 import embed from "./en/embed";
-import business from "./en/business";
+import teams from "./en/teams";
 import referral from "./en/referral";
 import admin from "./en/admin";
 export default {
@@ -22,7 +22,7 @@ export default {
   ...chat,
   ...terms,
   ...embed,
-  ...business,
+  ...teams,
   ...referral,
   ...admin,
   "footer.heading": "Footer",
@@ -30,7 +30,7 @@ export default {
   "footer.product.title": "Product",
   "footer.product.features": "Features",
   "footer.product.pricing": "Pricing",
-  "footer.product.business": "Business",
+  "footer.product.teams": "Teams",
   "footer.product.support": "Support",
   "footer.company.title": "Company",
   "footer.company.about": "About",
@@ -136,32 +136,32 @@ export default {
   "dashboard.settings": "Settings",
   "dashboard.settings.description":
     "Manage your account settings and preferences",
-  "dashboard.business": "Business",
-  "dashboard.business.description": "Manage your business connections",
-  "dashboard.business.current": "Current Businesses",
-  "dashboard.business.owner": "Business Owner",
-  "dashboard.business.traders": "Traders",
-  "dashboard.business.noBusiness": "No business linked",
-  "dashboard.business.leaveSuccess": "Left business successfully",
-  "dashboard.business.error": "An error occurred",
-  "dashboard.business.leave": "Leave Business",
-  "dashboard.business.leaveConfirm":
-    "Are you sure you want to leave this business?",
-  "dashboard.business.contactAdmin":
-    "Contact your business administrator to get an invitation to join a business.",
-  "dashboard.business.manager": "Manager",
-  "dashboard.business.admin": "Admin",
-  "dashboard.business.viewer": "Viewer",
-  "dashboard.business.addManager": "Add Manager",
-  "dashboard.business.removeManager": "Remove Manager",
-  "dashboard.business.updateAccess": "Update Access",
-  "dashboard.business.managerEmail": "Manager Email",
-  "dashboard.business.accessLevel": "Access Level",
-  "dashboard.business.managerAdded": "Manager added successfully",
-  "dashboard.business.managerRemoved": "Manager removed successfully",
-  "dashboard.business.accessUpdated": "Access updated successfully",
-  "dashboard.business.onlyAdminCanManage": "Only admins can manage users",
-  "dashboard.business.managerExists": "Manager already exists",
+  "dashboard.teams": "Teams",
+  "dashboard.teams.description": "Manage your team connections",
+  "dashboard.teams.current": "Current Teams",
+  "dashboard.teams.owner": "Team Owner",
+  "dashboard.teams.traders": "Traders",
+  "dashboard.teams.noTeam": "No team linked",
+  "dashboard.teams.leaveSuccess": "Left team successfully",
+  "dashboard.teams.error": "An error occurred",
+  "dashboard.teams.leave": "Leave Team",
+  "dashboard.teams.leaveConfirm":
+    "Are you sure you want to leave this team?",
+  "dashboard.teams.contactAdmin":
+    "Contact your team administrator to get an invitation to join a team.",
+  "dashboard.teams.manager": "Manager",
+  "dashboard.teams.admin": "Admin",
+  "dashboard.teams.viewer": "Viewer",
+  "dashboard.teams.addManager": "Add Manager",
+  "dashboard.teams.removeManager": "Remove Manager",
+  "dashboard.teams.updateAccess": "Update Access",
+  "dashboard.teams.managerEmail": "Manager Email",
+  "dashboard.teams.accessLevel": "Access Level",
+  "dashboard.teams.managerAdded": "Manager added successfully",
+  "dashboard.teams.managerRemoved": "Manager removed successfully",
+  "dashboard.teams.accessUpdated": "Access updated successfully",
+  "dashboard.teams.onlyAdminCanManage": "Only admins can manage users",
+  "dashboard.teams.managerExists": "Manager already exists",
   "dashboard.tabs.table": "Table",
   "dashboard.tabs.accounts": "Accounts",
   "dashboard.tabs.widgets": "Widgets",

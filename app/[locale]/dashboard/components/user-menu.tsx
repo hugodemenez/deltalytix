@@ -146,7 +146,7 @@ export default function UserMenu() {
             <Link href="/business/dashboard">
               <div className="flex items-center w-full">
                 <Building2 className="mr-2 h-4 w-4" />
-                <span>{t('dashboard.business')}</span>
+                <span>{t('dashboard.teams')}</span>
               </div>
             </Link>
           </DropdownMenuItem>

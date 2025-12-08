@@ -16,7 +16,7 @@ const templates: { value: EmailTemplate; label: string; description: string }[] 
   { value: "weekly-recap", label: "Weekly Recap", description: "Weekly trading statistics" },
   { value: "new-feature", label: "New Feature", description: "Announce new product features" },
   { value: "renewal-notice", label: "Renewal Notice", description: "Prop firm renewal reminder" },
-  { value: "business-invitation", label: "Business Invitation", description: "Invite to a business workspace" },
+  { value: "team-invitation", label: "Team Invitation", description: "Invite to a team workspace" },
   { value: "missing-data", label: "Missing Data", description: "Encourage users to import trades" },
   { value: "support-request", label: "Support Request", description: "Support escalation email" },
   { value: "support-subscription-error", label: "Subscription Error", description: "Subscription support follow-up" },
@@ -46,6 +46,9 @@ export function EmailTemplateSelector({ selectedTemplate, onSelect }: EmailTempl
     </div>
   )
 }
+
+
+
 
 
 

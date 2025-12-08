@@ -73,9 +73,9 @@ export function SendEmailPageClient() {
         descriptionKey: "admin.sendEmail.templates.renewalNotice.description",
       },
       {
-        value: "business-invitation",
-        labelKey: "admin.sendEmail.templates.businessInvitation.label",
-        descriptionKey: "admin.sendEmail.templates.businessInvitation.description",
+        value: "team-invitation",
+        labelKey: "admin.sendEmail.templates.teamInvitation.label",
+        descriptionKey: "admin.sendEmail.templates.teamInvitation.description",
       },
       {
         value: "missing-data",

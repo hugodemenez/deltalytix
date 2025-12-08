@@ -84,6 +84,26 @@ model BusinessSubscription {
   @@schema("public")
 }
 
+model TeamSubscription {
+  id          String    @id @unique @default(uuid())
+  email       String    @unique
+  plan        String
+  createdAt   DateTime  @default(now())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team        Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String    @unique
+  endDate     DateTime?
+  status      String    @default("ACTIVE")
+  trialEndsAt DateTime?
+  interval    String?
+
+  @@index([email])
+  @@index([userId])
+  @@index([teamId])
+  @@schema("public")
+}
+
 model Notification {
   id          String    @id @default(cuid())
   userId      String
@@ -108,6 +128,8 @@ model User {
   thorToken             String?
   accounts              Account[]
   businesses            Business[]
+  teams                 Team[]
+  teamSubscriptions     TeamSubscription[]
   comments              Comment[]
   dashboardLayout       DashboardLayout?
   groups                Group[]
@@ -142,6 +164,56 @@ model Synchronization {
   @@unique([userId, service, accountId])
   @@index([userId])
   @@index([service])
+  @@schema("public")
+}
+
+model Team {
+  id               String            @id @default(uuid())
+  name             String
+  userId           String
+  traderIds        String[]          @default([])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitations      TeamInvitation[]
+  managers         TeamManager[]
+  teamSubscription TeamSubscription?
+
+  @@unique([name, userId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model TeamInvitation {
+  id        String   @id @default(uuid())
+  teamId    String
+  email     String
+  invitedBy String
+  status    String   @default("PENDING")
+  expiresAt DateTime @default(dbgenerated("(now() + '7 days'::interval)"))
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, email])
+  @@index([teamId])
+  @@index([email])
+  @@index([status])
+  @@schema("public")
+}
+
+model TeamManager {
+  id        String   @id @default(uuid())
+  teamId    String
+  managerId String
+  access    String   @default("viewer")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, managerId])
+  @@index([teamId])
+  @@index([managerId])
   @@schema("public")
 }
 
@@ -346,11 +418,11 @@ model Shared {
 model Referral {
   id              String   @id @default(uuid())
   userId          String   @unique
-  slug             String   @unique
+  slug            String   @unique
   referredUserIds String[] @default([])
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([slug])

@@ -23,7 +23,7 @@ export type EmailTemplate =
   | "weekly-recap"
   | "new-feature"
   | "renewal-notice"
-  | "business-invitation"
+  | "team-invitation"
   | "missing-data"
   | "support-request"
   | "support-subscription-error"
@@ -46,8 +46,8 @@ async function getEmailTemplate(template: EmailTemplate): Promise<TemplateCompon
       return (await import("@/components/emails/new-feature")).default as TemplateComponent
     case "renewal-notice":
       return (await import("@/components/emails/renewal-notice")).default as TemplateComponent
-    case "business-invitation":
-      return (await import("@/components/emails/business-invitation")).default as TemplateComponent
+    case "team-invitation":
+      return (await import("@/components/emails/team-invitation")).default as TemplateComponent
     case "missing-data":
       return (await import("@/components/emails/missing-data")).default as TemplateComponent
     case "support-request":
@@ -101,10 +101,10 @@ export async function getDefaultTemplateProps(template: EmailTemplate): Promise<
         language: "en",
         unsubscribeUrl: "https://deltalytix.app/api/email/unsubscribe?email=user%40example.com",
       }
-    case "business-invitation":
+    case "team-invitation":
       return {
         email: "user@example.com",
-        businessName: "Sample Business",
+        teamName: "Sample Team",
         inviterName: "John Doe",
         inviterEmail: "john@example.com",
         joinUrl: "https://deltalytix.app",
@@ -159,8 +159,8 @@ export async function getRequiredTemplateProps(template: EmailTemplate): Promise
         "daysUntilRenewal",
         "paymentFrequency",
       ]
-    case "business-invitation":
-      return ["email", "businessName", "inviterName", "inviterEmail", "joinUrl"]
+    case "team-invitation":
+      return ["email", "teamName", "inviterName", "inviterEmail", "joinUrl"]
     case "missing-data":
       return ["email", "firstName"]
     case "support-request":
@@ -383,9 +383,9 @@ function getDefaultSubject(template: EmailTemplate, language: string): string {
       en: "Account Renewal Notice",
       fr: "Avis de renouvellement de compte",
     },
-    "business-invitation": {
-      en: "You've been invited to join a business on Deltalytix",
-      fr: "Vous avez été invité à rejoindre une entreprise sur Deltalytix",
+    "team-invitation": {
+      en: "You've been invited to join a team on Deltalytix",
+      fr: "Vous avez été invité à rejoindre une équipe sur Deltalytix",
     },
     "missing-data": {
       en: "We miss seeing you on Deltalytix",

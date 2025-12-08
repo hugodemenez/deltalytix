@@ -60,8 +60,8 @@ export default {
   "admin.sendEmail.templates.newFeature.description": "Announce the latest product updates.",
   "admin.sendEmail.templates.renewalNotice.label": "Renewal notice",
   "admin.sendEmail.templates.renewalNotice.description": "Remind prop firm users about renewals.",
-  "admin.sendEmail.templates.businessInvitation.label": "Business invitation",
-  "admin.sendEmail.templates.businessInvitation.description": "Invite traders to join a business workspace.",
+  "admin.sendEmail.templates.teamInvitation.label": "Team invitation",
+  "admin.sendEmail.templates.teamInvitation.description": "Invite traders to join a team workspace.",
   "admin.sendEmail.templates.missingData.label": "Missing data",
   "admin.sendEmail.templates.missingData.description": "Encourage users to import their trades.",
   "admin.sendEmail.templates.supportRequest.label": "Support request",
@@ -69,4 +69,7 @@ export default {
   "admin.sendEmail.templates.supportSubscriptionError.label": "Subscription error",
   "admin.sendEmail.templates.supportSubscriptionError.description": "Follow up on a subscription issue.",
 }
+
+
+
 

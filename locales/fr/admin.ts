@@ -60,8 +60,8 @@ export default {
   "admin.sendEmail.templates.newFeature.description": "Annoncez les dernières mises à jour produit.",
   "admin.sendEmail.templates.renewalNotice.label": "Avis de renouvellement",
   "admin.sendEmail.templates.renewalNotice.description": "Rappelez aux utilisateurs prop firm les renouvellements.",
-  "admin.sendEmail.templates.businessInvitation.label": "Invitation business",
-  "admin.sendEmail.templates.businessInvitation.description": "Invitez des traders à rejoindre un espace business.",
+  "admin.sendEmail.templates.teamInvitation.label": "Invitation équipe",
+  "admin.sendEmail.templates.teamInvitation.description": "Invitez des traders à rejoindre un espace équipe.",
   "admin.sendEmail.templates.missingData.label": "Données manquantes",
   "admin.sendEmail.templates.missingData.description": "Encouragez les utilisateurs à importer leurs trades.",
   "admin.sendEmail.templates.supportRequest.label": "Demande de support",
@@ -69,4 +69,7 @@ export default {
   "admin.sendEmail.templates.supportSubscriptionError.label": "Erreur d'abonnement",
   "admin.sendEmail.templates.supportSubscriptionError.description": "Relance suite à un problème d'abonnement.",
 }
+
+
+
 

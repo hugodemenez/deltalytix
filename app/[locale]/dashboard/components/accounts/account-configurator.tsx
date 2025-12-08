@@ -706,7 +706,8 @@ export function AccountConfigurator({
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleInputChange('nextPaymentDate', undefined);
+                              // Use null so the value is cleared in the backend (undefined is ignored)
+                              handleInputChange('nextPaymentDate', null);
                             }}
                           >
                             <X className="h-4 w-4" />

@@ -85,7 +85,7 @@ Rules:
 3. Be conservative - only infer names when you're reasonably confident
 4. For emails like "trader@domain.com" or "admin@company.com", return null for names
 5. For emails with numbers or random characters, be more cautious
-6. Consider that some emails might be business emails vs personal emails
+6. Consider that some emails might be team emails vs personal emails
 
 Email addresses to analyze:
 ${emails.map((email, index) => `${index + 1}. ${email}`).join('\n')}
