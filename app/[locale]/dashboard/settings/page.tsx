@@ -478,7 +478,7 @@ export default function SettingsPage() {
                 <p>No team linked</p>
                 <p className="text-sm mt-2">Contact your team administrator to get an invitation to join a team.</p>
                 <div className="mt-4">
-                  <Link href="/team/dashboard">
+                  <Link href="/teams/dashboard">
                     <Button>
                       <Building2 className="mr-2 h-4 w-4" />
                       Manage Teams
@@ -491,7 +491,7 @@ export default function SettingsPage() {
             {/* Team Management Link */}
             {(userTeams.ownedTeams.length > 0 || userTeams.joinedTeams.length > 0) && (
               <div className="mt-4">
-                <Link href="/team/dashboard">
+                <Link href="/teams/dashboard">
                   <Button variant="outline" className="w-full">
                     <Settings className="mr-2 h-4 w-4" />
                     Manage Teams

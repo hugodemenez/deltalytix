@@ -131,10 +131,10 @@ export default function TeamNavbar() {
                     <AccordionTrigger>{t('teams.navbar.features')}</AccordionTrigger>
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
-                            <MobileNavItem href="/team#features" onClick={onLinkClick}>{t('teams.navbar.features.multiAccount')}</MobileNavItem>
-                            <MobileNavItem href="/team#features" onClick={onLinkClick}>{t('teams.navbar.features.teamAnalytics')}</MobileNavItem>
-                            <MobileNavItem href="/team#features" onClick={onLinkClick}>{t('teams.navbar.features.realTime')}</MobileNavItem>
-                            <MobileNavItem href="/team#features" onClick={onLinkClick}>{t('teams.navbar.features.riskManagement')}</MobileNavItem>
+                            <MobileNavItem href="/teams#features" onClick={onLinkClick}>{t('teams.navbar.features.multiAccount')}</MobileNavItem>
+                            <MobileNavItem href="/teams#features" onClick={onLinkClick}>{t('teams.navbar.features.teamAnalytics')}</MobileNavItem>
+                            <MobileNavItem href="/teams#features" onClick={onLinkClick}>{t('teams.navbar.features.realTime')}</MobileNavItem>
+                            <MobileNavItem href="/teams#features" onClick={onLinkClick}>{t('teams.navbar.features.riskManagement')}</MobileNavItem>
                         </ul>
                     </AccordionContent>
                 </AccordionItem>
@@ -142,17 +142,17 @@ export default function TeamNavbar() {
                     <AccordionTrigger>{t('teams.navbar.roadmap')}</AccordionTrigger>
                     <AccordionContent>
                         <ul className="space-y-2 list-none">
-                            <MobileNavItem href="/team#roadmap" onClick={onLinkClick}>{t('teams.navbar.roadmap.q1')}</MobileNavItem>
-                            <MobileNavItem href="/team#roadmap" onClick={onLinkClick}>{t('teams.navbar.roadmap.q2')}</MobileNavItem>
-                            <MobileNavItem href="/team#roadmap" onClick={onLinkClick}>{t('teams.navbar.roadmap.q3')}</MobileNavItem>
-                            <MobileNavItem href="/team#roadmap" onClick={onLinkClick}>{t('teams.navbar.roadmap.q4')}</MobileNavItem>
+                            <MobileNavItem href="/teams#roadmap" onClick={onLinkClick}>{t('teams.navbar.roadmap.q1')}</MobileNavItem>
+                            <MobileNavItem href="/teams#roadmap" onClick={onLinkClick}>{t('teams.navbar.roadmap.q2')}</MobileNavItem>
+                            <MobileNavItem href="/teams#roadmap" onClick={onLinkClick}>{t('teams.navbar.roadmap.q3')}</MobileNavItem>
+                            <MobileNavItem href="/teams#roadmap" onClick={onLinkClick}>{t('teams.navbar.roadmap.q4')}</MobileNavItem>
                         </ul>
                     </AccordionContent>
                 </AccordionItem>
 
             </Accordion>
             <Button asChild variant="outline" className="w-full" onClick={onLinkClick}>
-                <Link href={"/team/dashboard"}>{t('teams.cta')}</Link>
+                <Link href={"/teams/dashboard"}>{t('teams.cta')}</Link>
             </Button>
             <div className="py-4 border-t space-y-4">
                 <Popover>
@@ -193,7 +193,7 @@ export default function TeamNavbar() {
             <div className={`fixed inset-0 bg-background/80  backdrop-blur-xs z-40 transition-opacity duration-300 ${hoveredItem ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} />
             <span className={`h-14 fixed top-0 left-0 right-0 bg-background z-50 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}></span>
             <header className={`max-w-7xl mx-auto fixed top-0 left-0 right-0 px-4 lg:px-6 h-14 flex items-center justify-between z-50  text-foreground transition-transform duration-300 ${isVisible ? 'translate-y-0' : '-translate-y-full'}`}>
-                <Link href="/team" className="flex items-center space-x-2">
+                <Link href="/teams" className="flex items-center space-x-2">
                     <Logo className='w-6 h-6 fill-black dark:fill-white' />
                     <span className="font-bold text-xl">Deltalytix</span>
                     <Badge variant="secondary" className="text-xs">
@@ -220,17 +220,17 @@ export default function TeamNavbar() {
                                                 </Link>
                                             </NavigationMenuLink>
                                         </li>
-                                        <ListItem href="/team#features" title={t('teams.navbar.features.multiAccount')}>
+                                        <ListItem href="/teams#features" title={t('teams.navbar.features.multiAccount')}>
                                             Monitor and analyze performance across multiple trading accounts
                                         </ListItem>
-                                        <ListItem href="/team#features" title={t('teams.navbar.features.teamAnalytics')}>
+                                        <ListItem href="/teams#features" title={t('teams.navbar.features.teamAnalytics')}>
                                             Track individual trader performance and optimize team allocation
                                         </ListItem>
-                                        <ListItem href="/team#features" title={t('teams.navbar.features.realTime')}>
+                                        <ListItem href="/teams#features" title={t('teams.navbar.features.realTime')}>
                                             Get instant alerts and real-time updates on trading activities
                                         </ListItem>
                                         <div className='col-span-2'>
-                                            <ListItem href="/team#features" title={t('teams.navbar.features.riskManagement')}>
+                                            <ListItem href="/teams#features" title={t('teams.navbar.features.riskManagement')}>
                                                 Advanced risk analytics with position sizing and drawdown analysis
                                             </ListItem>
                                         </div>
@@ -241,16 +241,16 @@ export default function TeamNavbar() {
                                 <NavigationMenuTrigger className='bg-transparent'>{t('teams.navbar.roadmap')}</NavigationMenuTrigger>
                                 <NavigationMenuContent>
                                     <ul className="grid gap-3 p-4 w-[400px] list-none">
-                                        <ListItem href="/team#roadmap" title={t('teams.navbar.roadmap.q1')}>
+                                        <ListItem href="/teams#roadmap" title={t('teams.navbar.roadmap.q1')}>
                                             Multi-account dashboard, team analytics, basic reporting
                                         </ListItem>
-                                        <ListItem href="/team#roadmap" title={t('teams.navbar.roadmap.q2')}>
+                                        <ListItem href="/teams#roadmap" title={t('teams.navbar.roadmap.q2')}>
                                             Real-time monitoring, risk management tools, compliance reporting
                                         </ListItem>
-                                        <ListItem href="/team#roadmap" title={t('teams.navbar.roadmap.q3')}>
+                                        <ListItem href="/teams#roadmap" title={t('teams.navbar.roadmap.q3')}>
                                             Enterprise API, custom integrations, advanced security
                                         </ListItem>
-                                        <ListItem href="/team#roadmap" title={t('teams.navbar.roadmap.q4')}>
+                                        <ListItem href="/teams#roadmap" title={t('teams.navbar.roadmap.q4')}>
                                             Complete enterprise suite, dedicated support, custom onboarding
                                         </ListItem>
                                     </ul>
@@ -260,7 +260,7 @@ export default function TeamNavbar() {
                         </NavigationMenuList>
                         <Separator orientation="vertical" className="h-6 mx-4" />
                         <Button variant="ghost" className="text-sm font-medium hover:text-accent-foreground" asChild>
-                            <Link href={"/team/dashboard"}>{t('teams.cta')}</Link>
+                            <Link href={"/teams/dashboard"}>{t('teams.cta')}</Link>
                         </Button>
                     </NavigationMenu>
                 </div>

@@ -452,7 +452,7 @@ export async function deleteTeam(teamId: string) {
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/team/dashboard')
+    revalidatePath('/teams/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error deleting team:', error)
@@ -503,7 +503,7 @@ export async function renameTeam(teamId: string, newName: string) {
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/team/dashboard')
+    revalidatePath('/teams/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error renaming team:', error)
@@ -568,7 +568,7 @@ export async function addTraderToTeam(teamId: string, traderEmail: string) {
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/team/dashboard')
+    revalidatePath('/teams/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error adding trader to team:', error)
@@ -644,7 +644,7 @@ export async function sendTeamInvitation(teamId: string, traderEmail: string) {
     }
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/team/dashboard')
+    revalidatePath('/teams/dashboard')
     return { success: true, invitationId: result.invitationId }
   } catch (error) {
     console.error('Error sending team invitation:', error)
@@ -749,7 +749,7 @@ export async function removeTraderFromTeam(teamId: string, traderId: string) {
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/team/dashboard')
+    revalidatePath('/teams/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error removing trader from team:', error)
@@ -798,7 +798,7 @@ export async function cancelTeamInvitation(teamId: string, invitationId: string)
     })
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/team/dashboard')
+    revalidatePath('/teams/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error canceling team invitation:', error)
@@ -927,7 +927,7 @@ export async function joinTeamByInvitation(invitationToken: string) {
     ])
 
     revalidatePath('/dashboard/settings')
-    revalidatePath('/team/dashboard')
+    revalidatePath('/teams/dashboard')
     return { success: true }
   } catch (error) {
     console.error('Error joining team by invitation:', error)

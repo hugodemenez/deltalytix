@@ -355,7 +355,7 @@ export function TeamEquityGridClient({ teamId }: TeamEquityGridClientProps) {
                       {user.statistics.totalPnL >= 0 ? '+' : ''}{user.statistics.totalPnL.toFixed(2)}
                     </div>
                     <Link 
-                      href={`/team/dashboard/trader/${user.userId}`}
+                      href={`/teams/dashboard/trader/${user.userId}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1 hover:bg-gray-100 rounded transition-colors"

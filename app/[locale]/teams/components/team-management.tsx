@@ -198,7 +198,7 @@ export function TeamManagement({
     loadInitialData()
     // If we found a team, redirect to it
     if (firstTeamId) {
-      redirect(`/team/dashboard/${firstTeamId}`)
+      redirect(`/teams/dashboard/${firstTeamId}`)
     }
   }, [firstTeamId, pathname])
   const t = useI18n()
@@ -843,7 +843,7 @@ export function TeamManagement({
                         size="sm"
                         className="flex-1 text-xs"
                       >
-                        <Link href={`/team/dashboard/${team.id}`} className="flex items-center">
+                        <Link href={`/teams/dashboard/${team.id}`} className="flex items-center">
                           <Eye className="h-3 w-3 mr-1" />
                           {t('teams.dashboard.view')}
                         </Link>

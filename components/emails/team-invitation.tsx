@@ -54,7 +54,7 @@ export default function TeamInvitationEmail({
   teamName = "My Team",
   inviterName = "trader",
   inviterEmail = "trader@example.com",
-  joinUrl = "https://deltalytix.app/team/join",
+  joinUrl = "https://deltalytix.app/teams/join",
   language = "fr",
 }: TeamInvitationEmailProps) {
   const lang = language === "en" ? "en" : "fr";

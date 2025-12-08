@@ -159,7 +159,7 @@ export default function TeamJoinPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <Link href="/team/dashboard">
+              <Link href="/teams/dashboard">
                 <Button variant="outline" className="w-full">
                   {t('teams.join.goToManage')}
                 </Button>
@@ -184,7 +184,7 @@ export default function TeamJoinPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="text-center">
-              <Link href="/team/dashboard">
+              <Link href="/teams/dashboard">
                 <Button
                   variant="outline"
                   className="w-full"
@@ -317,7 +317,7 @@ export default function TeamJoinPage() {
                       }
                     </span>
                   </div>
-                  <Link href="/team/dashboard">
+                  <Link href="/teams/dashboard">
                     <Button
                       variant="outline"
                       className="w-full"

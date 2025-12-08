@@ -165,14 +165,14 @@ export default function TeamPage() {
                 <div className="-m-2 rounded-xl bg-gray-900/5 dark:bg-gray-100/5 p-2 ring-1 ring-gray-900/10 dark:ring-gray-100/10 ring-inset lg:-m-4 lg:rounded-2xl lg:p-4">
                   <Image
                     alt="Dashboard screenshot"
-                    src="/team-dark.png"
+                    src="/business-dark.png"
                     width={2432}
                     height={1442}
                     className="w-304 rounded-md shadow-2xl ring-1 ring-gray-900/10 dark:ring-gray-100/10 hidden dark:block"
                   />
                   <Image
                     alt="Dashboard screenshot"
-                    src="/team-light.png"
+                    src="/business-light.png"
                     width={2432}
                     height={1442}
                     className="w-304 rounded-md shadow-2xl ring-1 ring-gray-900/10 dark:hidden"
