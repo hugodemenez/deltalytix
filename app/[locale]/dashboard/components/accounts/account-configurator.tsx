@@ -706,7 +706,7 @@ export function AccountConfigurator({
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              handleInputChange('nextPaymentDate', undefined);
+                              handleInputChange('nextPaymentDate', null);
                             }}
                           >
                             <X className="h-4 w-4" />
