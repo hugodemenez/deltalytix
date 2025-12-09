@@ -157,8 +157,6 @@ export interface Account extends Omit<PrismaAccount, 'payouts' | 'group'> {
   balanceToDate?: number
   group?: PrismaGroup | null
   aboveBuffer?: number
-  // When true, metrics and charts ignore trades until cumulative profit reaches `buffer`
-  considerBuffer?: boolean
   // Filtered trades used for metrics/charts (not to be sent to server actions)
   trades?: PrismaTrade[]
   
@@ -997,12 +995,13 @@ export const DataProvider: React.FC<{
       // If the account is not found, create it
       if (!currentAccount) {
         // Never send client-only fields to server
-        const { trades: _trades, considerBuffer: _considerBuffer, ...serverAccount } = newAccount
+        const { trades: _trades, ...serverAccount } = newAccount
+        const considerBuffer = newAccount.considerBuffer ?? true
         const createdAccount = await setupAccountAction(serverAccount as Account)
         
         // Recalculate metrics for the new account (optimistic, client-side)
         const accountsWithMetrics = computeMetricsForAccounts([
-          { ...createdAccount, considerBuffer: _considerBuffer ?? true }
+          { ...createdAccount, considerBuffer: createdAccount.considerBuffer ?? considerBuffer }
         ], trades)
         const accountWithMetrics = accountsWithMetrics[0]
         
@@ -1025,12 +1024,13 @@ export const DataProvider: React.FC<{
 
       // Update the account in the database
       // Strip client-only fields
-      const { trades: _trades2, considerBuffer: _considerBuffer2, ...serverAccount2 } = newAccount
+      const { trades: _trades2, ...serverAccount2 } = newAccount
+      const considerBuffer = newAccount.considerBuffer ?? true
       const updatedAccount = await setupAccountAction(serverAccount2 as Account)
       
       // Recalculate metrics for the updated account (optimistic, client-side)
       const accountsWithMetrics = computeMetricsForAccounts([
-        { ...updatedAccount, considerBuffer: _considerBuffer2 ?? true }
+        { ...updatedAccount, considerBuffer: updatedAccount.considerBuffer ?? considerBuffer }
       ], trades)
       const accountWithMetrics = accountsWithMetrics[0]
       

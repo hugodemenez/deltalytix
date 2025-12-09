@@ -328,6 +328,7 @@ model Account {
   user                    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   payouts                 Payout[]
   buffer                  Float             @default(0)
+  considerBuffer          Boolean           @default(true)
 
   @@unique([number, userId])
   @@index([number])

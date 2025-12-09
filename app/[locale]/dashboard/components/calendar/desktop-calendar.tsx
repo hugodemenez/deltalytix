@@ -86,6 +86,7 @@ const truncateAccountNumber = (accountNumber: string, maxLength: number = 15): s
 interface CalendarPnlProps {
   calendarData: CalendarData;
   financialEvents?: FinancialEvent[];
+  hideFiltersOnMobile?: boolean;
 }
 
 
@@ -280,7 +281,7 @@ function RenewalBadge({ renewals }: { renewals: Account[] }) {
   )
 }
 
-export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
+export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false }: CalendarPnlProps) {
   const accounts = useUserStore(state => state.accounts)
   const groups = useUserStore(state => state.groups)
   const t = useI18n()
@@ -512,7 +513,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
         </div>
         <div className="flex items-center gap-4">
           {/* Impact Level Filter */}
-          <div className="flex items-center gap-2">
+          <div className={cn("flex items-center gap-2", hideFiltersOnMobile && "max-sm:hidden")}>
             <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
               {t('calendar.importanceFilter.title')}
             </span>
@@ -526,7 +527,7 @@ export default function CalendarPnl({ calendarData }: CalendarPnlProps) {
             countries={countries}
             value={selectedCountries}
             onValueChange={setSelectedCountries}
-            className="h-8"
+            className={cn("h-8", hideFiltersOnMobile && "max-sm:hidden")}
           />
           <div className="flex items-center gap-1.5">
             <Button
