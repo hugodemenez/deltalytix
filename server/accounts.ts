@@ -209,34 +209,45 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     ...baseAccountData 
   } = account
 
-  // Handle group relation separately
-  // If groupId is provided, connect to that group
-  // If groupId is explicitly null, disconnect from current group
-  // If groupId is undefined, don't change the group relation
-  const accountDataWithGroup = {
+  // Build group relation payloads separately for update vs create
+  // - Update: allow disconnect when groupId is explicitly null
+  // - Create: Prisma does not accept `disconnect`; omit the relation when null/undefined
+  const accountDataForUpdate = {
     ...baseAccountData,
-    ...(groupId !== undefined && (
-      groupId 
+    ...(groupId !== undefined &&
+      (groupId
         ? {
             group: {
               connect: {
-                id: groupId
-              }
-            }
+                id: groupId,
+              },
+            },
           }
         : {
             group: {
-              disconnect: true
-            }
-          }
-    ))
+              disconnect: true,
+            },
+          })),
+  }
+
+  const accountDataForCreate = {
+    ...baseAccountData,
+    ...(groupId
+      ? {
+          group: {
+            connect: {
+              id: groupId,
+            },
+          },
+        }
+      : {}),
   }
 
   let savedAccount
   if (existingAccount) {
     savedAccount = await prisma.account.update({
       where: { id: existingAccount.id },
-      data: accountDataWithGroup,
+      data: accountDataForUpdate,
       include: {
         payouts: {
           select: {
@@ -252,7 +263,7 @@ export async function setupAccountAction(account: Account): Promise<Account> {
   } else {
     savedAccount = await prisma.account.create({
       data: {
-        ...accountDataWithGroup,
+        ...accountDataForCreate,
         user: {
           connect: {
             id: userId
