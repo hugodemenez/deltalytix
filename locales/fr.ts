@@ -497,7 +497,7 @@ export default {
     selectAccount: "Sélectionner un compte",
     selectInstrument: "Sélectionner un instrument",
     selectPropfirm: "Sélectionner une propfirm",
-    searchAccount: "Rechercher un compte...",
+    searchAccount: "Rechercher un compte ou un groupe (créer un nouveau groupe)...",
     searchInstrument: "Rechercher un instrument...",
     searchPropfirm: "Rechercher une propfirm...",
     noAccountFound: "Aucun compte trouvé.",

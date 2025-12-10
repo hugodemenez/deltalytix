@@ -15,6 +15,7 @@ import { useI18n } from "@/locales/client";
 import { useRithmicSyncStore } from "@/store/rithmic-sync-store";
 import { useTradesStore } from "@/store/trades-store";
 import { getUserId } from "@/server/auth";
+import { useUserStore } from "@/store/user-store";
 
 interface RithmicCredentials {
   username: string;
@@ -57,9 +58,7 @@ interface RithmicSyncContextType {
 
   // Utilities
   calculateStartDate: (selectedAccounts: string[]) => string;
-  authenticateAndGetAccounts: (
-    credentials: RithmicCredentials
-  ) => Promise<
+  authenticateAndGetAccounts: (credentials: RithmicCredentials) => Promise<
     | { success: false; rateLimited: boolean; message: string }
     | {
         success: true;
@@ -89,6 +88,8 @@ export function RithmicSyncContextProvider({
 
   const t = useI18n();
   const { refreshTrades } = useData();
+
+  const isLoading = useUserStore((state) => state.isLoading);
   const trades = useTradesStore((state) => state.trades);
 
   // Use store for state management
@@ -664,7 +665,9 @@ export function RithmicSyncContextProvider({
 
         if (!syncResponse.ok) {
           const errorData = await syncResponse.json();
-          throw new Error(errorData.message || "Failed to update synchronization");
+          throw new Error(
+            errorData.message || "Failed to update synchronization"
+          );
         }
 
         return {
@@ -803,6 +806,8 @@ export function RithmicSyncContextProvider({
 
   // Auto-sync checking
   const checkAndPerformSyncs = useCallback(async () => {
+    // If we are still loading trades, return
+    if (isLoading) return;
     // If we are already syncing, return
     if (isAutoSyncing) return;
     try {
@@ -821,7 +826,6 @@ export function RithmicSyncContextProvider({
 
       for (const sync of synchronizations) {
         if (!sync.lastSyncedAt) continue;
-        
 
         const lastSyncTime = new Date(sync.lastSyncedAt).getTime();
         const now = Date.now();

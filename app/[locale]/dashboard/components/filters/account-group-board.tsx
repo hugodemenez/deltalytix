@@ -607,8 +607,10 @@ export function AccountGroupBoard() {
               const accounts = group.accounts.filter(acc =>
                 matchingAccounts.some(match => match.id === acc.id),
               )
+              const isHiddenGroupCard =
+                group.id === (hiddenGroup?.id ?? "hidden") || group.name === t("filters.hiddenAccounts")
 
-              if (searchQuery.trim() && accounts.length === 0) {
+              if (searchQuery.trim() && accounts.length === 0 && !isHiddenGroupCard) {
                 return null
               }
 

@@ -461,7 +461,7 @@ export default {
     selectAccount: "Select account",
     selectInstrument: "Select instrument",
     selectPropfirm: "Select propfirm",
-    searchAccount: "Search account...",
+    searchAccount: "Search account or group (create a new group)...",
     searchInstrument: "Search instrument...",
     searchPropfirm: "Search propfirm...",
     noAccountFound: "No account found.",
