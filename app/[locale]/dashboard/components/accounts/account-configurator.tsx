@@ -16,6 +16,7 @@ import { useParams } from 'next/navigation'
 import { enUS, fr } from 'date-fns/locale'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { propFirms } from './config'
+import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Account } from '@/context/data-provider'
@@ -49,6 +50,8 @@ export function AccountConfigurator({
   const params = useParams()
   const { saveGroup } = useData()
   const groups = useUserStore(state => state.groups)
+  const hiddenGroup = groups.find(group => group.name === HIDDEN_GROUP_NAME)
+  const visibleGroups = groups.filter(group => group.name !== HIDDEN_GROUP_NAME)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [paymentCalendarOpen, setPaymentCalendarOpen] = useState(false)
   const [selectedAccountSize, setSelectedAccountSize] = useState<string>("")
@@ -129,6 +132,20 @@ export function AccountConfigurator({
       })
     } finally {
       setIsCreatingGroup(false)
+    }
+  }
+
+  const ensureHiddenGroup = async () => {
+    if (hiddenGroup?.id) return hiddenGroup.id
+    try {
+      const created = await saveGroup(HIDDEN_GROUP_NAME)
+      return created?.id ?? null
+    } catch (error) {
+      console.error("Error ensuring hidden group:", error)
+      toast.error(t("common.error"), {
+        description: t("filters.errorCreatingGroup", { name: HIDDEN_GROUP_NAME })
+      })
+      return null
     }
   }
 
@@ -431,16 +448,30 @@ export function AccountConfigurator({
                 ) : (
                   <Select
                     value={
-                      'groupId' in (pendingChanges || {})
-                        ? (pendingChanges?.groupId ?? "__no_group__")
-                        : (account.groupId ?? "__no_group__")
+                      (() => {
+                        const rawValue =
+                          'groupId' in (pendingChanges || {})
+                            ? (pendingChanges?.groupId ?? "__no_group__")
+                            : (account.groupId ?? "__no_group__")
+                        if (rawValue === hiddenGroup?.id) return "hidden"
+                        return rawValue
+                      })()
                     }
                     onValueChange={(value) => {
                       if (value === "__create_new__") {
                         setShowNewGroupInput(true)
-                      } else {
-                        handleInputChange('groupId', value === "__no_group__" ? null : value)
+                        return
                       }
+                      if (value === "hidden") {
+                        void (async () => {
+                          const ensuredId = await ensureHiddenGroup()
+                          if (ensuredId) {
+                            handleInputChange('groupId', ensuredId)
+                          }
+                        })()
+                        return
+                      }
+                      handleInputChange('groupId', value === "__no_group__" ? null : value)
                     }}
                   >
                     <SelectTrigger>
@@ -448,7 +479,10 @@ export function AccountConfigurator({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__no_group__">{t("filters.noGroup")}</SelectItem>
-                      {groups.map((group) => (
+                      <SelectItem value="hidden">
+                        {t("filters.hiddenAccounts")}
+                      </SelectItem>
+                      {visibleGroups.map((group) => (
                         <SelectItem key={group.id} value={group.id}>
                           {group.name}
                         </SelectItem>
