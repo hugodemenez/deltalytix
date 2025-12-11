@@ -254,7 +254,7 @@ export function TradovateCredentialsManager() {
               {t("tradovateSync.multiAccount.syncAll")}
             </Button>
             <Button
-              onClick={handleStartOAuth}
+              onClick={() => handleStartOAuth()}
               disabled={isLoading}
               size="sm"
               className="h-8"
@@ -292,8 +292,9 @@ export function TradovateCredentialsManager() {
             {accounts.map((account) => {
               const isExpired =
                 !account.token ||
-                (account.tokenExpiresAt &&
-                  new Date(account.tokenExpiresAt).getTime() <= Date.now());
+                (account.tokenExpiresAt
+                  ? new Date(account.tokenExpiresAt).getTime() <= Date.now()
+                  : false);
 
               return (
                 <TableRow key={account.accountId}>
