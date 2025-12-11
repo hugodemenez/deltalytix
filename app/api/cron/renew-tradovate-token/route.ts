@@ -37,15 +37,28 @@ export async function GET(request: NextRequest) {
     const synchronizations = await prisma.synchronization.findMany({
       where: {
         service: 'tradovate',
-        token: { not: null },
-        tokenExpiresAt: { not: null }
+        token: { not: null }
       }
     });
+
+    // If tokenExpiresAt is null, clear the token (invalid state)
+    const missingExpiry = synchronizations.filter((s) => !s.tokenExpiresAt);
+    if (missingExpiry.length > 0) {
+      console.warn(`[CRON] Clearing ${missingExpiry.length} Tradovate tokens missing tokenExpiresAt`);
+      await prisma.synchronization.updateMany({
+        where: {
+          id: { in: missingExpiry.map((s) => s.id) }
+        },
+        data: { token: null, tokenExpiresAt: null }
+      });
+    }
+
+    const validSynchronizations = synchronizations.filter((s) => !!s.tokenExpiresAt);
 
     let tokenRenewals = 0;
     let dailySyncs = 0;
 
-    const promises = synchronizations.map(async (synchronization) => {
+    const promises = validSynchronizations.map(async (synchronization) => {
       let renewed = false;
       let synced = false;
       

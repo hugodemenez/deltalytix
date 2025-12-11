@@ -1990,6 +1990,7 @@ export default {
       actions: "Actions",
       expired: "Expiré",
       valid: "Valide",
+      reconnect: "Reconnecter",
       loadMore: "Charger Plus de Données",
       edit: "Modifier",
       delete: "Supprimer",

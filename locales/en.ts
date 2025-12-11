@@ -1865,6 +1865,7 @@ export default {
       actions: "Actions",
       expired: "Expired",
       valid: "Valid",
+      reconnect: "Reconnect",
       loadMore: "Load More Data",
       edit: "Edit",
       delete: "Delete",
