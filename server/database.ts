@@ -69,9 +69,12 @@ function generateTradeUUID(trade: Partial<Trade>): string {
   return uuidv5(tradeSignature, TRADE_NAMESPACE)
 }
 
-export async function saveTradesAction(data: Trade[]): Promise<TradeResponse> {
+export async function saveTradesAction(
+  data: Trade[],
+  options?: { userId?: string }
+): Promise<TradeResponse> {
   console.log('[saveTrades] Saving trades:', data.length)
-  const userId = await getUserId()
+  const userId = options?.userId ?? await getUserId()
   if (!Array.isArray(data) || data.length === 0) {
     return {
       error: 'INVALID_DATA',

@@ -6,18 +6,6 @@ import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
 import { Synchronization } from '@prisma/client'
 
-interface TradovateSyncProgress {
-  accountId: string
-  isSyncing: boolean
-  isComplete: boolean
-  ordersProcessed: number
-  tradesSaved: number
-  error?: string
-  startTime?: number
-  endTime?: number
-}
-
-
 interface TradovateSyncContextType {
   // Core sync management
   performSyncForAccount: (accountId: string) => Promise<{ success: boolean; message: string } | undefined>
@@ -25,7 +13,6 @@ interface TradovateSyncContextType {
   
   // State management
   isAutoSyncing: boolean
-  syncProgress: Record<string, TradovateSyncProgress>
   
   // Account management
   accounts: Synchronization[]
@@ -37,27 +24,18 @@ interface TradovateSyncContextType {
   setSyncInterval: (interval: number) => void
   enableAutoSync: boolean
   setEnableAutoSync: (enabled: boolean) => void
-  
-  // Utilities
-  resetSyncProgress: () => void
 }
 
 const TradovateSyncContext = createContext<TradovateSyncContextType | undefined>(undefined)
 
 export function TradovateSyncContextProvider({ children }: { children: ReactNode }) {
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
-  const [syncProgress, setSyncProgress] = useState<Record<string, TradovateSyncProgress>>({})
   const [accounts, setAccounts] = useState<Synchronization[]>([])
   const [syncInterval, setSyncInterval] = useState(15) // 15 minutes default
   const [enableAutoSync, setEnableAutoSync] = useState(false)
 
   const t = useI18n()
   const { refreshTrades } = useData()
-
-  // Reset sync progress
-  const resetSyncProgress = useCallback(() => {
-    setSyncProgress({})
-  }, [])
 
   // Normalize dates returned from API
   const normalizeSynchronization = useCallback(
@@ -92,17 +70,6 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     }
   }, [normalizeSynchronization])
 
-  // Update sync progress for an account
-  const updateSyncProgress = useCallback((accountId: string, updates: Partial<TradovateSyncProgress>) => {
-    setSyncProgress(prev => ({
-      ...prev,
-      [accountId]: {
-        ...prev[accountId],
-        ...updates
-      }
-    }))
-  }, [])
-
   const deleteAccount = useCallback(async (accountId: string) => {
     setAccounts(prev => prev.filter(acc => acc.accountId !== accountId))
     await fetch("/api/tradovate/synchronizations", {
@@ -125,25 +92,8 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       return { success: false, message: errorMsg }
     }
 
-    // Check if already syncing
-    const currentProgress = syncProgress[accountId]
-    if (currentProgress?.isSyncing) {
-      const errorMsg = `Account ${accountId} is already syncing`
-      return { success: false, message: errorMsg }
-    }
-
     try {
       const runSync = async () => {
-        // Initialize sync progress
-        updateSyncProgress(accountId, {
-          isSyncing: true,
-          isComplete: false,
-          ordersProcessed: 0,
-          tradesSaved: 0,
-          startTime: Date.now(),
-          error: undefined
-        })
-
         console.log('Starting sync for account:', accountId)
         if (!account.token) {
           const errorMsg = `Token for account ${accountId} is expired`
@@ -162,13 +112,6 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
         if (payload?.message === "DUPLICATE_TRADES") {
           const message = t('tradovateSync.multiAccount.alreadyImportedTrades')
           
-          updateSyncProgress(accountId, {
-            isSyncing: false,
-            isComplete: true,
-            endTime: Date.now(),
-            error: message
-          })
-
           await refreshTrades()
           return message
         }
@@ -176,26 +119,12 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
         if (!response.ok || !payload?.success) {
           const errorMsg = payload?.message || `Sync error for account ${accountId}`
 
-          updateSyncProgress(accountId, {
-            isSyncing: false,
-            isComplete: true,
-            endTime: Date.now(),
-            error: errorMsg
-          })
           throw new Error(errorMsg)
         }
 
         // Track progress
         const savedCount = payload.savedCount || 0
         const ordersCount = payload.ordersCount || 0
-        
-        updateSyncProgress(accountId, {
-          isSyncing: false,
-          isComplete: true,
-          ordersProcessed: ordersCount,
-          tradesSaved: savedCount,
-          endTime: Date.now()
-        })
 
         console.log(`Sync complete for ${accountId}: ${savedCount} trades saved, ${ordersCount} orders processed`)
 
@@ -237,17 +166,10 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     } catch (error) {
       const errorMsg = `Sync error for account ${accountId}: ${error instanceof Error ? error.message : t('tradovateSync.sync.unknownError')}`
 
-      updateSyncProgress(accountId, {
-        isSyncing: false,
-        isComplete: true,
-        endTime: Date.now(),
-        error: errorMsg
-      })
-
       console.error('Sync error:', error)
       return { success: false, message: errorMsg }
     }
-  }, [accounts, syncProgress, updateSyncProgress, t, refreshTrades, loadAccounts])
+  }, [accounts, t, refreshTrades, loadAccounts])
 
   // Perform sync for all accounts
   const performSyncForAllAccounts = useCallback(async () => {
@@ -331,7 +253,6 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       
       // State management
       isAutoSyncing,
-      syncProgress,
       
       // Account management
       accounts,
@@ -343,9 +264,6 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       setSyncInterval,
       enableAutoSync,
       setEnableAutoSync,
-      
-      // Utilities
-      resetSyncProgress,
     }}>
       {children}
     </TradovateSyncContext.Provider>

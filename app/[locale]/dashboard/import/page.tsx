@@ -8,6 +8,7 @@ import {
   storeTradovateToken,
 } from "../components/import/tradovate/actions";
 import { useI18n } from "@/locales/client";
+import { useSyncContext } from "@/context/sync-context";
 import {
   Card,
   CardContent,
@@ -23,6 +24,7 @@ export default function ImportCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tradovateStore = useTradovateSyncStore();
+  const { tradovate } = useSyncContext();
   const t = useI18n();
 
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -30,16 +32,36 @@ export default function ImportCallbackPage() {
   );
   const [error, setError] = useState<string>("");
   const hasProcessed = useRef(false);
+  const [storeHydrated, setStoreHydrated] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = useTradovateSyncStore.persist?.onFinishHydration?.(() => {
+      setStoreHydrated(true);
+    });
+
+    if (useTradovateSyncStore.persist?.hasHydrated?.()) {
+      setStoreHydrated(true);
+    }
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
 
   useEffect(() => {
     const handleCallback = async () => {
+      if (!storeHydrated) {
+        console.log("Waiting for Tradovate store hydration...");
+        return;
+      }
+
       // Prevent double execution (React StrictMode in development)
       if (hasProcessed.current) {
         console.log("Callback already processed, skipping...");
         return;
       }
-
       hasProcessed.current = true;
+
       try {
         const code = searchParams.get("code");
         const state = searchParams.get("state");
@@ -67,10 +89,13 @@ export default function ImportCallbackPage() {
         }
 
         // Verify state matches what we stored
-        if (
-          !tradovateStore ||
-          typeof tradovateStore.oauthState === "undefined"
-        ) {
+        const storedOAuthState =
+          tradovateStore.oauthState ??
+          (typeof sessionStorage !== "undefined"
+            ? sessionStorage.getItem("tradovate_oauth_state")
+            : null);
+
+        if (!storedOAuthState) {
           console.error("Tradovate store not properly initialized:", {
             hasStore: !!tradovateStore,
             oauthState: tradovateStore?.oauthState,
@@ -80,12 +105,12 @@ export default function ImportCallbackPage() {
           return;
         }
 
-        if (state !== tradovateStore.oauthState) {
+        if (state !== storedOAuthState) {
           console.error("State mismatch:", {
             received: state?.substring(0, 8) + "...",
-            expected: tradovateStore.oauthState?.substring(0, 8) + "...",
+            expected: storedOAuthState?.substring(0, 8) + "...",
             receivedLength: state?.length,
-            expectedLength: tradovateStore.oauthState?.length,
+            expectedLength: storedOAuthState?.length,
           });
           setError("Invalid state parameter - possible security issue");
           setStatus("error");
@@ -126,6 +151,16 @@ export default function ImportCallbackPage() {
         }
 
         tradovateStore.clearOAuthState();
+        if (typeof sessionStorage !== "undefined") {
+          sessionStorage.removeItem("tradovate_oauth_state");
+        }
+
+        // Refresh synchronizations so context has the latest accounts
+        try {
+          await tradovate.loadAccounts();
+        } catch (loadError) {
+          console.warn("Failed to refresh Tradovate synchronizations", loadError);
+        }
 
         // Tokens are stored during the Exchange callback
         console.log("OAuth flow completed successfully");
@@ -158,7 +193,7 @@ export default function ImportCallbackPage() {
     };
 
     handleCallback();
-  }, [searchParams, tradovateStore, router]);
+  }, [searchParams, tradovateStore, router, storeHydrated, tradovate]);
 
   const handleRetry = () => {
     hasProcessed.current = false;

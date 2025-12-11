@@ -46,16 +46,11 @@ export async function GET(request: NextRequest) {
     let dailySyncs = 0;
 
     const promises = synchronizations.map(async (synchronization) => {
-      const expiresAt = new Date(synchronization.tokenExpiresAt!);
-      const now = new Date();
-      
       let renewed = false;
       let synced = false;
       
-      // Check if token needs renewal (expires within 15 minutes)
-      if (expiresAt.getTime() - now.getTime() < 15 * 60 * 1000) {
-        renewed = await renewUserToken(synchronization);
-      }
+      // Always attempt renewal for each token
+      renewed = await renewUserToken(synchronization);
       
       // Check if we should perform daily sync
       if (shouldPerformDailySync(synchronization.dailySyncTime)) {
@@ -101,6 +96,8 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
       ? 'https://demo.tradovateapi.com' 
       : 'https://live.tradovateapi.com';
     
+    console.log(`[CRON] Attempting token renewal for account ${synchronization.accountId}`);
+    
     const renewal = await fetch(`${apiBaseUrl}/auth/renewAccessToken`, {
       headers: {
         'Authorization': `Bearer ${synchronization.token}`
@@ -108,15 +105,16 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
     });
     
     if (!renewal.ok) {
-      console.error('Failed to renew token:', await renewal.text());
-      // Remove invalid token
+      const errorText = await renewal.text();
+      console.error(`[CRON] Failed to renew token for account ${synchronization.accountId}: ${errorText}`);
+      // Remove invalid/expired token
       await prisma.user.update({
         where: { id: synchronization.userId },
         data: {
           synchronizations: {
             update: {
               where: { id: synchronization.id },
-              data: { token: null }
+              data: { token: null, tokenExpiresAt: null }
             }
           }
         }
@@ -141,7 +139,19 @@ async function renewUserToken(synchronization: any): Promise<boolean> {
 
     return true;
   } catch (error) {
-    console.error(`Failed to renew token for user ${synchronization.userId}:`, error);
+    console.error(`[CRON] Error renewing token for account ${synchronization.accountId}:`, error);
+    // On unexpected error, also expire the token to force re-auth
+    await prisma.user.update({
+      where: { id: synchronization.userId },
+      data: {
+        synchronizations: {
+          update: {
+            where: { id: synchronization.id },
+            data: { token: null, tokenExpiresAt: null }
+          }
+        }
+      }
+    });
     return false;
   }
 }
@@ -159,7 +169,7 @@ async function performDailySync(synchronization: any): Promise<boolean> {
     const { getTradovateTrades } = await import('@/app/[locale]/dashboard/components/import/tradovate/actions');
     
     // Fetch and save trades
-    const result = await getTradovateTrades(synchronization.token);
+    const result = await getTradovateTrades(synchronization.token, { userId: synchronization.userId });
     
     if (result.error) {
       console.error(`[CRON] Failed to sync trades for account ${synchronization.accountId}:`, result.error);

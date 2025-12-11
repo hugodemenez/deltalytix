@@ -1427,16 +1427,25 @@ async function updateLastSyncedAt(userId: string, accessToken: string) {
     return updateResult
 }
 
-export async function getTradovateTrades(accessToken: string): Promise<TradovateTradesResult> {
+  
+export async function getTradovateTrades(
+  accessToken: string,
+  options?: { userId?: string }
+): Promise<TradovateTradesResult> {
   try {
+    // If we are on the server
+    // Identify user by access token
     logger.info('Fetching Tradovate fill pairs for improved trade building (demo only)')
     
-    // Get current user for userId
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return { error: 'User not authenticated' }
+    // Resolve userId either from caller (e.g. cron) or current session
+    let userId = options?.userId ?? null
+    if (!userId) {
+      const supabase = await createClient()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return { error: 'User not authenticated' }
+      }
+      userId = user.id
     }
 
     const apiBaseUrl = TRADOVATE_ENVIRONMENTS.demo.api
@@ -1449,7 +1458,7 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     // Means there are no trades to import
     if (fillPairs.length === 0) {
       logger.info('No fill pairs returned from Tradovate')
-      await updateLastSyncedAt(user.id, accessToken)
+      await updateLastSyncedAt(userId, accessToken)
       return { processedTrades: [], savedCount: 0, ordersCount: 0 }
     }
 
@@ -1548,9 +1557,9 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
     logger.info(`Fetched ${tickDetails.length} tick details`)
 
     // Build trades using fill pairs with account resolution
-    const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, ordersById, accountsById, user.id, tickDetails)
+    const processedTrades = await buildTradesFromFillPairs(fillPairs, contracts, fillsById, ordersById, accountsById, userId, tickDetails)
     
-    await updateLastSyncedAt(user.id, accessToken)
+    await updateLastSyncedAt(userId, accessToken)
 
     if (processedTrades.length === 0) {
       logger.info('No trades could be created from fill pairs')
@@ -1559,7 +1568,7 @@ export async function getTradovateTrades(accessToken: string): Promise<Tradovate
 
     // Save trades to database
     logger.info(`Attempting to save ${processedTrades.length} fill pair trades to database`)
-    const saveResult = await saveTradesAction(processedTrades)
+    const saveResult = await saveTradesAction(processedTrades, { userId })
     
     if (saveResult.error) {
       if (saveResult.error === "DUPLICATE_TRADES") {
