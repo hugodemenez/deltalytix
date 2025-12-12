@@ -102,78 +102,7 @@ export async function POST(req: Request) {
               where: { email: data.customer_details?.email as string },
             });
 
-            // Check if this is a team subscription
-            const isTeamSubscription = data.metadata?.plan === 'team_monthly_usd' ||
-              subscriptionPlan === 'TEAM' ||
-              price.lookup_key === 'team_monthly_usd';
-              const currentPeriodEnd = getCurrentPeriodEnd(subscription);
-
-            if (isTeamSubscription) {
-              // Handle team subscription
-              console.log('Team subscription completed')
-
-              // Create the business after successful payment
-              const teamName = data.metadata?.teamName || subscription.metadata?.teamName || 'My Team';
-              const userId = data.metadata?.userId || subscription.metadata?.userId;
-
-              if (userId) {
-                try {
-                  // Create the team
-                  const team = await prisma.team.create({
-                    data: {
-                      name: teamName,
-                      userId: userId,
-                      traderIds: [userId], // Add the creator as the first trader
-                      managers: {
-                        create: {
-                          managerId: userId,
-                          access: 'admin', // Add the creator as admin manager
-                        }
-                      }
-                    },
-                  });
-
-                  console.log('Team created:', team);
-
-                  // Register subscription as a business subscription
-            // We should register subscription as a business subscription if it is a business subscription
-            // Otherwise it will interfer with the user subscription (! user can have both a business subscription and a user subscription)
-            // And multiple business subscriptions for the same user will be registered as different subscriptions in the database
-            
-            // We should identify the business subscription by the business name and the user id
-            await prisma.teamSubscription.upsert({
-              where: {
-                teamId: team.id,
-              },
-              update: {
-                plan: subscriptionPlan,
-                endDate: new Date(currentPeriodEnd * 1000),
-                status: 'ACTIVE',
-                trialEndsAt: null,
-                interval: interval,
-              },
-              create: {
-                email: data.customer_details?.email as string,
-                plan: subscriptionPlan,
-                user: { connect: { id: user?.id } },
-                endDate: new Date(currentPeriodEnd * 1000),
-                team: { connect: { id: team.id } },
-                status: 'ACTIVE',
-                trialEndsAt: null,
-                interval: interval,
-              }
-            });
-
-            console.log('business subscription created/updated', subscription)
-
-            // Return. No need to continue the flow.
-            return NextResponse.json({ message: 'Team subscription created/updated' }, { status: 200 });
-                } catch (error) {
-                  console.error('Error creating team:', error);
-                }
-              }
-            }
-
+            const currentPeriodEnd = getCurrentPeriodEnd(subscription);
 
             // We should register subscription as a business subscription if it is a business subscription
             // Otherwise it will interfer with the user subscription (! user can have both a business subscription and a user subscription)

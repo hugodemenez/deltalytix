@@ -5,7 +5,7 @@ import auth from '@/locales/en/auth'
 import { createClient } from '@/server/auth'
 import { revalidatePath } from 'next/cache'
 
-export async function createTeam(name: string, currency: 'USD' | 'EUR' = 'USD') {
+export async function createTeam(name: string) {
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -13,27 +13,39 @@ export async function createTeam(name: string, currency: 'USD' | 'EUR' = 'USD') 
       throw new Error('Unauthorized')
     }
 
-    // Redirect to Stripe checkout for team subscription
-    const formData = new FormData()
-    formData.append('teamName', name)
-    formData.append('currency', currency)
-    
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/create-team-checkout-session`, {
-      method: 'POST',
-      body: formData,
+    // Check if a team with this name already exists for this user
+    const existingTeam = await prisma.team.findFirst({
+      where: {
+        name: name.trim(),
+        userId: user.id,
+      },
     })
 
-    if (response.ok) {
-      const redirectUrl = response.headers.get('location')
-      if (redirectUrl) {
-        return { success: true, redirectUrl }
-      }
+    if (existingTeam) {
+      throw new Error('A team with this name already exists')
     }
 
-    return { success: false, error: 'Failed to create checkout session' }
+    // Create the team directly
+    const team = await prisma.team.create({
+      data: {
+        name: name.trim(),
+        userId: user.id,
+        traderIds: [user.id], // Add the creator as the first trader
+        managers: {
+          create: {
+            managerId: user.id,
+            access: 'admin', // Add the creator as admin manager
+          }
+        }
+      },
+    })
+
+    revalidatePath('/dashboard/settings')
+    revalidatePath('/teams/dashboard')
+    return { success: true, team }
   } catch (error) {
-    console.error('Error creating team checkout session:', error)
-    return { success: false, error: 'Failed to create team' }
+    console.error('Error creating team:', error)
+    return { success: false, error: error instanceof Error ? error.message : 'Failed to create team' }
   }
 }
 

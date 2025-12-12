@@ -143,7 +143,7 @@ export default function UserMenu() {
             <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link href="/business/dashboard">
+            <Link href="/teams/dashboard">
               <div className="flex items-center w-full">
                 <Building2 className="mr-2 h-4 w-4" />
                 <span>{t('dashboard.teams')}</span>

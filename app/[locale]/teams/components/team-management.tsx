@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useI18n, useCurrentLocale } from "@/locales/client"
+import { useI18n } from "@/locales/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,80 +15,11 @@ import {
   UserMinus,
   Eye,
   Settings,
-  CheckCircle,
   XCircle,
   Trash2
 } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
-
-// Currency detection hook (same as in pricing-plans.tsx)
-function useCurrency() {
-  const [currency, setCurrency] = useState<'USD' | 'EUR'>('USD')
-  const [symbol, setSymbol] = useState('$')
-  const locale = useCurrentLocale()
-
-  const detectCurrency = useCallback(() => {
-    // Eurozone countries as per official EU list
-    const eurozoneCountries = [
-      'AT', 'BE', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT',
-      'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES', 'CH',
-      // French overseas territories
-      'GP', 'MQ', 'GF', 'RE', 'YT', 'PM', 'BL', 'MF', 'NC', 'PF', 'WF', 'TF'
-    ]
-
-    // Function to set currency based on country code
-    const setCurrencyFromCountry = (countryCode: string) => {
-      const upperCountryCode = countryCode.toUpperCase()
-      if (eurozoneCountries.includes(upperCountryCode)) {
-        setCurrency('EUR')
-        setSymbol('€')
-        return true
-      } else {
-        setCurrency('USD')
-        setSymbol('$')
-        return true
-      }
-    }
-
-    // First, try to get country from cookie (set by middleware)
-    const getCookie = (name: string) => {
-      const value = `; ${document.cookie}`
-      const parts = value.split(`; ${name}=`)
-      if (parts.length === 2) return parts.pop()?.split(';').shift()
-      return null
-    }
-
-    const countryFromCookie = getCookie('user-country')
-    if (countryFromCookie) {
-      setCurrencyFromCountry(countryFromCookie)
-      return
-    }
-
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-
-    // Check if timezone indicates European location
-    const isEuropeanTimezone = timezone.startsWith('Europe/') ||
-      ['Paris', 'Berlin', 'Madrid', 'Rome', 'Amsterdam', 'Brussels', 'Vienna'].some(city => timezone.includes(city))
-
-    // Check if locale indicates European country
-    const isEuropeanLocale = /^(fr|de|es|it|nl|pt|el|fi|et|lv|lt|sl|sk|mt|cy)-/.test(locale)
-
-    if (isEuropeanTimezone || isEuropeanLocale) {
-      setCurrency('EUR')
-      setSymbol('€')
-    } else {
-      setCurrency('USD')
-      setSymbol('$')
-    }
-  }, [locale])
-
-  useEffect(() => {
-    detectCurrency()
-  }, [detectCurrency])
-
-  return { currency, symbol }
-}
 import {
   Dialog,
   DialogContent,
@@ -129,7 +60,8 @@ import {
   sendTeamInvitation,
   getTeamInvitations,
   removeTraderFromTeam,
-  cancelTeamInvitation
+  cancelTeamInvitation,
+  createTeam
 } from '@/app/[locale]/dashboard/settings/actions'
 import { redirect, usePathname } from 'next/navigation'
 import Link from 'next/link'
@@ -202,18 +134,6 @@ export function TeamManagement({
     }
   }, [firstTeamId, pathname])
   const t = useI18n()
-  const { currency, symbol } = useCurrency()
-
-  // Get subscription price based on detected currency
-  const subscriptionPrice = currency === 'EUR' ? '€500/month per team' : '$500/month per team'
-
-  // Get subscription features from translations
-  const subscriptionFeatures = [
-    t('teams.management.teamCollaboration'),
-    t('teams.management.sharedAnalytics'),
-    t('teams.management.managerAccessControls'),
-    t('teams.management.teamReporting')
-  ]
 
   // State
   const [userTeams, setUserTeams] = useState<{
@@ -272,31 +192,21 @@ export function TeamManagement({
 
   const handleCreateTeam = async () => {
     if (!newTeamName.trim()) {
-      toast.error('Team name is required')
+      toast.error(t('teams.rename.nameRequired'))
       return
     }
 
     setIsSubmitting(true)
     try {
-      // Create a form and submit it directly to the Stripe checkout endpoint
-      const form = document.createElement('form')
-      form.method = 'POST'
-      form.action = '/api/stripe/create-team-checkout-session'
-
-      const teamNameInput = document.createElement('input')
-      teamNameInput.type = 'hidden'
-      teamNameInput.name = 'teamName'
-      teamNameInput.value = newTeamName.trim()
-
-      const currencyInput = document.createElement('input')
-      currencyInput.type = 'hidden'
-      currencyInput.name = 'currency'
-      currencyInput.value = currency
-
-      form.appendChild(teamNameInput)
-      form.appendChild(currencyInput)
-      document.body.appendChild(form)
-      form.submit()
+      const result = await createTeam(newTeamName.trim())
+      if (result.success) {
+        toast.success(t('teams.management.createTeamTitle') + ' - ' + t('teams.rename.success'))
+        setCreateDialogOpen(false)
+        setNewTeamName('')
+        await loadTeamData()
+      } else {
+        toast.error(result.error || t('dashboard.teams.error'))
+      }
     } catch (error) {
       console.error('Error creating team:', error)
       toast.error(t('dashboard.teams.error'))
@@ -945,40 +855,13 @@ export function TeamManagement({
                     placeholder={t('teams.management.enterTeamName')}
                   />
                 </div>
-
-                {/* Payment Information */}
-                <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{t('teams.management.subscriptionRequired')}</span>
-                    <Badge variant="secondary">{currency === 'EUR' ? '€500/month per team' : '$500/month per team'}</Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {t('teams.management.subscriptionDescription')}
-                  </p>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">{t('teams.management.includes')}</p>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      {[
-                        t('teams.management.teamCollaboration'),
-                        t('teams.management.sharedAnalytics'),
-                        t('teams.management.managerAccessControls'),
-                        t('teams.management.teamReporting')
-                      ].map((feature: string, index: number) => (
-                        <li key={index} className="flex items-center gap-2">
-                          <CheckCircle className="h-3 w-3 text-green-500" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
                   {t('teams.management.cancel')}
                 </Button>
                 <Button onClick={handleCreateTeam} disabled={isSubmitting}>
-                  {isSubmitting ? t('teams.management.saving') : t('teams.management.startSubscription')}
+                  {isSubmitting ? t('teams.management.saving') : t('teams.management.createTeamTitle')}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -1020,33 +903,6 @@ export function TeamManagement({
                       onChange={(e) => setNewTeamName(e.target.value)}
                       placeholder={t('teams.management.enterTeamName')}
                     />
-                  </div>
-
-                  {/* Payment Information */}
-                  <div className="bg-muted/50 p-4 rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{t('teams.management.subscriptionRequired')}</span>
-                      <Badge variant="secondary">{currency === 'EUR' ? '€500/month per team' : '$500/month per team'}</Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {t('teams.management.subscriptionDescription')}
-                    </p>
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">{t('teams.management.includes')}</p>
-                      <ul className="text-sm text-muted-foreground space-y-1">
-                        {[
-                          t('teams.management.teamCollaboration'),
-                          t('teams.management.sharedAnalytics'),
-                          t('teams.management.managerAccessControls'),
-                          t('teams.management.teamReporting')
-                        ].map((feature: string, index: number) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <CheckCircle className="h-3 w-3 text-green-500" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
                   </div>
                 </div>
                 <DialogFooter>
