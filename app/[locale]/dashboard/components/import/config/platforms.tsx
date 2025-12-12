@@ -169,7 +169,7 @@ export interface PlatformConfig {
   type: string
   name: string
   description: string
-  category: 'Direct Account Sync' | 'Intelligent Import' | 'Platform CSV Import'
+  category: 'Direct Account Sync' | 'Intelligent Import' | 'Platform CSV Import' | 'Manual Entry'
   videoUrl?: string
   details: string
   logo: {
@@ -811,7 +811,7 @@ export const platforms: PlatformConfig[] = [
     type: 'manual-entry',
     name: 'import.type.manualEntry.name',
     description: 'import.type.manualEntry.description',
-    category: 'Intelligent Import',
+    category: 'Manual Entry',
     videoUrl: '',
     details: 'import.type.manualEntry.details',
     logo: {

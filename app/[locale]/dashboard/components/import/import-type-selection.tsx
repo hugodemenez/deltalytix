@@ -59,6 +59,8 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
         return t('import.type.category.intelligentImport')
       case 'Platform CSV Import':
         return t('import.type.category.platformCsv')
+      case 'Manual Entry':
+        return t('import.type.category.manualEntry')
       default:
         return category
     }

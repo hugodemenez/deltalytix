@@ -299,6 +299,7 @@ export default {
   "import.type.category.directSync": "Direct Account Sync",
   "import.type.category.intelligentImport": "Intelligent Import",
   "import.type.category.platformCsv": "Platform CSV Import",
+  "import.type.category.manualEntry": "Manual Entry",
   "import.type.rithmicSync.name": "Rithmic",
   "import.type.rithmicSync.description": "Direct account syncing",
   "import.type.rithmicSync.details":
