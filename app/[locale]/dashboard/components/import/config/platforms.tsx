@@ -23,8 +23,9 @@ import PdfProcessing from '../ibkr-pdf/pdf-processing'
 import AtasFileUpload from '../atas/atas-file-upload'
 import AtasProcessor from '../atas/atas-processor'
 import FtmoProcessor from '../ftmo/ftmo-processor'
+import ManualProcessor from '../manual/manual-processor'
 import { Step } from '../import-button'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, PenTool } from 'lucide-react'
 import { useTheme } from '@/context/theme-provider'
 import Image from 'next/image'
 
@@ -47,6 +48,8 @@ type TranslationKey =
   | 'import.steps.connectAccountDescription'
   | 'import.steps.processFile'
   | 'import.steps.processFileDescription'
+  | 'import.steps.manualEntry'
+  | 'import.steps.manualEntryDescription'
 
 export interface ProcessedData {
   headers: string[]
@@ -150,6 +153,7 @@ type StepComponent =
   | typeof AtasFileUpload
   | typeof AtasProcessor
   | typeof FtmoProcessor
+  | typeof ManualProcessor
 
 
 export interface PlatformProcessorProps {
@@ -798,6 +802,41 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.processTrades',
         description: 'import.steps.processTradesDescription',
         component: FtmoProcessor,
+        isLastStep: true
+      }
+    ]
+  },
+  {
+    platformName: 'manual-entry',
+    type: 'manual-entry',
+    name: 'import.type.manualEntry.name',
+    description: 'import.type.manualEntry.description',
+    category: 'Intelligent Import',
+    videoUrl: '',
+    details: 'import.type.manualEntry.details',
+    logo: {
+      component: () => <PenTool className="w-4 h-4" />,
+    },
+    requiresAccountSelection: true,
+    processorComponent: ManualProcessor,
+    steps: [
+      {
+        id: 'select-import-type',
+        title: 'import.steps.selectPlatform',
+        description: 'import.steps.selectPlatformDescription',
+        component: ImportTypeSelection
+      },
+      {
+        id: 'select-account',
+        title: 'import.steps.selectAccount',
+        description: 'import.steps.selectAccountDescription',
+        component: AccountSelection
+      },
+      {
+        id: 'preview-trades',
+        title: 'import.steps.manualEntry',
+        description: 'import.steps.manualEntryDescription',
+        component: ManualProcessor,
         isLastStep: true
       }
     ]
