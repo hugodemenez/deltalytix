@@ -577,7 +577,7 @@ AccountsLegend.displayName = "AccountsLegend";
 
 export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const pathname = usePathname();
-  const isBusinessView = pathname.includes('business');
+  const isTeamView = pathname.includes('team');
   const {
     instruments,
     accountNumbers,
@@ -749,7 +749,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   // Fetch chart data when filters or config change
   React.useEffect(() => {
     // Use client-side computation for shared view
-    if (isSharedView || isBusinessView) {
+    if (isSharedView || isTeamView) {
       console.log('[EquityChart] Using client-side computation (shared view)');
       setIsLoading(true);
       try {
@@ -828,7 +828,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   // Optimized chart config with consistent color mapping
   const chartConfig = React.useMemo(() => {
     // Force grouped view in shared mode
-    if (!showIndividual || isSharedView || isBusinessView) {
+    if (!showIndividual || isSharedView || isTeamView) {
       return {
         equity: {
           label: "Total Equity",
@@ -848,7 +848,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       };
       return acc;
     }, {} as ChartConfig);
-  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView, isBusinessView]);
+  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView, isTeamView]);
 
   // Memoized chart lines with consistent color mapping
   const chartLines = React.useMemo(() => {
@@ -933,7 +933,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               </Tooltip>
             </TooltipProvider>
           </div>
-          {(!isSharedView && !isBusinessView) && (
+          {(!isSharedView && !isTeamView) && (
             <div className="flex items-center space-x-2">
               <Switch
                 id="view-mode"
@@ -1038,7 +1038,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
           {showIndividual &&
             !isSharedView &&
-            !isBusinessView &&
+            !isTeamView &&
             size !== "small" && (
               <AccountsLegend
                 accountNumbers={availableAccountNumbers}

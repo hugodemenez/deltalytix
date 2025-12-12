@@ -209,11 +209,15 @@ export async function setupAccountAction(account: Account): Promise<Account> {
     ...baseAccountData 
   } = account
 
+  // Only include considerBuffer when explicitly provided to avoid overriding unintentionally
+  const considerBufferUpdate = considerBuffer === undefined ? {} : { considerBuffer }
+
   // Build group relation payloads separately for update vs create
   // - Update: allow disconnect when groupId is explicitly null
   // - Create: Prisma does not accept `disconnect`; omit the relation when null/undefined
   const accountDataForUpdate = {
     ...baseAccountData,
+    ...considerBufferUpdate,
     ...(groupId !== undefined &&
       (groupId
         ? {
@@ -232,6 +236,7 @@ export async function setupAccountAction(account: Account): Promise<Account> {
 
   const accountDataForCreate = {
     ...baseAccountData,
+    ...considerBufferUpdate,
     ...(groupId
       ? {
           group: {

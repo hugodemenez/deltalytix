@@ -1,13 +1,40 @@
+"use client"
+
+import { ReactNode } from "react"
 import { BarChart3, Calendar, Database, Brain } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
 import { ImportFeature } from "./import-feature"
 import { useI18n } from "@/locales/client"
 import TradingChatAssistant from "./chat-feature"
+import { CalendarFeaturePreview } from "./calendar-preview"
+import { cn } from "@/lib/utils"
+import { PnlPerContractPreview } from "./pnl-per-contract-preview"
+
+type FeatureCard = {
+  id: string
+  title: string
+  icon: ReactNode
+  description: string
+  stat: string
+  image: ReactNode | { light: string; dark: string }
+  wrapperClass?: string
+}
+
+function isImagePair(
+  image: FeatureCard["image"]
+): image is { light: string; dark: string } {
+  return (
+    typeof image === "object" &&
+    image !== null &&
+    "light" in image &&
+    "dark" in image
+  )
+}
 
 export default function Features() {
   const t = useI18n()
-  const features = [
+  const features: FeatureCard[] = [
     {
       id: "ai-journaling",
       title: t("landing.features.ai-journaling.title"),
@@ -22,10 +49,8 @@ export default function Features() {
       icon: <BarChart3 className="h-5 w-5 text-muted-foreground" />,
       description: t("landing.features.performance-visualization.description"),
       stat: t("landing.features.performance-visualization.stat"),
-      image: {
-        light: "/charts-light.png",
-        dark: "/charts-dark.png"
-      }
+      image: <PnlPerContractPreview />,
+      wrapperClass: "min-h-[420px]"
     },
     {
       id: "daily-performance",
@@ -33,10 +58,8 @@ export default function Features() {
       icon: <Calendar className="h-5 w-5 text-muted-foreground" />,
       description: t("landing.features.daily-performance.description"),
       stat: t("landing.features.daily-performance.stat"),
-      image: {
-        light: "/calendar-light.png",
-        dark: "/calendar-dark.png"
-      }
+      image: <CalendarFeaturePreview />,
+      wrapperClass: "min-h-[420px] lg:min-h-[480px]"
     },
     {
       id: "data-import",
@@ -74,22 +97,27 @@ export default function Features() {
                     {feature.description}
                   </p>
                 </div>
-                <div className="relative h-[300px] w-full flex justify-center items-center">
-                  {typeof feature.image === 'object' && 'light' in feature.image ? (
+              <div
+                className={cn(
+                  "relative w-full flex justify-center items-center rounded-xl overflow-hidden",
+                  feature.wrapperClass ?? "h-[300px]"
+                )}
+              >
+                  {isImagePair(feature.image) ? (
                     <>
                       <Image
                         src={feature.image.light}
                         alt={`${feature.title} visualization`}
-                        layout="fill"
-                        objectFit="contain"
-                        className="rounded-md dark:hidden"
+                        className="rounded-md dark:hidden h-full w-full object-contain"
+                        width={800}
+                        height={400}
                       />
                       <Image
                         src={feature.image.dark}
                         alt={`${feature.title} visualization`}
-                        layout="fill"
-                        objectFit="contain"
-                        className="rounded-md hidden dark:block"
+                        className="rounded-md hidden dark:block h-full w-full object-contain"
+                        width={800}
+                        height={400}
                       />
                     </>
                   ) : (

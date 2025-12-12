@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 
-import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useSyncContext } from '@/context/sync-context'
 
 import { Badge } from "@/components/ui/badge"
 import { Clock } from 'lucide-react'
@@ -18,7 +18,8 @@ export function SyncCountdown({ lastSyncTime, isAutoSyncing, credentialId }: Syn
   const [timeLeft, setTimeLeft] = useState<string>('')
   const { syncInterval } = useRithmicSyncStore()
 
-  const { performSyncForCredential } = useRithmicSyncContext()
+  const { rithmic } = useSyncContext()
+  const { performSyncForCredential } = rithmic
 
   const hasTriggeredSyncRef = useRef(false)
 

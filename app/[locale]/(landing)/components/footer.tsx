@@ -10,7 +10,7 @@ export default function Footer() {
     product: [
       { name: t('footer.product.features'), href: '/#features' },
       { name: t('footer.product.pricing'), href: '/pricing' },
-      { name: t('footer.product.business'), href: '/business' },
+      { name: t('footer.product.teams'), href: '/teams' },
       { name: t('footer.product.support'), href: '/support' },
     ],
     company: [

@@ -33,16 +33,17 @@ import {
 } from "./actions";
 import { useTradovateSyncStore } from "@/store/tradovate-sync-store";
 import { useData } from "@/context/data-provider";
-import { useTradovateSyncContext } from "@/context/tradovate-sync-context";
+import { useSyncContext } from "@/context/sync-context";
 
 export function TradovateCredentialsManager() {
+  const { tradovate } = useSyncContext();
   const {
     performSyncForAccount,
     performSyncForAllAccounts,
     accounts,
     deleteAccount,
     loadAccounts,
-  } = useTradovateSyncContext();
+  } = tradovate;
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
@@ -74,10 +75,10 @@ export function TradovateCredentialsManager() {
     [t],
   );
 
-  const handleStartOAuth = useCallback(async () => {
+  const handleStartOAuth = useCallback(async (accountId: string = "default") => {
     try {
       setIsLoading(true);
-      const result = await initiateTradovateOAuth("default"); // We'll determine the actual account ID from the token
+      const result = await initiateTradovateOAuth(accountId);
       if (result.error || !result.authUrl || !result.state) {
         toast.error(t("tradovateSync.error.oauthInit"));
         return;
@@ -253,7 +254,7 @@ export function TradovateCredentialsManager() {
               {t("tradovateSync.multiAccount.syncAll")}
             </Button>
             <Button
-              onClick={handleStartOAuth}
+              onClick={() => handleStartOAuth()}
               disabled={isLoading}
               size="sm"
               className="h-8"
@@ -288,8 +289,15 @@ export function TradovateCredentialsManager() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {accounts.map((account) => (
-              <TableRow key={account.accountId}>
+            {accounts.map((account) => {
+              const isExpired =
+                !account.token ||
+                (account.tokenExpiresAt
+                  ? new Date(account.tokenExpiresAt).getTime() <= Date.now()
+                  : false);
+
+              return (
+                <TableRow key={account.accountId}>
                 <TableCell className="font-medium">
                   {account.accountId}
                 </TableCell>
@@ -318,25 +326,35 @@ export function TradovateCredentialsManager() {
                 <TableCell>
                   <span
                     className={`px-2 py-1 rounded text-xs ${
-                      !account.token
+                      isExpired
                         ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                         : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                     }`}
                   >
-                    {!account.token
+                    {isExpired
                       ? t("tradovateSync.multiAccount.expired")
                       : t("tradovateSync.multiAccount.valid")}
                   </span>
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-center items-center gap-2">
+                    {isExpired && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleStartOAuth(account.accountId)}
+                        className="h-8"
+                      >
+                        {t("tradovateSync.multiAccount.reconnect")}
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={async () => {
                         await performSyncForAccount(account.accountId);
                       }}
-                      disabled={syncingId !== null || !account.token}
+                      disabled={syncingId !== null || isExpired}
                     >
                       {syncingId === account.accountId ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -374,7 +392,7 @@ export function TradovateCredentialsManager() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
             {accounts.length === 0 && (
               <TableRow>
                 <TableCell

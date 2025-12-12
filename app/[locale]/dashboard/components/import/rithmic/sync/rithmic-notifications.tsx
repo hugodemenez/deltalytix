@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRithmicSyncContext } from '@/context/rithmic-sync-context'
+import { useSyncContext } from '@/context/sync-context'
 import { useRithmicSyncStore } from '@/store/rithmic-sync-store'
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CheckCircle2, Info, ChevronDown } from 'lucide-react'
@@ -52,7 +52,8 @@ export function RithmicSyncNotifications() {
   })
   const [isComplete, setIsComplete] = useState(false)
   const { isCollapsed, setIsCollapsed } = useNotificationStore()
-  const { isConnected } = useRithmicSyncContext()
+  const { rithmic } = useSyncContext()
+  const { isConnected } = rithmic
   const { lastMessage, accountsProgress, currentAccount, selectedAccounts, processingStats } = useRithmicSyncStore()
 
   // Reset complete state when connection is established

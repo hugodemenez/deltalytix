@@ -48,18 +48,20 @@ export function PlatformItem({
         disabled={platform.isDisabled || platform.isComingSoon}
       >
         <div className="flex items-center py-1">
-          {platform.logo.path && (
-            <Image
-              src={platform.logo.path}
-              alt={platform.logo.alt || ''}
-              width={32}
-              height={32}
-              className="object-contain rounded-lg border border-border/50"
-            />
-          )}
-          {platform.logo.component && (
-            <platform.logo.component />
-          )}
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-border/50 bg-background/50 shrink-0">
+            {platform.logo.path && (
+              <Image
+                src={platform.logo.path}
+                alt={platform.logo.alt || ''}
+                width={32}
+                height={32}
+                className="object-contain"
+              />
+            )}
+            {platform.logo.component && (
+              <platform.logo.component />
+            )}
+          </div>
         </div>
         <div className="flex-1">
           <div className="font-medium flex items-center gap-2">

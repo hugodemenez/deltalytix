@@ -200,34 +200,27 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
       }
     }
 
-    // Calculate date boundaries (moved from useDateBoundaries)
-    const dates = filteredTrades.map(t => formatInTimeZone(new Date(t.entryDate), params.timezone, 'yyyy-MM-dd'))
-    const startDate = dates.reduce((min, date) => date < min ? date : min)
-    const endDate = dates.reduce((max, date) => date > max ? date : max)
-    
-    const start = parseISO(startDate)
-    const end = parseISO(endDate)
-    end.setDate(end.getDate() + 1)
-    
-    const allDates = eachDayOfInterval({ start, end })
-
-    // Get unique account numbers from filtered trades
+    // Get unique account numbers from filtered trades (for selector)
     const allAccountNumbers = Array.from(new Set(filteredTrades.map(trade => trade.accountNumber)))
-    const limitedAccountNumbers = params.showIndividual 
-      ? allAccountNumbers.slice(0, params.maxAccounts)
+
+    // Respect selection for chart data, but keep full list for the selector
+    const hasAccountSelection = params.selectedAccounts.length > 0
+    const chartAccountNumbers = hasAccountSelection
+      ? allAccountNumbers.filter(acc => params.selectedAccounts.includes(acc))
       : allAccountNumbers
 
+    const limitedAccountNumbers = params.showIndividual 
+      ? chartAccountNumbers.slice(0, params.maxAccounts)
+      : chartAccountNumbers
+    
     // Create account map for quick lookup
     const accountMap = new Map(accounts.map(acc => [acc.number, acc]))
-
+    
     // Filter trades based on reset dates and selected accounts
-    const hasAccountSelection = params.selectedAccounts.length > 0
-
     const finalFilteredTrades = filteredTrades.filter(trade => {
       const isWhitelistedAccount = limitedAccountNumbers.includes(trade.accountNumber)
-      const isAccountSelected = !hasAccountSelection || params.selectedAccounts.includes(trade.accountNumber)
-
-      if (!isWhitelistedAccount || !isAccountSelected) {
+    
+      if (!isWhitelistedAccount) {
         return false
       }
       
@@ -241,6 +234,25 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
       
       return true
     })
+
+    if (!finalFilteredTrades.length) {
+      return {
+        chartData: [],
+        accountNumbers: allAccountNumbers,
+        dateRange: { startDate: '', endDate: '' }
+      }
+    }
+
+    // Calculate date boundaries using only the trades that will be displayed
+    const dates = finalFilteredTrades.map(t => formatInTimeZone(new Date(t.entryDate), params.timezone, 'yyyy-MM-dd'))
+    const startDate = dates.reduce((min, date) => date < min ? date : min)
+    const endDate = dates.reduce((max, date) => date > max ? date : max)
+    
+    const start = parseISO(startDate)
+    const end = parseISO(endDate)
+    end.setDate(end.getDate() + 1)
+    
+    const allDates = eachDayOfInterval({ start, end })
     
     // Data sampling for very large datasets
     const datesToProcess = params.dataSampling === 'sample' && allDates.length > 100
@@ -399,7 +411,7 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
     console.log('AccountNumber', limitedAccountNumbers)
     return {
       chartData,
-      accountNumbers: limitedAccountNumbers,
+      accountNumbers: allAccountNumbers,
       dateRange: { startDate, endDate }
     }
 

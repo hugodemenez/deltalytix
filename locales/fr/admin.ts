@@ -1,0 +1,80 @@
+export default {
+  "admin.sendEmail.hero.title": "Visualiseur d'emails",
+  "admin.sendEmail.hero.description": "Prévisualisez, personnalisez et envoyez chaque modèle en toute confiance.",
+  "admin.sendEmail.hero.hint": "L'aperçu HTML se met à jour dès que vous modifiez les champs.",
+
+  "admin.sendEmail.template.title": "Sélection du modèle",
+  "admin.sendEmail.template.description": "Choisissez un modèle pour charger ses champs obligatoires et ses valeurs par défaut.",
+  "admin.sendEmail.template.selectLabel": "Modèle d'email",
+  "admin.sendEmail.template.placeholder": "Sélectionnez un modèle",
+  "admin.sendEmail.template.helper": "Choisissez un modèle pour charger ses valeurs par défaut et commencer la personnalisation.",
+  "admin.sendEmail.template.requiredPropsLabel": "Champs requis",
+  "admin.sendEmail.template.selected": "Sélectionné : {template}",
+  "admin.sendEmail.template.noneSelected": "Aucun modèle sélectionné",
+
+  "admin.sendEmail.subject.label": "Sujet de l'email (optionnel)",
+  "admin.sendEmail.subject.placeholder": "Laissez vide pour utiliser le sujet par défaut",
+
+  "admin.sendEmail.props.title": "Personnalisation",
+  "admin.sendEmail.props.description": "Personnalisez les champs utilisés dans le contenu de l'email.",
+  "admin.sendEmail.props.requiredBadge": "Requis",
+  "admin.sendEmail.props.placeholder": "Sélectionnez un modèle pour afficher les champs disponibles.",
+  "admin.sendEmail.props.boolean.enabled": "Activé",
+  "admin.sendEmail.props.boolean.disabled": "Désactivé",
+  "admin.sendEmail.props.array.add": "Ajouter un élément",
+  "admin.sendEmail.props.array.remove": "Supprimer",
+  "admin.sendEmail.props.language.english": "Anglais",
+  "admin.sendEmail.props.language.french": "Français",
+
+  "admin.sendEmail.recipients.title": "Destinataires",
+  "admin.sendEmail.recipients.description": "Recherchez et sélectionnez les utilisateurs qui recevront cet email.",
+  "admin.sendEmail.recipients.selected": "{count} utilisateur(s) sélectionné(s)",
+
+  "admin.sendEmail.preview.title": "Aperçu de l'email",
+  "admin.sendEmail.preview.description": "HTML rendu selon le modèle et vos valeurs actuelles.",
+  "admin.sendEmail.preview.loading": "Génération de l'aperçu...",
+  "admin.sendEmail.preview.empty": "Sélectionnez un modèle pour visualiser l'email.",
+  "admin.sendEmail.preview.device.label": "Appareil",
+  "admin.sendEmail.preview.device.desktop": "Desktop",
+  "admin.sendEmail.preview.device.mobile": "Mobile",
+
+  "admin.sendEmail.actions.send": "Envoyer à {count} utilisateur(s)",
+  "admin.sendEmail.actions.sending": "Envoi en cours...",
+  "admin.sendEmail.actions.validation.template": "Veuillez sélectionner un modèle d'email",
+  "admin.sendEmail.actions.validation.recipients": "Veuillez sélectionner au moins un utilisateur",
+  "admin.sendEmail.actions.validation.missingProps": "Champs requis manquants : {props}",
+
+  "admin.sendEmail.toast.loadUsersError": "Échec du chargement des utilisateurs",
+  "admin.sendEmail.toast.previewError": "Échec de la mise à jour de l'aperçu",
+  "admin.sendEmail.toast.sendError": "Échec de l'envoi des emails",
+  "admin.sendEmail.toast.sendSuccess": "Emails envoyés : {successCount}. Tous les emails ont été traités avec succès.",
+  "admin.sendEmail.toast.sendPartialSuccess": "Emails envoyés : {successCount}. {errorCount} échec(s).",
+
+  "admin.sendEmail.templates.blackFriday.label": "Black Friday",
+  "admin.sendEmail.templates.blackFriday.description": "Email promotionnel en durée limitée.",
+  "admin.sendEmail.templates.welcome.label": "Bienvenue",
+  "admin.sendEmail.templates.welcome.description": "Souhaitez la bienvenue aux nouveaux utilisateurs.",
+  "admin.sendEmail.templates.weeklyRecap.label": "Récap hebdomadaire",
+  "admin.sendEmail.templates.weeklyRecap.description": "Partagez les statistiques de trading de la semaine.",
+  "admin.sendEmail.templates.newFeature.label": "Nouvelle fonctionnalité",
+  "admin.sendEmail.templates.newFeature.description": "Annoncez les dernières mises à jour produit.",
+  "admin.sendEmail.templates.renewalNotice.label": "Avis de renouvellement",
+  "admin.sendEmail.templates.renewalNotice.description": "Rappelez aux utilisateurs prop firm les renouvellements.",
+  "admin.sendEmail.templates.teamInvitation.label": "Invitation équipe",
+  "admin.sendEmail.templates.teamInvitation.description": "Invitez des traders à rejoindre un espace équipe.",
+  "admin.sendEmail.templates.missingData.label": "Données manquantes",
+  "admin.sendEmail.templates.missingData.description": "Encouragez les utilisateurs à importer leurs trades.",
+  "admin.sendEmail.templates.supportRequest.label": "Demande de support",
+  "admin.sendEmail.templates.supportRequest.description": "Escaladez une conversation de support.",
+  "admin.sendEmail.templates.supportSubscriptionError.label": "Erreur d'abonnement",
+  "admin.sendEmail.templates.supportSubscriptionError.description": "Relance suite à un problème d'abonnement.",
+}
+
+
+
+
+
+
+
+
+

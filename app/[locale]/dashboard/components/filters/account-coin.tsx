@@ -1,9 +1,13 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { SheetTooltip, SheetTooltipContent, SheetTooltipProvider, SheetTooltipTrigger } from "@/components/ui/sheet-tooltip"
+import { useMemo, useState } from "react"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 export interface Account {
@@ -13,134 +17,165 @@ export interface Account {
   initials: string
   color: string
   groupId?: string | null
+  groupName?: string | null
+  balance?: number
+  isPlaceholder?: boolean
 }
 
 interface AccountCoinProps {
   account: Account
+  selectable?: boolean
+  selected?: boolean
+  disabled?: boolean
   isDragging?: boolean
+  dragHandleLabel?: string
+  meta?: string
+  balanceLabel?: string
   onMouseEnter?: () => void
   onMouseLeave?: () => void
   onDragStart?: (e: React.DragEvent, account: Account) => void
   onDragEnd?: () => void
+  onSelectToggle?: (account: Account) => void
   style?: React.CSSProperties
   className?: string
+  draggableEnabled?: boolean
 }
 
 export function AccountCoin({
   account,
+  selectable = false,
+  selected = false,
+  disabled = false,
   isDragging = false,
+  dragHandleLabel,
+  meta,
+  balanceLabel,
   onMouseEnter,
   onMouseLeave,
   onDragStart,
   onDragEnd,
+  onSelectToggle,
   style,
   className,
+  draggableEnabled = true,
 }: AccountCoinProps) {
   const [isAnimating, setIsAnimating] = useState(false)
-  const coinRef = useRef<HTMLDivElement>(null)
 
   const handleDragStart = (e: React.DragEvent) => {
+    if (!draggableEnabled || disabled) return
     setIsAnimating(true)
     onDragStart?.(e, account)
-
-    // Add coin throw animation
-    if (coinRef.current) {
-      coinRef.current.classList.add("coin-throw")
-    }
   }
 
   const handleDragEnd = () => {
     setIsAnimating(false)
     onDragEnd?.()
-
-    // Remove animation classes
-    if (coinRef.current) {
-      coinRef.current.classList.remove("coin-throw")
-      coinRef.current.classList.add("coin-bounce")
-      setTimeout(() => {
-        coinRef.current?.classList.remove("coin-bounce")
-      }, 300)
-    }
   }
 
-  // Generate initials from account number
-  const getInitials = (number: string) => {
-    // Take first 2 characters, or if it's all numbers, use first 2 digits
-    const cleanNumber = number.replace(/[^A-Za-z0-9]/g, '')
-    if (cleanNumber.length >= 2) {
-      return cleanNumber.substring(0, 2).toUpperCase()
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!selectable || disabled) return
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault()
+      onSelectToggle?.(account)
     }
-    return cleanNumber.toUpperCase()
   }
 
   // Generate color based on account number
-  const getColor = (number: string) => {
-    const colors = [
-      "bg-blue-500",
-      "bg-green-500", 
-      "bg-purple-500",
-      "bg-orange-500",
-      "bg-red-500",
-      "bg-teal-500",
-      "bg-indigo-500",
-      "bg-pink-500",
-      "bg-slate-500",
-      "bg-amber-500",
-      "bg-cyan-500"
-    ]
-    const hash = number.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0)
-      return a & a
+  const getColorPalette = (seed: string) => {
+    const hash = seed.split("").reduce((acc, char) => {
+      acc = ((acc << 5) - acc) + char.charCodeAt(0)
+      return acc & acc
     }, 0)
-    return colors[Math.abs(hash) % colors.length]
+    const hue = Math.abs(hash) % 360
+    const base = `hsl(${hue}, 70%, 52%)`
+    return {
+      base,
+      bg: `hsla(${hue}, 70%, 52%, 0.1)`,
+      border: `hsla(${hue}, 70%, 52%, 0.25)`,
+      text: `hsl(${hue}, 55%, 30%)`,
+    }
   }
 
-  const initials = account.initials || getInitials(account.number)
-  const color = account.color || getColor(account.number)
+  const palette = useMemo(() => getColorPalette(account.number), [account.number])
+
+  const content = (
+    <div
+      role={selectable ? "checkbox" : undefined}
+      aria-checked={selectable ? selected : undefined}
+      tabIndex={selectable ? 0 : undefined}
+      onKeyDown={handleKeyDown}
+      draggable={draggableEnabled && !disabled}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={cn(
+        "relative flex min-w-0 w-full max-w-full items-center gap-3 rounded-lg border bg-card px-3 py-2 shadow-sm",
+        "sm:w-full sm:min-w-[120px] sm:max-w-full",
+        "transition-all duration-200 ease-out",
+        draggableEnabled && !disabled && "cursor-grab active:cursor-grabbing",
+        "hover:border-primary/50 hover:shadow-md",
+        isDragging && "opacity-60 ring-2 ring-primary/60 ring-offset-2 ring-offset-background",
+        isAnimating && "transition-none",
+        selectable && "pr-3",
+        disabled && "opacity-60 pointer-events-none",
+        className,
+      )}
+      aria-label={account.number}
+      title={account.number}
+      style={{
+        ...style,
+        backgroundColor: palette.bg,
+        borderColor: palette.border,
+      }}
+    >
+      {selectable && (
+        <Checkbox
+          aria-label={dragHandleLabel || account.number}
+          checked={selected}
+          onCheckedChange={() => onSelectToggle?.(account)}
+          disabled={disabled}
+        />
+      )}
+
+      <div
+        className="h-9 w-0.5 rounded-full"
+        style={{ backgroundColor: palette.base }}
+        aria-hidden
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-center gap-2 min-w-0">
+          <span
+            className="text-sm font-medium leading-5 truncate"
+            style={{ color: palette.text }}
+          >
+            {account.number}
+          </span>
+
+        </div>
+
+        {(meta || balanceLabel) && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            {balanceLabel && <span className="font-medium">{balanceLabel}</span>}
+            {meta && (
+              <>
+                <span aria-hidden>•</span>
+                <span className="truncate">{meta}</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 
   return (
-    <SheetTooltipProvider>
-      <SheetTooltip>
-        <SheetTooltipTrigger asChild>
-          <div
-            ref={coinRef}
-            draggable
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
-            style={style}
-            className={cn(
-              "relative cursor-grab active:cursor-grabbing transition-all duration-300 ease-out",
-              "hover:z-10 hover:scale-105",
-              isDragging && "opacity-50 scale-110 rotate-12",
-              isAnimating && "transition-none",
-              className,
-            )}
-          >
-            <div
-              className={cn(
-                "relative w-12 h-12 rounded-full border-2 border-border/20 shadow-lg",
-                "bg-linear-to-br from-card to-card/80 backdrop-blur-xs",
-                "hover:shadow-xl hover:border-primary/30",
-                "transition-all duration-300 ease-out",
-              )}
-            >
-              <Avatar className="w-full h-full">
-                <AvatarFallback className={cn("text-xs font-semibold text-white", color)}>
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-
-              {/* Shine effect */}
-              <div className="absolute inset-0 rounded-full bg-linear-to-tr from-transparent via-white/10 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300" />
-            </div>
-          </div>
-        </SheetTooltipTrigger>
-        <SheetTooltipContent>
-          <span className="text-sm font-medium">{account.number}</span>
-        </SheetTooltipContent>
-      </SheetTooltip>
-    </SheetTooltipProvider>
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>{content}</TooltipTrigger>
+      <TooltipContent side="top" align="start">
+        {account.number}
+      </TooltipContent>
+    </Tooltip>
   )
 }

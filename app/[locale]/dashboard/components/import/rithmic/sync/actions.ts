@@ -36,3 +36,16 @@ export async function setRithmicSynchronization(synchronization: Partial<Synchro
     },
   })
 }
+
+export async function removeRithmicSynchronization(accountId: string) {
+  console.log('REMOVING RITHMIC SYNCHRONIZATION')
+  const userId = await getUserId()
+
+  await prisma.synchronization.deleteMany({
+    where: {
+      userId,
+      service: "rithmic",
+      accountId,
+    },
+  })
+}

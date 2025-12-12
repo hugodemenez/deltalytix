@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { Link2, FileSpreadsheet, Database } from "lucide-react"
+import { Link2, FileSpreadsheet, Database, Pencil } from "lucide-react"
 import {
   Command,
   CommandDialog,
@@ -31,7 +31,8 @@ interface ImportTypeSelectionProps {
 const categoryIcons: Record<PlatformConfig['category'], React.ReactNode> = {
   'Direct Account Sync': <Link2 className="h-4 w-4" />,
   'Intelligent Import': <FileSpreadsheet className="h-4 w-4" />,
-  'Platform CSV Import': <Database className="h-4 w-4" />
+  'Platform CSV Import': <Database className="h-4 w-4" />,
+  'Manual Entry': <Pencil className="h-4 w-4" />
 }
 
 // Function to check if it's weekend
@@ -59,6 +60,8 @@ export default function ImportTypeSelection({ selectedType, setSelectedType, set
         return t('import.type.category.intelligentImport')
       case 'Platform CSV Import':
         return t('import.type.category.platformCsv')
+      case 'Manual Entry':
+        return t('import.type.category.manualEntry')
       default:
         return category
     }

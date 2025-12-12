@@ -4,21 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
-import { useTradesStore } from '@/store/trades-store'
-import { getTradovateTrades, removeTradovateToken, getTradovateSynchronizations } from '@/app/[locale]/dashboard/components/import/tradovate/actions'
 import { Synchronization } from '@prisma/client'
-
-interface TradovateSyncProgress {
-  accountId: string
-  isSyncing: boolean
-  isComplete: boolean
-  ordersProcessed: number
-  tradesSaved: number
-  error?: string
-  startTime?: number
-  endTime?: number
-}
-
 
 interface TradovateSyncContextType {
   // Core sync management
@@ -27,7 +13,6 @@ interface TradovateSyncContextType {
   
   // State management
   isAutoSyncing: boolean
-  syncProgress: Record<string, TradovateSyncProgress>
   
   // Account management
   accounts: Synchronization[]
@@ -39,55 +24,59 @@ interface TradovateSyncContextType {
   setSyncInterval: (interval: number) => void
   enableAutoSync: boolean
   setEnableAutoSync: (enabled: boolean) => void
-  
-  // Utilities
-  resetSyncProgress: () => void
 }
 
 const TradovateSyncContext = createContext<TradovateSyncContextType | undefined>(undefined)
 
 export function TradovateSyncContextProvider({ children }: { children: ReactNode }) {
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
-  const [syncProgress, setSyncProgress] = useState<Record<string, TradovateSyncProgress>>({})
   const [accounts, setAccounts] = useState<Synchronization[]>([])
   const [syncInterval, setSyncInterval] = useState(15) // 15 minutes default
   const [enableAutoSync, setEnableAutoSync] = useState(false)
 
   const t = useI18n()
   const { refreshTrades } = useData()
-  const trades = useTradesStore((state) => state.trades)
 
-  // Reset sync progress
-  const resetSyncProgress = useCallback(() => {
-    setSyncProgress({})
-  }, [])
+  // Normalize dates returned from API
+  const normalizeSynchronization = useCallback(
+    (sync: any): Synchronization => ({
+      ...sync,
+      lastSyncedAt: sync?.lastSyncedAt ? new Date(sync.lastSyncedAt) : null,
+      tokenExpiresAt: sync?.tokenExpiresAt ? new Date(sync.tokenExpiresAt) : null,
+      dailySyncTime: sync?.dailySyncTime ? new Date(sync.dailySyncTime) : null,
+      createdAt: sync?.createdAt ? new Date(sync.createdAt) : new Date(),
+      updatedAt: sync?.updatedAt ? new Date(sync.updatedAt) : new Date(),
+    }),
+    []
+  )
 
-  // Load accounts from database
+  // Load accounts from API
   const loadAccounts = useCallback(async () => {
     try {
-      const result = await getTradovateSynchronizations()
-      if (!result.error && result.synchronizations) {
-        setAccounts(result.synchronizations)
+      const response = await fetch("/api/tradovate/synchronizations", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch Tradovate synchronizations")
       }
+
+      const result = await response.json()
+      const data = Array.isArray(result.data) ? result.data : []
+      setAccounts(data.map(normalizeSynchronization))
     } catch (error) {
       console.warn('Failed to load Tradovate accounts:', error)
     }
-  }, [])
-
-  // Update sync progress for an account
-  const updateSyncProgress = useCallback((accountId: string, updates: Partial<TradovateSyncProgress>) => {
-    setSyncProgress(prev => ({
-      ...prev,
-      [accountId]: {
-        ...prev[accountId],
-        ...updates
-      }
-    }))
-  }, [])
+  }, [normalizeSynchronization])
 
   const deleteAccount = useCallback(async (accountId: string) => {
     setAccounts(prev => prev.filter(acc => acc.accountId !== accountId))
-    await removeTradovateToken(accountId)
+    await fetch("/api/tradovate/synchronizations", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accountId })
+    })
   }, [])
 
   // Perform sync for a specific account
@@ -103,98 +92,66 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       return { success: false, message: errorMsg }
     }
 
-    // Check if already syncing
-    const currentProgress = syncProgress[accountId]
-    if (currentProgress?.isSyncing) {
-      const errorMsg = `Account ${accountId} is already syncing`
-      return { success: false, message: errorMsg }
-    }
-
     try {
       const runSync = async () => {
-        // Initialize sync progress
-        updateSyncProgress(accountId, {
-          isSyncing: true,
-          isComplete: false,
-          ordersProcessed: 0,
-          tradesSaved: 0,
-          startTime: Date.now(),
-          error: undefined
-        })
-
         console.log('Starting sync for account:', accountId)
         if (!account.token) {
           const errorMsg = `Token for account ${accountId} is expired`
           return errorMsg
         }
 
-        const result = await getTradovateTrades(account.token)
+        const response = await fetch("/api/tradovate/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accountId })
+        })
 
-      // Handle duplicate trades (already imported)
-      if (result.error === "DUPLICATE_TRADES") {
-        const message = t('tradovateSync.multiAccount.alreadyImportedTrades')
+        const payload = await response.json()
+
+        // Handle duplicate trades (already imported)
+        if (payload?.message === "DUPLICATE_TRADES") {
+          const message = t('tradovateSync.multiAccount.alreadyImportedTrades')
+          
+          await refreshTrades()
+          return message
+        }
         
-        updateSyncProgress(accountId, {
-          isSyncing: false,
-          isComplete: true,
-          endTime: Date.now(),
-          error: message
-        })
+        if (!response.ok || !payload?.success) {
+          const errorMsg = payload?.message || `Sync error for account ${accountId}`
 
+          throw new Error(errorMsg)
+        }
+
+        // Track progress
+        const savedCount = payload.savedCount || 0
+        const ordersCount = payload.ordersCount || 0
+
+        console.log(`Sync complete for ${accountId}: ${savedCount} trades saved, ${ordersCount} orders processed`)
+
+        // Show success message
+        let successMessage: string
+        if (savedCount > 0) {
+          successMessage = t('tradovateSync.multiAccount.syncCompleteForAccount', { 
+            savedCount, 
+            ordersCount, 
+            accountId 
+          })
+        } else if (ordersCount > 0) {
+          successMessage = t('tradovateSync.multiAccount.syncCompleteNoNewTradesForAccount', { 
+            ordersCount, 
+            accountId 
+          })
+        } else {
+          successMessage = t('tradovateSync.multiAccount.syncCompleteNoOrdersForAccount', { 
+            accountId 
+          })
+        }
+
+        // Refresh the accounts list to update last sync time
+        await loadAccounts()
         await refreshTrades()
-        return message
-      }
-      
-      if (result.error) {
-        const errorMsg = `Sync error for account ${accountId}: ${result.error}`
 
-        updateSyncProgress(accountId, {
-          isSyncing: false,
-          isComplete: true,
-          endTime: Date.now(),
-          error: result.error
-        })
-        throw new Error(result.error)
-      }
-
-      // Track progress
-      const savedCount = result.savedCount || 0
-      const ordersCount = result.ordersCount || 0
-      
-      updateSyncProgress(accountId, {
-        isSyncing: false,
-        isComplete: true,
-        ordersProcessed: ordersCount,
-        tradesSaved: savedCount,
-        endTime: Date.now()
-      })
-
-      console.log(`Sync complete for ${accountId}: ${savedCount} trades saved, ${ordersCount} orders processed`)
-
-      // Show success message
-      let successMessage: string
-      if (savedCount > 0) {
-        successMessage = t('tradovateSync.multiAccount.syncCompleteForAccount', { 
-          savedCount, 
-          ordersCount, 
-          accountId 
-        })
-      } else if (ordersCount > 0) {
-        successMessage = t('tradovateSync.multiAccount.syncCompleteNoNewTradesForAccount', { 
-          ordersCount, 
-          accountId 
-        })
-      } else {
-        successMessage = t('tradovateSync.multiAccount.syncCompleteNoOrdersForAccount', { 
-          accountId 
-        })
-      }
-
-      // Refresh the accounts list to update last sync time
-      await loadAccounts()
-      await refreshTrades()
-
-      return successMessage
+        return successMessage
       }
 
       const promise = runSync()
@@ -209,17 +166,10 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     } catch (error) {
       const errorMsg = `Sync error for account ${accountId}: ${error instanceof Error ? error.message : t('tradovateSync.sync.unknownError')}`
 
-      updateSyncProgress(accountId, {
-        isSyncing: false,
-        isComplete: true,
-        endTime: Date.now(),
-        error: errorMsg
-      })
-
       console.error('Sync error:', error)
       return { success: false, message: errorMsg }
     }
-  }, [accounts, syncProgress, updateSyncProgress, t, refreshTrades, loadAccounts])
+  }, [accounts, t, refreshTrades, loadAccounts])
 
   // Perform sync for all accounts
   const performSyncForAllAccounts = useCallback(async () => {
@@ -258,6 +208,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       
       // Check each account's last sync time
       for (const account of accounts) {
+        // If we don't have a token, skip this account
         if (!account.token) continue
 
         const lastSyncTime = new Date(account.lastSyncedAt).getTime()
@@ -271,7 +222,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     } catch (error) {
       console.warn('Error during tradovate auto-sync check:', error)
     }
-  }, [enableAutoSync, isAutoSyncing, accounts, syncInterval, performSyncForAccount])
+  }, [enableAutoSync, isAutoSyncing, accounts, syncInterval, performSyncForAccount]);
 
   // Auto-sync checking interval
   useEffect(() => {
@@ -287,7 +238,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
     return () => {
       clearInterval(intervalId)
     }
-  }, [enableAutoSync, checkAndPerformSyncs])
+  }, [enableAutoSync])
 
   // Load accounts on mount
   useEffect(() => {
@@ -302,7 +253,6 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       
       // State management
       isAutoSyncing,
-      syncProgress,
       
       // Account management
       accounts,
@@ -314,9 +264,6 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       setSyncInterval,
       enableAutoSync,
       setEnableAutoSync,
-      
-      // Utilities
-      resetSyncProgress,
     }}>
       {children}
     </TradovateSyncContext.Provider>

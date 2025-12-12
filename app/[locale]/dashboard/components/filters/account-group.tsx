@@ -46,7 +46,6 @@ export function AccountGroup({
   isHiddenGroup = false,
 }: AccountGroupProps) {
   const t = useI18n()
-  const [expandedId, setExpandedId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState(group.name)
 
@@ -58,14 +57,6 @@ export function AccountGroup({
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     onDragOver?.(e)
-  }
-
-  const handleMouseEnter = (accountId: string) => {
-    setExpandedId(accountId)
-  }
-
-  const handleMouseLeave = () => {
-    setExpandedId(null)
   }
 
   const handleRename = () => {
@@ -82,25 +73,6 @@ export function AccountGroup({
       setEditName(group.name)
       setIsEditing(false)
     }
-  }
-
-  const getTransformStyle = (index: number, accountId: string) => {
-    if (expandedId === accountId) {
-      return { transform: "translateX(0px)", zIndex: 20 }
-    }
-
-    if (expandedId) {
-      const expandedIndex = group.accounts.findIndex((acc) => acc.id === expandedId)
-      if (expandedIndex !== -1) {
-        if (index < expandedIndex) {
-          return { transform: "translateX(-8px)", zIndex: 10 }
-        } else if (index > expandedIndex) {
-          return { transform: "translateX(8px)", zIndex: 10 }
-        }
-      }
-    }
-
-    return { transform: "translateX(0px)", zIndex: 1 }
   }
 
   return (
@@ -164,20 +136,14 @@ export function AccountGroup({
             <p className="text-muted-foreground text-sm">{t("filters.dropAccountsHere")}</p>
           </div>
         ) : (
-          <div className="flex items-center gap-1 flex-wrap">
-            {group.accounts.map((account, index) => (
+          <div className="flex flex-wrap gap-3">
+            {group.accounts.map((account) => (
               <div
                 key={account.id}
-                className="shrink-0 transition-transform duration-300 ease-out"
-                style={{
-                  marginLeft: index === 0 ? "0" : "-8px",
-                  ...getTransformStyle(index, account.id),
-                }}
+                className="shrink-0 transition-transform duration-200 ease-out"
               >
                 <AccountCoin
                   account={account}
-                  onMouseEnter={() => handleMouseEnter(account.id)}
-                  onMouseLeave={handleMouseLeave}
                   onDragStart={(e, account) => onDragStart?.(e, account, group.id)}
                   onDragEnd={onDragEnd}
                 />

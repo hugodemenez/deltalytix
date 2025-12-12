@@ -6,18 +6,30 @@ import { Badge } from '@/components/ui/badge'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import Script from 'next/script'
+import { setStaticParamsLocale } from 'next-international/server'
+import { getStaticParams as getLocaleStaticParams } from '@/locales/server'
+
+type ParamsInput =
+  | {
+      slug: string
+      locale: string
+    }
+  | Promise<{
+      slug: string
+      locale: string
+    }>
 
 interface PageProps {
-  params: Promise<{
-    slug: string
-    locale: string
-  }>
+  params: ParamsInput
 }
+
+export const dynamic = 'force-static'
+export const dynamicParams = false
 
 
 // Generate static paths for all posts in all locales
 export async function generateStaticParams() {
-  const locales = ['en', 'fr']
+  const locales = getLocaleStaticParams().map((entry) => entry.locale)
   const paths: Array<{ locale: string; slug: string }> = []
 
   for (const locale of locales) {
@@ -33,7 +45,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   try {
-    const resolvedParams = await params
+    const resolvedParams = await Promise.resolve(params)
     if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
       return {
         title: 'Not Found',
@@ -42,6 +54,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
 
     const { slug, locale } = resolvedParams
+    setStaticParamsLocale(locale)
     
     try {
       const post = await getPost(slug, locale)
@@ -107,12 +120,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function Page({ params }: PageProps) {
   try {
-    const resolvedParams = await params
+    const resolvedParams = await Promise.resolve(params)
     if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
       notFound()
     }
 
     const { slug, locale } = resolvedParams
+    setStaticParamsLocale(locale)
     
     try {
       const post = await getPost(slug, locale)
@@ -216,4 +230,4 @@ export default async function Page({ params }: PageProps) {
     console.error('Error resolving params:', paramError);
     notFound()
   }
-} 
+}
