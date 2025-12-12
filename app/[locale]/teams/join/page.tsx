@@ -84,7 +84,7 @@ export default function TeamJoinPage() {
         toast.success(t('teams.join.success'))
         // Redirect to team dashboard after successful join
         setTimeout(() => {
-          window.location.href = `/team/dashboard/${invitation.teamId}`
+          window.location.href = `/teams/dashboard/${invitation.teamId}`
         }, 1500)
       } else {
         toast.error(result.error || t('teams.join.error'))

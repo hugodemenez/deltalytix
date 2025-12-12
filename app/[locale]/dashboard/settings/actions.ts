@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import auth from '@/locales/en/auth'
 import { createClient } from '@/server/auth'
 import { revalidatePath } from 'next/cache'
+import { Resend } from 'resend'
+import { render } from '@react-email/render'
+import TeamInvitationEmail from '@/components/emails/team-invitation'
 
 export async function createTeam(name: string) {
   try {
@@ -589,8 +592,6 @@ export async function addTraderToTeam(teamId: string, traderEmail: string) {
 }
 
 export async function sendTeamInvitation(teamId: string, traderEmail: string) {
-  console.log('Debug - Team ID:', teamId)
-  console.log('Debug - Trader Email:', traderEmail)
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -636,28 +637,83 @@ export async function sendTeamInvitation(teamId: string, traderEmail: string) {
       throw new Error('An invitation has already been sent to this email')
     }
 
-    // Send invitation via API
-    const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/team/invite`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        teamId,
-        email: traderEmail,
-        inviterId: user.id,
-      }),
+    // Check if user is already a trader in this team
+    const existingUser = await prisma.user.findUnique({
+      where: { email: traderEmail },
     })
 
-    const result = await response.json()
+    if (existingUser && team.traderIds.includes(existingUser.id)) {
+      throw new Error('User is already a member of this team')
+    }
 
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to send invitation')
+    // Create or update invitation
+    const invitation = await prisma.teamInvitation.upsert({
+      where: {
+        teamId_email: {
+          teamId,
+          email: traderEmail,
+        }
+      },
+      update: {
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        invitedBy: user.id,
+      },
+      create: {
+        teamId,
+        email: traderEmail,
+        invitedBy: user.id,
+        status: 'PENDING',
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      },
+    })
+
+    // Get inviter information
+    const inviter = await prisma.user.findUnique({
+      where: { id: user.id },
+    })
+
+    // Generate join URL
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+      (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://deltalytix.app')
+    const joinUrl = `${baseUrl}/team/join?invitation=${invitation.id}`
+
+    // Render email
+    const emailHtml = await render(
+      TeamInvitationEmail({
+        email: traderEmail,
+        teamName: team.name,
+        inviterName: inviter?.email?.split('@')[0] || 'trader',
+        inviterEmail: inviter?.email || 'trader@example.com',
+        joinUrl,
+        language: existingUser?.language || 'en'
+      })
+    )
+
+    // Send email
+    if (!process.env.RESEND_API_KEY) {
+      throw new Error('RESEND_API_KEY is not configured')
+    }
+
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const { error: emailError } = await resend.emails.send({
+      from: 'Deltalytix Team <team@eu.updates.deltalytix.app>',
+      to: traderEmail,
+      subject: existingUser?.language === 'fr' 
+        ? `Invitation à rejoindre ${team.name} sur Deltalytix`
+        : `Invitation to join ${team.name} on Deltalytix`,
+      html: emailHtml,
+      replyTo: 'hugo.demenez@deltalytix.app',
+    })
+
+    if (emailError) {
+      console.error('Error sending invitation email:', emailError)
+      throw new Error('Failed to send invitation email')
     }
 
     revalidatePath('/dashboard/settings')
     revalidatePath('/teams/dashboard')
-    return { success: true, invitationId: result.invitationId }
+    return { success: true, invitationId: invitation.id }
   } catch (error) {
     console.error('Error sending team invitation:', error)
     return { success: false, error: error instanceof Error ? error.message : 'Failed to send invitation' }
