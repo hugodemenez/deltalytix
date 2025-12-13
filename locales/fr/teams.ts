@@ -155,7 +155,7 @@ export default {
   // Équipe dashboard
   'teams.dashboard.view': 'Voir',
   'teams.dashboard.title': 'Tableau de Bord équipe',
-  'teams.dashboard.description': 'Voir les données de trading pour tous les traders de ce équipe',
+  'teams.dashboard.description': 'Voir les données de trading pour tous les traders de cette équipe',
   
   // Trader management
   'teams.traders': 'Traders',
@@ -197,31 +197,31 @@ export default {
   'teams.invitations.wrongEmail': 'Cette invitation a été envoyée à une adresse email différente',
   
   // Join équipe
-  'teams.join.success': 'Équipe rejoint avec succès',
-  'teams.join.error': 'Échec de la jonction au équipe',
+  'teams.join.success': 'Équipe rejointe avec succès',
+  'teams.join.error': 'Échec en rejoignant l\'équipe',
   'teams.join.invalidInvitation': 'Invitation invalide',
   'teams.join.expiredInvitation': 'L\'invitation a expiré',
-  'teams.join.alreadyMember': 'Vous êtes déjà membre de ce équipe',
+  'teams.join.alreadyMember': 'Vous êtes déjà membre de cette équipe',
   
   // Équipe join page
-  'teams.join.title': 'Invitation Équipe',
-  'teams.join.subtitle': 'Vous avez été invité à rejoindre une équipe équipe',
+  'teams.join.title': 'Invitation d\'équipe',
+  'teams.join.subtitle': 'Vous avez été invité à rejoindre une équipe',
   'teams.join.loading': 'Chargement des détails de l\'invitation...',
   'teams.join.invalid.title': 'Invitation invalide',
   'teams.join.invalid.description': 'L\'invitation que vous recherchez n\'existe pas ou a été supprimée.',
   'teams.join.notFound.title': 'Invitation non trouvée',
   'teams.join.notFound.description': 'L\'invitation que vous recherchez n\'existe pas ou a été supprimée.',
-  'teams.join.goToManage': 'Aller à la gestion du équipe',
-  'teams.join.details.title': 'Détails de l\'invitation équipe',
+  'teams.join.goToManage': 'Aller à la gestion de l\'équipe',
+  'teams.join.details.title': 'Détails de l\'invitation d\'équipe',
   'teams.join.status.title': 'Statut de l\'invitation',
   'teams.join.status.ready': 'Prêt à rejoindre',
   'teams.join.status.expired': 'L\'invitation a expiré',
   'teams.join.status.accepted': 'Déjà acceptée',
   'teams.join.status.unknown': 'Statut inconnu',
-  'teams.join.details.invitedEmail': 'Email invité',
+  'teams.join.details.invitedEmail': 'Email de l\'invité',
   'teams.join.details.invitedOn': 'Invité le',
   'teams.join.details.expiresOn': 'Expire le',
-  'teams.join.action.description': 'Cliquez sur le bouton ci-dessous pour rejoindre cette équipe équipe. Vous aurez accès aux analyses partagées et aux fonctionnalités d\'équipe.',
+  'teams.join.action.description': 'Cliquez sur le bouton ci-dessous pour rejoindre cette équipe. Vous aurez accès aux analyses partagées et aux fonctionnalités d\'équipe.',
   'teams.join.action.button': 'Rejoindre l\'équipe',
   'teams.join.action.joining': 'Rejoindre l\'équipe...',
   'teams.join.action.alreadyAccepted': 'Vous avez déjà accepté cette invitation',
@@ -264,11 +264,11 @@ export default {
   'teams.equity.exportError': 'Échec de l\'export des trades',
   
   // Équipe Management Component
-  'teams.management.createTeam': 'Créer un nouveau équipe',
+  'teams.management.createTeam': 'Créer une nouvelle équipe',
   'teams.management.createTeamDescription': 'Ajouter un autre équipe à votre portefeuille',
   'teams.management.createFirstTeam': 'Créer votre premier équipe',
   'teams.management.createTeamTitle': 'Créer une équipe',
-  'teams.management.createTeamDialogDescription': 'Créez un nouveau équipe pour gérer votre équipe de trading. Chaque équipe nécessite un abonnement.',
+  'teams.management.createTeamDialogDescription': 'Créez une nouvelle équipe pour gérer votre équipe de trading. Chaque équipe nécessite un abonnement.',
   'teams.management.teamName': 'Nom de l\'équipe',
   'teams.management.enterTeamName': 'Entrez le nom de l\'équipe',
   'teams.management.subscriptionRequired': 'Abonnement requis',
@@ -282,7 +282,7 @@ export default {
   'teams.management.deleteTeam': 'Supprimer l\'équipe',
   'teams.management.deleteConfirm': 'Êtes-vous sûr de vouloir supprimer "{name}" ? Cette action ne peut pas être annulée et supprimera définitivement l\'équipe et toutes les données associées.',
   'teams.management.leave': 'Quitter',
-  'teams.management.leaveConfirm': 'Êtes-vous sûr de vouloir quitter ce équipe ? Vous perdrez l\'accès à toutes les données de l\'équipe.',
+  'teams.management.leaveConfirm': 'Êtes-vous sûr de vouloir quitter cette équipe ? Vous perdrez l\'accès à toutes les données de l\'équipe.',
   'teams.management.manageTitle': 'Gérer - {name}',
   'teams.management.manageDescription': 'Gérez les paramètres de votre équipe, renommez, traders et managers',
   'teams.management.rename': 'Renommer',
@@ -292,13 +292,13 @@ export default {
   'teams.management.pending': 'En attente',
   'teams.management.active': 'Actif',
   'teams.management.removeTrader': 'Retirer le trader',
-  'teams.management.removeTraderConfirm': 'Êtes-vous sûr de vouloir retirer "{email}" de ce équipe ? Ils perdront l\'accès aux données du équipe.',
+  'teams.management.removeTraderConfirm': 'Êtes-vous sûr de vouloir retirer "{email}" de cette équipe ? Ils perdront l\'accès aux données de l\'équipe.',
   'teams.management.removeTraderAction': 'Retirer le trader',
   'teams.management.removeManager': 'Retirer le manager',
-  'teams.management.removeManagerConfirm': 'Êtes-vous sûr de vouloir retirer "{email}" de ce équipe ? Ils perdront l\'accès de gestion à ce équipe.',
+  'teams.management.removeManagerConfirm': 'Êtes-vous sûr de vouloir retirer "{email}" de cette équipe ? Ils perdront l\'accès de gestion à cette équipe.',
   'teams.management.removeManagerAction': 'Retirer le manager',
   'teams.management.cancelInvitation': 'Annuler l\'invitation',
-  'teams.management.cancelInvitationConfirm': 'Êtes-vous sûr de vouloir annuler l\'invitation pour "{email}" ? Ils ne pourront plus rejoindre ce équipe avec cette invitation.',
+  'teams.management.cancelInvitationConfirm': 'Êtes-vous sûr de vouloir annuler l\'invitation pour "{email}" ? Ils ne pourront plus rejoindre cette équipe avec cette invitation.',
   'teams.management.cancelInvitationAction': 'Annuler l\'invitation',
   'teams.management.noPendingInvitations': 'Aucune invitation en attente.',
   'teams.management.addNewTeam': 'Ajouter un autre équipe à votre portefeuille',
@@ -309,8 +309,8 @@ export default {
   'teams.management.teamReporting': 'Rapports',
   
   // Équipe Management Component Customization
-  'teams.management.component.title': 'Gestion des équipe',
-  'teams.management.component.description': 'Gérez vos équipe, équipes et contrôles d\'accès',
+  'teams.management.component.title': 'Gestion des équipes',
+  'teams.management.component.description': 'Gérez vos équipes, traders et managers',
   'teams.management.component.createButtonText': 'Créer une équipe',
   'teams.management.component.joinButtonText': 'Rejoindre une équipe',
   'teams.management.component.emptyStateMessage': 'Aucune équipe trouvée',
@@ -318,6 +318,6 @@ export default {
     'Collaboration d\'équipe',
     'Analyses partagées', 
     'Contrôles d\'accès des managers',
-    'Rapports équipe'
+    'Rapports d\'équipe'
   ],
 } 
