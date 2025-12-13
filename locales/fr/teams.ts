@@ -309,10 +309,10 @@ export default {
   'teams.management.teamReporting': 'Rapports',
   
   // Équipe Management Component Customization
-  'teams.management.component.title': 'Gestion des Équipe',
+  'teams.management.component.title': 'Gestion des équipe',
   'teams.management.component.description': 'Gérez vos équipe, équipes et contrôles d\'accès',
-  'teams.management.component.createButtonText': 'Créer un Équipe',
-  'teams.management.component.joinButtonText': 'Rejoindre un Équipe',
+  'teams.management.component.createButtonText': 'Créer un équipe',
+  'teams.management.component.joinButtonText': 'Rejoindre un équipe',
   'teams.management.component.emptyStateMessage': 'Aucun équipe trouvé',
   'teams.management.component.subscriptionFeatures': [
     'Collaboration d\'équipe',

@@ -676,7 +676,7 @@ export async function sendTeamInvitation(teamId: string, traderEmail: string) {
     // Generate join URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
       (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://deltalytix.app')
-    const joinUrl = `${baseUrl}/team/join?invitation=${invitation.id}`
+    const joinUrl = `${baseUrl}/teams/join?invitation=${invitation.id}`
 
     // Render email
     const emailHtml = await render(

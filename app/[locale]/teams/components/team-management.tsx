@@ -101,7 +101,7 @@ export function TeamManagement({
   useEffect(() => {
     const loadInitialData = async () => {
       // If we are not yet on a team dashboard, we try to redirect to the first team
-      if (!pathname.endsWith('/team/dashboard')) {
+      if (!pathname.endsWith('/teams/dashboard')) {
         return;
       }
       // Get user's teams
@@ -679,7 +679,7 @@ export function TeamManagement({
           const isJoined = userTeams.joinedTeams.some(b => b.id === team.id)
           const isManaged = managedTeams.some(b => b.id === team.id)
           const access = team.userAccess || (isOwner ? 'admin' : 'viewer')
-          const isActive = pathname.includes(`/team/dashboard/${team.id}`)
+          const isActive = pathname.includes(`/teams/dashboard/${team.id}`)
 
           return (
             <Card key={team.id} className={cn(
@@ -728,39 +728,43 @@ export function TeamManagement({
                 <Separator />
 
                 <div className="flex gap-2 flex-wrap">
+                  {/* Manage button - only for owners and admins */}
                   {(isOwner || access === 'admin') && (
-                    <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs"
-                        onClick={async () => {
-                          setSelectedTeam(team)
-                          setRenameTeamName(team.name)
-                          setManageDialogOpen(true)
-                          // Load pending invitations when dialog opens
-                          setTimeout(async () => {
-                            await loadPendingInvitations()
-                          }, 100)
-                        }}
-                      >
-                        <Settings className="h-3 w-3 mr-1" />
-                        {t('teams.management.manage')}
-                      </Button>
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs"
-                      >
-                        <Link href={`/teams/dashboard/${team.id}`} className="flex items-center">
-                          <Eye className="h-3 w-3 mr-1" />
-                          {t('teams.dashboard.view')}
-                        </Link>
-                      </Button>
-                    </>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs"
+                      onClick={async () => {
+                        setSelectedTeam(team)
+                        setRenameTeamName(team.name)
+                        setManageDialogOpen(true)
+                        // Load pending invitations when dialog opens
+                        setTimeout(async () => {
+                          await loadPendingInvitations()
+                        }, 100)
+                      }}
+                    >
+                      <Settings className="h-3 w-3 mr-1" />
+                      {t('teams.management.manage')}
+                    </Button>
                   )}
 
+                  {/* View button - for all team members (owners, admins, regular members, managed teams) */}
+                  {(isOwner || isJoined || isManaged) && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs"
+                    >
+                      <Link href={`/teams/dashboard/${team.id}`} className="flex items-center">
+                        <Eye className="h-3 w-3 mr-1" />
+                        {t('teams.dashboard.view')}
+                      </Link>
+                    </Button>
+                  )}
+
+                  {/* Delete button - only for owners */}
                   {isOwner && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
@@ -789,6 +793,7 @@ export function TeamManagement({
                     </AlertDialog>
                   )}
 
+                  {/* Leave button - for joined/managed teams that are not owners */}
                   {(isJoined || isManaged) && !isOwner && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

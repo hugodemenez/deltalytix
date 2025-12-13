@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     })
 
     // Generate join URL
-    const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL}/team/join?invitation=${invitation.id}`
+    const joinUrl = `${process.env.NEXT_PUBLIC_APP_URL}/teams/join?invitation=${invitation.id}`
 
     // Render email
     const emailHtml = await render(
