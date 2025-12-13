@@ -3,6 +3,9 @@ import { createClient, getWebsiteURL } from "@/server/auth";
 import { stripe } from "@/actions/stripe";
 
 async function handleTeamCheckoutSession(user: any, websiteURL: string, teamName?: string, currency: 'USD' | 'EUR' = 'USD') {
+    if (!stripe) {
+        return NextResponse.json({ message: "Stripe is not configured" }, { status: 503 });
+    }
     // First, try to find existing customer
     const existingCustomers = await stripe.customers.list({
         email: user.email,
@@ -114,6 +117,10 @@ export async function POST(req: Request) {
     const body = await req.formData();
     const websiteURL = await getWebsiteURL();
 
+    if (!stripe) {
+        return NextResponse.json({ message: "Stripe is not configured" }, { status: 503 });
+    }
+
     // Only use currency from form data, default to USD if not provided
     const formCurrency = body.get('currency') as string | null;
     const currency = formCurrency ? (formCurrency.toUpperCase() as 'USD' | 'EUR') : 'USD';
@@ -139,6 +146,10 @@ export async function GET(req: Request) {
     const teamName = searchParams.get('teamName');
     // Default to USD for GET requests
     const currency: 'USD' | 'EUR' = 'USD';
+
+    if (!stripe) {
+        return NextResponse.json({ message: "Stripe is not configured" }, { status: 503 });
+    }
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();

@@ -7,6 +7,9 @@ import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
 
 async function handleCheckoutSession(lookup_key: string, user: any, websiteURL: string, referral?: string | null, promo_code?: string | null) {
+    if (!stripe) {
+        return NextResponse.json({ message: "Stripe is not configured" }, { status: 503 });
+    }
     const subscriptionDetails = await getSubscriptionDetails();
     
     // If referral code is provided, validate it (but don't block checkout if invalid)
@@ -137,6 +140,10 @@ export async function POST(req: Request) {
     const body = await req.formData();
     const websiteURL = await getWebsiteURL();
 
+    if (!stripe) {
+        return NextResponse.json({ message: "Stripe is not configured" }, { status: 503 });
+    }
+
     if (!body.get('lookup_key')) {
         return NextResponse.json({ message: "Lookup key is required" }, { status: 400 });
     }
@@ -166,6 +173,10 @@ export async function GET(req: Request) {
     const lookup_key = searchParams.get('lookup_key');
     const referral = searchParams.get('referral');
     const promo_code = searchParams.get('promo_code');
+
+    if (!stripe) {
+        return NextResponse.json({ message: "Stripe is not configured" }, { status: 503 });
+    }
 
     if (!lookup_key) {
         return NextResponse.json({ message: "Lookup key is required" }, { status: 400 });

@@ -35,6 +35,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(req: Request) {
+  if (!stripe) {
+    return NextResponse.json({ message: 'Stripe is not configured' }, { status: 503 })
+  }
   let event: Stripe.Event | undefined;
   try {
     event = stripe.webhooks.constructEvent(

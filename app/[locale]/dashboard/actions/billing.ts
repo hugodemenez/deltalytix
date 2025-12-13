@@ -60,10 +60,43 @@ export async function getSubscriptionData() {
   console.debug('getSubscriptionData')
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user?.email) {
+    return null
+  }
+
+  // Short-circuit: treat every user as an active Pro subscriber unless billing is explicitly enabled
+  const billingEnabled = process.env.ENABLE_STRIPE_BILLING === 'true'
+  if (!billingEnabled) {
+    const now = Math.floor(Date.now() / 1000)
+
+    return {
+      id: 'pro-local',
+      status: 'active',
+      current_period_end: now + 10 * 365 * 24 * 60 * 60, // 10-year horizon for UI
+      current_period_start: now,
+      created: now,
+      cancel_at_period_end: false,
+      cancel_at: null,
+      canceled_at: null,
+      trial_end: null,
+      trial_start: null,
+      plan: {
+        id: 'pro-local-plan',
+        name: 'Plus',
+        amount: 0,
+        interval: 'lifetime',
+      },
+      promotion: undefined,
+      invoices: [],
+    }
+  }
+
+  if (!stripe) {
+    throw new Error('Stripe is not configured (set STRIPE_SECRET_KEY or disable billing).')
+  }
+
   try {
-    // Get the current user
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user?.email) throw new Error('User not found')
 
     // FIRST: Check local database for active lifetime subscription (highest priority)
     const localSubscription = await prisma.subscription.findUnique({
