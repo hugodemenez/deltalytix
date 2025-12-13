@@ -25,8 +25,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getI18n } from "@/locales/server";
 import { cacheLife } from "next/cache";
 
-const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || "default_owner";
-const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || "default_repo";
+const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || "itskavin";
+const REPO_NAME = process.env.NEXT_PUBLIC_REPO_NAME || "deltalytix";
 
 interface GithubStats {
   repository: {

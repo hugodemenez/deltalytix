@@ -78,8 +78,8 @@ export default {
   
   // CTA sections
   'teams.cta.demo.title': 'See your trading data like never before',
-  'teams.cta.demo.description': 'Book a 15-minute demo. See your actual data analyzed in real-time. No sales pitch.',
-  'teams.cta.demo.button': 'Book Free Demo',
+  'teams.cta.demo.description': 'Book for Free. See your actual data analyzed in real-time. No sales pitch.',
+  'teams.cta.demo.button': 'Book Free',
   
   'teams.cta.contact.title': 'Questions? We Have Answers',
   'teams.cta.contact.description': 'Talk to someone who actually understands trading analytics.',

@@ -241,12 +241,12 @@ export default function Component() {
             title: t('landing.navbar.developers'),
             children: [
                 {
-                    path: "https://github.com/hugodemenez/deltalytix",
+                    path: "https://github.com/itskavin/deltalytix",
                     title: t('landing.navbar.openSource'),
                     icon: <SiGithub className="h-4 w-4" />,
                 },
                 {
-                    path: "https://www.youtube.com/@hugodemenez",
+                    path: "https://www.youtube.com/@bykavin",
                     title: "YouTube",
                     icon: <FileText className="h-4 w-4" />,
                 },
@@ -321,10 +321,7 @@ export default function Component() {
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.pricing')}</NavigationMenuTrigger>
                                 <NavigationMenuContent onMouseEnter={() => setHoveredItem('pricing')} onMouseLeave={() => setHoveredItem(null)}>
                                     <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] list-none">
-                                        <ListItem href="/authentication" title={t('pricing.basic.name')} icon={<Sun className="h-4 w-4" />}>
-                                            {t('pricing.basic.description')}
-                                        </ListItem>
-                                        <ListItem href="/pricing" title={t('pricing.plus.name')} icon={<Crown className="h-4 w-4" />}>
+                                        <ListItem href="/pricing" title={t('pricing.free.name')} icon={<Crown className="h-4 w-4" />}>
                                                 {t('pricing.plus.description')}
                                         </ListItem>
                                     </ul>
@@ -347,10 +344,10 @@ export default function Component() {
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.developers')}</NavigationMenuTrigger>
                                 <NavigationMenuContent onMouseEnter={() => setHoveredItem('developers')} onMouseLeave={() => setHoveredItem(null)}>
                                     <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 lg:w-[600px] list-none">
-                                        <ListItem href="https://github.com/hugodemenez/deltalytix" title={t('landing.navbar.openSource')} icon={<SiGithub className="h-4 w-4" />}>
+                                        <ListItem href="https://github.com/itskavin/deltalytix" title={t('landing.navbar.openSource')} icon={<SiGithub className="h-4 w-4" />}>
                                             {t('landing.navbar.openSourceDescription')}
                                         </ListItem>
-                                        <ListItem href="https://www.youtube.com/@hugodemenez" title="YouTube" icon={<FileText className="h-4 w-4" />}>
+                                        <ListItem href="https://www.youtube.com/@bykavin" title="YouTube" icon={<FileText className="h-4 w-4" />}>
                                             {t('landing.navbar.youtubeDescription')}
                                         </ListItem>
                                         <ListItem href={process.env.NEXT_PUBLIC_DISCORD_INVITATION || ''} title={t('landing.navbar.joinCommunity')} icon={<Users className="h-4 w-4" />}>
