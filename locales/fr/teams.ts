@@ -142,8 +142,8 @@ export default {
   'teams.cta.createAccount.subtext': 'Onboarding sur mesure • Installation en 5 minutes • Pas de contrat long terme',
   
   // Équipe management
-  'teams.rename': 'Renommer le équipe',
-  'teams.rename.title': 'Renommer le équipe',
+  'teams.rename': 'Renommer l\'équipe',
+  'teams.rename.title': 'Renommer l\'équipe',
   'teams.rename.description': 'Entrez un nouveau nom pour votre équipe',
   'teams.rename.placeholder': 'Entrez le nouveau nom de votre équipe',
   'teams.rename.success': 'Équipe renommé avec succès',
@@ -222,8 +222,8 @@ export default {
   'teams.join.details.invitedOn': 'Invité le',
   'teams.join.details.expiresOn': 'Expire le',
   'teams.join.action.description': 'Cliquez sur le bouton ci-dessous pour rejoindre cette équipe équipe. Vous aurez accès aux analyses partagées et aux fonctionnalités d\'équipe.',
-  'teams.join.action.button': 'Rejoindre le équipe',
-  'teams.join.action.joining': 'Rejoindre le équipe...',
+  'teams.join.action.button': 'Rejoindre l\'équipe',
+  'teams.join.action.joining': 'Rejoindre l\'équipe...',
   'teams.join.action.alreadyAccepted': 'Vous avez déjà accepté cette invitation',
   'teams.join.action.expired': 'Cette invitation a expiré',
   'teams.join.action.invalid': 'Cette invitation n\'est plus valide',
