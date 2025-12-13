@@ -284,7 +284,7 @@ export default {
   'teams.management.leave': 'Quitter',
   'teams.management.leaveConfirm': 'Êtes-vous sûr de vouloir quitter cette équipe ? Vous perdrez l\'accès à toutes les données de l\'équipe.',
   'teams.management.manageTitle': 'Gérer - {name}',
-  'teams.management.manageDescription': 'Gérez les paramètres de votre équipe, renommez, traders et managers',
+  'teams.management.manageDescription': 'Gérez les paramètres de votre équipe, renommez, ajoutez des traders et des managers',
   'teams.management.rename': 'Renommer',
   'teams.management.close': 'Fermer',
   'teams.management.created': 'Créé',

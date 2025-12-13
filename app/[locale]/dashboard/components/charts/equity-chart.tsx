@@ -107,7 +107,7 @@ function createAccountColorMap(accountNumbers: string[]): Map<string, string> {
     accountNumbers.map((accountNumber) => [
       accountNumber,
       generateAccountColor(accountNumber),
-    ]),
+    ])
   );
 }
 
@@ -152,7 +152,7 @@ const renderDot = (props: any) => {
   if (dataKey === "equity") {
     // Check for reset indicators
     const resetAccounts = Object.keys(payload).filter(
-      (key) => key.startsWith("reset_") && payload[key],
+      (key) => key.startsWith("reset_") && payload[key]
     );
     if (resetAccounts.length > 0) {
       return (
@@ -170,7 +170,7 @@ const renderDot = (props: any) => {
 
     // Check for payout indicators
     const payoutAccounts = Object.keys(payload).filter(
-      (key) => key.startsWith("payout_") && payload[key],
+      (key) => key.startsWith("payout_") && payload[key]
     );
     if (payoutAccounts.length > 0) {
       const accountNumber = payoutAccounts[0].replace("payout_", "");
@@ -410,7 +410,7 @@ const OptimizedTooltip = React.memo(
         </div>
       </div>
     );
-  },
+  }
 );
 OptimizedTooltip.displayName = "OptimizedTooltip";
 
@@ -560,7 +560,7 @@ const AccountsLegend = React.memo(
                       </div>
                     </div>
                   </div>
-                ),
+                )
               )}
             {accountsWithEquity.length > 20 && (
               <div className="flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground h-[50px]">
@@ -571,13 +571,13 @@ const AccountsLegend = React.memo(
         </div>
       </div>
     );
-  },
+  }
 );
 AccountsLegend.displayName = "AccountsLegend";
 
 export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const pathname = usePathname();
-  const isTeamView = pathname.includes('team');
+  const isTeamView = pathname.includes("teams");
   const {
     instruments,
     accountNumbers,
@@ -596,13 +596,17 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const timezone = useUserStore((state) => state.timezone);
   const {
     config,
-    setShowIndividual,
+    setShowIndividual: setShowIndividualConfig,
     setSelectedAccountsToDisplay,
     toggleAccountSelection,
   } = useEquityChartStore();
-  const showIndividual = config.showIndividual;
+  let showIndividual = config.showIndividual;
+  // If isTeamView, set showIndividual to false
+  if (isTeamView) {
+    showIndividual = false;
+  }
   const [hoveredData, setHoveredData] = React.useState<ChartDataPoint | null>(
-    null,
+    null
   );
   const [chartData, setChartData] = React.useState<ChartDataPoint[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -619,7 +623,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
         timeoutId = setTimeout(() => setHoveredData(data), 16); // ~60fps
       };
     }, []),
-    [],
+    []
   );
   const yAxisRef = React.useRef<any>(null);
   const t = useI18n();
@@ -631,7 +635,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     (accountNumber: string) => {
       toggleAccountSelection(accountNumber);
     },
-    [toggleAccountSelection],
+    [toggleAccountSelection]
   );
 
   // Initialize selected accounts if empty OR validate existing selections
@@ -639,17 +643,24 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     if (availableAccountNumbers.length === 0) return;
 
     // Filter to only valid accounts that actually exist
-    const validSelection = config.selectedAccountsToDisplay?.filter(acc => 
-      availableAccountNumbers.includes(acc)
-    ) || [];
-    
+    const validSelection =
+      config.selectedAccountsToDisplay?.filter((acc) =>
+        availableAccountNumbers.includes(acc)
+      ) || [];
+
     // Reset if empty OR if none of the selected accounts are valid
     if (validSelection.length === 0) {
-      console.log('[EquityChart] Resetting account selection to all available accounts');
+      console.log(
+        "[EquityChart] Resetting account selection to all available accounts"
+      );
       setSelectedAccountsToDisplay(availableAccountNumbers);
-    } else if (validSelection.length !== config.selectedAccountsToDisplay?.length) {
+    } else if (
+      validSelection.length !== config.selectedAccountsToDisplay?.length
+    ) {
       // Some accounts were invalid, update to only valid ones
-      console.log('[EquityChart] Updating account selection to remove invalid accounts');
+      console.log(
+        "[EquityChart] Updating account selection to remove invalid accounts"
+      );
       setSelectedAccountsToDisplay(validSelection);
     }
   }, [
@@ -660,35 +671,39 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
   const selectedAccounts = React.useMemo(
     () => new Set(config.selectedAccountsToDisplay || []),
-    [config.selectedAccountsToDisplay],
+    [config.selectedAccountsToDisplay]
   );
 
   const accountColorMap = React.useMemo(
     () => createAccountColorMap(availableAccountNumbers),
-    [availableAccountNumbers],
+    [availableAccountNumbers]
   );
 
   // Client-side computation for shared view
   const computeClientSideData = React.useCallback(() => {
     if (!formattedTrades || formattedTrades.length === 0) {
-      console.log('[EquityChart] No formatted trades available');
+      console.log("[EquityChart] No formatted trades available");
       return {
         chartData: [],
         accountNumbers: [],
       };
     }
 
-    console.log('[EquityChart] Computing client-side data for', formattedTrades.length, 'trades');
+    console.log(
+      "[EquityChart] Computing client-side data for",
+      formattedTrades.length,
+      "trades"
+    );
 
     // Sort trades by date
     const sortedTrades = [...formattedTrades].sort(
       (a, b) =>
-        parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime(),
+        parseISO(a.entryDate).getTime() - parseISO(b.entryDate).getTime()
     );
 
     // Calculate date boundaries
     const dates = sortedTrades.map((t) =>
-      formatInTimeZone(new Date(t.entryDate), timezone, "yyyy-MM-dd"),
+      formatInTimeZone(new Date(t.entryDate), timezone, "yyyy-MM-dd")
     );
     const startDate = dates.reduce((min, date) => (date < min ? date : min));
     const endDate = dates.reduce((max, date) => (date > max ? date : max));
@@ -705,7 +720,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       const dateKey = formatInTimeZone(
         new Date(trade.entryDate),
         timezone,
-        "yyyy-MM-dd",
+        "yyyy-MM-dd"
       );
       if (!tradesMap.has(dateKey)) {
         tradesMap.set(dateKey, []);
@@ -734,11 +749,15 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
     // Get unique account numbers
     const uniqueAccountNumbers = Array.from(
-      new Set(sortedTrades.map((trade) => trade.accountNumber)),
+      new Set(sortedTrades.map((trade) => trade.accountNumber))
     );
 
-    console.log('[EquityChart] Computed chart data:', chartData.length, 'points');
-    console.log('[EquityChart] Sample data:', chartData.slice(0, 3));
+    console.log(
+      "[EquityChart] Computed chart data:",
+      chartData.length,
+      "points"
+    );
+    console.log("[EquityChart] Sample data:", chartData.slice(0, 3));
 
     return {
       chartData,
@@ -750,16 +769,23 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   React.useEffect(() => {
     // Use client-side computation for shared view
     if (isSharedView || isTeamView) {
-      console.log('[EquityChart] Using client-side computation (shared view)');
+      console.log("[EquityChart] Using client-side computation (shared view)");
       setIsLoading(true);
       try {
         const { chartData: computedData, accountNumbers: accNumbers } =
           computeClientSideData();
-        console.log('[EquityChart] Setting chart data:', computedData.length, 'points');
+        console.log(
+          "[EquityChart] Setting chart data:",
+          computedData.length,
+          "points"
+        );
         setChartData(computedData);
         setAvailableAccountNumbers(accNumbers);
       } catch (error) {
-        console.error("Failed to compute client-side equity chart data:", error);
+        console.error(
+          "Failed to compute client-side equity chart data:",
+          error
+        );
         setChartData([]);
         setAvailableAccountNumbers([]);
       } finally {
@@ -768,19 +794,20 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       return;
     }
 
-    console.log('[EquityChart] Fetching server-side data');
+    console.log("[EquityChart] Fetching server-side data");
     const fetchChartData = async () => {
       setIsLoading(true);
       try {
         const result = await getEquityChartDataAction({
           instruments,
           accountNumbers,
-          dateRange: dateRange && dateRange.from && dateRange.to
-            ? {
-                from: dateRange.from.toISOString(),
-                to: dateRange.to.toISOString(),
-              }
-            : undefined,
+          dateRange:
+            dateRange && dateRange.from && dateRange.to
+              ? {
+                  from: dateRange.from.toISOString(),
+                  to: dateRange.to.toISOString(),
+                }
+              : undefined,
           pnlRange,
           tickRange,
           timeRange,
@@ -848,7 +875,13 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       };
       return acc;
     }, {} as ChartConfig);
-  }, [selectedAccounts, showIndividual, accountColorMap, isSharedView, isTeamView]);
+  }, [
+    selectedAccounts,
+    showIndividual,
+    accountColorMap,
+    isSharedView,
+    isTeamView,
+  ]);
 
   // Memoized chart lines with consistent color mapping
   const chartLines = React.useMemo(() => {
@@ -893,10 +926,13 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
   // Debug logging
   React.useEffect(() => {
-    console.log('[EquityChart Render] isSharedView:', isSharedView);
-    console.log('[EquityChart Render] showIndividual:', showIndividual);
-    console.log('[EquityChart Render] chartData length:', chartData.length);
-    console.log('[EquityChart Render] First 3 data points:', chartData.slice(0, 3));
+    console.log("[EquityChart Render] isSharedView:", isSharedView);
+    console.log("[EquityChart Render] showIndividual:", showIndividual);
+    console.log("[EquityChart Render] chartData length:", chartData.length);
+    console.log(
+      "[EquityChart Render] First 3 data points:",
+      chartData.slice(0, 3)
+    );
   }, [isSharedView, showIndividual, chartData]);
 
   return (
@@ -904,7 +940,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       <CardHeader
         className={cn(
           "flex flex-col items-stretch space-y-0 border-b shrink-0 h-14",
-          size === "small" ? "p-2" : "p-3 sm:p-4",
+          size === "small" ? "p-2" : "p-3 sm:p-4"
         )}
       >
         <div className="flex items-center justify-between h-full">
@@ -912,7 +948,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
             <CardTitle
               className={cn(
                 "line-clamp-1",
-                size === "small" ? "text-sm" : "text-base",
+                size === "small" ? "text-sm" : "text-base"
               )}
             >
               {t("equity.title")}
@@ -923,7 +959,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
                   <Info
                     className={cn(
                       "text-muted-foreground hover:text-foreground transition-colors cursor-help",
-                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4",
+                      size === "small" ? "h-3.5 w-3.5" : "h-4 w-4"
                     )}
                   />
                 </TooltipTrigger>
@@ -933,12 +969,12 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
               </Tooltip>
             </TooltipProvider>
           </div>
-          {(!isSharedView && !isTeamView) && (
+          {!isSharedView && !isTeamView && (
             <div className="flex items-center space-x-2">
               <Switch
                 id="view-mode"
                 checked={showIndividual}
-                onCheckedChange={setShowIndividual}
+                onCheckedChange={setShowIndividualConfig}
                 className="shrink-0"
               />
               <Label htmlFor="view-mode" className="text-sm">
@@ -951,7 +987,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
       <CardContent
         className={cn(
           "flex-1 min-h-0",
-          size === "small" ? "p-1" : "p-2 sm:p-4",
+          size === "small" ? "p-1" : "p-2 sm:p-4"
         )}
       >
         <div className="w-full h-full flex flex-col">
