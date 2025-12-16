@@ -52,7 +52,8 @@ export default {
                 pricingPayout: 'Pricing & Payout',
                 resetDate: 'Reset Date',
                 paymentRenewal: 'Payment & Renewal',
-                accountReset: 'Account Reset Configuration'
+                accountReset: 'Account Reset Configuration',
+                consistencySettings: 'Consistency'
             },
             fields: {
                 accountType: 'Account Type',
@@ -88,7 +89,8 @@ export default {
                 renewalNoticeInfo: 'You will receive notifications 3 days before renewal',
                 renewalNotice: 'Renewal Notice Days',
                 autoAdvanceInfo: '💡 This date will automatically advance based on your {frequency} frequency after each renewal notice.',
-                customFrequencyWarning: 'If you choose a unique frequency, the payment date will be fixed and not updated automatically.'
+                customFrequencyWarning: 'If you choose a unique frequency, the payment date will be fixed and not updated automatically.',
+                enableConsistencyRule: 'Enable consistency threshold'
             },
             trailingTypes: {
                 static: 'Static',

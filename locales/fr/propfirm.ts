@@ -52,7 +52,8 @@ export default {
                 pricingPayout: 'Prix & Paiements',
                 resetDate: 'Date de Réinitialisation',
                 paymentRenewal: 'Paiement et Renouvellement',
-                accountReset: 'Configuration de Réinitialisation du Compte'
+                accountReset: 'Configuration de Réinitialisation du Compte',
+                consistencySettings: 'Cohérence'
             },
             fields: {
                 accountType: 'Type de Compte',
@@ -88,7 +89,8 @@ export default {
                 renewalNoticeInfo: 'Vous recevrez des notifications 3 jours avant le renouvellement',
                 renewalNotice: 'Jours de Préavis de Renouvellement',
                 autoAdvanceInfo: '💡 Cette date avancera automatiquement en fonction de votre fréquence {frequency} après chaque avis de renouvellement.',
-                customFrequencyWarning: 'Si vous choisissez une fréquence unique, la date de paiement sera fixe et ne sera pas mise à jour automatiquement.'
+                customFrequencyWarning: 'Si vous choisissez une fréquence unique, la date de paiement sera fixe et ne sera pas mise à jour automatiquement.',
+                enableConsistencyRule: 'Activer un seuil de cohérence'
             },
             trailingTypes: {
                 static: 'Statique',

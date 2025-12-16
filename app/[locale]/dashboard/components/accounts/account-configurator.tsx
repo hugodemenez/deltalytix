@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon, X, Trash2, Check, ChevronsUpDown, Info } from "lucide-react"
+import { CalendarIcon, X, Trash2, Check, ChevronsUpDown, Info, SearchCheck } from "lucide-react"
 // Tooltips replaced by Popovers
 import { format, Locale } from "date-fns"
 import { cn } from "@/lib/utils"
@@ -26,6 +26,7 @@ import { useData } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
+import { Command, CommandList, CommandGroup, CommandItem } from "@/components/ui/command"
 
 interface AccountConfiguratorProps {
   account: Account
@@ -60,6 +61,14 @@ export function AccountConfigurator({
   const [newGroupName, setNewGroupName] = useState("")
   const [isCreatingGroup, setIsCreatingGroup] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const accountSizeInputRef = useRef<HTMLInputElement>(null)
+
+  const effectiveConsistency =
+    pendingChanges?.consistencyPercentage ??
+    account.consistencyPercentage ??
+    100
+
+  const isConsistencyEnabled = effectiveConsistency !== 100
 
   const handleTemplateChange = (firmKey: string, sizeKey: string) => {
     const firm = propFirms[firmKey]
@@ -351,50 +360,82 @@ export function AccountConfigurator({
               </div>
               <div className="flex flex-col gap-2">
                 <Label>{t('propFirm.accountSize')}</Label>
-                <Popover modal open={accountSizeOpen} onOpenChange={setAccountSizeOpen}>
-                  <PopoverTrigger asChild>
-                    <Input
-                      type="number"
-                      value={pendingChanges?.startingBalance ?? account.startingBalance ?? ''}
-                      onChange={(e) => handleInputChange('startingBalance', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
-                    />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80">
-                    <div className="grid grid-cols-2 gap-2">
-                      {[0,25000, 50000, 100000, 150000, 300000].map((size) => (
-                        <Button
-                          key={size}
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => {
-                            handleInputChange('startingBalance', size)
-                            setAccountSizeOpen(false)
-                          }}
-                        >
-                          {size.toLocaleString()}
-                        </Button>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <div className="relative">
+                  <Input
+                    ref={accountSizeInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    value={pendingChanges?.startingBalance ?? account.startingBalance ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^0-9]/g, '')
+                      handleInputChange('startingBalance', value === '' ? 0 : parseFloat(value) || 0)
+                    }}
+                    onFocus={(e) => {
+                      // Set cursor to the start of the input
+                      e.target.setSelectionRange(0, 0)
+                      setAccountSizeOpen(true)
+                    }}
+                    className="pr-9"
+                    placeholder="0"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-0 top-0 h-full px-3 flex items-center hover:bg-muted/50 rounded-r-md transition-colors"
+                    onMouseDown={(e) => {
+                      // Prevent input blur so we keep focus + selection behavior
+                      e.preventDefault()
+                      setAccountSizeOpen((open) => !open)
+                    }}
+                    aria-label="Open account size options"
+                  >
+                    <SearchCheck className="h-4 w-4 text-muted-foreground" />
+                  </button>
+
+                  {accountSizeOpen && (
+                    <Command
+                      shouldFilter={false}
+                      className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md top-full left-0 max-h-8 h-fit"
+                    >
+                      <CommandList className="max-h-8 overflow-y-auto">
+                        <CommandGroup className="max-h-8 overflow-y-auto">
+                          {[25000, 50000, 100000, 150000, 300000].map((size) => (
+                            <CommandItem
+                              key={size}
+                              value={size.toString()}
+                              onSelect={() => {
+                                handleInputChange('startingBalance', size)
+                                setAccountSizeOpen(false)
+                                // Refocus the input after selection
+                                setTimeout(() => {
+                                  accountSizeInputRef.current?.focus()
+                                  accountSizeInputRef.current?.setSelectionRange(0, 0)
+                                }, 0)
+                              }}
+                              className="cursor-pointer"
+                            >
+                              {size === 0 ? t('propFirm.configurator.template.clear') : size.toLocaleString()}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  )}
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 <Label>{t('propFirm.target')}</Label>
                 <Input
                   type="number"
                   value={pendingChanges?.profitTarget ?? account.profitTarget ?? ''}
-                  onChange={(e) => handleInputChange('profitTarget', e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleInputChange(
+                      'profitTarget',
+                      e.target.value === '' ? 0 : parseFloat(e.target.value) || 0
+                    )
+                  }
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <Label>{t('propFirm.coherence')}</Label>
-                <Input
-                  type="number"
-                  value={pendingChanges?.consistencyPercentage ?? account.consistencyPercentage ?? ''}
-                  onChange={(e) => handleInputChange('consistencyPercentage', e.target.value === '' ? 30 : parseFloat(e.target.value) || 30)}
-                />
-              </div>
+              {/* Consistency moved to dedicated subsection below */}
               <div className="flex flex-col gap-2">
                 <Label>{t('propFirm.configurator.fields.accountType')}</Label>
                 <div className="flex items-center space-x-2">
@@ -679,6 +720,60 @@ export function AccountConfigurator({
                   </div>
                 </div>
               </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* Consistency Settings */}
+        <AccordionItem value="consistency">
+          <AccordionTrigger>{t('propFirm.consistency.title')}</AccordionTrigger>
+          <AccordionContent>
+            <div className="p-4 border rounded-lg space-y-3 bg-muted/40">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col">
+                  <h4 className="text-sm font-medium">{t('propFirm.consistency.title')}</h4>
+                  <p className="text-xs text-muted-foreground">
+                    {t('propFirm.consistency.description')}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="consistencyEnabled"
+                    checked={isConsistencyEnabled}
+                    onCheckedChange={(checked) => {
+                      if (!checked) {
+                        handleInputChange('consistencyPercentage', 100)
+                        return
+                      }
+
+                      const newValue =
+                        effectiveConsistency === 100 || effectiveConsistency == null
+                          ? 30
+                          : effectiveConsistency
+                      handleInputChange('consistencyPercentage', newValue)
+                    }}
+                  />
+                  <Label htmlFor="consistencyEnabled" className="cursor-pointer text-xs text-muted-foreground">
+                    {t('propFirm.configurator.fields.enableConsistencyRule')}
+                  </Label>
+                </div>
+              </div>
+
+              {isConsistencyEnabled && (
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm text-muted-foreground">{t('propFirm.coherence')}</Label>
+                  <Input
+                    type="number"
+                    value={effectiveConsistency}
+                    onChange={(e) =>
+                      handleInputChange(
+                        'consistencyPercentage',
+                        e.target.value === '' ? 30 : parseFloat(e.target.value) || 30
+                      )
+                    }
+                  />
+                </div>
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>
