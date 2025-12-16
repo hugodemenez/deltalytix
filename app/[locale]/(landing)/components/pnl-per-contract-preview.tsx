@@ -32,6 +32,3 @@ export function PnlPerContractPreview() {
     </div>
   )
 }
-
-
-
