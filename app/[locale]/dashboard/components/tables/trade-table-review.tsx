@@ -509,53 +509,75 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
     return Array.from(groups.values());
   }, [trades, groupingGranularity]);
 
+  // Helper function to extract all trade IDs from groupedTrades (across all pages)
+  const getAllTradeIds = useMemo(() => {
+    return groupedTrades.flatMap((row) => {
+      const subTradeIds = row.trades.map((t) => t.id);
+      // Only include group row ID if it's not empty (i.e., it's an actual trade, not a group)
+      const groupId =
+        row.id && row.id !== "" ? [row.id] : [];
+      return [...groupId, ...subTradeIds];
+    });
+  }, [groupedTrades]);
+
+  // Check if all trades across all pages are selected
+  const areAllTradesSelected = useMemo(() => {
+    if (getAllTradeIds.length === 0) return false;
+    return getAllTradeIds.every((id) => selectedTrades.includes(id));
+  }, [getAllTradeIds, selectedTrades]);
+
   const columns = useMemo<ColumnDef<ExtendedTrade>[]>(
     () => [
       {
         id: "select",
-        header: ({ table }) => (
-          <Checkbox
-            checked={table.getIsAllPageRowsSelected()}
-            onCheckedChange={(value) => {
-              table.toggleAllPageRowsSelected(!!value);
-              // Get all trade IDs including subrows (only actual trades, not group rows)
-              const allTradeIds = table.getRowModel().rows.flatMap((row) => {
-                const subTradeIds = row.original.trades.map((t) => t.id);
-                // Only include group row ID if it's not empty (i.e., it's an actual trade, not a group)
-                const groupId =
-                  row.original.id && row.original.id !== ""
-                    ? [row.original.id]
-                    : [];
-                return [...groupId, ...subTradeIds];
-              });
-              setSelectedTrades(value ? allTradeIds : []);
-            }}
-            aria-label="Select all"
-            className="translate-y-[2px] mr-2"
-          />
-        ),
-        cell: ({ row }) => (
-          <Checkbox
-            checked={row.getIsSelected()}
-            onCheckedChange={(value) => {
-              row.toggleSelected(!!value);
-              // Get all trade IDs for this row including subrows (only actual trades, not group rows)
-              const subTradeIds = row.original.trades.map((t) => t.id);
-              const groupId =
-                row.original.id && row.original.id !== ""
-                  ? [row.original.id]
-                  : [];
-              const tradeIds = [...groupId, ...subTradeIds];
-              setSelectedTrades((prev) =>
-                value
-                  ? [...prev, ...tradeIds]
-                  : prev.filter((id) => !tradeIds.includes(id)),
-              );
-            }}
-            aria-label="Select row"
-            className="translate-y-[2px] mr-2"
-          />
-        ),
+        header: ({ table }) => {
+          return (
+            <Checkbox
+              checked={areAllTradesSelected}
+              onCheckedChange={(value) => {
+                if (value) {
+                  // Select all trades across all pages
+                  setSelectedTrades([...getAllTradeIds]);
+                  // Also select all rows on current page for visual consistency
+                  table.toggleAllPageRowsSelected(true);
+                } else {
+                  // Deselect all trades
+                  setSelectedTrades([]);
+                  table.toggleAllPageRowsSelected(false);
+                }
+              }}
+              aria-label="Select all"
+              className="translate-y-[2px] mr-2"
+            />
+          );
+        },
+        cell: ({ row }) => {
+          // Get all trade IDs for this row including subrows (only actual trades, not group rows)
+          const subTradeIds = row.original.trades.map((t) => t.id);
+          const groupId =
+            row.original.id && row.original.id !== ""
+              ? [row.original.id]
+              : [];
+          const tradeIds = [...groupId, ...subTradeIds];
+          // Check if all trade IDs for this row are selected
+          const isRowSelected = tradeIds.every((id) => selectedTrades.includes(id));
+          
+          return (
+            <Checkbox
+              checked={isRowSelected}
+              onCheckedChange={(value) => {
+                row.toggleSelected(!!value);
+                setSelectedTrades((prev) =>
+                  value
+                    ? [...prev, ...tradeIds.filter((id) => !prev.includes(id))]
+                    : prev.filter((id) => !tradeIds.includes(id)),
+                );
+              }}
+              aria-label="Select row"
+              className="translate-y-[2px] mr-2"
+            />
+          );
+        },
         enableSorting: false,
         enableHiding: false,
         size: 40,
@@ -1049,7 +1071,7 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
         size: 200,
       },
     ],
-    [t, timezone, tags, expanded, tickDetails, showPoints],
+    [t, timezone, tags, expanded, tickDetails, showPoints, getAllTradeIds, areAllTradesSelected, selectedTrades],
   );
 
   const table = useReactTable({
