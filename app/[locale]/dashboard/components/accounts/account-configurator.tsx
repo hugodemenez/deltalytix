@@ -394,10 +394,10 @@ export function AccountConfigurator({
                   {accountSizeOpen && (
                     <Command
                       shouldFilter={false}
-                      className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md top-full left-0 max-h-8 h-fit"
+                      className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md top-full left-0 h-fit"
                     >
-                      <CommandList className="max-h-8 overflow-y-auto">
-                        <CommandGroup className="max-h-8 overflow-y-auto">
+                      <CommandList className="max-h-24 overflow-y-auto">
+                        <CommandGroup>
                           {[25000, 50000, 100000, 150000, 300000].map((size) => (
                             <CommandItem
                               key={size}
