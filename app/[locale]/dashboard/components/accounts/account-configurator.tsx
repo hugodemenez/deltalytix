@@ -1017,6 +1017,36 @@ export function AccountConfigurator({
                   </div>
                 </DialogContent>
               </Dialog>
+              
+              {/* Should Consider Trades Before Reset */}
+              <div className="flex flex-col gap-2 mt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm text-muted-foreground">
+                      {t('propFirm.resetDate.shouldConsiderTradesBeforeReset')}
+                    </Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center h-4 w-4 text-muted-foreground cursor-pointer"
+                          aria-label="Should consider trades before reset information"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="max-w-sm text-sm p-3">
+                        <p>{t('propFirm.resetDate.shouldConsiderTradesBeforeResetTooltip')}</p>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <Switch
+                    id="shouldConsiderTradesBeforeReset"
+                    checked={pendingChanges?.shouldConsiderTradesBeforeReset ?? account.shouldConsiderTradesBeforeReset ?? true}
+                    onCheckedChange={(checked) => handleInputChange('shouldConsiderTradesBeforeReset', checked)}
+                  />
+                </div>
+              </div>
             </div>
           </AccordionContent>
         </AccordionItem>
