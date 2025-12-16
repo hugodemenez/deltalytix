@@ -876,6 +876,15 @@ export const DataProvider: React.FC<{
         );
         if (!isValid(entryDate)) return false;
 
+        // Filter trades before reset date if shouldConsiderTradesBeforeReset is false
+        if (tradeAccount?.resetDate && tradeAccount.shouldConsiderTradesBeforeReset === false) {
+          const resetDate = startOfDay(new Date(tradeAccount.resetDate));
+          const tradeDate = startOfDay(entryDate);
+          if (tradeDate < resetDate) {
+            return false;
+          }
+        }
+
         // Instrument filter
         if (instruments.length > 0 && !instruments.includes(trade.instrument)) {
           return false;

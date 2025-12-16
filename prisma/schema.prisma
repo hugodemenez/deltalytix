@@ -282,53 +282,54 @@ model Group {
 }
 
 model Account {
-  id                      String            @id @unique @default(uuid())
-  number                  String
-  propfirm                String            @default("")
-  drawdownThreshold       Float             @default(0)
-  profitTarget            Float             @default(0)
-  isPerformance           Boolean           @default(false)
-  userId                  String
-  createdAt               DateTime          @default(now())
-  startingBalance         Float             @default(0)
-  payoutCount             Int               @default(0)
-  trailingDrawdown        Boolean           @default(false)
-  trailingStopProfit      Float?
-  resetDate               DateTime?
-  consistencyPercentage   Float?            @default(30)
-  groupId                 String?
-  accountSize             String?
-  accountSizeName         String?
-  activationFees          Float?
-  balanceRequired         Float?
-  dailyLoss               Float?
-  evaluation              Boolean           @default(true)
-  isRecursively           String?
-  maxFundedAccounts       Int?
-  maxPayout               String?
-  minDays                 Int?
-  minPayout               Float?
-  minTradingDaysForPayout Int?
-  payoutBonus             Float?
-  payoutPolicy            String?
-  price                   Float?
-  priceWithPromo          Float?
-  profitSharing           Float?
-  rulesDailyLoss          String?
-  tradingNewsAllowed      Boolean           @default(true)
-  trailing                String?
-  autoRenewal             Boolean           @default(false)
-  nextPaymentDate         DateTime?
-  paymentFrequency        PaymentFrequency?
-  promoPercentage         Float?
-  promoType               PromoType?
-  renewalNotice           Int?
-  minPnlToCountAsDay      Float?
-  group                   Group?            @relation(fields: [groupId], references: [id])
-  user                    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  payouts                 Payout[]
-  buffer                  Float             @default(0)
-  considerBuffer          Boolean           @default(true)
+  id                              String            @id @unique @default(uuid())
+  number                          String
+  propfirm                        String            @default("")
+  drawdownThreshold               Float             @default(0)
+  profitTarget                    Float             @default(0)
+  isPerformance                   Boolean           @default(false)
+  userId                          String
+  createdAt                       DateTime          @default(now())
+  startingBalance                 Float             @default(0)
+  payoutCount                     Int               @default(0)
+  trailingDrawdown                Boolean           @default(false)
+  trailingStopProfit              Float?
+  resetDate                       DateTime?
+  consistencyPercentage           Float?            @default(30)
+  groupId                         String?
+  accountSize                     String?
+  accountSizeName                 String?
+  activationFees                  Float?
+  balanceRequired                 Float?
+  dailyLoss                       Float?
+  evaluation                      Boolean           @default(true)
+  isRecursively                   String?
+  maxFundedAccounts               Int?
+  maxPayout                       String?
+  minDays                         Int?
+  minPayout                       Float?
+  minTradingDaysForPayout         Int?
+  payoutBonus                     Float?
+  payoutPolicy                    String?
+  price                           Float?
+  priceWithPromo                  Float?
+  profitSharing                   Float?
+  rulesDailyLoss                  String?
+  tradingNewsAllowed              Boolean           @default(true)
+  trailing                        String?
+  autoRenewal                     Boolean           @default(false)
+  nextPaymentDate                 DateTime?
+  paymentFrequency                PaymentFrequency?
+  promoPercentage                 Float?
+  promoType                       PromoType?
+  renewalNotice                   Int?
+  minPnlToCountAsDay              Float?
+  group                           Group?            @relation(fields: [groupId], references: [id])
+  user                            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payouts                         Payout[]
+  buffer                          Float             @default(0)
+  considerBuffer                  Boolean           @default(true)
+  shouldConsiderTradesBeforeReset Boolean           @default(true)
 
   @@unique([number, userId])
   @@index([number])

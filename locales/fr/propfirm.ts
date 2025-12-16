@@ -145,7 +145,9 @@ export default {
             set: 'Définir la date de réinitialisation',
             label: 'Date de Réinitialisation',
             noDate: 'Pas de date de réinitialisation',
-            info: 'La date à laquelle le solde du compte sera réinitialisé'
+            info: 'La date à laquelle le solde du compte sera réinitialisé',
+            shouldConsiderTradesBeforeReset: 'Inclure les trades avant la date de réinitialisation',
+            shouldConsiderTradesBeforeResetTooltip: 'Quand activé, les trades avant la date de réinitialisation seront inclus dans les calculs et graphiques. Quand désactivé, seuls les trades après la date de réinitialisation seront pris en compte.'
         },
         noResetDate: 'Pas de date de réinitialisation',
         resetDateDescription: 'La date à laquelle le solde du compte sera réinitialisé',

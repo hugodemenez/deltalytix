@@ -811,7 +811,10 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         drawdownThreshold: pendingChanges?.drawdownThreshold ?? selectedAccountForTable.drawdownThreshold,
         consistencyPercentage: pendingChanges?.consistencyPercentage ?? selectedAccountForTable.consistencyPercentage,
         propfirm: pendingChanges?.propfirm ?? selectedAccountForTable.propfirm,
-        resetDate: pendingChanges?.resetDate instanceof Date ? pendingChanges.resetDate : null,
+        resetDate: 'resetDate' in pendingChanges 
+          ? (pendingChanges.resetDate instanceof Date ? pendingChanges.resetDate : null)
+          : selectedAccountForTable.resetDate,
+        shouldConsiderTradesBeforeReset: pendingChanges?.shouldConsiderTradesBeforeReset ?? selectedAccountForTable.shouldConsiderTradesBeforeReset ?? true,
         trailingDrawdown: pendingChanges?.trailingDrawdown ?? selectedAccountForTable.trailingDrawdown,
         trailingStopProfit: pendingChanges?.trailingStopProfit ?? selectedAccountForTable.trailingStopProfit,
         accountSize: pendingChanges?.accountSize ?? selectedAccountForTable.accountSize,
