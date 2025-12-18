@@ -1035,11 +1035,13 @@ export default {
     previous: "Previous",
     next: "Next",
     totalTrades: "{count} trades",
+    total: "Total",
     expandAll: "Expand All",
     collapseAll: "Collapse All",
     pageInfo: "Page {current} of {total}",
     pageSize: "Increase Page Size",
     resetPageSize: "Reset Page Size",
+    maxPageSize: "Show All",
     account: "Account",
     accountNumber: "Account Number",
     deleteTag: {

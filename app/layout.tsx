@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/auth-provider";
 import Script from "next/script"
 import { ReactNode } from "react";
 import { connection } from "next/server";
+import { ScrollLockFix } from "@/components/scroll-lock-fix";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -215,17 +216,8 @@ export default async function RootLayout({
             html {
               margin: 0;
               padding: 0;
-              overflow-y: scroll !important;
-              overflow-x: hidden !important;
               scrollbar-gutter: stable !important;
               -ms-overflow-style: scrollbar !important;
-            }
-
-            body {
-              min-height: 100vh !important;
-              margin: 0 !important;
-              padding: 0 !important;
-              overflow-x: hidden !important;
             }
 
             /* Style the scrollbar */
@@ -255,11 +247,34 @@ export default async function RootLayout({
               scrollbar-width: thin !important;
               scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent !important;
             }
+
+            /* Prevent Radix UI Dialog from adding padding-right/margin-right to body */
+            /* Since we use scrollbar-gutter: stable, we don't need the padding/margin */
+            body[data-scroll-locked],
+            body[style*="padding-right"],
+            body[style*="margin-right"] {
+              padding-right: 0 !important;
+              margin-right: 0 !important;
+            }
+            
+            /* Also target any Radix scroll lock classes */
+            body.radix-scroll-lock,
+            body[class*="scroll-lock"] {
+              padding-right: 0 !important;
+              margin-right: 0 !important;
+            }
+            
+            /* Force margin-right to 0 when body has pointer-events: none (Radix UI scroll lock) */
+            body[style*="pointer-events: none"] {
+              margin-right: 0 !important;
+              padding-right: 0 !important;
+            }
           `}
         </style>
 
       </head>
-      <body className={inter.className + " min-h-screen overflow-x-hidden w-screen"}>
+      <body className={inter.className}>
+        <ScrollLockFix />
         <AuthProvider>
           <SpeedInsights />
           <Analytics />

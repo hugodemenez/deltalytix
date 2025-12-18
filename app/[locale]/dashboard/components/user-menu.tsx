@@ -86,7 +86,7 @@ export default function UserMenu() {
 
   return (
     <div className="relative">
-      <DropdownMenu>
+      <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
           <div className="relative inline-block">
             <Avatar className="cursor-pointer h-8 w-8">

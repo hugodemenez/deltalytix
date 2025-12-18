@@ -222,8 +222,8 @@ export default function AtasFileUpload({
       setCsvData(dataRows);
       setHeaders(headers);
 
-      // Move to the next step (account selection)
-      setStep("select-account");
+      // Move to the next step (preview trades)
+      setStep("preview-trades");
 
       setError(null);
     } catch (error) {

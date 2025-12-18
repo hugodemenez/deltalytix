@@ -1324,11 +1324,13 @@ export default {
     previous: "Précédent",
     next: "Suivant",
     totalTrades: "{count} trades",
+    total: "Total",
     expandAll: "Tout développer",
     collapseAll: "Tout réduire",
     pageInfo: "Page {current} sur {total}",
     pageSize: "Augmenter la taille de la page",
     resetPageSize: "Réinitialiser la taille de la page",
+    maxPageSize: "Afficher Tout",
     account: "Compte",
     accountNumber: "Numéro de compte",
     deleteTag: {
