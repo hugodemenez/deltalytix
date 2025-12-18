@@ -1370,7 +1370,6 @@ export default {
       "Une erreur s'est produite lors de la suppression des trades. Veuillez réessayer.",
     deleteAllImages: "Supprimer toutes les images",
     allImagesDeleted: "Toutes les images ont été supprimées avec succès",
-    total: "Total",
     resetConfig: "Réinitialiser la Configuration",
     resetConfigDescription:
       "Réinitialiser la configuration du tableau aux paramètres par défaut",

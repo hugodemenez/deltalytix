@@ -1088,7 +1088,6 @@ export default {
       "An error occurred while deleting the trades. Please try again.",
     deleteAllImages: "Delete all images",
     allImagesDeleted: "All images deleted successfully",
-    total: "Total",
     resetConfig: "Reset Configuration",
     resetConfigDescription: "Reset table configuration to default settings",
     resetConfigSuccess: "Table configuration reset successfully",
