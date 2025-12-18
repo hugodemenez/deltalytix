@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
   Table,
   TableBody,
@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { CheckCircle2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Trade } from "@prisma/client";
 import { useI18n } from "@/locales/client";
@@ -143,41 +147,91 @@ export default function AtasProcessor({
   processedTrades,
   setProcessedTrades,
   accountNumbers,
+  selectedAccountNumbers,
+  setSelectedAccountNumbers,
 }: PlatformProcessorProps) {
   const existingTrades = useTradesStore((state) => state.trades);
   const [trades, setTrades] = useState<Trade[]>([]);
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
   const [missingCommissions, setMissingCommissions] = useState<{
     [key: string]: number;
   }>({});
   const [showCommissionPrompt, setShowCommissionPrompt] = useState(false);
   const t = useI18n();
+  const hasInitialized = useRef(false);
+  
+  // Internal state for account selection if not provided via props
+  const [internalSelectedAccounts, setInternalSelectedAccounts] = useState<string[]>([]);
+  
+  // Use provided selectedAccountNumbers or fall back to internal state
+  const currentSelectedAccounts = selectedAccountNumbers || internalSelectedAccounts;
+  const setCurrentSelectedAccounts = setSelectedAccountNumbers || setInternalSelectedAccounts;
+
+  // Get available accounts from all trades
+  const availableAccounts = useMemo(() => {
+    return Array.from(new Set(allTrades.map((trade) => trade.accountNumber).filter(Boolean))) as string[];
+  }, [allTrades]);
+
+  // Count trades per account
+  const tradesPerAccount = useMemo(() => {
+    return allTrades.reduce(
+      (counts, trade) => {
+        if (!trade.accountNumber) return counts;
+        counts[trade.accountNumber] = (counts[trade.accountNumber] || 0) + 1;
+        return counts;
+      },
+      {} as { [key: string]: number }
+    );
+  }, [allTrades]);
+
+  // Filter trades based on selected accounts
+  const filteredTrades = useMemo(() => {
+    if (currentSelectedAccounts.length === 0) {
+      return [];
+    }
+    return allTrades.filter(
+      (trade) => trade.accountNumber && currentSelectedAccounts.includes(trade.accountNumber)
+    );
+  }, [allTrades, currentSelectedAccounts]);
+
+
+  // Initialize selected accounts on first load
+  useEffect(() => {
+    if (availableAccounts.length > 0 && !hasInitialized.current && currentSelectedAccounts.length === 0) {
+      setCurrentSelectedAccounts(
+        availableAccounts.filter((account) => account !== undefined) as string[]
+      );
+      hasInitialized.current = true;
+    }
+  }, [availableAccounts, currentSelectedAccounts.length, setCurrentSelectedAccounts]);
 
   const existingCommissions = useMemo(() => {
     const commissions: { [key: string]: number } = {};
-    if (!accountNumbers) {
+    if (!accountNumbers && currentSelectedAccounts.length === 0) {
       return commissions;
     }
+    const accountsToCheck = accountNumbers || currentSelectedAccounts;
     existingTrades
-      .filter((trade) => accountNumbers.includes(trade.accountNumber))
+      .filter((trade) => accountsToCheck.includes(trade.accountNumber))
       .forEach((trade) => {
         if (trade.instrument && trade.commission && trade.quantity) {
           commissions[trade.instrument] = trade.commission / trade.quantity;
         }
       });
     return commissions;
-  }, [existingTrades, accountNumbers]);
+  }, [existingTrades, accountNumbers, currentSelectedAccounts]);
 
   const totalPnL = useMemo(
-    () => trades.reduce((sum, trade) => sum + (trade.pnl || 0), 0),
-    [trades]
+    () => filteredTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0),
+    [filteredTrades]
   );
   const totalCommission = useMemo(
-    () => trades.reduce((sum, trade) => sum + (trade.commission || 0), 0),
-    [trades]
+    () => filteredTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0),
+    [filteredTrades]
   );
   const uniqueInstruments = useMemo(
-    () => Array.from(new Set(trades.map((trade) => trade.instrument))),
-    [trades]
+    () => Array.from(new Set(filteredTrades.map((trade) => trade.instrument))),
+    [filteredTrades]
   );
 
   const processTrades = useCallback(() => {
@@ -332,6 +386,7 @@ export default function AtasProcessor({
 
     console.log("newTrades", newTrades);
 
+    setAllTrades(newTrades);
     setTrades(newTrades);
     setProcessedTrades(newTrades);
 
@@ -366,7 +421,7 @@ export default function AtasProcessor({
   };
 
   const applyCommissions = () => {
-    const updatedTrades = trades.map((trade) => {
+    const updatedTrades = allTrades.map((trade) => {
       if (
         trade.instrument &&
         missingCommissions[trade.instrument] !== undefined
@@ -379,6 +434,7 @@ export default function AtasProcessor({
       return trade;
     });
 
+    setAllTrades(updatedTrades);
     setTrades(updatedTrades);
     setProcessedTrades(updatedTrades);
     setShowCommissionPrompt(false);
@@ -433,7 +489,64 @@ export default function AtasProcessor({
               </Button>
             </div>
           )}
-          {trades.length === 0 && (
+          
+          {/* Account Selection Section */}
+          {availableAccounts.length > 0 && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-lg font-semibold">
+                  {t("import.account.pickAccounts")}
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {t("import.account.pickAccountsDescription")}
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {availableAccounts.map((account) => {
+                  if (!account) return null;
+                  const tradeCount = tradesPerAccount[account] || 0;
+                  const isSelected = currentSelectedAccounts.includes(account);
+
+                  return (
+                    <Card
+                      key={account}
+                      className={cn(
+                        "p-6 cursor-pointer hover:border-primary transition-colors relative group",
+                        isSelected ? "border-primary bg-primary/5" : ""
+                      )}
+                      onClick={() => {
+                        if (isSelected) {
+                          setCurrentSelectedAccounts(
+                            currentSelectedAccounts.filter((a) => a !== account)
+                          );
+                        } else {
+                          setCurrentSelectedAccounts([
+                            ...currentSelectedAccounts,
+                            account,
+                          ]);
+                        }
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2 flex-1">
+                          <p className="font-medium">{account}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {tradeCount} {tradeCount === 1 ? t("import.account.trade") : t("import.account.trades")}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {allTrades.length === 0 && (
             <div
               className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r"
               role="alert"
@@ -442,34 +555,47 @@ export default function AtasProcessor({
               <p>{t("import.error.duplicateTradesDescription")}</p>
             </div>
           )}
-          <div className="px-2">
-            <TradeTableReview
-              tradesParam={trades.map((trade) =>
-                createTradeWithDefaults(trade)
-              )}
-              config={{
-                style: {
-                  height: "100%",
-                  width: "100%",
-                },
-                columns: [
-                  "expand",
-                  "accounts",
-                  "instrument",
-                  "entryDate",
-                  "entryTime",
-                  "closeDate",
-                  "closeTime",
-                  "quantity",
-                  "pnl",
-                  "commission",
-                ],
-                groupTrades: false,
-                showHeader: false,
-                expandByDefault: true,
-              }}
-            />
-          </div>
+          
+          {currentSelectedAccounts.length === 0 && allTrades.length > 0 && (
+            <div
+              className="flex-none bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-r"
+              role="alert"
+            >
+              <p className="font-bold">{t("import.account.selectAccount")}</p>
+              <p>{t("import.account.selectAccountToView")}</p>
+            </div>
+          )}
+
+          {filteredTrades.length > 0 && (
+            <div className="px-2">
+              <TradeTableReview
+                tradesParam={filteredTrades.map((trade) =>
+                  createTradeWithDefaults(trade)
+                )}
+                config={{
+                  style: {
+                    height: "100%",
+                    width: "100%",
+                  },
+                  columns: [
+                    "expand",
+                    "accounts",
+                    "instrument",
+                    "entryDate",
+                    "entryTime",
+                    "closeDate",
+                    "closeTime",
+                    "quantity",
+                    "pnl",
+                    "commission",
+                  ],
+                  groupTrades: false,
+                  showHeader: false,
+                  expandByDefault: true,
+                }}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

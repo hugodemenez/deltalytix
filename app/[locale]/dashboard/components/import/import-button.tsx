@@ -28,7 +28,6 @@ import { usePdfProcessingStore } from "@/store/pdf-processing-store";
 import PdfUpload from "./ibkr-pdf/pdf-upload";
 import PdfProcessing from "./ibkr-pdf/pdf-processing";
 import AtasFileUpload from "./atas/atas-file-upload";
-import AtasAccountSelection from "./atas/atas-account-selection";
 import { generateTradeHash } from "@/lib/utils";
 import { createTradeWithDefaults } from "@/lib/trade-factory";
 
@@ -296,15 +295,6 @@ export default function ImportButton() {
       );
     }
 
-    if (Component === AtasAccountSelection) {
-      return (
-        <Component
-          processedTrades={processedTrades}
-          selectedAccountNumbers={selectedAccountNumbers}
-          setSelectedAccountNumbers={setSelectedAccountNumbers}
-        />
-      );
-    }
 
     if (Component === ColumnMapping) {
       return (
@@ -358,6 +348,8 @@ export default function ImportButton() {
           processedTrades={processedTrades}
           setProcessedTrades={setProcessedTrades}
           accountNumbers={accountNumbers}
+          selectedAccountNumbers={selectedAccountNumbers}
+          setSelectedAccountNumbers={setSelectedAccountNumbers}
         />
       );
     }
@@ -405,9 +397,10 @@ export default function ImportButton() {
     )
       return true;
 
-    // Account selection for ATAS
+    // Account selection for ATAS (now handled in processor)
     if (
-      currentStep.component === AtasAccountSelection &&
+      importType === "atas" &&
+      currentStep.component === platform.processorComponent &&
       selectedAccountNumbers.length === 0
     )
       return true;

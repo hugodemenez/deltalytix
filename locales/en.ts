@@ -509,9 +509,19 @@ export default {
   "import.account.selectAccount": "Select Account",
   "import.account.selectAccountDescription":
     "Choose an existing account or add a new one",
+  "import.account.pickAccounts": "Pick Accounts",
+  "import.account.pickAccountsDescription":
+    "Select which accounts to import from the file",
   "import.account.tradingAccount": "Trading Account",
   "import.account.enterAccountNumber": "Enter account number",
   "import.account.addNewAccount": "Add New Account",
+  "import.account.selectAccountToView": "Please select at least one account to view trades.",
+  "import.account.account": "account",
+  "import.account.accounts": "accounts",
+  "import.account.trade": "trade",
+  "import.account.trades": "trades",
+  "import.account.selected": "selected",
+  "import.account.total": "Total:",
   common: {
     add: "Add",
     cancel: "Cancel",

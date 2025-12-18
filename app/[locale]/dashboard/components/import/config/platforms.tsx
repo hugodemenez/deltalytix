@@ -28,7 +28,6 @@ import { Step } from '../import-button'
 import { Sparkles, PenTool } from 'lucide-react'
 import { useTheme } from '@/context/theme-provider'
 import Image from 'next/image'
-import AtasAccountSelection from '../atas/atas-account-selection'
 
 type TranslationKey =
   | 'import.steps.selectPlatform'
@@ -137,7 +136,6 @@ type StepComponent =
   | typeof FileUpload
   | typeof HeaderSelection
   | typeof AccountSelection
-  | typeof AtasAccountSelection
   | typeof ColumnMapping
   | typeof FormatPreview
   | typeof TradezellaProcessor
@@ -164,6 +162,8 @@ export interface PlatformProcessorProps {
   processedTrades: Partial<Trade>[]
   setProcessedTrades: React.Dispatch<React.SetStateAction<Partial<Trade>[]>>
   accountNumbers?: string[]
+  selectedAccountNumbers?: string[]
+  setSelectedAccountNumbers?: React.Dispatch<React.SetStateAction<string[]>>
 }
 
 export interface PlatformConfig {
@@ -753,12 +753,6 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.processTrades',
         description: 'import.steps.processTradesDescription',
         component: AtasProcessor,
-      },
-      {
-        id: 'select-account',
-        title: 'import.steps.selectAccount',
-        description: 'import.steps.selectAccountDescription',
-        component: AtasAccountSelection,
         isLastStep: true
       }
     ]
