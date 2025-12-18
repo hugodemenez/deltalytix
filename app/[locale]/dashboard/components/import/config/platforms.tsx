@@ -162,6 +162,8 @@ export interface PlatformProcessorProps {
   processedTrades: Partial<Trade>[]
   setProcessedTrades: React.Dispatch<React.SetStateAction<Partial<Trade>[]>>
   accountNumbers?: string[]
+  selectedAccountNumbers?: string[]
+  setSelectedAccountNumbers?: React.Dispatch<React.SetStateAction<string[]>>
 }
 
 export interface PlatformConfig {
@@ -732,7 +734,6 @@ export const platforms: PlatformConfig[] = [
       component: AtasLogo,
       alt: 'ATAS Logo'
     },
-    requiresAccountSelection: true,
     processorComponent: AtasProcessor,
     steps: [
       {
@@ -746,12 +747,6 @@ export const platforms: PlatformConfig[] = [
         title: 'import.steps.uploadFile',
         description: 'import.steps.uploadFileDescription',
         component: AtasFileUpload
-      },
-      {
-        id: 'select-account',
-        title: 'import.steps.selectAccount',
-        description: 'import.steps.selectAccountDescription',
-        component: AccountSelection
       },
       {
         id: 'preview-trades',

@@ -48,14 +48,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DataTableColumnHeader } from "./column-header";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { createClient } from "@/lib/supabase";
 import {
   Card,
@@ -261,7 +253,23 @@ interface ExtendedTrade extends Trade {
 
 const supabase = createClient();
 
-export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
+interface TradeTableReviewConfig {
+  style?: {
+    height?: string | number;
+    width?: string | number;
+  };
+  columns?: string[]; // Array of column IDs to show
+  showHeader?: boolean; // Whether to show the Card header (not the table column headers)
+  expandByDefault?: boolean; // Whether to expand all expandable rows by default
+  groupTrades?: boolean; // Whether to group trades (default: true)
+}
+
+interface TradeTableReviewProps {
+  tradesParam?: Trade[];
+  config?: TradeTableReviewConfig;
+}
+
+export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps) {
   const t = useI18n();
   const { formattedTrades, updateTrades, refreshTrades } = useData();
   const tags = useUserStore((state) => state.tags);
@@ -305,6 +313,7 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
   const [showPoints, setShowPoints] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [hasInitializedExpanded, setHasInitializedExpanded] = useState(false);
 
   // Sync local state with store
   React.useEffect(() => {
@@ -426,7 +435,17 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
   };
 
   // Group trades by instrument, entry date, and close date with granularity
+  // Or return ungrouped trades if groupTrades is false
   const groupedTrades = useMemo(() => {
+    // If grouping is disabled, return trades as individual rows
+    if (config?.groupTrades === false) {
+      return trades.map((trade) => ({
+        ...trade,
+        trades: [], // Empty trades array means no sub-rows (not expandable)
+      })) as ExtendedTrade[];
+    }
+
+    // Otherwise, group trades as before
     const groups = new Map<string, ExtendedTrade>();
 
     trades.forEach((trade) => {
@@ -507,7 +526,25 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
     });
 
     return Array.from(groups.values());
-  }, [trades, groupingGranularity]);
+  }, [trades, groupingGranularity, config?.groupTrades]);
+
+  // Initialize expanded state when expandByDefault is enabled
+  React.useEffect(() => {
+    if (config?.expandByDefault && groupedTrades.length > 0 && !hasInitializedExpanded) {
+      const initialExpanded: ExpandedState = {};
+      groupedTrades.forEach((trade, index) => {
+        // Expand rows that have more than one trade (expandable rows)
+        if (trade.trades.length > 1) {
+          initialExpanded[index.toString()] = true;
+        }
+      });
+      setExpanded(initialExpanded);
+      setHasInitializedExpanded(true);
+    } else if (!config?.expandByDefault && hasInitializedExpanded) {
+      // Reset flag when expandByDefault is disabled
+      setHasInitializedExpanded(false);
+    }
+  }, [config?.expandByDefault, groupedTrades, hasInitializedExpanded]);
 
   // Helper function to extract all trade IDs from groupedTrades (across all pages)
   const getAllTradeIds = useMemo(() => {
@@ -520,13 +557,38 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
     });
   }, [groupedTrades]);
 
+  // Calculate totals across all trades (including sub-rows)
+  const totals = useMemo(() => {
+    let totalPnl = 0;
+    let totalCommission = 0;
+    let totalQuantity = 0;
+
+    groupedTrades.forEach((row) => {
+      // If row has sub-trades, sum from sub-trades
+      if (row.trades.length > 0) {
+        row.trades.forEach((trade) => {
+          totalPnl += trade.pnl || 0;
+          totalCommission += trade.commission || 0;
+          totalQuantity += trade.quantity || 0;
+        });
+      } else {
+        // If no sub-trades, use the row's own values
+        totalPnl += row.pnl || 0;
+        totalCommission += row.commission || 0;
+        totalQuantity += row.quantity || 0;
+      }
+    });
+
+    return { totalPnl, totalCommission, totalQuantity };
+  }, [groupedTrades]);
+
   // Check if all trades across all pages are selected
   const areAllTradesSelected = useMemo(() => {
     if (getAllTradeIds.length === 0) return false;
     return getAllTradeIds.every((id) => selectedTrades.includes(id));
   }, [getAllTradeIds, selectedTrades]);
 
-  const columns = useMemo<ColumnDef<ExtendedTrade>[]>(
+  const allColumns = useMemo<ColumnDef<ExtendedTrade>[]>(
     () => [
       {
         id: "select",
@@ -1074,6 +1136,17 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
     [t, timezone, tags, expanded, tickDetails, showPoints, getAllTradeIds, areAllTradesSelected, selectedTrades],
   );
 
+  // Filter columns based on config
+  const columns = useMemo<ColumnDef<ExtendedTrade>[]>(() => {
+    if (!config?.columns || config.columns.length === 0) {
+      return allColumns;
+    }
+    return allColumns.filter((col) => {
+      const columnId = col.id || (col as any).accessorKey;
+      return columnId && config.columns!.includes(columnId as string);
+    });
+  }, [allColumns, config?.columns]);
+
   const table = useReactTable({
     data: groupedTrades,
     columns,
@@ -1107,9 +1180,31 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
     },
   });
 
+  // Get style values from config
+  const cardStyle = config?.style
+    ? {
+        height:
+          typeof config.style.height === "number"
+            ? `${config.style.height}px`
+            : config.style.height,
+        width:
+          typeof config.style.width === "number"
+            ? `${config.style.width}px`
+            : config.style.width,
+      }
+    : {};
+
+  // Determine if Card header should be shown (default to true if not specified)
+  // Note: This only controls the Card header, not the table column headers
+  const showHeader = config?.showHeader !== false;
+
   return (
-    <Card className="h-full flex flex-col w-full overflow-x-scroll">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
+    <Card
+      className="h-full flex flex-col w-full"
+      style={cardStyle}
+    >
+      {showHeader && (
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b shrink-0 p-3 sm:p-4 h-[56px]">
         <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-1.5">
             <CardTitle className="line-clamp-1 text-base">
@@ -1137,7 +1232,7 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
                 {t("trade-table.deleteSelected")}
               </Button>
             )}
-            {selectedTrades.length >= 2 && (
+            {config?.groupTrades !== false && selectedTrades.length >= 2 && (
               <Button
                 variant="outline"
                 className="h-10 font-normal whitespace-nowrap"
@@ -1146,7 +1241,7 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
                 {t("trade-table.groupTrades")}
               </Button>
             )}
-            {selectedTrades.length > 0 && (
+            {config?.groupTrades !== false && selectedTrades.length > 0 && (
               <Button
                 variant="outline"
                 className="h-10 font-normal whitespace-nowrap"
@@ -1155,88 +1250,94 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
                 {t("trade-table.ungroupTrades")}
               </Button>
             )}
-            <Select
-              value={groupingGranularity.toString()}
-              onValueChange={(value) =>
-                handleGroupingGranularityChange(parseInt(value))
-              }
-            >
-              <SelectTrigger className="min-w-[180px] max-w-[250px]">
-                <div className="flex items-center w-full">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info
-                          className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help mr-2 shrink-0"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="z-50">
-                        <p>{t("trade-table.granularity.tooltip")}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <SelectValue
-                    placeholder={t("trade-table.granularity.label")}
-                    className="truncate"
-                  />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">
-                  {t("trade-table.granularity.exact")}
-                </SelectItem>
-                <SelectItem value="5">
-                  {t("trade-table.granularity.fiveSeconds")}
-                </SelectItem>
-                <SelectItem value="10">
-                  {t("trade-table.granularity.tenSeconds")}
-                </SelectItem>
-                <SelectItem value="30">
-                  {t("trade-table.granularity.thirtySeconds")}
-                </SelectItem>
-                <SelectItem value="60">
-                  {t("trade-table.granularity.oneMinute")}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            {config?.groupTrades !== false && (
+              <Select
+                value={groupingGranularity.toString()}
+                onValueChange={(value) =>
+                  handleGroupingGranularityChange(parseInt(value))
+                }
+              >
+                <SelectTrigger className="min-w-[180px] max-w-[250px]">
+                  <div className="flex items-center w-full">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info
+                            className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help mr-2 shrink-0"
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="z-50">
+                          <p>{t("trade-table.granularity.tooltip")}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <SelectValue
+                      placeholder={t("trade-table.granularity.label")}
+                      className="truncate"
+                    />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">
+                    {t("trade-table.granularity.exact")}
+                  </SelectItem>
+                  <SelectItem value="5">
+                    {t("trade-table.granularity.fiveSeconds")}
+                  </SelectItem>
+                  <SelectItem value="10">
+                    {t("trade-table.granularity.tenSeconds")}
+                  </SelectItem>
+                  <SelectItem value="30">
+                    {t("trade-table.granularity.thirtySeconds")}
+                  </SelectItem>
+                  <SelectItem value="60">
+                    {t("trade-table.granularity.oneMinute")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <ColumnConfigDialog tableId="trade-table" />
           </div>
         </div>
       </CardHeader>
+      )}
       <CardContent className="flex-1 min-h-0 overflow-auto p-0">
-        <div className="flex h-full flex-col min-w-fit">
-          <Table className="w-full h-full border-separate border-spacing-0">
-            <TableHeader className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l"
-                      style={{ width: header.getSize() }}
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
+        <div className="relative w-full min-w-fit">
+          <table className="w-full border-separate border-spacing-0 caption-bottom text-sm">
+            <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr
+                    key={headerGroup.id}
+                    className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l h-12 align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                        style={{ width: header.getSize() }}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
 
-            <TableBody className="flex-1 overflow-auto bg-background">
+            <tbody className="bg-background [&_tr:last-child]:border-0">
               {table.getRowModel().rows?.length ? (
                 table.getRowModel().rows.map((row, rowIndex) => (
                   <React.Fragment key={row.id}>
-                    <TableRow
+                    <tr
                       data-state={row.getIsSelected() && "selected"}
                       className={cn(
                         "border-b border-border transition-all duration-75 hover:bg-muted/40 group",
-                        row.getIsSelected() && "bg-accent/50 hover:bg-accent",
+                        row.getIsSelected() && "bg-accent/50 hover:bg-accent data-[state=selected]:bg-muted",
                         row.getIsExpanded()
                           ? "bg-muted/60"
                           : row.getCanExpand()
@@ -1248,10 +1349,10 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
                       )}
                     >
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell
+                        <td
                           key={cell.id}
                           className={cn(
-                            "whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l group-hover:border-border",
+                            "p-4 align-middle [&:has([role=checkbox])]:pr-0 whitespace-nowrap px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l group-hover:border-border",
                             row.getIsSelected() && "border-border",
                           )}
                           style={{ width: cell.column.getSize() }}
@@ -1260,23 +1361,127 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
                             cell.column.columnDef.cell,
                             cell.getContext(),
                           )}
-                        </TableCell>
+                        </td>
                       ))}
-                    </TableRow>
+                    </tr>
                   </React.Fragment>
                 ))
               ) : (
-                <TableRow>
-                  <TableCell
+                <tr>
+                  <td
                     colSpan={columns.length}
-                    className="h-24 text-center"
+                    className="p-4 align-middle [&:has([role=checkbox])]:pr-0 h-24 text-center"
                   >
                     No results.
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+            <tfoot className="sticky bottom-0 z-10 bg-muted/90 backdrop-blur-xs border-t-2 border-border">
+              <tr className="border-b transition-colors">
+                {columns.map((column, index) => {
+                  const columnId = column.id || (column as any).accessorKey;
+                  
+                  // Find the first non-select/expand column for "Total" label
+                  const firstDataColumnIndex = columns.findIndex(
+                    (col) => {
+                      const id = col.id || (col as any).accessorKey;
+                      return id !== "select" && id !== "expand";
+                    }
+                  );
+                  const isFirstDataColumn = index === firstDataColumnIndex;
+
+                  // Show "Total" label in the first data column
+                  if (isFirstDataColumn) {
+                    return (
+                      <td
+                        key={columnId || index}
+                        className={cn(
+                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold border-r border-border/50 last:border-r-0 first:border-l",
+                        )}
+                        style={{ width: column.size || 400 }}
+                      >
+                        {t("trade-table.total")}
+                      </td>
+                    );
+                  }
+
+                  // Empty cells for select and expand columns
+                  if (columnId === "select" || columnId === "expand") {
+                    return (
+                      <td
+                        key={columnId || index}
+                        className={cn(
+                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm border-r border-border/50 last:border-r-0",
+                        )}
+                        style={{ width: column.size || 400 }}
+                      />
+                    );
+                  }
+
+                  // Show totals for numeric columns
+                  if (columnId === "pnl") {
+                    return (
+                      <td
+                        key={columnId}
+                        className={cn(
+                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
+                        )}
+                        style={{ width: column.size || 400 }}
+                      >
+                        <span
+                          className={cn(
+                            totals.totalPnl >= 0 ? "text-green-600" : "text-red-600"
+                          )}
+                        >
+                          {totals.totalPnl.toFixed(2)}
+                        </span>
+                      </td>
+                    );
+                  }
+
+                  if (columnId === "commission") {
+                    return (
+                      <td
+                        key={columnId}
+                        className={cn(
+                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
+                        )}
+                        style={{ width: column.size || 400 }}
+                      >
+                        ${totals.totalCommission.toFixed(2)}
+                      </td>
+                    );
+                  }
+
+                  if (columnId === "quantity") {
+                    return (
+                      <td
+                        key={columnId}
+                        className={cn(
+                          "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
+                        )}
+                        style={{ width: column.size || 400 }}
+                      >
+                        {totals.totalQuantity.toLocaleString()}
+                      </td>
+                    );
+                  }
+
+                  // Empty cells for other columns
+                  return (
+                    <td
+                      key={columnId || index}
+                      className={cn(
+                        "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm border-r border-border/50 last:border-r-0",
+                      )}
+                      style={{ width: column.size || 400 }}
+                    />
+                  );
+                })}
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </CardContent>
       <CardFooter className="flex items-center justify-between border-t bg-background px-4 py-3">
@@ -1330,6 +1535,18 @@ export function TradeTableReview({ tradesParam }: { tradesParam?: Trade[] }) {
             }}
           >
             {t("trade-table.resetPageSize")}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const maxPageSize = groupedTrades.length;
+              handlePageSizeChange(maxPageSize);
+              table.setPageSize(maxPageSize);
+              table.setPageIndex(0);
+            }}
+          >
+            {t("trade-table.maxPageSize")}
           </Button>
         </div>
       </CardFooter>

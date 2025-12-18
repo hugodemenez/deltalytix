@@ -5,7 +5,7 @@ import { TradeTableReview } from "./components/tables/trade-table-review";
 import { AccountsOverview } from "./components/accounts/accounts-overview";
 import { AnalysisOverview } from "./components/analysis/analysis-overview";
 import WidgetCanvas from "./components/widget-canvas";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useI18n } from "@/locales/client";
 import { useSearchParams } from "next/navigation";
 import { clearReferralCode } from "@/lib/referral-storage";
@@ -36,15 +36,28 @@ export default function Home() {
 
       // Debounce the calculation to account for animations
       timeoutId = setTimeout(() => {
-        // Get navbar height - it's fixed at the top
+        // Get navbar height - it's sticky at the top
         const navbar = document.querySelector(
-          'nav[class*="fixed"]'
+          'nav[class*="sticky"]'
         ) as HTMLElement;
         const navbarHeight = navbar?.offsetHeight || 96; // fallback to 96px
 
-        // Get tabs list height
+        // Get tabs list height (wrapper includes py-2 padding)
         const tabsList = tabsListRef.current;
         const tabsListHeight = tabsList?.offsetHeight || 0;
+
+        // Calculate the actual bottom position of the fixed tabs wrapper
+        // Tabs wrapper is positioned at: navbarHeight from top
+        // Tabs wrapper bottom = navbarHeight + tabsListHeight
+        const tabsWrapperBottom = navbarHeight + tabsListHeight;
+
+        // Get main element's top position to calculate relative padding
+        const main = mainRef.current;
+        const mainTop = main?.getBoundingClientRect().top || 0;
+
+        // Calculate padding-top needed: tabs wrapper bottom - main top
+        // This ensures content starts right after the tabs wrapper
+        const calculatedPaddingTop = tabsWrapperBottom - mainTop;
 
         // Set CSS custom property for navbar height
         document.documentElement.style.setProperty(
@@ -54,6 +67,10 @@ export default function Home() {
         document.documentElement.style.setProperty(
           "--tabs-height",
           `${tabsListHeight}px`
+        );
+        document.documentElement.style.setProperty(
+          "--calculated-padding-top",
+          `${calculatedPaddingTop}px`
         );
       }, 100); // Small delay to account for animation
     };
@@ -66,7 +83,7 @@ export default function Home() {
 
     // Create a ResizeObserver to watch for navbar height changes (when filters appear/disappear)
     const resizeObserver = new ResizeObserver(calculateHeight);
-    const navbar = document.querySelector('nav[class*="fixed"]');
+    const navbar = document.querySelector('nav[class*="sticky"]');
     if (navbar) {
       resizeObserver.observe(navbar);
     }
@@ -115,51 +132,33 @@ export default function Home() {
   }, []);
 
   return (
-    <main
-      ref={mainRef}
-      className="flex w-full min-h-screen overflow-x-hidden"
-      style={{
-        paddingTop: `calc(var(--navbar-height, 72px) + var(--tabs-height, 48px))`,
-      }}
-    >
-      <div className="flex flex-1 flex-col w-full px-4">
-        <Tabs defaultValue="widgets" className="w-full h-full flex flex-col">
-          {/* Fixed TabsList positioned under navbar */}
-          <div
-            ref={tabsListRef}
-            className="fixed top-0 left-0 right-0 z-40 bg-background border-b px-4 py-2"
-            style={{
-              top: "var(--navbar-height, 72px)",
-              paddingLeft: "1rem",
-              paddingRight: "1rem",
-            }}
-          >
-            <TabsList className="w-full max-w-none">
-              <TabsTrigger value="widgets">
-                {t("dashboard.tabs.widgets")}
-              </TabsTrigger>
-              <TabsTrigger value="table">
-                {t("dashboard.tabs.table")}
-              </TabsTrigger>
-              <TabsTrigger value="accounts">
-                {t("dashboard.tabs.accounts")}
-              </TabsTrigger>
-            </TabsList>
-          </div>
+    <main ref={mainRef}>
+      <Tabs defaultValue="widgets" className="w-full h-full">
+        {/* Fixed TabsList positioned under navbar */}
+        <div ref={tabsListRef} className="sticky bg-background border-b top-(--navbar-height) z-1">
+          <TabsList className="w-full max-w-none">
+            <TabsTrigger value="widgets">
+              {t("dashboard.tabs.widgets")}
+            </TabsTrigger>
+            <TabsTrigger value="table">{t("dashboard.tabs.table")}</TabsTrigger>
+            <TabsTrigger value="accounts">
+              {t("dashboard.tabs.accounts")}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-          <TabsContent value="table" className="flex-1 grow-0">
-            <TradeTableReview />
-          </TabsContent>
+        <TabsContent value="table" className="h-[calc(100vh-var(--navbar-height)-var(--tabs-height)-16px)] p-4">
+          <TradeTableReview />
+        </TabsContent>
 
-          <TabsContent value="accounts" className="flex-1 -mt-16">
-            <AccountsOverview size="large" />
-          </TabsContent>
+        <TabsContent value="accounts" className="flex-1 mt-0">
+          <AccountsOverview size="large" />
+        </TabsContent>
 
-          <TabsContent value="widgets" className="flex-1 -mt-20">
-            <WidgetCanvas />
-          </TabsContent>
-        </Tabs>
-      </div>
+        <TabsContent value="widgets" className="px-4">
+          <WidgetCanvas />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }

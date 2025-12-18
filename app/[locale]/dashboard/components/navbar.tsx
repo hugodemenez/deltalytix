@@ -36,11 +36,11 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed py-2 top-0 left-0 right-0 z-50 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-xs w-screen">
+      <nav className="sticky py-2 top-0 left-0 right-0 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-xs w-full z-1">
         <div className="flex items-center justify-between px-10 h-16">
           <div className="flex items-center gap-x-4">
             <div className="flex flex-col items-center">
-              <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen}>
+              <Popover open={isLogoPopoverOpen} onOpenChange={setIsLogoPopoverOpen} modal={false}>
                 <PopoverTrigger asChild>
                   <Button 
                     variant="ghost" 
@@ -106,7 +106,6 @@ export default function Navbar() {
           <ActiveFilterTags showAccountNumbers={showAccountNumbers} />
         </AnimatePresence>
       </nav>
-      <div className="h-[72px]" />
     </>
   )
 }
