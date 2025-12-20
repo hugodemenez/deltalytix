@@ -5,12 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useData } from "@/context/data-provider"
 import { Clock, PiggyBank, Award, BarChart, Info } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
+import { cn, calculateStatistics } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Progress } from "@/components/ui/progress"
+import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
+import { Trade } from "@prisma/client"
 
 interface StatisticsWidgetProps {
   size?: 'tiny' | 'small' | 'medium' | 'large' | 'small-long' | 'extra-large'
+  dayData?: CalendarEntry // Optional: if provided, show statistics for this specific day only
 }
 
 function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
@@ -21,8 +24,8 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (.
   }
 }
 
-export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetProps) {
-  const { statistics, calendarData } = useData()
+export default function StatisticsWidget({ size = 'medium', dayData }: StatisticsWidgetProps) {
+  const dataContext = useData()
   const [activeTooltip, setActiveTooltip] = React.useState<string | null>(null)
   const [isTouch, setIsTouch] = React.useState(false)
   const cardRef = React.useRef<HTMLDivElement>(null)
@@ -45,7 +48,30 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
     }
   }
 
-  // Calculate statistics
+  // Calculate statistics - either for a specific day or for all data
+  const statistics = React.useMemo(() => {
+    if (dayData?.trades) {
+      // Calculate statistics for this specific day
+      return calculateStatistics(dayData.trades as Trade[], [])
+    }
+    return dataContext.statistics
+  }, [dayData, dataContext.statistics])
+
+  const calendarData = React.useMemo(() => {
+    if (dayData) {
+      // Create a single-day calendarData object
+      return {
+        'selected-day': {
+          pnl: dayData.pnl,
+          tradeNumber: dayData.tradeNumber,
+          longNumber: dayData.longNumber,
+          shortNumber: dayData.shortNumber,
+        }
+      }
+    }
+    return dataContext.calendarData
+  }, [dayData, dataContext.calendarData])
+
   const { 
     nbWin, nbLoss, nbBe, nbTrades, 
     averagePositionTime, 
@@ -78,6 +104,30 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
   const totalTrades = longNumber + shortNumber
   const longRate = Number((longNumber / totalTrades * 100).toFixed(2))
   const shortRate = Number((shortNumber / totalTrades * 100).toFixed(2))
+
+  // Calculate average win/loss based on daily P&L
+  // For single day mode, use the day's P&L directly; for multi-day, calculate average
+  const avgWinPerDay = React.useMemo(() => {
+    if (dayData) {
+      // Single day: if positive, show the day's P&L; otherwise 0
+      return dayData.pnl > 0 ? dayData.pnl : 0
+    }
+    const winningDays = chartData.filter(day => day.pnl > 0)
+    return winningDays.length > 0 
+      ? winningDays.reduce((sum, day) => sum + day.pnl, 0) / winningDays.length 
+      : 0
+  }, [dayData, chartData])
+
+  const avgLossPerDay = React.useMemo(() => {
+    if (dayData) {
+      // Single day: if negative, show absolute value; otherwise 0
+      return dayData.pnl < 0 ? Math.abs(dayData.pnl) : 0
+    }
+    const losingDays = chartData.filter(day => day.pnl < 0)
+    return losingDays.length > 0 
+      ? Math.abs(losingDays.reduce((sum, day) => sum + day.pnl, 0) / losingDays.length)
+      : 0
+  }, [dayData, chartData])
 
   // Colors
   const positiveColor = "hsl(var(--chart-win))"
@@ -221,13 +271,37 @@ export default function StatisticsWidget({ size = 'medium' }: StatisticsWidgetPr
                 <span className="text-sm font-medium">{winRate}%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground text-xs">{t('statistics.performance.avgWin')}</span>
-                <span className="text-sm font-medium text-green-500 font-mono">{formatCurrency(grossWin / nbWin)}</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground text-xs">{t('statistics.performance.avgWin')}</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Info className="h-3 w-3 text-muted-foreground" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{t('statistics.performance.avgWinTooltip')}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+                <span className="text-sm font-medium text-green-500 font-mono">{formatCurrency(avgWinPerDay)}</span>
               </div>
               {size !== 'tiny' && (
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground text-xs">{t('statistics.performance.avgLoss')}</span>
-                  <span className="text-sm font-medium text-red-500 font-mono">-{formatCurrency(grossLosses / nbLoss)}</span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-muted-foreground text-xs">{t('statistics.performance.avgLoss')}</span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Info className="h-3 w-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>{t('statistics.performance.avgLossTooltip')}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <span className="text-sm font-medium text-red-500 font-mono">-{formatCurrency(avgLossPerDay)}</span>
                 </div>
               )}
             </div>

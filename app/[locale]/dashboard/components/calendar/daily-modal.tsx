@@ -29,6 +29,7 @@ import { DailyStats } from "./daily-stats";
 import { DailyComment } from "./daily-comment";
 import { useUserStore } from "../../../../../store/user-store";
 import { TradeTableReview } from "../tables/trade-table-review";
+import StatisticsWidget from "../statistics/statistics-widget";
 
 interface CalendarModalProps {
   isOpen: boolean;
@@ -122,6 +123,9 @@ export function CalendarModal({
             value="analysis"
             className="grow overflow-auto p-6 pt-2 space-y-4"
           >
+            {dayData && dayData.trades?.length > 0 && (
+              <StatisticsWidget dayData={dayData} size="medium" />
+            )}
             <DailyStats dayData={dayData} isWeekly={false} />
             {/* <DailyMood dayData={dayData} isWeekly={false} selectedDate={selectedDate} /> */}
             <Charts dayData={dayData} />

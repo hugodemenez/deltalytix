@@ -28,7 +28,7 @@ import { Account } from "@/context/data-provider"
 import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
 
 
-const WEEKDAYS = [
+const WEEKDAYS_SUNDAY_START = [
   'calendar.weekdays.sun',
   'calendar.weekdays.mon',
   'calendar.weekdays.tue',
@@ -38,10 +38,21 @@ const WEEKDAYS = [
   'calendar.weekdays.sat'
 ] as const
 
+const WEEKDAYS_MONDAY_START = [
+  'calendar.weekdays.mon',
+  'calendar.weekdays.tue',
+  'calendar.weekdays.wed',
+  'calendar.weekdays.thu',
+  'calendar.weekdays.fri',
+  'calendar.weekdays.sat',
+  'calendar.weekdays.sun'
+] as const
 
-function getCalendarDays(monthStart: Date, monthEnd: Date) {
-  const startDate = startOfWeek(monthStart)
-  const endDate = endOfWeek(monthEnd)
+
+function getCalendarDays(monthStart: Date, monthEnd: Date, weekStartsOnMonday: boolean = false) {
+  const weekStartsOn = weekStartsOnMonday ? 1 : 0
+  const startDate = startOfWeek(monthStart, { weekStartsOn })
+  const endDate = endOfWeek(monthEnd, { weekStartsOn })
   const days = eachDayOfInterval({ start: startDate, end: endDate })
 
   if (days.length === 42) return days
@@ -289,6 +300,8 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
   const timezone = useUserStore(state => state.timezone)
   const userFinancialEvents = useFinancialEventsStore(state => state.events)
   const dateLocale = locale === 'fr' ? fr : enUS
+  const weekStartsOnMonday = locale === 'fr'
+  const WEEKDAYS = weekStartsOnMonday ? WEEKDAYS_MONDAY_START : WEEKDAYS_SUNDAY_START
   const [currentDate, setCurrentDate] = useState(new Date())
   const [isLoading, setIsLoading] = useState(false)
   const [monthEvents, setMonthEvents] = useState<FinancialEvent[]>([])
@@ -302,8 +315,8 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
 
   // Update calendarDays when currentDate changes
   useEffect(() => {
-    setCalendarDays(getCalendarDays(monthStart, monthEnd))
-  }, [currentDate, monthStart, monthEnd])
+    setCalendarDays(getCalendarDays(monthStart, monthEnd, weekStartsOnMonday))
+  }, [currentDate, monthStart, monthEnd, weekStartsOnMonday])
 
   // Use the calendar view store
   const {
@@ -568,7 +581,8 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
               {calendarDays.map((date, index) => {
                 const dateString = format(date, 'yyyy-MM-dd')
                 const dayData = calendarData[dateString]
-                const isLastDayOfWeek = getDay(date) === 6
+                // Check if it's the last day of the week (Saturday for Sunday start, Sunday for Monday start)
+                const isLastDayOfWeek = weekStartsOnMonday ? getDay(date) === 0 : getDay(date) === 6
                 const isCurrentMonth = isSameMonth(date, currentDate)
                 const dateEvents = filteredEventsByDate.get(dateString) || []
                 const dateRenewals = renewalsByDate.get(dateString) || []
