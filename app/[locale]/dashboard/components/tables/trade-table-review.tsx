@@ -262,6 +262,7 @@ interface TradeTableReviewConfig {
   showHeader?: boolean; // Whether to show the Card header (not the table column headers)
   expandByDefault?: boolean; // Whether to expand all expandable rows by default
   groupTrades?: boolean; // Whether to group trades (default: true)
+  disableColumnConfig?: boolean; // Whether to disable column configuration/hiding (default: false)
 }
 
 interface TradeTableReviewProps {
@@ -320,11 +321,16 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     if (tableConfig) {
       setSorting(tableConfig.sorting);
       setColumnFilters(tableConfig.columnFilters);
-      setColumnVisibility(tableConfig.columnVisibility);
+      // When column config is disabled, force all columns to be visible (empty visibility state)
+      if (config?.disableColumnConfig) {
+        setColumnVisibility({});
+      } else {
+        setColumnVisibility(tableConfig.columnVisibility);
+      }
       setPageSize(tableConfig.pageSize);
       setGroupingGranularity(tableConfig.groupingGranularity);
     }
-  }, [tableConfig]);
+  }, [tableConfig, config?.disableColumnConfig]);
 
   // Show bulk edit panel when multiple trades are selected
   React.useEffect(() => {
@@ -355,6 +361,10 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   const handleColumnVisibilityChange: OnChangeFn<VisibilityState> = (
     updaterOrValue,
   ) => {
+    // Prevent column visibility changes if disabled
+    if (config?.disableColumnConfig) {
+      return;
+    }
     const newVisibility =
       typeof updaterOrValue === "function"
         ? updaterOrValue(columnVisibility)
@@ -1147,13 +1157,16 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     });
   }, [allColumns, config?.columns]);
 
+  // Force all columns visible when column config is disabled
+  const effectiveColumnVisibility = config?.disableColumnConfig ? {} : columnVisibility;
+
   const table = useReactTable({
     data: groupedTrades,
     columns,
     state: {
       sorting,
       columnFilters,
-      columnVisibility,
+      columnVisibility: effectiveColumnVisibility,
       expanded,
       pagination: {
         pageIndex,
@@ -1297,7 +1310,9 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 </SelectContent>
               </Select>
             )}
-            <ColumnConfigDialog tableId="trade-table" />
+            {!config?.disableColumnConfig && (
+              <ColumnConfigDialog tableId="trade-table" />
+            )}
           </div>
         </div>
       </CardHeader>

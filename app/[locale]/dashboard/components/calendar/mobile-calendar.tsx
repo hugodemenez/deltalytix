@@ -26,7 +26,7 @@ function formatCurrency(value: number): string {
 
 // Generates an array of 42 YYYY-MM-DD date strings for the calendar grid,
 // ensuring calculations respect the target timezone.
-function getCalendarDayStrings(currentMonthDate: Date, timezone: string): string[] {
+function getCalendarDayStrings(currentMonthDate: Date, timezone: string, weekStartsOnMonday: boolean = false): string[] {
   // 1. Get the start of the month in the target timezone string format (YYYY-MM-01)
   const monthStartString = formatInTimeZone(currentMonthDate, timezone, 'yyyy-MM-01');
   // 2. Convert this string to a Date object representing midnight *in the target timezone*.
@@ -34,9 +34,13 @@ function getCalendarDayStrings(currentMonthDate: Date, timezone: string): string
   // 3. Get the day of the week (0=Sunday, 6=Saturday) for this first day *in the target timezone*.
   const startDayOfWeek = getDay(firstDayOfMonthInTZ); // getDay uses the locale's start of week, but the Date object is timezone-correct
 
-  // 4. Calculate the actual start date of the grid (Sunday) by subtracting days from the first day.
+  // 4. Calculate the actual start date of the grid (Sunday or Monday) by subtracting days from the first day.
   // `addDays` operates on the underlying timestamp but starts from a timezone-aware Date.
-  let currentGridDate = addDays(firstDayOfMonthInTZ, -startDayOfWeek);
+  // If week starts on Monday, adjust: Monday=1, so subtract (startDayOfWeek === 0 ? 6 : startDayOfWeek - 1)
+  const daysToSubtract = weekStartsOnMonday 
+    ? (startDayOfWeek === 0 ? 6 : startDayOfWeek - 1)
+    : startDayOfWeek;
+  let currentGridDate = addDays(firstDayOfMonthInTZ, -daysToSubtract);
 
   const dayStrings: string[] = [];
   for (let i = 0; i < 42; i++) {
@@ -61,12 +65,13 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
   const locale = useCurrentLocale()
   const timezone = useUserStore(state => state.timezone)
   const dateLocale = locale === 'fr' ? fr : enUS
+  const weekStartsOnMonday = locale === 'fr'
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
   // Generate calendar date strings based on the current date and timezone
-  const calendarDayStrings = getCalendarDayStrings(currentDate, timezone)
+  const calendarDayStrings = getCalendarDayStrings(currentDate, timezone, weekStartsOnMonday)
 
   // Get the current month and year based on the state date *in the target timezone*
   // Use a reference date (start of the month) in the target timezone for reliable comparison.
@@ -74,16 +79,26 @@ export default function MobileCalendarPnl({ calendarData }: { calendarData: Cale
   const currentMonth = currentMonthReferenceDate.getMonth()
   const currentYear = currentMonthReferenceDate.getFullYear()
 
-  // Define weekday headers (assuming Sunday start)
-  const weekdayHeaders = [
-    { key: 'sunday', label: t('calendar.weekdays.sun') },
-    { key: 'monday', label: t('calendar.weekdays.mon') },
-    { key: 'tuesday', label: t('calendar.weekdays.tue') },
-    { key: 'wednesday', label: t('calendar.weekdays.wed') },
-    { key: 'thursday', label: t('calendar.weekdays.thu') },
-    { key: 'friday', label: t('calendar.weekdays.fri') },
-    { key: 'saturday', label: t('calendar.weekdays.sat') }
-  ]
+  // Define weekday headers (Monday start for French locale, Sunday start otherwise)
+  const weekdayHeaders = weekStartsOnMonday
+    ? [
+        { key: 'monday', label: t('calendar.weekdays.mon') },
+        { key: 'tuesday', label: t('calendar.weekdays.tue') },
+        { key: 'wednesday', label: t('calendar.weekdays.wed') },
+        { key: 'thursday', label: t('calendar.weekdays.thu') },
+        { key: 'friday', label: t('calendar.weekdays.fri') },
+        { key: 'saturday', label: t('calendar.weekdays.sat') },
+        { key: 'sunday', label: t('calendar.weekdays.sun') }
+      ]
+    : [
+        { key: 'sunday', label: t('calendar.weekdays.sun') },
+        { key: 'monday', label: t('calendar.weekdays.mon') },
+        { key: 'tuesday', label: t('calendar.weekdays.tue') },
+        { key: 'wednesday', label: t('calendar.weekdays.wed') },
+        { key: 'thursday', label: t('calendar.weekdays.thu') },
+        { key: 'friday', label: t('calendar.weekdays.fri') },
+        { key: 'saturday', label: t('calendar.weekdays.sat') }
+      ]
 
   const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1))
   const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1))

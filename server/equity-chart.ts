@@ -39,7 +39,7 @@ interface EquityChartParams {
   tickRange: { min?: number, max?: number }
   timeRange: { range: string | null }
   tickFilter: { value: string | null }
-  weekdayFilter: { day: number | null }
+  weekdayFilter: { days: number[] }
   hourFilter: { hour: number | null }
   tagFilter: { tags: string[] }
   timezone: string
@@ -167,9 +167,9 @@ export async function getEquityChartDataAction(params: EquityChartParams): Promi
       }
 
       // Weekday filter
-      if (params.weekdayFilter?.day !== null) {
+      if (params.weekdayFilter?.days && params.weekdayFilter.days.length > 0) {
         const dayOfWeek = entryDate.getDay()
-        if (dayOfWeek !== params.weekdayFilter.day) {
+        if (!params.weekdayFilter.days.includes(dayOfWeek)) {
           return false
         }
       }
