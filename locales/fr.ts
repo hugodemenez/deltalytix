@@ -483,6 +483,9 @@ export default {
       categories: {
         title: "Aller à une catégorie",
       },
+      dateRangeApplied: "Période appliquée",
+      dateParseError: "Impossible d'analyser la date. Essayez d'utiliser le calendrier ou les sélecteurs rapides.",
+      parsingDate: "Analyse de la date...",
     },
     selectGroup: "Sélectionner un groupe",
     noGroup: "Sans groupe",

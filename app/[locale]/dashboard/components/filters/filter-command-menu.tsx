@@ -175,11 +175,11 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
         })
         // Clear search value after successful parse
         setSearchValue("")
-        toast.success('Date range applied')
+        toast.success(t('filters.commandMenu.dateRangeApplied'))
       }
     } catch (error) {
       console.error('Error parsing date:', error)
-      toast.error('Failed to parse date. Try using the calendar or quick selectors.')
+      toast.error(t('filters.commandMenu.dateParseError'))
     } finally {
       setIsParsingDate(false)
     }
@@ -464,7 +464,7 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
           : "max-h-[min(500px,calc(100vh-12rem))]"
       )}>
         <CommandEmpty>
-          {isParsingDate ? 'Parsing date...' : t('filters.noResults')}
+          {isParsingDate ? t('filters.commandMenu.parsingDate') : t('filters.noResults')}
         </CommandEmpty>
         
         {/* Date Range Section */}

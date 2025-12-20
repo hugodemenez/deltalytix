@@ -447,6 +447,9 @@ export default {
       categories: {
         title: "Jump to a category",
       },
+      dateRangeApplied: "Date range applied",
+      dateParseError: "Failed to parse date. Try using the calendar or quick selectors.",
+      parsingDate: "Parsing date...",
     },
     selectGroup: "Select Group",
     noGroup: "No Group",
