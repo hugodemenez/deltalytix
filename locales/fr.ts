@@ -479,6 +479,7 @@ export default {
         placeholderYear: "Année",
         placeholderMonth: "Mois",
         placeholderDay: "Jour",
+        weekdayFilter: "Filtre jour de la semaine",
       },
       categories: {
         title: "Aller à une catégorie",
@@ -486,6 +487,7 @@ export default {
       dateRangeApplied: "Période appliquée",
       dateParseError: "Impossible d'analyser la date. Essayez d'utiliser le calendrier ou les sélecteurs rapides.",
       parsingDate: "Analyse de la date...",
+      weekdayFilterApplied: "Filtre de jour de la semaine appliqué",
     },
     selectGroup: "Sélectionner un groupe",
     noGroup: "Sans groupe",

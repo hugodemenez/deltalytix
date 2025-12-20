@@ -18,11 +18,13 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     dateRange, 
     pnlRange,
     tagFilter,
+    weekdayFilter,
     setAccountNumbers, 
     setInstruments,
     setDateRange,
     setPnlRange,
-    setTagFilter
+    setTagFilter,
+    setWeekdayFilter
   } = useData()
   const tags = useUserStore(state => state.tags)
   const t = useI18n()
@@ -64,7 +66,7 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
       const { scrollWidth, clientWidth } = scrollRef.current
       setCanScroll(scrollWidth > clientWidth)
     }
-  }, [accountNumbers, instruments, dateRange, pnlRange, tagFilter])
+  }, [accountNumbers, instruments, dateRange, pnlRange, tagFilter, weekdayFilter])
 
   const scrollToNext = () => {
     if (!scrollRef.current) return
@@ -127,6 +129,10 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     setPnlRange({ min: undefined, max: undefined })
   }
 
+  const handleRemoveWeekdayFilter = () => {
+    setWeekdayFilter({ days: [] })
+  }
+
   // Get tag color by name
   const getTagColor = (tagName: string) => {
     const tag = tags?.find(t => t.name === tagName)
@@ -160,12 +166,38 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     return null
   }
 
+  // Get weekday name for display
+  const getWeekdayName = (day: number): string => {
+    const weekdayNames = [
+      t('weekdayPnl.days.sunday'),
+      t('weekdayPnl.days.monday'),
+      t('weekdayPnl.days.tuesday'),
+      t('weekdayPnl.days.wednesday'),
+      t('weekdayPnl.days.thursday'),
+      t('weekdayPnl.days.friday'),
+      t('weekdayPnl.days.saturday'),
+    ]
+    return weekdayNames[day] || ''
+  }
+
+  // Format weekday filter display
+  const formatWeekdayFilter = () => {
+    if (!weekdayFilter?.days || weekdayFilter.days.length === 0) return null
+    if (weekdayFilter.days.length === 1) {
+      return getWeekdayName(weekdayFilter.days[0])
+    }
+    // Sort days for consistent display
+    const sortedDays = [...weekdayFilter.days].sort((a, b) => a - b)
+    return sortedDays.map(day => getWeekdayName(day)).join(', ')
+  }
+
   const hasActiveFilters = 
     (accountNumbers?.length || 0) > 0 || 
     (instruments?.length || 0) > 0 || 
     (dateRange && (dateRange.from || dateRange.to)) || 
     (pnlRange && (pnlRange.min !== undefined || pnlRange.max !== undefined)) ||
-    (tagFilter?.tags?.length || 0) > 0
+    (tagFilter?.tags?.length || 0) > 0 ||
+    (weekdayFilter?.days && weekdayFilter.days.length > 0)
 
   if (!hasActiveFilters) {
     return null
@@ -226,6 +258,29 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
                     onClick={handleRemovePnlRange}
                   >
                     {formatPnlRange()}
+                    <X 
+                      className="h-3 w-3" 
+                    />
+                  </Badge>
+                </motion.div>
+              )}
+
+              {/* Weekday Filter Badge */}
+              {weekdayFilter?.days && weekdayFilter.days.length > 0 && formatWeekdayFilter() && (
+                <motion.div
+                  key="weekday-filter"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.15 }}
+                  layout
+                >
+                  <Badge 
+                    variant="secondary" 
+                    className="gap-1 shrink-0 badge cursor-pointer"
+                    onClick={handleRemoveWeekdayFilter}
+                  >
+                    {formatWeekdayFilter()}
                     <X 
                       className="h-3 w-3" 
                     />

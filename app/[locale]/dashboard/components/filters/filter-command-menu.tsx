@@ -28,7 +28,7 @@ interface FilterCommandMenuProps {
 
 export function FilterCommandMenu({ className, variant = "navbar" }: FilterCommandMenuProps) {
   const t = useI18n()
-  const { isMobile, dateRange, setDateRange } = useData()
+  const { isMobile, dateRange, setDateRange, setWeekdayFilter } = useData()
   const [open, setOpen] = useState(false)
   const [searchValue, setSearchValue] = useState("")
   const [inputWidth, setInputWidth] = useState<number | undefined>(undefined)
@@ -168,7 +168,15 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
 
       const data = await response.json()
       
-      if (data.from && data.to) {
+      // Handle weekday filter
+      if (data.weekdays && Array.isArray(data.weekdays) && data.weekdays.length > 0) {
+        setWeekdayFilter({ days: data.weekdays })
+        // Clear search value after successful parse
+        setSearchValue("")
+        toast.success(t('filters.commandMenu.weekdayFilterApplied'))
+      } 
+      // Handle date range filter
+      else if (data.from && data.to) {
         setDateRange({
           from: new Date(data.from),
           to: new Date(data.to),
@@ -183,7 +191,7 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
     } finally {
       setIsParsingDate(false)
     }
-  }, [containsDateKeywords, locale, timezone, setDateRange])
+  }, [containsDateKeywords, locale, timezone, setDateRange, setWeekdayFilter, t])
 
   // Handle search input changes with debouncing for date parsing
   const handleSearchChange = useCallback((value: string) => {

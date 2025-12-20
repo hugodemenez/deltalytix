@@ -443,6 +443,7 @@ export default {
         placeholderYear: "Year",
         placeholderMonth: "Month",
         placeholderDay: "Day",
+        weekdayFilter: "Weekday filter",
       },
       categories: {
         title: "Jump to a category",
@@ -450,6 +451,7 @@ export default {
       dateRangeApplied: "Date range applied",
       dateParseError: "Failed to parse date. Try using the calendar or quick selectors.",
       parsingDate: "Parsing date...",
+      weekdayFilterApplied: "Weekday filter applied",
     },
     selectGroup: "Select Group",
     noGroup: "No Group",

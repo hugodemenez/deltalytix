@@ -124,9 +124,9 @@ interface TickFilter {
   value: string | null;
 }
 
-// Update WeekdayFilter interface to use numbers
+// Update WeekdayFilter interface to use array of numbers
 interface WeekdayFilter {
-  day: number | null;
+  days: number[];
 }
 
 // Add new interface for hour filter
@@ -574,7 +574,7 @@ export const DataProvider: React.FC<{
   const [timeRange, setTimeRange] = useState<TimeRange>({ range: null });
   const [tickFilter, setTickFilter] = useState<TickFilter>({ value: null });
   const [weekdayFilter, setWeekdayFilter] = useState<WeekdayFilter>({
-    day: null,
+    days: [],
   });
   const [hourFilter, setHourFilter] = useState<HourFilter>({ hour: null });
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] });
@@ -969,9 +969,9 @@ export const DataProvider: React.FC<{
         }
 
         // Weekday filter
-        if (weekdayFilter?.day !== null) {
+        if (weekdayFilter?.days && weekdayFilter.days.length > 0) {
           const dayOfWeek = entryDate.getDay();
-          if (dayOfWeek !== weekdayFilter.day) {
+          if (!weekdayFilter.days.includes(dayOfWeek)) {
             return false;
           }
         }

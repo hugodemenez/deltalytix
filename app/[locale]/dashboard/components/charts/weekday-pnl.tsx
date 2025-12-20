@@ -106,12 +106,15 @@ export default function WeekdayPNLChart({
 
   const handleClick = React.useCallback(() => {
     if (activeDay === null) return;
-    if (weekdayFilter.day === activeDay) {
-      setWeekdayFilter({ day: null });
+    const currentDays = weekdayFilter.days || [];
+    if (currentDays.includes(activeDay)) {
+      // Remove day from filter
+      setWeekdayFilter({ days: currentDays.filter(d => d !== activeDay) });
     } else {
-      setWeekdayFilter({ day: activeDay });
+      // Add day to filter
+      setWeekdayFilter({ days: [...currentDays, activeDay] });
     }
-  }, [activeDay, weekdayFilter.day, setWeekdayFilter]);
+  }, [activeDay, weekdayFilter.days, setWeekdayFilter]);
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     React.useEffect(() => {
@@ -193,12 +196,12 @@ export default function WeekdayPNLChart({
               </UITooltip>
             </TooltipProvider>
           </div>
-          {weekdayFilter.day !== null && (
+          {weekdayFilter.days && weekdayFilter.days.length > 0 && (
             <Button
               variant="ghost"
               size="sm"
               className="h-8 px-2 lg:px-3"
-              onClick={() => setWeekdayFilter({ day: null })}
+              onClick={() => setWeekdayFilter({ days: [] })}
             >
               {t("weekdayPnl.clearFilter")}
             </Button>
@@ -263,12 +266,16 @@ export default function WeekdayPNLChart({
                 radius={[3, 3, 0, 0]}
                 maxBarSize={size === "small" ? 25 : 40}
                 className="transition-all duration-300 ease-in-out"
-                opacity={weekdayFilter.day !== null ? 0.3 : 1}
+                opacity={weekdayFilter.days && weekdayFilter.days.length > 0 ? 0.3 : 1}
               >
                 {weekdayData.map((entry) => (
                   <Cell
                     key={`cell-${entry.day}`}
                     fill={getColor(entry.pnl)}
+                    className={cn(
+                      "transition-all duration-300 ease-in-out",
+                      weekdayFilter.days && weekdayFilter.days.includes(entry.day) && "ring-2 ring-primary ring-offset-2"
+                    )}
                   />
                 ))}
               </Bar>

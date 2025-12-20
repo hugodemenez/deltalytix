@@ -32,7 +32,7 @@ interface DateInputsState {
 }
 
 export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
-  const { dateRange, setDateRange } = useData()
+  const { dateRange, setDateRange, weekdayFilter, setWeekdayFilter } = useData()
   const [fromCalendarOpen, setFromCalendarOpen] = useState(false)
   const [toCalendarOpen, setToCalendarOpen] = useState(false)
   const [uniqueDayCalendarOpen, setUniqueDayCalendarOpen] = useState(false)
@@ -351,8 +351,59 @@ export function DateRangeSection({ searchValue }: DateRangeSectionProps) {
   const showTo = !searchValue || toLabel.toLowerCase().includes(searchValue.toLowerCase())
   const showUniqueDay = !searchValue || uniqueDayLabel.toLowerCase().includes(searchValue.toLowerCase())
 
+  // Get weekday name for display
+  const getWeekdayName = (day: number): string => {
+    const weekdayNames = [
+      t('weekdayPnl.days.sunday'),
+      t('weekdayPnl.days.monday'),
+      t('weekdayPnl.days.tuesday'),
+      t('weekdayPnl.days.wednesday'),
+      t('weekdayPnl.days.thursday'),
+      t('weekdayPnl.days.friday'),
+      t('weekdayPnl.days.saturday'),
+    ]
+    return weekdayNames[day] || ''
+  }
+
+  const showWeekdayFilter = weekdayFilter?.days && weekdayFilter.days.length > 0
+
+  // Format weekday filter display
+  const formatWeekdayFilter = () => {
+    if (!weekdayFilter?.days || weekdayFilter.days.length === 0) return ''
+    if (weekdayFilter.days.length === 1) {
+      return getWeekdayName(weekdayFilter.days[0])
+    }
+    // Sort days for consistent display
+    const sortedDays = [...weekdayFilter.days].sort((a, b) => a - b)
+    return sortedDays.map(day => getWeekdayName(day)).join(', ')
+  }
+
   return (
     <>
+      {/* Weekday Filter Indicator */}
+      {showWeekdayFilter && (
+        <CommandItem
+          onSelect={() => setWeekdayFilter({ days: [] })}
+          className="flex items-center gap-2 px-2 group"
+        >
+          <CalendarIcon className="h-4 w-4" />
+          <span className="text-sm">{t('filters.commandMenu.dateRange.weekdayFilter')}: {formatWeekdayFilter()}</span>
+          <div className="ml-auto">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={(e) => {
+                e.stopPropagation()
+                setWeekdayFilter({ days: [] })
+              }}
+            >
+              <X className="h-3 w-3 text-destructive" />
+            </Button>
+          </div>
+        </CommandItem>
+      )}
+
       {/* From Date Calendar Popover */}
       {showFrom && (
         <Popover open={fromCalendarOpen} onOpenChange={setFromCalendarOpen}>
