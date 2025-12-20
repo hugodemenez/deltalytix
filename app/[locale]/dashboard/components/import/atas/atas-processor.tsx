@@ -385,8 +385,8 @@ export default function AtasProcessor({
       }
 
       // Generate unique IDs for entry and close
-      item.entryId = `atas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      item.closeId = `atas_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      item.entryId = `entry-${generateTradeHash(item)}`;
+      item.closeId = `close-${generateTradeHash(item)}`;
 
       // Generate trade hash for deduplication
       item.id = generateTradeHash(item);
@@ -605,12 +605,39 @@ export default function AtasProcessor({
           {availableAccounts.length > 0 && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-lg font-semibold">
-                  {t("import.account.pickAccounts")}
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  {t("import.account.pickAccountsDescription")}
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-lg font-semibold">
+                      {t("import.account.pickAccounts")}
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      {t("import.account.pickAccountsDescription")}
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const allSelected =
+                        availableAccounts.length === currentSelectedAccounts.length &&
+                        availableAccounts.every((account) =>
+                          currentSelectedAccounts.includes(account)
+                        );
+                      if (allSelected) {
+                        setCurrentSelectedAccounts([]);
+                      } else {
+                        setCurrentSelectedAccounts([...availableAccounts]);
+                      }
+                    }}
+                  >
+                    {availableAccounts.length === currentSelectedAccounts.length &&
+                    availableAccounts.every((account) =>
+                      currentSelectedAccounts.includes(account)
+                    )
+                      ? t("shared.deselectAll")
+                      : t("shared.selectAll")}
+                  </Button>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
