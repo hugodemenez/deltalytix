@@ -1,14 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +11,7 @@ import { toast } from "sonner";
 import { Trade } from "@prisma/client";
 import { useI18n } from "@/locales/client";
 import { useTradesStore } from "@/store/trades-store";
+import { useUserStore } from "@/store/user-store";
 import { generateTradeHash } from "@/lib/utils";
 import { PlatformProcessorProps } from "../config/platforms";
 import { TradeTableReview } from "../../tables/trade-table-review";
@@ -47,37 +40,97 @@ const formatPnl = (
   return { pnl: numericValue };
 };
 
-const parseAtasDate = (dateValue: any): string | undefined => {
+const parseAtasDate = (dateValue: any, timezone: string): string | undefined => {
   if (!dateValue || String(dateValue).trim() === "") {
     return undefined;
   }
 
   try {
-    // Check if it's an Excel serial number (numeric value)
-    if (typeof dateValue === "number") {
-      // Excel serial numbers represent days since January 1, 1900
-      // We need to convert this to a JavaScript Date
-      const excelEpoch = new Date(1900, 0, 1); // January 1, 1900
-      const millisecondsPerDay = 24 * 60 * 60 * 1000;
+    // Excel parses dates and provides them as Date objects or Date object strings
+    const dateStr = String(dateValue);
 
-      // Excel incorrectly treats 1900 as a leap year, so we need to adjust
-      // Excel's epoch is actually 1900-01-01, but it incorrectly includes 1900-02-29
-      const adjustedSerialNumber = dateValue - 2; // Adjust for Excel's leap year bug
-
-      const date = new Date(
-        excelEpoch.getTime() + adjustedSerialNumber * millisecondsPerDay
-      );
-
-      if (isNaN(date.getTime())) {
-        console.error(`Invalid Excel serial number: ${dateValue}`);
-        return undefined;
+    // Check if it's already a Date object or a string representation of a Date object
+    let dateObj: Date | null = null;
+    if (dateValue instanceof Date) {
+      dateObj = dateValue;
+    } else if (typeof dateValue === "string" && (dateStr.includes("GMT") || dateStr.includes("UTC") || dateStr.match(/^\w{3} \w{3} \d{2} \d{4}/))) {
+      // Try to parse as a Date object string
+      dateObj = new Date(dateStr);
+      if (isNaN(dateObj.getTime())) {
+        dateObj = null;
       }
-
-      return date.toISOString().replace("Z", "+00:00");
     }
 
-    // Handle string format: DD.MM.YYYY HH:MM:SS
-    const dateStr = String(dateValue);
+    if (dateObj) {
+      // Extract UTC components from the Date object
+      // Excel parses dates and creates Date objects where the UTC components
+      // represent what was in the Excel file. We need to treat those UTC components
+      // as being in the user's timezone, then convert to UTC for storage.
+      const utcYear = dateObj.getUTCFullYear();
+      const utcMonth = dateObj.getUTCMonth() + 1;
+      const utcDay = dateObj.getUTCDate();
+      const utcHours = dateObj.getUTCHours();
+      const utcMinutes = dateObj.getUTCMinutes();
+      const utcSeconds = dateObj.getUTCSeconds();
+      
+      // Now treat these UTC components as being in the user's timezone and convert to UTC
+      const dateString = `${utcYear}-${String(utcMonth).padStart(2, "0")}-${String(utcDay).padStart(2, "0")}T${String(utcHours).padStart(2, "0")}:${String(utcMinutes).padStart(2, "0")}:${String(utcSeconds).padStart(2, "0")}`;
+      
+      // Create a formatter for the target timezone
+      const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      });
+      
+      // Create a date assuming these components are UTC
+      const tempUTC = new Date(dateString + "Z");
+      
+      // Format the UTC date in the target timezone to see what it displays as
+      // Use formatToParts to get structured components instead of parsing a string
+      const parts = formatter.formatToParts(tempUTC);
+      const tzYear = parseInt(parts.find(p => p.type === "year")?.value || "0");
+      const tzMonth = parseInt(parts.find(p => p.type === "month")?.value || "0");
+      const tzDay = parseInt(parts.find(p => p.type === "day")?.value || "0");
+      const tzHour = parseInt(parts.find(p => p.type === "hour")?.value || "0");
+      const tzMinute = parseInt(parts.find(p => p.type === "minute")?.value || "0");
+      const tzSecond = parseInt(parts.find(p => p.type === "second")?.value || "0");
+      
+      // Calculate the timezone offset: what we want (utcHours treated as local time) vs what UTC displays as
+      // If we want 15:53:10 in Europe/Paris, and 15:53:10 UTC displays as 17:53:10 in Europe/Paris,
+      // we need to subtract 2 hours from UTC to get 13:53:10 UTC, which displays as 15:53:10 in Europe/Paris
+      // The offset is: desired local time - what UTC displays as = 15:53:10 - 17:53:10 = -2 hours
+      // So we need to ADD this offset to UTC (subtract 2 hours from UTC time)
+      const desiredSeconds = utcHours * 3600 + utcMinutes * 60 + utcSeconds;
+      const actualSeconds = tzHour * 3600 + tzMinute * 60 + tzSecond;
+      const secondsDiff = desiredSeconds - actualSeconds; // This is negative: -7200 seconds
+      
+      // Also account for day rollover
+      let dayOffset = 0;
+      if (tzYear !== utcYear || tzMonth !== utcMonth || tzDay !== utcDay) {
+        const desiredDate = new Date(utcYear, utcMonth - 1, utcDay, utcHours, utcMinutes, utcSeconds);
+        const actualDate = new Date(tzYear, tzMonth - 1, tzDay, tzHour, tzMinute, tzSecond);
+        dayOffset = Math.round((desiredDate.getTime() - actualDate.getTime()) / 1000);
+      }
+      
+      const totalSecondsDiff = dayOffset + secondsDiff;
+      
+      // Adjust: ADD the offset (which is negative) to get the correct UTC time
+      // Example: 15:53:10 UTC + (-7200) = 13:53:10 UTC, which displays as 15:53:10 in Europe/Paris
+      const correctUTC = new Date(tempUTC.getTime() + (totalSecondsDiff * 1000));
+      
+      if (isNaN(correctUTC.getTime())) {
+        console.error(`Invalid date created:`, correctUTC);
+        return undefined;
+      }
+      
+      return correctUTC.toISOString().replace("Z", "+00:00");
+    }
 
     // Check if it's already in ISO format
     if (dateStr.includes("T") || dateStr.includes("-")) {
@@ -87,41 +140,9 @@ const parseAtasDate = (dateValue: any): string | undefined => {
       }
     }
 
-    // ATAS format: DD.MM.YYYY HH:MM:SS
-    const [datePart, timePart] = dateStr.split(" ");
-
-    if (!datePart || !timePart) {
-      console.error(`Invalid ATAS date format: ${dateStr}`);
-      return undefined;
-    }
-
-    const [day, month, year] = datePart.split(".").map(Number);
-    const [hours, minutes, seconds] = timePart.split(":").map(Number);
-
-    // Validate all components
-    if ([year, month, day, hours, minutes, seconds].some((n) => isNaN(n))) {
-      console.error(`Invalid date components:`, {
-        year,
-        month,
-        day,
-        hours,
-        minutes,
-        seconds,
-      });
-      return undefined;
-    }
-
-    // Create date in local time (month - 1 because JS months are 0-based)
-    const localDate = new Date(year, month - 1, day, hours, minutes, seconds);
-
-    // Validate the created date
-    if (isNaN(localDate.getTime())) {
-      console.error(`Invalid date created:`, localDate);
-      return undefined;
-    }
-
-    // Convert to UTC and format
-    return localDate.toISOString().replace("Z", "+00:00");
+    // If we reach here, the date format is not recognized
+    console.error(`Unsupported date format: ${dateStr}`);
+    return undefined;
   } catch (error) {
     console.error(`Error parsing ATAS date: ${dateValue}`, error);
     return undefined;
@@ -151,30 +172,37 @@ export default function AtasProcessor({
   setSelectedAccountNumbers,
 }: PlatformProcessorProps) {
   const existingTrades = useTradesStore((state) => state.trades);
-  const [trades, setTrades] = useState<Trade[]>([]);
-  const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const timezone = useUserStore((state) => state.timezone);
+  const [allProcessedTrades, setAllProcessedTrades] = useState<Trade[]>([]);
   const [missingCommissions, setMissingCommissions] = useState<{
     [key: string]: number;
   }>({});
   const [showCommissionPrompt, setShowCommissionPrompt] = useState(false);
   const t = useI18n();
-  const hasInitialized = useRef(false);
-  
+
   // Internal state for account selection if not provided via props
-  const [internalSelectedAccounts, setInternalSelectedAccounts] = useState<string[]>([]);
-  
+  const [internalSelectedAccounts, setInternalSelectedAccounts] = useState<
+    string[]
+  >([]);
+
   // Use provided selectedAccountNumbers or fall back to internal state
-  const currentSelectedAccounts = selectedAccountNumbers || internalSelectedAccounts;
-  const setCurrentSelectedAccounts = setSelectedAccountNumbers || setInternalSelectedAccounts;
+  const currentSelectedAccounts =
+    selectedAccountNumbers || internalSelectedAccounts;
+  const setCurrentSelectedAccounts =
+    setSelectedAccountNumbers || setInternalSelectedAccounts;
 
   // Get available accounts from all trades
   const availableAccounts = useMemo(() => {
-    return Array.from(new Set(allTrades.map((trade) => trade.accountNumber).filter(Boolean))) as string[];
-  }, [allTrades]);
+    return Array.from(
+      new Set(
+        allProcessedTrades.map((trade) => trade.accountNumber).filter(Boolean)
+      )
+    ) as string[];
+  }, [allProcessedTrades]);
 
   // Count trades per account
   const tradesPerAccount = useMemo(() => {
-    return allTrades.reduce(
+    return allProcessedTrades.reduce(
       (counts, trade) => {
         if (!trade.accountNumber) return counts;
         counts[trade.accountNumber] = (counts[trade.accountNumber] || 0) + 1;
@@ -182,68 +210,58 @@ export default function AtasProcessor({
       },
       {} as { [key: string]: number }
     );
-  }, [allTrades]);
+  }, [allProcessedTrades]);
 
   // Filter trades based on selected accounts
   const filteredTrades = useMemo(() => {
     if (currentSelectedAccounts.length === 0) {
       return [];
     }
-    return allTrades.filter(
-      (trade) => trade.accountNumber && currentSelectedAccounts.includes(trade.accountNumber)
+    return allProcessedTrades.filter(
+      (trade) =>
+        trade.accountNumber &&
+        currentSelectedAccounts.includes(trade.accountNumber)
     );
-  }, [allTrades, currentSelectedAccounts]);
-
-
-  // Initialize selected accounts on first load
-  useEffect(() => {
-    if (availableAccounts.length > 0 && !hasInitialized.current && currentSelectedAccounts.length === 0) {
-      setCurrentSelectedAccounts(
-        availableAccounts.filter((account) => account !== undefined) as string[]
-      );
-      hasInitialized.current = true;
-    }
-  }, [availableAccounts, currentSelectedAccounts.length, setCurrentSelectedAccounts]);
+  }, [allProcessedTrades, currentSelectedAccounts]);
 
   const existingCommissions = useMemo(() => {
     const commissions: { [key: string]: number } = {};
-    if (!accountNumbers && currentSelectedAccounts.length === 0) {
-      return commissions;
-    }
-    const accountsToCheck = accountNumbers || currentSelectedAccounts;
-    existingTrades
-      .filter((trade) => accountsToCheck.includes(trade.accountNumber))
-      .forEach((trade) => {
-        if (trade.instrument && trade.commission && trade.quantity) {
-          commissions[trade.instrument] = trade.commission / trade.quantity;
-        }
-      });
+    // Use all existing trades to build commission lookup by accountNumber:instrument
+    existingTrades.forEach((trade) => {
+      if (trade.accountNumber && trade.instrument && trade.commission && trade.quantity) {
+        const key = `${trade.accountNumber}:${trade.instrument}`;
+        commissions[key] = trade.commission / trade.quantity;
+      }
+    });
     return commissions;
-  }, [existingTrades, accountNumbers, currentSelectedAccounts]);
+  }, [existingTrades]);
 
-  const totalPnL = useMemo(
-    () => filteredTrades.reduce((sum, trade) => sum + (trade.pnl || 0), 0),
-    [filteredTrades]
-  );
-  const totalCommission = useMemo(
-    () => filteredTrades.reduce((sum, trade) => sum + (trade.commission || 0), 0),
-    [filteredTrades]
-  );
-  const uniqueInstruments = useMemo(
-    () => Array.from(new Set(filteredTrades.map((trade) => trade.instrument))),
-    [filteredTrades]
-  );
+  // Get all unique account+instrument combinations from processed trades
+  const allAccountInstrumentPairs = useMemo(() => {
+    const pairs = new Set<string>();
+    allProcessedTrades.forEach((trade) => {
+      if (trade.accountNumber && trade.instrument) {
+        pairs.add(`${trade.accountNumber}:${trade.instrument}`);
+      }
+    });
+    return Array.from(pairs);
+  }, [allProcessedTrades]);
+
+  // Get all unique instruments from processed trades (for backward compatibility)
+  const allInstruments = useMemo(() => {
+    return Array.from(
+      new Set(
+        allProcessedTrades
+          .map((trade) => trade.instrument)
+          .filter(Boolean)
+      )
+    ) as string[];
+  }, [allProcessedTrades]);
 
   const processTrades = useCallback(() => {
-    if (!accountNumbers) {
-      console.error("No account number provided");
-      return;
-    }
-
     const newTrades: Trade[] = [];
     const missingCommissionsTemp: { [key: string]: boolean } = {};
 
-    console.log("csvData", csvData);
     csvData.forEach((row) => {
       const item: Partial<Trade> = {};
       let quantity = 0;
@@ -267,7 +285,7 @@ export default function AtasProcessor({
               break;
             case "entryDate":
             case "closeDate":
-              item[key] = parseAtasDate(cellValue);
+              item[key] = parseAtasDate(cellValue, timezone);
               break;
             case "entryPrice":
             case "closePrice":
@@ -348,17 +366,21 @@ export default function AtasProcessor({
       }
 
       // Handle commissions
-      if (item.instrument) {
+      if (item.instrument && item.accountNumber) {
         // Remove the last 6 characters if they exist (e.g., U5@CME)
         // This removes the month code (U5) and exchange suffix (@CME)
         if (item.instrument.length > 6) {
           item.instrument = item.instrument.slice(0, -6);
         }
-        if (existingCommissions[item.instrument]) {
+        // Only apply existing commissions during processing
+        // User-set commissions will be applied via separate effect
+        const commissionKey = `${item.accountNumber}:${item.instrument}`;
+        if (existingCommissions[commissionKey]) {
           item.commission =
-            existingCommissions[item.instrument] * item.quantity!;
+            existingCommissions[commissionKey] * item.quantity!;
         } else {
-          missingCommissionsTemp[item.instrument] = true;
+          // Track missing commissions by account+instrument combination
+          missingCommissionsTemp[commissionKey] = true;
         }
       }
 
@@ -384,23 +406,21 @@ export default function AtasProcessor({
       }
     });
 
-    console.log("newTrades", newTrades);
-
-    setAllTrades(newTrades);
-    setTrades(newTrades);
+    setAllProcessedTrades(newTrades);
     setProcessedTrades(newTrades);
 
-    const missingInstruments = Object.keys(missingCommissionsTemp);
-    if (missingInstruments.length > 0) {
-      setMissingCommissions(
-        missingInstruments.reduce(
-          (acc, instrument) => {
-            acc[instrument] = 0;
-            return acc;
-          },
-          {} as { [key: string]: number }
-        )
-      );
+    const missingCommissionKeys = Object.keys(missingCommissionsTemp);
+    if (missingCommissionKeys.length > 0) {
+      setMissingCommissions((prev) => {
+        // Preserve existing commission values, only add new account+instrument pairs with 0
+        const updated = { ...prev };
+        missingCommissionKeys.forEach((key) => {
+          if (updated[key] === undefined) {
+            updated[key] = 0;
+          }
+        });
+        return updated;
+      });
       setShowCommissionPrompt(true);
     }
   }, [
@@ -420,28 +440,30 @@ export default function AtasProcessor({
     }));
   };
 
-  const applyCommissions = () => {
-    const updatedTrades = allTrades.map((trade) => {
-      if (
-        trade.instrument &&
-        missingCommissions[trade.instrument] !== undefined
-      ) {
+  const applyCommissions = useCallback(() => {
+    const updatedTrades = allProcessedTrades.map((trade) => {
+      if (trade.instrument && trade.accountNumber) {
+        const commissionKey = `${trade.accountNumber}:${trade.instrument}`;
+        // Use same priority: user-set > existing > 0
+        const commissionPerContract =
+          missingCommissions[commissionKey] !== undefined
+            ? missingCommissions[commissionKey]
+            : existingCommissions[commissionKey] || 0;
+        
         return {
           ...trade,
-          commission: missingCommissions[trade.instrument] * trade.quantity,
+          commission: commissionPerContract * trade.quantity,
         };
       }
       return trade;
     });
 
-    setAllTrades(updatedTrades);
-    setTrades(updatedTrades);
+    setAllProcessedTrades(updatedTrades);
     setProcessedTrades(updatedTrades);
-    setShowCommissionPrompt(false);
     toast.success(t("import.commission.success.title"), {
       description: t("import.commission.success.description"),
     });
-  };
+  }, [allProcessedTrades, missingCommissions, existingCommissions, setProcessedTrades, t]);
 
   useEffect(() => {
     if (csvData.length > 0) {
@@ -449,13 +471,90 @@ export default function AtasProcessor({
     }
   }, [csvData, processTrades]);
 
+  // Apply user-set commissions when missingCommissions changes
+  useEffect(() => {
+    setAllProcessedTrades((prevTrades) => {
+      if (prevTrades.length === 0) {
+        return prevTrades;
+      }
+
+      // Only update trades that have account+instrument combinations with user-set commissions
+      const updatedTrades = prevTrades.map((trade) => {
+        if (trade.instrument && trade.accountNumber) {
+          const commissionKey = `${trade.accountNumber}:${trade.instrument}`;
+          if (missingCommissions[commissionKey] !== undefined) {
+            const commissionPerContract = missingCommissions[commissionKey];
+            const expectedCommission = commissionPerContract * trade.quantity;
+            // Only update if the commission is different
+            if (trade.commission !== expectedCommission) {
+              return {
+                ...trade,
+                commission: expectedCommission,
+              };
+            }
+          }
+        }
+        return trade;
+      });
+
+      // Check if any trades were actually updated
+      const hasChanges = updatedTrades.some((trade, index) => {
+        return trade.commission !== prevTrades[index]?.commission;
+      });
+
+      if (hasChanges) {
+        setProcessedTrades(updatedTrades);
+        return updatedTrades;
+      }
+
+      return prevTrades;
+    });
+  }, [missingCommissions, setProcessedTrades]);
+
+  // Merge commissions from allProcessedTrades when processedTrades prop changes
+  useEffect(() => {
+    if (processedTrades && processedTrades.length > 0) {
+      // Create a map of commissions from allProcessedTrades by trade ID
+      const commissionMap = new Map<string, number>();
+      allProcessedTrades.forEach((trade) => {
+        if (trade.id && trade.commission) {
+          commissionMap.set(trade.id, trade.commission);
+        }
+      });
+
+      // Merge commissions into processedTrades if they exist in allProcessedTrades
+      const mergedTrades = processedTrades.map((trade) => {
+        if (trade.id && commissionMap.has(trade.id)) {
+          return {
+            ...trade,
+            commission: commissionMap.get(trade.id)!,
+          };
+        }
+        return trade;
+      });
+
+      // Only update if there were actual changes
+      const hasChanges = mergedTrades.some((trade, index) => {
+        const original = processedTrades[index];
+        return trade.commission !== original.commission;
+      });
+
+      if (hasChanges) {
+        setAllProcessedTrades(mergedTrades as Trade[]);
+      } else if (allProcessedTrades.length === 0) {
+        // If allProcessedTrades is empty but processedTrades has data, initialize it
+        setAllProcessedTrades(processedTrades as Trade[]);
+      }
+    }
+  }, [processedTrades]);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-auto">
         <div className="space-y-4 p-6">
-          {showCommissionPrompt && (
+          {allAccountInstrumentPairs.length > 0 && (
             <div
-              className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r"
+              className="flex-none bg-blue-50 dark:bg-blue-950 border-l-4 border-blue-500 text-blue-900 dark:text-blue-100 p-4 rounded-r"
               role="alert"
             >
               <p className="font-bold">{t("import.commission.title")}</p>
@@ -463,33 +562,45 @@ export default function AtasProcessor({
               <p className="mt-2 text-sm">{t("import.commission.help")}</p>
               <p className="text-sm italic">{t("import.commission.example")}</p>
               <div className="mt-4 space-y-2">
-                {Object.keys(missingCommissions).map((instrument) => (
-                  <div key={instrument} className="flex items-center space-x-2">
-                    <label
-                      htmlFor={`commission-${instrument}`}
-                      className="min-w-[200px]"
+                {allAccountInstrumentPairs.map((pair) => {
+                  const [accountNumber, instrument] = pair.split(":");
+                  // Get current commission value: user-set > existing > 0
+                  const currentCommission =
+                    missingCommissions[pair] !== undefined
+                      ? missingCommissions[pair]
+                      : existingCommissions[pair] || 0;
+                  
+                  return (
+                    <div
+                      key={pair}
+                      className="flex items-center space-x-2"
                     >
-                      {instrument} - {t("import.commission.perContract")}
-                    </label>
-                    <Input
-                      id={`commission-${instrument}`}
-                      type="number"
-                      step="0.01"
-                      value={missingCommissions[instrument]}
-                      onChange={(e) =>
-                        handleCommissionChange(instrument, e.target.value)
-                      }
-                      className="w-24"
-                    />
-                  </div>
-                ))}
+                      <label
+                        htmlFor={`commission-${pair}`}
+                        className="min-w-[200px]"
+                      >
+                        {accountNumber} - {instrument} - {t("import.commission.perContract")}
+                      </label>
+                      <Input
+                        id={`commission-${pair}`}
+                        type="number"
+                        step="0.01"
+                        value={currentCommission}
+                        onChange={(e) =>
+                          handleCommissionChange(pair, e.target.value)
+                        }
+                        className="w-24"
+                      />
+                    </div>
+                  );
+                })}
               </div>
               <Button onClick={applyCommissions} className="mt-4">
                 {t("import.commission.apply")}
               </Button>
             </div>
           )}
-          
+
           {/* Account Selection Section */}
           {availableAccounts.length > 0 && (
             <div className="space-y-4">
@@ -501,7 +612,7 @@ export default function AtasProcessor({
                   {t("import.account.pickAccountsDescription")}
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {availableAccounts.map((account) => {
                   if (!account) return null;
@@ -532,7 +643,10 @@ export default function AtasProcessor({
                         <div className="space-y-2 flex-1">
                           <p className="font-medium">{account}</p>
                           <p className="text-sm text-muted-foreground">
-                            {tradeCount} {tradeCount === 1 ? t("import.account.trade") : t("import.account.trades")}
+                            {tradeCount}{" "}
+                            {tradeCount === 1
+                              ? t("import.account.trade")
+                              : t("import.account.trades")}
                           </p>
                         </div>
                         {isSelected && (
@@ -546,7 +660,7 @@ export default function AtasProcessor({
             </div>
           )}
 
-          {allTrades.length === 0 && (
+          {allProcessedTrades.length === 0 && (
             <div
               className="flex-none bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded-r"
               role="alert"
@@ -555,16 +669,17 @@ export default function AtasProcessor({
               <p>{t("import.error.duplicateTradesDescription")}</p>
             </div>
           )}
-          
-          {currentSelectedAccounts.length === 0 && allTrades.length > 0 && (
-            <div
-              className="flex-none bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-r"
-              role="alert"
-            >
-              <p className="font-bold">{t("import.account.selectAccount")}</p>
-              <p>{t("import.account.selectAccountToView")}</p>
-            </div>
-          )}
+
+          {currentSelectedAccounts.length === 0 &&
+            allProcessedTrades.length > 0 && (
+              <div
+                className="flex-none bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded-r"
+                role="alert"
+              >
+                <p className="font-bold">{t("import.account.selectAccount")}</p>
+                <p>{t("import.account.selectAccountToView")}</p>
+              </div>
+            )}
 
           {filteredTrades.length > 0 && (
             <div className="px-2">
@@ -592,6 +707,7 @@ export default function AtasProcessor({
                   groupTrades: false,
                   showHeader: false,
                   expandByDefault: true,
+                  disableColumnConfig: true,
                 }}
               />
             </div>
