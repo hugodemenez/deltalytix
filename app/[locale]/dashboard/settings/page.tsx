@@ -26,7 +26,8 @@ import {
   Database,
   LifeBuoy,
   LogOut,
-  Building2
+  Building2,
+  Mail
 } from "lucide-react"
 import { signOut } from "@/server/auth"
 import Link from 'next/link'
@@ -57,6 +58,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { LinkedAccounts } from "@/components/linked-accounts"
+import { NewsletterPreferences } from "@/app/[locale]/(landing)/newsletter/newsletter-preferences"
 
 type Locale = 'en' | 'fr'
 
@@ -395,6 +397,9 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Newsletter Preferences Section */}
+        <NewsletterPreferences isAuthenticated={true} />
 
         {/* Business Section */}
         <Card>

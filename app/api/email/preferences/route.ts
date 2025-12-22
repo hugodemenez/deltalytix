@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { PrismaClient } from "@prisma/client"
 import { createHmac, timingSafeEqual } from "crypto"
+import { createClient } from "@/server/auth"
 
 // Add route segment config
 export const dynamic = 'force-dynamic'
@@ -62,6 +63,38 @@ export async function GET(request: Request) {
     const email = searchParams.get('email')
     const token = searchParams.get('token')
 
+    // Try to get authenticated user first
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // If user is authenticated, use their email
+    if (user?.email) {
+      const newsletter = await prisma.newsletter.findUnique({
+        where: { email: user.email },
+        select: {
+          email: true,
+          isActive: true,
+          monthlyStats: true,
+          weeklyUpdates: true,
+          renewalNotifications: true,
+        }
+      })
+
+      if (!newsletter) {
+        // Return default preferences if not found
+        return NextResponse.json({
+          email: user.email,
+          isActive: true,
+          monthlyStats: true,
+          weeklyUpdates: true,
+          renewalNotifications: true,
+        })
+      }
+
+      return NextResponse.json(newsletter)
+    }
+
+    // If not authenticated, require email and token
     if (!email) {
       return NextResponse.json(
         { error: 'Email parameter is required' },
@@ -118,6 +151,40 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { email, token, monthlyStats, weeklyUpdates, renewalNotifications } = body
 
+    // Try to get authenticated user first
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // If user is authenticated, use their email
+    if (user?.email) {
+      const newsletter = await prisma.newsletter.upsert({
+        where: { email: user.email },
+        update: {
+          monthlyStats: monthlyStats ?? true,
+          weeklyUpdates: weeklyUpdates ?? true,
+          renewalNotifications: renewalNotifications ?? true,
+        },
+        create: {
+          email: user.email,
+          isActive: true,
+          monthlyStats: monthlyStats ?? true,
+          weeklyUpdates: weeklyUpdates ?? true,
+          renewalNotifications: renewalNotifications ?? true,
+        }
+      })
+
+      return NextResponse.json({
+        success: true,
+        preferences: {
+          email: newsletter.email,
+          monthlyStats: newsletter.monthlyStats,
+          weeklyUpdates: newsletter.weeklyUpdates,
+          renewalNotifications: newsletter.renewalNotifications,
+        }
+      })
+    }
+
+    // If not authenticated, require email and token
     if (!email) {
       return NextResponse.json(
         { error: 'Email is required' },

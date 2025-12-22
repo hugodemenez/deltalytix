@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 interface NewsletterPreferencesProps {
   email?: string
   token?: string
+  isAuthenticated?: boolean
 }
 
 interface Preferences {
@@ -21,20 +22,26 @@ interface Preferences {
   renewalNotifications: boolean
 }
 
-export function NewsletterPreferences({ email: initialEmail, token: initialToken }: NewsletterPreferencesProps) {
+export function NewsletterPreferences({ email: initialEmail, token: initialToken, isAuthenticated = false }: NewsletterPreferencesProps) {
   const t = useScopedI18n('newsletter')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [preferences, setPreferences] = useState<Preferences | null>(null)
   const [tokenError, setTokenError] = useState(false)
 
-  const loadPreferences = async (emailToLoad: string, tokenToUse: string) => {
-    if (!emailToLoad || !tokenToUse) return
-    
+  const loadPreferences = async (emailToLoad?: string, tokenToUse?: string) => {
     setLoading(true)
     setTokenError(false)
     try {
-      const response = await fetch(`/api/email/preferences?email=${encodeURIComponent(emailToLoad)}&token=${encodeURIComponent(tokenToUse)}`)
+      // Build query params - if authenticated, no email/token needed
+      const params = new URLSearchParams()
+      if (!isAuthenticated) {
+        if (emailToLoad) params.append('email', emailToLoad)
+        if (tokenToUse) params.append('token', tokenToUse)
+      }
+      
+      const queryString = params.toString()
+      const response = await fetch(`/api/email/preferences${queryString ? `?${queryString}` : ''}`)
       
       if (response.ok) {
         const data = await response.json()
@@ -65,13 +72,17 @@ export function NewsletterPreferences({ email: initialEmail, token: initialToken
   }
 
   useEffect(() => {
-    if (initialEmail && initialToken) {
+    if (isAuthenticated) {
+      // For authenticated users, load without email/token
+      loadPreferences()
+    } else if (initialEmail && initialToken) {
+      // For email link users, require token
       loadPreferences(initialEmail, initialToken)
     }
-  }, [initialEmail, initialToken])
+  }, [initialEmail, initialToken, isAuthenticated])
 
   const handleSavePreferences = async () => {
-    if (!initialEmail || !initialToken) {
+    if (!isAuthenticated && (!initialEmail || !initialToken)) {
       toast.error(t("preferences.error.tokenRequired"))
       return
     }
@@ -80,16 +91,22 @@ export function NewsletterPreferences({ email: initialEmail, token: initialToken
 
     setSaving(true)
     try {
+      const body: any = {
+        ...preferences,
+      }
+      
+      // Only include email and token if not authenticated
+      if (!isAuthenticated) {
+        body.email = initialEmail
+        body.token = initialToken
+      }
+
       const response = await fetch("/api/email/preferences", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          email: initialEmail,
-          token: initialToken,
-          ...preferences,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (response.ok) {
@@ -112,8 +129,8 @@ export function NewsletterPreferences({ email: initialEmail, token: initialToken
     setPreferences(prev => prev ? { ...prev, [key]: value } : null)
   }
 
-  // Show error if no token is provided
-  if (!initialToken || !initialEmail) {
+  // Show error if no token is provided for non-authenticated users
+  if (!isAuthenticated && (!initialToken || !initialEmail)) {
     return (
       <Card className="shadow-xs">
         <CardHeader className="space-y-3 sm:space-y-4">
@@ -139,7 +156,7 @@ export function NewsletterPreferences({ email: initialEmail, token: initialToken
         <CardDescription className="text-sm sm:text-base">{t("preferences.description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {tokenError && (
+        {tokenError && !isAuthenticated && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -148,7 +165,7 @@ export function NewsletterPreferences({ email: initialEmail, token: initialToken
           </Alert>
         )}
 
-        {preferences && !tokenError && (
+        {preferences && (!tokenError || isAuthenticated) && (
           <div className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between space-x-2">
@@ -205,7 +222,7 @@ export function NewsletterPreferences({ email: initialEmail, token: initialToken
 
             <Button
               onClick={handleSavePreferences}
-              disabled={saving || tokenError}
+              disabled={saving || (tokenError && !isAuthenticated)}
               className="w-full sm:w-auto"
             >
               {saving ? (
