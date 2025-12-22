@@ -247,6 +247,17 @@ export default function AtasProcessor({
     return Array.from(pairs);
   }, [allProcessedTrades]);
 
+  // Filter account+instrument pairs to only include selected accounts
+  const selectedAccountInstrumentPairs = useMemo(() => {
+    if (currentSelectedAccounts.length === 0) {
+      return [];
+    }
+    return allAccountInstrumentPairs.filter((pair) => {
+      const [accountNumber] = pair.split(":");
+      return currentSelectedAccounts.includes(accountNumber);
+    });
+  }, [allAccountInstrumentPairs, currentSelectedAccounts]);
+
   // Get all unique instruments from processed trades (for backward compatibility)
   const allInstruments = useMemo(() => {
     return Array.from(
@@ -552,55 +563,6 @@ export default function AtasProcessor({
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-auto">
         <div className="space-y-4 p-6">
-          {allAccountInstrumentPairs.length > 0 && (
-            <div
-              className="flex-none bg-blue-50 dark:bg-blue-950 border-l-4 border-blue-500 text-blue-900 dark:text-blue-100 p-4 rounded-r"
-              role="alert"
-            >
-              <p className="font-bold">{t("import.commission.title")}</p>
-              <p>{t("import.commission.description")}</p>
-              <p className="mt-2 text-sm">{t("import.commission.help")}</p>
-              <p className="text-sm italic">{t("import.commission.example")}</p>
-              <div className="mt-4 space-y-2">
-                {allAccountInstrumentPairs.map((pair) => {
-                  const [accountNumber, instrument] = pair.split(":");
-                  // Get current commission value: user-set > existing > 0
-                  const currentCommission =
-                    missingCommissions[pair] !== undefined
-                      ? missingCommissions[pair]
-                      : existingCommissions[pair] || 0;
-                  
-                  return (
-                    <div
-                      key={pair}
-                      className="flex items-center space-x-2"
-                    >
-                      <label
-                        htmlFor={`commission-${pair}`}
-                        className="min-w-[200px]"
-                      >
-                        {accountNumber} - {instrument} - {t("import.commission.perContract")}
-                      </label>
-                      <Input
-                        id={`commission-${pair}`}
-                        type="number"
-                        step="0.01"
-                        value={currentCommission}
-                        onChange={(e) =>
-                          handleCommissionChange(pair, e.target.value)
-                        }
-                        className="w-24"
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-              <Button onClick={applyCommissions} className="mt-4">
-                {t("import.commission.apply")}
-              </Button>
-            </div>
-          )}
-
           {/* Account Selection Section */}
           {availableAccounts.length > 0 && (
             <div className="space-y-4">
@@ -684,6 +646,56 @@ export default function AtasProcessor({
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Commissions Section - Only show for selected accounts */}
+          {selectedAccountInstrumentPairs.length > 0 && (
+            <div
+              className="flex-none bg-blue-50 dark:bg-blue-950 border-l-4 border-blue-500 text-blue-900 dark:text-blue-100 p-4 rounded-r"
+              role="alert"
+            >
+              <p className="font-bold">{t("import.commission.title")}</p>
+              <p>{t("import.commission.description")}</p>
+              <p className="mt-2 text-sm">{t("import.commission.help")}</p>
+              <p className="text-sm italic">{t("import.commission.example")}</p>
+              <div className="mt-4 space-y-2">
+                {selectedAccountInstrumentPairs.map((pair) => {
+                  const [accountNumber, instrument] = pair.split(":");
+                  // Get current commission value: user-set > existing > 0
+                  const currentCommission =
+                    missingCommissions[pair] !== undefined
+                      ? missingCommissions[pair]
+                      : existingCommissions[pair] || 0;
+                  
+                  return (
+                    <div
+                      key={pair}
+                      className="flex items-center space-x-2"
+                    >
+                      <label
+                        htmlFor={`commission-${pair}`}
+                        className="min-w-[200px]"
+                      >
+                        {accountNumber} - {instrument} - {t("import.commission.perContract")}
+                      </label>
+                      <Input
+                        id={`commission-${pair}`}
+                        type="number"
+                        step="0.01"
+                        value={currentCommission}
+                        onChange={(e) =>
+                          handleCommissionChange(pair, e.target.value)
+                        }
+                        className="w-24"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+              <Button onClick={applyCommissions} className="mt-4">
+                {t("import.commission.apply")}
+              </Button>
             </div>
           )}
 
