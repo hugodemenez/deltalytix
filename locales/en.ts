@@ -30,6 +30,7 @@ export default {
   "footer.product.title": "Product",
   "footer.product.features": "Features",
   "footer.product.pricing": "Pricing",
+  "footer.product.propfirms": "Prop Firms Catalogue",
   "footer.product.teams": "Teams",
   "footer.product.support": "Support",
   "footer.company.title": "Company",
