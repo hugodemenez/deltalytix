@@ -66,10 +66,3 @@ export function CalendarFeaturePreview() {
     </div>
   )
 }
-
-
-
-
-
-
-

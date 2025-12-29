@@ -129,10 +129,3 @@ export function PerformanceVisualizationChart() {
     </div>
   )
 }
-
-
-
-
-
-
-
