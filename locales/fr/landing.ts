@@ -221,5 +221,45 @@ export default {
                 }
             }
         },
+        propfirms: {
+            title: 'Catalogue des Prop Firms',
+            description: 'Explorez les prop firms suivies par les utilisateurs de Deltalytix. Consultez les statistiques réelles sur les comptes enregistrés et les performances de payouts.',
+            registeredAccounts: 'Comptes enregistrés',
+            accountTemplates: 'Modèles de comptes',
+            chart: {
+                title: 'Comptes enregistrés par Prop Firm',
+                accounts: 'Comptes'
+            },
+            sort: {
+                label: 'Trier par',
+                accounts: 'Nombre de Comptes',
+                paidPayout: 'Montant des payouts payés',
+                refusedPayout: 'Montant des payouts refusés'
+            },
+            payouts: {
+                title: 'Statistiques de payouts',
+                paid: {
+                    label: 'Payés',
+                    description: 'Montant total et nombre de payouts payés et validés'
+                },
+                pending: {
+                    label: 'En Attente',
+                    description: 'Montant total et nombre de payouts en attente'
+                },
+                refused: {
+                    label: 'Refusés',
+                    description: 'Montant total et nombre de payouts refusés'
+                },
+                amount: 'Montant',
+                'count#zero': 'Aucun payout',
+                'count#one': '1 payout',
+                'count#other': '{count} payouts'
+            },
+            other: {
+                title: 'Autres Prop Firms',
+                description: 'Prop firms avec des comptes enregistrés mais non présentes dans notre catalogue de modèles'
+            },
+            noStats: 'Aucune statistique disponible'
+        },
     },
 } as const;
