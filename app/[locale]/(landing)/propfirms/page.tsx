@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AccountsBarChart } from './components/accounts-bar-chart'
 import { SortControls } from './components/sort-controls'
+import { TimeframeControls } from './components/timeframe-controls'
+import type { Timeframe } from './actions/timeframe-utils'
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getI18n()
@@ -104,14 +106,15 @@ function renderPropfirmCard(
 }
 
 interface PropFirmsPageProps {
-  searchParams: Promise<{ sort?: string }>
+  searchParams: Promise<{ sort?: string; timeframe?: string }>
 }
 
 export default async function PropFirmsPage({ searchParams }: PropFirmsPageProps) {
   const t = await getI18n()
-  const { stats } = await getPropfirmCatalogueData()
   const resolvedSearchParams = await searchParams
+  const timeframe = (resolvedSearchParams.timeframe || 'currentMonth') as Timeframe
   const sortBy = resolvedSearchParams.sort || 'accounts'
+  const { stats } = await getPropfirmCatalogueData(timeframe)
 
   // Create a map of propfirm name -> stats for quick lookup
   const statsMap = new Map(
@@ -186,8 +189,18 @@ export default async function PropFirmsPage({ searchParams }: PropFirmsPageProps
           />
         </div>
 
-        {/* Sort controls */}
-        <div className="mb-6 flex justify-end">
+        {/* Controls */}
+        <div className="mb-6 flex justify-between items-center gap-4 flex-wrap">
+          <TimeframeControls
+            timeframeLabel={(t as any)('landing.propfirms.timeframe.label')}
+            timeframeOptions={{
+              currentMonth: (t as any)('landing.propfirms.timeframe.currentMonth'),
+              last3Months: (t as any)('landing.propfirms.timeframe.last3Months'),
+              last6Months: (t as any)('landing.propfirms.timeframe.last6Months'),
+              '2024': (t as any)('landing.propfirms.timeframe.2024'),
+              '2025': (t as any)('landing.propfirms.timeframe.2025'),
+            }}
+          />
           <SortControls
             sortLabel={(t as any)('landing.propfirms.sort.label')}
             sortOptions={{

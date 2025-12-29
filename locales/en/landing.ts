@@ -236,6 +236,14 @@ export default {
                 paidPayout: 'Paid Payout Amount',
                 refusedPayout: 'Refused Payout Amount'
             },
+            timeframe: {
+                label: 'Timeframe',
+                currentMonth: 'Current Month',
+                last3Months: 'Last 3 Months',
+                last6Months: 'Last 6 Months',
+                '2024': '2024',
+                '2025': '2025'
+            },
             payouts: {
                 title: 'Payout Statistics',
                 paid: {
