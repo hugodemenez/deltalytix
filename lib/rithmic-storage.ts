@@ -107,6 +107,11 @@ export function updateLastSyncTime(id: string): void {
 }
 
 // Helper to generate a unique ID for new credential sets
-export function generateCredentialId(): string {
-  return `rithmic_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+// Uses username as the ID since synchronizations use username as accountId
+export function generateCredentialId(username: string): string {
+  if (!username) {
+    // Fallback for edge cases (should not happen in normal flow)
+    return `cred_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+  }
+  return username
 } 
