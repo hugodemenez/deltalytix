@@ -242,7 +242,8 @@ export default {
                 last3Months: '3 Derniers Mois',
                 last6Months: '6 Derniers Mois',
                 '2024': '2024',
-                '2025': '2025'
+                '2025': '2025',
+                allTime: 'Tout le temps'
             },
             payouts: {
                 title: 'Statistiques de payouts',

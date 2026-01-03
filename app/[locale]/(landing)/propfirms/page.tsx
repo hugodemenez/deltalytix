@@ -112,7 +112,7 @@ interface PropFirmsPageProps {
 export default async function PropFirmsPage({ searchParams }: PropFirmsPageProps) {
   const t = await getI18n()
   const resolvedSearchParams = await searchParams
-  const timeframe = (resolvedSearchParams.timeframe || 'currentMonth') as Timeframe
+  const timeframe = (resolvedSearchParams.timeframe || '2025') as Timeframe
   const sortBy = resolvedSearchParams.sort || 'accounts'
   const { stats } = await getPropfirmCatalogueData(timeframe)
 
@@ -199,6 +199,7 @@ export default async function PropFirmsPage({ searchParams }: PropFirmsPageProps
               last6Months: (t as any)('landing.propfirms.timeframe.last6Months'),
               '2024': (t as any)('landing.propfirms.timeframe.2024'),
               '2025': (t as any)('landing.propfirms.timeframe.2025'),
+              allTime: (t as any)('landing.propfirms.timeframe.allTime'),
             }}
           />
           <SortControls

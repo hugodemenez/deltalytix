@@ -13,6 +13,7 @@ interface TimeframeControlsProps {
     last6Months: string
     '2024': string
     '2025': string
+    allTime: string
   }
 }
 
@@ -23,7 +24,7 @@ export function TimeframeControls({ timeframeLabel, timeframeOptions }: Timefram
 
   const handleTimeframeChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (value === "currentMonth") {
+    if (value === "2025") {
       params.delete("timeframe")
     } else {
       params.set("timeframe", value)
@@ -46,6 +47,7 @@ export function TimeframeControls({ timeframeLabel, timeframeOptions }: Timefram
           <SelectItem value="last6Months">{timeframeOptions.last6Months}</SelectItem>
           <SelectItem value="2024">{timeframeOptions['2024']}</SelectItem>
           <SelectItem value="2025">{timeframeOptions['2025']}</SelectItem>
+          <SelectItem value="allTime">{timeframeOptions.allTime}</SelectItem>
         </SelectContent>
       </Select>
     </div>
