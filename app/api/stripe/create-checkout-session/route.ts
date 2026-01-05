@@ -2,7 +2,7 @@
 
 import { NextResponse } from "next/server";
 import { createClient, getWebsiteURL } from "@/server/auth";
-import { stripe } from "@/actions/stripe";
+import { stripe } from "@/server/stripe";
 import { getSubscriptionDetails } from "@/server/subscription";
 import { getReferralBySlug } from "@/server/referral";
 

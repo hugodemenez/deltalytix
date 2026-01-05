@@ -1,0 +1,40 @@
+---
+title: Manual trade entry with auto-commission calculation
+description: Enter trades manually when automatic import is not available, with intelligent commission calculation based on your history.
+date: 2025-12-20
+status: completed
+completedDate: 2025-12-20
+---
+
+# Manual trade entry with auto-commission calculation
+
+For brokers without automatic sync or when you need to add trades that weren't captured, manual entry provides a complete solution.
+
+## How it works
+
+Select "Manual Entry" from the import options. Fill in the trade details using the interactive form. The system calculates commissions automatically based on your previous trades for the same instrument.
+
+## Trade entry form
+
+Enter all trade details:
+
+- **Instrument**: Symbol or contract name
+- **Side**: Long or short
+- **Entry time**: When you opened the position
+- **Exit time**: When you closed the position
+- **Entry price**: Your entry price
+- **Exit price**: Your exit price
+- **Quantity**: Number of contracts or shares
+- **Commission**: Auto-calculated or manually entered
+
+## Auto-commission calculation
+
+The system looks at your historical trades for the same instrument and calculates the average commission per contract. This value is suggested automatically but can be overridden.
+
+## Key capabilities
+
+- **Form validation**: Required fields are validated before saving
+- **Real-time P&L**: See calculated profit/loss as you enter data
+- **Edit and delete**: Modify or remove manually entered trades anytime
+- **Statistics**: Manual trades are included in all analytics and charts
+- **Account assignment**: Assign trades to specific accounts

@@ -8,11 +8,17 @@ type WithoutRef<T> = Omit<T, 'ref'>;
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
   return {
-    a: ({ href = '', ...props }: WithoutRef<AnchorHTMLAttributes<HTMLAnchorElement>>) => {
+    a: ({ href = '', className = '', ...props }: WithoutRef<AnchorHTMLAttributes<HTMLAnchorElement>>) => {
+      // Don't apply underline to anchor links wrapping headings (from rehype-autolink-headings)
+      const isAnchorLink = className.includes('anchor');
+      const linkClasses = isAnchorLink 
+        ? '' 
+        : "underline decoration-neutral-400 underline-offset-2 hover:text-neutral-800 hover:decoration-neutral-800 dark:hover:text-neutral-200 dark:hover:decoration-neutral-200";
+      
       if (href.startsWith('http')) {
         return (
           <a
-            className="underline decoration-neutral-400 underline-offset-2 hover:text-neutral-800 hover:decoration-neutral-800 dark:hover:text-neutral-200 dark:hover:decoration-neutral-200"
+            className={linkClasses}
             href={href}
             target="_blank"
             rel="noopener noreferrer"
@@ -23,7 +29,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
       return (
         <Link
           href={href}
-          className="underline decoration-neutral-400 underline-offset-2 hover:text-neutral-800 hover:decoration-neutral-800 dark:hover:text-neutral-200 dark:hover:decoration-neutral-200"
+          className={linkClasses}
           {...props}
         />
       );

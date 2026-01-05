@@ -16,11 +16,8 @@ import {
   TimeRangePerformanceChart,
 } from './index'
 import { toast, Toaster } from 'sonner'
-import { processPhoenixOrdersWithFIFO } from '@/lib/phoenix-fifo-processor'
-import { parsePhoenixOrders } from '@/lib/phoenix-order-parser'
 import { useSearchParams } from 'next/navigation'
 import { applyEmbedTheme, THEME_PRESETS, getOverridesFromSearchParams } from './theme'
-import { useEffect } from 'react'
 import Script from 'next/script'
 import { I18nProviderClient } from '@/locales/client'
 
@@ -151,25 +148,6 @@ export default function EmbedPage() {
                 } else if (data.type === 'CLEAR_TRADES') {
                     // Clear all trades
                     setTrades([])
-                } else if (data.type === 'ADD_PHOENIX_ORDERS') {
-                    const { orders } = data
-                    // Process Phoenix orders
-                    if (orders && Array.isArray(orders)) {
-                        const parsedOrders = parsePhoenixOrders(orders)
-                        const processedOrdersWithFIFO = processPhoenixOrdersWithFIFO(parsedOrders.processedOrders)
-                        setTrades(prev => [
-                          ...prev,
-                          ...processedOrdersWithFIFO.trades.map(trade => ({
-                            pnl: trade.pnl,
-                            timeInPosition: trade.timeInPosition,
-                            entryDate: trade.entryDate,
-                            side: trade.side,
-                            quantity: trade.quantity,
-                            commission: trade.commission,
-                            instrument: trade.instrument,
-                          })),
-                        ])
-                    }
                 } else if (data.type === 'SET_THEME') {
                     const root = document.documentElement
                     const { themeMode, preset: p, vars } = data

@@ -3,10 +3,17 @@
 import { createClient } from '@/server/auth'
 import { cookies } from 'next/headers'
 import { PrismaClient } from '@prisma/client'
-import { stripe } from '@/actions/stripe'
+import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
+import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
 
-const prisma = new PrismaClient()
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+})
+
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 // Helper function to get current period end from subscription items
 function getCurrentPeriodEnd(subscription: Stripe.Subscription): number {

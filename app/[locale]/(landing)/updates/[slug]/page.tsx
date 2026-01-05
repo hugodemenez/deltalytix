@@ -8,6 +8,7 @@ import { format } from 'date-fns'
 import Script from 'next/script'
 import { setStaticParamsLocale } from 'next-international/server'
 import { getStaticParams as getLocaleStaticParams } from '@/locales/server'
+import { MdxSidebar } from '@/components/mdx-sidebar'
 
 type ParamsInput =
   | {
@@ -173,7 +174,7 @@ export default async function Page({ params }: PageProps) {
             {JSON.stringify(jsonLd)}
           </Script>
 
-          <article className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8" itemScope itemType="https://schema.org/Article">
+          <article className="max-w-4xl mx-auto px-4 pt-16 pb-16 sm:px-6 lg:px-8" itemScope itemType="https://schema.org/Article">
             <div className="mb-8">
               <h1 className="text-4xl font-bold mb-4 text-neutral-900 dark:text-neutral-100" itemProp="headline">
                 {meta.title}
@@ -219,6 +220,7 @@ export default async function Page({ params }: PageProps) {
             >
               {content}
             </div>
+            <MdxSidebar />
           </article>
         </>
       )
