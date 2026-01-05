@@ -13,6 +13,12 @@ import CommentNotificationEmail from '@/components/emails/blog/comment-notificat
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+type PostCommentWithReplyCount = {
+  id: string
+  parentId: string | null
+  _count: { replies: number } | null
+}
+
 // Helper function to check if user is admin
 async function isAdmin(userId: string) {
   return userId === process.env.ALLOWED_ADMIN_USER_ID
@@ -53,7 +59,7 @@ export async function getPosts() {
 
     // Calculate total comments for each post and add isAuthor flag
     const postsWithCommentCount = posts.map((post: typeof posts[number]) => {
-      const totalComments = post.comments.reduce((acc: number, comment) => {
+      const totalComments = post.comments.reduce((acc: number, comment: PostCommentWithReplyCount) => {
         // Add 1 for the comment itself and the number of its replies
         return acc + 1 + (comment._count?.replies || 0)
       }, 0)
