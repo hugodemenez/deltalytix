@@ -46,7 +46,53 @@ const formatPriceValue = (price: string | undefined): { price: number, error?: s
 const convertToValidDate = (dateString: string): Date | null => {
   if (!dateString) return null;
 
-  // Try DD/MM/YYYY HH:MM:SS format (with seconds)
+  // Try MM/DD/YYYY HH:MM:SS AM/PM format (US format with seconds and AM/PM)
+  const usFormatWithSeconds = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2}):(\d{2})\s(AM|PM)$/i;
+  const matchUSWithSeconds = dateString.match(usFormatWithSeconds);
+  
+  if (matchUSWithSeconds) {
+    const [, month, day, year, hours, minutes, seconds, ampm] = matchUSWithSeconds;
+    let hour24 = parseInt(hours);
+    if (ampm.toUpperCase() === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (ampm.toUpperCase() === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      hour24,
+      parseInt(minutes),
+      parseInt(seconds)
+    );
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  // Try MM/DD/YYYY HH:MM AM/PM format (US format without seconds)
+  const usFormatWithoutSeconds = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2})\s(AM|PM)$/i;
+  const matchUSWithoutSeconds = dateString.match(usFormatWithoutSeconds);
+  
+  if (matchUSWithoutSeconds) {
+    const [, month, day, year, hours, minutes, ampm] = matchUSWithoutSeconds;
+    let hour24 = parseInt(hours);
+    if (ampm.toUpperCase() === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (ampm.toUpperCase() === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      hour24,
+      parseInt(minutes),
+      0 // default seconds to 0
+    );
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  // Try DD/MM/YYYY HH:MM:SS format (European format with seconds)
   const dateRegexWithSeconds = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})$/;
   const matchWithSeconds = dateString.match(dateRegexWithSeconds);
   
@@ -64,7 +110,7 @@ const convertToValidDate = (dateString: string): Date | null => {
     return isNaN(localDate.getTime()) ? null : localDate;
   }
 
-  // Try DD/MM/YYYY HH:MM format (without seconds)
+  // Try DD/MM/YYYY HH:MM format (European format without seconds)
   const dateRegexWithoutSeconds = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2})$/;
   const matchWithoutSeconds = dateString.match(dateRegexWithoutSeconds);
   
@@ -82,7 +128,7 @@ const convertToValidDate = (dateString: string): Date | null => {
     return isNaN(localDate.getTime()) ? null : localDate;
   }
 
-  // If neither format matches, return null
+  // If none of the formats match, return null
   return null;
 };
 
