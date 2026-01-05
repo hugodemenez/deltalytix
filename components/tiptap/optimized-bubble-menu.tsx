@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/locales/client";
 import { useEditorState } from "@tiptap/react";
+import type { Editor } from "@tiptap/react";
 import { Bold, Italic, UnderlineIcon, Strikethrough, Highlighter, Loader2, Sparkles, Table2, Trash2, Plus } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,13 @@ export function OptimizedBubbleMenu({
   onRunAIAction,
   status,
 }: {
-  editor: any;
+  editor: Editor;
   onRunAIAction: (action: "explain" | "improve" | "suggest_question") => void;
   status: string;
 }) {
   const t = useI18n();
   const [isAIOpen, setIsAIOpen] = useState(false);
+  const [isTableMenuOpen, setIsTableMenuOpen] = useState(false);
 
   const editorState = useEditorState({
     editor,
@@ -45,8 +47,6 @@ export function OptimizedBubbleMenu({
   });
 
   if (!editorState) return null;
-
-  const [isTableMenuOpen, setIsTableMenuOpen] = useState(false);
 
   return (
     <BubbleMenu

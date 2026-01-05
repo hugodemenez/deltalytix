@@ -1,4 +1,4 @@
-export default {
+const admin = {
   "admin.sendEmail.hero.title": "Visualiseur d'emails",
   "admin.sendEmail.hero.description": "Prévisualisez, personnalisez et envoyez chaque modèle en toute confiance.",
   "admin.sendEmail.hero.hint": "L'aperçu HTML se met à jour dès que vous modifiez les champs.",
@@ -69,5 +69,7 @@ export default {
   "admin.sendEmail.templates.supportSubscriptionError.label": "Erreur d'abonnement",
   "admin.sendEmail.templates.supportSubscriptionError.description": "Relance suite à un problème d'abonnement.",
 }
+
+export default admin;
 
 

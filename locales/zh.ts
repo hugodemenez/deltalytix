@@ -1,5 +1,7 @@
 import embed from './zh/embed'
 
-export default {
+const zh = {
   ...embed,
 }
+
+export default zh

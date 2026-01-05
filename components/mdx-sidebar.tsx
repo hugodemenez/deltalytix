@@ -117,7 +117,10 @@ export function MdxSidebar() {
         }
       })
 
-    setHeadings(extractedHeadings)
+    // Use requestAnimationFrame to defer state update
+    requestAnimationFrame(() => {
+      setHeadings(extractedHeadings)
+    })
   }, [pathname])
 
   useEffect(() => {

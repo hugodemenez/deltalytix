@@ -1,5 +1,7 @@
 import embed from './it/embed'
 
-export default {
+const it = {
   ...embed,
 }
+
+export default it

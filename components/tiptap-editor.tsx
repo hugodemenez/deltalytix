@@ -59,14 +59,14 @@ const AICompletionExtension = Extension.create({
     return {
       startAICompletion:
         (position: number) =>
-        ({ commands }) => {
+        () => {
           this.storage.insertPosition = position;
           this.storage.lastInsertedLength = 0;
           return true;
         },
       updateAICompletion:
         (completion: string) =>
-        ({ commands }: { commands: any }) => {
+        ({ commands }) => {
           if (this.storage.insertPosition === null) return false;
 
           const delta = completion.slice(this.storage.lastInsertedLength);
@@ -84,7 +84,7 @@ const AICompletionExtension = Extension.create({
         },
       finishAICompletion:
         () =>
-        ({ commands }) => {
+        () => {
           this.storage.insertPosition = null;
           this.storage.lastInsertedLength = 0;
           return true;
@@ -135,7 +135,7 @@ export function TiptapEditor({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const locale = useCurrentLocale();
 
-  const editorRef = useRef<any>(null);
+  const editorRef = useRef<ReturnType<typeof useEditor> | null>(null);
   // Prevent initial empty onUpdate from clearing externally provided content
   const isInitializingRef = useRef<boolean>(true);
   // Cache of image hash -> public URL to avoid duplicate uploads
@@ -284,7 +284,7 @@ export function TiptapEditor({
         },
       });
     },
-    [locale, t, complete, setCompletion],
+    [locale, t, complete, setCompletion, date],
   );
 
   // Handle completion streaming using editor command

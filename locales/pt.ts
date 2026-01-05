@@ -1,5 +1,7 @@
 import embed from './pt/embed'
 
-export default {
+const pt = {
   ...embed,
 }
+
+export default pt

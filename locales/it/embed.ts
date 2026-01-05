@@ -1,4 +1,4 @@
-export default {
+const embed = {
   embed: {
     charts: {
       timeRangePerformance: "Prestazione per Intervallo di Tempo",
@@ -263,3 +263,5 @@ export default {
     },
   },
 };
+
+export default embed;

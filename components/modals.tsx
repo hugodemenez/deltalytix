@@ -16,11 +16,8 @@ import { useModalStateStore } from '@/store/modal-state-store'
 import { useTradesStore } from '@/store/trades-store'
 import { toast } from 'sonner'
 
-const PAYWALL_COOLDOWN = 30 * 60 * 1000; // 30 minutes in milliseconds
-
 export default function Modals() {
   const user = useUserStore((state) => state.user)
-  const subscription = useUserStore((state) => state.subscription)
   const isLoading = useUserStore((state) => state.isLoading)
   const trades = useTradesStore((state) => state.trades)
   const [isPaywallOpen, setIsPaywallOpen] = useState(false)
@@ -33,7 +30,10 @@ export default function Modals() {
   useEffect(() => {
     const error = searchParams.get('error')
     if (error === 'already_subscribed') {
-      setIsAlreadySubscribedOpen(true)
+      // Use requestAnimationFrame to defer state update
+      requestAnimationFrame(() => {
+        setIsAlreadySubscribedOpen(true)
+      })
     }
   }, [searchParams])
 
@@ -41,7 +41,10 @@ export default function Modals() {
     if (!isLoading && !isPaywallOpen) {
       if (!trades) {
         console.warn('No trades available. Please add some trades to see the dashboard content.');
-        setIsTradesDialogOpen(true)
+        // Use requestAnimationFrame to defer state update
+        requestAnimationFrame(() => {
+          setIsTradesDialogOpen(true)
+        })
       }
     }
   }, [trades, isPaywallOpen, isLoading])

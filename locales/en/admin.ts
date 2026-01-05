@@ -1,4 +1,4 @@
-export default {
+const admin = {
   "admin.sendEmail.hero.title": "Email visualizer",
   "admin.sendEmail.hero.description": "Preview, personalize, and send every template with confidence.",
   "admin.sendEmail.hero.hint": "Live HTML preview updates as you tweak props.",
@@ -69,5 +69,7 @@ export default {
   "admin.sendEmail.templates.supportSubscriptionError.label": "Subscription error",
   "admin.sendEmail.templates.supportSubscriptionError.description": "Follow up on a subscription issue.",
 }
+
+export default admin;
 
 

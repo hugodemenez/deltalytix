@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, startTransition } from 'react'
 import { type FileError, type FileRejection, useDropzone } from 'react-dropzone'
 import { createClient } from '@/lib/supabase'
 
@@ -155,7 +155,9 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
 
   useEffect(() => {
     if (files.length === 0) {
-      setErrors([])
+      startTransition(() => {
+        setErrors([])
+      })
     }
 
     // If the number of files doesn't exceed the maxFiles parameter, remove the error 'Too many files' from each file

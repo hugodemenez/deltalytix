@@ -16,7 +16,7 @@ import {
 import { Slider } from './ui/slider'
 
 export function ThemeSwitcher() {
-  const { theme, setTheme, intensity, setIntensity } = useTheme()
+  const { setTheme, intensity, setIntensity } = useTheme()
 
   const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
     setTheme(newTheme)
