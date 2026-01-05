@@ -202,5 +202,7 @@ export async function updateIsFirstConnectionAction(isFirstConnection: boolean) 
     where: { id: userId },
     data: { isFirstConnection }
   })
+  // Invalidate all dashboard-related cache tags for this user
   revalidateTag(`user-data-${userId}`, { expire: 0 })
+  revalidateTag(`dashboard-${userId}`, { expire: 0 })
 }

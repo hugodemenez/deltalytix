@@ -122,6 +122,9 @@ export async function saveTradesAction(
       }
     }
 
+    // Invalidate all dashboard-related cache tags for this user
+    revalidateTag(`trades-${userId}`, { expire: 0 })
+    revalidateTag(`dashboard-${userId}`, { expire: 0 })
     revalidatePath('/')
     return {
       error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
@@ -169,10 +172,18 @@ function getCachedTrades(userId: string, isSubscribed: boolean, page: number, ch
 
 
 export async function getTradesAction(userId: string | null = null, forceRefresh: boolean = false): Promise<Trade[]> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user && !userId) {
-    throw new Error('User not found')
+  // Optimize: Skip Supabase auth call when userId is provided
+  // The proxy.ts already enforces auth for /dashboard routes
+  let effectiveUserId = userId
+  
+  if (!effectiveUserId) {
+    // Fallback: Get userId from auth (for cases where userId not provided)
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      throw new Error('User not found')
+    }
+    effectiveUserId = user.id
   }
 
   const subscriptionDetails = await getSubscriptionDetails()
@@ -180,19 +191,22 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
 
   // If forceRefresh is true, bypass cache and fetch directly
   if (forceRefresh) {
-    console.log(`[getTrades] Force refresh - bypassing cache for user ${userId || user?.id}`)
-    revalidateTag(`trades-${userId || user?.id}`, { expire: 0 })
+    console.log(`[getTrades] Force refresh - bypassing cache for user ${effectiveUserId}`)
+    // Invalidate all dashboard-related cache tags for this user
+    revalidateTag(`trades-${effectiveUserId}`, { expire: 0 })
+    revalidateTag(`dashboard-${effectiveUserId}`, { expire: 0 })
 
-    const query: any = {
-      where: {
-        userId: userId || user?.id,
-      },
-      orderBy: { entryDate: 'desc' }
+    const query: Parameters<typeof prisma.trade.findMany>[0] = {
+      where: { userId: effectiveUserId },
+      orderBy: { entryDate: 'desc' as const }
     }
     if (!isSubscribed) {
       const twoWeeksAgo = startOfDay(new Date())
       twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
-      query.where.entryDate = { gte: twoWeeksAgo.toISOString() }
+      query.where = {
+        ...query.where,
+        entryDate: { gte: twoWeeksAgo.toISOString() }
+      }
     }
 
     const trades = await prisma.trade.findMany(query)
@@ -207,15 +221,16 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
 
   // Get cached trades
   // Per page
-  const query: any = {
-    where: {
-      userId: userId || user?.id,
-    }
+  const query: Parameters<typeof prisma.trade.count>[0] = {
+    where: { userId: effectiveUserId }
   }
   if (!isSubscribed) {
     const twoWeeksAgo = startOfDay(new Date())
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
-    query.where.entryDate = { gte: twoWeeksAgo.toISOString() }
+    query.where = {
+      ...query.where,
+      entryDate: { gte: twoWeeksAgo.toISOString() }
+    }
   }
   const count = await prisma.trade.count(query)
   // Split pages by chunks of 1000
@@ -223,7 +238,7 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
   const totalPages = Math.ceil(count / chunkSize)
   const trades: Trade[] = []
   for (let page = 1; page <= totalPages; page++) {
-    const pageTrades = await getCachedTrades(userId || user?.id || '', isSubscribed, page, chunkSize)
+    const pageTrades = await getCachedTrades(effectiveUserId, isSubscribed, page, chunkSize)
     trades.push(...pageTrades)
   }
   console.log(`[getTrades] Found ${count} trades fetched ${trades.length}`)
@@ -329,7 +344,9 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
       })
     }
 
+    // Invalidate all dashboard-related cache tags for this user
     revalidateTag(`trades-${userId}`, { expire: 0 })
+    revalidateTag(`dashboard-${userId}`, { expire: 0 })
 
     return tradesIds.length // Return the number of trades processed
   } catch (error) {
@@ -443,6 +460,9 @@ export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promi
       },
     })
 
+    // Invalidate dashboard layout cache tag for next read
+    revalidateTag(`dashboard-layout-${userId}`, { expire: 0 })
+    revalidateTag(`dashboard-${userId}`, { expire: 0 })
   } catch (error) {
     console.error('[saveDashboardLayout] Database error:', error)
   }

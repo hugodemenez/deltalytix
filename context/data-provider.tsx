@@ -25,6 +25,7 @@ import {
   loadSharedData,
   updateIsFirstConnectionAction,
 } from "@/server/user-data";
+import type { DashboardInitialData } from "@/server/dashboard-initial-data";
 import {
   getTradesAction,
   groupTradesAction,
@@ -515,7 +516,8 @@ export const DataProvider: React.FC<{
   adminView?: {
     userId: string;
   };
-}> = ({ children, isSharedView = false, adminView = null }) => {
+  initialData?: DashboardInitialData | null;
+}> = ({ children, isSharedView = false, adminView = null, initialData = null }) => {
   const router = useRouter();
   const params = useParams();
   const isMobile = useIsMobileDetection();
@@ -579,6 +581,9 @@ export const DataProvider: React.FC<{
   const [hourFilter, setHourFilter] = useState<HourFilter>({ hour: null });
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] });
   const [isFirstConnection, setIsFirstConnection] = useState(false);
+
+  // Track if we've hydrated from initialData
+  const [hasHydratedFromInitialData, setHasHydratedFromInitialData] = useState(false);
 
   // Load data from the server
   const loadData = useCallback(async () => {
@@ -723,12 +728,72 @@ export const DataProvider: React.FC<{
     setIsLoading,
   ]);
 
+  // Hydrate stores from server-prefetched initialData (SSR optimization)
+  // This runs once on mount if initialData is provided
+  useEffect(() => {
+    if (initialData && !hasHydratedFromInitialData && !isSharedView && !adminView) {
+      console.log("[DataProvider] Hydrating from server-prefetched initialData");
+      
+      // Set all stores immediately from server data
+      setTrades(Array.isArray(initialData.trades) ? initialData.trades : []);
+      setUser(initialData.userData);
+      setSubscription(initialData.subscription as PrismaSubscription | null);
+      setTags(initialData.tags);
+      setGroups(initialData.groups as Group[]);
+      setMoods(initialData.moodHistory);
+      setEvents(initialData.financialEvents);
+      setTickDetails(initialData.tickDetails);
+      setDashboardLayout(initialData.dashboardLayout as DashboardLayoutWithWidgets);
+      setIsFirstConnection(initialData.userData?.isFirstConnection || false);
+      
+      // Calculate metrics for accounts (client-side computation)
+      calculateAccountMetricsAction(initialData.accounts || []).then((accountsWithMetrics) => {
+        setAccounts(accountsWithMetrics);
+      });
+      
+      // Get Supabase user for client-side operations
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          setSupabaseUser(user);
+        }
+      });
+      
+      setHasHydratedFromInitialData(true);
+      setIsLoading(false);
+    }
+  }, [initialData, hasHydratedFromInitialData, isSharedView, adminView]);
+
   // Load data on mount and when isSharedView changes
+  // Skip load-on-mount if initialData is provided (SSR optimization)
   useEffect(() => {
     let mounted = true;
 
     const loadDataIfMounted = async () => {
       if (!mounted) return;
+      
+      // Skip client-side data fetching if we have initialData (hydrated from SSR)
+      // This eliminates the extra request cycle and repeated DB reads
+      if (initialData && !isSharedView && !adminView) {
+        console.log("[DataProvider] Skipping loadData - using server-prefetched initialData");
+        // Still load Stripe subscription data (not included in initialData)
+        try {
+          setStripeSubscriptionLoading(true);
+          const stripeSubscriptionData = await getSubscriptionData();
+          setStripeSubscription(stripeSubscriptionData);
+          setStripeSubscriptionError(null);
+        } catch (error) {
+          console.error("Error loading Stripe subscription:", error);
+          setStripeSubscriptionError(
+            error instanceof Error ? error.message : "Failed to load subscription"
+          );
+          setStripeSubscription(null);
+        } finally {
+          setStripeSubscriptionLoading(false);
+        }
+        return;
+      }
+      
+      // Fallback to existing loadData behavior for shared/admin views or if no initialData
       await loadData();
       // Load Stripe subscription data
       try {
@@ -752,7 +817,7 @@ export const DataProvider: React.FC<{
     return () => {
       mounted = false;
     };
-  }, [isSharedView]); // Only depend on isSharedView
+  }, [isSharedView, initialData, adminView]); // Added initialData and adminView dependencies
 
   // Persist language changes without blocking UI
   useEffect(() => {

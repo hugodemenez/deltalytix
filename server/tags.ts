@@ -2,7 +2,7 @@
 
 import { createClient } from './auth'
 import { prisma } from '@/lib/prisma'
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 
 export async function getTagsAction(userId: string) {
   console.log('getTags', userId)
@@ -46,6 +46,9 @@ export async function createTagAction(formData: {
       },
     })
 
+    // Invalidate dashboard-related cache tags
+    revalidateTag(`user-data-${user.id}`, { expire: 0 })
+    revalidateTag(`dashboard-${user.id}`, { expire: 0 })
     revalidatePath('/dashboard')
     return { tag }
   } catch (error) {
@@ -120,6 +123,10 @@ export async function updateTagAction(id: string, formData: {
       )
     })
 
+    // Invalidate dashboard-related cache tags
+    revalidateTag(`user-data-${user.id}`, { expire: 0 })
+    revalidateTag(`trades-${user.id}`, { expire: 0 })
+    revalidateTag(`dashboard-${user.id}`, { expire: 0 })
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {
@@ -185,6 +192,10 @@ export async function deleteTagAction(id: string) {
       })
     })
 
+    // Invalidate dashboard-related cache tags
+    revalidateTag(`user-data-${user.id}`, { expire: 0 })
+    revalidateTag(`trades-${user.id}`, { expire: 0 })
+    revalidateTag(`dashboard-${user.id}`, { expire: 0 })
     revalidatePath('/dashboard')
     return { success: true }
   } catch (error) {

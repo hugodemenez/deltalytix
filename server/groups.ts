@@ -2,7 +2,8 @@
 
 import { prisma } from '@/lib/prisma'
 import { Group, Account } from '@/context/data-provider'
-import { createClient } from './auth'
+import { createClient, getUserId } from './auth'
+import { revalidateTag } from 'next/cache'
 
 export interface GroupWithAccounts extends Group {
   accounts: Account[]
@@ -28,6 +29,7 @@ export async function getGroupsAction(): Promise<GroupWithAccounts[]> {
 
 export async function renameGroupAction(groupId: string, name: string): Promise<Group> {
   try {
+    const userId = await getUserId()
     const group = await prisma.group.update({
       where: { id: groupId },
       data: { name },
@@ -35,6 +37,9 @@ export async function renameGroupAction(groupId: string, name: string): Promise<
         accounts: true,
       },
     })
+    // Invalidate dashboard-related cache tags
+    revalidateTag(`user-data-${userId}`, { expire: 0 })
+    revalidateTag(`dashboard-${userId}`, { expire: 0 })
     return group
   } catch (error) {
     console.error('Error renaming group:', error)
@@ -67,6 +72,9 @@ export async function saveGroupAction(name: string): Promise<Group> {
         accounts: true,
       },
     })
+    // Invalidate dashboard-related cache tags
+    revalidateTag(`user-data-${userId}`, { expire: 0 })
+    revalidateTag(`dashboard-${userId}`, { expire: 0 })
     return group
   } catch (error) {
     console.error('Error creating group:', error)
@@ -92,9 +100,13 @@ export async function updateGroupAction(groupId: string, name: string): Promise<
 
 export async function deleteGroupAction(groupId: string): Promise<void> {
   try {
+    const userId = await getUserId()
     await prisma.group.delete({
       where: { id: groupId },
     })
+    // Invalidate dashboard-related cache tags
+    revalidateTag(`user-data-${userId}`, { expire: 0 })
+    revalidateTag(`dashboard-${userId}`, { expire: 0 })
   } catch (error) {
     console.error('Error deleting group:', error)
     throw error
@@ -103,13 +115,17 @@ export async function deleteGroupAction(groupId: string): Promise<void> {
 
 export async function moveAccountToGroupAction(accountId: string, targetGroupId: string | null): Promise<void> {
   try {
+    const userId = await getUserId()
     await prisma.account.update({
       where: { id: accountId },
       data: { groupId: targetGroupId },
     })
+    // Invalidate dashboard-related cache tags
+    revalidateTag(`user-data-${userId}`, { expire: 0 })
+    revalidateTag(`dashboard-${userId}`, { expire: 0 })
   } catch (error) {
     console.error('Error moving account to group:', error)
     throw error
   }
-} 
+}
 
