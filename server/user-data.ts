@@ -7,7 +7,7 @@ import { getCurrentLocale } from '@/locales/server'
 import { prisma } from '@/lib/prisma'
 import { createClient, getUserId } from './auth'
 import { Account, Group } from '@/context/data-provider'
-import { revalidateTag, unstable_cache } from 'next/cache'
+import { updateTag, unstable_cache } from 'next/cache'
 
 export type SharedDataResponse = {
   trades: Trade[]
@@ -70,7 +70,7 @@ export async function getUserData(forceRefresh: boolean = false): Promise<{
   if (forceRefresh) {
     const start = performance.now();
     console.log(`[getUserData] Force refresh - bypassing cache for user ${userId}`)
-    revalidateTag(`user-data-${userId}`, { expire: 0 })
+    updateTag(`user-data-${userId}`)
     
     // Fetch all data in a single transaction
     const [userData, subscription, tickDetails, accounts, groups, tags, financialEvents, moodHistory] = await prisma.$transaction([
@@ -203,6 +203,6 @@ export async function updateIsFirstConnectionAction(isFirstConnection: boolean) 
     data: { isFirstConnection }
   })
   // Invalidate all dashboard-related cache tags for this user
-  revalidateTag(`user-data-${userId}`, { expire: 0 })
-  revalidateTag(`dashboard-${userId}`, { expire: 0 })
+  updateTag(`user-data-${userId}`)
+  updateTag(`dashboard-${userId}`)
 }

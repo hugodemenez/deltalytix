@@ -1,6 +1,6 @@
 'use server'
 import { Trade, Prisma, DashboardLayout } from '@prisma/client'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
@@ -28,11 +28,11 @@ export async function revalidateCache(tags: string[]) {
 
   tags.forEach(tag => {
     try {
-      console.log(`[revalidateCache] Revalidating tag: ${tag}`)
-      revalidateTag(tag, { expire: 0 })
-      console.log(`[revalidateCache] Successfully revalidated tag: ${tag}`)
+      console.log(`[revalidateCache] Updating tag: ${tag}`)
+      updateTag(tag)
+      console.log(`[revalidateCache] Successfully updated tag: ${tag}`)
     } catch (error) {
-      console.error(`[revalidateCache] Error revalidating tag ${tag}:`, error)
+      console.error(`[revalidateCache] Error updating tag ${tag}:`, error)
     }
   })
 
@@ -123,8 +123,8 @@ export async function saveTradesAction(
     }
 
     // Invalidate all dashboard-related cache tags for this user
-    revalidateTag(`trades-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`trades-${userId}`)
+    updateTag(`dashboard-${userId}`)
     revalidatePath('/')
     return {
       error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
@@ -193,8 +193,8 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
   if (forceRefresh) {
     console.log(`[getTrades] Force refresh - bypassing cache for user ${effectiveUserId}`)
     // Invalidate all dashboard-related cache tags for this user
-    revalidateTag(`trades-${effectiveUserId}`, { expire: 0 })
-    revalidateTag(`dashboard-${effectiveUserId}`, { expire: 0 })
+    updateTag(`trades-${effectiveUserId}`)
+    updateTag(`dashboard-${effectiveUserId}`)
 
     const query: Parameters<typeof prisma.trade.findMany>[0] = {
       where: { userId: effectiveUserId },
@@ -345,8 +345,8 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
     }
 
     // Invalidate all dashboard-related cache tags for this user
-    revalidateTag(`trades-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`trades-${userId}`)
+    updateTag(`dashboard-${userId}`)
 
     return tradesIds.length // Return the number of trades processed
   } catch (error) {
@@ -461,8 +461,8 @@ export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promi
     })
 
     // Invalidate dashboard layout cache tag for next read
-    revalidateTag(`dashboard-layout-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`dashboard-layout-${userId}`)
+    updateTag(`dashboard-${userId}`)
   } catch (error) {
     console.error('[saveDashboardLayout] Database error:', error)
   }

@@ -4,7 +4,7 @@ import { getUserId } from '@/server/auth'
 import { PrismaClient, Trade, Payout } from '@prisma/client'
 import { computeMetricsForAccounts } from '@/lib/account-metrics'
 import { Account } from '@/context/data-provider'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -64,9 +64,9 @@ export async function removeAccountsFromTradesAction(accountNumbers: string[]): 
     }
   })
   // Invalidate dashboard-related cache tags
-  revalidateTag(`trades-${userId}`, { expire: 0 })
-  revalidateTag(`user-data-${userId}`, { expire: 0 })
-  revalidateTag(`dashboard-${userId}`, { expire: 0 })
+  updateTag(`trades-${userId}`)
+  updateTag(`user-data-${userId}`)
+  updateTag(`dashboard-${userId}`)
 }
 
 export async function removeAccountFromTradesAction(accountNumber: string): Promise<void> {
@@ -78,8 +78,8 @@ export async function removeAccountFromTradesAction(accountNumber: string): Prom
     }
   })
   // Invalidate dashboard-related cache tags
-  revalidateTag(`trades-${userId}`, { expire: 0 })
-  revalidateTag(`dashboard-${userId}`, { expire: 0 })
+  updateTag(`trades-${userId}`)
+  updateTag(`dashboard-${userId}`)
 }
 
 export async function deleteInstrumentGroupAction(accountNumber: string, instrumentGroup: string, userId: string): Promise<void> {
@@ -298,8 +298,8 @@ export async function setupAccountAction(account: Account): Promise<Account> {
   }
 
   // Invalidate dashboard-related cache tags
-  revalidateTag(`user-data-${userId}`, { expire: 0 })
-  revalidateTag(`dashboard-${userId}`, { expire: 0 })
+  updateTag(`user-data-${userId}`)
+  updateTag(`dashboard-${userId}`)
 
   // Return the saved account with the original shape
   return {
@@ -318,8 +318,8 @@ export async function deleteAccountAction(account: Account) {
     }
   })
   // Invalidate dashboard-related cache tags
-  revalidateTag(`user-data-${userId}`, { expire: 0 })
-  revalidateTag(`dashboard-${userId}`, { expire: 0 })
+  updateTag(`user-data-${userId}`)
+  updateTag(`dashboard-${userId}`)
 }
 
 export async function getAccountsAction() {
@@ -399,8 +399,8 @@ export async function savePayoutAction(payout: Payout) {
     })
 
     // Invalidate dashboard-related cache tags
-    revalidateTag(`user-data-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`user-data-${userId}`)
+    updateTag(`dashboard-${userId}`)
 
     return result
   } catch (error) {
@@ -442,8 +442,8 @@ export async function deletePayoutAction(payoutId: string) {
     });
 
     // Invalidate dashboard-related cache tags
-    revalidateTag(`user-data-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`user-data-${userId}`)
+    updateTag(`dashboard-${userId}`)
 
     return true;
   } catch (error) {

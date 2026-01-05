@@ -1,7 +1,7 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { revalidatePath, updateTag } from 'next/cache'
 import { getUserId } from './auth'
 
 export async function addTagToTrade(tradeId: string, tag: string) {
@@ -91,7 +91,8 @@ export async function deleteTagFromAllTrades(tag: string) {
       )
     )
 
-    revalidateTag(userId, { expire: 0 })
+    updateTag(`trades-${userId}`)
+    updateTag(`dashboard-${userId}`)
     return { success: true }
   } catch (error) {
     console.error('Failed to delete tag:', error)

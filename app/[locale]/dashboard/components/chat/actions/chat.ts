@@ -3,7 +3,7 @@ import { UIMessage } from "ai"
 import { prisma } from "@/lib/prisma"
 import { addDays, format } from "date-fns"
 import { Mood } from "@prisma/client"
-import { revalidateTag } from "next/cache"
+import { updateTag } from "next/cache"
 import { getUserId } from "@/server/auth"
 
 export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
@@ -55,8 +55,9 @@ export async function saveChat(messages: UIMessage[]): Promise<Mood | null> {
     },
   })
 
-  // Expire immediately so next time we load the user data, we get the latest data
-  revalidateTag(`user-data-${userId}`, { expire: 0 })
+  // Invalidate cache so next time we load the user data, we get the latest data
+  updateTag(`user-data-${userId}`)
+  updateTag(`dashboard-${userId}`)
 
   if (existingMood) {
     // Update existing mood entry

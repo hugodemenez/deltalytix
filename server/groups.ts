@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { Group, Account } from '@/context/data-provider'
 import { createClient, getUserId } from './auth'
-import { revalidateTag } from 'next/cache'
+import { updateTag } from 'next/cache'
 
 export interface GroupWithAccounts extends Group {
   accounts: Account[]
@@ -38,8 +38,8 @@ export async function renameGroupAction(groupId: string, name: string): Promise<
       },
     })
     // Invalidate dashboard-related cache tags
-    revalidateTag(`user-data-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`user-data-${userId}`)
+    updateTag(`dashboard-${userId}`)
     return group
   } catch (error) {
     console.error('Error renaming group:', error)
@@ -73,8 +73,8 @@ export async function saveGroupAction(name: string): Promise<Group> {
       },
     })
     // Invalidate dashboard-related cache tags
-    revalidateTag(`user-data-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`user-data-${userId}`)
+    updateTag(`dashboard-${userId}`)
     return group
   } catch (error) {
     console.error('Error creating group:', error)
@@ -105,8 +105,8 @@ export async function deleteGroupAction(groupId: string): Promise<void> {
       where: { id: groupId },
     })
     // Invalidate dashboard-related cache tags
-    revalidateTag(`user-data-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`user-data-${userId}`)
+    updateTag(`dashboard-${userId}`)
   } catch (error) {
     console.error('Error deleting group:', error)
     throw error
@@ -121,8 +121,8 @@ export async function moveAccountToGroupAction(accountId: string, targetGroupId:
       data: { groupId: targetGroupId },
     })
     // Invalidate dashboard-related cache tags
-    revalidateTag(`user-data-${userId}`, { expire: 0 })
-    revalidateTag(`dashboard-${userId}`, { expire: 0 })
+    updateTag(`user-data-${userId}`)
+    updateTag(`dashboard-${userId}`)
   } catch (error) {
     console.error('Error moving account to group:', error)
     throw error
