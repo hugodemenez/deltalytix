@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Trade as PrismaTrade } from '@prisma/client'
+import { Trade as PrismaTrade } from '@/prisma/generated/prisma/client'
 import { StoreApi, UseBoundStore } from 'zustand'
 
 type WithSelectors<S> = S extends { getState: () => infer T }

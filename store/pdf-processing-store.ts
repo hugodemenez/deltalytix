@@ -1,7 +1,7 @@
 'use client'
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { Trade } from '@prisma/client'
+import { Trade } from '@/prisma/generated/prisma/client'
 
 interface PdfProcessingState {
   // PDF processing data

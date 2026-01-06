@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from 'sonner'
-import { Trade } from '@prisma/client'
+import { Trade } from '@/prisma/generated/prisma/client'
 import { useI18n } from '@/locales/client'
 import { useTradesStore } from '@/store/trades-store'
 import { generateTradeHash } from '@/lib/utils'

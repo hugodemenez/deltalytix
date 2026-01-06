@@ -1,5 +1,5 @@
 'use server'
-import { Trade, Prisma, DashboardLayout } from '@prisma/client'
+import { Trade, Prisma, DashboardLayout } from '@/prisma/generated/prisma/client'
 import { revalidatePath, revalidateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'

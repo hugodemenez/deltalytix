@@ -38,7 +38,7 @@ import { experimental_useObject as useObject } from '@ai-sdk/react'
 import { z } from 'zod/v3';
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { DataTableColumnHeader } from '../../tables/column-header'
-import { Trade as PrismaTrade } from '@prisma/client'
+import { Trade as PrismaTrade } from '@/prisma/generated/prisma/client'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 

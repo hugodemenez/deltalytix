@@ -1,4 +1,4 @@
-import { Post, User, Vote } from '@prisma/client'
+import { Post, User, Vote } from '@/prisma/generated/prisma/client'
 
 export type ExtendedPost = Post & {
   user: Pick<User, 'email' | 'id'>

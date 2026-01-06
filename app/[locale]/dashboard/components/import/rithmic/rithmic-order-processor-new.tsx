@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
-import { TickDetails, Trade } from '@prisma/client'
+import { TickDetails, Trade } from '@/prisma/generated/prisma/client'
 import { getTickDetails } from '@/server/tick-details'
 import { PlatformProcessorProps } from '../config/platforms'
 

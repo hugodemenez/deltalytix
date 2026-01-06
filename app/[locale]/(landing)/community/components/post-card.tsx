@@ -1,6 +1,6 @@
 'use client'
 
-import { Post, PostStatus, PostType, Vote, VoteType } from '@prisma/client'
+import { Post, PostStatus, PostType, Vote, VoteType } from '@/prisma/generated/prisma/client'
 import { formatDistanceToNow } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
 import { ArrowBigDown, ArrowBigUp, MessageSquare, ImageIcon, Pencil, ExternalLink, Link as LinkIcon, Copy, Check, MoreHorizontal, Settings2 } from 'lucide-react'

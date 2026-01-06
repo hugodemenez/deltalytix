@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Mood } from '@prisma/client'
+import { Mood } from '@/prisma/generated/prisma/client'
 
 type MoodStore = {
   moods: Mood[]

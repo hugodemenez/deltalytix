@@ -1,7 +1,7 @@
 'use server'
 
 import { getUserId } from '@/server/auth'
-import { PrismaClient, Trade, Payout } from '@prisma/client'
+import { PrismaClient, Trade, Payout } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import { computeMetricsForAccounts } from '@/lib/account-metrics'

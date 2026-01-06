@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/server/auth'
-import { PostType, PostStatus, VoteType } from '@prisma/client'
+import { PostType, PostStatus, VoteType } from '@/prisma/generated/prisma/client'
 
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'

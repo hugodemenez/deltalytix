@@ -25,7 +25,7 @@ import {
   CommandList,
 } from "@/components/ui/command"
 import { Badge } from '@/components/ui/badge'
-import { Trade } from '@prisma/client'
+import { Trade } from '@/prisma/generated/prisma/client'
 import { useUserStore } from '@/store/user-store'
 import { createTagAction } from '@/server/tags'
 import { format } from 'date-fns'
