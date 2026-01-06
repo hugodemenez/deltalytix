@@ -46,13 +46,13 @@ interface Props {
   isAuthor: boolean
 }
 
-const typeColors = {
+const typeColors: Record<PostType, string> = {
   [PostType.FEATURE_REQUEST]: 'bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100',
   [PostType.BUG_REPORT]: 'bg-red-100 text-red-900 dark:bg-red-900 dark:text-red-100',
   [PostType.DISCUSSION]: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
 }
 
-const statusColors = {
+const statusColors: Record<PostStatus, string> = {
   [PostStatus.OPEN]: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
   [PostStatus.IN_PROGRESS]: 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100',
   [PostStatus.COMPLETED]: 'bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100',
