@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
     // Use react prop instead of rendering to HTML
     const { data, error } = await resend.emails.send({
-      from: 'Deltalytix <welcome@eu.auth.deltalytix.app>',
+      from: 'Deltalytix <welcome@eu.updates.deltalytix.app>',
       to: record.email,
       subject: userLanguage === 'fr' ? 'Bienvenue sur Deltalytix' : 'Welcome to Deltalytix',
       react: WelcomeEmail({ firstName, email: record.email, language: userLanguage, youtubeId: youtubeId || 'ZBrIZpCh_7Q' }),
