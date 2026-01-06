@@ -21,12 +21,49 @@ const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: st
   }
 
   const formattedPnl = pnl.trim();
-  const numericValue = parseFloat(formattedPnl.replace(/[$]/g, '').replace(',', '.'));
+  
+  // Check if value is in parenthesis format (negative)
+  const isNegative = formattedPnl.startsWith('(') && formattedPnl.endsWith(')');
+  
+  // Remove parentheses and dollar signs
+  let cleanedValue = formattedPnl.replace(/[()$]/g, '');
+  
+  // Detect format: if there's both comma and period, determine which is decimal separator
+  if (cleanedValue.includes(',') && cleanedValue.includes('.')) {
+    // If comma comes before period, it's a thousand separator (US format: 1,234.56)
+    // If period comes before comma, it's European format (1.234,56)
+    const commaIndex = cleanedValue.indexOf(',');
+    const periodIndex = cleanedValue.indexOf('.');
+    
+    if (commaIndex < periodIndex) {
+      // US format: remove commas (thousand separators)
+      cleanedValue = cleanedValue.replace(/,/g, '');
+    } else {
+      // European format: remove periods (thousand separators) and replace comma with period
+      cleanedValue = cleanedValue.replace(/\./g, '').replace(',', '.');
+    }
+  } else if (cleanedValue.includes(',')) {
+    // Only comma present - could be either format
+    // If comma is followed by exactly 3 digits at the end, it's likely European decimal (e.g., 123,456)
+    // Otherwise, if there are more than 3 digits after comma, it's likely European decimal
+    // If comma has exactly 3 digits after it and there are more digits before, it's likely US thousand separator
+    const parts = cleanedValue.split(',');
+    if (parts.length === 2 && parts[1].length <= 2) {
+      // Likely European decimal format (e.g., 123,45)
+      cleanedValue = cleanedValue.replace(',', '.');
+    } else {
+      // Likely US thousand separator format (e.g., 1,234)
+      cleanedValue = cleanedValue.replace(/,/g, '');
+    }
+  }
+  
+  const numericValue = parseFloat(cleanedValue);
   
   if (isNaN(numericValue)) {
     return { pnl: 0, error: 'Unable to parse PNL value' };
   }
-  return { pnl: numericValue };
+  
+  return { pnl: isNegative ? -numericValue : numericValue };
 };
 
 const formatPriceValue = (price: string | undefined): { price: number, error?: string } => {
