@@ -66,7 +66,7 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
   const pathname = usePathname()
   const isPostPage = pathname === `/${locale}/community/post/${post.id}`
   const dateLocale = locale === 'fr' ? fr : enUS
-  const [optimisticVotes, setOptimisticVotes] = useState(post.votes)
+  const [optimisticVotes, setOptimisticVotes] = useState<Vote[]>(post.votes)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState(post.content)
