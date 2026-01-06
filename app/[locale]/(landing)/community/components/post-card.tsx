@@ -116,7 +116,7 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
           newVotes = optimisticVotes.filter(v => v.userId !== post.userId)
         } else {
           // Change vote type
-          newVotes = optimisticVotes.map(v =>
+          newVotes = optimisticVotes.map((v: Vote) =>
             v.userId === post.userId ? { ...v, type } : v
           )
         }
@@ -327,7 +327,7 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {post.screenshots.map((screenshot, index) => (
+                {post.screenshots.map((screenshot: string, index: number) => (
                   <Dialog key={index} open={selectedImage === screenshot} onOpenChange={(open) => !open && setSelectedImage(null)}>
                     <DialogTrigger asChild>
                       <Button variant="outline" className="p-0 h-24 w-24 relative overflow-hidden" onClick={() => setSelectedImage(screenshot)}>
