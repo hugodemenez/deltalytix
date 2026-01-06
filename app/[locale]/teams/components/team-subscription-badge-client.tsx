@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/tooltip"
 import Link from "next/link"
 import { useI18n } from "@/locales/client"
-import type { Subscription } from '@/prisma/generated/prisma/client'
+import type { Subscription } from '@/prisma/generated/prisma/browser'
 
 export function TeamSubscriptionBadge({ 
   subscription,

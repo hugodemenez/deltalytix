@@ -19,7 +19,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Tag, Trade } from '@/prisma/generated/prisma/client'
+import { Tag, Trade } from '@/prisma/generated/prisma/browser'
 import { useUserStore } from '@/store/user-store'
 import { createTagAction } from '@/server/tags'
 

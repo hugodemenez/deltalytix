@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Trade } from '@/prisma/generated/prisma/client'
+import { Trade } from '@/prisma/generated/prisma/browser'
 import { useI18n } from '@/locales/client'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { PlatformProcessorProps } from '../config/platforms'

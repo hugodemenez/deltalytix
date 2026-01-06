@@ -37,7 +37,7 @@ import { HexColorPicker } from 'react-colorful'
 import { cn } from '@/lib/utils'
 import { createTagAction, updateTagAction, deleteTagAction, syncTradeTagsToTagTableAction } from '@/server/tags'
 import { toast } from "sonner"
-import { Trade, Tag } from '@/prisma/generated/prisma/client'
+import { Trade, Tag } from '@/prisma/generated/prisma/browser'
 import { WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import {
   AlertDialog,

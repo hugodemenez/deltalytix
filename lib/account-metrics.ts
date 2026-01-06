@@ -1,6 +1,6 @@
 // Shared, environment-agnostic account metrics utilities
 // These functions can be used on both server and client for consistent results.
-import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/client'
+import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
 
 export type AccountMetrics = {

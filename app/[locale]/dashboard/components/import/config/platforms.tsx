@@ -1,5 +1,5 @@
 'use client'
-import { Trade } from '@/prisma/generated/prisma/client'
+import { Trade } from '@/prisma/generated/prisma/browser'
 import { ThorSync } from '../thor/thor-sync'
 import { TradovateSync } from '../tradovate/tradovate-sync'
 import { ImportType } from '../import-type-selection'

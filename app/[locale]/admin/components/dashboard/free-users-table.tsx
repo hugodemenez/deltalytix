@@ -13,7 +13,7 @@ import { getFreeUsers } from '../../actions/stats'
 import { format } from 'date-fns'
 import { Button } from '@/components/ui/button'
 import { ArrowUpDown } from 'lucide-react'
-import { Trade } from '@/prisma/generated/prisma/client'
+import { Trade } from '@/prisma/generated/prisma/browser'
 
 interface FreeUser {
   email: string

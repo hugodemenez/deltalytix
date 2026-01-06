@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { PostType } from '@/prisma/generated/prisma/client'
+import { PostType } from '@/prisma/generated/prisma/browser'
 import { createPost } from '@/app/[locale]/(landing)/actions/community'
 import { Button } from '@/components/ui/button'
 import { useI18n } from '@/locales/client'

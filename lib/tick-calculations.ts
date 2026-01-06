@@ -1,5 +1,5 @@
-import { Trade } from '@/prisma/generated/prisma/client'
-import { TickDetails } from '@/prisma/generated/prisma/client'
+import type { Trade } from '@/prisma/generated/prisma/browser'
+import type { TickDetails } from '@/prisma/generated/prisma/browser'
 
 export interface TickCalculation {
   ticks: number
