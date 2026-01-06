@@ -53,15 +53,14 @@ const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: st
     }
   } else if (cleanedValue.includes(',')) {
     // Only comma present - could be either format
-    // If comma is followed by exactly 3 digits at the end, it's likely European decimal (e.g., 123,456)
-    // Otherwise, if there are more than 3 digits after comma, it's likely European decimal
-    // If comma has exactly 3 digits after it and there are more digits before, it's likely US thousand separator
+    // European decimal format typically has 1-2 digits after comma (e.g., 123,45)
+    // US thousand separator has exactly 3 digits after comma (e.g., 1,234 or 1,234,567)
     const parts = cleanedValue.split(',');
     if (parts.length === 2 && parts[1].length <= 2) {
       // Likely European decimal format (e.g., 123,45)
       cleanedValue = cleanedValue.replace(',', '.');
     } else {
-      // Likely US thousand separator format (e.g., 1,234)
+      // Likely US thousand separator format (e.g., 1,234 or 1,234,567)
       cleanedValue = cleanedValue.replace(/,/g, '');
     }
   }
@@ -264,14 +263,14 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
               item[key] = closePriceError ? undefined : closePrice.toString();
               break;
             case 'pnl':
-              const { pnl, error } = formatCurrencyValue(cellValue)
+              const { pnl, error } = formatCurrencyValue(cellValue);
               // Don't skip the trade if PnL is missing, just default to 0
-              item[key] = error ? 0 : pnl
+              item[key] = error ? 0 : pnl;
               break;
             case 'commission':
-              const { pnl: commission, error: commissionError } = formatCurrencyValue(cellValue) || 0;
+              const { pnl: commission, error: commissionError } = formatCurrencyValue(cellValue);
               // Don't skip the trade if commission is missing, just default to 0
-              item[key] = commissionError ? 0 : commission
+              item[key] = commissionError ? 0 : commission;
               break;
             case 'side':
               item[key] = cellValue.toLowerCase()
