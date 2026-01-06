@@ -6,10 +6,11 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "ts-node scripts/generate-routes.ts",
+    "prebuild": "prisma generate && ts-node scripts/generate-routes.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate"
   },
   "dependencies": {

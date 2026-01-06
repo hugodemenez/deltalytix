@@ -213,11 +213,11 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
         <CardHeader className="flex-row items-start justify-between space-y-0">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className={typeColors[post.type]}>
-                {post.type.replace('_', ' ')}
+              <Badge variant="secondary" className={typeColors[post.type as PostType]}>
+                {(post.type as string).replace('_', ' ')}
               </Badge>
-              <Badge variant="outline" className={statusColors[post.status]}>
-                {post.status.replace('_', ' ')}
+              <Badge variant="outline" className={statusColors[post.status as PostStatus]}>
+                {(post.status as string).replace('_', ' ')}
               </Badge>
             </div>
             <h3 className="font-semibold">{post.title}</h3>
