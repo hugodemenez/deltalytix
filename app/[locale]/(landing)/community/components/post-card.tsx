@@ -72,7 +72,7 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
   const [editedContent, setEditedContent] = useState(post.content)
   const [isCommentsOpen, setIsCommentsOpen] = useState(isExpanded)
   const [comments, setComments] = useState<any[]>([])
-  const [commentCount, setCommentCount] = useState(post._count.comments)
+  const [commentCount, setCommentCount] = useState<number>(post._count.comments)
   const user = useUserStore(state => state.user)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [authAction, setAuthAction] = useState('')
