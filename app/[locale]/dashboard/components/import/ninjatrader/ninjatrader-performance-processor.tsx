@@ -54,14 +54,20 @@ const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: st
   } else if (cleanedValue.includes(',')) {
     // Only comma present - could be either format
     // European decimal format typically has 1-2 digits after comma (e.g., 123,45)
-    // US thousand separator has exactly 3 digits after comma (e.g., 1,234 or 1,234,567)
+    // US thousand separator has exactly 3 digits between/after commas (e.g., 1,234 or 1,234,567)
     const parts = cleanedValue.split(',');
-    if (parts.length === 2 && parts[1].length <= 2) {
-      // Likely European decimal format (e.g., 123,45)
-      cleanedValue = cleanedValue.replace(',', '.');
-    } else {
-      // Likely US thousand separator format (e.g., 1,234 or 1,234,567)
+    
+    // Check if it matches US thousand separator pattern:
+    // - Multiple commas OR single comma with exactly 3 digits after
+    // - All parts after first must be exactly 3 digits
+    const isUSFormat = parts.length > 2 || (parts.length === 2 && parts[1].length === 3);
+    
+    if (isUSFormat) {
+      // US thousand separator format (e.g., 1,234 or 1,234,567)
       cleanedValue = cleanedValue.replace(/,/g, '');
+    } else {
+      // European decimal format (e.g., 123,45 or 1,2)
+      cleanedValue = cleanedValue.replace(',', '.');
     }
   }
   
