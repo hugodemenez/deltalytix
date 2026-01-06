@@ -286,7 +286,7 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
               item[key] = commissionError ? 0 : commission;
               break;
             case 'side':
-              item[key] = cellValue.toLowerCase()
+              item[key] = cellValue.toLowerCase();
               break;
               case 'instrument':
                 if (typeof cellValue === 'string' && cellValue.trim() !== '') {
