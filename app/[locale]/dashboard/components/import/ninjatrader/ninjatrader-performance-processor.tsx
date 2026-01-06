@@ -15,6 +15,15 @@ import {
 } from "@/components/ui/card"
 
 
+/**
+ * Formats currency values from NinjaTrader CSV exports
+ * Supports multiple formats:
+ * - Negative values in parenthesis: ($400.00), (400.00)
+ * - Standard negative: -$400.00, -400.00
+ * - Positive values: $400.00, 400.00
+ * - US format with thousand separators: $1,234.56
+ * - European format with comma as decimal: 1234,56 or 1.234,56
+ */
 const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: string } => {
   if (typeof pnl !== 'string' || pnl.trim() === '') {
     return { pnl: 0, error: 'Invalid PNL value' };
