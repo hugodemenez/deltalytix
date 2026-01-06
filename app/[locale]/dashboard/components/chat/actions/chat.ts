@@ -2,7 +2,7 @@
 import { UIMessage } from "ai"
 import { prisma } from "@/lib/prisma"
 import { addDays, format } from "date-fns"
-import { Mood } from "@prisma/client"
+import { Mood } from "@/prisma/generated/prisma/client"
 import { revalidateTag } from "next/cache"
 import { getUserId } from "@/server/auth"
 

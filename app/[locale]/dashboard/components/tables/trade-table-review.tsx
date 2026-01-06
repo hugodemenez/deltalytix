@@ -27,7 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import {
   Popover,
   PopoverContent,

@@ -4,7 +4,7 @@ import {
   setRithmicSynchronization,
   removeRithmicSynchronization,
 } from "@/app/[locale]/dashboard/components/import/rithmic/sync/actions";
-import { Synchronization } from "@prisma/client";
+import { Synchronization } from "@/prisma/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
   try {

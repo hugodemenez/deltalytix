@@ -1,7 +1,7 @@
 'use server'
 import { render } from "@react-email/render"
 import TraderStatsEmail from "@/components/emails/weekly-recap"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { createClient } from '@supabase/supabase-js'
 import { generateTradingAnalysis } from "@/app/api/email/weekly-summary/[userid]/actions/analysis"
 import { getUserData, computeTradingStats } from "@/app/api/email/weekly-summary/[userid]/actions/user-data"

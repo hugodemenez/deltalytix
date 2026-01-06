@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import { useI18n } from "@/locales/client";
 import { useTradesStore } from "@/store/trades-store";
 import { useUserStore } from "@/store/user-store";

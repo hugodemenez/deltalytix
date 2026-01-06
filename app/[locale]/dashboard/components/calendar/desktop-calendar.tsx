@@ -9,7 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { FinancialEvent } from "@prisma/client"
+import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import { CalendarModal } from "./daily-modal"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { translateWeekday } from "@/lib/translation-utils"

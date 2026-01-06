@@ -3,7 +3,7 @@
 import type { Stripe } from "stripe";
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/server/stripe";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@/prisma/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
