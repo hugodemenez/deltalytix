@@ -53,20 +53,27 @@ const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: st
     }
   } else if (cleanedValue.includes(',')) {
     // Only comma present - could be either format
-    // European decimal format typically has 1-2 digits after comma (e.g., 123,45)
-    // US thousand separator has exactly 3 digits between/after commas (e.g., 1,234 or 1,234,567)
+    // European decimal format has 1+ digits after comma (e.g., 123,45 or 123,4567)
+    // US thousand separator has exactly 3 digits between each comma (e.g., 1,234 or 1,234,567)
     const parts = cleanedValue.split(',');
     
     // Check if it matches US thousand separator pattern:
-    // - Multiple commas OR single comma with exactly 3 digits after
-    // - All parts after first must be exactly 3 digits
-    const isUSFormat = parts.length > 2 || (parts.length === 2 && parts[1].length === 3);
+    // - Multiple commas: all parts after first must be exactly 3 digits
+    // - Single comma with exactly 3 digits after
+    let isUSFormat = false;
+    if (parts.length === 2 && parts[1].length === 3) {
+      // Single comma with exactly 3 digits after (e.g., 1,234)
+      isUSFormat = true;
+    } else if (parts.length > 2) {
+      // Multiple commas: verify all parts except first are exactly 3 digits
+      isUSFormat = parts.slice(1).every(part => part.length === 3);
+    }
     
     if (isUSFormat) {
       // US thousand separator format (e.g., 1,234 or 1,234,567)
       cleanedValue = cleanedValue.replace(/,/g, '');
     } else {
-      // European decimal format (e.g., 123,45 or 1,2)
+      // European decimal format (e.g., 123,45 or 1,2 or 123,4567)
       cleanedValue = cleanedValue.replace(',', '.');
     }
   }
