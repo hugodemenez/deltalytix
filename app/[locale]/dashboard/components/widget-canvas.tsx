@@ -22,7 +22,7 @@ import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
 import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user-store'
 import { toast } from "sonner"
-import { defaultLayouts } from "@/context/data-provider"
+import { defaultLayouts } from "@/lib/default-layouts"
 import { Prisma, DashboardLayout } from "@/prisma/generated/prisma/browser"
 
 // Helper function to convert internal layout to Prisma type

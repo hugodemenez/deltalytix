@@ -7,7 +7,7 @@ import { startOfDay } from 'date-fns'
 import { getSubscriptionDetails } from './subscription'
 import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
-import { defaultLayouts } from '@/context/data-provider'
+import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
 import { v5 as uuidv5 } from 'uuid'
 
