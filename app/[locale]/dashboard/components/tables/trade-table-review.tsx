@@ -74,7 +74,6 @@ import {
 } from "@/lib/tick-calculations";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { deleteTradesByIdsAction } from "@/server/accounts";
 import { Trash } from "lucide-react";
 import {
   DropdownMenu,
@@ -283,7 +282,7 @@ interface TradeTableReviewProps {
 
 export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps) {
   const t = useI18n();
-  const { formattedTrades, updateTrades, refreshTrades } = useData();
+  const { formattedTrades, updateTrades, deleteTrades, refreshTrades } = useData();
   const tags = useUserStore((state) => state.tags);
   const timezone = useUserStore((state) => state.timezone);
   const tickDetails = useTickDetailsStore((state) => state.tickDetails);
@@ -292,9 +291,6 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   if (tradesParam) {
     contextTrades = tradesParam;
   }
-
-  // Debug: Log tick details
-  console.log("Available tick details:", tickDetails);
 
   // Get table configuration from store
   const {
@@ -327,11 +323,6 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [hasInitializedExpanded, setHasInitializedExpanded] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-
-
-
-
-
 
   // Sync local state with store
   React.useEffect(() => {
@@ -443,11 +434,14 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     const validTradeIds = selectedTrades.filter((id) => id && id !== "");
     if (validTradeIds.length === 0) return;
 
+    // Clear selection immediately for better UX
+    setSelectedTrades([]);
+    table.resetRowSelection();
+    setShowDeleteDialog(false);
+
     try {
-      await deleteTradesByIdsAction(validTradeIds);
-      setSelectedTrades([]);
-      table.resetRowSelection();
-      refreshTrades();
+      // deleteTrades optimistically removes trades from local state
+      await deleteTrades(validTradeIds);
       toast.success(t("trade-table.deleteSuccess"), {
         description: t("trade-table.deleteSuccessDescription", {
           count: validTradeIds.length,
@@ -458,8 +452,6 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       toast.error(t("trade-table.deleteError"), {
         description: t("trade-table.deleteErrorDescription"),
       });
-    } finally {
-      setShowDeleteDialog(false);
     }
   };
 

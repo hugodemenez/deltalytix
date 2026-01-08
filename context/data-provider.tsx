@@ -44,6 +44,7 @@ import {
   savePayoutAction,
   calculateAccountBalanceAction,
   calculateAccountMetricsAction,
+  deleteTradesByIdsAction,
 } from "@/server/accounts";
 import { computeMetricsForAccounts } from "@/lib/account-metrics";
 import {
@@ -452,6 +453,7 @@ interface DataContextType {
     tradeIds: string[],
     update: Partial<PrismaTrade>
   ) => Promise<void>;
+  deleteTrades: (tradeIds: string[]) => Promise<void>;
   groupTrades: (tradeIds: string[]) => Promise<void>;
   ungroupTrades: (tradeIds: string[]) => Promise<void>;
 
@@ -843,7 +845,7 @@ export const DataProvider: React.FC<{
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
-    if (isLoading || !trades || !Array.isArray(trades) || trades.length === 0)
+    if (!trades || !Array.isArray(trades) || trades.length === 0)
       return [];
 
     // Get hidden accounts for filtering
@@ -1662,6 +1664,33 @@ export const DataProvider: React.FC<{
     [supabaseUser?.id, trades, setTrades]
   );
 
+  const deleteTrades = useCallback(
+    async (tradeIds: string[]) => {
+      if (!supabaseUser?.id) return;
+      
+      // Optimistically remove trades from local state immediately
+      // Use startTransition to mark the expensive recalculation as non-urgent
+      // This keeps the UI responsive while formattedTrades recalculates
+      const remainingTrades = trades.filter(
+        (trade) => !tradeIds.includes(trade.id)
+      );
+      
+      // Update state in a transition so it doesn't block the UI
+        setTrades(remainingTrades);
+      
+      try {
+        // Delete from database
+        await deleteTradesByIdsAction(tradeIds);
+      } catch (error) {
+        // On error, refresh to restore the correct state
+        console.error("Error deleting trades:", error);
+        await refreshTrades();
+        throw error;
+      }
+    },
+    [supabaseUser?.id, trades, setTrades, refreshTrades]
+  );
+
   const saveDashboardLayout = useCallback(
     async (layout: PrismaDashboardLayout) => {
       if (!supabaseUser?.id) return;
@@ -1730,6 +1759,7 @@ export const DataProvider: React.FC<{
 
     // Update trade
     updateTrades,
+    deleteTrades,
     groupTrades,
     ungroupTrades,
 
