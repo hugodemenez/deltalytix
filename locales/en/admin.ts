@@ -70,3 +70,4 @@ export default {
   "admin.sendEmail.templates.supportSubscriptionError.description": "Follow up on a subscription issue.",
 }
 
+

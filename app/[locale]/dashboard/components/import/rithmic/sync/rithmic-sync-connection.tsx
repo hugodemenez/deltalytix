@@ -326,8 +326,9 @@ export function RithmicSyncConnection({ setIsOpen }: RithmicSyncConnectionProps)
         })
       } else {
         // No existing credentials found, save as new
+        // Use username as the ID to match synchronization system
         const dataToSave = {
-          id: currentCredentialId || generateCredentialId(),
+          id: currentCredentialId || generateCredentialId(credentials.username),
           credentials: {
             username: credentials.username,
             password: credentials.password,

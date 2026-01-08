@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, getWebsiteURL } from "@/server/auth";
-import { stripe } from "@/actions/stripe";
+import { stripe } from "@/server/stripe";
 
 async function handleTeamCheckoutSession(user: any, websiteURL: string, teamName?: string, currency: 'USD' | 'EUR' = 'USD') {
     // First, try to find existing customer

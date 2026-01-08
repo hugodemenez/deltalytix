@@ -4,7 +4,7 @@ import { createClient } from './auth'
 import { prisma } from '@/lib/prisma'
 import { formatInTimeZone } from 'date-fns-tz'
 import { parseISO, eachDayOfInterval, startOfDay, endOfDay, isValid } from 'date-fns'
-import { Payout as PrismaPayout } from '@prisma/client'
+import { Payout as PrismaPayout } from '@/prisma/generated/prisma/client'
 
 // Types matching the component
 interface ChartDataPoint {

@@ -27,7 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import {
   Popover,
   PopoverContent,
@@ -306,7 +306,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     tableConfig?.columnVisibility || {},
   );
   const [expanded, setExpanded] = useState<ExpandedState>({});
-  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 10);
+  const [pageSize, setPageSize] = useState(tableConfig?.pageSize || 50);
   const [groupingGranularity, setGroupingGranularity] = useState<number>(
     tableConfig?.groupingGranularity || 0,
   );
@@ -1211,6 +1211,9 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   // Note: This only controls the Card header, not the table column headers
   const showHeader = config?.showHeader !== false;
 
+  // Visible columns are used for rendering header/body/footer so hidden columns don't create gaps
+  const visibleColumns = table.getVisibleLeafColumns();
+
   return (
     <Card
       className="h-full flex flex-col w-full"
@@ -1384,7 +1387,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               ) : (
                 <tr>
                   <td
-                    colSpan={columns.length}
+                    colSpan={visibleColumns.length}
                     className="p-4 align-middle [&:has([role=checkbox])]:pr-0 h-24 text-center"
                   >
                     No results.
@@ -1394,11 +1397,11 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             </tbody>
             <tfoot className="sticky bottom-0 z-10 bg-muted/90 backdrop-blur-xs border-t-2 border-border">
               <tr className="border-b transition-colors">
-                {columns.map((column, index) => {
+                {visibleColumns.map((column, index) => {
                   const columnId = column.id || (column as any).accessorKey;
                   
                   // Find the first non-select/expand column for "Total" label
-                  const firstDataColumnIndex = columns.findIndex(
+                  const firstDataColumnIndex = visibleColumns.findIndex(
                     (col) => {
                       const id = col.id || (col as any).accessorKey;
                       return id !== "select" && id !== "expand";
@@ -1414,7 +1417,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                         className={cn(
                           "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold border-r border-border/50 last:border-r-0 first:border-l",
                         )}
-                        style={{ width: column.size || 400 }}
+                        style={{ width: column.getSize() }}
                       >
                         {t("trade-table.total")}
                       </td>
@@ -1429,7 +1432,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                         className={cn(
                           "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm border-r border-border/50 last:border-r-0",
                         )}
-                        style={{ width: column.size || 400 }}
+                      style={{ width: column.getSize() }}
                       />
                     );
                   }
@@ -1442,7 +1445,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                         className={cn(
                           "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
                         )}
-                        style={{ width: column.size || 400 }}
+                      style={{ width: column.getSize() }}
                       >
                         <span
                           className={cn(
@@ -1462,7 +1465,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                         className={cn(
                           "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
                         )}
-                        style={{ width: column.size || 400 }}
+                      style={{ width: column.getSize() }}
                       >
                         ${totals.totalCommission.toFixed(2)}
                       </td>
@@ -1476,7 +1479,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                         className={cn(
                           "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm font-semibold text-right border-r border-border/50 last:border-r-0",
                         )}
-                        style={{ width: column.size || 400 }}
+                      style={{ width: column.getSize() }}
                       >
                         {totals.totalQuantity.toLocaleString()}
                       </td>
@@ -1490,7 +1493,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       className={cn(
                         "p-4 align-middle whitespace-nowrap px-3 py-3 text-sm border-r border-border/50 last:border-r-0",
                       )}
-                      style={{ width: column.size || 400 }}
+                      style={{ width: column.getSize() }}
                     />
                   );
                 })}
@@ -1544,7 +1547,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             size="sm"
             className="w-[180px]"
             onClick={() => {
-              handlePageSizeChange(10);
+              handlePageSizeChange(50);
               table.resetPageSize();
               table.setPageIndex(0);
             }}

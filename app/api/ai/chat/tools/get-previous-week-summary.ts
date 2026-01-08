@@ -1,6 +1,6 @@
 import { groupBy } from "@/lib/utils";
 import { getTradesAction } from "@/server/database";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
 import { z } from 'zod/v3';
 import { startOfWeek, endOfWeek, subWeeks, format } from "date-fns";

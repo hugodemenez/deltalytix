@@ -221,5 +221,54 @@ export default {
                 }
             }
         },
+        propfirms: {
+            title: 'Prop Firm Catalogue',
+            description: 'Explore prop firms tracked by Deltalytix users. See real statistics on registered accounts and payout performance.',
+            registeredAccounts: 'Registered Accounts',
+            accountTemplates: 'Account Templates',
+            chart: {
+                title: 'Registered Accounts by Prop Firm',
+                accounts: 'Accounts'
+            },
+            sort: {
+                label: 'Sort by',
+                accounts: 'Number of Accounts',
+                paidPayout: 'Paid Payout Amount',
+                refusedPayout: 'Refused Payout Amount'
+            },
+            timeframe: {
+                label: 'Timeframe',
+                currentMonth: 'Current Month',
+                last3Months: 'Last 3 Months',
+                last6Months: 'Last 6 Months',
+                '2024': '2024',
+                '2025': '2025',
+                allTime: 'All Time'
+            },
+            payouts: {
+                title: 'Payout Statistics',
+                paid: {
+                    label: 'Paid',
+                    description: 'Total amount and count of paid and validated payouts'
+                },
+                pending: {
+                    label: 'Pending',
+                    description: 'Total amount and count of pending payouts'
+                },
+                refused: {
+                    label: 'Refused',
+                    description: 'Total amount and count of refused payouts'
+                },
+                amount: 'Amount',
+                'count#zero': 'No payouts',
+                'count#one': '1 payout',
+                'count#other': '{count} payouts'
+            },
+            other: {
+                title: 'Other Prop Firms',
+                description: 'Prop firms with registered accounts but not in our template catalogue'
+            },
+            noStats: 'No statistics available'
+        },
     },
 } as const;

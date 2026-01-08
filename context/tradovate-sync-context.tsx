@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
-import { Synchronization } from '@prisma/client'
+import { Synchronization } from '@/prisma/generated/prisma/browser'
 
 interface TradovateSyncContextType {
   // Core sync management

@@ -1,0 +1,67 @@
+---
+title: Embeddable analytics widgets for external websites
+description: Embed Deltalytix charts on your website or platform with customizable themes and multi-language support.
+date: 2025-10-18
+status: completed
+completedDate: 2025-10-18
+---
+
+# Embeddable analytics widgets for external websites
+
+Display your trading analytics anywhere with embeddable chart widgets.
+
+## How it works
+
+Add an iframe to your website pointing to the Deltalytix embed URL. Configure which charts to show, the language, and the visual theme using URL parameters.
+
+```html
+<iframe 
+  src="https://deltalytix.app/embed?charts=trade-distribution,weekday-pnl&lang=en"
+  width="100%" 
+  height="400">
+</iframe>
+```
+
+## Available charts
+
+- Time range performance
+- Daily PnL
+- Time of day performance
+- Weekday PnL
+- Trade distribution (win/loss/breakeven)
+- Tick distribution
+- PnL by side (long vs short)
+- Average PnL per contract
+- Commissions vs net PnL
+- Contracts by hour
+
+## Language support
+
+11 languages available via the `lang` parameter:
+English, French, German, Spanish, Italian, Portuguese, Vietnamese, Hindi, Japanese, Chinese, Yoruba
+
+## Theme customization
+
+### Presets
+
+- `preset=ocean` - Cool blue tones
+- `preset=sunset` - Warm orange/red palette
+- `preset=default` - System theme
+
+### Custom CSS variables
+
+Override individual colors via URL parameters:
+```
+?bg-color=0a0a0a&border-color=27272a&radius=0.5rem
+```
+
+## Dynamic data
+
+Use PostMessage API to send trade data or theme updates from your parent page:
+
+```javascript
+iframe.contentWindow.postMessage({
+  type: 'addTrades',
+  trades: [{ pnl: 150, timestamp: '2025-10-18T10:30:00Z' }]
+}, '*');
+```

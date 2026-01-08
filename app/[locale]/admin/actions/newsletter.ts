@@ -1,6 +1,8 @@
 "use server"
 
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient, User } from "@/prisma/generated/prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
+import pg from "pg"
 import { Resend } from 'resend'
 import NewsletterEmail from '@/components/emails/new-feature'
 import { revalidatePath } from "next/cache"
@@ -8,7 +10,12 @@ import { parse } from "csv-parse"
 import { render } from "@react-email/render"
 
 // Initialize PrismaClient outside of the actions
-const prisma = new PrismaClient()
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+})
+
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 interface SendNewsletterParams {
   subject: string
@@ -110,9 +117,9 @@ export async function sendNewsletter({
     const users = await prisma.user.findMany()
 
     // For all french users, check if they are subscribed to the newsletter
-    const frenchUsers = users.filter(user => user.language === 'fr')
+    const frenchUsers = users.filter((user: User) => user.language === 'fr')
     const subscribers = await prisma.newsletter.findMany({
-      where: { email: { in: frenchUsers.map(user => user.email) }, isActive: true },
+      where: { email: { in: frenchUsers.map((user: User) => user.email) }, isActive: true },
     })
     
 

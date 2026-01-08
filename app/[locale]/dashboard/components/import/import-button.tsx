@@ -8,7 +8,7 @@ import {
   UploadIcon,
   type UploadIconHandle,
 } from "@/components/animated-icons/upload";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import { saveTradesAction } from "@/server/database";
 import ImportTypeSelection, { ImportType } from "./import-type-selection";
 import FileUpload from "./file-upload";

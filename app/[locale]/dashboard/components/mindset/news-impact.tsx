@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/client"
-import { FinancialEvent } from "@prisma/client"
+import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import { useCurrentLocale } from "@/locales/client"
 import { X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"

@@ -70,3 +70,4 @@ export default {
   "admin.sendEmail.templates.supportSubscriptionError.description": "Relance suite à un problème d'abonnement.",
 }
 
+

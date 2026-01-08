@@ -1,11 +1,11 @@
 {
   "crons": [
     {
-      "path": "/api/investing?lang=fr&db=true",
+      "path": "/api/cron/investing?lang=fr&db=true",
       "schedule": "0 5 * * 1"
     },
     {
-      "path": "/api/investing?lang=en&db=true",
+      "path": "/api/cron/investing?lang=en&db=true",
       "schedule": "0 5 * * 1"
     },
     {

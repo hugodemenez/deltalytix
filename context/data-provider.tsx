@@ -16,7 +16,7 @@ import {
   DashboardLayout as PrismaDashboardLayout,
   Subscription as PrismaSubscription,
   Tag,
-} from "@prisma/client";
+} from "@/prisma/generated/prisma/browser";
 
 import { SharedParams } from "@/server/shared";
 import {

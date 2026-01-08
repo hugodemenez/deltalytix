@@ -31,6 +31,7 @@ export default {
   "footer.product.title": "Produit",
   "footer.product.features": "Fonctionnalités",
   "footer.product.pricing": "Tarification",
+  "footer.product.propfirms": "Catalogue des Prop Firms",
   "footer.product.teams": "Équipes",
   "footer.product.support": "Support",
   "footer.company.title": "Équipe",

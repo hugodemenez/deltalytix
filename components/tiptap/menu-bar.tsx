@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/locales/client";
-import { FinancialEvent } from "@prisma/client";
+import { FinancialEvent } from "@/prisma/generated/prisma/browser";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useEditorState } from "@tiptap/react";
 import { Bold, Italic, UnderlineIcon, Strikethrough, Highlighter, Heading1, Heading2, Heading3, List, ListOrdered, Quote, ImageIcon, Loader2, Sparkles, MoreHorizontal, Minimize2, Maximize2, Table2, AlignLeft, AlignCenter, AlignRight } from "lucide-react";

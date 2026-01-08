@@ -1,6 +1,6 @@
 import { create } from "zustand"
 import { persist, createJSONStorage } from "zustand/middleware"
-import { Account } from "@prisma/client"
+import { Account } from "@/prisma/generated/prisma/browser"
 
 interface AccountStore {
   accounts: Account[]

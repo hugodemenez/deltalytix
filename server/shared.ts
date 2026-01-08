@@ -1,6 +1,6 @@
 'use server'
 
-import { Trade, Prisma, PrismaClient, Group, TickDetails } from '@prisma/client'
+import { Trade, Prisma, PrismaClient, Group, TickDetails } from '@/prisma/generated/prisma/client'
 import { endOfDay, startOfDay } from 'date-fns'
 import { parseISO, isValid } from 'date-fns'
 import { revalidatePath } from 'next/cache'

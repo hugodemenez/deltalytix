@@ -1,4 +1,4 @@
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 
 export interface CalendarEntry {
   pnl: number;
