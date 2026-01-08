@@ -1092,6 +1092,11 @@ export default {
     deleteError: "Failed to Delete Trades",
     deleteErrorDescription:
       "An error occurred while deleting the trades. Please try again.",
+    deleteConfirmTitle: "Delete selected trades",
+    deleteConfirmDescription:
+      "Are you sure you want to delete {count} selected trade(s)? This action cannot be undone.",
+    deleteConfirmCancel: "Cancel",
+    deleteConfirmConfirm: "Delete",
     deleteAllImages: "Delete all images",
     allImagesDeleted: "All images deleted successfully",
     resetConfig: "Reset Configuration",

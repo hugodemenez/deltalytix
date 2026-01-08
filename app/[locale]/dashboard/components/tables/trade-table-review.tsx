@@ -86,6 +86,17 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { EditableTimeCell } from "./editable-time-cell";
 import { EditableInstrumentCell } from "./editable-instrument-cell";
 import { BulkEditPanel } from "./bulk-edit-panel";
@@ -315,6 +326,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   const [pageIndex, setPageIndex] = useState(0);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [hasInitializedExpanded, setHasInitializedExpanded] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+
+
+
+
 
   // Sync local state with store
   React.useEffect(() => {
@@ -441,8 +458,11 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       toast.error(t("trade-table.deleteError"), {
         description: t("trade-table.deleteErrorDescription"),
       });
+    } finally {
+      setShowDeleteDialog(false);
     }
   };
+
 
   // Group trades by instrument, entry date, and close date with granularity
   // Or return ungrouped trades if groupTrades is false
@@ -1239,14 +1259,36 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           </div>
           <div className="flex items-center gap-2">
             {selectedTrades.length > 0 && (
-              <Button
-                variant="destructive"
-                className="h-10 font-normal whitespace-nowrap"
-                onClick={handleDeleteTrades}
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                {t("trade-table.deleteSelected")}
-              </Button>
+              <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    className="h-10 font-normal whitespace-nowrap"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash className="mr-2 h-4 w-4" />
+                    {t("trade-table.deleteSelected")}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t("trade-table.deleteConfirmTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("trade-table.deleteConfirmDescription", {
+                        count: selectedTrades.length,
+                      })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>
+                      {t("trade-table.deleteConfirmCancel")}
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteTrades}>
+                      {t("trade-table.deleteConfirmConfirm")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {config?.groupTrades !== false && selectedTrades.length >= 2 && (
               <Button

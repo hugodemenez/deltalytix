@@ -12,6 +12,17 @@ import { saveTradesAction } from '@/server/database'
 import { toast } from 'sonner'
 import { deleteTradesByIdsAction } from '@/server/accounts'
 import { useData } from '@/context/data-provider'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type SortConfig = {
   key: keyof Trade
@@ -27,6 +38,8 @@ export default function TradeTable() {
   const [selectAll, setSelectAll] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const tradesPerPage = 10
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deleteCount, setDeleteCount] = useState(0)
 
   const filteredAndSortedTrades = useMemo(() => {
     return formattedTrades
@@ -63,9 +76,10 @@ export default function TradeTable() {
     await deleteTradesByIdsAction(ids)
     setSelectedTrades(new Set())
     refreshTrades()
-    toast.message( "Trades Deleted", {
+    toast.message("Trades Deleted", {
       description: `${ids.length} trade(s) have been deleted.`,
     })
+    setShowDeleteDialog(false)
   }
 
   const toggleSelectAll = () => {
@@ -76,6 +90,12 @@ export default function TradeTable() {
       setSelectedTrades(allTradeIds)
     }
     setSelectAll(!selectAll)
+  }
+
+  const confirmDeleteSelected = () => {
+    const ids = Array.from(selectedTrades)
+    setDeleteCount(ids.length)
+    setShowDeleteDialog(true)
   }
 
   const toggleTradeSelection = (id: string) => {
@@ -119,9 +139,27 @@ export default function TradeTable() {
           />
         </div>
         <div className="space-x-2">
-          <Button onClick={() => handleDelete(Array.from(selectedTrades))} disabled={selectedTrades.size === 0}>
-            <Trash className="mr-2 h-4 w-4" /> Delete Selected
-          </Button>
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogTrigger asChild>
+              <Button onClick={confirmDeleteSelected} disabled={selectedTrades.size === 0}>
+                <Trash className="mr-2 h-4 w-4" /> Delete Selected
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete selected trades</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete {deleteCount} selected trade(s)? This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={() => handleDelete(Array.from(selectedTrades))}>
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
       <Table>
