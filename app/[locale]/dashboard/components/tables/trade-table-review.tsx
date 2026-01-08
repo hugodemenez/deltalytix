@@ -282,7 +282,7 @@ interface TradeTableReviewProps {
 
 export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps) {
   const t = useI18n();
-  const { formattedTrades, updateTrades, deleteTrades, refreshTrades } = useData();
+  const { formattedTrades, updateTrades, deleteTrades } = useData();
   const tags = useUserStore((state) => state.tags);
   const timezone = useUserStore((state) => state.timezone);
   const tickDetails = useTickDetailsStore((state) => state.tickDetails);
@@ -1607,7 +1607,6 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
         <BulkEditPanel
           selectedTrades={selectedTrades}
           onUpdate={updateTrades}
-          onFinish={() => refreshTrades()}
           onClose={() => setShowBulkEdit(false)}
         />
       )}

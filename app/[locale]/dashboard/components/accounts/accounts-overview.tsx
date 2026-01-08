@@ -567,7 +567,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const isLoading = useUserStore(state => state.isLoading)
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
-  const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout, refreshTrades } = useData()
+  const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout } = useData()
   const { getOrderedAccounts, reorderAccounts } = useAccountOrderStore()
   const t = useI18n()
   const params = useParams()
@@ -723,10 +723,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         })
       }
       
-      // Force refresh of accounts data to get the latest payout information
-      // This ensures the account table shows the new payout immediately
+      // Mark for local selection update; data is already updated optimistically
       shouldUpdateSelectedAccount.current = true
-      await refreshTrades()
 
       setPayoutDialogOpen(false)
       setSelectedPayout(undefined)
@@ -752,10 +750,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       
       await deletePayout(selectedPayout.id)
 
-      // Force refresh of accounts data to get the latest payout information
-      // This ensures the account table shows the updated data immediately
+      // Mark for local selection update; data is already updated optimistically
       shouldUpdateSelectedAccount.current = true
-      await refreshTrades()
 
       setPayoutDialogOpen(false)
       setSelectedPayout(undefined)
@@ -780,8 +776,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       setIsDeleting(true)
       // Delete both account configuration and all associated trades
       await removeAccountsFromTradesAction([selectedAccountForTable.number])
-      // Refresh trades to update the UI
-      await refreshTrades()
+      // DataProvider updates accounts/trades optimistically; no full refresh
       setSelectedAccountForTable(null)
 
       toast.success(t('propFirm.toast.deleteSuccess'), {
@@ -1184,10 +1179,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                         try {
                           await deletePayout(payoutId)
 
-                          // Force refresh of accounts data to get the latest payout information
-                          // This ensures the account table shows the updated data immediately
                           shouldUpdateSelectedAccount.current = true
-                          await refreshTrades()
 
                           toast.success(t('propFirm.payout.deleteSuccess'), {
                             description: t('propFirm.payout.deleteSuccessDescription'),

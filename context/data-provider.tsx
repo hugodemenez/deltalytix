@@ -195,6 +195,9 @@ export interface Account extends Omit<PrismaAccount, "payouts" | "group"> {
 // Combined Context Type
 interface DataContextType {
   refreshTrades: () => Promise<void>;
+  refreshTradesOnly: (options?: { force?: boolean }) => Promise<void>;
+  refreshUserDataOnly: (options?: { force?: boolean; includeStripe?: boolean }) => Promise<void>;
+  refreshAllData: (options?: { force?: boolean }) => Promise<void>;
   isPlusUser: () => boolean;
   isLoading: boolean;
   isMobile: boolean;
@@ -553,80 +556,124 @@ export const DataProvider: React.FC<{
     updateLanguage();
   }, [locale, supabaseUser?.id]);
 
-  const refreshTrades = useCallback(async () => {
-    if (!supabaseUser?.id) return;
-
-    setIsLoading(true);
-
+  const loadStripeSubscription = useCallback(async () => {
     try {
-      // Get the correct user ID from server
-      const userId = await getUserId();
-
-      // Force refresh by calling getTradesAction with forceRefresh: true
-      const trades = await getTradesAction(userId, true);
-      setTrades(Array.isArray(trades) ? trades : []);
-
-      // Also refresh other data with forceRefresh: true
-      const data = await getUserData(true);
-
-      if (!data) {
-        await signOut();
-        setIsLoading(false);
-        return;
-      }
-
-      // Calculate metrics for each account
-      const accountsWithMetrics = await calculateAccountMetricsAction(
-        data.accounts || []
-      );
-      setAccounts(accountsWithMetrics);
-
-      setUser(data.userData);
-      setSubscription(data.subscription as PrismaSubscription | null);
-      setTags(data.tags);
-      setGroups(data.groups);
-      setMoods(data.moodHistory);
-      setEvents(data.financialEvents);
-      setTickDetails(data.tickDetails);
-      setIsFirstConnection(data.userData?.isFirstConnection || false);
-
-      console.log(
-        "[refreshTrades] Successfully refreshed trades and user data"
-      );
+      setStripeSubscriptionLoading(true);
+      const stripeSubscriptionData = await getSubscriptionData();
+      setStripeSubscription(stripeSubscriptionData);
+      setStripeSubscriptionError(null);
     } catch (error) {
-      console.error("Error refreshing trades:", error);
+      console.error("Error loading Stripe subscription:", error);
+      setStripeSubscriptionError(
+        error instanceof Error ? error.message : "Failed to load subscription"
+      );
+      setStripeSubscription(null);
     } finally {
-      setIsLoading(false);
-      // Load Stripe subscription data
-      try {
-        setStripeSubscriptionLoading(true);
-        const stripeSubscriptionData = await getSubscriptionData();
-        setStripeSubscription(stripeSubscriptionData);
-        setStripeSubscriptionError(null);
-      } catch (error) {
-        console.error("Error loading Stripe subscription:", error);
-        setStripeSubscriptionError(
-          error instanceof Error ? error.message : "Failed to load subscription"
-        );
-        setStripeSubscription(null);
-      } finally {
-        setStripeSubscriptionLoading(false);
-      }
+      setStripeSubscriptionLoading(false);
     }
-  }, [
-    supabaseUser?.id,
-    supabaseUser,
-    locale,
-    setTrades,
-    setUser,
-    setSubscription,
-    setTags,
-    setGroups,
-    setMoods,
-    setEvents,
-    setTickDetails,
-    setAccounts,
-  ]);
+  }, []);
+
+  const refreshTradesOnly = useCallback(
+    async (options?: { force?: boolean; withLoading?: boolean }) => {
+      if (!supabaseUser?.id) return;
+      const { force = false, withLoading = true } = options || {};
+
+      if (withLoading) setIsLoading(true);
+
+      try {
+        const userId = await getUserId();
+        const trades = await getTradesAction(userId, force);
+        setTrades(Array.isArray(trades) ? trades : []);
+      } catch (error) {
+        console.error("Error refreshing trades:", error);
+      } finally {
+        if (withLoading) setIsLoading(false);
+      }
+    },
+    [supabaseUser?.id, setTrades]
+  );
+
+  const refreshUserDataOnly = useCallback(
+    async (
+      options?: { force?: boolean; includeStripe?: boolean; withLoading?: boolean }
+    ) => {
+      if (!supabaseUser?.id) return;
+      const {
+        force = false,
+        includeStripe = false,
+        withLoading = true,
+      } = options || {};
+
+      if (withLoading) setIsLoading(true);
+
+      try {
+        const data = await getUserData(force);
+
+        if (!data) {
+          await signOut();
+          return;
+        }
+
+        const accountsWithMetrics = await calculateAccountMetricsAction(
+          data.accounts || []
+        );
+        setAccounts(accountsWithMetrics);
+
+        setUser(data.userData);
+        setSubscription(data.subscription as PrismaSubscription | null);
+        setTags(data.tags);
+        setGroups(data.groups);
+        setMoods(data.moodHistory);
+        setEvents(data.financialEvents);
+        setTickDetails(data.tickDetails);
+        setIsFirstConnection(data.userData?.isFirstConnection || false);
+
+        if (includeStripe) {
+          await loadStripeSubscription();
+        }
+      } catch (error) {
+        console.error("Error refreshing user data:", error);
+      } finally {
+        if (withLoading) setIsLoading(false);
+      }
+    },
+    [
+      supabaseUser?.id,
+      setAccounts,
+      setUser,
+      setSubscription,
+      setTags,
+      setGroups,
+      setMoods,
+      setEvents,
+      setTickDetails,
+      setIsFirstConnection,
+      loadStripeSubscription,
+    ]
+  );
+
+  const refreshAllData = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!supabaseUser?.id) return;
+      const force = options?.force ?? false;
+
+      setIsLoading(true);
+      try {
+        await refreshTradesOnly({ force, withLoading: false });
+        await refreshUserDataOnly({
+          force,
+          includeStripe: true,
+          withLoading: false,
+        });
+        console.log("[refreshAllData] Successfully refreshed trades and user data");
+      } catch (error) {
+        console.error("Error refreshing all data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [refreshTradesOnly, refreshUserDataOnly, supabaseUser?.id]
+  );
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
@@ -1469,11 +1516,11 @@ export const DataProvider: React.FC<{
       } catch (error) {
         // On error, refresh to restore the correct state
         console.error("Error deleting trades:", error);
-        await refreshTrades();
+        await refreshAllData();
         throw error;
       }
     },
-    [supabaseUser?.id, trades, setTrades, refreshTrades]
+    [supabaseUser?.id, trades, setTrades, refreshAllData]
   );
 
   const saveDashboardLayout = useCallback(
@@ -1498,7 +1545,10 @@ export const DataProvider: React.FC<{
     isSharedView,
     sharedParams,
     setSharedParams,
-    refreshTrades,
+    refreshTrades: refreshAllData,
+    refreshTradesOnly,
+    refreshUserDataOnly,
+    refreshAllData,
     changeIsFirstConnection,
     isFirstConnection,
     setIsFirstConnection,
