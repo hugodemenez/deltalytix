@@ -1607,6 +1607,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
         <BulkEditPanel
           selectedTrades={selectedTrades}
           onUpdate={updateTrades}
+          onFinish={() => {}}
           onClose={() => setShowBulkEdit(false)}
         />
       )}
