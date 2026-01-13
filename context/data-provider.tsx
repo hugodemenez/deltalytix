@@ -53,6 +53,7 @@ import { DashboardLayoutWithWidgets, useUserStore } from "@/store/user-store";
 import { useTickDetailsStore } from "@/store/tick-details-store";
 import { useFinancialEventsStore } from "@/store/financial-events-store";
 import { useTradesStore } from "@/store/trades-store";
+import { getTradesCache, setTradesCache } from "@/lib/indexeddb/trades-cache";
 import { endOfDay, isValid, parseISO, set, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { calculateStatistics, formatCalendarData } from "@/lib/utils";
@@ -467,9 +468,28 @@ export const DataProvider: React.FC<{
 
       // Step 2: Fetch trades (with caching server side)
       // I think we could make basic computations server side to offload inital stats computations
-      // WE SHOULD NOT USE CLIENT SIDE CACHING FOR TRADES (PREVENTS DATA LEAKAGE / OVERLOAD IN CACHE)
-      const trades = await getTradesAction();
-      setTrades(Array.isArray(trades) ? trades : []);
+      // Dev: prefer local IndexedDB to avoid hitting remote DB on reloads
+      const userId = await getUserId();
+      if (
+        process.env.NODE_ENV === "development" &&
+        userId &&
+        !params?.isSharedView // avoid caching shared/public views
+      ) {
+        const cachedTrades = await getTradesCache(userId);
+        if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
+          setTrades(cachedTrades);
+        } else {
+          const trades = await getTradesAction(userId, false);
+          const safeTrades = Array.isArray(trades) ? trades : [];
+          setTrades(safeTrades);
+          setTradesCache(userId, safeTrades).catch((err) =>
+            console.error("[DataProvider] Failed to cache trades in IndexedDB (loadData)", err),
+          );
+        }
+      } else {
+        const trades = await getTradesAction();
+        setTrades(Array.isArray(trades) ? trades : []);
+      }
 
       // Step 3: Fetch user data
       // TODO: Check what we could cache client side
@@ -582,8 +602,28 @@ export const DataProvider: React.FC<{
 
       try {
         const userId = await getUserId();
+        if (!userId) return;
+
+        // Dev-only: serve trades from IndexedDB to avoid DB hits when possible
+        if (process.env.NODE_ENV === "development" && !force) {
+          const cachedTrades = await getTradesCache(userId);
+          if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
+            setTrades(cachedTrades);
+            if (withLoading) setIsLoading(false);
+            return;
+          }
+        }
+
         const trades = await getTradesAction(userId, force);
-        setTrades(Array.isArray(trades) ? trades : []);
+        const safeTrades = Array.isArray(trades) ? trades : [];
+        setTrades(safeTrades);
+
+        if (process.env.NODE_ENV === "development") {
+          // Best-effort cache write; do not block UI on failure
+          setTradesCache(userId, safeTrades).catch((err) =>
+            console.error("[refreshTradesOnly] Failed to cache trades in IndexedDB", err),
+          );
+        }
       } catch (error) {
         console.error("Error refreshing trades:", error);
       } finally {
@@ -674,6 +714,22 @@ export const DataProvider: React.FC<{
     },
     [refreshTradesOnly, refreshUserDataOnly, supabaseUser?.id]
   );
+
+  // Dev-only: persist trades store into IndexedDB so reloads avoid DB hits
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    if (!supabaseUser?.id) return;
+    if (!Array.isArray(trades)) return;
+    if (trades.length === 0) return; // avoid caching empty and blocking future fetches
+
+    const timer = window.setTimeout(() => {
+      setTradesCache(supabaseUser.id, trades).catch((err) =>
+        console.error("[DataProvider] Failed to sync trades to IndexedDB", err),
+      );
+    }, 200);
+
+    return () => window.clearTimeout(timer);
+  }, [trades, supabaseUser?.id]);
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
