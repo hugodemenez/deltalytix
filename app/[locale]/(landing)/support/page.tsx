@@ -48,7 +48,7 @@ import {
   ReasoningTrigger,
 } from '@/components/ai-elements/reasoning';
 import { Loader } from '@/components/ai-elements/loader';
-import { ChatTransport, DefaultChatTransport, ToolUIPart, UIMessage } from 'ai';
+import { DefaultChatTransport, ToolUIPart, UIMessage } from 'ai';
 import { ClipboardCheckIcon } from '@/components/animated-icons/clipboard-check';
 import SupportForm from './components/support-form';
 import { toast } from 'sonner';

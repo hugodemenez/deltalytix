@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai";
-import { generateObject } from "ai";
+import { generateText, Output } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
 
@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
       timeZone: timezone || 'UTC'
     });
 
-    const { object } = await generateObject({
-      model: openai("gpt-4o-mini"),
-      schema: dateRangeSchema,
+    const { output } = await generateText({
+      model: 'openai/gpt-5-mini',
+      output: Output.object({ schema: dateRangeSchema }),
       prompt: `You are an expert at parsing natural language date queries into date ranges or weekday filters.
 
 CONTEXT:
@@ -107,7 +107,7 @@ Return the appropriate filter type (date range OR weekday).`,
       temperature: 0.1,
     });
 
-    return new Response(JSON.stringify(object), {
+    return new Response(JSON.stringify(output), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
