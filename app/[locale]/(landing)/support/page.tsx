@@ -48,7 +48,7 @@ import {
   ReasoningTrigger,
 } from '@/components/ai-elements/reasoning';
 import { Loader } from '@/components/ai-elements/loader';
-import { DefaultChatTransport, ToolUIPart } from 'ai';
+import { ChatTransport, DefaultChatTransport, ToolUIPart, UIMessage } from 'ai';
 import { ClipboardCheckIcon } from '@/components/animated-icons/clipboard-check';
 import SupportForm from './components/support-form';
 import { toast } from 'sonner';
@@ -106,7 +106,7 @@ const ChatBotDemo = () => {
     {
       transport: new DefaultChatTransport({
         api: '/api/ai/support',
-      }),
+      }) ,
       onFinish: async ({ message }) => {
         console.log(JSON.stringify(message, null, 2));
       },

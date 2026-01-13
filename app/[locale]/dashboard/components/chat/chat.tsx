@@ -11,18 +11,6 @@ import type { UIMessage } from "ai";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { WidgetSize } from "../../types/dashboard";
-
-// Type adapter: DefaultChatTransport from ai v6 is runtime-compatible with
-// ChatTransport expected by @ai-sdk/react (which uses ai v5 internally).
-// The only difference is in type definitions (providerMetadata structure),
-// but the actual message structure and streaming protocol are identical.
-// Extract the expected transport type from useChat's options
-type UseChatOptions = Parameters<typeof useChat>[0];
-type CompatibleChatTransport = UseChatOptions extends { transport?: infer T } 
-  ? T extends undefined 
-    ? never 
-    : T 
-  : never;
 import { BotMessage } from "./bot-message";
 import { UserMessage } from "./user-message";
 import { ChatInput } from "./input";
@@ -286,7 +274,7 @@ export default function ChatWidget({ size = "large" }: ChatWidgetProps) {
         locale: locale,
         timezone,
       }),
-    }) as CompatibleChatTransport,
+    }),
     onFinish: async ({ messages }) => {
       if (messages[0].role !== "assistant") {
         messages.shift();
