@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings, ChevronLeft, ChevronRight, Loader2, GripVertical } from "lucide-react"
+import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings, ChevronLeft, ChevronRight, Loader2, GripVertical, LayoutGrid, Table } from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn, calculateTradingDays } from "@/lib/utils"
@@ -23,6 +23,7 @@ import { enUS, fr } from 'date-fns/locale'
 import { useParams } from 'next/navigation'
 import { AccountCard } from './account-card'
 import { AccountConfigurator } from './account-configurator'
+import { AccountsTableView } from './accounts-table-view'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import {
@@ -35,7 +36,9 @@ import { Account } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
 import { useAccountOrderStore } from '@/store/account-order-store'
+import { useAccountsViewPreferenceStore } from '@/store/accounts-view-preference-store'
 import { savePayoutAction, removeAccountsFromTradesAction } from '@/server/accounts'
+import { useModalStateStore } from '@/store/modal-state-store'
 import {
   DndContext,
   closestCenter,
@@ -572,6 +575,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
+  const { setAccountGroupBoardOpen } = useModalStateStore()
+  const { view, setView } = useAccountsViewPreferenceStore()
   const [selectedAccountForTable, setSelectedAccountForTable] = useState<Account | null>(null)
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false)
   const [selectedPayout, setSelectedPayout] = useState<{
@@ -883,6 +888,50 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               </UITooltip>
             </TooltipProvider>
           </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAccountGroupBoardOpen(true)}
+              className={cn(
+                "gap-1.5",
+                size === "small" ? "h-7 px-2 text-xs" : "h-8"
+              )}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              <span className={cn(size === "small" && "sr-only")}>
+                {t("filters.manageAccounts")}
+              </span>
+            </Button>
+            <Button
+              variant={view === "cards" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("cards")}
+              className={cn(
+                "gap-1.5",
+                size === "small" ? "h-7 px-2 text-xs" : "h-8"
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className={cn(size === "small" && "sr-only")}>
+                {t("accounts.view.cards")}
+              </span>
+            </Button>
+            <Button
+              variant={view === "table" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setView("table")}
+              className={cn(
+                "gap-1.5",
+                size === "small" ? "h-7 px-2 text-xs" : "h-8"
+              )}
+            >
+              <Table className="h-3.5 w-3.5" />
+              <span className={cn(size === "small" && "sr-only")}>
+                {t("accounts.view.table")}
+              </span>
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
@@ -939,159 +988,172 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         </div>
       )}
 
-      <CardContent className="flex-1 overflow-hidden">
+      <CardContent
+        className={cn(
+          "flex-1 overflow-hidden",
+          view === "table" && "p-0"
+        )}
+      >
         <div
           className="flex-1 overflow-y-auto h-full"
         >
-          {/* Group accounts by their groups */}
-          <div className="mt-4">
-            <div className="space-y-6">
-              {groups.map((group, groupIndex) => {
-                // Filter accounts for this group
-                const groupAccounts = filteredAccounts.filter(account => {
-                  // Find the account in the group's accounts
-                  return group.accounts.some(a => a.number === account.number);
-                });
+          {view === "cards" ? (
+            <div className="mt-4">
+              <div className="space-y-6">
+                {groups.map((group, groupIndex) => {
+                  // Filter accounts for this group
+                  const groupAccounts = filteredAccounts.filter(account => {
+                    console.log('account', JSON.stringify(account, null, 2))
+                    // Find the account in the group's accounts
+                    return group.accounts.some(a => a.number === account.number);
+                  });
 
-                // Skip groups with no accounts
-                if (groupAccounts.length === 0) return null;
+                  // Skip groups with no accounts
+                  if (groupAccounts.length === 0) return null;
 
-                // Get ordered accounts for this group
-                const orderedAccounts = getOrderedAccounts(group.id, groupAccounts) as Account[];
+                  // Get ordered accounts for this group
+                  const orderedAccounts = getOrderedAccounts(group.id, groupAccounts) as Account[];
 
-                // Generate a consistent color for each group based on group index
-                const groupColors = [
-                  'border-blue-200/50 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/20',
-                  'border-purple-200/50 bg-purple-50/30 dark:border-purple-800/30 dark:bg-purple-950/20',
-                  'border-green-200/50 bg-green-50/30 dark:border-green-800/30 dark:bg-green-950/20',
-                  'border-orange-200/50 bg-orange-50/30 dark:border-orange-800/30 dark:bg-orange-950/20',
-                  'border-pink-200/50 bg-pink-50/30 dark:border-pink-800/30 dark:bg-pink-950/20',
-                  'border-cyan-200/50 bg-cyan-50/30 dark:border-cyan-800/30 dark:bg-cyan-950/20',
-                ];
+                  // Generate a consistent color for each group based on group index
+                  const groupColors = [
+                    'border-blue-200/50 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/20',
+                    'border-purple-200/50 bg-purple-50/30 dark:border-purple-800/30 dark:bg-purple-950/20',
+                    'border-green-200/50 bg-green-50/30 dark:border-green-800/30 dark:bg-green-950/20',
+                    'border-orange-200/50 bg-orange-50/30 dark:border-orange-800/30 dark:bg-orange-950/20',
+                    'border-pink-200/50 bg-pink-50/30 dark:border-pink-800/30 dark:bg-pink-950/20',
+                    'border-cyan-200/50 bg-cyan-50/30 dark:border-cyan-800/30 dark:bg-cyan-950/20',
+                  ];
 
-                const groupColorClass = groupColors[groupIndex % groupColors.length];
+                  const groupColorClass = groupColors[groupIndex % groupColors.length];
 
-                return (
-                  <div
-                    key={group.id}
-                    className={cn(
-                      "relative border-l-4 rounded-r-lg",
-                      groupColorClass,
-                      "transition-all duration-200 hover:shadow-md"
-                    )}
-                  >
-                    {/* Group header with subtle styling */}
-                    <div className="px-4 py-3 border-b border-current/10">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-foreground/80 tracking-wide uppercase">
-                          {group.name}
-                        </h3>
-                        <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
-                          {groupAccounts.length} {groupAccounts.length === 1 ? 'account' : 'accounts'}
+                  return (
+                    <div
+                      key={group.id}
+                      className={cn(
+                        "relative border-l-4 rounded-r-lg",
+                        groupColorClass,
+                        "transition-all duration-200 hover:shadow-md"
+                      )}
+                    >
+                      {/* Group header with subtle styling */}
+                      <div className="px-4 py-3 border-b border-current/10">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-foreground/80 tracking-wide uppercase">
+                            {group.name}
+                          </h3>
+                          <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
+                            {groupAccounts.length} {groupAccounts.length === 1 ? 'account' : 'accounts'}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Cards container with optimized spacing */}
-                    <div className="p-4 pt-3">
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                        modifiers={[restrictToHorizontalAxis]}
-                      >
-                        <SortableContext
-                          items={orderedAccounts.map(acc => acc.number)}
-                          strategy={horizontalListSortingStrategy}
+                      {/* Cards container with optimized spacing */}
+                      <div className="p-4 pt-3">
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                          modifiers={[restrictToHorizontalAxis]}
                         >
-                          <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
-                            {orderedAccounts.map(account => {
-                              if (!account.number) return null;
-                              return (
-                                <DraggableAccountCard
-                                  key={account.number}
-                                  account={account as Account}
-                                  onClick={() => setSelectedAccountForTable(account as Account)}
-                                  size={size}
-                                />
-                              )
-                            }).filter(Boolean)}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Show ungrouped accounts */}
-              {(() => {
-
-                const groupedAccountNumbers = new Set(
-                  groups.flatMap(group => group.accounts.map(a => a.number))
-                );
-
-                const ungroupedAccounts = filteredAccounts.filter(
-                  account => !groupedAccountNumbers.has(account.number ?? '')
-                );
-
-                if (ungroupedAccounts.length === 0) return null;
-
-                // Get ordered accounts for ungrouped (using a special key)
-                const orderedUngroupedAccounts = getOrderedAccounts('ungrouped', ungroupedAccounts) as Account[];
-
-                return (
-                  <div
-                    className={cn(
-                      "relative border-l-4 border-gray-200/50 bg-gray-50/30 dark:border-gray-700/30 dark:bg-gray-900/20 rounded-r-lg",
-                      "transition-all duration-200 hover:shadow-md"
-                    )}
-                  >
-                    {/* Ungrouped header */}
-                    <div className="px-4 py-3 border-b border-gray-200/20 dark:border-gray-700/20">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">
-                          {t('propFirm.ungrouped')}
-                        </h3>
-                        <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
-                          {ungroupedAccounts.length} {ungroupedAccounts.length === 1 ? 'account' : 'accounts'}
-                        </div>
+                          <SortableContext
+                            items={orderedAccounts.map(acc => acc.number)}
+                            strategy={horizontalListSortingStrategy}
+                          >
+                            <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
+                              {orderedAccounts.map(account => {
+                                if (!account.number) return null;
+                                return (
+                                  <DraggableAccountCard
+                                    key={account.number}
+                                    account={account as Account}
+                                    onClick={() => setSelectedAccountForTable(account as Account)}
+                                    size={size}
+                                  />
+                                )
+                              }).filter(Boolean)}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
                       </div>
                     </div>
+                  );
+                })}
 
-                    {/* Cards container */}
-                    <div className="p-4 pt-3">
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                        modifiers={[restrictToHorizontalAxis]}
-                      >
-                        <SortableContext
-                          items={orderedUngroupedAccounts.map(acc => acc.number)}
-                          strategy={horizontalListSortingStrategy}
-                        >
-                          <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
-                            {orderedUngroupedAccounts.map(account => {
-                              if (!account.number) return null;
-                              return (
-                                <DraggableAccountCard
-                                  key={account.number}
-                                  account={account as Account}
-                                  onClick={() => setSelectedAccountForTable(account as Account)}
-                                  size={size}
-                                />
-                              )
-                            }).filter(Boolean)}
+                {/* Show ungrouped accounts */}
+                {(() => {
+
+                  const groupedAccountNumbers = new Set(
+                    groups.flatMap(group => group.accounts.map(a => a.number))
+                  );
+
+                  const ungroupedAccounts = filteredAccounts.filter(
+                    account => !groupedAccountNumbers.has(account.number ?? '')
+                  );
+
+                  if (ungroupedAccounts.length === 0) return null;
+
+                  // Get ordered accounts for ungrouped (using a special key)
+                  const orderedUngroupedAccounts = getOrderedAccounts('ungrouped', ungroupedAccounts) as Account[];
+
+                  return (
+                    <div
+                      className={cn(
+                        "relative border-l-4 border-gray-200/50 bg-gray-50/30 dark:border-gray-700/30 dark:bg-gray-900/20 rounded-r-lg",
+                        "transition-all duration-200 hover:shadow-md"
+                      )}
+                    >
+                      {/* Ungrouped header */}
+                      <div className="px-4 py-3 border-b border-gray-200/20 dark:border-gray-700/20">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">
+                            {t('propFirm.ungrouped')}
+                          </h3>
+                          <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
+                            {ungroupedAccounts.length} {ungroupedAccounts.length === 1 ? 'account' : 'accounts'}
                           </div>
-                        </SortableContext>
-                      </DndContext>
+                        </div>
+                      </div>
+
+                      {/* Cards container */}
+                      <div className="p-4 pt-3">
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                          modifiers={[restrictToHorizontalAxis]}
+                        >
+                          <SortableContext
+                            items={orderedUngroupedAccounts.map(acc => acc.number)}
+                            strategy={horizontalListSortingStrategy}
+                          >
+                            <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
+                              {orderedUngroupedAccounts.map(account => {
+                                if (!account.number) return null;
+                                return (
+                                  <DraggableAccountCard
+                                    key={account.number}
+                                    account={account as Account}
+                                    onClick={() => setSelectedAccountForTable(account as Account)}
+                                    size={size}
+                                  />
+                                )
+                              }).filter(Boolean)}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
             </div>
-          </div>
+          ) : (
+            <AccountsTableView
+              accounts={filteredAccounts}
+              groups={groups}
+              onSelectAccount={(account) => setSelectedAccountForTable(account)}
+            />
+          )}
         </div>
 
         <Dialog
