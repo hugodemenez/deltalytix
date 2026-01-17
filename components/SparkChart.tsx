@@ -18,21 +18,21 @@ import { ChartContainer, ChartConfig } from "@/components/ui/chart"
 
 type SparkChartProps<T extends Record<string, unknown>> = {
   data: T[]
-  index: keyof T
-  categories: Array<keyof T>
-  colors?: Partial<Record<string, string>>
+  index: Extract<keyof T, string>
+  categories: Array<Extract<keyof T, string>>
+  colors?: Partial<Record<Extract<keyof T, string>, string>>
   className?: string
   height?: number
 }
 
-function useSparkConfig(
-  categories: Array<keyof Record<string, unknown>>,
-  colors?: Partial<Record<string, string>>
+function useSparkConfig<K extends string>(
+  categories: K[],
+  colors?: Partial<Record<K, string>>
 ) {
   return useMemo(() => {
     const config: ChartConfig = {}
     categories.forEach((key, index) => {
-      const colorOverride = colors?.[String(key)]
+      const colorOverride = colors?.[key]
       config[String(key)] = {
         label: String(key),
         color: colorOverride ?? `hsl(var(--chart-${index + 1}))`,
@@ -62,7 +62,7 @@ function SparkChartFrame<T extends Record<string, unknown>>({
       style={{ height }}
     >
       <ResponsiveContainer width="100%" height="100%">
-        {children}
+        {children as React.ReactElement}
       </ResponsiveContainer>
     </ChartContainer>
   )
