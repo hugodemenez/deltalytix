@@ -74,8 +74,11 @@ export default function ColumnMapping({ headers, csvData, mappings, setMappings,
         // For each destination column in the object
         if (object) {
           Object.entries(object).forEach(([destinationColumn, headerValue]) => {
+            if (typeof headerValue !== "string" || headerValue.length === 0) {
+              return;
+            }
             console.log(`Processing: ${destinationColumn} -> ${headerValue}`);
-            
+
             // Check if the header value includes position information (e.g., "Prix_1", "Prix_2")
             const positionMatch = headerValue.match(/^(.+)_(\d+)$/);
             

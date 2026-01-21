@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai";
-import { streamObject } from "ai";
+import { Output, streamObject, streamText } from "ai";
 import { NextRequest } from "next/server";
 import { mappingSchema } from "./schema";
 
@@ -22,15 +22,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = streamObject({
-      model: "openai/gpt-5-nano",
-      schema: mappingSchema,
-      temperature: 1,
+    const result = streamText({
+      model: "openai/gpt-5-mini",
+      output: Output.object({schema:mappingSchema}),
       onFinish: (result) => {
         console.log("=== AI RESPONSE ===");
         console.log(
           "AI Mapping Result:",
-          JSON.stringify(result.object, null, 2),
+          JSON.stringify(result.text, null, 2),
         );
       },
       onError: (error) => {
@@ -68,7 +67,7 @@ export async function POST(req: NextRequest) {
         `  * PnL columns: profit/loss amounts (can be negative)\n\n` +
         `IMPORTANT: For duplicate column names, you MUST include the column position (1-based index) in your response.\n` +
         `Format: "ColumnName_Position" (e.g., "Prix_1", "Prix_2")\n\n` +
-        `Map each column by providing the matching column name with position for each database field. Use column position and context to resolve duplicates. If unsure or no match exists, omit the value.\n\n` +
+        `Map each column by providing the matching column name with position for each database field. Use column position and context to resolve duplicates. If unsure or no match exists, use null for the field.\n\n` +
         `Column order and context:\n` +
         fieldColumns
           .map((col: string, index: number) => `${index + 1}. ${col}`)
