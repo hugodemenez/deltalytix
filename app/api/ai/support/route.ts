@@ -1,29 +1,30 @@
-import { convertToModelMessages, streamText, UIMessage } from 'ai'
-import { askForEmailForm } from './tools/ask-for-email-form';
+import { convertToModelMessages, streamText, UIMessage } from "ai";
+import { askForEmailForm } from "./tools/ask-for-email-form";
 
 // Allow streaming responses up to 30 seconds
-export const maxDuration = 30
+export const maxDuration = 30;
 
 export async function POST(req: Request) {
-    try {
-        const {
-          messages,
-          model,
-          webSearch,
-        }: { 
-          messages: UIMessage[]; 
-          model: string; 
-          webSearch: boolean;
-        } = await req.json();
+  try {
+    const {
+      messages,
+      model,
+      webSearch,
+    }: {
+      messages: UIMessage[];
+      model: string;
+      webSearch: boolean;
+    } = await req.json();
 
-        // Remove first message if it's assistant message
-        if (messages[0].role === 'assistant') {
-            messages.shift();
-        }
+    // Remove first message if it's assistant message
+    if (messages[0].role === "assistant") {
+      messages.shift();
+    }
 
-        const result = streamText({
-            model: webSearch ? 'perplexity/sonar' : model,
-            system: `You are an AI chatbot support assistant for Deltalytix, a trading journaling platform. Your role is to gather information and direct users to the appropriate support channels.
+    const modelMessages = await convertToModelMessages(messages);
+    const result = streamText({
+      model: webSearch ? "perplexity/sonar" : model,
+      system: `You are an AI chatbot support assistant for Deltalytix, a trading journaling platform. Your role is to gather information and direct users to the appropriate support channels.
 
 ## CRITICAL LIMITATIONS
 - **NO DOCUMENTATION ACCESS**: You do not have access to Deltalytix documentation, user guides, or specific feature information
@@ -92,72 +93,75 @@ When starting a conversation, always begin with:
 "Hi! I'm an AI chatbot here to help gather information for our support team. I don't have access to Deltalytix documentation, but I can help you with basic troubleshooting and connect you with the right support person. How can I help you today?"
 
 Remember: Always be transparent about being an AI chatbot and your role in gathering information for the support team.`,
-            messages: convertToModelMessages(messages),
-            tools: {
-                askForEmailForm,
-            },
-            temperature: 0.3,
-            onStepFinish: (step) => {
-                console.log('Step finished:', JSON.stringify(step, null, 2));
-            }
-        })
+      messages: modelMessages,
+      tools: {
+        askForEmailForm,
+      },
+      temperature: 0.3,
+      onStepFinish: (step) => {
+        console.log("Step finished:", JSON.stringify(step, null, 2));
+      },
+    });
 
-        return result.toUIMessageStreamResponse({
-            sendSources: true,
-            sendReasoning: true,
-          })
-    } catch (error: any) {
-        console.error('Support API Error:', error);
-        
-        // Handle rate limit errors specifically
-        if (error?.statusCode === 429 || error?.type === 'rate_limit_exceeded') {
-            return new Response(
-                JSON.stringify({
-                    error: 'Rate limit exceeded',
-                    message: 'We are experiencing high demand. Please try again in a few minutes or contact support directly.',
-                    type: 'rate_limit_exceeded',
-                    retryAfter: 300 // 5 minutes
-                }),
-                {
-                    status: 429,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Retry-After': '300'
-                    }
-                }
-            );
-        }
+    return result.toUIMessageStreamResponse({
+      sendSources: true,
+      sendReasoning: true,
+    });
+  } catch (error: any) {
+    console.error("Support API Error:", error);
 
-        // Handle other AI/API errors
-        if (error?.statusCode >= 400 && error?.statusCode < 500) {
-            return new Response(
-                JSON.stringify({
-                    error: 'Service temporarily unavailable',
-                    message: 'Our AI service is temporarily unavailable. Please try again later or contact support directly.',
-                    type: 'service_unavailable'
-                }),
-                {
-                    status: 503,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-        }
-
-        // Handle server errors
-        return new Response(
-            JSON.stringify({
-                error: 'Internal server error',
-                message: 'An unexpected error occurred. Please try again later or contact support.',
-                type: 'internal_error'
-            }),
-            {
-                status: 500,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
+    // Handle rate limit errors specifically
+    if (error?.statusCode === 429 || error?.type === "rate_limit_exceeded") {
+      return new Response(
+        JSON.stringify({
+          error: "Rate limit exceeded",
+          message:
+            "We are experiencing high demand. Please try again in a few minutes or contact support directly.",
+          type: "rate_limit_exceeded",
+          retryAfter: 300, // 5 minutes
+        }),
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+            "Retry-After": "300",
+          },
+        },
+      );
     }
+
+    // Handle other AI/API errors
+    if (error?.statusCode >= 400 && error?.statusCode < 500) {
+      return new Response(
+        JSON.stringify({
+          error: "Service temporarily unavailable",
+          message:
+            "Our AI service is temporarily unavailable. Please try again later or contact support directly.",
+          type: "service_unavailable",
+        }),
+        {
+          status: 503,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }
+
+    // Handle server errors
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        message:
+          "An unexpected error occurred. Please try again later or contact support.",
+        type: "internal_error",
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+  }
 }

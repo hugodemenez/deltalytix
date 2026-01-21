@@ -22,7 +22,7 @@ import { Widget, WidgetType, WidgetSize, LayoutItem } from '../types/dashboard'
 import { Toolbar } from './toolbar'
 import { useUserStore, DashboardLayoutWithWidgets } from '../../../../store/user-store'
 import { toast } from "sonner"
-import { defaultLayouts } from "@/context/data-provider"
+import { defaultLayouts } from "@/lib/default-layouts"
 import { Prisma, DashboardLayout } from "@/prisma/generated/prisma/browser"
 
 // Helper function to convert internal layout to Prisma type
@@ -177,7 +177,7 @@ function WidgetWrapper({ children, onRemove, onChangeSize, isCustomizing, size, 
   return (
     <div 
       ref={widgetRef}
-      className="relative h-full w-full overflow-hidden rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate animate-[fadeIn_1.5s_ease-in-out]"
+      className="relative h-full w-full rounded-lg bg-background shadow-[0_2px_4px_rgba(0,0,0,0.05)] group isolate animate-[fadeIn_1.5s_ease-in-out] overflow-clip"
       onTouchStart={handleTouchStart}
     >
       <div className={cn("h-full w-full", 

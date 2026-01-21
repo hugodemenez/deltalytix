@@ -5,7 +5,7 @@ import { Responsive, WidthProvider } from 'react-grid-layout'
 import { WIDGET_REGISTRY, getWidgetComponent } from '@/app/[locale]/dashboard/config/widget-registry'
 import { Widget, WidgetSize } from '@/app/[locale]/dashboard/types/dashboard'
 import { useData } from '@/context/data-provider'
-import { defaultLayouts } from '@/context/data-provider'
+import { defaultLayouts } from '@/lib/default-layouts'
 
 
 // Update sizeToGrid to handle responsive sizes (copy from widget-canvas.tsx)

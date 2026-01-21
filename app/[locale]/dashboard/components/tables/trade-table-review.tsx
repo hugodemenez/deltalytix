@@ -74,7 +74,6 @@ import {
 } from "@/lib/tick-calculations";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { deleteTradesByIdsAction } from "@/server/accounts";
 import { Trash } from "lucide-react";
 import {
   DropdownMenu,
@@ -86,6 +85,17 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { EditableTimeCell } from "./editable-time-cell";
 import { EditableInstrumentCell } from "./editable-instrument-cell";
 import { BulkEditPanel } from "./bulk-edit-panel";
@@ -272,7 +282,7 @@ interface TradeTableReviewProps {
 
 export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps) {
   const t = useI18n();
-  const { formattedTrades, updateTrades, refreshTrades } = useData();
+  const { formattedTrades, updateTrades, deleteTrades } = useData();
   const tags = useUserStore((state) => state.tags);
   const timezone = useUserStore((state) => state.timezone);
   const tickDetails = useTickDetailsStore((state) => state.tickDetails);
@@ -281,9 +291,6 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   if (tradesParam) {
     contextTrades = tradesParam;
   }
-
-  // Debug: Log tick details
-  console.log("Available tick details:", tickDetails);
 
   // Get table configuration from store
   const {
@@ -315,6 +322,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   const [pageIndex, setPageIndex] = useState(0);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [hasInitializedExpanded, setHasInitializedExpanded] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Sync local state with store
   React.useEffect(() => {
@@ -426,11 +434,14 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     const validTradeIds = selectedTrades.filter((id) => id && id !== "");
     if (validTradeIds.length === 0) return;
 
+    // Clear selection immediately for better UX
+    setSelectedTrades([]);
+    table.resetRowSelection();
+    setShowDeleteDialog(false);
+
     try {
-      await deleteTradesByIdsAction(validTradeIds);
-      setSelectedTrades([]);
-      table.resetRowSelection();
-      refreshTrades();
+      // deleteTrades optimistically removes trades from local state
+      await deleteTrades(validTradeIds);
       toast.success(t("trade-table.deleteSuccess"), {
         description: t("trade-table.deleteSuccessDescription", {
           count: validTradeIds.length,
@@ -443,6 +454,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       });
     }
   };
+
 
   // Group trades by instrument, entry date, and close date with granularity
   // Or return ungrouped trades if groupTrades is false
@@ -1239,14 +1251,36 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           </div>
           <div className="flex items-center gap-2">
             {selectedTrades.length > 0 && (
-              <Button
-                variant="destructive"
-                className="h-10 font-normal whitespace-nowrap"
-                onClick={handleDeleteTrades}
-              >
-                <Trash className="mr-2 h-4 w-4" />
-                {t("trade-table.deleteSelected")}
-              </Button>
+              <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    className="h-10 font-normal whitespace-nowrap"
+                    onClick={() => setShowDeleteDialog(true)}
+                  >
+                    <Trash className="mr-2 h-4 w-4" />
+                    {t("trade-table.deleteSelected")}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t("trade-table.deleteConfirmTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("trade-table.deleteConfirmDescription", {
+                        count: selectedTrades.length,
+                      })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>
+                      {t("trade-table.deleteConfirmCancel")}
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteTrades}>
+                      {t("trade-table.deleteConfirmConfirm")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             {config?.groupTrades !== false && selectedTrades.length >= 2 && (
               <Button
@@ -1573,7 +1607,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
         <BulkEditPanel
           selectedTrades={selectedTrades}
           onUpdate={updateTrades}
-          onFinish={() => refreshTrades()}
+          onFinish={() => {}}
           onClose={() => setShowBulkEdit(false)}
         />
       )}

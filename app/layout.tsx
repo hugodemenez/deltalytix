@@ -3,7 +3,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Analytics } from "@vercel/analytics/react"
 import { SpeedInsights } from "@vercel/speed-insights/next"
-import { AuthProvider } from "@/context/auth-provider";
 import Script from "next/script"
 import { ReactNode } from "react";
 import { connection } from "next/server";
@@ -275,11 +274,9 @@ export default async function RootLayout({
       </head>
       <body className={inter.className}>
         <ScrollLockFix />
-        <AuthProvider>
-          <SpeedInsights />
-          <Analytics />
-          {children}
-        </AuthProvider>
+        <SpeedInsights />
+        <Analytics />
+        {children}
       </body>
     </html>
   );

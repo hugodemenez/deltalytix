@@ -69,7 +69,8 @@ export default function ImportButton() {
   const user = useUserStore((state) => state.user);
   const supabaseUser = useUserStore((state) => state.supabaseUser);
   const trades = useTradesStore((state) => state.trades);
-  const { refreshTrades, updateTrades } = useData();
+  const setTradesStore = useTradesStore((state) => state.setTrades);
+  const { refreshTradesOnly } = useData();
   const t = useI18n();
 
   const handleSave = useCallback(async () => {
@@ -119,8 +120,17 @@ export default function ImportButton() {
 
       console.log("[ImportButton] Saving trades:", newTrades);
       const result = await saveTradesAction(newTrades);
-      // Update the trades now because it shows a toast, and requires some time before showing the trades
-      await refreshTrades();
+
+      // Optimistically merge new trades into local store to avoid full refetch
+      const newIds = new Set(newTrades.map((t) => t.id));
+      const mergedTrades = [
+        ...newTrades,
+        ...trades.filter((t) => !newIds.has(t.id)),
+      ];
+      setTradesStore(mergedTrades);
+
+      // Keep server cache fresh (server action will update tags); avoid full refresh
+      await refreshTradesOnly({ force: false });
       if (result.error) {
         if (result.error === "DUPLICATE_TRADES") {
           toast.error(t("import.error.duplicateTrades"), {
@@ -155,7 +165,7 @@ export default function ImportButton() {
     } finally {
       setIsSaving(false);
     }
-  }, [processedTrades, accountNumbers, selectedAccountNumbers, importType, user, supabaseUser, t, refreshTrades]);
+  }, [processedTrades, accountNumbers, selectedAccountNumbers, importType, user, supabaseUser, t, refreshTradesOnly]);
 
   const resetImportState = () => {
     setImportType("");
