@@ -19,7 +19,7 @@ export default function Partners() {
                     </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-center justify-items-center w-full mt-8">
-                    <a className="relative w-full h-[60px] flex items-center justify-center" href="https://account.ninjatrader.com/register?introducingPartner=deltalytix" target="_blank" rel="noopener noreferrer">
+                    <a className="relative w-full h-[60px] flex items-center justify-center" href="https://ninjatraderdomesticvendor.sjv.io/e1VQMz" target="_blank" rel="noopener noreferrer">
                         <Image
                             src="/logos/ninjatrader-ob.svg"
                             alt="NinjaTrader"
