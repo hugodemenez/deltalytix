@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/tooltip"
 import Link from "next/link"
 import { getI18n } from "@/locales/server"
-import type { Subscription } from '@prisma/client'
+import type { Subscription } from '@/prisma/generated/prisma/client'
 
 export async function TeamSubscriptionBadge({ 
   subscription,

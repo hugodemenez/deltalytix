@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/locales/client";
-import { FinancialEvent } from "@prisma/client";
+import { FinancialEvent } from "@/prisma/generated/prisma/browser";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useEditorState } from "@tiptap/react";
 import type { Editor } from "@tiptap/react";

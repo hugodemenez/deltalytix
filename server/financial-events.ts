@@ -1,6 +1,6 @@
 'use server'
 
-import { PrismaClient, FinancialEvent } from '@prisma/client'
+import { PrismaClient, FinancialEvent } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import { format } from 'date-fns'

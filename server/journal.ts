@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { createClient } from './auth';
-import { Mood } from '@prisma/client';
+import { Mood } from '@/prisma/generated/prisma/client';
 
 export type Conversation = {
   role: 'user' | 'assistant' | 'system';

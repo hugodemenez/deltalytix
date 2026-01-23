@@ -2,7 +2,7 @@
 
 import { createClient } from '@/server/auth'
 import { saveTradesAction } from '@/server/database'
-import { Trade, TickDetails } from '@prisma/client'
+import { Trade, TickDetails } from '@/prisma/generated/prisma/client'
 import crypto from 'crypto'
 import { generateDeterministicTradeId } from '@/lib/trade-id-utils'
 import { getTickDetails } from '@/server/tick-details'

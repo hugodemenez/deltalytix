@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from "@/locales/client"
-import { Synchronization } from '@prisma/client'
+import { Synchronization } from '@/prisma/generated/prisma/browser'
 
 interface TradovateSyncContextType {
   // Core sync management
@@ -35,7 +35,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
   const [enableAutoSync, setEnableAutoSync] = useState(false)
 
   const t = useI18n()
-  const { refreshTrades } = useData()
+  const { refreshTradesOnly } = useData()
 
   // Normalize dates returned from API
   const normalizeSynchronization = useCallback(
@@ -111,8 +111,6 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
         // Handle duplicate trades (already imported)
         if (payload?.message === "DUPLICATE_TRADES") {
           const message = t('tradovateSync.multiAccount.alreadyImportedTrades')
-          
-          await refreshTrades()
           return message
         }
         
@@ -149,7 +147,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
 
         // Refresh the accounts list to update last sync time
         await loadAccounts()
-        await refreshTrades()
+        await refreshTradesOnly({ force: false })
 
         return successMessage
       }
@@ -169,7 +167,7 @@ export function TradovateSyncContextProvider({ children }: { children: ReactNode
       console.error('Sync error:', error)
       return { success: false, message: errorMsg }
     }
-  }, [accounts, t, refreshTrades, loadAccounts])
+  }, [accounts, t, refreshTradesOnly, loadAccounts])
 
   // Perform sync for all accounts
   const performSyncForAllAccounts = useCallback(async () => {

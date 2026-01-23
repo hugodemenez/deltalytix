@@ -60,7 +60,9 @@ export function AccountGroupBoard() {
   const user = useUserStore(state => state.user)
   const groups = useUserStore(state => state.groups)
   const trades = useTradesStore(state => state.trades)
+  const setTradesStore = useTradesStore(state => state.setTrades)
   const existingAccounts = useUserStore(state => state.accounts)
+  const setAccounts = useUserStore(state => state.setAccounts)
   const {
     saveGroup,
     renameGroup,
@@ -69,7 +71,7 @@ export function AccountGroupBoard() {
     saveAccount,
     deleteAccount,
     deleteGroup,
-    refreshTrades,
+    refreshTradesOnly,
   } = useData()
 
   const [isCreating, setIsCreating] = useState(false)
@@ -321,7 +323,11 @@ export function AccountGroupBoard() {
 
     try {
       await removeAccountsFromTradesAction([account.number])
-      await refreshTrades()
+      setTradesStore(trades.filter((trade) => trade.accountNumber !== account.number))
+      if (setAccounts) {
+        setAccounts(existingAccounts.filter((acc) => acc.id !== account.id))
+      }
+      await refreshTradesOnly({ force: false })
       setSelectedAccountIds(prev => prev.filter(id => id !== account.id))
       toast.success(t("common.success"), {
         description: t("filters.accountDeleted", { account: account.number }),
@@ -333,7 +339,7 @@ export function AccountGroupBoard() {
       })
     }
     setDeletingAccountId(null)
-  }, [existingAccounts, refreshTrades, t])
+  }, [existingAccounts, refreshTradesOnly, setAccounts, setTradesStore, t, trades])
 
   const confirmDeleteAccount = useCallback(async () => {
     if (!accountToDelete) return

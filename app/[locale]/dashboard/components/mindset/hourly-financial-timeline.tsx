@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils"
 import { Clock, ExternalLink, MoreHorizontal, DollarSign } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import type { FinancialEvent } from "@prisma/client"
+import type { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import type { Locale } from "date-fns"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"

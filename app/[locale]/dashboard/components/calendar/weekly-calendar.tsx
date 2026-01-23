@@ -4,7 +4,7 @@ import React from "react"
 import { format, eachWeekOfInterval, getWeek, getMonth, getYear, addDays, startOfYear, endOfYear } from "date-fns"
 import { fr, enUS } from 'date-fns/locale'
 import { cn } from "@/lib/utils"
-import { Trade } from "@prisma/client"
+import { Trade } from "@/prisma/generated/prisma/browser"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"

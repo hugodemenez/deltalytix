@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { Trade, PrismaClient } from '@prisma/client'
+import { Trade, PrismaClient } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import pg from 'pg'
 import { saveTradesAction } from '@/server/database';

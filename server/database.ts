@@ -1,13 +1,13 @@
 'use server'
-import { Trade, Prisma, DashboardLayout } from '@prisma/client'
-import { revalidatePath, revalidateTag } from 'next/cache'
+import { Trade, Prisma, DashboardLayout } from '@/prisma/generated/prisma/client'
+import { revalidatePath, updateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
 import { getSubscriptionDetails } from './subscription'
 import { prisma } from '@/lib/prisma'
 import { unstable_cache } from 'next/cache'
-import { defaultLayouts } from '@/context/data-provider'
+import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
 import { v5 as uuidv5 } from 'uuid'
 
@@ -29,7 +29,7 @@ export async function revalidateCache(tags: string[]) {
   tags.forEach(tag => {
     try {
       console.log(`[revalidateCache] Revalidating tag: ${tag}`)
-      revalidateTag(tag, { expire: 0 })
+      updateTag(tag)
       console.log(`[revalidateCache] Successfully revalidated tag: ${tag}`)
     } catch (error) {
       console.error(`[revalidateCache] Error revalidating tag ${tag}:`, error)
@@ -122,7 +122,7 @@ export async function saveTradesAction(
       }
     }
 
-    revalidatePath('/')
+    updateTag(`trades-${userId}`)
     return {
       error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
       numberOfTradesAdded: result.count
@@ -181,7 +181,7 @@ export async function getTradesAction(userId: string | null = null, forceRefresh
   // If forceRefresh is true, bypass cache and fetch directly
   if (forceRefresh) {
     console.log(`[getTrades] Force refresh - bypassing cache for user ${userId || user?.id}`)
-    revalidateTag(`trades-${userId || user?.id}`, { expire: 0 })
+    updateTag(`trades-${userId || user?.id}`)
 
     const query: any = {
       where: {
@@ -329,7 +329,7 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
       })
     }
 
-    revalidateTag(`trades-${userId}`, { expire: 0 })
+    updateTag(`trades-${userId}`)
 
     return tradesIds.length // Return the number of trades processed
   } catch (error) {

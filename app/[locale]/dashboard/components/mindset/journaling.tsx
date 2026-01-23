@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/client"
 import { EmotionSelector } from "./emotion-selector"
 import { DayTagSelector } from "./day-tag-selector"
-import { FinancialEvent, Trade } from "@prisma/client"
+import { FinancialEvent, Trade } from "@/prisma/generated/prisma/browser"
 import { TiptapEditor } from "@/components/tiptap-editor"
 
 interface JournalingProps {

@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/card";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
 import { formatInTimeZone } from "date-fns-tz";

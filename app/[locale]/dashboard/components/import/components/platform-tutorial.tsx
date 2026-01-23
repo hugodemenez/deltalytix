@@ -1,79 +1,86 @@
-'use client'
+"use client";
 
-import { AlertCircle, ExternalLink } from "lucide-react"
-import Image from "next/image"
-import { useEffect, useRef } from "react"
-import { cn } from "@/lib/utils"
-import { PlatformConfig } from "../config/platforms"
-import { useI18n } from "@/locales/client"
-import { Button } from "@/components/ui/button"
+import { AlertCircle, ExternalLink } from "lucide-react";
+import Image from "next/image";
+import { useEffect, useRef } from "react";
+import { cn } from "@/lib/utils";
+import { PlatformConfig } from "../config/platforms";
+import { useI18n } from "@/locales/client";
+import { Button } from "@/components/ui/button";
 
 interface PlatformTutorialProps {
-  selectedPlatform: PlatformConfig | undefined
-  setIsOpen: (isOpen: boolean) => void
+  selectedPlatform: PlatformConfig | undefined;
+  setIsOpen: (isOpen: boolean) => void;
 }
 
-export function PlatformTutorial({ selectedPlatform, setIsOpen }: PlatformTutorialProps) {
-  const t = useI18n()
-  const videoRef = useRef<HTMLVideoElement>(null)
+export function PlatformTutorial({
+  selectedPlatform,
+  setIsOpen,
+}: PlatformTutorialProps) {
+  const t = useI18n();
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Reset and handle video when platform changes
   useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
+    const video = videoRef.current;
+    if (!video) return;
 
     // Reset video state
-    video.pause()
-    video.currentTime = 0
+    video.pause();
+    video.currentTime = 0;
 
     // Handle new platform video
     if (selectedPlatform?.videoUrl) {
       // Load and play the new video
-      video.load()
+      video.load();
       const playVideo = () => {
         video.play().catch((error) => {
-          console.error('Video playback error:', error)
-        })
-      }
+          console.error("Video playback error:", error);
+        });
+      };
 
       // Play video when it's ready
       if (video.readyState >= 2) {
-        playVideo()
+        playVideo();
       } else {
-        video.addEventListener('loadeddata', playVideo, { once: true })
+        video.addEventListener("loadeddata", playVideo, { once: true });
       }
     }
 
     // Cleanup
     return () => {
       if (video) {
-        video.pause()
-        video.removeEventListener('loadeddata', () => {})
+        video.pause();
+        video.removeEventListener("loadeddata", () => {});
       }
-    }
-  }, [selectedPlatform])
+    };
+  }, [selectedPlatform]);
 
-  if (!selectedPlatform) return null
+  if (!selectedPlatform) return null;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">{t('import.type.tutorial.title')}</h2>
+        <h2 className="text-2xl font-bold">
+          {selectedPlatform.videoUrl
+            ? t("import.type.tutorial.title")
+            : t("import.type.tutorial.title").replace("Video", " ")}
+        </h2>
         {selectedPlatform.tutorialLink && (
           <Button
             variant="outline"
             size="sm"
             className="gap-2"
-            onClick={() => window.open(selectedPlatform.tutorialLink, '_blank')}
+            onClick={() => window.open(selectedPlatform.tutorialLink, "_blank")}
           >
             <ExternalLink className="h-4 w-4" />
-            {t('import.type.tutorial.viewDocs')}
+            {t("import.type.tutorial.viewDocs")}
           </Button>
         )}
       </div>
-          {selectedPlatform.videoUrl ? (
-      <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
-        <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+      {selectedPlatform.videoUrl ? (
+        <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 transition-transform duration-300 hover:scale-[1.02]">
+          <div className="aspect-video rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
             <video
               ref={videoRef}
               height="600"
@@ -94,15 +101,18 @@ export function PlatformTutorial({ selectedPlatform, setIsOpen }: PlatformTutori
               />
               Your browser does not support the video tag.
             </video>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {selectedPlatform.videoUrl
+              ? t("import.type.tutorial.description", {
+                  platform: selectedPlatform.type.split("-").join(" "),
+                })
+              : t("import.type.tutorial.notAvailable", {
+                  platform: selectedPlatform.type.split("-").join(" "),
+                })}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {selectedPlatform.videoUrl 
-            ? t('import.type.tutorial.description', { platform: selectedPlatform.type.split('-').join(' ') })
-            : t('import.type.tutorial.notAvailable', { platform: selectedPlatform.type.split('-').join(' ') })
-          }
-        </p>
-      </div>
-          ) : null}
+      ) : null}
 
       {selectedPlatform.details && (
         <div className="text-sm text-muted-foreground flex items-start gap-2 bg-muted/50 p-4 rounded-lg transition-all duration-300 hover:bg-muted/70 animate-in slide-in-from-bottom-4">
@@ -114,31 +124,31 @@ export function PlatformTutorial({ selectedPlatform, setIsOpen }: PlatformTutori
       {selectedPlatform.isRithmic && (
         <div className="mt-6 text-xs text-muted-foreground space-y-2 border-t pt-4">
           <div className="flex items-center gap-4 mb-2">
-            <Image 
+            <Image
               src="/RithmicArtwork/TradingPlatformByRithmic-Black.png"
               alt="Trading Platform by Rithmic"
               width={120}
               height={40}
               className="dark:hidden"
             />
-            <Image 
+            <Image
               src="/RithmicArtwork/TradingPlatformByRithmic-Green.png"
               alt="Trading Platform by Rithmic"
               width={120}
               height={40}
               className="hidden dark:block"
             />
-            <Image 
+            <Image
               src="/RithmicArtwork/Powered_by_Omne.png"
               alt="Powered by OMNE"
               width={120}
               height={40}
             />
           </div>
-          <p>{t('import.type.copyright.platform')}</p>
-          <p>{t('import.type.copyright.omne')}</p>
+          <p>{t("import.type.copyright.platform")}</p>
+          <p>{t("import.type.copyright.omne")}</p>
         </div>
       )}
     </div>
-  )
-} 
+  );
+}

@@ -21,7 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Trade } from '@prisma/client'
+import { Trade } from '@/prisma/generated/prisma/browser'
 import ExportButton from '@/components/export-button'
 import { useI18n } from "@/locales/client"
 import { useUserStore } from '@/store/user-store'
@@ -34,9 +34,12 @@ type GroupedTrades = Record<string, Record<string, Trade[]>>
 export function DataManagementCard() {
   const t = useI18n()
   const user = useUserStore((state) => state.user)
+  const accounts = useUserStore((state) => state.accounts)
+  const setAccounts = useUserStore((state) => state.setAccounts)
   const trades = useTradesStore((state) => state.trades)
+  const setTradesStore = useTradesStore((state) => state.setTrades)
 
-  const { refreshTrades } = useData()
+  const { refreshTradesOnly } = useData()
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [renameLoading, setRenameLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
@@ -86,7 +89,14 @@ export function DataManagementCard() {
       setDeleteLoading(true)
       const accountsToDelete = deleteMode === 'all' ? Object.keys(groupedTrades) : selectedAccounts
       await removeAccountsFromTradesAction(accountsToDelete)
-      await refreshTrades()
+      // Optimistically drop trades and accounts locally
+      const remainingTrades = trades.filter(trade => !accountsToDelete.includes(trade.accountNumber))
+      setTradesStore(remainingTrades)
+      if (accounts && setAccounts) {
+        setAccounts(accounts.filter((acc) => !accountsToDelete.includes(acc.number)))
+      }
+      // Lightweight server cache update
+      await refreshTradesOnly({ force: false })
       setSelectedAccounts([])
       toast.success(accountsToDelete.length > 1 ? t('dataManagement.toast.accountsDeleted') : t('dataManagement.toast.accountDeleted'))
     } catch (error) {
@@ -99,12 +109,22 @@ export function DataManagementCard() {
       setDeleteLoading(false)
       setDeleteDialogOpen(false)
     }
-  }, [user, deleteMode, groupedTrades, selectedAccounts, refreshTrades, t])
+  }, [user, deleteMode, groupedTrades, selectedAccounts, trades, setTradesStore, accounts, setAccounts, refreshTradesOnly, t])
 
   const handleDeleteInstrument = useCallback(async (accountNumber: string, instrumentGroup: string) => {
     try {
       await deleteInstrumentGroupAction(accountNumber, instrumentGroup, user!.id)
-      await refreshTrades()
+      // Optimistically drop matching trades locally
+      setTradesStore(
+        trades.filter(
+          (trade) =>
+            !(
+              trade.accountNumber === accountNumber &&
+              trade.instrument.startsWith(instrumentGroup)
+            )
+        )
+      )
+      await refreshTradesOnly({ force: false })
       toast.success(t('dataManagement.toast.instrumentDeleted'))
     } catch (error) {
       console.error("Failed to delete instrument group:", error)
@@ -113,7 +133,7 @@ export function DataManagementCard() {
         description: t('dataManagement.toast.deleteErrorDesc'),
       })
     }
-  }, [user, refreshTrades, t])
+  }, [user, trades, refreshTradesOnly, setTradesStore, t])
 
   const [commissionLoading, setCommissionLoading] = useState<Record<string, boolean>>({})
   const [pendingCommissionUpdates, setPendingCommissionUpdates] = useState<Record<string, { accountNumber: string; instrumentGroup: string; newCommission: number }>>({})
@@ -149,7 +169,15 @@ export function DataManagementCard() {
     try {
       setCommissionLoading(prev => ({ ...prev, [updateKey]: true }))
       await updateCommissionForGroupAction(accountNumber, instrumentGroup, pendingUpdate.newCommission)
-      await refreshTrades()
+      // Optimistically update commissions locally
+      const updatedTrades = trades.map((trade) =>
+        trade.accountNumber === accountNumber &&
+        trade.instrument.startsWith(instrumentGroup)
+          ? { ...trade, commission: pendingUpdate.newCommission * trade.quantity }
+          : trade
+      )
+      setTradesStore(updatedTrades)
+      await refreshTradesOnly({ force: false })
       
       // Clear pending update
       setPendingCommissionUpdates(prev => {
@@ -168,7 +196,7 @@ export function DataManagementCard() {
     } finally {
       setCommissionLoading(prev => ({ ...prev, [updateKey]: false }))
     }
-  }, [pendingCommissionUpdates, refreshTrades, t])
+  }, [pendingCommissionUpdates, refreshTradesOnly, setTradesStore, t, trades])
 
   const toggleAccountExpansion = useCallback((accountNumber: string) => {
     setExpandedAccounts(prev => ({
@@ -182,7 +210,16 @@ export function DataManagementCard() {
     try {
       setRenameLoading(true)
       await renameInstrumentAction(instrumentToRename.accountNumber, instrumentToRename.currentName, newInstrumentName)
-      await refreshTrades()
+      // Optimistically rename matching trades locally (exact match)
+      setTradesStore(
+        trades.map((trade) =>
+          trade.accountNumber === instrumentToRename.accountNumber &&
+          trade.instrument === instrumentToRename.currentName
+            ? { ...trade, instrument: newInstrumentName }
+            : trade
+        )
+      )
+      await refreshTradesOnly({ force: false })
       toast.success(t('dataManagement.toast.instrumentRenamed'))
       setRenameInstrumentDialogOpen(false)
       setInstrumentToRename({ accountNumber: "", currentName: "" })
@@ -196,7 +233,7 @@ export function DataManagementCard() {
     } finally {
       setRenameLoading(false)
     }
-  }, [user, instrumentToRename, newInstrumentName, refreshTrades, t])
+  }, [user, instrumentToRename, newInstrumentName, refreshTradesOnly, setTradesStore, t, trades])
 
   const handleSelectAccount = useCallback((accountNumber: string) => {
     setSelectedAccounts(prev =>
@@ -211,7 +248,23 @@ export function DataManagementCard() {
     try {
       setRenameLoading(true)
       await renameAccountAction(accountToRename, newAccountNumber)
-      await refreshTrades()
+      // Optimistically update trades and accounts locally
+      const updatedTrades = trades.map((trade) =>
+        trade.accountNumber === accountToRename
+          ? { ...trade, accountNumber: newAccountNumber }
+          : trade
+      )
+      setTradesStore(updatedTrades)
+      if (accounts && setAccounts) {
+        setAccounts(
+          accounts.map((acc) =>
+            acc.number === accountToRename
+              ? { ...acc, number: newAccountNumber }
+              : acc
+          )
+        )
+      }
+      await refreshTradesOnly({ force: false })
       toast.success(t('dataManagement.toast.accountRenamed'))
       setRenameAccountDialogOpen(false)
       setAccountToRename("")
@@ -225,7 +278,7 @@ export function DataManagementCard() {
     } finally {
       setRenameLoading(false)
     }
-  }, [user, accountToRename, newAccountNumber, refreshTrades, t])
+  }, [accounts, accountToRename, newAccountNumber, refreshTradesOnly, setAccounts, setTradesStore, t, trades, user])
 
   if (error) return (
     <Alert variant="destructive">

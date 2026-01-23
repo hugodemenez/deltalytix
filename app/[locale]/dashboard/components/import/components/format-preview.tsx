@@ -1,6 +1,6 @@
 "use client";
 
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import { useEffect, useState, useMemo, useRef } from "react";
 import {
   Table,

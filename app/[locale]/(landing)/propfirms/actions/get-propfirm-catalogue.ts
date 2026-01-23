@@ -65,7 +65,8 @@ export async function getPropfirmCatalogueData(timeframe: Timeframe = 'currentMo
     const payoutStatsMap = new Map<string, PropfirmPayoutStats>()
 
     // Initialize payout stats for all propfirms found in accounts
-    accountCounts.forEach(({ propfirm }) => {
+    accountCounts.forEach((row: AccountCountResult) => {
+      const { propfirm } = row
       if (!payoutStatsMap.has(propfirm)) {
         payoutStatsMap.set(propfirm, {
           propfirmName: propfirm,
@@ -80,7 +81,8 @@ export async function getPropfirmCatalogueData(timeframe: Timeframe = 'currentMo
     })
 
     // Aggregate payout data by status
-    payoutAggregations.forEach(({ propfirm, status, total_amount, count }) => {
+    payoutAggregations.forEach((row: PayoutAggregationResult) => {
+      const { propfirm, status, total_amount, count } = row
       if (!payoutStatsMap.has(propfirm)) {
         payoutStatsMap.set(propfirm, {
           propfirmName: propfirm,
@@ -109,7 +111,8 @@ export async function getPropfirmCatalogueData(timeframe: Timeframe = 'currentMo
     })
 
     // Build final stats array combining account counts and payout stats
-    const stats: PropfirmCatalogueStats[] = accountCounts.map(({ propfirm, count }) => {
+    const stats: PropfirmCatalogueStats[] = accountCounts.map((row: AccountCountResult) => {
+      const { propfirm, count } = row
       const payoutStats = payoutStatsMap.get(propfirm) || {
         propfirmName: propfirm,
         pendingAmount: 0,

@@ -17,7 +17,3 @@ export interface PropfirmCatalogueStats {
 export interface PropfirmCatalogueData {
   stats: PropfirmCatalogueStats[];
 }
-
-
-
-

@@ -3,7 +3,7 @@
 import { createClient } from './auth'
 import { prisma } from '@/lib/prisma'
 import type { User } from '@supabase/supabase-js'
-import type { Subscription } from '@prisma/client'
+import type { Subscription } from '@/prisma/generated/prisma/client'
 
 export type UserProfileData = {
   supabaseUser: User | null

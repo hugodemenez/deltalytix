@@ -60,7 +60,7 @@ export default function UserMenu() {
   const changeLocale = useChangeLocale()
   const currentLocale = useCurrentLocale()
   const { theme, setTheme, intensity, setIntensity } = useTheme()
-  const { refreshTrades } = useData()
+  const { refreshAllData } = useData()
   const user = useUserStore(state => state.supabaseUser)
   const timezone = useUserStore(state => state.timezone)
   const setTimezone = useUserStore(state => state.setTimezone)
@@ -137,7 +137,7 @@ export default function UserMenu() {
               <DropdownMenuShortcut>⌘S</DropdownMenuShortcut>
             </DropdownMenuItem>
           </Link>
-          <DropdownMenuItem onClick={async () => await refreshTrades()} className="flex items-center">
+          <DropdownMenuItem onClick={async () => await refreshAllData({ force: true })} className="flex items-center">
             <RefreshCw className="mr-2 h-4 w-4" />
             <span>{t('dashboard.refreshData')}</span>
             <DropdownMenuShortcut>⌘R</DropdownMenuShortcut>

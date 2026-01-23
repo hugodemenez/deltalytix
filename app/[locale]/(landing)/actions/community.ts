@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { createClient } from '@/server/auth'
-import { PostType, PostStatus, VoteType } from '@prisma/client'
+import { PostType, PostStatus, VoteType } from '@/prisma/generated/prisma/client'
 
 import { revalidatePath } from 'next/cache'
 import sharp from 'sharp'
@@ -52,8 +52,8 @@ export async function getPosts() {
     })
 
     // Calculate total comments for each post and add isAuthor flag
-    const postsWithCommentCount = posts.map(post => {
-      const totalComments = post.comments.reduce((acc, comment) => {
+    const postsWithCommentCount = posts.map((post: typeof posts[number]) => {
+      const totalComments = post.comments.reduce((acc: number, comment: typeof post.comments[number]) => {
         // Add 1 for the comment itself and the number of its replies
         return acc + 1 + (comment._count?.replies || 0)
       }, 0)

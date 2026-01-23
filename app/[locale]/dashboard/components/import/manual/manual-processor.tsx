@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from 'sonner'
-import { Trade } from '@prisma/client'
+import { Trade } from '@/prisma/generated/prisma/browser'
 import { useI18n } from '@/locales/client'
 import { useTradesStore } from '@/store/trades-store'
 import { generateTradeHash } from '@/lib/utils'

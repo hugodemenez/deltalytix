@@ -36,7 +36,7 @@ import { useCurrentLocale, useI18n } from "@/locales/client";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase";
 import { useCompletion } from "@ai-sdk/react";
-import { FinancialEvent } from "@prisma/client";
+import { FinancialEvent } from "@/prisma/generated/prisma/browser";
 import { z } from "zod";
 import { OptimizedBubbleMenu } from "@/components/tiptap/optimized-bubble-menu";
 import { ResponsiveMenuBar } from "@/components/tiptap/menu-bar";
