@@ -17,6 +17,7 @@
 </div>
 
 ---
+
 ## ✨ Key Features
 
   <div align="center">
@@ -24,6 +25,7 @@
 </div>
 
 ### 📊 Advanced Trading Analytics
+
 - **Real-time PnL tracking** with customizable performance metrics
 - **Interactive dashboards** with drag-and-drop widget layouts
 - **Comprehensive trade analysis** with decile statistics and pattern recognition
@@ -32,6 +34,7 @@
 <!-- TODO: Add GIF showing dashboard overview with customizable widgets -->
 
 ### 🔗 Multi-Broker Integration
+
 - **Tradovate sync** for real-time trade data synchronization
 - **Rithmic sync** via proprietary service integration
 - **Built-in integrations** for FTMO, ProjectX, ATAS, and Interactive Brokers (IBKR)
@@ -40,6 +43,7 @@
 <!-- TODO: Add GIF showing CSV import flow with AI field mapping -->
 
 ### 🤖 AI-Powered Insights
+
 - **Intelligent field mapping** for seamless data imports
 - **Sentiment analysis** of trading patterns and market conditions
 - **Automated trade journal** with AI-generated insights
@@ -49,12 +53,14 @@
 <!-- TODO: Add GIF showing AI chat assistant helping with trade analysis -->
 
 ### 🌍 Internationalization
+
 - **Full i18n support** with English and French translations
 - **Extensible translation system** using next-international
 - **Locale-aware formatting** for dates, numbers, and currencies
 - **RTL language support** ready for future expansion
 
 ### ⚡ Modern Technology Stack
+
 - **Next.js 15** with App Router for optimal performance
 - **React 19** with latest concurrent features
 - **TypeScript** for type-safe development
@@ -68,6 +74,7 @@
 ## 🛠️ Tech Stack & Architecture
 
 ### Frontend
+
 - **Framework**: Next.js 15 (App Router)
 - **UI Library**: React 19 with TypeScript
 - **Styling**: Tailwind CSS with custom design system
@@ -76,6 +83,7 @@
 - **Internationalization**: next-international
 
 ### Backend
+
 - **API**: Next.js API Routes + Server Actions
 - **Database**: PostgreSQL via Supabase
 - **ORM**: Prisma with type-safe queries
@@ -83,6 +91,7 @@
 - **Real-time**: WebSocket connections for live data
 
 ### External Services
+
 - **Payments**: Stripe integration with webhooks
 - **AI/ML**: OpenAI API for analysis and field mapping
 - **Storage**: Supabase Storage for file uploads
@@ -91,6 +100,7 @@
 - **Deployment**: Vercel-optimized with edge functions
 
 ### Development Tools
+
 - **Package Manager**: Bun (recommended) or npm
 - **Linting**: ESLint with Next.js config
 - **Type Checking**: TypeScript strict mode
@@ -103,11 +113,13 @@
 Before you begin, ensure you have the following:
 
 ### Required Software
+
 - **Node.js 20+** or **Bun** (latest version recommended)
 - **Git** for version control
 - **PostgreSQL** database (or use Supabase free tier)
 
 ### Required Accounts
+
 - **Supabase account** ([free tier available](https://supabase.com))
 - **Stripe account** (for payment processing)
 - **OpenAI API key** (for AI features)
@@ -185,6 +197,7 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 ## ⚙️ Configuration Guide
 
 ### Supabase Setup
+
 1. Create a new Supabase project
 2. Enable Discord OAuth provider in Authentication settings
 3. Configure Row Level Security (RLS) policies
@@ -192,18 +205,21 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 5. Configure real-time subscriptions for live data
 
 ### Stripe Configuration
+
 1. Create a Stripe account and get API keys
 2. Set up webhook endpoints for payment processing
 3. Configure products and pricing plans
 4. Test webhook integration in development
 
 ### Discord OAuth Setup
+
 1. Create a Discord application in the [Discord Developer Portal](https://discord.com/developers/applications)
 2. Navigate to OAuth2 settings and add redirect URI: `http://localhost:3000/api/auth/callback/discord`
 3. Copy Client ID and Client Secret to environment variables
 4. Enable the `identify` and `email` scopes for user authentication
 
 ### OpenAI Integration
+
 1. Get an API key from OpenAI
 2. Configure usage limits and billing
 3. Test API connectivity with the field mapping feature
@@ -248,12 +264,14 @@ deltalytix/
 ## 🧑‍💻 Development Guidelines
 
 ### Code Style
+
 - Use TypeScript strict mode
 - Follow Next.js best practices
 - Implement proper error handling
 - Write self-documenting code
 
 ### Translation System
+
 Use the `useI18n` hook for all user-facing text:
 
 ```typescript
@@ -269,12 +287,14 @@ const t = useI18n()
 ```
 
 ### State Management
+
 - Use Zustand stores for client-side state
 - Use React Context for complex mutations
 - Prefer Server Actions for data mutations
 - Use API routes for public data with caching
 
 ### API Design
+
 - **API Routes**: For public data that benefits from caching
 - **Server Actions**: For mutations and private operations
 - **Real-time**: Use Supabase subscriptions for live updates
@@ -286,6 +306,7 @@ const t = useI18n()
 We welcome contributions to Deltalytix! Here's how you can help:
 
 ### Getting Started
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
 3. Make your changes and test thoroughly
@@ -294,6 +315,7 @@ We welcome contributions to Deltalytix! Here's how you can help:
 6. Open a Pull Request
 
 ### Development Workflow
+
 - Follow the existing code style and conventions
 - Add tests for new features
 - Update documentation as needed
@@ -301,12 +323,14 @@ We welcome contributions to Deltalytix! Here's how you can help:
 - Test on both desktop and mobile
 
 ### Reporting Issues
+
 - Use GitHub Issues for bug reports
 - Include steps to reproduce
 - Provide system information
 - Add screenshots if applicable
 
 ### Feature Requests
+
 - Use GitHub Discussions for feature ideas
 - Check existing issues before creating new ones
 - Provide detailed use cases and benefits
@@ -318,6 +342,7 @@ We welcome contributions to Deltalytix! Here's how you can help:
 This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)**.
 
 ### Key Points:
+
 - ✅ **You can use, modify, and distribute this software for non-commercial purposes**
 - ✅ **You must give appropriate credit and provide a link to the license**
 - ✅ **You can create derivative works for non-commercial use**
@@ -325,6 +350,7 @@ This project is licensed under the **Creative Commons Attribution-NonCommercial 
 - ❌ **You cannot distribute this software commercially without permission**
 
 ### What This Means:
+
 This license allows you to use Deltalytix for personal, educational, and non-commercial purposes. You can modify and share the code as long as you give proper attribution and don't use it commercially.
 
 **For commercial licensing options, please contact us.**
@@ -336,12 +362,14 @@ Read the full license text in the [LICENSE](LICENSE) file.
 ## 🆘 Support & Community
 
 ### Get Help
+
 - 💬 **Discord Community**: [Join our Discord](https://discord.gg/a5YVF5Ec2n) for real-time support
 - 📚 **GitHub Discussions**: Ask questions and share ideas
 - 🐛 **Issue Tracker**: Report bugs and request features
 - 📖 **Documentation**: Check our comprehensive guides
 
 ### Stay Updated
+
 - ⭐ **Star the repository** to show your support
 - 👀 **Watch for releases** to get notified of updates
 - 🐦 **Follow us on social media** for announcements
@@ -351,10 +379,13 @@ Read the full license text in the [LICENSE](LICENSE) file.
 ## 🙏 Acknowledgments
 
 ### Contributors
+
 Thank you to all the contributors who help make Deltalytix better!
 
 ### Open Source Projects
+
 This project builds upon many excellent open source libraries:
+
 - [Next.js](https://nextjs.org/) - The React framework
 - [Supabase](https://supabase.com/) - Backend as a service
 - [Prisma](https://prisma.io/) - Database toolkit
@@ -363,6 +394,7 @@ This project builds upon many excellent open source libraries:
 - [Radix UI](https://radix-ui.com/) - Accessible component primitives
 
 ### Inspiration
+
 Deltalytix was inspired by the need for better trading analytics tools in the open source community.
 
 ---
@@ -370,6 +402,7 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 ## 🗺️ Roadmap
 
 ### ✅ Recently Completed
+
 - [x] **Custom Dashboard Layout** - Drag-and-drop widgets with flexible workspace customization
 - [x] **AI-Powered Data Import** - Intelligent field mapping for seamless CSV processing
 - [x] **Enhanced Data Processing** - Multi-platform support with encryption and accurate commission calculations
@@ -378,12 +411,25 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 - [x] **Interactive Brokers Integration** - PDF statement import system for comprehensive trade data
 - [x] **AMP Integration** - Connected through Rithmic sync for seamless data flow
 - [x] **Subscription Plans** - Flexible pricing tiers for different trader needs
+- [x] **Bulk Trade Editing** - Edit multiple trades at once with bulk operations or modify individual trades directly in the table
+- [x] **Journal with Image Resizing and Tables** - Enhanced journal editor with draggable image resizing, table creation, and session-based tag application
+- [x] **Teams Platform** - Create trading teams, invite members, and view combined performance analytics across all team traders
+- [x] **Manual Trade Entry** - Enter trades manually with intelligent auto-commission calculation based on historical data
+- [x] **Prop Firms Catalogue** - Browse prop trading firms with aggregated statistics on account counts, payout rates, and success metrics
+- [x] **Accounts Table View** - Enhanced accounts overview with table view option and improved account management
+- [x] **Multi-Day Weekday Filters** - Select multiple days at once for filtering charts and analytics
+- [x] **Calendar Modal Enhancements** - Daily statistics widget and improved trade review in calendar modal
+- [x] **Account Configurator Improvements** - Search functionality for prop firms, reset date consideration, and group management
+- [x] **Automated Journaling System** - AI-assisted trade journaling that focuses on mistakes and successes
+- [x] **Collaborative AI Assistant** - AI Trading Coach with data-aware conversations, pattern recognition, and behavioral insights
 
 ### 🔄 Currently In Development
-- [ ] **Automated Journaling System** - AI-assisted trade journaling that focuses on mistakes and successes
-- [ ] **Collaborative AI Assistant** - Notion-style peer writer for real-time trading insights and analysis
+
+- [ ] **Mobile Optimization** - Fully responsive design with mobile-specific Enhancements
+- [ ] **On premise deployment** - Dockerized version for self-hosting (uses postgres container)
 
 ### 📋 Upcoming Features (Q2-Q3 2025)
+
 - [ ] **Enhanced Journaling Experience** - Session-based analysis with automated insights on trading patterns
 - [ ] **Market Data Integration** - Databento connection for real-time market insights and context
 - [ ] **Advanced AI Collaboration** - Direct integration of AI insights into trading workflow
@@ -391,6 +437,7 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 - [ ] **Performance Coaching** - AI-powered suggestions based on historical trading behavior
 
 ### 🚀 Long-term Vision (2026+)
+
 - [ ] **Third-Party Dashboard Licensing** - Prop firms can embed Deltalytix directly into their platforms
 - [ ] **Interactive Brokers API Integration** - Direct sync replacing PDF imports for real-time data
 - [ ] **Advanced Market Analytics** - Deep market insights powered by Databento data feeds
@@ -400,6 +447,7 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 - [ ] **Portfolio Optimization Tools** - Modern portfolio theory and risk-adjusted returns
 
 ### 🎯 Strategic Focus Areas
+
 - **Trader-Centric Development** - All features designed specifically for individual traders
 - **AI-Human Collaboration** - Seamless integration of AI insights into natural trading workflow
 - **Automated Learning** - Systems that help traders identify and learn from their patterns
@@ -415,3 +463,4 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
     <a href="https://deltalytix.app">Website</a>
   </p>
 </div>
+
