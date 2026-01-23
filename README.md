@@ -428,21 +428,17 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 - [ ] **Mobile Optimization** - Fully responsive design with mobile-specific Enhancements
 - [ ] **On premise deployment** - Dockerized version for self-hosting (uses postgres container)
 
-### 📋 Upcoming Features (Q2-Q3 2025)
+### 📋 Upcoming Features (Q2-Q3 2026)
 
 - [ ] **Enhanced Journaling Experience** - Session-based analysis with automated insights on trading patterns
 - [ ] **Market Data Integration** - Databento connection for real-time market insights and context
-- [ ] **Advanced AI Collaboration** - Direct integration of AI insights into trading workflow
-- [ ] **Session Analysis Tools** - Automated identification of trading mistakes and successful patterns
-- [ ] **Performance Coaching** - AI-powered suggestions based on historical trading behavior
 
-### 🚀 Long-term Vision (2026+)
+### 🚀 Long-term Vision (2027+)
 
 - [ ] **Third-Party Dashboard Licensing** - Prop firms can embed Deltalytix directly into their platforms
 - [ ] **Interactive Brokers API Integration** - Direct sync replacing PDF imports for real-time data
 - [ ] **Advanced Market Analytics** - Deep market insights powered by Databento data feeds
 - [ ] **White-Label Solutions** - Customizable platform for trading firms and educational institutions
-- [ ] **Community Features** - Trader-to-trader insights and collaborative learning
 - [ ] **Advanced Risk Management** - Real-time alerts and automated risk monitoring
 - [ ] **Portfolio Optimization Tools** - Modern portfolio theory and risk-adjusted returns
 
