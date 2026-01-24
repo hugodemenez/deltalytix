@@ -1,4 +1,4 @@
-export default {
+const embed = {
   embed: {
     charts: {
       timeRangePerformance: 'Iṣẹ́ Akoko Ibiti',
@@ -257,3 +257,5 @@ export default {
 
   },
 }
+
+export default embed;

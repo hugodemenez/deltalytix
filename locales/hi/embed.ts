@@ -1,4 +1,4 @@
-export default {
+const embed = {
   embed: {
     charts: {
       timeRangePerformance: "समय सीमा के अनुसार प्रदर्शन",
@@ -258,3 +258,5 @@ export default {
     },
   },
 };
+
+export default embed;

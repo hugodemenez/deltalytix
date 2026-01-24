@@ -1,5 +1,7 @@
 import embed from './ja/embed'
 
-export default {
+const ja = {
   ...embed,
 }
+
+export default ja

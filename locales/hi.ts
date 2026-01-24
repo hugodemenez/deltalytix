@@ -1,5 +1,7 @@
 import embed from './hi/embed'
 
-export default {
+const hi = {
   ...embed,
 }
+
+export default hi

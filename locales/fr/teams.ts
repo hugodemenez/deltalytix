@@ -1,4 +1,4 @@
-export default {
+const teams = {
   'teams.title': 'Transformez vos données de trading en profit',
   'teams.description': 'Enfin, voyez exactement quels traders gagnent de l\'argent et pourquoi. Analytics en temps réel que les firmes de trading utilisent pour augmenter leurs profits de 34%.',
   'teams.cta': 'Commencer',
@@ -320,4 +320,6 @@ export default {
     'Contrôles d\'accès des managers',
     'Rapports d\'équipe'
   ],
-} 
+}
+
+export default teams; 

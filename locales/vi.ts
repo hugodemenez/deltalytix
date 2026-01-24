@@ -1,5 +1,7 @@
 import embed from './vi/embed'
 
-export default {
+const vi = {
   ...embed,
 }
+
+export default vi

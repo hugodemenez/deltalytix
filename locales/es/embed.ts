@@ -1,4 +1,4 @@
-export default {
+const embed = {
   embed: {
     charts: {
       timeRangePerformance: "Rendimiento por Rango de Tiempo",
@@ -264,3 +264,5 @@ export default {
     },
   },
 };
+
+export default embed;
