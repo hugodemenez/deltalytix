@@ -151,7 +151,6 @@ export async function sendNewsletter({
             to: [email],
             subject,
             reply_to: 'hugo.demenez@deltalytix.app',
-            scheduledAt: 'tomorrow at 9am paris time',
             react: NewsletterEmail({ 
               youtubeId, 
               introMessage, 
