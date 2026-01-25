@@ -13,34 +13,52 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import {
-  addMonths,
-  addWeeks,
-  startOfMonth,
-  startOfWeek,
-  subMonths,
-  subWeeks,
-  Locale,
-} from "date-fns"
-import { enUS, fr } from "date-fns/locale"
-
+  DndContext,
+  closestCenter,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
 import { Account, Group } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Progress } from "@/components/ui/progress"
 import { useAccountOrderStore } from "@/store/account-order-store"
-import { SparkLineChart } from "@/components/SparkChart"
 import { DataTableColumnHeader } from "../tables/column-header"
-import { CheckCircle, ChevronDown, ChevronRight, XCircle } from "lucide-react"
-
-type DailyPnlPoint = {
-  date: Date
-  pnl: number
-}
-
-type SparkPoint = {
-  period: string
-  pnl: number
-}
+import { Button } from "@/components/ui/button"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  ArrowDown,
+  ArrowUp,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  GripVertical,
+  ListOrdered,
+  X,
+  XCircle,
+} from "lucide-react"
 
 type AccountGroupRow = {
   kind: "group"
@@ -65,84 +83,102 @@ interface AccountsTableViewProps {
   onSelectAccount: (account: Account) => void
 }
 
-function getDailyPnlPoints(account: Account): DailyPnlPoint[] {
-  if (account.dailyMetrics && account.dailyMetrics.length > 0) {
-    return account.dailyMetrics.map((metric) => ({
-      date: metric.date,
-      pnl: metric.pnl,
-    }))
+function toValidDate(value: Date | string | null | undefined) {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function getAccountStartDate(account: Account) {
+  const tradeDates = (account.trades ?? [])
+    .map((trade) => toValidDate(trade.entryDate))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  if (tradeDates.length > 0) return tradeDates[0]
+
+  const dailyDates = (account.dailyMetrics ?? [])
+    .map((metric) => toValidDate(metric.date))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  return dailyDates[0] ?? null
+}
+
+type SortOption = {
+  id: string
+  label: string
+}
+
+function SortRuleItem({
+  sort,
+  label,
+  reorderLabel,
+  toggleLabel,
+  removeLabel,
+  onToggleDirection,
+  onRemove,
+}: {
+  sort: SortingState[number]
+  label: string
+  reorderLabel: string
+  toggleLabel: string
+  removeLabel: string
+  onToggleDirection: () => void
+  onRemove: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: sort.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
   }
 
-  const dailyPnL = account.metrics?.dailyPnL ?? {}
-  return Object.entries(dailyPnL)
-    .map(([date, pnl]) => ({ date: new Date(date), pnl }))
-    .filter((point) => !Number.isNaN(point.date.getTime()))
-}
-
-function sumPnLInRange(points: DailyPnlPoint[], start: Date, end: Date) {
-  return points.reduce((sum, point) => {
-    if (point.date >= start && point.date < end) {
-      return sum + point.pnl
-    }
-    return sum
-  }, 0)
-}
-
-function buildWeeklySpark(
-  points: DailyPnlPoint[],
-  locale: Locale
-): SparkPoint[] {
-  const latestDate = points.reduce<Date | null>((latest, point) => {
-    if (!latest || point.date > latest) return point.date
-    return latest
-  }, null)
-  const anchorDate = latestDate ?? new Date()
-  const currentWeekStart = startOfWeek(anchorDate, { locale })
-  const priorWeekStart = subWeeks(currentWeekStart, 1)
-  const priorTwoWeekStart = subWeeks(currentWeekStart, 2)
-  const currentWeekEnd = addWeeks(currentWeekStart, 1)
-
-  return [
-    {
-      period: "prior2",
-      pnl: sumPnLInRange(points, priorTwoWeekStart, priorWeekStart),
-    },
-    {
-      period: "prior",
-      pnl: sumPnLInRange(points, priorWeekStart, currentWeekStart),
-    },
-    {
-      period: "current",
-      pnl: sumPnLInRange(points, currentWeekStart, currentWeekEnd),
-    },
-  ]
-}
-
-function buildMonthlySpark(points: DailyPnlPoint[]): SparkPoint[] {
-  const latestDate = points.reduce<Date | null>((latest, point) => {
-    if (!latest || point.date > latest) return point.date
-    return latest
-  }, null)
-  const anchorDate = latestDate ?? new Date()
-  const currentMonthStart = startOfMonth(anchorDate)
-  const priorMonthStart = subMonths(currentMonthStart, 1)
-  const priorTwoMonthStart = subMonths(currentMonthStart, 2)
-  const currentMonthEnd = addMonths(currentMonthStart, 1)
-
-  return [
-    {
-      period: "prior2",
-      pnl: sumPnLInRange(points, priorTwoMonthStart, priorMonthStart),
-    },
-    {
-      period: "prior",
-      pnl: sumPnLInRange(points, priorMonthStart, currentMonthStart),
-    },
-    {
-      period: "current",
-      pnl: sumPnLInRange(points, currentMonthStart, currentMonthEnd),
-    },
-  ]
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-sm",
+        isDragging && "opacity-70 shadow-sm"
+      )}
+    >
+      <button
+        type="button"
+        className="cursor-grab text-muted-foreground active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+        aria-label={reorderLabel}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <span className="flex-1 truncate">{label}</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onToggleDirection}
+        className="h-7 w-7"
+        aria-label={toggleLabel}
+      >
+        {sort.desc ? (
+          <ArrowDown className="h-4 w-4" />
+        ) : (
+          <ArrowUp className="h-4 w-4" />
+        )}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+        aria-label={removeLabel}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  )
 }
 
 function isGroupRow(row: AccountRow): row is AccountGroupRow {
@@ -153,20 +189,45 @@ function getAccountBalance(account: Account) {
   return account.metrics?.currentBalance ?? account.startingBalance ?? 0
 }
 
+function getGroupAccountSortKey(groupRow: AccountGroupRow) {
+  const numbers = groupRow.accounts
+    .map((account) => account.number || "")
+    .filter((value) => value.length > 0)
+  if (numbers.length === 0) return ""
+  return numbers.reduce((min, value) =>
+    value.localeCompare(min, undefined, { sensitivity: "base" }) < 0 ? value : min
+  )
+}
+
 function AccountsTableSection({
   rows,
   onSelectAccount,
   columns,
   sorting,
   onSortingChange,
+  sortOptions,
+  t,
 }: {
   rows: AccountRow[]
   onSelectAccount: (account: Account) => void
   columns: ColumnDef<AccountRow>[]
   sorting: SortingState
   onSortingChange: OnChangeFn<SortingState>
+  sortOptions: SortOption[]
+  t: ReturnType<typeof useI18n>
 }) {
   const [expanded, setExpanded] = useState<ExpandedState>({})
+  const [sortingMenuOpen, setSortingMenuOpen] = useState(false)
+  const [pendingSortId, setPendingSortId] = useState<string>("")
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+  const availableSortOptions = sortOptions.filter(
+    (option) => !sorting.some((rule) => rule.id === option.id)
+  )
   const isDrawdownBreached = (row: AccountRow) => {
     if (isGroupRow(row)) return false
     const drawdownThreshold = row.drawdownThreshold ?? 0
@@ -184,6 +245,7 @@ function AccountsTableSection({
     getExpandedRowModel: getExpandedRowModel(),
     getSubRows: (row) => (isGroupRow(row) ? row.accounts : []),
     getRowCanExpand: (row) => isGroupRow(row.original),
+    enableMultiSort: true,
   })
 
   if (rows.length === 0) return null
@@ -192,6 +254,145 @@ function AccountsTableSection({
     <div className="overflow-x-auto">
       <table className="w-full border-separate border-spacing-0 text-sm">
         <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
+          <tr>
+            <th
+              colSpan={table.getVisibleLeafColumns().length}
+              className="px-3 py-2 text-right"
+            >
+              <div className="flex items-center justify-start">
+                <Popover
+                  open={sortingMenuOpen}
+                  onOpenChange={setSortingMenuOpen}
+                >
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <ListOrdered className="h-4 w-4" />
+                      {sorting.length > 0
+                        ? t("table.sortingRules", { count: sorting.length })
+                        : t("table.sorting")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80 p-3">
+                    <div className="space-y-3">
+                      {sorting.length === 0 ? (
+                        <div className="text-sm text-muted-foreground">
+                          {t("table.noSorting")}
+                        </div>
+                      ) : (
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={(event: DragEndEvent) => {
+                            const { active, over } = event
+                            if (!over || active.id === over.id) return
+                            const oldIndex = sorting.findIndex(
+                              (rule) => rule.id === active.id
+                            )
+                            const newIndex = sorting.findIndex(
+                              (rule) => rule.id === over.id
+                            )
+                            if (oldIndex === -1 || newIndex === -1) return
+                            onSortingChange((prev) =>
+                              arrayMove(prev, oldIndex, newIndex)
+                            )
+                          }}
+                        >
+                          <SortableContext
+                            items={sorting.map((rule) => rule.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                              {sorting.map((rule) => {
+                                const label =
+                                  sortOptions.find(
+                                    (option) => option.id === rule.id
+                                  )?.label ?? rule.id
+                                return (
+                                  <SortRuleItem
+                                    key={rule.id}
+                                    sort={rule}
+                                    label={label}
+                                    reorderLabel={t("table.reorderSort")}
+                                    toggleLabel={
+                                      rule.desc
+                                        ? t("table.sortDescending")
+                                        : t("table.sortAscending")
+                                    }
+                                    removeLabel={t("table.removeSort")}
+                                    onToggleDirection={() =>
+                                      onSortingChange((prev) =>
+                                        prev.map((item) =>
+                                          item.id === rule.id
+                                            ? { ...item, desc: !item.desc }
+                                            : item
+                                        )
+                                      )
+                                    }
+                                    onRemove={() =>
+                                      onSortingChange((prev) =>
+                                        prev.filter(
+                                          (item) => item.id !== rule.id
+                                        )
+                                      )
+                                    }
+                                  />
+                                )
+                              })}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={pendingSortId}
+                          onValueChange={(value) => {
+                            const nextValue = value === "__none" ? "" : value
+                            setPendingSortId(nextValue)
+                            if (nextValue) {
+                              onSortingChange((prev) => [
+                                ...prev,
+                                { id: nextValue, desc: false },
+                              ])
+                              setPendingSortId("")
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8 flex-1">
+                            <SelectValue
+                              placeholder={t("table.pickSortColumn")}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableSortOptions.length === 0 ? (
+                              <SelectItem value="__none" disabled>
+                                {t("table.noMoreSortOptions")}
+                              </SelectItem>
+                            ) : (
+                              availableSortOptions.map((option) => (
+                                <SelectItem key={option.id} value={option.id}>
+                                  {option.label}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onSortingChange([])}
+                          disabled={sorting.length === 0}
+                        >
+                          {t("table.clearSorting")}
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </th>
+          </tr>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
               key={headerGroup.id}
@@ -262,10 +463,14 @@ export function AccountsTableView({
   onSelectAccount,
 }: AccountsTableViewProps) {
   const t = useI18n()
-  const locale = useCurrentLocale()
-  const dateLocale = locale === "fr" ? fr : enUS
+  const currentLocale = useCurrentLocale()
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(currentLocale, { dateStyle: "medium" }),
+    [currentLocale]
+  )
   const { getOrderedAccounts } = useAccountOrderStore()
   const [sorting, setSorting] = useState<SortingState>([
+    { id: "group", desc: false },
     { id: "account", desc: false },
   ])
 
@@ -274,6 +479,7 @@ export function AccountsTableView({
       {
         id: "expand",
         header: () => null,
+        enableSorting: false,
         cell: ({ row }) => {
           if (!row.getCanExpand()) return null
           return (
@@ -301,7 +507,36 @@ export function AccountsTableView({
         size: 40,
       },
       {
+        id: "group",
+        accessorFn: (row) => (isGroupRow(row) ? row.name : ""),
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("accounts.table.group")}
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="min-w-[160px] font-medium truncate">
+            {isGroupRow(row.original) ? (
+              <span>
+                {row.original.name} ({row.original.accounts.length})
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">—</span>
+            )}
+          </div>
+        ),
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original) ? rowA.original.name : ""
+          const b = isGroupRow(rowB.original) ? rowB.original.name : ""
+          return a.localeCompare(b)
+        },
+        size: 200,
+      },
+      {
         id: "account",
+        accessorFn: (row) =>
+          isGroupRow(row) ? getGroupAccountSortKey(row) : row.number || "",
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -311,9 +546,7 @@ export function AccountsTableView({
         cell: ({ row }) => (
           <div className="flex flex-col min-w-[160px]">
             {isGroupRow(row.original) ? (
-              <span className="font-medium truncate">
-                {row.original.name} ({row.original.accounts.length})
-              </span>
+              <span className="text-sm text-muted-foreground">—</span>
             ) : (
               <>
                 <span className="font-medium truncate">
@@ -330,10 +563,10 @@ export function AccountsTableView({
         ),
         sortingFn: (rowA, rowB) => {
           const a = isGroupRow(rowA.original)
-            ? rowA.original.name
+            ? getGroupAccountSortKey(rowA.original)
             : rowA.original.number || ""
           const b = isGroupRow(rowB.original)
-            ? rowB.original.name
+            ? getGroupAccountSortKey(rowB.original)
             : rowB.original.number || ""
           return a.localeCompare(b)
         },
@@ -341,6 +574,8 @@ export function AccountsTableView({
       },
       {
         id: "propfirm",
+        accessorFn: (row) =>
+          isGroupRow(row) ? "" : row.propfirm || t("propFirm.card.unnamedAccount"),
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -356,17 +591,66 @@ export function AccountsTableView({
         ),
         sortingFn: (rowA, rowB) => {
           const a = isGroupRow(rowA.original)
-            ? rowA.original.name
+            ? ""
             : rowA.original.propfirm || ""
           const b = isGroupRow(rowB.original)
-            ? rowB.original.name
+            ? ""
             : rowB.original.propfirm || ""
           return a.localeCompare(b)
         },
         size: 200,
       },
       {
+        id: "startDate",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? Number.POSITIVE_INFINITY
+            : getAccountStartDate(row)?.getTime() ?? Number.POSITIVE_INFINITY,
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("accounts.table.startDate")}
+          />
+        ),
+        cell: ({ row }) => {
+          if (isGroupRow(row.original)) {
+            return (
+              <div className="text-sm text-muted-foreground text-center">—</div>
+            )
+          }
+          const startDate = getAccountStartDate(row.original)
+          if (!startDate) {
+            return (
+              <div className="text-sm text-muted-foreground text-center">—</div>
+            )
+          }
+          return (
+            <div className="text-sm font-medium">
+              {dateFormatter.format(startDate)}
+            </div>
+          )
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original)
+            ? Number.POSITIVE_INFINITY
+            : getAccountStartDate(rowA.original)?.getTime() ??
+              Number.POSITIVE_INFINITY
+          const b = isGroupRow(rowB.original)
+            ? Number.POSITIVE_INFINITY
+            : getAccountStartDate(rowB.original)?.getTime() ??
+              Number.POSITIVE_INFINITY
+          return a - b
+        },
+        size: 140,
+      },
+      {
         id: "funded",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? row.summary.fundedCount
+            : row.evaluation === false
+              ? 1
+              : 0,
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -415,6 +699,8 @@ export function AccountsTableView({
       },
       {
         id: "balance",
+        accessorFn: (row) =>
+          isGroupRow(row) ? row.summary.totalBalance : getAccountBalance(row),
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -444,6 +730,10 @@ export function AccountsTableView({
       },
       {
         id: "targetProgress",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? row.summary.averageProgress
+            : row.metrics?.progress ?? 0,
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -500,6 +790,10 @@ export function AccountsTableView({
       },
       {
         id: "drawdown",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? row.summary.totalRemainingLoss
+            : row.metrics?.remainingLoss ?? 0,
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -560,63 +854,84 @@ export function AccountsTableView({
         size: 200,
       },
       {
-        id: "weeklyTrend",
+        id: "consistency",
+        accessorFn: (row) => {
+          if (isGroupRow(row)) return -1
+          const metrics = row.metrics
+          if (!metrics?.hasProfitableData) return 0
+          return metrics.isConsistent || row.consistencyPercentage === 100 ? 2 : 1
+        },
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
-            title={t("accounts.table.weeklyTrend")}
+            title={t("propFirm.card.consistency")}
           />
         ),
         cell: ({ row }) => {
           if (isGroupRow(row.original)) {
             return (
-              <div className="text-right text-sm text-muted-foreground">—</div>
+              <div className="text-sm text-muted-foreground text-center">—</div>
             )
           }
-          const points = getDailyPnlPoints(row.original)
-          const sparkData = buildWeeklySpark(points, dateLocale)
-          const recentTwoTotal = sparkData
-            .slice(-2)
-            .reduce((sum, point) => sum + point.pnl, 0)
-          const sparkColor =
-            recentTwoTotal >= 0
-              ? "hsl(var(--success))"
-              : "hsl(var(--destructive))"
+          const metrics = row.original.metrics
+          if (!metrics?.isConfigured) {
+            return (
+              <div className="text-xs text-muted-foreground">
+                {t("accounts.table.notConfigured")}
+              </div>
+            )
+          }
+          if (!metrics.hasProfitableData) {
+            return (
+              <div className="text-xs text-muted-foreground italic">
+                {t("propFirm.status.unprofitable")}
+              </div>
+            )
+          }
+          const isConsistent =
+            metrics.isConsistent || row.original.consistencyPercentage === 100
           return (
-            <div className="min-w-[80px]">
-              <SparkLineChart
-                data={sparkData}
-                index="period"
-                categories={["pnl"]}
-                colors={{ pnl: sparkColor }}
-                height={28}
-              />
+            <div
+              className={cn(
+                "text-xs font-medium",
+                isConsistent ? "text-success" : "text-destructive"
+              )}
+            >
+              {isConsistent
+                ? t("propFirm.status.consistent")
+                : t("propFirm.status.inconsistent")}
             </div>
           )
         },
         sortingFn: (rowA, rowB) => {
           const a = isGroupRow(rowA.original)
-            ? 0
-            : buildWeeklySpark(
-                getDailyPnlPoints(rowA.original),
-                dateLocale
-              ).reduce((sum, point) => sum + point.pnl, 0)
+            ? -1
+            : rowA.original.metrics?.hasProfitableData
+              ? rowA.original.metrics.isConsistent ||
+                rowA.original.consistencyPercentage === 100
+                ? 2
+                : 1
+              : 0
           const b = isGroupRow(rowB.original)
-            ? 0
-            : buildWeeklySpark(
-                getDailyPnlPoints(rowB.original),
-                dateLocale
-              ).reduce((sum, point) => sum + point.pnl, 0)
+            ? -1
+            : rowB.original.metrics?.hasProfitableData
+              ? rowB.original.metrics.isConsistent ||
+                rowB.original.consistencyPercentage === 100
+                ? 2
+                : 1
+              : 0
           return a - b
         },
-        size: 120,
+        size: 180,
       },
       {
-        id: "monthlyTrend",
+        id: "maxDailyProfit",
+        accessorFn: (row) =>
+          isGroupRow(row) ? 0 : row.metrics?.highestProfitDay ?? 0,
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
-            title={t("accounts.table.monthlyTrend")}
+            title={t("propFirm.card.highestDailyProfit")}
           />
         ),
         cell: ({ row }) => {
@@ -625,47 +940,102 @@ export function AccountsTableView({
               <div className="text-right text-sm text-muted-foreground">—</div>
             )
           }
-          const points = getDailyPnlPoints(row.original)
-          const sparkData = buildMonthlySpark(points)
-          const recentTwoTotal = sparkData
-            .slice(-2)
-            .reduce((sum, point) => sum + point.pnl, 0)
-          const sparkColor =
-            recentTwoTotal >= 0
-              ? "hsl(var(--success))"
-              : "hsl(var(--destructive))"
+          const maxDailyProfit = row.original.metrics?.highestProfitDay
+          if (maxDailyProfit === undefined) {
+            return (
+              <div className="text-right text-sm text-muted-foreground">—</div>
+            )
+          }
           return (
-            <div className="min-w-[80px]">
-              <SparkLineChart
-                data={sparkData}
-                index="period"
-                categories={["pnl"]}
-                colors={{ pnl: sparkColor }}
-                height={28}
-              />
+            <div className="text-right text-sm font-medium">
+              ${maxDailyProfit.toFixed(2)}
             </div>
           )
         },
         sortingFn: (rowA, rowB) => {
           const a = isGroupRow(rowA.original)
             ? 0
-            : buildMonthlySpark(getDailyPnlPoints(rowA.original)).reduce(
-                (sum, point) => sum + point.pnl,
-                0
-              )
+            : rowA.original.metrics?.highestProfitDay ?? 0
           const b = isGroupRow(rowB.original)
             ? 0
-            : buildMonthlySpark(getDailyPnlPoints(rowB.original)).reduce(
-                (sum, point) => sum + point.pnl,
-                0
-              )
+            : rowB.original.metrics?.highestProfitDay ?? 0
           return a - b
         },
-        size: 120,
+        size: 140,
+      },
+      {
+        id: "tradingDays",
+        accessorFn: (row) =>
+          isGroupRow(row) ? 0 : row.metrics?.totalTradingDays ?? 0,
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("propFirm.card.tradingDays")}
+          />
+        ),
+        cell: ({ row }) => {
+          if (isGroupRow(row.original)) {
+            return (
+              <div className="text-right text-sm text-muted-foreground">—</div>
+            )
+          }
+          const metrics = row.original.metrics
+          if (!metrics?.isConfigured) {
+            return (
+              <div className="text-xs text-muted-foreground">
+                {t("accounts.table.notConfigured")}
+              </div>
+            )
+          }
+          const totalTradingDays = metrics.totalTradingDays ?? 0
+          const validTradingDays = metrics.validTradingDays ?? 0
+          return (
+            <div className="text-right text-sm">
+              <span
+                className={cn(
+                  "font-medium",
+                  validTradingDays === totalTradingDays
+                    ? "text-success"
+                    : "text-warning"
+                )}
+              >
+                {validTradingDays}/{totalTradingDays}
+              </span>
+            </div>
+          )
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original)
+            ? 0
+            : rowA.original.metrics?.totalTradingDays ?? 0
+          const b = isGroupRow(rowB.original)
+            ? 0
+            : rowB.original.metrics?.totalTradingDays ?? 0
+          return a - b
+        },
+        size: 140,
       },
     ],
-    [t, dateLocale]
+    [t, dateFormatter]
   )
+
+  const sortOptions = useMemo<SortOption[]>(
+    () => [
+      { id: "group", label: t("accounts.table.group") },
+      { id: "account", label: t("accounts.table.account") },
+      { id: "propfirm", label: t("accounts.table.propfirm") },
+      { id: "startDate", label: t("accounts.table.startDate") },
+      { id: "funded", label: t("accounts.table.funded") },
+      { id: "balance", label: t("accounts.table.balance") },
+      { id: "targetProgress", label: t("accounts.table.targetProgress") },
+      { id: "drawdown", label: t("accounts.table.drawdownRemaining") },
+      { id: "consistency", label: t("propFirm.card.consistency") },
+      { id: "maxDailyProfit", label: t("propFirm.card.highestDailyProfit") },
+      { id: "tradingDays", label: t("propFirm.card.tradingDays") },
+    ],
+    [t]
+  )
+
 
   const groupedAccounts = useMemo(() => {
     const buildGroupRow = (
@@ -756,6 +1126,8 @@ export function AccountsTableView({
         columns={columns}
         sorting={sorting}
         onSortingChange={setSorting}
+        sortOptions={sortOptions}
+        t={t}
       />
     </div>
   )
