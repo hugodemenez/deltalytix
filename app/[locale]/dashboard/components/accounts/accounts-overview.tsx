@@ -65,6 +65,7 @@ import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
 import { useAccountOrderStore } from '@/store/account-order-store'
 import { useAccountsViewPreferenceStore } from '@/store/accounts-view-preference-store'
+import { useAccountsSortingStore } from '@/store/accounts-sorting-store'
 import { savePayoutAction, removeAccountsFromTradesAction } from '@/server/accounts'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { SortingState } from "@tanstack/react-table"
@@ -764,7 +765,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [pendingChanges, setPendingChanges] = useState<Partial<Account> | null>(null)
   const [isSavingPayout, setIsSavingPayout] = useState(false)
   const [isDeletingPayout, setIsDeletingPayout] = useState(false)
-  const [sorting, setSorting] = useState<SortingState>([])
+  const { sorting, setSorting, clearSorting } = useAccountsSortingStore()
   const [sortingMenuOpen, setSortingMenuOpen] = useState(false)
   const [pendingSortId, setPendingSortId] = useState("")
   const shouldUpdateSelectedAccount = useRef(false)
@@ -1291,7 +1292,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setSorting([])}
+                      onClick={clearSorting}
                       disabled={sorting.length === 0}
                     >
                       {t("table.clearSorting")}

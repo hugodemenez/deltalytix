@@ -183,39 +183,17 @@ function AccountsTableSection({
   const visibleRows = table.getRowModel().rows
   const displayRows: Array<
     | { type: "row"; row: (typeof visibleRows)[number] }
-    | { type: "summary"; variant: "subtotal" | "total"; summary: SummaryRow }
+    | { type: "summary"; summary: SummaryRow }
   > = []
-  let activeGroup: AccountGroupRow | null = null
 
   for (let index = 0; index < visibleRows.length; index += 1) {
     const row = visibleRows[index]
     displayRows.push({ type: "row", row })
-    if (row.depth === 0 && row.getCanExpand() && row.getIsExpanded()) {
-      if (isGroupRow(row.original)) {
-        activeGroup = row.original
-      }
-    }
-
-    const nextRow = visibleRows[index + 1]
-    if (activeGroup && (!nextRow || nextRow.depth === 0)) {
-      displayRows.push({
-        type: "summary",
-        variant: "subtotal",
-        summary: {
-          id: `${activeGroup.id}-subtotal`,
-          label: `${activeGroup.name} · ${t("accounts.table.subtotal")}`,
-          summary: activeGroup.summary,
-          accountCount: activeGroup.accounts.length,
-        },
-      })
-      activeGroup = null
-    }
   }
 
   if (totalSummary) {
     displayRows.push({
       type: "summary",
-      variant: "total",
       summary: totalSummary,
     })
   }
@@ -245,11 +223,7 @@ function AccountsTableSection({
 
   if (rows.length === 0) return null
 
-  const renderSummaryCell = (
-    columnId: string,
-    summary: SummaryRow,
-    variant: "subtotal" | "total"
-  ) => {
+  const renderSummaryCell = (columnId: string, summary: SummaryRow) => {
     switch (columnId) {
       case "expand":
         return null
@@ -274,12 +248,7 @@ function AccountsTableSection({
         )
       case "balance":
         return (
-          <div
-            className={cn(
-              "text-right",
-              variant === "total" ? "font-semibold" : "font-medium"
-            )}
-          >
+          <div className="text-right font-semibold">
             ${summary.summary.totalBalance.toFixed(2)}
           </div>
         )
@@ -311,12 +280,7 @@ function AccountsTableSection({
       }
       case "totalPayout":
         return (
-          <div
-            className={cn(
-              "text-right",
-              variant === "total" ? "font-semibold" : "font-medium"
-            )}
-          >
+          <div className="text-right font-semibold">
             ${summary.summary.totalPayouts.toFixed(2)}
           </div>
         )
@@ -370,12 +334,7 @@ function AccountsTableSection({
               return (
                 <tr
                   key={entry.summary.id}
-                  className={cn(
-                    "border-b border-border",
-                    entry.variant === "total"
-                      ? "bg-muted/50 font-semibold"
-                      : "bg-muted/30 font-medium"
-                  )}
+                className="border-b border-border bg-muted/50 font-semibold"
                 >
                   {table.getVisibleLeafColumns().map((column) => (
                     <td
@@ -383,7 +342,7 @@ function AccountsTableSection({
                       className="px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle"
                       style={{ width: column.getSize() }}
                     >
-                      {renderSummaryCell(column.id, entry.summary, entry.variant)}
+                      {renderSummaryCell(column.id, entry.summary)}
                     </td>
                   ))}
                 </tr>
