@@ -2093,6 +2093,8 @@ export default {
   "accounts.table.remaining": "Remaining",
   "accounts.table.drawdownRemaining": "Remaining drawdown",
   "accounts.table.notConfigured": "Not configured",
+  "accounts.table.subtotal": "Subtotal",
+  "accounts.table.total": "Total",
   "accounts.table.expandGroup": "Expand group",
   "accounts.table.collapseGroup": "Collapse group",
   "table.sorting": "Sorting",

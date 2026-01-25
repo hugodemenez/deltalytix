@@ -2254,6 +2254,8 @@ export default {
   "accounts.table.remaining": "Restant",
   "accounts.table.drawdownRemaining": "Drawdown restant",
   "accounts.table.notConfigured": "Non configuré",
+  "accounts.table.subtotal": "Sous-total",
+  "accounts.table.total": "Total",
   "accounts.table.expandGroup": "Développer le groupe",
   "accounts.table.collapseGroup": "Réduire le groupe",
   "table.sorting": "Tri",
