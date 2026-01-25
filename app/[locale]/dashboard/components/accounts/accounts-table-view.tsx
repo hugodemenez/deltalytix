@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ColumnDef,
   flexRender,
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Progress } from "@/components/ui/progress"
 import { useAccountOrderStore } from "@/store/account-order-store"
+import { useAccountsGroupExpansionStore } from "../../../../../store/accounts-group-expansion-store"
 import { DataTableColumnHeader } from "../tables/column-header"
 import { CheckCircle, ChevronDown, ChevronRight, XCircle } from "lucide-react"
 
@@ -156,10 +157,19 @@ function AccountsTableSection({
   totalSummary?: SummaryRow | null
 }) {
   const t = useI18n()
-  const [expanded, setExpanded] = useState<ExpandedState>({})
+  const expanded = useAccountsGroupExpansionStore((state) => state.expanded)
+  const setExpanded = useAccountsGroupExpansionStore((state) => state.setExpanded)
   const tableWrapperRef = useRef<HTMLDivElement | null>(null)
   const [isHintDismissed, setIsHintDismissed] = useState(true)
   const [canScrollHorizontally, setCanScrollHorizontally] = useState(false)
+  const handleExpandedChange = useCallback<OnChangeFn<ExpandedState>>(
+    (updater) => {
+      const nextExpanded =
+        typeof updater === "function" ? updater(expanded) : updater
+      setExpanded(nextExpanded)
+    },
+    [expanded, setExpanded]
+  )
   const isDrawdownBreached = (row: AccountRow) => {
     if (isGroupRow(row)) return false
     const drawdownThreshold = row.drawdownThreshold ?? 0
@@ -171,12 +181,16 @@ function AccountsTableSection({
     columns,
     state: { sorting, expanded },
     onSortingChange,
-    onExpandedChange: setExpanded,
+    onExpandedChange: handleExpandedChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getSubRows: (row) => (isGroupRow(row) ? row.accounts : []),
     getRowCanExpand: (row) => isGroupRow(row.original),
+    getRowId: (row, index) => {
+      if (isGroupRow(row)) return row.id
+      return row.id ?? row.number ?? String(index)
+    },
     enableMultiSort: true,
   })
 
@@ -1007,14 +1021,13 @@ export function AccountsTableView({
     const buildGroupRow = (
       groupId: string,
       groupName: string,
-      groupAccounts: Account[],
-      index: number
+      groupAccounts: Account[]
     ): AccountGroupRow | null => {
       if (groupAccounts.length === 0) return null
 
       return {
         kind: "group",
-        id: `${groupId}-${index}`,
+        id: groupId,
         name: groupName,
         accounts: groupAccounts,
         summary: getAccountsSummary(groupAccounts),
@@ -1023,12 +1036,12 @@ export function AccountsTableView({
 
     const rows: AccountRow[] = []
 
-    groups.forEach((group, index) => {
+    groups.forEach((group) => {
       const groupAccounts = accounts.filter((account) =>
         group.accounts.some((a) => a.number === account.number)
       )
       const orderedAccounts = getOrderedAccounts(group.id, groupAccounts)
-      const groupRow = buildGroupRow(group.id, group.name, orderedAccounts, index)
+      const groupRow = buildGroupRow(group.id, group.name, orderedAccounts)
       if (groupRow) rows.push(groupRow)
     })
 
@@ -1042,8 +1055,7 @@ export function AccountsTableView({
     const ungroupedRow = buildGroupRow(
       "ungrouped",
       t("propFirm.ungrouped"),
-      orderedUngrouped,
-      rows.length
+      orderedUngrouped
     )
     if (ungroupedRow) rows.push(ungroupedRow)
 
