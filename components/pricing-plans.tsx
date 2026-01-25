@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, startTransition } from 'react'
+import Link from 'next/link'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react"
+import { Check, X, AlertCircle } from "lucide-react"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import NumberFlow from '@number-flow/react'
 import {
@@ -38,15 +39,16 @@ function useCurrency() {
     // Function to set currency based on country code
     const setCurrencyFromCountry = (countryCode: string) => {
       const upperCountryCode = countryCode.toUpperCase()
-      if (eurozoneCountries.includes(upperCountryCode)) {
-        setCurrency('EUR')
-        setSymbol('€')
-        return true
-      } else {
-        setCurrency('USD')
-        setSymbol('$')
-        return true
-      }
+      startTransition(() => {
+        if (eurozoneCountries.includes(upperCountryCode)) {
+          setCurrency('EUR')
+          setSymbol('€')
+        } else {
+          setCurrency('USD')
+          setSymbol('$')
+        }
+      })
+      return true
     }
 
     // First, try to get country from cookie (set by middleware)
@@ -72,13 +74,15 @@ function useCurrency() {
     // Check if locale indicates European country
     const isEuropeanLocale = /^(fr|de|es|it|nl|pt|el|fi|et|lv|lt|sl|sk|mt|cy)-/.test(locale)
 
-    if (isEuropeanTimezone || isEuropeanLocale) {
-      setCurrency('EUR')
-      setSymbol('€')
-    } else {
-      setCurrency('USD')
-      setSymbol('$')
-    }
+    startTransition(() => {
+      if (isEuropeanTimezone || isEuropeanLocale) {
+        setCurrency('EUR')
+        setSymbol('€')
+      } else {
+        setCurrency('USD')
+        setSymbol('$')
+      }
+    })
   }, [locale])
 
   useEffect(() => {
@@ -306,7 +310,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
           description: result.error,
         })
       }
-    } catch (error) {
+    } catch {
       toast.error(t('billing.error'), {
         description: t('billing.planSwitchError'),
       })
@@ -364,23 +368,6 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     }
   }
 
-  function formatPrice(plan: Plan, planKey: string): number {
-    if (plan.price.yearly === 0 || planKey === 'basic') {
-      return 0
-    }
-
-    switch (billingPeriod) {
-      case 'quarterly':
-        return plan.price.quarterly / 3
-      case 'yearly':
-        return plan.price.yearly / 12
-      case 'lifetime':
-        return plan.price.lifetime
-      default:
-        return plan.price.monthly
-    }
-  }
-
   const FreePlan = ({ plan, isModal, onClose }: { plan: Plan, isModal?: boolean, onClose?: () => void }) => {
     const t = useI18n()
     return (
@@ -414,15 +401,15 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
               </Button>
             ) : (
               <Button asChild className="">
-                <a href="/authentication">{t('pricing.startBasic')}</a>
+                <Link href="/authentication">{t('pricing.startBasic')}</Link>
               </Button>
             )}
             
             <p className="text-xs text-center text-muted-foreground">
               {t('terms.pricing.disclaimer')}
-              <a href="/terms" className="text-primary hover:underline">
+              <Link href="/terms" className="text-primary hover:underline">
                 {t('terms.pricing.termsOfService')}
-              </a>
+              </Link>
             </p>
           </CardFooter>
         </Card>
@@ -600,7 +587,6 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
             {(() => {
               const lookupKey = `plus_${billingPeriod}_${currency.toLowerCase()}`
               const isCurrent = isCurrentPlan(lookupKey)
-              const isLifetimeUser = hasLifetimeSubscription()
               const isBlockedRecurring = isBlockedFromRecurring(lookupKey)
               const isBlockedLifetime = isBlockedFromLifetime(lookupKey)
               const isBlocked = isBlockedRecurring || isBlockedLifetime
@@ -627,9 +613,9 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
             
             <p className="text-xs text-center text-muted-foreground">
               {t('terms.pricing.disclaimer')}
-              <a href="/terms" className="text-primary hover:underline">
+              <Link href="/terms" className="text-primary hover:underline">
                 {t('terms.pricing.termsOfService')}
-              </a>
+              </Link>
             </p>
           </CardFooter>
         </Card>

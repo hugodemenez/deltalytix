@@ -217,7 +217,7 @@ export function CreatePost({ children }: Props) {
                     <FormControl>
                       <div className="space-y-4">
                         <div className="flex flex-wrap gap-2">
-                          {field.value.map((screenshot, index) => (
+                          {(field.value ?? []).map((screenshot, index) => (
                             <div key={index} className="relative">
                               <Image
                                 src={screenshot}
@@ -238,7 +238,7 @@ export function CreatePost({ children }: Props) {
                             </div>
                           ))}
                         </div>
-                        {field.value.length < 3 && (
+                        {(field.value?.length ?? 0) < 3 && (
                           <div className="flex items-center">
                             <Input
                               type="file"

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, startTransition } from 'react'
 import { type FileError, type FileRejection, useDropzone } from 'react-dropzone'
 import { createClient } from '@/lib/supabase'
 
@@ -225,9 +225,11 @@ const useHashUpload = (options: UseHashUploadOptions) => {
 
   useEffect(() => {
     if (files.length === 0) {
-      setErrors([])
-      setSuccesses([])
-      setUploadedUrls([])
+      startTransition(() => {
+        setErrors([])
+        setSuccesses([])
+        setUploadedUrls([])
+      })
     }
 
     // If the number of files doesn't exceed the maxFiles parameter, remove the error 'Too many files' from each file

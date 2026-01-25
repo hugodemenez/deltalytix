@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ColumnDef,
   flexRender,
@@ -12,35 +12,14 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
-import {
-  addMonths,
-  addWeeks,
-  startOfMonth,
-  startOfWeek,
-  subMonths,
-  subWeeks,
-  Locale,
-} from "date-fns"
-import { enUS, fr } from "date-fns/locale"
-
 import { Account, Group } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Progress } from "@/components/ui/progress"
 import { useAccountOrderStore } from "@/store/account-order-store"
-import { SparkLineChart } from "@/components/SparkChart"
+import { useAccountsGroupExpansionStore } from "../../../../../store/accounts-group-expansion-store"
 import { DataTableColumnHeader } from "../tables/column-header"
 import { CheckCircle, ChevronDown, ChevronRight, XCircle } from "lucide-react"
-
-type DailyPnlPoint = {
-  date: Date
-  pnl: number
-}
-
-type SparkPoint = {
-  period: string
-  pnl: number
-}
 
 type AccountGroupRow = {
   kind: "group"
@@ -49,6 +28,7 @@ type AccountGroupRow = {
   accounts: Account[]
   summary: {
     totalBalance: number
+    totalPayouts: number
     totalRemainingToTarget: number
     totalRemainingLoss: number
     averageProgress: number
@@ -59,90 +39,41 @@ type AccountGroupRow = {
 
 type AccountRow = Account | AccountGroupRow
 
+type SummaryRow = {
+  id: string
+  label: string
+  summary: AccountGroupRow["summary"]
+  accountCount: number
+}
+
 interface AccountsTableViewProps {
   accounts: Account[]
   groups: Group[]
   onSelectAccount: (account: Account) => void
+  sorting: SortingState
+  onSortingChange: OnChangeFn<SortingState>
 }
 
-function getDailyPnlPoints(account: Account): DailyPnlPoint[] {
-  if (account.dailyMetrics && account.dailyMetrics.length > 0) {
-    return account.dailyMetrics.map((metric) => ({
-      date: metric.date,
-      pnl: metric.pnl,
-    }))
-  }
-
-  const dailyPnL = account.metrics?.dailyPnL ?? {}
-  return Object.entries(dailyPnL)
-    .map(([date, pnl]) => ({ date: new Date(date), pnl }))
-    .filter((point) => !Number.isNaN(point.date.getTime()))
+function toValidDate(value: Date | string | null | undefined) {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
 }
 
-function sumPnLInRange(points: DailyPnlPoint[], start: Date, end: Date) {
-  return points.reduce((sum, point) => {
-    if (point.date >= start && point.date < end) {
-      return sum + point.pnl
-    }
-    return sum
-  }, 0)
-}
+function getAccountStartDate(account: Account) {
+  const tradeDates = (account.trades ?? [])
+    .map((trade) => toValidDate(trade.entryDate))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
 
-function buildWeeklySpark(
-  points: DailyPnlPoint[],
-  locale: Locale
-): SparkPoint[] {
-  const latestDate = points.reduce<Date | null>((latest, point) => {
-    if (!latest || point.date > latest) return point.date
-    return latest
-  }, null)
-  const anchorDate = latestDate ?? new Date()
-  const currentWeekStart = startOfWeek(anchorDate, { locale })
-  const priorWeekStart = subWeeks(currentWeekStart, 1)
-  const priorTwoWeekStart = subWeeks(currentWeekStart, 2)
-  const currentWeekEnd = addWeeks(currentWeekStart, 1)
+  if (tradeDates.length > 0) return tradeDates[0]
 
-  return [
-    {
-      period: "prior2",
-      pnl: sumPnLInRange(points, priorTwoWeekStart, priorWeekStart),
-    },
-    {
-      period: "prior",
-      pnl: sumPnLInRange(points, priorWeekStart, currentWeekStart),
-    },
-    {
-      period: "current",
-      pnl: sumPnLInRange(points, currentWeekStart, currentWeekEnd),
-    },
-  ]
-}
+  const dailyDates = (account.dailyMetrics ?? [])
+    .map((metric) => toValidDate(metric.date))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
 
-function buildMonthlySpark(points: DailyPnlPoint[]): SparkPoint[] {
-  const latestDate = points.reduce<Date | null>((latest, point) => {
-    if (!latest || point.date > latest) return point.date
-    return latest
-  }, null)
-  const anchorDate = latestDate ?? new Date()
-  const currentMonthStart = startOfMonth(anchorDate)
-  const priorMonthStart = subMonths(currentMonthStart, 1)
-  const priorTwoMonthStart = subMonths(currentMonthStart, 2)
-  const currentMonthEnd = addMonths(currentMonthStart, 1)
-
-  return [
-    {
-      period: "prior2",
-      pnl: sumPnLInRange(points, priorTwoMonthStart, priorMonthStart),
-    },
-    {
-      period: "prior",
-      pnl: sumPnLInRange(points, priorMonthStart, currentMonthStart),
-    },
-    {
-      period: "current",
-      pnl: sumPnLInRange(points, currentMonthStart, currentMonthEnd),
-    },
-  ]
+  return dailyDates[0] ?? null
 }
 
 function isGroupRow(row: AccountRow): row is AccountGroupRow {
@@ -153,20 +84,92 @@ function getAccountBalance(account: Account) {
   return account.metrics?.currentBalance ?? account.startingBalance ?? 0
 }
 
+function getAccountTotalPayouts(account: Account) {
+  return (account.payouts ?? [])
+    .filter((payout) => payout.status === "PAID" || payout.status === "VALIDATED")
+    .reduce((sum, payout) => sum + payout.amount, 0)
+}
+
+function getAccountsSummary(accounts: Account[]) {
+  const summary = accounts.reduce(
+    (acc, account) => {
+      const currentBalance = getAccountBalance(account)
+      const metrics = account.metrics
+      acc.totalBalance += currentBalance
+      acc.totalPayouts += getAccountTotalPayouts(account)
+      if (metrics?.isConfigured) {
+        acc.totalRemainingToTarget += metrics.remainingToTarget ?? 0
+        acc.totalRemainingLoss += metrics.remainingLoss ?? 0
+        acc.totalProgress += metrics.progress ?? 0
+        acc.configuredCount += 1
+      }
+      if (account.isPerformance === true) acc.fundedCount += 1
+      return acc
+    },
+    {
+      totalBalance: 0,
+      totalPayouts: 0,
+      totalRemainingToTarget: 0,
+      totalRemainingLoss: 0,
+      totalProgress: 0,
+      configuredCount: 0,
+      fundedCount: 0,
+    }
+  )
+
+  return {
+    totalBalance: summary.totalBalance,
+    totalPayouts: summary.totalPayouts,
+    totalRemainingToTarget: summary.totalRemainingToTarget,
+    totalRemainingLoss: summary.totalRemainingLoss,
+    averageProgress:
+      summary.configuredCount > 0
+        ? summary.totalProgress / summary.configuredCount
+        : 0,
+    configuredCount: summary.configuredCount,
+    fundedCount: summary.fundedCount,
+  }
+}
+
+function getGroupAccountSortKey(groupRow: AccountGroupRow) {
+  const numbers = groupRow.accounts
+    .map((account) => account.number || "")
+    .filter((value) => value.length > 0)
+  if (numbers.length === 0) return ""
+  return numbers.reduce((min, value) =>
+    value.localeCompare(min, undefined, { sensitivity: "base" }) < 0 ? value : min
+  )
+}
+
 function AccountsTableSection({
   rows,
   onSelectAccount,
   columns,
   sorting,
   onSortingChange,
+  totalSummary,
 }: {
   rows: AccountRow[]
   onSelectAccount: (account: Account) => void
   columns: ColumnDef<AccountRow>[]
   sorting: SortingState
   onSortingChange: OnChangeFn<SortingState>
+  totalSummary?: SummaryRow | null
 }) {
-  const [expanded, setExpanded] = useState<ExpandedState>({})
+  const t = useI18n()
+  const expanded = useAccountsGroupExpansionStore((state) => state.expanded)
+  const setExpanded = useAccountsGroupExpansionStore((state) => state.setExpanded)
+  const tableWrapperRef = useRef<HTMLDivElement | null>(null)
+  const [isHintDismissed, setIsHintDismissed] = useState(true)
+  const [canScrollHorizontally, setCanScrollHorizontally] = useState(false)
+  const handleExpandedChange = useCallback<OnChangeFn<ExpandedState>>(
+    (updater) => {
+      const nextExpanded =
+        typeof updater === "function" ? updater(expanded) : updater
+      setExpanded(nextExpanded)
+    },
+    [expanded, setExpanded]
+  )
   const isDrawdownBreached = (row: AccountRow) => {
     if (isGroupRow(row)) return false
     const drawdownThreshold = row.drawdownThreshold ?? 0
@@ -178,19 +181,144 @@ function AccountsTableSection({
     columns,
     state: { sorting, expanded },
     onSortingChange,
-    onExpandedChange: setExpanded,
+    onExpandedChange: handleExpandedChange,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     getSubRows: (row) => (isGroupRow(row) ? row.accounts : []),
     getRowCanExpand: (row) => isGroupRow(row.original),
+    getRowId: (row, index) => {
+      if (isGroupRow(row)) return row.id
+      return row.id ?? row.number ?? String(index)
+    },
+    enableMultiSort: true,
   })
+
+  const visibleRows = table.getRowModel().rows
+  const displayRows: Array<
+    | { type: "row"; row: (typeof visibleRows)[number] }
+    | { type: "summary"; summary: SummaryRow }
+  > = []
+
+  for (let index = 0; index < visibleRows.length; index += 1) {
+    const row = visibleRows[index]
+    displayRows.push({ type: "row", row })
+  }
+
+  if (totalSummary) {
+    displayRows.push({
+      type: "summary",
+      summary: totalSummary,
+    })
+  }
+
+  useEffect(() => {
+    const storedValue = localStorage.getItem("accountsTableScrollHintDismissed")
+    setIsHintDismissed(storedValue === "true")
+  }, [])
+
+  useEffect(() => {
+    const updateScrollState = () => {
+      const wrapper = tableWrapperRef.current
+      if (!wrapper) return
+      setCanScrollHorizontally(wrapper.scrollWidth > wrapper.clientWidth + 1)
+    }
+
+    updateScrollState()
+    window.addEventListener("resize", updateScrollState)
+    return () => window.removeEventListener("resize", updateScrollState)
+  }, [displayRows.length, columns.length])
+
+  const showScrollHint = canScrollHorizontally && !isHintDismissed
+  const handleDismissHint = () => {
+    localStorage.setItem("accountsTableScrollHintDismissed", "true")
+    setIsHintDismissed(true)
+  }
 
   if (rows.length === 0) return null
 
+  const renderSummaryCell = (columnId: string, summary: SummaryRow) => {
+    switch (columnId) {
+      case "expand":
+        return null
+      case "group":
+        return (
+          <div className="min-w-[160px] font-semibold truncate">
+            {summary.label}
+          </div>
+        )
+      case "account":
+      case "propfirm":
+        return <span className="text-sm text-muted-foreground">—</span>
+      case "startDate":
+        return (
+          <div className="text-sm text-muted-foreground text-center">—</div>
+        )
+      case "funded":
+        return (
+          <div className="flex items-center justify-center text-xs text-muted-foreground">
+            {summary.summary.fundedCount}/{summary.accountCount}
+          </div>
+        )
+      case "balance":
+        return (
+          <div className="text-right font-semibold">
+            ${summary.summary.totalBalance.toFixed(2)}
+          </div>
+        )
+      case "targetProgress": {
+        const isConfigured = summary.summary.configuredCount > 0
+        if (!isConfigured) {
+          return (
+            <div className="text-xs text-muted-foreground">
+              {t("accounts.table.notConfigured")}
+            </div>
+          )
+        }
+        return (
+          <div className="min-w-[160px] space-y-1">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{t("accounts.table.remaining")}</span>
+              <span>${summary.summary.totalRemainingToTarget.toFixed(2)}</span>
+            </div>
+            <Progress
+              value={summary.summary.averageProgress}
+              className="h-1.5"
+              indicatorClassName={cn(
+                "transition-colors duration-300",
+                "bg-[hsl(var(--chart-6))]"
+              )}
+            />
+          </div>
+        )
+      }
+      case "totalPayout":
+        return (
+          <div className="text-right font-semibold">
+            ${summary.summary.totalPayouts.toFixed(2)}
+          </div>
+        )
+      case "drawdown":
+        return (
+          <div className="text-right text-sm text-muted-foreground">
+            ${summary.summary.totalRemainingLoss.toFixed(2)}
+          </div>
+        )
+      case "consistency":
+      case "maxDailyProfit":
+      case "tradingDays":
+        return (
+          <div className="text-right text-sm text-muted-foreground">—</div>
+        )
+      default:
+        return <span className="text-sm text-muted-foreground">—</span>
+    }
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-separate border-spacing-0 text-sm">
+    <div className="relative">
+      <div className="overflow-x-auto" ref={tableWrapperRef}>
+        <table className="w-full border-separate border-spacing-0 text-sm">
         <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
@@ -215,43 +343,83 @@ function AccountsTableSection({
           ))}
         </thead>
         <tbody className="bg-background [&_tr:last-child]:border-0">
-          {table.getRowModel().rows.map((row, rowIndex) => (
-            <tr
-              key={row.id}
-              className={cn(
-                "border-b border-border transition-all duration-75 hover:bg-muted/40",
-                rowIndex % 2 === 1 && "bg-muted/20",
-                row.getCanExpand() && "bg-muted/30 font-medium",
-                isDrawdownBreached(row.original) && "opacity-50",
-                (row.getCanExpand() || row.depth > 0) && "cursor-pointer"
-              )}
-              onClick={() => {
-                if (row.getCanExpand()) {
-                  row.toggleExpanded()
-                } else if (!isGroupRow(row.original)) {
-                  onSelectAccount(row.original)
-                }
-              }}
-            >
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className={cn(
-                    "px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle",
-                    row.depth > 0 && cell.column.id === "account" && "pl-6"
-                  )}
-                  style={{ width: cell.column.getSize() }}
+          {displayRows.map((entry, rowIndex) => {
+            if (entry.type === "summary") {
+              return (
+                <tr
+                  key={entry.summary.id}
+                className="border-b border-border bg-muted/50 font-semibold"
                 >
-                  {flexRender(
-                    cell.column.columnDef.cell,
-                    cell.getContext()
-                  )}
-                </td>
-              ))}
-            </tr>
-          ))}
+                  {table.getVisibleLeafColumns().map((column) => (
+                    <td
+                      key={`${entry.summary.id}-${column.id}`}
+                      className="px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle"
+                      style={{ width: column.getSize() }}
+                    >
+                      {renderSummaryCell(column.id, entry.summary)}
+                    </td>
+                  ))}
+                </tr>
+              )
+            }
+
+            const row = entry.row
+            return (
+              <tr
+                key={row.id}
+                className={cn(
+                  "border-b border-border transition-all duration-75 hover:bg-muted/40",
+                  rowIndex % 2 === 1 && "bg-muted/20",
+                  row.getCanExpand() && "bg-muted/30 font-medium",
+                  isDrawdownBreached(row.original) && "opacity-50",
+                  (row.getCanExpand() || row.depth > 0) && "cursor-pointer"
+                )}
+                onClick={() => {
+                  if (row.getCanExpand()) {
+                    row.toggleExpanded()
+                  } else if (!isGroupRow(row.original)) {
+                    onSelectAccount(row.original)
+                  }
+                }}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <td
+                    key={cell.id}
+                    className={cn(
+                      "px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle",
+                      row.depth > 0 && cell.column.id === "account" && "pl-6"
+                    )}
+                    style={{ width: cell.column.getSize() }}
+                  >
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext()
+                    )}
+                  </td>
+                ))}
+              </tr>
+            )
+          })}
         </tbody>
-      </table>
+        </table>
+      </div>
+      {showScrollHint && (
+        <div className="pointer-events-none absolute bottom-2 right-2">
+          <div className="pointer-events-auto flex items-start gap-2 rounded-md border border-border/60 bg-background/90 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
+            <span className="max-w-[220px] leading-snug">
+              {t("accounts.table.scrollHint")}
+            </span>
+            <button
+              type="button"
+              onClick={handleDismissHint}
+              className="text-muted-foreground/70 transition-colors hover:text-muted-foreground pointer-cursor"
+            >
+              <XCircle className="h-4 w-4" />
+              <span className="sr-only">{t("accounts.table.dismissHint")}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -260,20 +428,23 @@ export function AccountsTableView({
   accounts,
   groups,
   onSelectAccount,
+  sorting,
+  onSortingChange,
 }: AccountsTableViewProps) {
   const t = useI18n()
-  const locale = useCurrentLocale()
-  const dateLocale = locale === "fr" ? fr : enUS
+  const currentLocale = useCurrentLocale()
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(currentLocale, { dateStyle: "medium" }),
+    [currentLocale]
+  )
   const { getOrderedAccounts } = useAccountOrderStore()
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "account", desc: false },
-  ])
 
   const columns = useMemo<ColumnDef<AccountRow>[]>(
     () => [
       {
         id: "expand",
         header: () => null,
+        enableSorting: false,
         cell: ({ row }) => {
           if (!row.getCanExpand()) return null
           return (
@@ -301,7 +472,36 @@ export function AccountsTableView({
         size: 40,
       },
       {
+        id: "group",
+        accessorFn: (row) => (isGroupRow(row) ? row.name : ""),
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("accounts.table.group")}
+          />
+        ),
+        cell: ({ row }) => (
+          <div className="min-w-[160px] font-medium truncate">
+            {isGroupRow(row.original) ? (
+              <span>
+                {row.original.name} ({row.original.accounts.length})
+              </span>
+            ) : (
+              <span className="text-sm text-muted-foreground">—</span>
+            )}
+          </div>
+        ),
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original) ? rowA.original.name : ""
+          const b = isGroupRow(rowB.original) ? rowB.original.name : ""
+          return a.localeCompare(b)
+        },
+        size: 200,
+      },
+      {
         id: "account",
+        accessorFn: (row) =>
+          isGroupRow(row) ? getGroupAccountSortKey(row) : row.number || "",
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -311,9 +511,7 @@ export function AccountsTableView({
         cell: ({ row }) => (
           <div className="flex flex-col min-w-[160px]">
             {isGroupRow(row.original) ? (
-              <span className="font-medium truncate">
-                {row.original.name} ({row.original.accounts.length})
-              </span>
+              <span className="text-sm text-muted-foreground">—</span>
             ) : (
               <>
                 <span className="font-medium truncate">
@@ -330,10 +528,10 @@ export function AccountsTableView({
         ),
         sortingFn: (rowA, rowB) => {
           const a = isGroupRow(rowA.original)
-            ? rowA.original.name
+            ? getGroupAccountSortKey(rowA.original)
             : rowA.original.number || ""
           const b = isGroupRow(rowB.original)
-            ? rowB.original.name
+            ? getGroupAccountSortKey(rowB.original)
             : rowB.original.number || ""
           return a.localeCompare(b)
         },
@@ -341,6 +539,8 @@ export function AccountsTableView({
       },
       {
         id: "propfirm",
+        accessorFn: (row) =>
+          isGroupRow(row) ? "" : row.propfirm || t("propFirm.card.unnamedAccount"),
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -356,17 +556,66 @@ export function AccountsTableView({
         ),
         sortingFn: (rowA, rowB) => {
           const a = isGroupRow(rowA.original)
-            ? rowA.original.name
+            ? ""
             : rowA.original.propfirm || ""
           const b = isGroupRow(rowB.original)
-            ? rowB.original.name
+            ? ""
             : rowB.original.propfirm || ""
           return a.localeCompare(b)
         },
         size: 200,
       },
       {
+        id: "startDate",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? Number.POSITIVE_INFINITY
+            : getAccountStartDate(row)?.getTime() ?? Number.POSITIVE_INFINITY,
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("accounts.table.startDate")}
+          />
+        ),
+        cell: ({ row }) => {
+          if (isGroupRow(row.original)) {
+            return (
+              <div className="text-sm text-muted-foreground text-center">—</div>
+            )
+          }
+          const startDate = getAccountStartDate(row.original)
+          if (!startDate) {
+            return (
+              <div className="text-sm text-muted-foreground text-center">—</div>
+            )
+          }
+          return (
+            <div className="text-sm font-medium">
+              {dateFormatter.format(startDate)}
+            </div>
+          )
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original)
+            ? Number.POSITIVE_INFINITY
+            : getAccountStartDate(rowA.original)?.getTime() ??
+              Number.POSITIVE_INFINITY
+          const b = isGroupRow(rowB.original)
+            ? Number.POSITIVE_INFINITY
+            : getAccountStartDate(rowB.original)?.getTime() ??
+              Number.POSITIVE_INFINITY
+          return a - b
+        },
+        size: 140,
+      },
+      {
         id: "funded",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? row.summary.fundedCount
+            : row.evaluation === false
+              ? 1
+              : 0,
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -415,6 +664,8 @@ export function AccountsTableView({
       },
       {
         id: "balance",
+        accessorFn: (row) =>
+          isGroupRow(row) ? row.summary.totalBalance : getAccountBalance(row),
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -443,7 +694,44 @@ export function AccountsTableView({
         size: 120,
       },
       {
+        id: "totalPayout",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? row.summary.totalPayouts
+            : getAccountTotalPayouts(row),
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("accounts.table.totalPayout")}
+          />
+        ),
+        cell: ({ row }) => {
+          const totalPayouts = isGroupRow(row.original)
+            ? row.original.summary.totalPayouts
+            : getAccountTotalPayouts(row.original)
+          return (
+            <div className="text-right font-medium">
+              ${totalPayouts.toFixed(2)}
+            </div>
+          )
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original)
+            ? rowA.original.summary.totalPayouts
+            : getAccountTotalPayouts(rowA.original)
+          const b = isGroupRow(rowB.original)
+            ? rowB.original.summary.totalPayouts
+            : getAccountTotalPayouts(rowB.original)
+          return a - b
+        },
+        size: 140,
+      },
+      {
         id: "targetProgress",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? row.summary.averageProgress
+            : row.metrics?.progress ?? 0,
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -500,6 +788,10 @@ export function AccountsTableView({
       },
       {
         id: "drawdown",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? row.summary.totalRemainingLoss
+            : row.metrics?.remainingLoss ?? 0,
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
@@ -560,63 +852,84 @@ export function AccountsTableView({
         size: 200,
       },
       {
-        id: "weeklyTrend",
+        id: "consistency",
+        accessorFn: (row) => {
+          if (isGroupRow(row)) return -1
+          const metrics = row.metrics
+          if (!metrics?.hasProfitableData) return 0
+          return metrics.isConsistent || row.consistencyPercentage === 100 ? 2 : 1
+        },
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
-            title={t("accounts.table.weeklyTrend")}
+            title={t("propFirm.card.consistency")}
           />
         ),
         cell: ({ row }) => {
           if (isGroupRow(row.original)) {
             return (
-              <div className="text-right text-sm text-muted-foreground">—</div>
+              <div className="text-sm text-muted-foreground text-center">—</div>
             )
           }
-          const points = getDailyPnlPoints(row.original)
-          const sparkData = buildWeeklySpark(points, dateLocale)
-          const recentTwoTotal = sparkData
-            .slice(-2)
-            .reduce((sum, point) => sum + point.pnl, 0)
-          const sparkColor =
-            recentTwoTotal >= 0
-              ? "hsl(var(--success))"
-              : "hsl(var(--destructive))"
+          const metrics = row.original.metrics
+          if (!metrics?.isConfigured) {
+            return (
+              <div className="text-xs text-muted-foreground">
+                {t("accounts.table.notConfigured")}
+              </div>
+            )
+          }
+          if (!metrics.hasProfitableData) {
+            return (
+              <div className="text-xs text-muted-foreground italic">
+                {t("propFirm.status.unprofitable")}
+              </div>
+            )
+          }
+          const isConsistent =
+            metrics.isConsistent || row.original.consistencyPercentage === 100
           return (
-            <div className="min-w-[80px]">
-              <SparkLineChart
-                data={sparkData}
-                index="period"
-                categories={["pnl"]}
-                colors={{ pnl: sparkColor }}
-                height={28}
-              />
+            <div
+              className={cn(
+                "text-xs font-medium",
+                isConsistent ? "text-success" : "text-destructive"
+              )}
+            >
+              {isConsistent
+                ? t("propFirm.status.consistent")
+                : t("propFirm.status.inconsistent")}
             </div>
           )
         },
         sortingFn: (rowA, rowB) => {
           const a = isGroupRow(rowA.original)
-            ? 0
-            : buildWeeklySpark(
-                getDailyPnlPoints(rowA.original),
-                dateLocale
-              ).reduce((sum, point) => sum + point.pnl, 0)
+            ? -1
+            : rowA.original.metrics?.hasProfitableData
+              ? rowA.original.metrics.isConsistent ||
+                rowA.original.consistencyPercentage === 100
+                ? 2
+                : 1
+              : 0
           const b = isGroupRow(rowB.original)
-            ? 0
-            : buildWeeklySpark(
-                getDailyPnlPoints(rowB.original),
-                dateLocale
-              ).reduce((sum, point) => sum + point.pnl, 0)
+            ? -1
+            : rowB.original.metrics?.hasProfitableData
+              ? rowB.original.metrics.isConsistent ||
+                rowB.original.consistencyPercentage === 100
+                ? 2
+                : 1
+              : 0
           return a - b
         },
-        size: 120,
+        size: 180,
       },
       {
-        id: "monthlyTrend",
+        id: "maxDailyProfit",
+        accessorFn: (row) =>
+          isGroupRow(row) ? 0 : row.metrics?.highestProfitDay ?? 0,
         header: ({ column }) => (
           <DataTableColumnHeader
             column={column}
-            title={t("accounts.table.monthlyTrend")}
+            title={t("propFirm.card.highestDailyProfit")}
           />
         ),
         cell: ({ row }) => {
@@ -625,108 +938,110 @@ export function AccountsTableView({
               <div className="text-right text-sm text-muted-foreground">—</div>
             )
           }
-          const points = getDailyPnlPoints(row.original)
-          const sparkData = buildMonthlySpark(points)
-          const recentTwoTotal = sparkData
-            .slice(-2)
-            .reduce((sum, point) => sum + point.pnl, 0)
-          const sparkColor =
-            recentTwoTotal >= 0
-              ? "hsl(var(--success))"
-              : "hsl(var(--destructive))"
+          const maxDailyProfit = row.original.metrics?.highestProfitDay
+          if (maxDailyProfit === undefined) {
+            return (
+              <div className="text-right text-sm text-muted-foreground">—</div>
+            )
+          }
           return (
-            <div className="min-w-[80px]">
-              <SparkLineChart
-                data={sparkData}
-                index="period"
-                categories={["pnl"]}
-                colors={{ pnl: sparkColor }}
-                height={28}
-              />
+            <div className="text-right text-sm font-medium">
+              ${maxDailyProfit.toFixed(2)}
             </div>
           )
         },
         sortingFn: (rowA, rowB) => {
           const a = isGroupRow(rowA.original)
             ? 0
-            : buildMonthlySpark(getDailyPnlPoints(rowA.original)).reduce(
-                (sum, point) => sum + point.pnl,
-                0
-              )
+            : rowA.original.metrics?.highestProfitDay ?? 0
           const b = isGroupRow(rowB.original)
             ? 0
-            : buildMonthlySpark(getDailyPnlPoints(rowB.original)).reduce(
-                (sum, point) => sum + point.pnl,
-                0
-              )
+            : rowB.original.metrics?.highestProfitDay ?? 0
           return a - b
         },
-        size: 120,
+        size: 140,
+      },
+      {
+        id: "tradingDays",
+        accessorFn: (row) =>
+          isGroupRow(row) ? 0 : row.metrics?.totalTradingDays ?? 0,
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("propFirm.card.tradingDays")}
+          />
+        ),
+        cell: ({ row }) => {
+          if (isGroupRow(row.original)) {
+            return (
+              <div className="text-right text-sm text-muted-foreground">—</div>
+            )
+          }
+          const metrics = row.original.metrics
+          if (!metrics?.isConfigured) {
+            return (
+              <div className="text-xs text-muted-foreground">
+                {t("accounts.table.notConfigured")}
+              </div>
+            )
+          }
+          const totalTradingDays = metrics.totalTradingDays ?? 0
+          const validTradingDays = metrics.validTradingDays ?? 0
+          return (
+            <div className="text-right text-sm">
+              <span
+                className={cn(
+                  "font-medium",
+                  validTradingDays === totalTradingDays
+                    ? "text-success"
+                    : "text-warning"
+                )}
+              >
+                {validTradingDays}/{totalTradingDays}
+              </span>
+            </div>
+          )
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original)
+            ? 0
+            : rowA.original.metrics?.totalTradingDays ?? 0
+          const b = isGroupRow(rowB.original)
+            ? 0
+            : rowB.original.metrics?.totalTradingDays ?? 0
+          return a - b
+        },
+        size: 140,
       },
     ],
-    [t, dateLocale]
+    [t, dateFormatter]
   )
 
   const groupedAccounts = useMemo(() => {
     const buildGroupRow = (
       groupId: string,
       groupName: string,
-      groupAccounts: Account[],
-      index: number
+      groupAccounts: Account[]
     ): AccountGroupRow | null => {
       if (groupAccounts.length === 0) return null
 
-      const summary = groupAccounts.reduce(
-        (acc, account) => {
-          const currentBalance = getAccountBalance(account)
-          const metrics = account.metrics
-          acc.totalBalance += currentBalance
-          if (metrics?.isConfigured) {
-            acc.totalRemainingToTarget += metrics.remainingToTarget ?? 0
-            acc.totalRemainingLoss += metrics.remainingLoss ?? 0
-            acc.totalProgress += metrics.progress ?? 0
-            acc.configuredCount += 1
-          }
-          if (account.isPerformance === true) acc.fundedCount += 1
-          return acc
-        },
-        {
-          totalBalance: 0,
-          totalRemainingToTarget: 0,
-          totalRemainingLoss: 0,
-          totalProgress: 0,
-          configuredCount: 0,
-          fundedCount: 0,
-        }
-      )
-
       return {
         kind: "group",
-        id: `${groupId}-${index}`,
+        id: groupId,
         name: groupName,
         accounts: groupAccounts,
-        summary: {
-          totalBalance: summary.totalBalance,
-          totalRemainingToTarget: summary.totalRemainingToTarget,
-          totalRemainingLoss: summary.totalRemainingLoss,
-          averageProgress:
-            summary.configuredCount > 0
-              ? summary.totalProgress / summary.configuredCount
-              : 0,
-          configuredCount: summary.configuredCount,
-          fundedCount: summary.fundedCount,
-        },
+        summary: getAccountsSummary(groupAccounts),
       }
     }
 
     const rows: AccountRow[] = []
 
-    groups.forEach((group, index) => {
+    groups.forEach((group) => {
       const groupAccounts = accounts.filter((account) =>
         group.accounts.some((a) => a.number === account.number)
       )
       const orderedAccounts = getOrderedAccounts(group.id, groupAccounts)
-      const groupRow = buildGroupRow(group.id, group.name, orderedAccounts, index)
+      const groupRow = buildGroupRow(group.id, group.name, orderedAccounts)
       if (groupRow) rows.push(groupRow)
     })
 
@@ -740,13 +1055,22 @@ export function AccountsTableView({
     const ungroupedRow = buildGroupRow(
       "ungrouped",
       t("propFirm.ungrouped"),
-      orderedUngrouped,
-      rows.length
+      orderedUngrouped
     )
     if (ungroupedRow) rows.push(ungroupedRow)
 
     return rows
   }, [accounts, groups, getOrderedAccounts, t])
+
+  const totalSummary = useMemo<SummaryRow | null>(() => {
+    if (accounts.length === 0) return null
+    return {
+      id: "accounts-total",
+      label: t("accounts.table.total"),
+      summary: getAccountsSummary(accounts),
+      accountCount: accounts.length,
+    }
+  }, [accounts, t])
 
   return (
     <div className="space-y-6">
@@ -755,7 +1079,8 @@ export function AccountsTableView({
         onSelectAccount={onSelectAccount}
         columns={columns}
         sorting={sorting}
-        onSortingChange={setSorting}
+        onSortingChange={onSortingChange}
+        totalSummary={totalSummary}
       />
     </div>
   )

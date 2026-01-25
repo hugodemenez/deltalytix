@@ -3,7 +3,8 @@ import { useI18n } from "@/locales/client";
 import { FinancialEvent } from "@/prisma/generated/prisma/browser";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useEditorState } from "@tiptap/react";
-import { Bold, Italic, UnderlineIcon, Strikethrough, Highlighter, Heading1, Heading2, Heading3, List, ListOrdered, Quote, ImageIcon, Loader2, Sparkles, MoreHorizontal, Minimize2, Maximize2, Table2, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import type { Editor } from "@tiptap/react";
+import { Heading1, Heading2, Heading3, List, ListOrdered, Quote, ImageIcon, Loader2, Sparkles, MoreHorizontal, Minimize2, Maximize2, Table2, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { NewsSubMenu } from "@/components/ai-elements/news-sub-menu";
@@ -24,7 +25,7 @@ export function ResponsiveMenuBar({
   onEmbedNews,
   date,
 }: {
-  editor: any;
+  editor: Editor;
   onRunAIAction: (action: z.infer<typeof EditorAction>) => void;
   status: string;
   onFileInput: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -439,7 +440,7 @@ export function ResponsiveMenuBar({
             />
           )}
 
-        {visibleItemsList.map((item, index) => {
+        {visibleItemsList.map((item) => {
           if (item.type === "separator") {
             return (
               <div key={item.id} className="w-px h-6 bg-border mx-1 shrink-0" />

@@ -58,3 +58,6 @@ datafeeds/
 *.csv
 
 **/market/**
+
+# Lock files
+*.lock

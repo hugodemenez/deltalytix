@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, startTransition } from 'react'
 
 type Theme = 'light' | 'dark' | 'system'
 
@@ -48,17 +48,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const savedTheme = localStorage.getItem('theme') as Theme | null
     const savedIntensity = localStorage.getItem('intensity')
 
-    if (savedTheme) {
-      setThemeState(savedTheme)
-    }
-    if (savedIntensity) {
-      setIntensityState(Number(savedIntensity))
-    }
+    startTransition(() => {
+      if (savedTheme) {
+        setThemeState(savedTheme)
+      }
+      if (savedIntensity) {
+        setIntensityState(Number(savedIntensity))
+      }
+    })
     applyTheme(savedTheme || 'system')
   }, [])
 
   useEffect(() => {
-    applyTheme(theme)
+    startTransition(() => {
+      applyTheme(theme)
+    })
     localStorage.setItem('theme', theme)
     localStorage.setItem('intensity', intensity.toString())
 

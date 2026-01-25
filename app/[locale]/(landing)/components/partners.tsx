@@ -30,15 +30,6 @@ export default function Partners() {
                     </a>
                     <a className="relative w-full h-[60px] flex items-center justify-center">
                         <Image
-                            src={effectiveTheme !== 'dark' ? '/logos/etp-b.png' : '/logos/etp-w.png'}
-                            alt="Trade Copier by ETP"
-                            fill
-                            className="object-contain"
-                            priority
-                        />
-                    </a>
-                    <a className="relative w-full h-[60px] flex items-center justify-center">
-                        <Image
                             src={effectiveTheme === 'dark' ? '/logos/rithmic-logo-white.png' : '/logos/rithmic-logo-black.png'}
                             alt="Rithmic"
                             fill
