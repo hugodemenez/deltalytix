@@ -2240,7 +2240,7 @@ export default {
   },
   "calendar.maxProfit": "Max P",
   "calendar.maxDD": "Max DD",
-  "accounts.view.cards": "Cartes",
+  "accounts.view.charts": "Graphiques",
   "accounts.view.table": "Tableau",
   "accounts.table.account": "Compte",
   "accounts.table.propfirm": "Prop firm",

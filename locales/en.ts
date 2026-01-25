@@ -2079,7 +2079,7 @@ export default {
   },
   "calendar.maxProfit": "Max P",
   "calendar.maxDD": "Max DD",
-  "accounts.view.cards": "Cards",
+  "accounts.view.charts": "Charts",
   "accounts.view.table": "Table",
   "accounts.table.account": "Account",
   "accounts.table.propfirm": "Prop firm",

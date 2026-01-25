@@ -12,53 +12,13 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table"
-import {
-  DndContext,
-  closestCenter,
-  DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core"
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
 import { Account, Group } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import { Progress } from "@/components/ui/progress"
 import { useAccountOrderStore } from "@/store/account-order-store"
 import { DataTableColumnHeader } from "../tables/column-header"
-import { Button } from "@/components/ui/button"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  ArrowDown,
-  ArrowUp,
-  CheckCircle,
-  ChevronDown,
-  ChevronRight,
-  GripVertical,
-  ListOrdered,
-  X,
-  XCircle,
-} from "lucide-react"
+import { CheckCircle, ChevronDown, ChevronRight, XCircle } from "lucide-react"
 
 type AccountGroupRow = {
   kind: "group"
@@ -81,6 +41,8 @@ interface AccountsTableViewProps {
   accounts: Account[]
   groups: Group[]
   onSelectAccount: (account: Account) => void
+  sorting: SortingState
+  onSortingChange: OnChangeFn<SortingState>
 }
 
 function toValidDate(value: Date | string | null | undefined) {
@@ -103,82 +65,6 @@ function getAccountStartDate(account: Account) {
     .sort((a, b) => a.getTime() - b.getTime())
 
   return dailyDates[0] ?? null
-}
-
-type SortOption = {
-  id: string
-  label: string
-}
-
-function SortRuleItem({
-  sort,
-  label,
-  reorderLabel,
-  toggleLabel,
-  removeLabel,
-  onToggleDirection,
-  onRemove,
-}: {
-  sort: SortingState[number]
-  label: string
-  reorderLabel: string
-  toggleLabel: string
-  removeLabel: string
-  onToggleDirection: () => void
-  onRemove: () => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: sort.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-sm",
-        isDragging && "opacity-70 shadow-sm"
-      )}
-    >
-      <button
-        type="button"
-        className="cursor-grab text-muted-foreground active:cursor-grabbing"
-        {...attributes}
-        {...listeners}
-        aria-label={reorderLabel}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <span className="flex-1 truncate">{label}</span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onToggleDirection}
-        className="h-7 w-7"
-        aria-label={toggleLabel}
-      >
-        {sort.desc ? (
-          <ArrowDown className="h-4 w-4" />
-        ) : (
-          <ArrowUp className="h-4 w-4" />
-        )}
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        onClick={onRemove}
-        className="h-7 w-7 text-muted-foreground hover:text-foreground"
-        aria-label={removeLabel}
-      >
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
-  )
 }
 
 function isGroupRow(row: AccountRow): row is AccountGroupRow {
@@ -205,29 +91,14 @@ function AccountsTableSection({
   columns,
   sorting,
   onSortingChange,
-  sortOptions,
-  t,
 }: {
   rows: AccountRow[]
   onSelectAccount: (account: Account) => void
   columns: ColumnDef<AccountRow>[]
   sorting: SortingState
   onSortingChange: OnChangeFn<SortingState>
-  sortOptions: SortOption[]
-  t: ReturnType<typeof useI18n>
 }) {
   const [expanded, setExpanded] = useState<ExpandedState>({})
-  const [sortingMenuOpen, setSortingMenuOpen] = useState(false)
-  const [pendingSortId, setPendingSortId] = useState<string>("")
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  )
-  const availableSortOptions = sortOptions.filter(
-    (option) => !sorting.some((rule) => rule.id === option.id)
-  )
   const isDrawdownBreached = (row: AccountRow) => {
     if (isGroupRow(row)) return false
     const drawdownThreshold = row.drawdownThreshold ?? 0
@@ -254,145 +125,6 @@ function AccountsTableSection({
     <div className="overflow-x-auto">
       <table className="w-full border-separate border-spacing-0 text-sm">
         <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
-          <tr>
-            <th
-              colSpan={table.getVisibleLeafColumns().length}
-              className="px-3 py-2 text-right"
-            >
-              <div className="flex items-center justify-start">
-                <Popover
-                  open={sortingMenuOpen}
-                  onOpenChange={setSortingMenuOpen}
-                >
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <ListOrdered className="h-4 w-4" />
-                      {sorting.length > 0
-                        ? t("table.sortingRules", { count: sorting.length })
-                        : t("table.sorting")}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 p-3">
-                    <div className="space-y-3">
-                      {sorting.length === 0 ? (
-                        <div className="text-sm text-muted-foreground">
-                          {t("table.noSorting")}
-                        </div>
-                      ) : (
-                        <DndContext
-                          sensors={sensors}
-                          collisionDetection={closestCenter}
-                          onDragEnd={(event: DragEndEvent) => {
-                            const { active, over } = event
-                            if (!over || active.id === over.id) return
-                            const oldIndex = sorting.findIndex(
-                              (rule) => rule.id === active.id
-                            )
-                            const newIndex = sorting.findIndex(
-                              (rule) => rule.id === over.id
-                            )
-                            if (oldIndex === -1 || newIndex === -1) return
-                            onSortingChange((prev) =>
-                              arrayMove(prev, oldIndex, newIndex)
-                            )
-                          }}
-                        >
-                          <SortableContext
-                            items={sorting.map((rule) => rule.id)}
-                            strategy={verticalListSortingStrategy}
-                          >
-                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                              {sorting.map((rule) => {
-                                const label =
-                                  sortOptions.find(
-                                    (option) => option.id === rule.id
-                                  )?.label ?? rule.id
-                                return (
-                                  <SortRuleItem
-                                    key={rule.id}
-                                    sort={rule}
-                                    label={label}
-                                    reorderLabel={t("table.reorderSort")}
-                                    toggleLabel={
-                                      rule.desc
-                                        ? t("table.sortDescending")
-                                        : t("table.sortAscending")
-                                    }
-                                    removeLabel={t("table.removeSort")}
-                                    onToggleDirection={() =>
-                                      onSortingChange((prev) =>
-                                        prev.map((item) =>
-                                          item.id === rule.id
-                                            ? { ...item, desc: !item.desc }
-                                            : item
-                                        )
-                                      )
-                                    }
-                                    onRemove={() =>
-                                      onSortingChange((prev) =>
-                                        prev.filter(
-                                          (item) => item.id !== rule.id
-                                        )
-                                      )
-                                    }
-                                  />
-                                )
-                              })}
-                            </div>
-                          </SortableContext>
-                        </DndContext>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <Select
-                          value={pendingSortId}
-                          onValueChange={(value) => {
-                            const nextValue = value === "__none" ? "" : value
-                            setPendingSortId(nextValue)
-                            if (nextValue) {
-                              onSortingChange((prev) => [
-                                ...prev,
-                                { id: nextValue, desc: false },
-                              ])
-                              setPendingSortId("")
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-8 flex-1">
-                            <SelectValue
-                              placeholder={t("table.pickSortColumn")}
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableSortOptions.length === 0 ? (
-                              <SelectItem value="__none" disabled>
-                                {t("table.noMoreSortOptions")}
-                              </SelectItem>
-                            ) : (
-                              availableSortOptions.map((option) => (
-                                <SelectItem key={option.id} value={option.id}>
-                                  {option.label}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onSortingChange([])}
-                          disabled={sorting.length === 0}
-                        >
-                          {t("table.clearSorting")}
-                        </Button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </th>
-          </tr>
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
               key={headerGroup.id}
@@ -461,6 +193,8 @@ export function AccountsTableView({
   accounts,
   groups,
   onSelectAccount,
+  sorting,
+  onSortingChange,
 }: AccountsTableViewProps) {
   const t = useI18n()
   const currentLocale = useCurrentLocale()
@@ -469,10 +203,6 @@ export function AccountsTableView({
     [currentLocale]
   )
   const { getOrderedAccounts } = useAccountOrderStore()
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "group", desc: false },
-    { id: "account", desc: false },
-  ])
 
   const columns = useMemo<ColumnDef<AccountRow>[]>(
     () => [
@@ -1019,24 +749,6 @@ export function AccountsTableView({
     [t, dateFormatter]
   )
 
-  const sortOptions = useMemo<SortOption[]>(
-    () => [
-      { id: "group", label: t("accounts.table.group") },
-      { id: "account", label: t("accounts.table.account") },
-      { id: "propfirm", label: t("accounts.table.propfirm") },
-      { id: "startDate", label: t("accounts.table.startDate") },
-      { id: "funded", label: t("accounts.table.funded") },
-      { id: "balance", label: t("accounts.table.balance") },
-      { id: "targetProgress", label: t("accounts.table.targetProgress") },
-      { id: "drawdown", label: t("accounts.table.drawdownRemaining") },
-      { id: "consistency", label: t("propFirm.card.consistency") },
-      { id: "maxDailyProfit", label: t("propFirm.card.highestDailyProfit") },
-      { id: "tradingDays", label: t("propFirm.card.tradingDays") },
-    ],
-    [t]
-  )
-
-
   const groupedAccounts = useMemo(() => {
     const buildGroupRow = (
       groupId: string,
@@ -1125,9 +837,7 @@ export function AccountsTableView({
         onSelectAccount={onSelectAccount}
         columns={columns}
         sorting={sorting}
-        onSortingChange={setSorting}
-        sortOptions={sortOptions}
-        t={t}
+        onSortingChange={onSortingChange}
       />
     </div>
   )
