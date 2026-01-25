@@ -27,6 +27,7 @@ type AccountGroupRow = {
   accounts: Account[]
   summary: {
     totalBalance: number
+    totalPayouts: number
     totalRemainingToTarget: number
     totalRemainingLoss: number
     averageProgress: number
@@ -82,12 +83,19 @@ function getAccountBalance(account: Account) {
   return account.metrics?.currentBalance ?? account.startingBalance ?? 0
 }
 
+function getAccountTotalPayouts(account: Account) {
+  return (account.payouts ?? [])
+    .filter((payout) => payout.status === "PAID" || payout.status === "VALIDATED")
+    .reduce((sum, payout) => sum + payout.amount, 0)
+}
+
 function getAccountsSummary(accounts: Account[]) {
   const summary = accounts.reduce(
     (acc, account) => {
       const currentBalance = getAccountBalance(account)
       const metrics = account.metrics
       acc.totalBalance += currentBalance
+      acc.totalPayouts += getAccountTotalPayouts(account)
       if (metrics?.isConfigured) {
         acc.totalRemainingToTarget += metrics.remainingToTarget ?? 0
         acc.totalRemainingLoss += metrics.remainingLoss ?? 0
@@ -99,6 +107,7 @@ function getAccountsSummary(accounts: Account[]) {
     },
     {
       totalBalance: 0,
+      totalPayouts: 0,
       totalRemainingToTarget: 0,
       totalRemainingLoss: 0,
       totalProgress: 0,
@@ -109,6 +118,7 @@ function getAccountsSummary(accounts: Account[]) {
 
   return {
     totalBalance: summary.totalBalance,
+    totalPayouts: summary.totalPayouts,
     totalRemainingToTarget: summary.totalRemainingToTarget,
     totalRemainingLoss: summary.totalRemainingLoss,
     averageProgress:
@@ -273,6 +283,17 @@ function AccountsTableSection({
           </div>
         )
       }
+      case "totalPayout":
+        return (
+          <div
+            className={cn(
+              "text-right",
+              variant === "total" ? "font-semibold" : "font-medium"
+            )}
+          >
+            ${summary.summary.totalPayouts.toFixed(2)}
+          </div>
+        )
       case "drawdown":
         return (
           <div className="text-right text-sm text-muted-foreground">
@@ -653,6 +674,39 @@ export function AccountsTableView({
           return a - b
         },
         size: 120,
+      },
+      {
+        id: "totalPayout",
+        accessorFn: (row) =>
+          isGroupRow(row)
+            ? row.summary.totalPayouts
+            : getAccountTotalPayouts(row),
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("accounts.table.totalPayout")}
+          />
+        ),
+        cell: ({ row }) => {
+          const totalPayouts = isGroupRow(row.original)
+            ? row.original.summary.totalPayouts
+            : getAccountTotalPayouts(row.original)
+          return (
+            <div className="text-right font-medium">
+              ${totalPayouts.toFixed(2)}
+            </div>
+          )
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original)
+            ? rowA.original.summary.totalPayouts
+            : getAccountTotalPayouts(rowA.original)
+          const b = isGroupRow(rowB.original)
+            ? rowB.original.summary.totalPayouts
+            : getAccountTotalPayouts(rowB.original)
+          return a - b
+        },
+        size: 140,
       },
       {
         id: "targetProgress",
