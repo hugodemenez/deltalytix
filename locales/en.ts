@@ -2098,6 +2098,8 @@ export default {
   "accounts.table.total": "Total",
   "accounts.table.expandGroup": "Expand group",
   "accounts.table.collapseGroup": "Collapse group",
+  "accounts.table.scrollHint": "Tip: hold Shift and scroll to move horizontally.",
+  "accounts.table.dismissHint": "Dismiss hint",
   "table.sorting": "Sorting",
   "table.sortingRules": "Sorted by {count} rules",
   "table.noSorting": "No sorting applied",

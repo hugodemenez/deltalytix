@@ -2259,6 +2259,8 @@ export default {
   "accounts.table.total": "Total",
   "accounts.table.expandGroup": "Développer le groupe",
   "accounts.table.collapseGroup": "Réduire le groupe",
+  "accounts.table.scrollHint": "Astuce : maintenez Maj et faites défiler la molette pour un défilement horizontal.",
+  "accounts.table.dismissHint": "Fermer l'astuce",
   "table.sorting": "Tri",
   "table.sortingRules": "Trié par {count} règles",
   "table.noSorting": "Aucun tri appliqué",

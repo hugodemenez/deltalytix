@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ColumnDef,
   flexRender,
@@ -157,6 +157,9 @@ function AccountsTableSection({
 }) {
   const t = useI18n()
   const [expanded, setExpanded] = useState<ExpandedState>({})
+  const tableWrapperRef = useRef<HTMLDivElement | null>(null)
+  const [isHintDismissed, setIsHintDismissed] = useState(true)
+  const [canScrollHorizontally, setCanScrollHorizontally] = useState(false)
   const isDrawdownBreached = (row: AccountRow) => {
     if (isGroupRow(row)) return false
     const drawdownThreshold = row.drawdownThreshold ?? 0
@@ -176,8 +179,6 @@ function AccountsTableSection({
     getRowCanExpand: (row) => isGroupRow(row.original),
     enableMultiSort: true,
   })
-
-  if (rows.length === 0) return null
 
   const visibleRows = table.getRowModel().rows
   const displayRows: Array<
@@ -218,6 +219,31 @@ function AccountsTableSection({
       summary: totalSummary,
     })
   }
+
+  useEffect(() => {
+    const storedValue = localStorage.getItem("accountsTableScrollHintDismissed")
+    setIsHintDismissed(storedValue === "true")
+  }, [])
+
+  useEffect(() => {
+    const updateScrollState = () => {
+      const wrapper = tableWrapperRef.current
+      if (!wrapper) return
+      setCanScrollHorizontally(wrapper.scrollWidth > wrapper.clientWidth + 1)
+    }
+
+    updateScrollState()
+    window.addEventListener("resize", updateScrollState)
+    return () => window.removeEventListener("resize", updateScrollState)
+  }, [displayRows.length, columns.length])
+
+  const showScrollHint = canScrollHorizontally && !isHintDismissed
+  const handleDismissHint = () => {
+    localStorage.setItem("accountsTableScrollHintDismissed", "true")
+    setIsHintDismissed(true)
+  }
+
+  if (rows.length === 0) return null
 
   const renderSummaryCell = (
     columnId: string,
@@ -312,8 +338,9 @@ function AccountsTableSection({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full border-separate border-spacing-0 text-sm">
+    <div className="relative">
+      <div className="overflow-x-auto" ref={tableWrapperRef}>
+        <table className="w-full border-separate border-spacing-0 text-sm">
         <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr
@@ -401,7 +428,25 @@ function AccountsTableSection({
             )
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
+      {showScrollHint && (
+        <div className="pointer-events-none absolute bottom-2 right-2">
+          <div className="pointer-events-auto flex items-start gap-2 rounded-md border border-border/60 bg-background/90 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur-sm">
+            <span className="max-w-[220px] leading-snug">
+              {t("accounts.table.scrollHint")}
+            </span>
+            <button
+              type="button"
+              onClick={handleDismissHint}
+              className="text-muted-foreground/70 transition-colors hover:text-muted-foreground pointer-cursor"
+            >
+              <XCircle className="h-4 w-4" />
+              <span className="sr-only">{t("accounts.table.dismissHint")}</span>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
