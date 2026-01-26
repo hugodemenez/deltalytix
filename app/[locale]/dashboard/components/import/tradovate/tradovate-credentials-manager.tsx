@@ -151,19 +151,21 @@ export function TradovateCredentialsManager() {
       );
       
       if (result.success) {
-        toast.success("Daily sync time updated successfully");
+        toast.success(t("tradovateSync.multiAccount.dailySyncTimeUpdated"));
         setIsTimeDialogOpen(false);
         await loadAccounts(); // Reload to show updated time
       } else {
-        toast.error(result.error || "Failed to update sync time");
+        toast.error(
+          result.error || t("tradovateSync.multiAccount.dailySyncTimeUpdateError"),
+        );
       }
     } catch (error) {
-      toast.error("Failed to update sync time");
+      toast.error(t("tradovateSync.multiAccount.dailySyncTimeUpdateError"));
       console.error("Update sync time error:", error);
     } finally {
       setIsSavingTime(false);
     }
-  }, [selectedAccountId, dailySyncTime, loadAccounts]);
+  }, [selectedAccountId, dailySyncTime, loadAccounts, t]);
 
   const handlePresetTime = useCallback((preset: string) => {
     let hours: number;
@@ -198,7 +200,7 @@ export function TradovateCredentialsManager() {
   }, []);
 
   function formatSyncTime(date: Date | null) {
-    if (!date) return "Not set";
+    if (!date) return t("tradovateSync.multiAccount.dailySyncTimeNotSet");
     
     // The date from DB is stored with UTC hours/minutes
     // We need to create a proper UTC date and convert to local
@@ -281,7 +283,9 @@ export function TradovateCredentialsManager() {
                 {t("tradovateSync.multiAccount.environment")}
               </TableHead>
               <TableHead>{t("tradovateSync.multiAccount.lastSync")}</TableHead>
-              <TableHead>Daily Sync Time (Local)</TableHead>
+              <TableHead>
+                {t("tradovateSync.multiAccount.dailySyncTimeLocal")}
+              </TableHead>
               <TableHead>
                 {t("tradovateSync.multiAccount.tokenStatus")}
               </TableHead>
@@ -309,7 +313,7 @@ export function TradovateCredentialsManager() {
                         : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     }`}
                   >
-                    demo
+                    {t("tradovateSync.multiAccount.environmentDemo")}
                   </span>
                 </TableCell>
                 <TableCell>{formatDate(account.lastSyncedAt.toISOString())}</TableCell>
@@ -441,29 +445,36 @@ export function TradovateCredentialsManager() {
       <Dialog open={isTimeDialogOpen} onOpenChange={setIsTimeDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Set Daily Sync Time</DialogTitle>
+            <DialogTitle>
+              {t("tradovateSync.multiAccount.dailySyncTimeTitle")}
+            </DialogTitle>
             <DialogDescription>
-              Configure when this account should automatically sync each day (in your local time).
-              Leave empty to disable automatic syncing.
+              {t("tradovateSync.multiAccount.dailySyncTimeDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
             <div className="space-y-2">
-              <Label htmlFor="syncTime">Sync Time (Local Time)</Label>
+              <Label htmlFor="syncTime">
+                {t("tradovateSync.multiAccount.dailySyncTimeLabel")}
+              </Label>
               <Input
                 id="syncTime"
                 type="time"
                 value={dailySyncTime}
                 onChange={(e) => setDailySyncTime(e.target.value)}
-                placeholder="HH:mm"
+                placeholder={t(
+                  "tradovateSync.multiAccount.dailySyncTimePlaceholder",
+                )}
               />
               <p className="text-sm text-muted-foreground">
-                Time is in your local timezone ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+                {t("tradovateSync.multiAccount.dailySyncTimeTimezoneNote", {
+                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                })}
               </p>
             </div>
             
             <div className="space-y-2">
-              <Label>Quick Presets</Label>
+              <Label>{t("tradovateSync.multiAccount.quickPresets")}</Label>
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
@@ -471,7 +482,7 @@ export function TradovateCredentialsManager() {
                   size="sm"
                   onClick={() => handlePresetTime('morning')}
                 >
-                  Morning (8:00 AM)
+                  {t("tradovateSync.multiAccount.presets.morning")}
                 </Button>
                 <Button
                   type="button"
@@ -479,7 +490,7 @@ export function TradovateCredentialsManager() {
                   size="sm"
                   onClick={() => handlePresetTime('midday')}
                 >
-                  Midday (12:00 PM)
+                  {t("tradovateSync.multiAccount.presets.midday")}
                 </Button>
                 <Button
                   type="button"
@@ -487,7 +498,7 @@ export function TradovateCredentialsManager() {
                   size="sm"
                   onClick={() => handlePresetTime('after-close')}
                 >
-                  After Market Close (22:00 UTC)
+                  {t("tradovateSync.multiAccount.presets.afterClose")}
                 </Button>
                 <Button
                   type="button"
@@ -495,7 +506,7 @@ export function TradovateCredentialsManager() {
                   size="sm"
                   onClick={() => handlePresetTime('midnight')}
                 >
-                  Midnight (12:00 AM)
+                  {t("tradovateSync.multiAccount.presets.midnight")}
                 </Button>
               </div>
             </div>
@@ -514,10 +525,10 @@ export function TradovateCredentialsManager() {
                 {isSavingTime ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
+                    {t("common.saving")}
                   </>
                 ) : (
-                  "Save"
+                  t("common.save")
                 )}
               </Button>
             </div>
