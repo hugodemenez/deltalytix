@@ -2064,6 +2064,25 @@ export default {
       accountNameRequired: "Le nom du compte est requis",
       accountsReloaded: "Comptes rechargés avec succès",
       reloadError: "Échec du rechargement des comptes",
+      dailySyncTimeLocal: "Heure de sync quotidienne (locale)",
+      environmentDemo: "Démo",
+      dailySyncTimeTitle: "Définir l'heure de sync quotidienne",
+      dailySyncTimeDescription:
+        "Configurez l'heure à laquelle ce compte doit se synchroniser automatiquement chaque jour (dans votre heure locale). Laissez vide pour désactiver la synchronisation automatique.",
+      dailySyncTimeLabel: "Heure de sync (heure locale)",
+      dailySyncTimePlaceholder: "HH:mm",
+      dailySyncTimeTimezoneNote:
+        "L'heure est dans votre fuseau horaire local ({timezone})",
+      dailySyncTimeNotSet: "Non défini",
+      dailySyncTimeUpdated: "Heure de sync quotidienne mise à jour avec succès",
+      dailySyncTimeUpdateError: "Échec de la mise à jour de l'heure de sync",
+      quickPresets: "Préréglages rapides",
+      presets: {
+        morning: "Matin (8:00)",
+        midday: "Midi (12:00)",
+        afterClose: "Après clôture (22:00 UTC)",
+        midnight: "Minuit (00:00)",
+      },
     },
     tabs: {
       accounts: "Comptes",
