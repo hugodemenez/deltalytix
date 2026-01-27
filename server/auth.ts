@@ -513,6 +513,11 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
       type
     })
 
+    if (data.user && data.session) {
+      const locale = email.includes('.fr') ? 'fr' : 'en';
+      await ensureUserInDatabase(data.user, locale)
+    }
+
     if (error) {
       throw new Error(error.message)
     }
