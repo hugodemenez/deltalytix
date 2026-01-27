@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:16
+    container_name: deltalytix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-devuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpass}
+      POSTGRES_DB: ${POSTGRES_DB:-deltalytix_dev}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - deltalytix-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devuser} -d ${POSTGRES_DB:-deltalytix_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # This is used to migrate the database
+  migrate:
+    image: oven/bun:1
+    container_name: deltalytix-migrate
+    working_dir: /app
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
+    volumes:
+      - ./:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "bun i prisma pg@latest dotenv@latest && bunx prisma migrate dev"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devuser} -d ${POSTGRES_DB:-deltalytix_dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.bun
+    container_name: deltalytix-app
+    working_dir: /app
+    restart: unless-stopped
+    environment:
+      ENV: container
+      DATABASE_URL: postgresql://${POSTGRES_USER:-devuser}:${POSTGRES_PASSWORD:-devpass}@db:5432/${POSTGRES_DB:-deltalytix_dev}
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${PORT:-3000}:3000"
+
+volumes:
+  deltalytix-postgres:

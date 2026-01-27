@@ -6,12 +6,11 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "prisma generate && ts-node scripts/generate-routes.ts",
+    "prebuild": "ts-node scripts/generate-routes.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "postinstall": "prisma generate"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
@@ -120,9 +119,9 @@
     "papaparse": "^5.5.3",
     "pdf-lib": "^1.17.1",
     "pdf2json": "^3.2.2",
-    "pg": "^8.16.3",
+    "pg": "^8.17.2",
     "playwright-core": "^1.56.1",
-    "prisma": "^7.2.0",
+    "prisma": "^7.3.0",
     "react": "19.2.1",
     "react-colorful": "^5.6.1",
     "react-day-picker": "^9.11.1",

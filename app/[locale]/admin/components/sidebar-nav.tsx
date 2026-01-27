@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { Mail, BarChart, UserPlus, TrendingUp, Send } from "lucide-react"
+import { Mail, BarChart, UserPlus, Send } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -41,11 +40,6 @@ export function SidebarNav({ className, ...props }: SidebarNavProps) {
       href: "/admin/send-email",
       label: "Send Email",
       icon: Send,
-    },
-    {
-      href: "/admin/user-equity",
-      label: "User Equity",
-      icon: TrendingUp,
     },
   ]
 
