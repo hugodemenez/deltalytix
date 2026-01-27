@@ -35,6 +35,7 @@ jobs:
 
       - name: Generate changelog entries
         env:
+          GH_TOKEN: ${{ github.token }}
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
           # Create a new branch from the current HEAD (which is the PR head SHA)
