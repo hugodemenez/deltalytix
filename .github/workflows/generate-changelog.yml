@@ -81,7 +81,7 @@ jobs:
             Create separate entries for distinct features/changes. 
             Write in both English and French (create files in both directories).
             
-            Only create changelog files - do not modify any other files."
+            Only create changelog files - do not modify any other files." --model auto
           
           # Check if changelog files were created
           if [ -z "$(git status --porcelain content/updates/)" ]; then
