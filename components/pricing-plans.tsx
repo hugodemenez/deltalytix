@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState, startTransition } from 'react'
 import Link from 'next/link'
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Check, X, AlertCircle } from "lucide-react"
 import { useCurrentLocale, useI18n } from "@/locales/client"
@@ -17,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { toast } from 'sonner'
+import { cn } from "@/lib/utils"
 
 // Currency detection hook
 // Handles special case for French overseas territories (DOM/TOM) that use EUR currency
@@ -130,7 +132,7 @@ interface PricingPlansProps {
 }
 
 export default function PricingPlans({ isModal, onClose, trigger, currentSubscription }: PricingPlansProps) {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly')
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('lifetime')
   const [isLoading, setIsLoading] = useState(false)
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false)
   const [pendingLookupKey, setPendingLookupKey] = useState<string>('')
@@ -271,7 +273,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     setIsLoading(true)
     
     try {
-      const { switchSubscriptionPlan } = await import('@/app/[locale]/dashboard/actions/billing')
+      const { switchSubscriptionPlan } = await import('@/server/billing')
       const result = await switchSubscriptionPlan(lookupKey)
       
       if (result.success) {
@@ -350,8 +352,13 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
         t('pricing.basic.feature1'),
         t('pricing.basic.feature2'),
         t('pricing.basic.feature3'),
-        t('pricing.basic.feature4'),
-        t('pricing.basic.feature5'),
+        t('pricing.basic.feature6'),
+        t('pricing.basic.feature7'),
+        t('pricing.basic.feature8'),
+        t('pricing.basic.feature9'),
+        t('pricing.basic.feature10'),
+        t('pricing.basic.feature11'),
+        t('pricing.basic.feature12'),
       ]
     },
     plus: {
@@ -362,7 +369,6 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
       features: [
         t('pricing.plus.feature1'),
         t('pricing.plus.feature2'),
-        t('pricing.plus.feature4'),
         t('pricing.plus.feature6'),
       ]
     }
@@ -384,7 +390,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
             <ul className="space-y-2">
               {plan.features.map((feature, index) => (
                 <li key={index} className="flex items-start">
-                  {index !== 1 && index !== 0 ? (
+                  {index > 2 ? (
                     <X className="h-4 w-4 text-red-500 mr-2 mt-1 shrink-0" />
                   ) : (
                     <Check className="h-4 w-4 text-green-500 mr-2 mt-1 shrink-0" />
@@ -406,7 +412,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
             )}
             
             <p className="text-xs text-center text-muted-foreground">
-              {t('terms.pricing.disclaimer')}
+              {t('terms.pricing.freePlanDisclaimer')}
               <Link href="/terms" className="text-primary hover:underline">
                 {t('terms.pricing.termsOfService')}
               </Link>
@@ -479,9 +485,12 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                 {recurringBillingOptions.map((option) => (
                   <Button
                     key={option.key}
-                    variant={billingPeriod === option.key ? 'default' : 'ghost'}
+                    variant="ghost"
                     size="sm"
-                    className="text-xs capitalize"
+                    className={cn(
+                      "text-xs capitalize border border-transparent",
+                      billingPeriod === option.key && "border-primary"
+                    )}
                     onClick={() => setBillingPeriod(option.key)}
                   >
                     {option.label}
@@ -492,12 +501,21 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
               {/* Separate lifetime button */}
               <div className="pt-2 border-t border-border">
                 <Button
-                  variant={billingPeriod === 'lifetime' ? 'default' : 'outline'}
+                  variant="outline"
                   size="sm"
-                  className="w-full"
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 border border-border",
+                    billingPeriod === 'lifetime' && "border-primary"
+                  )}
                   onClick={() => setBillingPeriod('lifetime')}
                 >
                   {t('pricing.lifetimeAccess')}
+                  <Badge
+                    variant="secondary"
+                    className="uppercase tracking-wide text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:bg-emerald-500/15 dark:text-emerald-300 border border-amber-500/40 dark:border-emerald-500/50"
+                  >
+                    {t('pricing.limitedTimeOffer')}
+                  </Badge>
                 </Button>
               </div>
             </div>
