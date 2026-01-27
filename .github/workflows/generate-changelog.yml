@@ -21,6 +21,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Configure Git
         run: |
@@ -36,9 +37,9 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
-          # Create a new branch for changelog
+          # Create a new branch from the current HEAD (which is the PR head SHA)
           BRANCH_NAME="changelog/pr-${{ github.event.pull_request.number }}-$(date +%s)"
-          git checkout -b "$BRANCH_NAME" "${{ github.event.pull_request.head.ref }}"
+          git checkout -b "$BRANCH_NAME"
           
           # Get the date range for the changelog
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
