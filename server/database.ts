@@ -1,6 +1,6 @@
 'use server'
 import { Trade, Prisma, DashboardLayout } from '@/prisma/generated/prisma/client'
-import { revalidatePath, updateTag } from 'next/cache'
+import { revalidatePath, revalidateTag, updateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
@@ -122,7 +122,13 @@ export async function saveTradesAction(
       }
     }
 
-    updateTag(`trades-${userId}`)
+    try{
+      updateTag(`trades-${userId}`)
+    } catch (error) {
+      console.error('[saveTrades] Error updating tag:', error)
+      revalidateTag(`trades-${userId}`, { expire: 0 })
+    }
+
     return {
       error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
       numberOfTradesAdded: result.count
