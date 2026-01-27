@@ -25,31 +25,6 @@ export default function PricingPage() {
         <PricingPlans />
       </main>
 
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-8">
-            {t("pricing.faq.heading")}
-          </h2>
-          <div className="max-w-3xl mx-auto space-y-6">
-            <details className="border-b pb-4">
-              <summary className="font-semibold cursor-pointer">
-                {t("pricing.faq.question1")}
-              </summary>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                {t("pricing.faq.answer1")}
-              </p>
-            </details>
-            <details className="border-b pb-4">
-              <summary className="font-semibold cursor-pointer">
-                {t("pricing.faq.question2")}
-              </summary>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                {t("pricing.faq.answer2")}
-              </p>
-            </details>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

@@ -18,8 +18,8 @@ export default function Partners() {
                         {t('landing.partners.description')}
                     </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-center justify-items-center w-full mt-8">
-                    <a className="relative w-full h-[60px] flex items-center justify-center" href="https://ninjatraderdomesticvendor.sjv.io/e1VQMz" target="_blank" rel="noopener noreferrer">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center justify-items-center w-full mt-8">
+                    <a className="relative w-full h-12 flex items-center justify-center" href="https://ninjatraderdomesticvendor.sjv.io/e1VQMz" target="_blank" rel="noopener noreferrer">
                         <Image
                             src="/logos/ninjatrader-ob.svg"
                             alt="NinjaTrader"
@@ -28,7 +28,7 @@ export default function Partners() {
                             priority
                         />
                     </a>
-                    <a className="relative w-full h-[60px] flex items-center justify-center">
+                    <a className="relative w-full h-12 flex items-center justify-center">
                         <Image
                             src={effectiveTheme === 'dark' ? '/logos/rithmic-logo-white.png' : '/logos/rithmic-logo-black.png'}
                             alt="Rithmic"

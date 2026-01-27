@@ -63,7 +63,7 @@ import { useRouter } from "next/navigation";
 import { useCurrentLocale } from "@/locales/client";
 import { useMoodStore } from "@/store/mood-store";
 import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store";
-import { getSubscriptionData } from "@/app/[locale]/dashboard/actions/billing";
+import { getSubscriptionData } from "@/server/billing";
 import { defaultLayouts } from "@/lib/default-layouts";
 
 // Types from trades-data.tsx
