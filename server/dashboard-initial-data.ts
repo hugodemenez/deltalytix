@@ -1,7 +1,7 @@
 'use cache'
 
 import { cacheTag, cacheLife } from 'next/cache'
-import { Trade, User, Subscription, Tag, TickDetails, FinancialEvent, Mood, DashboardLayout, Account as PrismaAccount, Payout as PrismaPayout, Group as PrismaGroup } from '@prisma/client'
+import { Trade, User, Subscription, Tag, TickDetails, FinancialEvent, Mood, DashboardLayout, Account as PrismaAccount, Payout as PrismaPayout, Group as PrismaGroup } from '@/prisma/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from './auth'
 import { getCurrentLocale } from '@/locales/server'
