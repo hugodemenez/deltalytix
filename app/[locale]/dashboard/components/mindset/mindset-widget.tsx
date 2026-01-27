@@ -26,7 +26,7 @@ import { useMoodStore } from "@/store/mood-store"
 import { useFinancialEventsStore } from "@/store/financial-events-store"
 import { useTradesStore } from "@/store/trades-store"
 import { useCurrentLocale } from "@/locales/client"
-import { FinancialEvent } from "@prisma/client"
+import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 
 interface MindsetWidgetProps {
   size: WidgetSize

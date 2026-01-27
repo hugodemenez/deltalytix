@@ -31,7 +31,10 @@ export default function OnboardingModal({ onDismiss }: OnboardingModalProps) {
       return
     }
 
-    setCurrent(api.selectedScrollSnap())
+    // Use requestAnimationFrame to defer state update
+    requestAnimationFrame(() => {
+      setCurrent(api.selectedScrollSnap())
+    })
 
     api.on("select", () => {
       setCurrent(api.selectedScrollSnap())

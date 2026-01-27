@@ -1,4 +1,4 @@
-import { Trade } from "@prisma/client"
+import { Trade } from "@/prisma/generated/prisma/browser"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { format } from "date-fns"

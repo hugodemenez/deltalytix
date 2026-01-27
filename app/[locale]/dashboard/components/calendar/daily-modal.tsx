@@ -21,7 +21,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn, parsePositionTime } from "@/lib/utils";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar";
 import { Charts } from "./charts";
 import { useI18n, useCurrentLocale } from "@/locales/client";

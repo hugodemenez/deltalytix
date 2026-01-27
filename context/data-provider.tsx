@@ -7,7 +7,6 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
-
 import {
   Trade as PrismaTrade,
   Group as PrismaGroup,
@@ -16,8 +15,7 @@ import {
   DashboardLayout as PrismaDashboardLayout,
   Subscription as PrismaSubscription,
   Tag,
-} from "@prisma/client";
-
+} from "@/prisma/generated/prisma/browser";
 import { SharedParams } from "@/server/shared";
 import {
   getDashboardLayout,
@@ -34,17 +32,13 @@ import {
   updateTradesAction,
 } from "@/server/database";
 import {
-  WidgetType,
-  WidgetSize,
-  Widget,
-} from "@/app/[locale]/dashboard/types/dashboard";
-import {
   deletePayoutAction,
   deleteAccountAction,
   setupAccountAction,
   savePayoutAction,
   calculateAccountBalanceAction,
   calculateAccountMetricsAction,
+  deleteTradesByIdsAction,
 } from "@/server/accounts";
 import { computeMetricsForAccounts } from "@/lib/account-metrics";
 import {
@@ -60,6 +54,7 @@ import { DashboardLayoutWithWidgets, useUserStore } from "@/store/user-store";
 import { useTickDetailsStore } from "@/store/tick-details-store";
 import { useFinancialEventsStore } from "@/store/financial-events-store";
 import { useTradesStore } from "@/store/trades-store";
+import { getTradesCache, setTradesCache } from "@/lib/indexeddb/trades-cache";
 import { endOfDay, isValid, parseISO, set, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { calculateStatistics, formatCalendarData } from "@/lib/utils";
@@ -69,7 +64,8 @@ import { useRouter } from "next/navigation";
 import { useCurrentLocale } from "@/locales/client";
 import { useMoodStore } from "@/store/mood-store";
 import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store";
-import { getSubscriptionData } from "@/app/[locale]/dashboard/actions/billing";
+import { getSubscriptionData } from "@/server/billing";
+import { defaultLayouts } from "@/lib/default-layouts";
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -197,219 +193,13 @@ export interface Account extends Omit<PrismaAccount, "payouts" | "group"> {
   }>;
 }
 
-// Add after the interfaces and before the UserDataContext
-export const defaultLayouts: DashboardLayoutWithWidgets = {
-  id: "",
-  userId: "",
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  desktop: [
-    {
-      i: "widget1751403095730",
-      type: "calendarWidget",
-      size: "large",
-      x: 0,
-      y: 17,
-      w: 6,
-      h: 8,
-    },
-    {
-      i: "widget1751715494609",
-      type: "tradeDistribution",
-      size: "small",
-      x: 0,
-      y: 1,
-      w: 3,
-      h: 4,
-    },
-    {
-      i: "widget1751741589330",
-      type: "pnlChart",
-      size: "medium",
-      x: 6,
-      y: 9,
-      w: 6,
-      h: 4,
-    },
-    {
-      i: "widget1752135357688",
-      type: "weekdayPnlChart",
-      size: "small",
-      x: 3,
-      y: 5,
-      w: 3,
-      h: 4,
-    },
-    {
-      i: "widget1752135359621",
-      type: "timeOfDayChart",
-      size: "small",
-      x: 6,
-      y: 13,
-      w: 3,
-      h: 4,
-    },
-    {
-      i: "widget1752135361015",
-      type: "timeInPositionChart",
-      size: "small",
-      x: 9,
-      y: 13,
-      w: 3,
-      h: 4,
-    },
-    {
-      i: "widget1752135363430",
-      type: "equityChart",
-      size: "large",
-      x: 6,
-      y: 1,
-      w: 6,
-      h: 8,
-    },
-    {
-      i: "widget1752135365730",
-      type: "pnlBySideChart",
-      size: "small",
-      x: 9,
-      y: 17,
-      w: 3,
-      h: 4,
-    },
-    {
-      i: "widget1752135368429",
-      type: "tickDistribution",
-      size: "medium",
-      x: 6,
-      y: 21,
-      w: 6,
-      h: 4,
-    },
-    {
-      i: "widget1752135370579",
-      type: "commissionsPnl",
-      size: "small",
-      x: 3,
-      y: 1,
-      w: 3,
-      h: 4,
-    },
-    {
-      i: "widget1752135378584",
-      type: "timeRangePerformance",
-      size: "small",
-      x: 0,
-      y: 5,
-      w: 3,
-      h: 4,
-    },
-    {
-      i: "widget1752135395916",
-      type: "riskRewardRatio",
-      size: "tiny",
-      x: 9,
-      y: 0,
-      w: 3,
-      h: 1,
-    },
-    {
-      i: "widget1752135396857",
-      type: "statisticsWidget",
-      size: "medium",
-      x: 0,
-      y: 13,
-      w: 6,
-      h: 4,
-    },
-    {
-      i: "widget1752135397611",
-      type: "profitFactor",
-      size: "tiny",
-      x: 6,
-      y: 0,
-      w: 3,
-      h: 1,
-    },
-    {
-      i: "widget1762369988555",
-      type: "averagePositionTime",
-      size: "tiny",
-      x: 3,
-      y: 0,
-      w: 3,
-      h: 1,
-    },
-    {
-      i: "widget1762369989742",
-      type: "cumulativePnl",
-      size: "tiny",
-      x: 0,
-      y: 0,
-      w: 3,
-      h: 1,
-    },
-    {
-      i: "widget1762520220168",
-      type: "pnlPerContractChart",
-      size: "small",
-      x: 6,
-      y: 17,
-      w: 3,
-      h: 4,
-    },
-    {
-      i: "widget1762520253990",
-      type: "pnlPerContractDailyChart",
-      size: "medium",
-      x: 0,
-      y: 9,
-      w: 6,
-      h: 4,
-    },
-  ],
-  mobile: [
-    {
-      i: "calendarWidget",
-      type: "calendarWidget" as WidgetType,
-      size: "large" as WidgetSize,
-      x: 0,
-      y: 2,
-      w: 12,
-      h: 6,
-    },
-    {
-      i: "equityChart",
-      type: "equityChart" as WidgetType,
-      size: "medium" as WidgetSize,
-      x: 0,
-      y: 8,
-      w: 12,
-      h: 6,
-    },
-    {
-      i: "cumulativePnl",
-      type: "cumulativePnl" as WidgetType,
-      size: "tiny" as WidgetSize,
-      x: 0,
-      y: 0,
-      w: 12,
-      h: 1,
-    },
-    {
-      i: "tradePerformance",
-      type: "tradePerformance" as WidgetType,
-      size: "tiny" as WidgetSize,
-      x: 0,
-      y: 1,
-      w: 12,
-      h: 1,
-    },
-  ],
-};
 
 // Combined Context Type
 interface DataContextType {
   refreshTrades: () => Promise<void>;
+  refreshTradesOnly: (options?: { force?: boolean }) => Promise<void>;
+  refreshUserDataOnly: (options?: { force?: boolean; includeStripe?: boolean }) => Promise<void>;
+  refreshAllData: (options?: { force?: boolean }) => Promise<void>;
   isPlusUser: () => boolean;
   isLoading: boolean;
   isMobile: boolean;
@@ -453,6 +243,7 @@ interface DataContextType {
     tradeIds: string[],
     update: Partial<PrismaTrade>
   ) => Promise<void>;
+  deleteTrades: (tradeIds: string[]) => Promise<void>;
   groupTrades: (tradeIds: string[]) => Promise<void>;
   ungroupTrades: (tradeIds: string[]) => Promise<void>;
 
@@ -682,9 +473,28 @@ export const DataProvider: React.FC<{
 
       // Step 2: Fetch trades (with caching server side)
       // I think we could make basic computations server side to offload inital stats computations
-      // WE SHOULD NOT USE CLIENT SIDE CACHING FOR TRADES (PREVENTS DATA LEAKAGE / OVERLOAD IN CACHE)
-      const trades = await getTradesAction();
-      setTrades(Array.isArray(trades) ? trades : []);
+      // Dev: prefer local IndexedDB to avoid hitting remote DB on reloads
+      const userId = await getUserId();
+      if (
+        process.env.NODE_ENV === "development" &&
+        userId &&
+        !params?.isSharedView // avoid caching shared/public views
+      ) {
+        const cachedTrades = await getTradesCache(userId);
+        if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
+          setTrades(cachedTrades);
+        } else {
+          const trades = await getTradesAction(userId, false);
+          const safeTrades = Array.isArray(trades) ? trades : [];
+          setTrades(safeTrades);
+          setTradesCache(userId, safeTrades).catch((err) =>
+            console.error("[DataProvider] Failed to cache trades in IndexedDB (loadData)", err),
+          );
+        }
+      } else {
+        const trades = await getTradesAction();
+        setTrades(Array.isArray(trades) ? trades : []);
+      }
 
       // Step 3: Fetch user data
       // TODO: Check what we could cache client side
@@ -831,84 +641,164 @@ export const DataProvider: React.FC<{
     updateLanguage();
   }, [locale, supabaseUser?.id]);
 
-  const refreshTrades = useCallback(async () => {
-    if (!supabaseUser?.id) return;
-
-    setIsLoading(true);
-
+  const loadStripeSubscription = useCallback(async () => {
     try {
-      // Get the correct user ID from server
-      const userId = await getUserId();
-
-      // Force refresh by calling getTradesAction with forceRefresh: true
-      const trades = await getTradesAction(userId, true);
-      setTrades(Array.isArray(trades) ? trades : []);
-
-      // Also refresh other data with forceRefresh: true
-      const data = await getUserData(true);
-
-      if (!data) {
-        await signOut();
-        setIsLoading(false);
-        return;
-      }
-
-      // Calculate metrics for each account
-      const accountsWithMetrics = await calculateAccountMetricsAction(
-        data.accounts || []
-      );
-      setAccounts(accountsWithMetrics);
-
-      setUser(data.userData);
-      setSubscription(data.subscription as PrismaSubscription | null);
-      setTags(data.tags);
-      setGroups(data.groups);
-      setMoods(data.moodHistory);
-      setEvents(data.financialEvents);
-      setTickDetails(data.tickDetails);
-      setIsFirstConnection(data.userData?.isFirstConnection || false);
-
-      console.log(
-        "[refreshTrades] Successfully refreshed trades and user data"
-      );
+      setStripeSubscriptionLoading(true);
+      const stripeSubscriptionData = await getSubscriptionData();
+      setStripeSubscription(stripeSubscriptionData);
+      setStripeSubscriptionError(null);
     } catch (error) {
-      console.error("Error refreshing trades:", error);
+      console.error("Error loading Stripe subscription:", error);
+      setStripeSubscriptionError(
+        error instanceof Error ? error.message : "Failed to load subscription"
+      );
+      setStripeSubscription(null);
     } finally {
-      setIsLoading(false);
-      // Load Stripe subscription data
-      try {
-        setStripeSubscriptionLoading(true);
-        const stripeSubscriptionData = await getSubscriptionData();
-        setStripeSubscription(stripeSubscriptionData);
-        setStripeSubscriptionError(null);
-      } catch (error) {
-        console.error("Error loading Stripe subscription:", error);
-        setStripeSubscriptionError(
-          error instanceof Error ? error.message : "Failed to load subscription"
-        );
-        setStripeSubscription(null);
-      } finally {
-        setStripeSubscriptionLoading(false);
-      }
+      setStripeSubscriptionLoading(false);
     }
-  }, [
-    supabaseUser?.id,
-    supabaseUser,
-    locale,
-    setTrades,
-    setUser,
-    setSubscription,
-    setTags,
-    setGroups,
-    setMoods,
-    setEvents,
-    setTickDetails,
-    setAccounts,
-  ]);
+  }, []);
+
+  const refreshTradesOnly = useCallback(
+    async (options?: { force?: boolean; withLoading?: boolean }) => {
+      if (!supabaseUser?.id) return;
+      const { force = false, withLoading = true } = options || {};
+
+      if (withLoading) setIsLoading(true);
+
+      try {
+        const userId = await getUserId();
+        if (!userId) return;
+
+        // Dev-only: serve trades from IndexedDB to avoid DB hits when possible
+        if (process.env.NODE_ENV === "development" && !force) {
+          const cachedTrades = await getTradesCache(userId);
+          if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
+            setTrades(cachedTrades);
+            if (withLoading) setIsLoading(false);
+            return;
+          }
+        }
+
+        const trades = await getTradesAction(userId, force);
+        const safeTrades = Array.isArray(trades) ? trades : [];
+        setTrades(safeTrades);
+
+        if (process.env.NODE_ENV === "development") {
+          // Best-effort cache write; do not block UI on failure
+          setTradesCache(userId, safeTrades).catch((err) =>
+            console.error("[refreshTradesOnly] Failed to cache trades in IndexedDB", err),
+          );
+        }
+      } catch (error) {
+        console.error("Error refreshing trades:", error);
+      } finally {
+        if (withLoading) setIsLoading(false);
+      }
+    },
+    [supabaseUser?.id, setTrades]
+  );
+
+  const refreshUserDataOnly = useCallback(
+    async (
+      options?: { force?: boolean; includeStripe?: boolean; withLoading?: boolean }
+    ) => {
+      if (!supabaseUser?.id) return;
+      const {
+        force = false,
+        includeStripe = false,
+        withLoading = true,
+      } = options || {};
+
+      if (withLoading) setIsLoading(true);
+
+      try {
+        const data = await getUserData(force);
+
+        if (!data) {
+          await signOut();
+          return;
+        }
+
+        const accountsWithMetrics = await calculateAccountMetricsAction(
+          data.accounts || []
+        );
+        setAccounts(accountsWithMetrics);
+
+        setUser(data.userData);
+        setSubscription(data.subscription as PrismaSubscription | null);
+        setTags(data.tags);
+        setGroups(data.groups);
+        setMoods(data.moodHistory);
+        setEvents(data.financialEvents);
+        setTickDetails(data.tickDetails);
+        setIsFirstConnection(data.userData?.isFirstConnection || false);
+
+        if (includeStripe) {
+          await loadStripeSubscription();
+        }
+      } catch (error) {
+        console.error("Error refreshing user data:", error);
+      } finally {
+        if (withLoading) setIsLoading(false);
+      }
+    },
+    [
+      supabaseUser?.id,
+      setAccounts,
+      setUser,
+      setSubscription,
+      setTags,
+      setGroups,
+      setMoods,
+      setEvents,
+      setTickDetails,
+      setIsFirstConnection,
+      loadStripeSubscription,
+    ]
+  );
+
+  const refreshAllData = useCallback(
+    async (options?: { force?: boolean }) => {
+      if (!supabaseUser?.id) return;
+      const force = options?.force ?? false;
+
+      setIsLoading(true);
+      try {
+        await refreshTradesOnly({ force, withLoading: false });
+        await refreshUserDataOnly({
+          force,
+          includeStripe: true,
+          withLoading: false,
+        });
+        console.log("[refreshAllData] Successfully refreshed trades and user data");
+      } catch (error) {
+        console.error("Error refreshing all data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [refreshTradesOnly, refreshUserDataOnly, supabaseUser?.id]
+  );
+
+  // Dev-only: persist trades store into IndexedDB so reloads avoid DB hits
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    if (!supabaseUser?.id) return;
+    if (!Array.isArray(trades)) return;
+    if (trades.length === 0) return; // avoid caching empty and blocking future fetches
+
+    const timer = window.setTimeout(() => {
+      setTradesCache(supabaseUser.id, trades).catch((err) =>
+        console.error("[DataProvider] Failed to sync trades to IndexedDB", err),
+      );
+    }, 200);
+
+    return () => window.clearTimeout(timer);
+  }, [trades, supabaseUser?.id]);
 
   const formattedTrades = useMemo(() => {
     // Early return if no trades or if trades is not an array
-    if (isLoading || !trades || !Array.isArray(trades) || trades.length === 0)
+    if (!trades || !Array.isArray(trades) || trades.length === 0)
       return [];
 
     // Get hidden accounts for filtering
@@ -1727,6 +1617,33 @@ export const DataProvider: React.FC<{
     [supabaseUser?.id, trades, setTrades]
   );
 
+  const deleteTrades = useCallback(
+    async (tradeIds: string[]) => {
+      if (!supabaseUser?.id) return;
+      
+      // Optimistically remove trades from local state immediately
+      // Use startTransition to mark the expensive recalculation as non-urgent
+      // This keeps the UI responsive while formattedTrades recalculates
+      const remainingTrades = trades.filter(
+        (trade) => !tradeIds.includes(trade.id)
+      );
+      
+      // Update state in a transition so it doesn't block the UI
+        setTrades(remainingTrades);
+      
+      try {
+        // Delete from database
+        await deleteTradesByIdsAction(tradeIds);
+      } catch (error) {
+        // On error, refresh to restore the correct state
+        console.error("Error deleting trades:", error);
+        await refreshAllData();
+        throw error;
+      }
+    },
+    [supabaseUser?.id, trades, setTrades, refreshAllData]
+  );
+
   const saveDashboardLayout = useCallback(
     async (layout: PrismaDashboardLayout) => {
       if (!supabaseUser?.id) return;
@@ -1749,7 +1666,10 @@ export const DataProvider: React.FC<{
     isSharedView,
     sharedParams,
     setSharedParams,
-    refreshTrades,
+    refreshTrades: refreshAllData,
+    refreshTradesOnly,
+    refreshUserDataOnly,
+    refreshAllData,
     changeIsFirstConnection,
     isFirstConnection,
     setIsFirstConnection,
@@ -1795,6 +1715,7 @@ export const DataProvider: React.FC<{
 
     // Update trade
     updateTrades,
+    deleteTrades,
     groupTrades,
     ungroupTrades,
 

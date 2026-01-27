@@ -1,7 +1,9 @@
 'use server'
 
 import { getUserId } from '@/server/auth'
-import { PrismaClient, Trade, Payout } from '@prisma/client'
+import { PrismaClient, Trade, Payout } from '@/prisma/generated/prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import pg from 'pg'
 import { computeMetricsForAccounts } from '@/lib/account-metrics'
 import { Account } from '@/context/data-provider'
 import { updateTag } from 'next/cache'
@@ -10,7 +12,13 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-const prisma = globalForPrisma.prisma ?? new PrismaClient()
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+})
+
+const adapter = new PrismaPg(pool)
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
@@ -83,13 +91,19 @@ export async function removeAccountFromTradesAction(accountNumber: string): Prom
 }
 
 export async function deleteInstrumentGroupAction(accountNumber: string, instrumentGroup: string, userId: string): Promise<void> {
+  const currentUserId = await getUserId()
+  const effectiveUserId = currentUserId ?? userId
   await prisma.trade.deleteMany({
     where: {
       accountNumber: accountNumber,
       instrument: { startsWith: instrumentGroup },
-      userId: userId
+      userId: effectiveUserId
     }
   })
+  if (effectiveUserId) {
+    updateTag(`trades-${effectiveUserId}`)
+    updateTag(`user-data-${effectiveUserId}`)
+  }
 }
 
 export async function updateCommissionForGroupAction(accountNumber: string, instrumentGroup: string, newCommission: number): Promise<void> {
@@ -111,6 +125,11 @@ export async function updateCommissionForGroupAction(accountNumber: string, inst
         commission: updatedCommission
       }
     })
+  }
+  const userId = await getUserId().catch(() => null)
+  if (userId) {
+    updateTag(`trades-${userId}`)
+    updateTag(`user-data-${userId}`)
   }
 }
 
@@ -174,6 +193,9 @@ export async function renameAccountAction(oldAccountNumber: string, newAccountNu
         }
       })
     })
+
+    updateTag(`trades-${userId}`)
+    updateTag(`user-data-${userId}`)
   } catch (error) {
     console.error('Error renaming account:', error)
     if (error instanceof Error) {
@@ -302,11 +324,14 @@ export async function setupAccountAction(account: Account): Promise<Account> {
   updateTag(`dashboard-${userId}`)
 
   // Return the saved account with the original shape
-  return {
+  const result = {
     ...savedAccount,
     payouts: savedAccount.payouts,
     group: savedAccount.group,
   } as Account
+  updateTag(`user-data-${userId}`)
+  updateTag(`trades-${userId}`)
+  return result
 }
 
 export async function deleteAccountAction(account: Account) {
@@ -445,6 +470,7 @@ export async function deletePayoutAction(payoutId: string) {
     updateTag(`user-data-${userId}`)
     updateTag(`dashboard-${userId}`)
 
+    updateTag(`user-data-${userId}`)
     return true;
   } catch (error) {
     console.error('Failed to delete payout:', error);
@@ -466,6 +492,8 @@ export async function renameInstrumentAction(accountNumber: string, oldInstrumen
         instrument: newInstrumentName
       }
     })
+    updateTag(`trades-${userId}`)
+    updateTag(`user-data-${userId}`)
   } catch (error) {
     console.error('Error renaming instrument:', error)
     if (error instanceof Error) {

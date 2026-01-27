@@ -1,9 +1,9 @@
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import TradeTable from "@/app/[locale]/dashboard/data/components/data-management/trade-table"
 import { DataManagementCard } from "@/app/[locale]/dashboard/data/components/data-management/data-management-card"
 import { useEffect } from "react"
+import { TradeTableReview } from "../components/tables/trade-table-review"
 
 export default function DashboardPage() {
   useEffect(() => {
@@ -24,8 +24,8 @@ export default function DashboardPage() {
           <TabsContent value="accounts">
             <DataManagementCard />
           </TabsContent>
-          <TabsContent value="trades">
-            <TradeTable />
+          <TabsContent value="trades" className="h-[calc(100vh-var(--navbar-height)-var(--tabs-height)-16px)] p-4">
+            <TradeTableReview />
           </TabsContent>
         </Tabs>
 

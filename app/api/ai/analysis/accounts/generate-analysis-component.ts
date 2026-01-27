@@ -1,5 +1,5 @@
-import { tool } from "ai";
-import { generateObject } from "ai";
+import { Output, tool } from "ai";
+import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { z } from 'zod/v3';
 import { AccountAnalysisSchema, type AccountAnalysis } from './get-account-performance';
@@ -80,11 +80,11 @@ Be concise and actionable. Maximum 3-5 points per section.
 Please provide a comprehensive structured analysis that would be valuable for a trader looking to improve their performance.`;
 
     try {
-      // Generate structured AI analysis using generateObject
-      const { object } = await generateObject({
-        model: openai('gpt-5-nano-2025-08-07'),
+      // Generate structured AI analysis using generateText
+      const { output } = await generateText({
+        model: 'openai/gpt-5-mini',
+        output: Output.object({ schema: AnalysisOutputSchema }),
         prompt: analysisPrompt,
-        schema: AnalysisOutputSchema,
       });
 
       // Return the simplified structured AI analysis
@@ -92,7 +92,7 @@ Please provide a comprehensive structured analysis that would be valuable for a 
         locale,
         username,
         generatedAt: now,
-        structuredAnalysis: object,
+        structuredAnalysis: output,
         dataSummary: {
           totalAccounts: accountData?.accounts?.length || 0,
           totalPortfolioValue: accountData?.totalPortfolioValue || 0,

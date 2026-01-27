@@ -1,5 +1,5 @@
 import { openai } from "@ai-sdk/openai";
-import { streamObject } from "ai";
+import { Output, streamObject, streamText } from "ai";
 import { NextRequest } from "next/server";
 import { mappingSchema } from "./schema";
 
@@ -9,26 +9,32 @@ export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { fieldColumns, firstRows } = typeof body === 'string' ? JSON.parse(body) : body;
+    const { fieldColumns, firstRows } =
+      typeof body === "string" ? JSON.parse(body) : body;
 
     if (!fieldColumns || !firstRows) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing required fields" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
-    const result = streamObject({
-      model: openai("gpt-4o-mini-2024-07-18"),
-      schema: mappingSchema,
-      temperature: 1,
+    const result = streamText({
+      model: "openai/gpt-5-mini",
+      output: Output.object({schema:mappingSchema}),
       onFinish: (result) => {
-        console.log('=== AI RESPONSE ===');
-        console.log('AI Mapping Result:', JSON.stringify(result.object, null, 2));
+        console.log("=== AI RESPONSE ===");
+        console.log(
+          "AI Mapping Result:",
+          JSON.stringify(result.text, null, 2),
+        );
       },
       onError: (error) => {
-        console.error('=== AI ERROR ===');
-        console.error('AI Mapping Error:', error);
+        console.error("=== AI ERROR ===");
+        console.error("AI Mapping Error:", error);
       },
       prompt:
         `You are a trading data expert. Analyze the CSV columns and their data patterns to map them to the correct database fields. ` +
@@ -61,21 +67,33 @@ export async function POST(req: NextRequest) {
         `  * PnL columns: profit/loss amounts (can be negative)\n\n` +
         `IMPORTANT: For duplicate column names, you MUST include the column position (1-based index) in your response.\n` +
         `Format: "ColumnName_Position" (e.g., "Prix_1", "Prix_2")\n\n` +
-        `Map each column by providing the matching column name with position for each database field. Use column position and context to resolve duplicates. If unsure or no match exists, omit the value.\n\n` +
+        `Map each column by providing the matching column name with position for each database field. Use column position and context to resolve duplicates. If unsure or no match exists, use null for the field.\n\n` +
         `Column order and context:\n` +
-        fieldColumns.map((col: string, index: number) => `${index + 1}. ${col}`).join("\n") + "\n\n" +
+        fieldColumns
+          .map((col: string, index: number) => `${index + 1}. ${col}`)
+          .join("\n") +
+        "\n\n" +
         `Sample data (first few rows):\n` +
-        firstRows.map((row: Record<string, string>, index: number) => 
-          `Row ${index + 1}: ${Object.entries(row).map(([col, val]) => `${col}: "${val}"`).join(", ")}`
-        ).join("\n"),
+        firstRows
+          .map(
+            (row: Record<string, string>, index: number) =>
+              `Row ${index + 1}: ${Object.entries(row)
+                .map(([col, val]) => `${col}: "${val}"`)
+                .join(", ")}`,
+          )
+          .join("\n"),
     });
 
     return result.toTextStreamResponse();
   } catch (error) {
     console.error("Error in mappings route:", error);
-    return new Response(JSON.stringify({ error: "Failed to generate mappings" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Failed to generate mappings" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 }
+

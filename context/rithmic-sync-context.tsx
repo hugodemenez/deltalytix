@@ -87,7 +87,7 @@ export function RithmicSyncContextProvider({
     useState<NodeJS.Timeout | null>(null);
 
   const t = useI18n();
-  const { refreshTrades } = useData();
+  const { refreshTradesOnly } = useData();
 
   const isLoading = useUserStore((state) => state.isLoading);
   const trades = useTradesStore((state) => state.trades);
@@ -318,7 +318,7 @@ export function RithmicSyncContextProvider({
           break;
 
         case "processing_complete":
-          refreshTrades();
+          refreshTradesOnly({ force: true });
           break;
 
         case "status":
@@ -380,7 +380,7 @@ export function RithmicSyncContextProvider({
       currentAccount,
       accountsProgress,
       setCurrentAccount,
-      refreshTrades,
+      refreshTradesOnly,
       setLastMessage,
       addMessageToHistory,
       updateAccountProgress,

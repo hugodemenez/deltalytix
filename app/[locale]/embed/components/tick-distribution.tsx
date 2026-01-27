@@ -19,7 +19,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { getTickDetails } from "@/server/tick-details";
-import { TickDetails } from "@prisma/client";
+import { TickDetails } from "@/prisma/generated/prisma/browser";
 import {
   Select,
   SelectContent,

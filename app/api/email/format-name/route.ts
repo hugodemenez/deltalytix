@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { PrismaClient } from "@prisma/client"
+import { PrismaClient } from "@/prisma/generated/prisma/client"
+import { PrismaPg } from "@prisma/adapter-pg"
+import pg from "pg"
 import { openai } from "@ai-sdk/openai"
-import { generateObject } from "ai"
+import { generateText, Output } from "ai"
 import { z } from "zod"
 
-const prisma = new PrismaClient()
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+})
+
+const adapter = new PrismaPg(pool)
+const prisma = new PrismaClient({ adapter })
 
 // Schema for the AI response
 const nameInferenceSchema = z.object({
@@ -74,9 +81,9 @@ export async function POST(req: NextRequest) {
     const emails = subscribers.map(sub => sub.email)
 
     // Use AI to infer names from emails
-    const { object } = await generateObject({
-      model: openai("gpt-4o-mini-2024-07-18"),
-      schema: nameInferenceSchema,
+    const { output } = await generateText({
+      model: 'openai/gpt-5-mini',
+      output: Output.object({ schema: nameInferenceSchema }),
       prompt: `You are an expert at inferring names from email addresses. Analyze the following email addresses and try to extract first and last names where possible.
 
 Rules:
@@ -101,7 +108,7 @@ Return the inferred names with confidence levels:
     let updatedCount = 0
     const results = []
 
-    for (const inference of object.names) {
+    for (const inference of output.names) {
       const subscriber = subscribers.find(sub => sub.email === inference.email)
       if (!subscriber) continue
 

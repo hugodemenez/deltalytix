@@ -1,8 +1,9 @@
 import { ImageResponse } from "next/og"
-import { getPost } from "@/lib/mdx"
+import { getPost, getAllPosts } from "@/lib/mdx"
 import type { ReactElement } from "react"
+import { getStaticParams as getLocaleStaticParams } from '@/locales/server'
 
-export const alt = "Deltalytix Blog Post"
+export const alt = "Deltalytix Update"
 export const size = {
     width: 1200,
     height: 630,
@@ -12,6 +13,22 @@ export const contentType = "image/png"
 // Route segment configuration - these are specialized Route Handlers
 export const runtime = 'nodejs'
 export const revalidate = 3600 // 1 hour
+
+// Generate static paths for all posts in all locales
+export async function generateStaticParams() {
+    const locales = getLocaleStaticParams().map((entry) => entry.locale)
+    const paths: Array<{ locale: string; slug: string }> = []
+
+    for (const locale of locales) {
+        const posts = await getAllPosts(locale)
+        paths.push(...posts.map((post) => ({
+            locale,
+            slug: post.slug,
+        })))
+    }
+
+    return paths
+}
 
 export default async function Image({ 
     params 
@@ -28,6 +45,14 @@ export default async function Image({
 
         const { meta } = post
 
+        // Format the date
+        const date = new Date(meta.date)
+        const formattedDate = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+        })
+
         const element = (
             <div
                 style={{
@@ -38,38 +63,75 @@ export default async function Image({
                     fontFamily: "system-ui, -apple-system, sans-serif",
                     padding: "80px",
                     flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    textAlign: "center",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
                 }}
             >
-                {/* Main Brand H1 */}
-                <h1
+                {/* Top section with logo */}
+                <div
                     style={{
-                        fontSize: "80px",
-                        fontWeight: "900",
-                        color: "#FFFFFF",
-                        margin: "0 0 40px 0",
-                        lineHeight: "1.1",
-                        letterSpacing: "-0.02em",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
                     }}
                 >
-                    Deltalytix
-                </h1>
+                    <svg viewBox="0 0 255 255" xmlns="http://www.w3.org/2000/svg" style={{ width: "32px", height: "32px" }}>
+                        <path fillRule="evenodd" clipRule="evenodd" d="M159 63L127.5 0V255H255L236.5 218H159V63Z" fill="#FFFFFF" />
+                        <path fillRule="evenodd" clipRule="evenodd" d="M-3.05176e-05 255L127.5 -5.96519e-06L127.5 255L-3.05176e-05 255ZM64 217L121 104L121 217L64 217Z" fill="#FFFFFF" />
+                    </svg>
+                    <span
+                        style={{
+                            fontSize: "24px",
+                            fontWeight: "600",
+                            color: "#FFFFFF",
+                            letterSpacing: "-0.01em",
+                        }}
+                    >
+                        Deltalytix
+                    </span>
+                </div>
 
-                {/* Post Title Subtitle */}
-                <h2
+                {/* Middle section with title */}
+                <div
                     style={{
-                        fontSize: "32px",
-                        fontWeight: "400",
-                        color: "#FFFFFF",
-                        margin: "0",
-                        lineHeight: "1.4",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "16px",
                         maxWidth: "900px",
                     }}
                 >
-                    {meta.title}
-                </h2>
+                    <h1
+                        style={{
+                            fontSize: "56px",
+                            fontWeight: "700",
+                            color: "#FFFFFF",
+                            margin: "0",
+                            lineHeight: "1.15",
+                            letterSpacing: "-0.025em",
+                        }}
+                    >
+                        {meta.title}
+                    </h1>
+                </div>
+
+                {/* Bottom section with date */}
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                    }}
+                >
+                    <span
+                        style={{
+                            fontSize: "18px",
+                            fontWeight: "400",
+                            color: "#6B7280",
+                            letterSpacing: "0.01em",
+                        }}
+                    >
+                        {formattedDate}
+                    </span>
+                </div>
             </div>
         ) as ReactElement
 

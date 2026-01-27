@@ -14,7 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartConfig } from "@/components/ui/chart";
 import { useData } from "@/context/data-provider";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import { cn } from "@/lib/utils";
 import { Info } from "lucide-react";
 import {

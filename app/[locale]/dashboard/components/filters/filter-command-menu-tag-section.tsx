@@ -16,7 +16,7 @@ import { useUserStore } from "../../../../../store/user-store"
 import { useTradesStore } from "../../../../../store/trades-store"
 import { createTagAction, deleteTagAction } from "@/server/tags"
 import { toast } from "sonner"
-import { Trade } from "@prisma/client"
+import { Trade } from "@/prisma/generated/prisma/browser"
 
 interface TagSectionProps {
   searchValue: string

@@ -1,7 +1,6 @@
 import { convertToModelMessages, streamText, UIMessage, stepCountIs } from "ai";
 import { NextRequest } from "next/server";
-import { z } from 'zod/v3';
-import { openai } from "@ai-sdk/openai";
+import { z } from "zod/v3";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "./generate-analysis-component";
@@ -11,15 +10,15 @@ export const maxDuration = 300;
 
 const analysisSchema = z.object({
   username: z.string().optional(),
-  locale: z.string().default('en'),
-  timezone: z.string().default('UTC'),
+  locale: z.string().default("en"),
+  timezone: z.string().default("UTC"),
   currentTime: z.string().default(new Date().toISOString()),
 });
 
 // Remove the schema as we're using streamText with tools instead
 
 function getLanguageInstructions(locale: string) {
-  if (locale === 'fr') {
+  if (locale === "fr") {
     return `- You MUST respond in French (français)
 - All content must be in French except for the specific trading terms listed below
 - Use French grammar, vocabulary, and sentence structure throughout your response`;
@@ -27,16 +26,19 @@ function getLanguageInstructions(locale: string) {
   return `- You MUST respond in ${locale} language`;
 }
 
-function getAccountAnalysisPrompt(locale: string, username?: string, timezone?: string, currentTime?: string) {
-
-
+function getAccountAnalysisPrompt(
+  locale: string,
+  username?: string,
+  timezone?: string,
+  currentTime?: string,
+) {
   return `# ROLE & PERSONA
 You are an expert trading analyst with deep knowledge of quantitative analysis, risk management, and trading psychology. You provide detailed, actionable insights based on trading data.
 
 ## CONTEXT & TIMING
-${username ? `- Trader: ${username}` : '- Anonymous Trader'}
-- Current Time (${timezone || 'UTC'}): ${currentTime}
-- User Timezone: ${timezone || 'UTC'}
+${username ? `- Trader: ${username}` : "- Anonymous Trader"}
+- Current Time (${timezone || "UTC"}): ${currentTime}
+- User Timezone: ${timezone || "UTC"}
 
 ## COMMUNICATION LANGUAGE
 ${getLanguageInstructions(locale)}
@@ -79,33 +81,49 @@ export async function POST(req: NextRequest) {
       locale,
       timezone,
       currentTime,
-    }: { 
-      messages: UIMessage[]; 
-      username: string; 
+    }: {
+      messages: UIMessage[];
+      username: string;
       currentTime: string;
-      locale: string; 
+      locale: string;
       timezone: string;
     } = await req.json();
-    
+
     // Add debugging to see what locale is being received
-    console.log('Account Analysis API received:', { username, locale, timezone, currentTime });
-    
+    console.log("Account Analysis API received:", {
+      username,
+      locale,
+      timezone,
+      currentTime,
+    });
+
     // Validate the request
-    const validatedData = analysisSchema.parse({ username, locale, timezone, currentTime });
-    console.log('Validated data:', validatedData);
+    const validatedData = analysisSchema.parse({
+      username,
+      locale,
+      timezone,
+      currentTime,
+    });
+    console.log("Validated data:", validatedData);
+    const modelMessages = await convertToModelMessages(messages);
 
     const result = streamText({
-      model: openai("gpt-4o-mini"),
-      system: getAccountAnalysisPrompt(validatedData.locale, validatedData.username, validatedData.timezone, validatedData.currentTime),
+      model: "openai/gpt-4o-mini",
+      system: getAccountAnalysisPrompt(
+        validatedData.locale,
+        validatedData.username,
+        validatedData.timezone,
+        validatedData.currentTime,
+      ),
       tools: {
         getAccountPerformance,
         generateAnalysisComponent,
       },
-      messages: convertToModelMessages(messages),
+      messages: modelMessages,
       stopWhen: stepCountIs(10),
       onStepFinish: (step) => {
-        console.log('Step finished:', step.usage);
-      }
+        console.log("Step finished:", step.usage);
+      },
     });
 
     return result.toUIMessageStreamResponse();
@@ -117,9 +135,12 @@ export async function POST(req: NextRequest) {
       });
     }
     console.error("Error in account analysis route:", error);
-    return new Response(JSON.stringify({ error: "Failed to process account analysis" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Failed to process account analysis" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 }

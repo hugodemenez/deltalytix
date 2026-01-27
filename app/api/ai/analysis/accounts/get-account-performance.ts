@@ -1,6 +1,6 @@
 import { getTradesAction } from "@/server/database";
 import { getGroupsAction } from "@/server/groups";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
 import { groups } from "d3";
 import { z } from 'zod/v3';

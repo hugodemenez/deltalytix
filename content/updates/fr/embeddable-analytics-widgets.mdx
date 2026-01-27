@@ -1,0 +1,60 @@
+---
+title: Widgets analytiques intégrables pour sites externes
+description: Affichez vos graphiques Deltalytix sur votre site web avec des thèmes personnalisables et support multilingue.
+date: 2025-10-18
+status: completed
+completedDate: 2025-10-18
+---
+
+# Widgets analytiques intégrables pour sites externes
+
+Affichez vos analyses de trading n'importe où grâce aux widgets intégrables.
+
+## Fonctionnement
+
+Ajoutez une iframe à votre site pointant vers l'URL d'embed Deltalytix. Configurez les graphiques à afficher, la langue et le thème via paramètres URL.
+
+```html
+<iframe 
+  src="https://deltalytix.app/embed?charts=trade-distribution,weekday-pnl&lang=fr"
+  width="100%" 
+  height="400">
+</iframe>
+```
+
+## Graphiques disponibles
+
+- Performance sur période
+- PnL quotidien
+- Performance par heure
+- PnL par jour de la semaine
+- Distribution des trades (gains/pertes/breakeven)
+- Distribution des ticks
+- PnL par sens (long vs short)
+- PnL moyen par contrat
+- Commissions vs PnL net
+- Contrats par heure
+
+## Support linguistique
+
+11 langues disponibles via le paramètre `lang` :
+Anglais, français, allemand, espagnol, italien, portugais, vietnamien, hindi, japonais, chinois, yoruba
+
+## Personnalisation du thème
+
+### Presets
+
+- `preset=ocean` - Tons bleus froids
+- `preset=sunset` - Palette orange/rouge chaude
+- `preset=default` - Thème système
+
+### Variables CSS personnalisées
+
+Remplacez les couleurs individuelles via paramètres URL :
+```
+?bg-color=0a0a0a&border-color=27272a&radius=0.5rem
+```
+
+## Données dynamiques
+
+Utilisez l'API PostMessage pour envoyer des trades ou mises à jour de thème depuis votre page parente.

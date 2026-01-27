@@ -361,6 +361,47 @@
     --tw-prose-th-borders: var(--color-neutral-700);
     --tw-prose-td-borders: var(--color-neutral-800);
   }
+
+  /* Remove underline from anchor links wrapping headings (from rehype-autolink-headings) */
+  .prose a.anchor,
+  .prose .anchor,
+  .prose h1 a,
+  .prose h2 a,
+  .prose h3 a,
+  .prose h4 a,
+  .prose h5 a,
+  .prose h6 a,
+  .prose h1 > a,
+  .prose h2 > a,
+  .prose h3 > a,
+  .prose h4 > a,
+  .prose h5 > a,
+  .prose h6 > a {
+    text-decoration: none !important;
+    text-decoration-line: none !important;
+    text-decoration-color: transparent !important;
+    text-decoration-thickness: 0 !important;
+  }
+
+  .dark .prose a.anchor,
+  .dark .prose .anchor,
+  .dark .prose h1 a,
+  .dark .prose h2 a,
+  .dark .prose h3 a,
+  .dark .prose h4 a,
+  .dark .prose h5 a,
+  .dark .prose h6 a,
+  .dark .prose h1 > a,
+  .dark .prose h2 > a,
+  .dark .prose h3 > a,
+  .dark .prose h4 > a,
+  .dark .prose h5 > a,
+  .dark .prose h6 > a {
+    text-decoration: none !important;
+    text-decoration-line: none !important;
+    text-decoration-color: transparent !important;
+    text-decoration-thickness: 0 !important;
+  }
 }
 
 @layer components {

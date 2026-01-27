@@ -68,6 +68,7 @@ export default {
         lastUpdated: "Last updated: ",
         pricing: {
             disclaimer: "By proceeding with payment, you agree to our ",
+            freePlanDisclaimer: "By creating your account, you agree to our ",
             termsOfService: "Terms of Service"
         }
     }

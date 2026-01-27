@@ -1,4 +1,4 @@
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/browser";
 import { generateTradeHash } from "./utils";
 
 /**

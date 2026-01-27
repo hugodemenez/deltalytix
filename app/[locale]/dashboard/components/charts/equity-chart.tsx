@@ -47,7 +47,7 @@ import { useI18n } from "@/locales/client";
 import { useCurrentLocale } from "@/locales/client";
 import { useUserStore } from "@/store/user-store";
 import { useEquityChartStore } from "@/store/equity-chart-store";
-import { Payout as PrismaPayout } from "@prisma/client";
+import { Payout as PrismaPayout } from "@/prisma/generated/prisma/browser";
 import { AccountSelectionPopover } from "./account-selection-popover";
 import { getEquityChartDataAction } from "@/server/equity-chart";
 import { usePathname } from "next/navigation";

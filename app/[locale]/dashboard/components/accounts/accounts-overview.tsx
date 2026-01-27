@@ -8,9 +8,37 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { CalendarIcon, Info, Plus, X, Clock, CheckCircle, XCircle, DollarSign, Trash2, Save, Settings, ChevronLeft, ChevronRight, Loader2, GripVertical } from "lucide-react"
+import {
+  ArrowDown,
+  ArrowUp,
+  CalendarIcon,
+  Info,
+  ListOrdered,
+  Plus,
+  X,
+  Clock,
+  CheckCircle,
+  XCircle,
+  DollarSign,
+  Trash2,
+  Save,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  GripVertical,
+  LayoutGrid,
+  Table,
+} from "lucide-react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, Locale } from "date-fns"
 import { cn, calculateTradingDays } from "@/lib/utils"
@@ -23,6 +51,7 @@ import { enUS, fr } from 'date-fns/locale'
 import { useParams } from 'next/navigation'
 import { AccountCard } from './account-card'
 import { AccountConfigurator } from './account-configurator'
+import { AccountsTableView } from './accounts-table-view'
 import { AlertDialogAction, AlertDialogCancel, AlertDialogFooter, AlertDialogDescription, AlertDialogTitle, AlertDialogContent, AlertDialogHeader, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { AlertDialog } from '@/components/ui/alert-dialog'
 import {
@@ -35,7 +64,11 @@ import { Account } from '@/context/data-provider'
 import { useUserStore } from '@/store/user-store'
 import { useTradesStore } from '@/store/trades-store'
 import { useAccountOrderStore } from '@/store/account-order-store'
+import { useAccountsViewPreferenceStore } from '@/store/accounts-view-preference-store'
+import { useAccountsSortingStore } from '@/store/accounts-sorting-store'
 import { savePayoutAction, removeAccountsFromTradesAction } from '@/server/accounts'
+import { useModalStateStore } from '@/store/modal-state-store'
+import { SortingState } from "@tanstack/react-table"
 import {
   DndContext,
   closestCenter,
@@ -94,6 +127,150 @@ interface PayoutDialogProps {
   onDelete?: () => Promise<void>
   isLoading?: boolean
   isDeleting?: boolean
+}
+
+type SortOption = {
+  id: string
+  label: string
+}
+
+function toValidDate(value: Date | string | null | undefined) {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+function getAccountStartDate(account: Account) {
+  const tradeDates = (account.trades ?? [])
+    .map((trade) => toValidDate(trade.entryDate))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  if (tradeDates.length > 0) return tradeDates[0]
+
+  const dailyDates = (account.dailyMetrics ?? [])
+    .map((metric) => toValidDate(metric.date))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  return dailyDates[0] ?? null
+}
+
+function getAccountBalance(account: Account) {
+  return account.metrics?.currentBalance ?? account.startingBalance ?? 0
+}
+
+function getAccountSortValue(account: Account, ruleId: string) {
+  switch (ruleId) {
+    case "account":
+      return account.number || ""
+    case "propfirm":
+      return account.propfirm || ""
+    case "startDate":
+      return getAccountStartDate(account)?.getTime() ?? Number.POSITIVE_INFINITY
+    case "funded":
+      return account.evaluation === false ? 1 : 0
+    case "balance":
+      return getAccountBalance(account)
+    case "targetProgress":
+      return account.metrics?.progress ?? 0
+    case "drawdown":
+      return account.metrics?.remainingLoss ?? 0
+    case "consistency":
+      if (!account.metrics?.hasProfitableData) return 0
+      return account.metrics.isConsistent || account.consistencyPercentage === 100
+        ? 2
+        : 1
+    case "maxDailyProfit":
+      return account.metrics?.highestProfitDay ?? 0
+    case "tradingDays":
+      return account.metrics?.totalTradingDays ?? 0
+    default:
+      return ""
+  }
+}
+
+function compareSortValues(a: unknown, b: unknown, desc: boolean) {
+  let result = 0
+  if (typeof a === "number" && typeof b === "number") {
+    result = a - b
+  } else {
+    result = String(a).localeCompare(String(b), undefined, {
+      sensitivity: "base",
+    })
+  }
+  return desc ? -result : result
+}
+
+function SortRuleItem({
+  sort,
+  label,
+  reorderLabel,
+  toggleLabel,
+  removeLabel,
+  onToggleDirection,
+  onRemove,
+}: {
+  sort: SortingState[number]
+  label: string
+  reorderLabel: string
+  toggleLabel: string
+  removeLabel: string
+  onToggleDirection: () => void
+  onRemove: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: sort.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-sm",
+        isDragging && "opacity-70 shadow-sm"
+      )}
+    >
+      <button
+        type="button"
+        className="cursor-grab text-muted-foreground active:cursor-grabbing"
+        {...attributes}
+        {...listeners}
+        aria-label={reorderLabel}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+      <span className="flex-1 truncate">{label}</span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onToggleDirection}
+        className="h-7 w-7"
+        aria-label={toggleLabel}
+      >
+        {sort.desc ? (
+          <ArrowDown className="h-4 w-4" />
+        ) : (
+          <ArrowUp className="h-4 w-4" />
+        )}
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={onRemove}
+        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+        aria-label={removeLabel}
+      >
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  )
 }
 
 
@@ -567,11 +744,13 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const isLoading = useUserStore(state => state.isLoading)
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
-  const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout, refreshTrades } = useData()
+  const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout } = useData()
   const { getOrderedAccounts, reorderAccounts } = useAccountOrderStore()
   const t = useI18n()
   const params = useParams()
   const locale = params.locale as string
+  const { setAccountGroupBoardOpen } = useModalStateStore()
+  const { view, setView } = useAccountsViewPreferenceStore()
   const [selectedAccountForTable, setSelectedAccountForTable] = useState<Account | null>(null)
   const [payoutDialogOpen, setPayoutDialogOpen] = useState(false)
   const [selectedPayout, setSelectedPayout] = useState<{
@@ -586,7 +765,32 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const [pendingChanges, setPendingChanges] = useState<Partial<Account> | null>(null)
   const [isSavingPayout, setIsSavingPayout] = useState(false)
   const [isDeletingPayout, setIsDeletingPayout] = useState(false)
+  const { sorting, setSorting, clearSorting } = useAccountsSortingStore()
+  const [sortingMenuOpen, setSortingMenuOpen] = useState(false)
+  const [pendingSortId, setPendingSortId] = useState("")
   const shouldUpdateSelectedAccount = useRef(false)
+
+  const sortOptions = useMemo<SortOption[]>(
+    () => [
+      { id: "group", label: t("accounts.table.group") },
+      { id: "account", label: t("accounts.table.account") },
+      { id: "propfirm", label: t("accounts.table.propfirm") },
+      { id: "startDate", label: t("accounts.table.startDate") },
+      { id: "funded", label: t("accounts.table.funded") },
+      { id: "balance", label: t("accounts.table.balance") },
+      { id: "targetProgress", label: t("accounts.table.targetProgress") },
+      { id: "drawdown", label: t("accounts.table.drawdownRemaining") },
+      { id: "consistency", label: t("propFirm.card.consistency") },
+      { id: "maxDailyProfit", label: t("propFirm.card.highestDailyProfit") },
+      { id: "tradingDays", label: t("propFirm.card.tradingDays") },
+    ],
+    [t]
+  )
+
+  const availableSortOptions = useMemo(
+    () => sortOptions.filter((option) => !sorting.some((rule) => rule.id === option.id)),
+    [sortOptions, sorting]
+  )
 
   // Drag and drop sensors
   const sensors = useSensors(
@@ -690,6 +894,75 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     return { filteredAccounts: configuredAccounts, unconfiguredAccounts }
   }, [trades, accounts, accountNumbers, groups])
 
+  const { sortedGroupEntries, sortedUngroupedAccounts } = useMemo(() => {
+    const groupSortRule = sorting.find((rule) => rule.id === "group")
+    const accountSortRules = sorting.filter((rule) => rule.id !== "group")
+
+    const sortAccounts = (groupId: string, groupAccounts: Account[]) => {
+      if (accountSortRules.length === 0) {
+        return getOrderedAccounts(groupId, groupAccounts) as Account[]
+      }
+      return [...groupAccounts].sort((a, b) => {
+        for (const rule of accountSortRules) {
+          const aValue = getAccountSortValue(a, rule.id)
+          const bValue = getAccountSortValue(b, rule.id)
+          const compare = compareSortValues(aValue, bValue, rule.desc)
+          if (compare !== 0) return compare
+        }
+        return 0
+      })
+    }
+
+    const groupEntries = groups
+      .map((group) => {
+        const groupAccounts = filteredAccounts.filter((account) =>
+          group.accounts.some((a) => a.number === account.number)
+        )
+        if (groupAccounts.length === 0) return null
+        return {
+          group,
+          accounts: sortAccounts(group.id, groupAccounts),
+        }
+      })
+      .filter((value): value is { group: typeof groups[number]; accounts: Account[] } =>
+        Boolean(value)
+      )
+
+    if (groupSortRule) {
+      groupEntries.sort((a, b) =>
+        compareSortValues(a.group.name, b.group.name, groupSortRule.desc)
+      )
+    } else if (accountSortRules.length > 0) {
+      groupEntries.sort((a, b) => {
+        const aAccount = a.accounts[0]
+        const bAccount = b.accounts[0]
+        if (!aAccount && !bAccount) return 0
+        if (!aAccount) return 1
+        if (!bAccount) return -1
+        for (const rule of accountSortRules) {
+          const aValue = getAccountSortValue(aAccount, rule.id)
+          const bValue = getAccountSortValue(bAccount, rule.id)
+          const compare = compareSortValues(aValue, bValue, rule.desc)
+          if (compare !== 0) return compare
+        }
+        return 0
+      })
+    }
+
+    const groupedAccountNumbers = new Set(
+      groups.flatMap((group) => group.accounts.map((a) => a.number))
+    )
+    const ungroupedAccounts = filteredAccounts.filter(
+      (account) => !groupedAccountNumbers.has(account.number ?? "")
+    )
+    const sortedUngrouped = sortAccounts("ungrouped", ungroupedAccounts)
+
+    return {
+      sortedGroupEntries: groupEntries,
+      sortedUngroupedAccounts: sortedUngrouped,
+    }
+  }, [filteredAccounts, getOrderedAccounts, groups, sorting])
+
   const dailyMetrics = useMemo(() => {
     if (!selectedAccountForTable) return []
     // Use pre-computed daily metrics from account
@@ -723,10 +996,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         })
       }
       
-      // Force refresh of accounts data to get the latest payout information
-      // This ensures the account table shows the new payout immediately
+      // Mark for local selection update; data is already updated optimistically
       shouldUpdateSelectedAccount.current = true
-      await refreshTrades()
 
       setPayoutDialogOpen(false)
       setSelectedPayout(undefined)
@@ -752,10 +1023,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       
       await deletePayout(selectedPayout.id)
 
-      // Force refresh of accounts data to get the latest payout information
-      // This ensures the account table shows the updated data immediately
+      // Mark for local selection update; data is already updated optimistically
       shouldUpdateSelectedAccount.current = true
-      await refreshTrades()
 
       setPayoutDialogOpen(false)
       setSelectedPayout(undefined)
@@ -780,8 +1049,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       setIsDeleting(true)
       // Delete both account configuration and all associated trades
       await removeAccountsFromTradesAction([selectedAccountForTable.number])
-      // Refresh trades to update the UI
-      await refreshTrades()
+      // DataProvider updates accounts/trades optimistically; no full refresh
       setSelectedAccountForTable(null)
 
       toast.success(t('propFirm.toast.deleteSuccess'), {
@@ -888,6 +1156,185 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
               </UITooltip>
             </TooltipProvider>
           </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAccountGroupBoardOpen(true)}
+              className={cn(
+                "gap-1.5",
+                size === "small" ? "h-7 px-2 text-xs" : "h-8"
+              )}
+            >
+              <Settings className="h-3.5 w-3.5" />
+              <span className={cn(size === "small" && "sr-only")}>
+                {t("filters.manageAccounts")}
+              </span>
+            </Button>
+            <Popover open={sortingMenuOpen} onOpenChange={setSortingMenuOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "gap-1.5",
+                    size === "small" ? "h-7 px-2 text-xs" : "h-8"
+                  )}
+                >
+                  <ListOrdered className="h-3.5 w-3.5" />
+                  <span className={cn(size === "small" && "sr-only")}>
+                    {sorting.length > 0
+                      ? t("table.sortingRules", { count: sorting.length })
+                      : t("table.sorting")}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-3">
+                <div className="space-y-3">
+                  {sorting.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">
+                      {t("table.noSorting")}
+                    </div>
+                  ) : (
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={(event: DragEndEvent) => {
+                        const { active, over } = event
+                        if (!over || active.id === over.id) return
+                        const oldIndex = sorting.findIndex(
+                          (rule) => rule.id === active.id
+                        )
+                        const newIndex = sorting.findIndex(
+                          (rule) => rule.id === over.id
+                        )
+                        if (oldIndex === -1 || newIndex === -1) return
+                        setSorting((prev) => arrayMove(prev, oldIndex, newIndex))
+                      }}
+                    >
+                      <SortableContext
+                        items={sorting.map((rule) => rule.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {sorting.map((rule) => {
+                            const label =
+                              sortOptions.find(
+                                (option) => option.id === rule.id
+                              )?.label ?? rule.id
+                            return (
+                              <SortRuleItem
+                                key={rule.id}
+                                sort={rule}
+                                label={label}
+                                reorderLabel={t("table.reorderSort")}
+                                toggleLabel={
+                                  rule.desc
+                                    ? t("table.sortDescending")
+                                    : t("table.sortAscending")
+                                }
+                                removeLabel={t("table.removeSort")}
+                                onToggleDirection={() =>
+                                  setSorting((prev) =>
+                                    prev.map((item) =>
+                                      item.id === rule.id
+                                        ? { ...item, desc: !item.desc }
+                                        : item
+                                    )
+                                  )
+                                }
+                                onRemove={() =>
+                                  setSorting((prev) =>
+                                    prev.filter((item) => item.id !== rule.id)
+                                  )
+                                }
+                              />
+                            )
+                          })}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={pendingSortId}
+                      onValueChange={(value) => {
+                        const nextValue = value === "__none" ? "" : value
+                        setPendingSortId(nextValue)
+                        if (nextValue) {
+                          setSorting((prev) => [
+                            ...prev,
+                            { id: nextValue, desc: false },
+                          ])
+                          setPendingSortId("")
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="h-8 flex-1">
+                        <SelectValue placeholder={t("table.pickSortColumn")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableSortOptions.length === 0 ? (
+                          <SelectItem value="__none" disabled>
+                            {t("table.noMoreSortOptions")}
+                          </SelectItem>
+                        ) : (
+                          availableSortOptions.map((option) => (
+                            <SelectItem key={option.id} value={option.id}>
+                              {option.label}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearSorting}
+                      disabled={sorting.length === 0}
+                    >
+                      {t("table.clearSorting")}
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <Tabs value={view} onValueChange={(value) => setView(value as "cards" | "table")}>
+              <TabsList
+                className={cn(
+                  "gap-1",
+                  size === "small" ? "h-7 px-1" : "h-8 px-1"
+                )}
+              >
+                <TabsTrigger
+                  value="cards"
+                  className={cn(
+                    "gap-1.5",
+                    size === "small" ? "h-6 px-2 text-xs" : "h-7"
+                  )}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span className={cn(size === "small" && "sr-only")}>
+                    {t("accounts.view.charts")}
+                  </span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="table"
+                  className={cn(
+                    "gap-1.5",
+                    size === "small" ? "h-6 px-2 text-xs" : "h-7"
+                  )}
+                >
+                  <Table className="h-3.5 w-3.5" />
+                  <span className={cn(size === "small" && "sr-only")}>
+                    {t("accounts.view.table")}
+                  </span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
       </CardHeader>
 
@@ -944,159 +1391,149 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
         </div>
       )}
 
-      <CardContent className="flex-1 overflow-hidden">
+      <CardContent
+        className={cn(
+          "flex-1 overflow-hidden",
+          view === "table" && "p-0"
+        )}
+      >
         <div
           className="flex-1 overflow-y-auto h-full"
         >
-          {/* Group accounts by their groups */}
-          <div className="mt-4">
-            <div className="space-y-6">
-              {groups.map((group, groupIndex) => {
-                // Filter accounts for this group
-                const groupAccounts = filteredAccounts.filter(account => {
-                  // Find the account in the group's accounts
-                  return group.accounts.some(a => a.number === account.number);
-                });
+          {view === "cards" ? (
+            <div className="mt-4">
+              <div className="space-y-6">
+                {sortedGroupEntries.map(({ group, accounts: orderedAccounts }, groupIndex) => {
+                  // Generate a consistent color for each group based on group index
+                  const groupColors = [
+                    'border-blue-200/50 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/20',
+                    'border-purple-200/50 bg-purple-50/30 dark:border-purple-800/30 dark:bg-purple-950/20',
+                    'border-green-200/50 bg-green-50/30 dark:border-green-800/30 dark:bg-green-950/20',
+                    'border-orange-200/50 bg-orange-50/30 dark:border-orange-800/30 dark:bg-orange-950/20',
+                    'border-pink-200/50 bg-pink-50/30 dark:border-pink-800/30 dark:bg-pink-950/20',
+                    'border-cyan-200/50 bg-cyan-50/30 dark:border-cyan-800/30 dark:bg-cyan-950/20',
+                  ];
 
-                // Skip groups with no accounts
-                if (groupAccounts.length === 0) return null;
+                  const groupColorClass = groupColors[groupIndex % groupColors.length];
 
-                // Get ordered accounts for this group
-                const orderedAccounts = getOrderedAccounts(group.id, groupAccounts) as Account[];
-
-                // Generate a consistent color for each group based on group index
-                const groupColors = [
-                  'border-blue-200/50 bg-blue-50/30 dark:border-blue-800/30 dark:bg-blue-950/20',
-                  'border-purple-200/50 bg-purple-50/30 dark:border-purple-800/30 dark:bg-purple-950/20',
-                  'border-green-200/50 bg-green-50/30 dark:border-green-800/30 dark:bg-green-950/20',
-                  'border-orange-200/50 bg-orange-50/30 dark:border-orange-800/30 dark:bg-orange-950/20',
-                  'border-pink-200/50 bg-pink-50/30 dark:border-pink-800/30 dark:bg-pink-950/20',
-                  'border-cyan-200/50 bg-cyan-50/30 dark:border-cyan-800/30 dark:bg-cyan-950/20',
-                ];
-
-                const groupColorClass = groupColors[groupIndex % groupColors.length];
-
-                return (
-                  <div
-                    key={group.id}
-                    className={cn(
-                      "relative border-l-4 rounded-r-lg",
-                      groupColorClass,
-                      "transition-all duration-200 hover:shadow-md"
-                    )}
-                  >
-                    {/* Group header with subtle styling */}
-                    <div className="px-4 py-3 border-b border-current/10">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-foreground/80 tracking-wide uppercase">
-                          {group.name}
-                        </h3>
-                        <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
-                          {groupAccounts.length} {groupAccounts.length === 1 ? 'account' : 'accounts'}
+                  return (
+                    <div
+                      key={group.id}
+                      className={cn(
+                        "relative border-l-4 rounded-r-lg",
+                        groupColorClass,
+                        "transition-all duration-200 hover:shadow-md"
+                      )}
+                    >
+                      {/* Group header with subtle styling */}
+                      <div className="px-4 py-3 border-b border-current/10">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-foreground/80 tracking-wide uppercase">
+                            {group.name}
+                          </h3>
+                          <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
+                            {orderedAccounts.length} {orderedAccounts.length === 1 ? 'account' : 'accounts'}
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Cards container with optimized spacing */}
-                    <div className="p-4 pt-3">
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                        modifiers={[restrictToHorizontalAxis]}
-                      >
-                        <SortableContext
-                          items={orderedAccounts.map(acc => acc.number)}
-                          strategy={horizontalListSortingStrategy}
+                      {/* Cards container with optimized spacing */}
+                      <div className="p-4 pt-3">
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                          modifiers={[restrictToHorizontalAxis]}
                         >
-                          <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
-                            {orderedAccounts.map(account => {
-                              if (!account.number) return null;
-                              return (
-                                <DraggableAccountCard
-                                  key={account.number}
-                                  account={account as Account}
-                                  onClick={() => setSelectedAccountForTable(account as Account)}
-                                  size={size}
-                                />
-                              )
-                            }).filter(Boolean)}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Show ungrouped accounts */}
-              {(() => {
-
-                const groupedAccountNumbers = new Set(
-                  groups.flatMap(group => group.accounts.map(a => a.number))
-                );
-
-                const ungroupedAccounts = filteredAccounts.filter(
-                  account => !groupedAccountNumbers.has(account.number ?? '')
-                );
-
-                if (ungroupedAccounts.length === 0) return null;
-
-                // Get ordered accounts for ungrouped (using a special key)
-                const orderedUngroupedAccounts = getOrderedAccounts('ungrouped', ungroupedAccounts) as Account[];
-
-                return (
-                  <div
-                    className={cn(
-                      "relative border-l-4 border-gray-200/50 bg-gray-50/30 dark:border-gray-700/30 dark:bg-gray-900/20 rounded-r-lg",
-                      "transition-all duration-200 hover:shadow-md"
-                    )}
-                  >
-                    {/* Ungrouped header */}
-                    <div className="px-4 py-3 border-b border-gray-200/20 dark:border-gray-700/20">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">
-                          {t('propFirm.ungrouped')}
-                        </h3>
-                        <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
-                          {ungroupedAccounts.length} {ungroupedAccounts.length === 1 ? 'account' : 'accounts'}
-                        </div>
+                          <SortableContext
+                            items={orderedAccounts.map(acc => acc.number)}
+                            strategy={horizontalListSortingStrategy}
+                          >
+                            <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
+                              {orderedAccounts.map(account => {
+                                if (!account.number) return null;
+                                return (
+                                  <DraggableAccountCard
+                                    key={account.number}
+                                    account={account as Account}
+                                    onClick={() => setSelectedAccountForTable(account as Account)}
+                                    size={size}
+                                  />
+                                )
+                              }).filter(Boolean)}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
                       </div>
                     </div>
+                  );
+                })}
 
-                    {/* Cards container */}
-                    <div className="p-4 pt-3">
-                      <DndContext
-                        sensors={sensors}
-                        collisionDetection={closestCenter}
-                        onDragEnd={handleDragEnd}
-                        modifiers={[restrictToHorizontalAxis]}
-                      >
-                        <SortableContext
-                          items={orderedUngroupedAccounts.map(acc => acc.number)}
-                          strategy={horizontalListSortingStrategy}
-                        >
-                          <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
-                            {orderedUngroupedAccounts.map(account => {
-                              if (!account.number) return null;
-                              return (
-                                <DraggableAccountCard
-                                  key={account.number}
-                                  account={account as Account}
-                                  onClick={() => setSelectedAccountForTable(account as Account)}
-                                  size={size}
-                                />
-                              )
-                            }).filter(Boolean)}
+                {/* Show ungrouped accounts */}
+                {(() => {
+                  if (sortedUngroupedAccounts.length === 0) return null;
+
+                  return (
+                    <div
+                      className={cn(
+                        "relative border-l-4 border-gray-200/50 bg-gray-50/30 dark:border-gray-700/30 dark:bg-gray-900/20 rounded-r-lg",
+                        "transition-all duration-200 hover:shadow-md"
+                      )}
+                    >
+                      {/* Ungrouped header */}
+                      <div className="px-4 py-3 border-b border-gray-200/20 dark:border-gray-700/20">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-muted-foreground tracking-wide uppercase">
+                            {t('propFirm.ungrouped')}
+                          </h3>
+                          <div className="text-xs text-muted-foreground bg-white/50 dark:bg-black/20 px-2 py-1 rounded-full">
+                            {sortedUngroupedAccounts.length} {sortedUngroupedAccounts.length === 1 ? 'account' : 'accounts'}
                           </div>
-                        </SortableContext>
-                      </DndContext>
+                        </div>
+                      </div>
+
+                      {/* Cards container */}
+                      <div className="p-4 pt-3">
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleDragEnd}
+                          modifiers={[restrictToHorizontalAxis]}
+                        >
+                          <SortableContext
+                            items={sortedUngroupedAccounts.map(acc => acc.number)}
+                            strategy={horizontalListSortingStrategy}
+                          >
+                            <div className="flex gap-3 overflow-x-auto pb-2 min-h-fit">
+                              {sortedUngroupedAccounts.map(account => {
+                                if (!account.number) return null;
+                                return (
+                                  <DraggableAccountCard
+                                    key={account.number}
+                                    account={account as Account}
+                                    onClick={() => setSelectedAccountForTable(account as Account)}
+                                    size={size}
+                                  />
+                                )
+                              }).filter(Boolean)}
+                            </div>
+                          </SortableContext>
+                        </DndContext>
+                      </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
             </div>
-          </div>
+          ) : (
+            <AccountsTableView
+              accounts={filteredAccounts}
+              groups={groups}
+              onSelectAccount={(account) => setSelectedAccountForTable(account)}
+              sorting={sorting}
+              onSortingChange={setSorting}
+            />
+          )}
         </div>
 
         <Dialog
@@ -1184,10 +1621,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                         try {
                           await deletePayout(payoutId)
 
-                          // Force refresh of accounts data to get the latest payout information
-                          // This ensures the account table shows the updated data immediately
                           shouldUpdateSelectedAccount.current = true
-                          await refreshTrades()
 
                           toast.success(t('propFirm.payout.deleteSuccess'), {
                             description: t('propFirm.payout.deleteSuccessDescription'),

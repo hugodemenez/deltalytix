@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { TickDetails } from '@prisma/client'
+import { TickDetails } from '@/prisma/generated/prisma/browser'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
 type TickDetailsStore = {

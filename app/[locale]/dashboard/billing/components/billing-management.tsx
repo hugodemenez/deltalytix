@@ -8,7 +8,7 @@ import { Check, AlertCircle, CheckCircle2, CalendarDays, Clock, CreditCard, Hist
 import { Dialog, DialogContent, DialogTrigger, DialogTitle, DialogDescription, DialogHeader, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { updateSubscription, collectSubscriptionFeedback, type SubscriptionWithPrice } from "../../actions/billing"
+import { updateSubscription, collectSubscriptionFeedback, type SubscriptionWithPrice } from "../../../../../server/billing"
 import { toast } from "sonner"
 import { useI18n, useCurrentLocale } from "@/locales/client"
 import PricingPlans from "@/components/pricing-plans"

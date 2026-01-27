@@ -321,13 +321,13 @@ export default function Component() {
                                 <NavigationMenuTrigger className='bg-transparent'>{t('landing.navbar.pricing')}</NavigationMenuTrigger>
                                 <NavigationMenuContent onMouseEnter={() => setHoveredItem('pricing')} onMouseLeave={() => setHoveredItem(null)}>
                                     <ul className="grid gap-3 p-6 md:w-[500px] lg:w-[600px] list-none">
-                                        <ListItem href="/authentication" title={t('pricing.basic.name')} icon={<Sun className="h-4 w-4" />}>
+                                        <ListItem href="#pricing" title={t('pricing.basic.name')} icon={<Sun className="h-4 w-4" />}>
                                             {t('pricing.basic.description')}
                                         </ListItem>
-                                        <ListItem href="/pricing" title={t('pricing.plus.name')} icon={<Crown className="h-4 w-4" />}>
+                                        <ListItem href="#pricing" title={t('pricing.plus.name')} icon={<Crown className="h-4 w-4" />}>
                                                 {t('pricing.plus.description')}
                                         </ListItem>
-                                    </ul>
+                                    </ul> 
                                 </NavigationMenuContent>
                             </NavigationMenuItem>
                             <NavigationMenuItem onMouseEnter={() => setHoveredItem('updates')} onMouseLeave={() => setHoveredItem(null)}>

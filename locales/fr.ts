@@ -11,6 +11,7 @@ import embed from "./fr/embed";
 import teams from "./fr/teams";
 import referral from "./fr/referral";
 import admin from "./fr/admin";
+import faq from "./fr/faq";
 
 export default {
   ...shared,
@@ -26,6 +27,7 @@ export default {
   ...teams,
   ...referral,
   ...admin,
+  ...faq,
   "footer.heading": "Pied de page",
   "footer.description": "Analyses avancées pour les traders modernes.",
   "footer.product.title": "Produit",
@@ -1374,9 +1376,15 @@ export default {
     deleteSuccess: "Trades Supprimés",
     deleteSuccessDescription: "{count} trade(s) ont été supprimé(s).",
     deleteError: "Échec de la Suppression des Trades",
-    deleteErrorDescription:
-      "Une erreur s'est produite lors de la suppression des trades. Veuillez réessayer.",
-    deleteAllImages: "Supprimer toutes les images",
+     deleteErrorDescription:
+       "Une erreur s'est produite lors de la suppression des trades. Veuillez réessayer.",
+     deleteConfirmTitle: "Supprimer les trades sélectionnés",
+     deleteConfirmDescription:
+       "Êtes-vous sûr de vouloir supprimer {count} trade(s) sélectionné(s) ? Cette action est irréversible.",
+     deleteConfirmCancel: "Annuler",
+     deleteConfirmConfirm: "Supprimer",
+     deleteAllImages: "Supprimer toutes les images",
+
     allImagesDeleted: "Toutes les images ont été supprimées avec succès",
     resetConfig: "Réinitialiser la Configuration",
     resetConfigDescription:
@@ -2058,6 +2066,25 @@ export default {
       accountNameRequired: "Le nom du compte est requis",
       accountsReloaded: "Comptes rechargés avec succès",
       reloadError: "Échec du rechargement des comptes",
+      dailySyncTimeLocal: "Heure de sync quotidienne (locale)",
+      environmentDemo: "Démo",
+      dailySyncTimeTitle: "Définir l'heure de sync quotidienne",
+      dailySyncTimeDescription:
+        "Configurez l'heure à laquelle ce compte doit se synchroniser automatiquement chaque jour (dans votre heure locale). Laissez vide pour désactiver la synchronisation automatique.",
+      dailySyncTimeLabel: "Heure de sync (heure locale)",
+      dailySyncTimePlaceholder: "HH:mm",
+      dailySyncTimeTimezoneNote:
+        "L'heure est dans votre fuseau horaire local ({timezone})",
+      dailySyncTimeNotSet: "Non défini",
+      dailySyncTimeUpdated: "Heure de sync quotidienne mise à jour avec succès",
+      dailySyncTimeUpdateError: "Échec de la mise à jour de l'heure de sync",
+      quickPresets: "Préréglages rapides",
+      presets: {
+        morning: "Matin (8:00)",
+        midday: "Midi (12:00)",
+        afterClose: "Après clôture (22:00 UTC)",
+        midnight: "Minuit (00:00)",
+      },
     },
     tabs: {
       accounts: "Comptes",
@@ -2234,6 +2261,37 @@ export default {
   },
   "calendar.maxProfit": "Max P",
   "calendar.maxDD": "Max DD",
+  "accounts.view.charts": "Graphiques",
+  "accounts.view.table": "Tableau",
+  "accounts.table.account": "Compte",
+  "accounts.table.propfirm": "Prop firm",
+  "accounts.table.startDate": "Date de début",
+  "accounts.table.funded": "Financé",
+  "accounts.table.fundedYes": "Compte financé",
+  "accounts.table.fundedNo": "Compte de challenge",
+  "accounts.table.balance": "Solde",
+  "accounts.table.totalPayout": "Total des payouts",
+  "accounts.table.group": "Groupe",
+  "accounts.table.targetProgress": "Progression de l’objectif",
+  "accounts.table.remaining": "Restant",
+  "accounts.table.drawdownRemaining": "Drawdown restant",
+  "accounts.table.notConfigured": "Non configuré",
+  "accounts.table.subtotal": "Sous-total",
+  "accounts.table.total": "Total",
+  "accounts.table.expandGroup": "Développer le groupe",
+  "accounts.table.collapseGroup": "Réduire le groupe",
+  "accounts.table.scrollHint": "Astuce : maintenez Maj et faites défiler la molette pour un défilement horizontal.",
+  "accounts.table.dismissHint": "Fermer l'astuce",
+  "table.sorting": "Tri",
+  "table.sortingRules": "Trié par {count} règles",
+  "table.noSorting": "Aucun tri appliqué",
+  "table.pickSortColumn": "Choisir une autre colonne à trier",
+  "table.noMoreSortOptions": "Toutes les colonnes sont déjà triées",
+  "table.addSort": "Ajouter un tri",
+  "table.clearSorting": "Effacer le tri",
+  "table.applySorting": "Appliquer le tri",
+  "table.reorderSort": "Réorganiser le tri",
+  "table.removeSort": "Supprimer le tri",
   "table.sortAscending": "Tri croissant",
   "table.sortDescending": "Tri décroissant",
   "table.filter": "Filtrer",

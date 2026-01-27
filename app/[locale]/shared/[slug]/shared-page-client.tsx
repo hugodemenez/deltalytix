@@ -12,7 +12,7 @@ import { useI18n } from "@/locales/client"
 import { Loader2, ChevronDown } from "lucide-react"
 import { useEffect, useState } from "react"
 import { SharedParams } from "@/server/shared"
-import { Trade } from "@prisma/client"
+import { Trade } from "@/prisma/generated/prisma/browser"
 import { LanguageSelector } from "@/components/ui/language-selector"
 
 interface SharedPageClientProps {

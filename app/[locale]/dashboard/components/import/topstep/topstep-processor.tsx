@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Trade } from '@prisma/client'
+import { Trade } from '@/prisma/generated/prisma/client'
 import { Button } from "@/components/ui/button"
 import { formatInTimeZone } from 'date-fns-tz'
 import { useUserStore } from '@/store/user-store'

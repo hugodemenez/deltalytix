@@ -103,4 +103,25 @@ export const getAllPosts = cache(async (locale: string) => {
     console.error(`Error reading posts directory: ${localeDirectory}`, error)
     return []
   }
+})
+
+// Get adjacent posts (previous and next) for navigation
+export const getAdjacentPosts = cache(async (currentSlug: string, locale: string) => {
+  const posts = await getAllPosts(locale)
+  const currentIndex = posts.findIndex(post => post.slug === currentSlug)
+  
+  if (currentIndex === -1) {
+    return { previous: null, next: null }
+  }
+  
+  // Posts are sorted by date descending, so:
+  // - "previous" (older) is the next item in the array (higher index)
+  // - "next" (newer) is the previous item in the array (lower index)
+  const previous = currentIndex < posts.length - 1 ? posts[currentIndex + 1] : null
+  const next = currentIndex > 0 ? posts[currentIndex - 1] : null
+  
+  return {
+    previous: previous ? { slug: previous.slug, title: previous.meta.title } : null,
+    next: next ? { slug: next.slug, title: next.meta.title } : null,
+  }
 }) 

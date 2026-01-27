@@ -1,19 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, startTransition } from 'react'
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false)
+  const [matches, setMatches] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia(query).matches
+    }
+    return false
+  })
 
   useEffect(() => {
     const media = window.matchMedia(query)
     
-    // Set initial value
-    setMatches(media.matches)
+    // Set initial value using startTransition
+    startTransition(() => {
+      setMatches(media.matches)
+    })
 
     // Update matches when media query changes
     function listener(e: MediaQueryListEvent) {
-      setMatches(e.matches)
+      startTransition(() => {
+        setMatches(e.matches)
+      })
     }
 
     // Modern browsers

@@ -1,9 +1,11 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, startTransition } from 'react'
+import Link from 'next/link'
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, ChevronLeft, ChevronRight, X, AlertCircle } from "lucide-react"
+import { Check, X, AlertCircle } from "lucide-react"
 import { useCurrentLocale, useI18n } from "@/locales/client"
 import NumberFlow from '@number-flow/react'
 import {
@@ -16,6 +18,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { toast } from 'sonner'
+import { cn } from "@/lib/utils"
 
 // Currency detection hook
 // Handles special case for French overseas territories (DOM/TOM) that use EUR currency
@@ -38,15 +41,16 @@ function useCurrency() {
     // Function to set currency based on country code
     const setCurrencyFromCountry = (countryCode: string) => {
       const upperCountryCode = countryCode.toUpperCase()
-      if (eurozoneCountries.includes(upperCountryCode)) {
-        setCurrency('EUR')
-        setSymbol('€')
-        return true
-      } else {
-        setCurrency('USD')
-        setSymbol('$')
-        return true
-      }
+      startTransition(() => {
+        if (eurozoneCountries.includes(upperCountryCode)) {
+          setCurrency('EUR')
+          setSymbol('€')
+        } else {
+          setCurrency('USD')
+          setSymbol('$')
+        }
+      })
+      return true
     }
 
     // First, try to get country from cookie (set by middleware)
@@ -72,13 +76,15 @@ function useCurrency() {
     // Check if locale indicates European country
     const isEuropeanLocale = /^(fr|de|es|it|nl|pt|el|fi|et|lv|lt|sl|sk|mt|cy)-/.test(locale)
 
-    if (isEuropeanTimezone || isEuropeanLocale) {
-      setCurrency('EUR')
-      setSymbol('€')
-    } else {
-      setCurrency('USD')
-      setSymbol('$')
-    }
+    startTransition(() => {
+      if (isEuropeanTimezone || isEuropeanLocale) {
+        setCurrency('EUR')
+        setSymbol('€')
+      } else {
+        setCurrency('USD')
+        setSymbol('$')
+      }
+    })
   }, [locale])
 
   useEffect(() => {
@@ -126,7 +132,7 @@ interface PricingPlansProps {
 }
 
 export default function PricingPlans({ isModal, onClose, trigger, currentSubscription }: PricingPlansProps) {
-  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('yearly')
+  const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>('lifetime')
   const [isLoading, setIsLoading] = useState(false)
   const [showLifetimeConfirm, setShowLifetimeConfirm] = useState(false)
   const [pendingLookupKey, setPendingLookupKey] = useState<string>('')
@@ -267,7 +273,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
     setIsLoading(true)
     
     try {
-      const { switchSubscriptionPlan } = await import('@/app/[locale]/dashboard/actions/billing')
+      const { switchSubscriptionPlan } = await import('@/server/billing')
       const result = await switchSubscriptionPlan(lookupKey)
       
       if (result.success) {
@@ -306,7 +312,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
           description: result.error,
         })
       }
-    } catch (error) {
+    } catch {
       toast.error(t('billing.error'), {
         description: t('billing.planSwitchError'),
       })
@@ -346,8 +352,13 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
         t('pricing.basic.feature1'),
         t('pricing.basic.feature2'),
         t('pricing.basic.feature3'),
-        t('pricing.basic.feature4'),
-        t('pricing.basic.feature5'),
+        t('pricing.basic.feature6'),
+        t('pricing.basic.feature7'),
+        t('pricing.basic.feature8'),
+        t('pricing.basic.feature9'),
+        t('pricing.basic.feature10'),
+        t('pricing.basic.feature11'),
+        t('pricing.basic.feature12'),
       ]
     },
     plus: {
@@ -358,26 +369,8 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
       features: [
         t('pricing.plus.feature1'),
         t('pricing.plus.feature2'),
-        t('pricing.plus.feature4'),
         t('pricing.plus.feature6'),
       ]
-    }
-  }
-
-  function formatPrice(plan: Plan, planKey: string): number {
-    if (plan.price.yearly === 0 || planKey === 'basic') {
-      return 0
-    }
-
-    switch (billingPeriod) {
-      case 'quarterly':
-        return plan.price.quarterly / 3
-      case 'yearly':
-        return plan.price.yearly / 12
-      case 'lifetime':
-        return plan.price.lifetime
-      default:
-        return plan.price.monthly
     }
   }
 
@@ -397,7 +390,7 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
             <ul className="space-y-2">
               {plan.features.map((feature, index) => (
                 <li key={index} className="flex items-start">
-                  {index !== 1 && index !== 0 ? (
+                  {index > 2 ? (
                     <X className="h-4 w-4 text-red-500 mr-2 mt-1 shrink-0" />
                   ) : (
                     <Check className="h-4 w-4 text-green-500 mr-2 mt-1 shrink-0" />
@@ -414,15 +407,15 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
               </Button>
             ) : (
               <Button asChild className="">
-                <a href="/authentication">{t('pricing.startBasic')}</a>
+                <Link href="/authentication">{t('pricing.startBasic')}</Link>
               </Button>
             )}
             
             <p className="text-xs text-center text-muted-foreground">
-              {t('terms.pricing.disclaimer')}
-              <a href="/terms" className="text-primary hover:underline">
+              {t('terms.pricing.freePlanDisclaimer')}
+              <Link href="/terms" className="text-primary hover:underline">
                 {t('terms.pricing.termsOfService')}
-              </a>
+              </Link>
             </p>
           </CardFooter>
         </Card>
@@ -492,9 +485,12 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
                 {recurringBillingOptions.map((option) => (
                   <Button
                     key={option.key}
-                    variant={billingPeriod === option.key ? 'default' : 'ghost'}
+                    variant="ghost"
                     size="sm"
-                    className="text-xs capitalize"
+                    className={cn(
+                      "text-xs capitalize border border-transparent",
+                      billingPeriod === option.key && "border-primary"
+                    )}
                     onClick={() => setBillingPeriod(option.key)}
                   >
                     {option.label}
@@ -505,12 +501,21 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
               {/* Separate lifetime button */}
               <div className="pt-2 border-t border-border">
                 <Button
-                  variant={billingPeriod === 'lifetime' ? 'default' : 'outline'}
+                  variant="outline"
                   size="sm"
-                  className="w-full"
+                  className={cn(
+                    "w-full flex items-center justify-center gap-2 border border-border",
+                    billingPeriod === 'lifetime' && "border-primary"
+                  )}
                   onClick={() => setBillingPeriod('lifetime')}
                 >
                   {t('pricing.lifetimeAccess')}
+                  <Badge
+                    variant="secondary"
+                    className="uppercase tracking-wide text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-700 dark:bg-emerald-500/15 dark:text-emerald-300 border border-amber-500/40 dark:border-emerald-500/50"
+                  >
+                    {t('pricing.limitedTimeOffer')}
+                  </Badge>
                 </Button>
               </div>
             </div>
@@ -600,7 +605,6 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
             {(() => {
               const lookupKey = `plus_${billingPeriod}_${currency.toLowerCase()}`
               const isCurrent = isCurrentPlan(lookupKey)
-              const isLifetimeUser = hasLifetimeSubscription()
               const isBlockedRecurring = isBlockedFromRecurring(lookupKey)
               const isBlockedLifetime = isBlockedFromLifetime(lookupKey)
               const isBlocked = isBlockedRecurring || isBlockedLifetime
@@ -627,9 +631,9 @@ export default function PricingPlans({ isModal, onClose, trigger, currentSubscri
             
             <p className="text-xs text-center text-muted-foreground">
               {t('terms.pricing.disclaimer')}
-              <a href="/terms" className="text-primary hover:underline">
+              <Link href="/terms" className="text-primary hover:underline">
                 {t('terms.pricing.termsOfService')}
-              </a>
+              </Link>
             </p>
           </CardFooter>
         </Card>

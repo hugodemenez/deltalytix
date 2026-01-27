@@ -1,7 +1,7 @@
 'use server'
 import { prisma } from "@/lib/prisma"
 import { getUserId } from "@/server/auth"
-import { Synchronization } from "@prisma/client"
+import { Synchronization } from "@/prisma/generated/prisma/client"
 
 export async function getRithmicSynchronizations() {
   console.log('CHECKING RITHMIC SYNCHRONIZATIONS')

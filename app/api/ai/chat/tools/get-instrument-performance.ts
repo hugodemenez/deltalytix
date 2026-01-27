@@ -1,5 +1,5 @@
 import { getTradesAction } from "@/server/database";
-import { Trade } from "@prisma/client";
+import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
 import { z } from 'zod/v3';
 

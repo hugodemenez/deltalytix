@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { FinancialEvent } from '@prisma/client'
+import { FinancialEvent } from '@/prisma/generated/prisma/browser'
 
 type FinancialEventsStore = {
   events: FinancialEvent[]

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { Trade } from '@prisma/client'
+import { Trade } from '@/prisma/generated/prisma/browser'
 import { generateTradeHash } from '@/lib/utils'
 import { PlatformProcessorProps } from '../config/platforms'
 import {
@@ -15,18 +15,76 @@ import {
 } from "@/components/ui/card"
 
 
+/**
+ * Formats currency values from NinjaTrader CSV exports
+ * Supports multiple formats:
+ * - Negative values in parenthesis: ($400.00), (400.00)
+ * - Standard negative: -$400.00, -400.00
+ * - Positive values: $400.00, 400.00
+ * - US format with thousand separators: $1,234.56
+ * - European format with comma as decimal: 1234,56 or 1.234,56
+ */
 const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: string } => {
   if (typeof pnl !== 'string' || pnl.trim() === '') {
     return { pnl: 0, error: 'Invalid PNL value' };
   }
 
   const formattedPnl = pnl.trim();
-  const numericValue = parseFloat(formattedPnl.replace(/[$]/g, '').replace(',', '.'));
+  
+  // Check if value is in parenthesis format (negative)
+  const isNegative = formattedPnl.startsWith('(') && formattedPnl.endsWith(')');
+  
+  // Remove parentheses and dollar signs
+  let cleanedValue = formattedPnl.replace(/[()$]/g, '');
+  
+  // Detect format: if there's both comma and period, determine which is decimal separator
+  if (cleanedValue.includes(',') && cleanedValue.includes('.')) {
+    // If comma comes before period, it's a thousand separator (US format: 1,234.56)
+    // If period comes before comma, it's European format (1.234,56)
+    const commaIndex = cleanedValue.indexOf(',');
+    const periodIndex = cleanedValue.indexOf('.');
+    
+    if (commaIndex < periodIndex) {
+      // US format: remove commas (thousand separators)
+      cleanedValue = cleanedValue.replace(/,/g, '');
+    } else {
+      // European format: remove periods (thousand separators) and replace comma with period
+      cleanedValue = cleanedValue.replace(/\./g, '').replace(',', '.');
+    }
+  } else if (cleanedValue.includes(',')) {
+    // Only comma present - could be either format
+    // European decimal format has 1+ digits after comma (e.g., 123,45 or 123,4567)
+    // US thousand separator has exactly 3 digits between each comma (e.g., 1,234 or 1,234,567)
+    const parts = cleanedValue.split(',');
+    
+    // Check if it matches US thousand separator pattern:
+    // - Multiple commas: all parts after first must be exactly 3 digits
+    // - Single comma with exactly 3 digits after
+    let isUSFormat = false;
+    if (parts.length === 2 && parts[1].length === 3) {
+      // Single comma with exactly 3 digits after (e.g., 1,234)
+      isUSFormat = true;
+    } else if (parts.length > 2) {
+      // Multiple commas: verify all parts except first are exactly 3 digits
+      isUSFormat = parts.slice(1).every(part => part.length === 3);
+    }
+    
+    if (isUSFormat) {
+      // US thousand separator format (e.g., 1,234 or 1,234,567)
+      cleanedValue = cleanedValue.replace(/,/g, '');
+    } else {
+      // European decimal format (e.g., 123,45 or 1,2 or 123,4567)
+      cleanedValue = cleanedValue.replace(',', '.');
+    }
+  }
+  
+  const numericValue = parseFloat(cleanedValue);
   
   if (isNaN(numericValue)) {
     return { pnl: 0, error: 'Unable to parse PNL value' };
   }
-  return { pnl: numericValue };
+  
+  return { pnl: isNegative ? -numericValue : numericValue };
 };
 
 const formatPriceValue = (price: string | undefined): { price: number, error?: string } => {
@@ -46,7 +104,53 @@ const formatPriceValue = (price: string | undefined): { price: number, error?: s
 const convertToValidDate = (dateString: string): Date | null => {
   if (!dateString) return null;
 
-  // Try DD/MM/YYYY HH:MM:SS format (with seconds)
+  // Try MM/DD/YYYY HH:MM:SS AM/PM format (US format with seconds and AM/PM)
+  const usFormatWithSeconds = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2}):(\d{2})\s(AM|PM)$/i;
+  const matchUSWithSeconds = dateString.match(usFormatWithSeconds);
+  
+  if (matchUSWithSeconds) {
+    const [, month, day, year, hours, minutes, seconds, ampm] = matchUSWithSeconds;
+    let hour24 = parseInt(hours);
+    if (ampm.toUpperCase() === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (ampm.toUpperCase() === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      hour24,
+      parseInt(minutes),
+      parseInt(seconds)
+    );
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  // Try MM/DD/YYYY HH:MM AM/PM format (US format without seconds)
+  const usFormatWithoutSeconds = /^(\d{1,2})\/(\d{1,2})\/(\d{4})\s(\d{1,2}):(\d{2})\s(AM|PM)$/i;
+  const matchUSWithoutSeconds = dateString.match(usFormatWithoutSeconds);
+  
+  if (matchUSWithoutSeconds) {
+    const [, month, day, year, hours, minutes, ampm] = matchUSWithoutSeconds;
+    let hour24 = parseInt(hours);
+    if (ampm.toUpperCase() === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (ampm.toUpperCase() === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    const localDate = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-based
+      parseInt(day),
+      hour24,
+      parseInt(minutes),
+      0 // default seconds to 0
+    );
+    return isNaN(localDate.getTime()) ? null : localDate;
+  }
+
+  // Try DD/MM/YYYY HH:MM:SS format (European format with seconds)
   const dateRegexWithSeconds = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2}):(\d{2})$/;
   const matchWithSeconds = dateString.match(dateRegexWithSeconds);
   
@@ -64,7 +168,7 @@ const convertToValidDate = (dateString: string): Date | null => {
     return isNaN(localDate.getTime()) ? null : localDate;
   }
 
-  // Try DD/MM/YYYY HH:MM format (without seconds)
+  // Try DD/MM/YYYY HH:MM format (European format without seconds)
   const dateRegexWithoutSeconds = /^(\d{2})\/(\d{2})\/(\d{4})\s(\d{2}):(\d{2})$/;
   const matchWithoutSeconds = dateString.match(dateRegexWithoutSeconds);
   
@@ -82,7 +186,7 @@ const convertToValidDate = (dateString: string): Date | null => {
     return isNaN(localDate.getTime()) ? null : localDate;
   }
 
-  // If neither format matches, return null
+  // If none of the formats match, return null
   return null;
 };
 
@@ -172,17 +276,17 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
               item[key] = closePriceError ? undefined : closePrice.toString();
               break;
             case 'pnl':
-              const { pnl, error } = formatCurrencyValue(cellValue)
+              const { pnl, error } = formatCurrencyValue(cellValue);
               // Don't skip the trade if PnL is missing, just default to 0
-              item[key] = error ? 0 : pnl
+              item[key] = error ? 0 : pnl;
               break;
             case 'commission':
-              const { pnl: commission, error: commissionError } = formatCurrencyValue(cellValue) || 0;
+              const { pnl: commission, error: commissionError } = formatCurrencyValue(cellValue);
               // Don't skip the trade if commission is missing, just default to 0
-              item[key] = commissionError ? 0 : commission
+              item[key] = commissionError ? 0 : commission;
               break;
             case 'side':
-              item[key] = cellValue.toLowerCase()
+              item[key] = cellValue.toLowerCase();
               break;
               case 'instrument':
                 if (typeof cellValue === 'string' && cellValue.trim() !== '') {

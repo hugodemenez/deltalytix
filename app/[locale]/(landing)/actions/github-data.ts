@@ -3,8 +3,15 @@
 import { Octokit } from '@octokit/rest'
 import { unstable_cache } from 'next/cache'
 
+const REQUEST_TIMEOUT_MS = 8000
+const MAX_RETRIES = 2
+const RETRY_BASE_DELAY_MS = 400
+
 const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN
+  auth: process.env.GITHUB_TOKEN,
+  request: {
+    timeout: REQUEST_TIMEOUT_MS
+  }
 })
 
 const REPO_OWNER = process.env.NEXT_PUBLIC_REPO_OWNER || 'hugodemenez'
@@ -38,103 +45,125 @@ interface GithubData {
   };
 }
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+const isRetryableError = (error: unknown) => {
+  const status = (error as { status?: number; response?: { status?: number } })?.status
+    ?? (error as { response?: { status?: number } })?.response?.status
+  if (status && [429, 500, 502, 503, 504].includes(status)) return true
+
+  const code = (error as { code?: string; cause?: { code?: string } })?.code
+    ?? (error as { cause?: { code?: string } })?.cause?.code
+  return [
+    'UND_ERR_SOCKET',
+    'UND_ERR_CONNECT_TIMEOUT',
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+    'ECONNREFUSED'
+  ].includes(code || '')
+}
+
+const withRetry = async <T>(label: string, fn: () => Promise<T>) => {
+  let attempt = 0
+  while (true) {
+    try {
+      return await fn()
+    } catch (error) {
+      attempt += 1
+      if (attempt > MAX_RETRIES || !isRetryableError(error)) {
+        throw error
+      }
+      const jitter = Math.floor(Math.random() * 100)
+      const delay = RETRY_BASE_DELAY_MS * (2 ** (attempt - 1)) + jitter
+      console.warn(`Retrying GitHub request (${label}) after ${delay}ms`, error)
+      await sleep(delay)
+    }
+  }
+}
+
 // Cached function to fetch all GitHub data in a single operation
 const getCachedGithubData = unstable_cache(
   async (): Promise<GithubData> => {
-        try {
+    try {
       // Fetch repository data
-      const repoResponse = await octokit.repos.get({
-        owner: REPO_OWNER,
-        repo: REPO_NAME,
-      })
+      const repoResponse = await withRetry('repo data', () =>
+        octokit.repos.get({
+          owner: REPO_OWNER,
+          repo: REPO_NAME,
+        })
+      )
 
       const repoData = repoResponse.data
 
       // Get the repository creation date as the starting point
-      const repoCreatedAt = new Date(repoData.created_at)
       const today = new Date()
+      const weeksToShow = 12
+      const activityStartDate = new Date(today)
+      activityStartDate.setDate(today.getDate() - (weeksToShow * 7))
       
-      // Get all branches first
-      let allBranches: any[] = []
-      let branchPage = 1
-      const branchPerPage = 100
-      let hasMoreBranches = true
-      
-      while (hasMoreBranches && branchPage <= 5) { // Limit to 500 branches max
-        try {
-          const branchesResponse = await octokit.repos.listBranches({
-            owner: REPO_OWNER,
-            repo: REPO_NAME,
-            per_page: branchPerPage,
-            page: branchPage,
-          })
-          
-          if (branchesResponse.data.length === 0) {
-            hasMoreBranches = false
-          } else {
-            allBranches = [...allBranches, ...branchesResponse.data]
-            branchPage++
-            if (branchesResponse.data.length < branchPerPage) {
-              hasMoreBranches = false
-            }
-          }
-        } catch (error) {
-          console.log(`Error fetching branches page ${branchPage}:`, error)
-          hasMoreBranches = false
-        }
-      }
+      const defaultBranch = repoData.default_branch || 'main'
 
-      // Get all commits from all branches to build daily activity chart
+      // Get commits from default branch to build weekly activity chart
       const allCommits: any[] = []
-      const seenCommits = new Set<string>() // To avoid duplicate commits across branches
+      let page = 1
+      const perPage = 100
+      let hasMoreCommits = true
       
-      // Fetch commits from each branch
-      for (const branch of allBranches) {
-        let page = 1
-        const perPage = 100
-        let hasMoreCommits = true
-        
-        while (hasMoreCommits && page <= 5) { // Limit to 500 commits per branch
-          try {
-            const commitsResponse = await octokit.repos.listCommits({
+      while (hasMoreCommits && page <= 5) { // Limit to 500 commits
+        try {
+          const commitsResponse = await withRetry(`commits page ${page}`, () =>
+            octokit.repos.listCommits({
               owner: REPO_OWNER,
               repo: REPO_NAME,
               per_page: perPage,
               page: page,
-              since: repoCreatedAt.toISOString(),
-              sha: branch.name // Fetch commits from specific branch
+              since: activityStartDate.toISOString(),
+              sha: defaultBranch
             })
-            
-            if (commitsResponse.data.length === 0) {
-              hasMoreCommits = false
-            } else {
-              // Add only unique commits (avoid duplicates across branches)
-              commitsResponse.data.forEach(commit => {
-                if (commit.sha && !seenCommits.has(commit.sha)) {
-                  seenCommits.add(commit.sha)
-                  allCommits.push(commit)
-                }
-              })
-              page++
-              if (commitsResponse.data.length < perPage) {
-                hasMoreCommits = false
-              }
-            }
-          } catch (error) {
-            console.log(`Error fetching commits from branch ${branch.name} page ${page}:`, error)
+          )
+          
+          if (commitsResponse.data.length === 0) {
             hasMoreCommits = false
+          } else {
+            commitsResponse.data.forEach(commit => {
+              if (commit.sha) {
+                allCommits.push(commit)
+              }
+            })
+            page++
+            if (commitsResponse.data.length < perPage) {
+              hasMoreCommits = false
+            }
           }
+        } catch (error) {
+          console.log(`Error fetching commits from ${defaultBranch} page ${page}:`, error)
+          hasMoreCommits = false
         }
       }
 
       // Find the most recent commit across all branches
       let latestCommit: any = null
-      if (allCommits.length > 0) {
-        latestCommit = allCommits.reduce((latest, commit) => {
-          const commitDate = new Date(commit.commit.committer.date)
-          const latestDate = latest ? new Date(latest.commit.committer.date) : new Date(0)
-          return commitDate > latestDate ? commit : latest
-        })
+      try {
+        const latestCommitResponse = await withRetry('latest commit', () =>
+          octokit.repos.listCommits({
+            owner: REPO_OWNER,
+            repo: REPO_NAME,
+            per_page: 1,
+            page: 1,
+            sha: defaultBranch
+          })
+        )
+        latestCommit = latestCommitResponse.data[0] ?? null
+      } catch (error) {
+        console.log(`Error fetching latest commit from ${defaultBranch}:`, error)
+        if (allCommits.length > 0) {
+          latestCommit = allCommits.reduce((latest, commit) => {
+            const commitDate = new Date(commit.commit.committer.date)
+            const latestDate = latest ? new Date(latest.commit.committer.date) : new Date(0)
+            return commitDate > latestDate ? commit : latest
+          })
+        }
       }
 
                     // Process commits into weekly activity data (like the original)
@@ -155,7 +184,6 @@ const getCachedGithubData = unstable_cache(
 
        // Create weekly data points for the last 12 weeks (like the original)
        const stats: { value: number; date: Date }[] = []
-       const weeksToShow = 12
        
        for (let i = weeksToShow - 1; i >= 0; i--) {
          const weekDate = new Date(today)

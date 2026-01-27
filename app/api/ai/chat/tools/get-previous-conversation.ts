@@ -1,5 +1,5 @@
 import { getMoodHistory } from '@/server/journal';
-import { Mood } from '@prisma/client';
+import { Mood } from '@/prisma/generated/prisma/client';
 import { tool } from 'ai';
 import { z } from 'zod/v3';
 

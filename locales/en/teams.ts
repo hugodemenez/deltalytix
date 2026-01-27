@@ -1,4 +1,4 @@
-export default {
+const teams = {
   'teams.title': 'Turn Trading Data Into Profit',
   'teams.description': 'Finally, see exactly which traders make money & why. Real-time analytics that trading firms use to boost profits by 34%.',
   'teams.cta': 'Get Started',
@@ -340,4 +340,6 @@ export default {
     'Manager access controls',
     'Team reporting'
   ],
-} 
+}
+
+export default teams; 

@@ -7,7 +7,7 @@ import { Logo } from '@/components/logo'
 import Link from 'next/link'
 import ImportButton from './import/import-button'
 import { useI18n } from "@/locales/client"
-import { useKeyboardShortcuts } from '../hooks/use-keyboard-shortcuts'
+import { useKeyboardShortcuts } from '../../../../hooks/use-keyboard-shortcuts'
 import { ActiveFilterTags } from './filters/active-filter-tags'
 import { AnimatePresence } from 'framer-motion'
 import {

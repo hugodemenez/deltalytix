@@ -1,6 +1,6 @@
 'use client'
 
-import { Post, PostStatus, PostType, Vote, VoteType } from '@prisma/client'
+import { Post, PostStatus, PostType, Vote, VoteType } from '@/prisma/generated/prisma/browser'
 import { formatDistanceToNow } from 'date-fns'
 import { fr, enUS } from 'date-fns/locale'
 import { ArrowBigDown, ArrowBigUp, MessageSquare, ImageIcon, Pencil, ExternalLink, Link as LinkIcon, Copy, Check, MoreHorizontal, Settings2 } from 'lucide-react'
@@ -46,13 +46,13 @@ interface Props {
   isAuthor: boolean
 }
 
-const typeColors = {
+const typeColors: Record<PostType, string> = {
   [PostType.FEATURE_REQUEST]: 'bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100',
   [PostType.BUG_REPORT]: 'bg-red-100 text-red-900 dark:bg-red-900 dark:text-red-100',
   [PostType.DISCUSSION]: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
 }
 
-const statusColors = {
+const statusColors: Record<PostStatus, string> = {
   [PostStatus.OPEN]: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100',
   [PostStatus.IN_PROGRESS]: 'bg-amber-100 text-amber-900 dark:bg-amber-900 dark:text-amber-100',
   [PostStatus.COMPLETED]: 'bg-blue-100 text-blue-900 dark:bg-blue-900 dark:text-blue-100',
@@ -66,13 +66,13 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
   const pathname = usePathname()
   const isPostPage = pathname === `/${locale}/community/post/${post.id}`
   const dateLocale = locale === 'fr' ? fr : enUS
-  const [optimisticVotes, setOptimisticVotes] = useState(post.votes)
+  const [optimisticVotes, setOptimisticVotes] = useState<Vote[]>(post.votes)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState(post.content)
   const [isCommentsOpen, setIsCommentsOpen] = useState(isExpanded)
   const [comments, setComments] = useState<any[]>([])
-  const [commentCount, setCommentCount] = useState(post._count.comments)
+  const [commentCount, setCommentCount] = useState<number>(post._count.comments)
   const user = useUserStore(state => state.user)
   const [showAuthPrompt, setShowAuthPrompt] = useState(false)
   const [authAction, setAuthAction] = useState('')
@@ -116,7 +116,7 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
           newVotes = optimisticVotes.filter(v => v.userId !== post.userId)
         } else {
           // Change vote type
-          newVotes = optimisticVotes.map(v =>
+          newVotes = optimisticVotes.map((v: Vote) =>
             v.userId === post.userId ? { ...v, type } : v
           )
         }
@@ -213,11 +213,11 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
         <CardHeader className="flex-row items-start justify-between space-y-0">
           <div className="space-y-1">
             <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className={typeColors[post.type]}>
-                {post.type.replace('_', ' ')}
+              <Badge variant="secondary" className={typeColors[post.type as PostType]}>
+                {(post.type as string).replace('_', ' ')}
               </Badge>
-              <Badge variant="outline" className={statusColors[post.status]}>
-                {post.status.replace('_', ' ')}
+              <Badge variant="outline" className={statusColors[post.status as PostStatus]}>
+                {(post.status as string).replace('_', ' ')}
               </Badge>
             </div>
             <h3 className="font-semibold">{post.title}</h3>
@@ -327,7 +327,7 @@ export function PostCard({ post, isExpanded = false, isAuthor }: Props) {
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {post.screenshots.map((screenshot, index) => (
+                {post.screenshots.map((screenshot: string, index: number) => (
                   <Dialog key={index} open={selectedImage === screenshot} onOpenChange={(open) => !open && setSelectedImage(null)}>
                     <DialogTrigger asChild>
                       <Button variant="outline" className="p-0 h-24 w-24 relative overflow-hidden" onClick={() => setSelectedImage(screenshot)}>
