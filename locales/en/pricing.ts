@@ -53,13 +53,6 @@ export default {
             feature2: 'Unlimited Data Storage',
             feature3: 'Trade Review with AI',
         },
-        faq: {
-            heading: 'Frequently Asked Questions',
-            question1: 'Does Deltalytix trade for me?',
-            answer1: 'No, Deltalytix is not a brokerage. You execute trades on your broker and then transfer the data into Deltalytix to track and analyze your trading performance.',
-            question2: 'How secure is Deltalytix?',
-            answer2: 'Your data security is our top priority. Deltalytix does not sell or advertise your data, and we employ industry-standard security measures to protect your information.',
-        },
         trialPeriod: 'Unlock Plus plan',
         upgradeToLifetime: 'Upgrade to Lifetime',
         trialDescription: 'Try all features for 14 days, no credit card required',

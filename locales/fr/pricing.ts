@@ -53,13 +53,6 @@ export default {
             feature2: 'Stockage de données illimité',
             feature3: 'Revue des trades avec l\'IA',
         },
-        faq: {
-            heading: 'Questions fréquemment posées',
-            question1: 'Deltalytix trade-t-il pour moi ?',
-            answer1: 'Non, Deltalytix n\'est pas un courtier. Vous exécutez vos trades chez votre courtier, puis transférez les données dans Deltalytix pour suivre et analyser vos performances de trading.',
-            question2: 'Quelle est la sécurité de Deltalytix ?',
-            answer2: 'La sécurité de vos données est notre priorité absolue. Deltalytix ne vend pas et ne fait pas de publicité avec vos données, et nous utilisons des mesures de sécurité standard de l\'industrie pour protéger vos informations.',
-        },
         trialPeriod: 'Boostez votre trading',
         upgradeToLifetime: 'Passer à vie',
         trialDescription: 'Essayez toutes les fonctionnalités pendant 14 jours, sans carte bancaire',

@@ -11,6 +11,7 @@ import embed from "./en/embed";
 import teams from "./en/teams";
 import referral from "./en/referral";
 import admin from "./en/admin";
+import faq from "./en/faq";
 export default {
   ...shared,
   ...landing,
@@ -25,6 +26,7 @@ export default {
   ...teams,
   ...referral,
   ...admin,
+  ...faq,
   "footer.heading": "Footer",
   "footer.description": "Advanced analytics for modern traders.",
   "footer.product.title": "Product",
