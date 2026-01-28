@@ -203,9 +203,14 @@ export async function renameAccountAction(oldAccountNumber: string, newAccountNu
 }
 
 export async function deleteTradesByIdsAction(tradeIds: string[]): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) {
+    throw new Error('User not found')
+  }
   await prisma.trade.deleteMany({
     where: {
-      id: { in: tradeIds }
+      id: { in: tradeIds },
+      userId: userId
     }
   })
 }

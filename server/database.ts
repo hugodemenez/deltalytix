@@ -1,6 +1,6 @@
 'use server'
 import { Trade, Prisma, DashboardLayout } from '@/prisma/generated/prisma/client'
-import { revalidatePath, updateTag } from 'next/cache'
+import { revalidatePath, revalidateTag, updateTag } from 'next/cache'
 import { Widget, Layouts } from '@/app/[locale]/dashboard/types/dashboard'
 import { createClient, getUserId } from './auth'
 import { startOfDay } from 'date-fns'
@@ -122,7 +122,13 @@ export async function saveTradesAction(
       }
     }
 
-    updateTag(`trades-${userId}`)
+    try{
+      updateTag(`trades-${userId}`)
+    } catch (error) {
+      console.error('[saveTrades] Error updating tag:', error)
+      revalidateTag(`trades-${userId}`, { expire: 0 })
+    }
+
     return {
       error: result.count === 0 ? 'NO_TRADES_ADDED' : false,
       numberOfTradesAdded: result.count
@@ -339,9 +345,14 @@ export async function updateTradesAction(tradesIds: string[], update: Partial<Tr
 }
 
 export async function updateTradeCommentAction(tradeId: string, comment: string | null) {
+  const userId = await getUserId()
+  if (!userId) {
+    throw new Error('User not found')
+  }
+
   try {
     await prisma.trade.update({
-      where: { id: tradeId },
+      where: { id: tradeId, userId },
       data: { comment }
     })
     revalidatePath('/')
@@ -359,9 +370,13 @@ export async function updateTradeCommentAction(tradeId: string, comment: string 
 }
 
 export async function updateTradeVideoUrlAction(tradeId: string, videoUrl: string | null) {
+  const userId = await getUserId()
+  if (!userId) {
+    throw new Error('User not found')
+  }
   try {
     await prisma.trade.update({
-      where: { id: tradeId },
+      where: { id: tradeId, userId },
       data: { videoUrl }
     })
     revalidatePath('/')
@@ -379,9 +394,7 @@ export async function updateTradeVideoUrlAction(tradeId: string, videoUrl: strin
 }
 
 export async function loadDashboardLayoutAction(): Promise<Layouts | null> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const userId = user?.id
+  const userId = await getUserId()
   if (!userId) {
     throw new Error('User not found')
   }
@@ -416,9 +429,7 @@ export async function loadDashboardLayoutAction(): Promise<Layouts | null> {
 }
 
 export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promise<void> {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const userId = user?.id
+  const userId = await getUserId()
   if (!userId || !layouts) {
     console.error('[saveDashboardLayout] Invalid input:', { userId, hasLayouts: !!layouts })
     return
@@ -429,7 +440,7 @@ export async function saveDashboardLayoutAction(layouts: DashboardLayout): Promi
     const desktopLayout = Array.isArray(layouts.desktop) ? layouts.desktop : []
     const mobileLayout = Array.isArray(layouts.mobile) ? layouts.mobile : []
 
-    const dashboard = await prisma.dashboardLayout.upsert({
+    await prisma.dashboardLayout.upsert({
       where: { userId },
       update: {
         desktop: JSON.stringify(desktopLayout),
@@ -480,6 +491,9 @@ export async function createDefaultDashboardLayout(userId: string): Promise<void
 export async function groupTradesAction(tradeIds: string[]): Promise<boolean> {
   try {
     const userId = await getUserId()
+    if (!userId) {
+      throw new Error('User not found')
+    }
     // Generate a new group ID
     const groupId = crypto.randomUUID()
 
@@ -503,6 +517,9 @@ export async function groupTradesAction(tradeIds: string[]): Promise<boolean> {
 export async function ungroupTradesAction(tradeIds: string[]): Promise<boolean> {
   try {
     const userId = await getUserId()
+    if (!userId) {
+      throw new Error('User not found')
+    }
     // Remove group ID from selected trades
     await prisma.trade.updateMany({
       where: {
