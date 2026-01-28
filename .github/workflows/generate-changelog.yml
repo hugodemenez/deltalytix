@@ -2,7 +2,7 @@ name: Generate Changelog
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened]
     branches:
       - main
 
@@ -14,7 +14,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,13 +41,13 @@ jobs:
           # Create a new branch from the current HEAD (which is the PR head SHA)
           BRANCH_NAME="changelog/pr-${{ github.event.pull_request.number }}-$(date +%s)"
           git checkout -b "$BRANCH_NAME"
-          
+
           # Get the date range for the changelog
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           FIRST_COMMIT_DATE=$(git log --format=%ai -1 "$BASE_SHA" | cut -d' ' -f1)
           LAST_COMMIT_DATE=$(git log --format=%ai -1 "$HEAD_SHA" | cut -d' ' -f1)
-          
+
           # Generate changelog using Cursor CLI
           agent -p --force \
             "Analyze the changes in this pull request from beta to main. 
@@ -83,18 +83,18 @@ jobs:
             Write in both English and French (create files in both directories).
             
             Only create changelog files - do not modify any other files." --model auto
-          
+
           # Check if changelog files were created
           if [ -z "$(git status --porcelain content/updates/)" ]; then
             echo "No changelog entries generated. Exiting."
             exit 0
           fi
-          
+
           # Commit changelog entries
           git add content/updates/
           git commit -m "docs: add changelog entries for PR #${{ github.event.pull_request.number }}"
           git push origin "$BRANCH_NAME"
-          
+
           # Create pull request
           gh pr create \
             --title "📝 Changelog entries for PR #${{ github.event.pull_request.number }}" \
