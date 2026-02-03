@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getTradovateToken,
   getTradovateTrades,
-} from "@/app/[locale]/dashboard/components/import/tradovate/actions";
+} from "@/app/[locale]/dashboard/components/import/tradovate/sync/actions";
 
 export async function POST(request: NextRequest) {
   try {

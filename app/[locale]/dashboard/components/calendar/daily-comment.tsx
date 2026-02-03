@@ -17,7 +17,7 @@ import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar";
 import { saveJournal, getMoodForDay } from "@/server/journal";
 import { format } from "date-fns";
 import { useUserStore } from "../../../../../store/user-store";
-import { useMoodStore } from "@/store/mood-store";
+import { useMoodStore } from "@/store/widgets/mood-store";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { TiptapEditor } from "@/components/tiptap-editor";

@@ -32,18 +32,16 @@ import {
   updateDailySyncTimeAction,
 } from "./actions";
 import { useTradovateSyncStore } from "@/store/tradovate-sync-store";
-import { useData } from "@/context/data-provider";
-import { useSyncContext } from "@/context/sync-context";
+import { useTradovateSyncContext } from "@/context/tradovate-sync-context";
 
 export function TradovateCredentialsManager() {
-  const { tradovate } = useSyncContext();
   const {
     performSyncForAccount,
     performSyncForAllAccounts,
     accounts,
     deleteAccount,
     loadAccounts,
-  } = tradovate;
+  } = useTradovateSyncContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(

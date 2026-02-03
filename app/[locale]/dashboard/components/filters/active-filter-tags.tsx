@@ -191,18 +191,6 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     return sortedDays.map(day => getWeekdayName(day)).join(', ')
   }
 
-  const hasActiveFilters = 
-    (accountNumbers?.length || 0) > 0 || 
-    (instruments?.length || 0) > 0 || 
-    (dateRange && (dateRange.from || dateRange.to)) || 
-    (pnlRange && (pnlRange.min !== undefined || pnlRange.max !== undefined)) ||
-    (tagFilter?.tags?.length || 0) > 0 ||
-    (weekdayFilter?.days && weekdayFilter.days.length > 0)
-
-  if (!hasActiveFilters) {
-    return null
-  }
-
   return (
     <motion.div
       key="active-filter-tags"
@@ -216,7 +204,7 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
         <div className="relative flex items-center overflow-hidden">
           <div 
             ref={scrollRef}
-            className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar pr-8"
+            className="flex gap-2 overflow-x-auto whitespace-nowrap no-scrollbar pr-8 h-7"
           >
             <AnimatePresence mode="popLayout">
               {/* Date Range Badge */}

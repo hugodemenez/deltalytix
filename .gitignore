@@ -25,11 +25,13 @@ WARP.md
 # misc
 .DS_Store
 *.pem
+wip
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.puppeteer*
 
 # env files
 .env

@@ -1,7 +1,7 @@
 'use client'
 import { Trade } from '@/prisma/generated/prisma/browser'
 import { ThorSync } from '../thor/thor-sync'
-import { TradovateSync } from '../tradovate/tradovate-sync'
+import { TradovateSync } from '../tradovate/sync/tradovate-sync'
 import { ImportType } from '../import-type-selection'
 import { RithmicSyncWrapper } from '../rithmic/sync/rithmic-sync-connection'
 import type { ComponentType } from 'react'

@@ -31,10 +31,12 @@ async function openDb(): Promise<IDBDatabase | null> {
 }
 
 export async function getTradesCache(userId: string): Promise<PrismaTrade[] | null> {
+  console.log("[getTradesCache] Getting trades cache for user", userId)
   const db = await openDb()
   if (!db) return null
+  console.log("[getTradesCache] Database opened")
 
-  return await new Promise((resolve, reject) => {
+  const trades = await new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly")
     const store = tx.objectStore(STORE_NAME)
     const request = store.get(`${KEY_PREFIX}${userId}`)
@@ -45,11 +47,15 @@ export async function getTradesCache(userId: string): Promise<PrismaTrade[] | nu
     }
     request.onerror = () => reject(request.error)
   })
+  console.log("[getTradesCache] Transaction completed")
+  return trades as PrismaTrade[] | null
 }
 
 export async function setTradesCache(userId: string, trades: PrismaTrade[]): Promise<void> {
+  console.log("[setTradesCache] Setting trades cache for user", userId)
   const db = await openDb()
   if (!db) return
+  console.log("[setTradesCache] Database opened")
 
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite")
@@ -59,6 +65,7 @@ export async function setTradesCache(userId: string, trades: PrismaTrade[]): Pro
     tx.oncomplete = () => resolve()
     tx.onerror = () => reject(tx.error)
   })
+  console.log("[setTradesCache] Transaction completed")
 }
 
 export async function clearTradesCache(userId: string): Promise<void> {
