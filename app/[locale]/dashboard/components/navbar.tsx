@@ -88,9 +88,6 @@ export default function Navbar() {
                 </PopoverContent>
               </Popover>
             </div>
-            <div className="hidden md:block">
-              <FilterCommandMenu variant="navbar" />
-            </div>
           </div>
           <div className="flex items-center space-x-4">
             <div className='hidden md:flex gap-x-4'>

@@ -464,6 +464,7 @@ export default {
     commandMenu: {
       placeholder: "Rechercher des filtres...",
       searchPlaceholder: "Rechercher des filtres...",
+      searchPlaceholderMobile: "Filtres",
       sections: {
         accounts: "Comptes",
         dateRange: "Période",

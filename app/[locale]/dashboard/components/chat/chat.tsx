@@ -20,11 +20,11 @@ import { useCurrentLocale } from "@/locales/client";
 import { useI18n } from "@/locales/client";
 import { loadChat, saveChat } from "./actions/chat";
 import { useUserStore } from "@/store/user-store";
-import { useChatStore } from "@/store/chat-store";
+import { useChatStore } from "@/store/widgets/chat-store";
 import { format } from "date-fns";
 import { DotStream } from "ldrs/react";
 import "ldrs/react/DotStream.css";
-import { useMoodStore } from "@/store/mood-store";
+import { useMoodStore } from "@/store/widgets/mood-store";
 
 // Types
 interface ChatWidgetProps {
