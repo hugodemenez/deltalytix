@@ -46,10 +46,10 @@ import { useData } from "@/context/data-provider";
 import { useI18n } from "@/locales/client";
 import { useCurrentLocale } from "@/locales/client";
 import { useUserStore } from "@/store/user-store";
-import { useEquityChartStore } from "@/store/equity-chart-store";
+import { useEquityChartStore } from "@/store/widgets/equity-chart-store";
+import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store";
 import { Payout as PrismaPayout } from "@/prisma/generated/prisma/browser";
 import { AccountSelectionPopover } from "./account-selection-popover";
-import { getEquityChartDataAction } from "@/server/equity-chart";
 import { usePathname } from "next/navigation";
 
 interface EquityChartProps {
@@ -473,7 +473,7 @@ const AccountsLegend = React.memo(
       .sort((a, b) => b.latestEquity - a.latestEquity);
 
     return (
-      <div className="border-t pt-2 mt-2 h-[88px] flex flex-col">
+      <div className="border-t pt-0 mt-2 h-fit flex flex-col">
         <div className="flex items-center justify-between mb-2 shrink-0">
           <div className="flex items-center gap-2">
             <span className="text-xs font-medium text-muted-foreground">
@@ -528,13 +528,14 @@ const AccountsLegend = React.memo(
                     key={accountNumber}
                     className="flex items-center gap-1.5 shrink-0"
                   >
-                    <div
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
                     <div className="flex flex-col h-[50px] justify-start">
-                      <span className="text-xs font-medium text-foreground leading-tight">
+                      <span className="text-xs font-medium text-foreground leading-tight relative mb-1"
+                      >
                         {accountNumber}
+                        <span 
+                      className="w-full h-1 rounded-full shrink-0 absolute -bottom-1 left-0"
+                      style={{ backgroundColor: color}}
+                        ></span>
                       </span>
                       <span className="text-xs text-muted-foreground leading-tight">
                         {formatCurrency(equity)}
@@ -608,11 +609,25 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
   const [hoveredData, setHoveredData] = React.useState<ChartDataPoint | null>(
     null
   );
-  const [chartData, setChartData] = React.useState<ChartDataPoint[]>([]);
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [availableAccountNumbers, setAvailableAccountNumbers] = React.useState<
+  // Local state only for shared/team view (client-side computation)
+  const [localChartData, setLocalChartData] = React.useState<ChartDataPoint[]>(
+    []
+  );
+  const [localLoading, setLocalLoading] = React.useState(false);
+  const [localAccountNumbers, setLocalAccountNumbers] = React.useState<
     string[]
   >([]);
+
+  const storeChartData = useEquityChartDataStore((s) => s.chartData);
+  const storeAccountNumbers = useEquityChartDataStore((s) => s.accountNumbers);
+  const storeIsLoading = useEquityChartDataStore((s) => s.isLoading);
+
+  const isStoreView = !isSharedView && !isTeamView;
+  const chartData = isStoreView ? storeChartData : localChartData;
+  const availableAccountNumbers = isStoreView
+    ? storeAccountNumbers
+    : localAccountNumbers;
+  const isLoading = isStoreView ? storeIsLoading : localLoading;
 
   // Throttled hover handler for better performance
   const throttledSetHoveredData = React.useCallback(
@@ -765,91 +780,31 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
     };
   }, [formattedTrades, timezone]);
 
-  // Fetch chart data when filters or config change
+  // Client-side computation only for shared/team view (data-provider fetches and stores data when widget is present)
   React.useEffect(() => {
-    // Use client-side computation for shared view
-    if (isSharedView || isTeamView) {
-      console.log("[EquityChart] Using client-side computation (shared view)");
-      setIsLoading(true);
-      try {
-        const { chartData: computedData, accountNumbers: accNumbers } =
-          computeClientSideData();
-        console.log(
-          "[EquityChart] Setting chart data:",
-          computedData.length,
-          "points"
-        );
-        setChartData(computedData);
-        setAvailableAccountNumbers(accNumbers);
-      } catch (error) {
-        console.error(
-          "Failed to compute client-side equity chart data:",
-          error
-        );
-        setChartData([]);
-        setAvailableAccountNumbers([]);
-      } finally {
-        setIsLoading(false);
-      }
-      return;
-    }
+    if (!isSharedView && !isTeamView) return;
 
-    console.log("[EquityChart] Fetching server-side data");
-    const fetchChartData = async () => {
-      setIsLoading(true);
-      try {
-        const result = await getEquityChartDataAction({
-          instruments,
-          accountNumbers,
-          dateRange:
-            dateRange && dateRange.from && dateRange.to
-              ? {
-                  from: dateRange.from.toISOString(),
-                  to: dateRange.to.toISOString(),
-                }
-              : undefined,
-          pnlRange,
-          tickRange,
-          timeRange,
-          tickFilter,
-          weekdayFilter,
-          hourFilter,
-          tagFilter,
-          timezone,
-          showIndividual,
-          maxAccounts: 8,
-          dataSampling: config.dataSampling,
-          selectedAccounts: Array.from(selectedAccounts),
-        });
-        setChartData(result.chartData);
-        setAvailableAccountNumbers(result.accountNumbers);
-      } catch (error) {
-        console.error("Failed to fetch equity chart data:", error);
-        setChartData([]);
-        setAvailableAccountNumbers([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchChartData();
+    console.log("[EquityChart] Using client-side computation (shared view)");
+    setLocalLoading(true);
+    try {
+      const { chartData: computedData, accountNumbers: accNumbers } =
+        computeClientSideData();
+      setLocalChartData(computedData);
+      setLocalAccountNumbers(accNumbers);
+    } catch (error) {
+      console.error(
+        "Failed to compute client-side equity chart data:",
+        error
+      );
+      setLocalChartData([]);
+      setLocalAccountNumbers([]);
+    } finally {
+      setLocalLoading(false);
+    }
   }, [
     isSharedView,
+    isTeamView,
     computeClientSideData,
-    instruments,
-    accountNumbers,
-    dateRange,
-    accounts,
-    pnlRange,
-    tickRange,
-    timeRange,
-    tickFilter,
-    weekdayFilter,
-    hourFilter,
-    tagFilter,
-    timezone,
-    showIndividual,
-    config.dataSampling,
-    selectedAccounts,
   ]);
 
   // Optimized chart config with consistent color mapping

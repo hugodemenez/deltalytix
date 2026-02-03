@@ -64,7 +64,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUserStore } from "@/store/user-store";
-import { useTableConfigStore } from "@/store/table-config-store";
+import { useTableConfigStore } from "@/store/widgets/table-config-store";
 import { useTickDetailsStore } from "@/store/tick-details-store";
 import { TradeImageEditor } from "./trade-image-editor";
 import { ColumnConfigDialog } from "@/components/ui/column-config-dialog";

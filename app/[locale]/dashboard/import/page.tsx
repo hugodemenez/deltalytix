@@ -6,9 +6,8 @@ import { useTradovateSyncStore } from "@/store/tradovate-sync-store";
 import {
   handleTradovateCallback,
   storeTradovateToken,
-} from "../components/import/tradovate/actions";
+} from "../components/import/tradovate/sync/actions";
 import { useI18n } from "@/locales/client";
-import { useSyncContext } from "@/context/sync-context";
 import {
   Card,
   CardContent,
@@ -19,12 +18,13 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { useTradovateSyncContext } from "@/context/tradovate-sync-context";
 
 export default function ImportCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const tradovateStore = useTradovateSyncStore();
-  const { tradovate } = useSyncContext();
+  const { loadAccounts } = useTradovateSyncContext();
   const t = useI18n();
 
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -157,7 +157,7 @@ export default function ImportCallbackPage() {
 
         // Refresh synchronizations so context has the latest accounts
         try {
-          await tradovate.loadAccounts();
+          await loadAccounts();
         } catch (loadError) {
           console.warn("Failed to refresh Tradovate synchronizations", loadError);
         }
@@ -193,7 +193,7 @@ export default function ImportCallbackPage() {
     };
 
     handleCallback();
-  }, [searchParams, tradovateStore, router, storeHydrated, tradovate]);
+  }, [searchParams, tradovateStore, router, storeHydrated, loadAccounts]);
 
   const handleRetry = () => {
     hasProcessed.current = false;

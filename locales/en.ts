@@ -428,6 +428,7 @@ export default {
     commandMenu: {
       placeholder: "Search filters...",
       searchPlaceholder: "Search filters...",
+      searchPlaceholderMobile: "Filters",
       sections: {
         accounts: "Accounts",
         dateRange: "Date Range",

@@ -16,7 +16,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu"
-import { useTableConfigStore } from "@/store/table-config-store"
+import { useTableConfigStore } from "@/store/widgets/table-config-store"
 import { Switch } from "@/components/ui/switch"
 import { useI18n } from "@/locales/client"
 

@@ -230,11 +230,6 @@ export default function Component() {
                     title: t('landing.navbar.productUpdates'),
                     icon: <BarChart3 className="h-4 w-4" />,
                 },
-                {
-                    path: "/community",
-                    title: t('landing.navbar.community'),
-                    icon: <Users className="h-4 w-4" />,
-                },
             ],
         },
         {

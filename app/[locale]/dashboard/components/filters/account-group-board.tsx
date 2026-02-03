@@ -67,7 +67,6 @@ export function AccountGroupBoard() {
     saveGroup,
     renameGroup,
     moveAccountsToGroup,
-    moveAccountToGroup,
     saveAccount,
     deleteAccount,
     deleteGroup,
@@ -197,9 +196,9 @@ export function AccountGroupBoard() {
         await saveAccount(accountData)
         return
       }
-      await moveAccountToGroup(account.id, targetGroupId ?? null)
+      await moveAccountsToGroup([account.id], targetGroupId ?? null)
     },
-    [moveAccountToGroup, resolveTargetGroupId, saveAccount, user?.id],
+    [moveAccountsToGroup, resolveTargetGroupId, saveAccount, user?.id],
   )
 
   const handleMoveSelected = useCallback(async (targetValue?: string) => {

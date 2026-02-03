@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getTradovateSynchronizations,
   removeTradovateToken,
-} from "@/app/[locale]/dashboard/components/import/tradovate/actions";
+} from "@/app/[locale]/dashboard/components/import/tradovate/sync/actions";
 
 export async function GET() {
   try {

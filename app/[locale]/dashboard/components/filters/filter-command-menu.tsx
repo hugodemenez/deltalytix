@@ -266,7 +266,7 @@ export function FilterCommandMenu({ className, variant = "navbar" }: FilterComma
       onClick={() => setOpen(true)}
     >
       <Search className="h-4 w-4 mr-2" />
-      <span className="text-muted-foreground">{t('filters.commandMenu.placeholder')}</span>
+      <span className="text-muted-foreground">{t('filters.commandMenu.searchPlaceholderMobile')}</span>
     </Button>
   )
 

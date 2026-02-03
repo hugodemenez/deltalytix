@@ -3,8 +3,6 @@
   "/[locale]/[...not-found]",
   "/[locale]/about",
   "/[locale]/authentication",
-  "/[locale]/community",
-  "/[locale]/community/post/[id]",
   "/[locale]/dashboard",
   "/[locale]/dashboard/billing",
   "/[locale]/dashboard/data",

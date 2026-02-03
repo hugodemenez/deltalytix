@@ -15,7 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { useUserStore } from "@/store/user-store"
 import { useTradesStore } from "@/store/trades-store"
-import { useFinancialEventsStore } from "@/store/financial-events-store"
+import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 
 type ImpactLevel = "low" | "medium" | "high"
 

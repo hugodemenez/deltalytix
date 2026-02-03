@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "screenshot:dashboard": "node scripts/screenshot-dashboard.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
@@ -158,6 +159,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "puppeteer": "^23.0.0",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/d3": "^7.4.3",
     "@types/ms": "^2.1.0",
