@@ -66,7 +66,7 @@ import { useTradesStore } from '@/store/trades-store'
 import { useAccountOrderStore } from '@/store/account-order-store'
 import { useAccountsViewPreferenceStore } from '@/store/accounts-view-preference-store'
 import { useAccountsSortingStore } from '@/store/accounts-sorting-store'
-import { savePayoutAction, removeAccountsFromTradesAction } from '@/server/accounts'
+import { removeAccountsFromTradesAction } from '@/server/accounts'
 import { useModalStateStore } from '@/store/modal-state-store'
 import { SortingState } from "@tanstack/react-table"
 import {
@@ -77,8 +77,6 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-  DragStartEvent,
-  DragMoveEvent,
 } from '@dnd-kit/core'
 import { restrictToHorizontalAxis } from '@dnd-kit/modifiers'
 import {
@@ -93,24 +91,12 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-interface DailyMetric {
-  date: Date
-  pnl: number
-  totalBalance: number
-  percentageOfTarget: number
-  isConsistent: boolean
-  payout?: {
-    id: string
-    amount: number
-    date: Date
-    status: string
-  }
-}
 
 interface Payout {
   date: Date
   amount: number
   status: string
+  propfirmSharingPercentage?: number | null
 }
 
 interface PayoutDialogProps {
@@ -122,6 +108,7 @@ interface PayoutDialogProps {
     date: Date
     amount: number
     status: string
+    propfirmSharingPercentage?: number | null
   }
   onSubmit: (payout: Payout) => Promise<void>
   onDelete?: () => Promise<void>
@@ -358,6 +345,7 @@ function PayoutDialog({
   const [amount, setAmount] = useState<number>(existingPayout?.amount ?? 0)
   const [inputValue, setInputValue] = useState<string>(existingPayout?.amount?.toString() ?? "")
   const [status, setStatus] = useState<string>(existingPayout?.status ?? 'PENDING')
+  const [propfirmSharingPercentage, setPropfirmSharingPercentage] = useState<number | ''>(existingPayout?.propfirmSharingPercentage ?? '')
   const [dateInputValue, setDateInputValue] = useState<string>("")
   const t = useI18n()
   
@@ -370,6 +358,7 @@ function PayoutDialog({
       setAmount(existingPayout.amount)
       setInputValue(existingPayout.amount.toString())
       setStatus(existingPayout.status)
+      setPropfirmSharingPercentage(existingPayout.propfirmSharingPercentage ?? '')
       setDateInputValue(format(existingPayout.date, 'yyyy-MM-dd'))
     } else {
       const today = new Date()
@@ -377,6 +366,7 @@ function PayoutDialog({
       setAmount(0)
       setInputValue("")
       setStatus('PENDING')
+      setPropfirmSharingPercentage('')
       setDateInputValue(format(today, 'yyyy-MM-dd'))
     }
   }, [existingPayout, open])
@@ -654,6 +644,22 @@ function PayoutDialog({
               ))}
             </div>
           </div>
+
+          {/* Prop Firm Sharing % */}
+          <div className="space-y-2">
+            <Label htmlFor="propfirmSharingPercentage">{t('propFirm.payout.propfirmSharingPercentage')}</Label>
+            <Input
+              id="propfirmSharingPercentage"
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              value={propfirmSharingPercentage}
+              onChange={(e) => setPropfirmSharingPercentage(e.target.value === '' ? '' : parseFloat(e.target.value) ?? '')}
+              placeholder="0-100"
+              disabled={isProcessing}
+            />
+          </div>
         </div>
 
         <SheetFooter className="shrink-0 flex-col-reverse sm:flex-row gap-2 pt-4 border-t mt-auto">
@@ -710,7 +716,15 @@ function PayoutDialog({
             </AlertDialog>
           )}
           <Button
-            onClick={() => onSubmit({ date, amount, status })}
+            onClick={() => {
+              const sharing = propfirmSharingPercentage === '' ? undefined : (typeof propfirmSharingPercentage === 'number' ? propfirmSharingPercentage : parseFloat(String(propfirmSharingPercentage)))
+              onSubmit({
+                date,
+                amount,
+                status,
+                propfirmSharingPercentage: sharing !== undefined && !Number.isNaN(sharing) ? sharing : undefined
+              })
+            }}
             disabled={amount <= 0 || isProcessing}
             size="sm"
             className="w-full sm:w-auto"
@@ -744,7 +758,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
   const isLoading = useUserStore(state => state.isLoading)
   const groups = useUserStore(state => state.groups)
   const accounts = useUserStore(state => state.accounts)
-  const { accountNumbers, setAccountNumbers, deletePayout, deleteAccount, saveAccount, savePayout } = useData()
+  const { accountNumbers, deletePayout, saveAccount, savePayout } = useData()
   const { getOrderedAccounts, reorderAccounts } = useAccountOrderStore()
   const t = useI18n()
   const params = useParams()
@@ -758,6 +772,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
     date: Date;
     amount: number;
     status: string;
+    propfirmSharingPercentage?: number | null;
   } | undefined>()
   const [isDeleting, setIsDeleting] = useState(false)
   const [canDeleteAccount, setCanDeleteAccount] = useState(false)
@@ -983,7 +998,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
           id: selectedPayout.id, // Use existing payout ID
           accountNumber: selectedAccountForTable.number,
           createdAt: selectedPayout.date, // Keep original creation date
-          accountId: selectedAccountForTable.id
+          accountId: selectedAccountForTable.id,
+          propfirmSharingPercentage: payout.propfirmSharingPercentage ?? 0
         })
       } else {
         // Add new payout
@@ -992,7 +1008,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
           id: '', // Will be generated by the server
           accountNumber: selectedAccountForTable.number,
           createdAt: new Date(),
-          accountId: selectedAccountForTable.id
+          accountId: selectedAccountForTable.id,
+          propfirmSharingPercentage: payout.propfirmSharingPercentage ?? 0
         })
       }
       
@@ -1638,7 +1655,8 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
                           id: payout.id,
                           date: new Date(payout.date),
                           amount: payout.amount,
-                          status: payout.status
+                          status: payout.status,
+                          propfirmSharingPercentage: payout.propfirmSharingPercentage ?? undefined
                         })
                         setPayoutDialogOpen(true)
                       }}

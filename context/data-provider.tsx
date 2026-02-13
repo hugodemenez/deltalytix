@@ -190,6 +190,7 @@ export interface Account extends Omit<PrismaAccount, "payouts" | "group"> {
       amount: number;
       date: Date;
       status: string;
+      propfirmSharingPercentage?: number | null;
     };
   }>;
 }

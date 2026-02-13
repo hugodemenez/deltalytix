@@ -367,6 +367,7 @@ export async function savePayoutAction(payout: Payout) {
         date: payout.date,
         amount: payout.amount,
         status: payout.status,
+        propfirmSharingPercentage: payout.propfirmSharingPercentage,
         account: {
           connect: {
             id: account.id
@@ -378,6 +379,7 @@ export async function savePayoutAction(payout: Payout) {
         date: payout.date,
         amount: payout.amount,
         status: payout.status,
+        propfirmSharingPercentage: payout.propfirmSharingPercentage,
         account: {
           connect: {
             id: account.id

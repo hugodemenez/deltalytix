@@ -41,6 +41,7 @@ export type AccountAvgAggregateOutputType = {
   minPayout: number | null
   minTradingDaysForPayout: number | null
   payoutBonus: number | null
+  propfirmSharingPercentage: number | null
   price: number | null
   priceWithPromo: number | null
   profitSharing: number | null
@@ -65,6 +66,7 @@ export type AccountSumAggregateOutputType = {
   minPayout: number | null
   minTradingDaysForPayout: number | null
   payoutBonus: number | null
+  propfirmSharingPercentage: number | null
   price: number | null
   priceWithPromo: number | null
   profitSharing: number | null
@@ -104,6 +106,7 @@ export type AccountMinAggregateOutputType = {
   minTradingDaysForPayout: number | null
   payoutBonus: number | null
   payoutPolicy: string | null
+  propfirmSharingPercentage: number | null
   price: number | null
   priceWithPromo: number | null
   profitSharing: number | null
@@ -152,6 +155,7 @@ export type AccountMaxAggregateOutputType = {
   minTradingDaysForPayout: number | null
   payoutBonus: number | null
   payoutPolicy: string | null
+  propfirmSharingPercentage: number | null
   price: number | null
   priceWithPromo: number | null
   profitSharing: number | null
@@ -200,6 +204,7 @@ export type AccountCountAggregateOutputType = {
   minTradingDaysForPayout: number
   payoutBonus: number
   payoutPolicy: number
+  propfirmSharingPercentage: number
   price: number
   priceWithPromo: number
   profitSharing: number
@@ -235,6 +240,7 @@ export type AccountAvgAggregateInputType = {
   minPayout?: true
   minTradingDaysForPayout?: true
   payoutBonus?: true
+  propfirmSharingPercentage?: true
   price?: true
   priceWithPromo?: true
   profitSharing?: true
@@ -259,6 +265,7 @@ export type AccountSumAggregateInputType = {
   minPayout?: true
   minTradingDaysForPayout?: true
   payoutBonus?: true
+  propfirmSharingPercentage?: true
   price?: true
   priceWithPromo?: true
   profitSharing?: true
@@ -298,6 +305,7 @@ export type AccountMinAggregateInputType = {
   minTradingDaysForPayout?: true
   payoutBonus?: true
   payoutPolicy?: true
+  propfirmSharingPercentage?: true
   price?: true
   priceWithPromo?: true
   profitSharing?: true
@@ -346,6 +354,7 @@ export type AccountMaxAggregateInputType = {
   minTradingDaysForPayout?: true
   payoutBonus?: true
   payoutPolicy?: true
+  propfirmSharingPercentage?: true
   price?: true
   priceWithPromo?: true
   profitSharing?: true
@@ -394,6 +403,7 @@ export type AccountCountAggregateInputType = {
   minTradingDaysForPayout?: true
   payoutBonus?: true
   payoutPolicy?: true
+  propfirmSharingPercentage?: true
   price?: true
   priceWithPromo?: true
   profitSharing?: true
@@ -529,6 +539,7 @@ export type AccountGroupByOutputType = {
   minTradingDaysForPayout: number | null
   payoutBonus: number | null
   payoutPolicy: string | null
+  propfirmSharingPercentage: number | null
   price: number | null
   priceWithPromo: number | null
   profitSharing: number | null
@@ -600,6 +611,7 @@ export type AccountWhereInput = {
   minTradingDaysForPayout?: Prisma.IntNullableFilter<"Account"> | number | null
   payoutBonus?: Prisma.FloatNullableFilter<"Account"> | number | null
   payoutPolicy?: Prisma.StringNullableFilter<"Account"> | string | null
+  propfirmSharingPercentage?: Prisma.FloatNullableFilter<"Account"> | number | null
   price?: Prisma.FloatNullableFilter<"Account"> | number | null
   priceWithPromo?: Prisma.FloatNullableFilter<"Account"> | number | null
   profitSharing?: Prisma.FloatNullableFilter<"Account"> | number | null
@@ -651,6 +663,7 @@ export type AccountOrderByWithRelationInput = {
   minTradingDaysForPayout?: Prisma.SortOrderInput | Prisma.SortOrder
   payoutBonus?: Prisma.SortOrderInput | Prisma.SortOrder
   payoutPolicy?: Prisma.SortOrderInput | Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrderInput | Prisma.SortOrder
   price?: Prisma.SortOrderInput | Prisma.SortOrder
   priceWithPromo?: Prisma.SortOrderInput | Prisma.SortOrder
   profitSharing?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -706,6 +719,7 @@ export type AccountWhereUniqueInput = Prisma.AtLeast<{
   minTradingDaysForPayout?: Prisma.IntNullableFilter<"Account"> | number | null
   payoutBonus?: Prisma.FloatNullableFilter<"Account"> | number | null
   payoutPolicy?: Prisma.StringNullableFilter<"Account"> | string | null
+  propfirmSharingPercentage?: Prisma.FloatNullableFilter<"Account"> | number | null
   price?: Prisma.FloatNullableFilter<"Account"> | number | null
   priceWithPromo?: Prisma.FloatNullableFilter<"Account"> | number | null
   profitSharing?: Prisma.FloatNullableFilter<"Account"> | number | null
@@ -757,6 +771,7 @@ export type AccountOrderByWithAggregationInput = {
   minTradingDaysForPayout?: Prisma.SortOrderInput | Prisma.SortOrder
   payoutBonus?: Prisma.SortOrderInput | Prisma.SortOrder
   payoutPolicy?: Prisma.SortOrderInput | Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrderInput | Prisma.SortOrder
   price?: Prisma.SortOrderInput | Prisma.SortOrder
   priceWithPromo?: Prisma.SortOrderInput | Prisma.SortOrder
   profitSharing?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -813,6 +828,7 @@ export type AccountScalarWhereWithAggregatesInput = {
   minTradingDaysForPayout?: Prisma.IntNullableWithAggregatesFilter<"Account"> | number | null
   payoutBonus?: Prisma.FloatNullableWithAggregatesFilter<"Account"> | number | null
   payoutPolicy?: Prisma.StringNullableWithAggregatesFilter<"Account"> | string | null
+  propfirmSharingPercentage?: Prisma.FloatNullableWithAggregatesFilter<"Account"> | number | null
   price?: Prisma.FloatNullableWithAggregatesFilter<"Account"> | number | null
   priceWithPromo?: Prisma.FloatNullableWithAggregatesFilter<"Account"> | number | null
   profitSharing?: Prisma.FloatNullableWithAggregatesFilter<"Account"> | number | null
@@ -859,6 +875,7 @@ export type AccountCreateInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -910,6 +927,7 @@ export type AccountUncheckedCreateInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -957,6 +975,7 @@ export type AccountUpdateInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1008,6 +1027,7 @@ export type AccountUncheckedUpdateInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1057,6 +1077,7 @@ export type AccountCreateManyInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -1103,6 +1124,7 @@ export type AccountUpdateManyMutationInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1151,6 +1173,7 @@ export type AccountUncheckedUpdateManyInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1214,6 +1237,7 @@ export type AccountCountOrderByAggregateInput = {
   minTradingDaysForPayout?: Prisma.SortOrder
   payoutBonus?: Prisma.SortOrder
   payoutPolicy?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
   price?: Prisma.SortOrder
   priceWithPromo?: Prisma.SortOrder
   profitSharing?: Prisma.SortOrder
@@ -1247,6 +1271,7 @@ export type AccountAvgOrderByAggregateInput = {
   minPayout?: Prisma.SortOrder
   minTradingDaysForPayout?: Prisma.SortOrder
   payoutBonus?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
   price?: Prisma.SortOrder
   priceWithPromo?: Prisma.SortOrder
   profitSharing?: Prisma.SortOrder
@@ -1286,6 +1311,7 @@ export type AccountMaxOrderByAggregateInput = {
   minTradingDaysForPayout?: Prisma.SortOrder
   payoutBonus?: Prisma.SortOrder
   payoutPolicy?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
   price?: Prisma.SortOrder
   priceWithPromo?: Prisma.SortOrder
   profitSharing?: Prisma.SortOrder
@@ -1334,6 +1360,7 @@ export type AccountMinOrderByAggregateInput = {
   minTradingDaysForPayout?: Prisma.SortOrder
   payoutBonus?: Prisma.SortOrder
   payoutPolicy?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
   price?: Prisma.SortOrder
   priceWithPromo?: Prisma.SortOrder
   profitSharing?: Prisma.SortOrder
@@ -1367,6 +1394,7 @@ export type AccountSumOrderByAggregateInput = {
   minPayout?: Prisma.SortOrder
   minTradingDaysForPayout?: Prisma.SortOrder
   payoutBonus?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
   price?: Prisma.SortOrder
   priceWithPromo?: Prisma.SortOrder
   profitSharing?: Prisma.SortOrder
@@ -1531,6 +1559,7 @@ export type AccountCreateWithoutUserInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -1580,6 +1609,7 @@ export type AccountUncheckedCreateWithoutUserInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -1658,6 +1688,7 @@ export type AccountScalarWhereInput = {
   minTradingDaysForPayout?: Prisma.IntNullableFilter<"Account"> | number | null
   payoutBonus?: Prisma.FloatNullableFilter<"Account"> | number | null
   payoutPolicy?: Prisma.StringNullableFilter<"Account"> | string | null
+  propfirmSharingPercentage?: Prisma.FloatNullableFilter<"Account"> | number | null
   price?: Prisma.FloatNullableFilter<"Account"> | number | null
   priceWithPromo?: Prisma.FloatNullableFilter<"Account"> | number | null
   profitSharing?: Prisma.FloatNullableFilter<"Account"> | number | null
@@ -1704,6 +1735,7 @@ export type AccountCreateWithoutGroupInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -1753,6 +1785,7 @@ export type AccountUncheckedCreateWithoutGroupInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -1826,6 +1859,7 @@ export type AccountCreateWithoutPayoutsInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -1876,6 +1910,7 @@ export type AccountUncheckedCreateWithoutPayoutsInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -1938,6 +1973,7 @@ export type AccountUpdateWithoutPayoutsInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -1988,6 +2024,7 @@ export type AccountUncheckedUpdateWithoutPayoutsInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -2035,6 +2072,7 @@ export type AccountCreateManyUserInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -2081,6 +2119,7 @@ export type AccountUpdateWithoutUserInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -2130,6 +2169,7 @@ export type AccountUncheckedUpdateWithoutUserInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -2178,6 +2218,7 @@ export type AccountUncheckedUpdateManyWithoutUserInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -2225,6 +2266,7 @@ export type AccountCreateManyGroupInput = {
   minTradingDaysForPayout?: number | null
   payoutBonus?: number | null
   payoutPolicy?: string | null
+  propfirmSharingPercentage?: number | null
   price?: number | null
   priceWithPromo?: number | null
   profitSharing?: number | null
@@ -2271,6 +2313,7 @@ export type AccountUpdateWithoutGroupInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -2320,6 +2363,7 @@ export type AccountUncheckedUpdateWithoutGroupInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -2368,6 +2412,7 @@ export type AccountUncheckedUpdateManyWithoutGroupInput = {
   minTradingDaysForPayout?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   payoutBonus?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   payoutPolicy?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   price?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   priceWithPromo?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   profitSharing?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
@@ -2447,6 +2492,7 @@ export type AccountSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   minTradingDaysForPayout?: boolean
   payoutBonus?: boolean
   payoutPolicy?: boolean
+  propfirmSharingPercentage?: boolean
   price?: boolean
   priceWithPromo?: boolean
   profitSharing?: boolean
@@ -2499,6 +2545,7 @@ export type AccountSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exten
   minTradingDaysForPayout?: boolean
   payoutBonus?: boolean
   payoutPolicy?: boolean
+  propfirmSharingPercentage?: boolean
   price?: boolean
   priceWithPromo?: boolean
   profitSharing?: boolean
@@ -2549,6 +2596,7 @@ export type AccountSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exten
   minTradingDaysForPayout?: boolean
   payoutBonus?: boolean
   payoutPolicy?: boolean
+  propfirmSharingPercentage?: boolean
   price?: boolean
   priceWithPromo?: boolean
   profitSharing?: boolean
@@ -2599,6 +2647,7 @@ export type AccountSelectScalar = {
   minTradingDaysForPayout?: boolean
   payoutBonus?: boolean
   payoutPolicy?: boolean
+  propfirmSharingPercentage?: boolean
   price?: boolean
   priceWithPromo?: boolean
   profitSharing?: boolean
@@ -2617,7 +2666,7 @@ export type AccountSelectScalar = {
   shouldConsiderTradesBeforeReset?: boolean
 }
 
-export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "propfirm" | "drawdownThreshold" | "profitTarget" | "isPerformance" | "userId" | "createdAt" | "startingBalance" | "payoutCount" | "trailingDrawdown" | "trailingStopProfit" | "resetDate" | "consistencyPercentage" | "groupId" | "accountSize" | "accountSizeName" | "activationFees" | "balanceRequired" | "dailyLoss" | "evaluation" | "isRecursively" | "maxFundedAccounts" | "maxPayout" | "minDays" | "minPayout" | "minTradingDaysForPayout" | "payoutBonus" | "payoutPolicy" | "price" | "priceWithPromo" | "profitSharing" | "rulesDailyLoss" | "tradingNewsAllowed" | "trailing" | "autoRenewal" | "nextPaymentDate" | "paymentFrequency" | "promoPercentage" | "promoType" | "renewalNotice" | "minPnlToCountAsDay" | "buffer" | "considerBuffer" | "shouldConsiderTradesBeforeReset", ExtArgs["result"]["account"]>
+export type AccountOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "number" | "propfirm" | "drawdownThreshold" | "profitTarget" | "isPerformance" | "userId" | "createdAt" | "startingBalance" | "payoutCount" | "trailingDrawdown" | "trailingStopProfit" | "resetDate" | "consistencyPercentage" | "groupId" | "accountSize" | "accountSizeName" | "activationFees" | "balanceRequired" | "dailyLoss" | "evaluation" | "isRecursively" | "maxFundedAccounts" | "maxPayout" | "minDays" | "minPayout" | "minTradingDaysForPayout" | "payoutBonus" | "payoutPolicy" | "propfirmSharingPercentage" | "price" | "priceWithPromo" | "profitSharing" | "rulesDailyLoss" | "tradingNewsAllowed" | "trailing" | "autoRenewal" | "nextPaymentDate" | "paymentFrequency" | "promoPercentage" | "promoType" | "renewalNotice" | "minPnlToCountAsDay" | "buffer" | "considerBuffer" | "shouldConsiderTradesBeforeReset", ExtArgs["result"]["account"]>
 export type AccountInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   group?: boolean | Prisma.Account$groupArgs<ExtArgs>
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -2670,6 +2719,7 @@ export type $AccountPayload<ExtArgs extends runtime.Types.Extensions.InternalArg
     minTradingDaysForPayout: number | null
     payoutBonus: number | null
     payoutPolicy: string | null
+    propfirmSharingPercentage: number | null
     price: number | null
     priceWithPromo: number | null
     profitSharing: number | null
@@ -3141,6 +3191,7 @@ export interface AccountFieldRefs {
   readonly minTradingDaysForPayout: Prisma.FieldRef<"Account", 'Int'>
   readonly payoutBonus: Prisma.FieldRef<"Account", 'Float'>
   readonly payoutPolicy: Prisma.FieldRef<"Account", 'String'>
+  readonly propfirmSharingPercentage: Prisma.FieldRef<"Account", 'Float'>
   readonly price: Prisma.FieldRef<"Account", 'Float'>
   readonly priceWithPromo: Prisma.FieldRef<"Account", 'Float'>
   readonly profitSharing: Prisma.FieldRef<"Account", 'Float'>
