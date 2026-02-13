@@ -90,7 +90,7 @@ function getAccountTotalPayouts(account: Account) {
     .reduce(
       (sum, payout) => {
         const propfirmSharingPercentage = payout.propfirmSharingPercentage ?? 0
-        return sum + payout.amount * (1 - propfirmSharingPercentage)
+        return sum + payout.amount * (1 - propfirmSharingPercentage/100)
       },
       0
     )
