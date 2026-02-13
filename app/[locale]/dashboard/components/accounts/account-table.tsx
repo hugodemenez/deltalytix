@@ -33,7 +33,7 @@ interface AccountTableProps {
   resetDate?: Date
   hasPendingChanges?: boolean
   onDeletePayout?: (payoutId: string) => Promise<void>
-  onEditPayout?: (payout: { id: string, amount: number, date: Date, status: string }) => void
+  onEditPayout?: (payout: { id: string, amount: number, date: Date, status: string, propfirmSharingPercentage?: number | null }) => void
 }
 
 export function AccountTable({ 

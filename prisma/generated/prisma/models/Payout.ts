@@ -28,10 +28,12 @@ export type AggregatePayout = {
 
 export type PayoutAvgAggregateOutputType = {
   amount: number | null
+  propfirmSharingPercentage: number | null
 }
 
 export type PayoutSumAggregateOutputType = {
   amount: number | null
+  propfirmSharingPercentage: number | null
 }
 
 export type PayoutMinAggregateOutputType = {
@@ -42,6 +44,7 @@ export type PayoutMinAggregateOutputType = {
   status: string | null
   accountNumber: string | null
   accountId: string | null
+  propfirmSharingPercentage: number | null
 }
 
 export type PayoutMaxAggregateOutputType = {
@@ -52,6 +55,7 @@ export type PayoutMaxAggregateOutputType = {
   status: string | null
   accountNumber: string | null
   accountId: string | null
+  propfirmSharingPercentage: number | null
 }
 
 export type PayoutCountAggregateOutputType = {
@@ -62,16 +66,19 @@ export type PayoutCountAggregateOutputType = {
   status: number
   accountNumber: number
   accountId: number
+  propfirmSharingPercentage: number
   _all: number
 }
 
 
 export type PayoutAvgAggregateInputType = {
   amount?: true
+  propfirmSharingPercentage?: true
 }
 
 export type PayoutSumAggregateInputType = {
   amount?: true
+  propfirmSharingPercentage?: true
 }
 
 export type PayoutMinAggregateInputType = {
@@ -82,6 +89,7 @@ export type PayoutMinAggregateInputType = {
   status?: true
   accountNumber?: true
   accountId?: true
+  propfirmSharingPercentage?: true
 }
 
 export type PayoutMaxAggregateInputType = {
@@ -92,6 +100,7 @@ export type PayoutMaxAggregateInputType = {
   status?: true
   accountNumber?: true
   accountId?: true
+  propfirmSharingPercentage?: true
 }
 
 export type PayoutCountAggregateInputType = {
@@ -102,6 +111,7 @@ export type PayoutCountAggregateInputType = {
   status?: true
   accountNumber?: true
   accountId?: true
+  propfirmSharingPercentage?: true
   _all?: true
 }
 
@@ -199,6 +209,7 @@ export type PayoutGroupByOutputType = {
   status: string
   accountNumber: string
   accountId: string
+  propfirmSharingPercentage: number | null
   _count: PayoutCountAggregateOutputType | null
   _avg: PayoutAvgAggregateOutputType | null
   _sum: PayoutSumAggregateOutputType | null
@@ -232,6 +243,7 @@ export type PayoutWhereInput = {
   status?: Prisma.StringFilter<"Payout"> | string
   accountNumber?: Prisma.StringFilter<"Payout"> | string
   accountId?: Prisma.StringFilter<"Payout"> | string
+  propfirmSharingPercentage?: Prisma.FloatNullableFilter<"Payout"> | number | null
   account?: Prisma.XOR<Prisma.AccountScalarRelationFilter, Prisma.AccountWhereInput>
 }
 
@@ -243,6 +255,7 @@ export type PayoutOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   accountNumber?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrderInput | Prisma.SortOrder
   account?: Prisma.AccountOrderByWithRelationInput
 }
 
@@ -257,6 +270,7 @@ export type PayoutWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.StringFilter<"Payout"> | string
   accountNumber?: Prisma.StringFilter<"Payout"> | string
   accountId?: Prisma.StringFilter<"Payout"> | string
+  propfirmSharingPercentage?: Prisma.FloatNullableFilter<"Payout"> | number | null
   account?: Prisma.XOR<Prisma.AccountScalarRelationFilter, Prisma.AccountWhereInput>
 }, "id">
 
@@ -268,6 +282,7 @@ export type PayoutOrderByWithAggregationInput = {
   status?: Prisma.SortOrder
   accountNumber?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.PayoutCountOrderByAggregateInput
   _avg?: Prisma.PayoutAvgOrderByAggregateInput
   _max?: Prisma.PayoutMaxOrderByAggregateInput
@@ -286,6 +301,7 @@ export type PayoutScalarWhereWithAggregatesInput = {
   status?: Prisma.StringWithAggregatesFilter<"Payout"> | string
   accountNumber?: Prisma.StringWithAggregatesFilter<"Payout"> | string
   accountId?: Prisma.StringWithAggregatesFilter<"Payout"> | string
+  propfirmSharingPercentage?: Prisma.FloatNullableWithAggregatesFilter<"Payout"> | number | null
 }
 
 export type PayoutCreateInput = {
@@ -295,6 +311,7 @@ export type PayoutCreateInput = {
   createdAt?: Date | string
   status?: string
   accountNumber: string
+  propfirmSharingPercentage?: number | null
   account: Prisma.AccountCreateNestedOneWithoutPayoutsInput
 }
 
@@ -306,6 +323,7 @@ export type PayoutUncheckedCreateInput = {
   status?: string
   accountNumber: string
   accountId: string
+  propfirmSharingPercentage?: number | null
 }
 
 export type PayoutUpdateInput = {
@@ -315,6 +333,7 @@ export type PayoutUpdateInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   account?: Prisma.AccountUpdateOneRequiredWithoutPayoutsNestedInput
 }
 
@@ -326,6 +345,7 @@ export type PayoutUncheckedUpdateInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type PayoutCreateManyInput = {
@@ -336,6 +356,7 @@ export type PayoutCreateManyInput = {
   status?: string
   accountNumber: string
   accountId: string
+  propfirmSharingPercentage?: number | null
 }
 
 export type PayoutUpdateManyMutationInput = {
@@ -345,6 +366,7 @@ export type PayoutUpdateManyMutationInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type PayoutUncheckedUpdateManyInput = {
@@ -355,6 +377,7 @@ export type PayoutUncheckedUpdateManyInput = {
   status?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
   accountId?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type PayoutListRelationFilter = {
@@ -375,10 +398,12 @@ export type PayoutCountOrderByAggregateInput = {
   status?: Prisma.SortOrder
   accountNumber?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
 }
 
 export type PayoutAvgOrderByAggregateInput = {
   amount?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
 }
 
 export type PayoutMaxOrderByAggregateInput = {
@@ -389,6 +414,7 @@ export type PayoutMaxOrderByAggregateInput = {
   status?: Prisma.SortOrder
   accountNumber?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
 }
 
 export type PayoutMinOrderByAggregateInput = {
@@ -399,10 +425,12 @@ export type PayoutMinOrderByAggregateInput = {
   status?: Prisma.SortOrder
   accountNumber?: Prisma.SortOrder
   accountId?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
 }
 
 export type PayoutSumOrderByAggregateInput = {
   amount?: Prisma.SortOrder
+  propfirmSharingPercentage?: Prisma.SortOrder
 }
 
 export type PayoutCreateNestedManyWithoutAccountInput = {
@@ -454,6 +482,7 @@ export type PayoutCreateWithoutAccountInput = {
   createdAt?: Date | string
   status?: string
   accountNumber: string
+  propfirmSharingPercentage?: number | null
 }
 
 export type PayoutUncheckedCreateWithoutAccountInput = {
@@ -463,6 +492,7 @@ export type PayoutUncheckedCreateWithoutAccountInput = {
   createdAt?: Date | string
   status?: string
   accountNumber: string
+  propfirmSharingPercentage?: number | null
 }
 
 export type PayoutCreateOrConnectWithoutAccountInput = {
@@ -502,6 +532,7 @@ export type PayoutScalarWhereInput = {
   status?: Prisma.StringFilter<"Payout"> | string
   accountNumber?: Prisma.StringFilter<"Payout"> | string
   accountId?: Prisma.StringFilter<"Payout"> | string
+  propfirmSharingPercentage?: Prisma.FloatNullableFilter<"Payout"> | number | null
 }
 
 export type PayoutCreateManyAccountInput = {
@@ -511,6 +542,7 @@ export type PayoutCreateManyAccountInput = {
   createdAt?: Date | string
   status?: string
   accountNumber: string
+  propfirmSharingPercentage?: number | null
 }
 
 export type PayoutUpdateWithoutAccountInput = {
@@ -520,6 +552,7 @@ export type PayoutUpdateWithoutAccountInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type PayoutUncheckedUpdateWithoutAccountInput = {
@@ -529,6 +562,7 @@ export type PayoutUncheckedUpdateWithoutAccountInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 export type PayoutUncheckedUpdateManyWithoutAccountInput = {
@@ -538,6 +572,7 @@ export type PayoutUncheckedUpdateManyWithoutAccountInput = {
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   accountNumber?: Prisma.StringFieldUpdateOperationsInput | string
+  propfirmSharingPercentage?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
 }
 
 
@@ -550,6 +585,7 @@ export type PayoutSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   status?: boolean
   accountNumber?: boolean
   accountId?: boolean
+  propfirmSharingPercentage?: boolean
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["payout"]>
 
@@ -561,6 +597,7 @@ export type PayoutSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
   status?: boolean
   accountNumber?: boolean
   accountId?: boolean
+  propfirmSharingPercentage?: boolean
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["payout"]>
 
@@ -572,6 +609,7 @@ export type PayoutSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
   status?: boolean
   accountNumber?: boolean
   accountId?: boolean
+  propfirmSharingPercentage?: boolean
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["payout"]>
 
@@ -583,9 +621,10 @@ export type PayoutSelectScalar = {
   status?: boolean
   accountNumber?: boolean
   accountId?: boolean
+  propfirmSharingPercentage?: boolean
 }
 
-export type PayoutOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "amount" | "date" | "createdAt" | "status" | "accountNumber" | "accountId", ExtArgs["result"]["payout"]>
+export type PayoutOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "amount" | "date" | "createdAt" | "status" | "accountNumber" | "accountId" | "propfirmSharingPercentage", ExtArgs["result"]["payout"]>
 export type PayoutInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   account?: boolean | Prisma.AccountDefaultArgs<ExtArgs>
 }
@@ -609,6 +648,7 @@ export type $PayoutPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     status: string
     accountNumber: string
     accountId: string
+    propfirmSharingPercentage: number | null
   }, ExtArgs["result"]["payout"]>
   composites: {}
 }
@@ -1040,6 +1080,7 @@ export interface PayoutFieldRefs {
   readonly status: Prisma.FieldRef<"Payout", 'String'>
   readonly accountNumber: Prisma.FieldRef<"Payout", 'String'>
   readonly accountId: Prisma.FieldRef<"Payout", 'String'>
+  readonly propfirmSharingPercentage: Prisma.FieldRef<"Payout", 'Float'>
 }
     
 

@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  schemas   = ["public"]
+  provider = "postgresql"
+  schemas  = ["public"]
 }
 
 model Trade {
@@ -338,14 +338,15 @@ model Account {
 }
 
 model Payout {
-  id            String   @id @default(uuid())
-  amount        Float
-  date          DateTime
-  createdAt     DateTime @default(now())
-  status        String   @default("PENDING")
-  accountNumber String
-  accountId     String
-  account       Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id                        String   @id @default(uuid())
+  amount                    Float
+  date                      DateTime
+  createdAt                 DateTime @default(now())
+  status                    String   @default("PENDING")
+  accountNumber             String
+  accountId                 String
+  account                   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  propfirmSharingPercentage Float?   @default(0)
 
   @@index([accountNumber])
   @@schema("public")

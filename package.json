@@ -6,7 +6,7 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "ts-node scripts/generate-routes.ts",
+    "prebuild": "ts-node scripts/generate-routes.ts && npx prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -159,7 +159,6 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "puppeteer": "^23.0.0",
     "@tailwindcss/postcss": "^4.1.16",
     "@types/d3": "^7.4.3",
     "@types/ms": "^2.1.0",
@@ -172,6 +171,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "postcss": "^8.5.6",
+    "puppeteer": "^23.0.0",
     "react-email": "4.3.2",
     "tailwindcss": "^4.1.16",
     "ts-node": "^10.9.2",
