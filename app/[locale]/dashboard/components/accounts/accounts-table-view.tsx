@@ -87,9 +87,15 @@ function getAccountBalance(account: Account) {
 function getAccountTotalPayouts(account: Account) {
   return (account.payouts ?? [])
     .filter((payout) => payout.status === "PAID" || payout.status === "VALIDATED")
-    .reduce((sum, payout) => sum + payout.amount, 0)
+    .reduce(
+      (sum, payout) => {
+        const propfirmSharingPercentage = payout.propfirmSharingPercentage ?? 0
+        return sum + payout.amount * (1 - propfirmSharingPercentage)
+      },
+      0
+    )
 }
-
+  
 function getAccountsSummary(accounts: Account[]) {
   const summary = accounts.reduce(
     (acc, account) => {
@@ -319,88 +325,88 @@ function AccountsTableSection({
     <div className="relative">
       <div className="overflow-x-auto" ref={tableWrapperRef}>
         <table className="w-full border-separate border-spacing-0 text-sm">
-        <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr
-              key={headerGroup.id}
-              className="border-b transition-colors hover:bg-muted/50"
-            >
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l align-middle text-muted-foreground"
-                  style={{ width: header.getSize() }}
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
+          <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr
+                key={headerGroup.id}
+                className="border-b transition-colors hover:bg-muted/50"
+              >
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l align-middle text-muted-foreground"
+                    style={{ width: header.getSize() }}
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
                         header.column.columnDef.header,
                         header.getContext()
                       )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody className="bg-background [&_tr:last-child]:border-0">
-          {displayRows.map((entry, rowIndex) => {
-            if (entry.type === "summary") {
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="bg-background [&_tr:last-child]:border-0">
+            {displayRows.map((entry, rowIndex) => {
+              if (entry.type === "summary") {
+                return (
+                  <tr
+                    key={entry.summary.id}
+                    className="border-b border-border bg-muted/50 font-semibold"
+                  >
+                    {table.getVisibleLeafColumns().map((column) => (
+                      <td
+                        key={`${entry.summary.id}-${column.id}`}
+                        className="px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle"
+                        style={{ width: column.getSize() }}
+                      >
+                        {renderSummaryCell(column.id, entry.summary)}
+                      </td>
+                    ))}
+                  </tr>
+                )
+              }
+
+              const row = entry.row
               return (
                 <tr
-                  key={entry.summary.id}
-                className="border-b border-border bg-muted/50 font-semibold"
+                  key={row.id}
+                  className={cn(
+                    "border-b border-border transition-all duration-75 hover:bg-muted/40",
+                    rowIndex % 2 === 1 && "bg-muted/20",
+                    row.getCanExpand() && "bg-muted/30 font-medium",
+                    isDrawdownBreached(row.original) && "opacity-50",
+                    (row.getCanExpand() || row.depth > 0) && "cursor-pointer"
+                  )}
+                  onClick={() => {
+                    if (row.getCanExpand()) {
+                      row.toggleExpanded()
+                    } else if (!isGroupRow(row.original)) {
+                      onSelectAccount(row.original)
+                    }
+                  }}
                 >
-                  {table.getVisibleLeafColumns().map((column) => (
+                  {row.getVisibleCells().map((cell) => (
                     <td
-                      key={`${entry.summary.id}-${column.id}`}
-                      className="px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle"
-                      style={{ width: column.getSize() }}
+                      key={cell.id}
+                      className={cn(
+                        "px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle",
+                        row.depth > 0 && cell.column.id === "account" && "pl-6"
+                      )}
+                      style={{ width: cell.column.getSize() }}
                     >
-                      {renderSummaryCell(column.id, entry.summary)}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </td>
                   ))}
                 </tr>
               )
-            }
-
-            const row = entry.row
-            return (
-              <tr
-                key={row.id}
-                className={cn(
-                  "border-b border-border transition-all duration-75 hover:bg-muted/40",
-                  rowIndex % 2 === 1 && "bg-muted/20",
-                  row.getCanExpand() && "bg-muted/30 font-medium",
-                  isDrawdownBreached(row.original) && "opacity-50",
-                  (row.getCanExpand() || row.depth > 0) && "cursor-pointer"
-                )}
-                onClick={() => {
-                  if (row.getCanExpand()) {
-                    row.toggleExpanded()
-                  } else if (!isGroupRow(row.original)) {
-                    onSelectAccount(row.original)
-                  }
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className={cn(
-                      "px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle",
-                      row.depth > 0 && cell.column.id === "account" && "pl-6"
-                    )}
-                    style={{ width: cell.column.getSize() }}
-                  >
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
-                  </td>
-                ))}
-              </tr>
-            )
-          })}
-        </tbody>
+            })}
+          </tbody>
         </table>
       </div>
       {showScrollHint && (
@@ -599,11 +605,11 @@ export function AccountsTableView({
           const a = isGroupRow(rowA.original)
             ? Number.POSITIVE_INFINITY
             : getAccountStartDate(rowA.original)?.getTime() ??
-              Number.POSITIVE_INFINITY
+            Number.POSITIVE_INFINITY
           const b = isGroupRow(rowB.original)
             ? Number.POSITIVE_INFINITY
             : getAccountStartDate(rowB.original)?.getTime() ??
-              Number.POSITIVE_INFINITY
+            Number.POSITIVE_INFINITY
           return a - b
         },
         size: 140,
@@ -826,15 +832,15 @@ export function AccountsTableView({
                   remainingLoss > (row.original.drawdownThreshold ?? 0) * 0.5
                     ? "text-success"
                     : remainingLoss >
-                        (row.original.drawdownThreshold ?? 0) * 0.2
+                      (row.original.drawdownThreshold ?? 0) * 0.2
                       ? "text-warning"
                       : "text-destructive"
                 )}
               >
                 {remainingLoss > 0
                   ? t("propFirm.card.remainingLoss", {
-                      amount: remainingLoss.toFixed(2),
-                    })
+                    amount: remainingLoss.toFixed(2),
+                  })
                   : t("propFirm.card.drawdownBreached")}
               </span>
             </div>

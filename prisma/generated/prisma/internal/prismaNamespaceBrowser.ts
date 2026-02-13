@@ -345,6 +345,7 @@ export const AccountScalarFieldEnum = {
   minTradingDaysForPayout: 'minTradingDaysForPayout',
   payoutBonus: 'payoutBonus',
   payoutPolicy: 'payoutPolicy',
+  propfirmSharingPercentage: 'propfirmSharingPercentage',
   price: 'price',
   priceWithPromo: 'priceWithPromo',
   profitSharing: 'profitSharing',
@@ -373,7 +374,8 @@ export const PayoutScalarFieldEnum = {
   createdAt: 'createdAt',
   status: 'status',
   accountNumber: 'accountNumber',
-  accountId: 'accountId'
+  accountId: 'accountId',
+  propfirmSharingPercentage: 'propfirmSharingPercentage'
 } as const
 
 export type PayoutScalarFieldEnum = (typeof PayoutScalarFieldEnum)[keyof typeof PayoutScalarFieldEnum]

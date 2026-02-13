@@ -7,7 +7,9 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    // Use DIRECT_URL (non-pooled, port 5432) for CLI commands like migrate/db push.
+    // The pooled DATABASE_URL is used at runtime via the PrismaPg adapter in lib/prisma.ts.
+    url: env("DIRECT_URL"),
   },
 //   experimental: {
 //     externalTables: true,
