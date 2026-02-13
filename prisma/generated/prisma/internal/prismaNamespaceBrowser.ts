@@ -345,7 +345,6 @@ export const AccountScalarFieldEnum = {
   minTradingDaysForPayout: 'minTradingDaysForPayout',
   payoutBonus: 'payoutBonus',
   payoutPolicy: 'payoutPolicy',
-  propfirmSharingPercentage: 'propfirmSharingPercentage',
   price: 'price',
   priceWithPromo: 'priceWithPromo',
   profitSharing: 'profitSharing',
