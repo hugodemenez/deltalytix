@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { RithmicSyncContextProvider } from "@/context/rithmic-sync-context";
 import { TradovateSyncContextProvider } from "@/context/tradovate-sync-context";
+import { DxFeedSyncContextProvider } from "@/context/dxfeed-sync-context";
 
 export default async function RootLayout({
   children,
@@ -19,11 +20,13 @@ export default async function RootLayout({
         <DataProvider>
           <RithmicSyncContextProvider>
             <TradovateSyncContextProvider>
-              <RithmicSyncNotifications />
-              <Toaster />
-              <Navbar />
-              {children}
-              <Modals />
+              <DxFeedSyncContextProvider>
+                <RithmicSyncNotifications />
+                <Toaster />
+                <Navbar />
+                {children}
+                <Modals />
+              </DxFeedSyncContextProvider>
             </TradovateSyncContextProvider>
           </RithmicSyncContextProvider>
         </DataProvider>

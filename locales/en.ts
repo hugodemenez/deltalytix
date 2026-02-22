@@ -1983,6 +1983,82 @@ export default {
       syncCompleted: "Sync completed for account {accountId}",
     },
   },
+  dxfeedSync: {
+    title: "DxFeed Account Sync",
+    description:
+      "Connect your DxFeed account to automatically sync your trades using your credentials.",
+    connected: "DxFeed account connected successfully",
+    disconnected: "DxFeed account disconnected",
+    error: {
+      credentialsRequired: "Email and password are required",
+      authFailed: "Failed to authenticate with DxFeed",
+    },
+    addAccount: {
+      title: "Connect DxFeed Account",
+      description:
+        "Enter your DxFeed credentials to connect your account and sync trades.",
+      emailLabel: "Email",
+      emailPlaceholder: "Enter your DxFeed email",
+      passwordLabel: "Password",
+      passwordPlaceholder: "Enter your DxFeed password",
+      connecting: "Connecting...",
+      connect: "Connect",
+    },
+    sync: {
+      error: "Error",
+      warning: "Warning",
+      success: "Success",
+      syncFailed: "Trade sync failed: {error}",
+      unknownError: "Unknown error",
+      inProgress: "DxFeed sync in progress for account {accountId}",
+    },
+    multiAccount: {
+      accountName: "Account Name",
+      lastSync: "Last Sync",
+      tokenStatus: "Token Status",
+      actions: "Actions",
+      expired: "Expired",
+      valid: "Valid",
+      reconnect: "Reconnect",
+      delete: "Delete",
+      savedAccounts: "Saved Accounts",
+      addNew: "Add New",
+      syncAll: "Sync All",
+      noSavedAccounts: "No saved accounts found",
+      deleteAccount: "Delete Account",
+      deleteAccountConfirm:
+        'Are you sure you want to delete the account "{accountId}"? This action cannot be undone.',
+      accountDeleted: 'Account "{accountId}" has been deleted successfully.',
+      deleteError: 'Failed to delete account "{accountId}".',
+      accountsReloaded: "Accounts reloaded successfully",
+      reloadError: "Failed to reload accounts",
+      alreadyImportedTrades: "Trades already imported",
+      syncCompleteForAccount:
+        "Successfully synced {savedCount} trades from {tradesCount} total for {accountId}.",
+      syncCompleteNoNewTradesForAccount:
+        "Found {tradesCount} trades for {accountId} but no new trades were found.",
+      syncCompleteNoOrdersForAccount: "No trades found for {accountId}.",
+      accountsCount: "accounts",
+      syncedAccounts: "Synced Accounts",
+      dailySyncTimeLocal: "Daily sync time (Local)",
+      dailySyncTimeTitle: "Set daily sync time",
+      dailySyncTimeDescription:
+        "Configure when this account should automatically sync each day (in your local time). Leave empty to disable automatic syncing.",
+      dailySyncTimeLabel: "Sync time (local time)",
+      dailySyncTimePlaceholder: "HH:mm",
+      dailySyncTimeTimezoneNote: "Time is in your local timezone ({timezone})",
+      dailySyncTimeNotSet: "Not set",
+      dailySyncTimeUpdated: "Daily sync time updated successfully",
+      dailySyncTimeUpdateError: "Failed to update sync time",
+      quickPresets: "Quick Presets",
+      presets: {
+        morning: "Morning (8:00 AM)",
+        midday: "Midday (12:00 PM)",
+        afterClose: "After Market Close (22:00 UTC)",
+        midnight: "Midnight (12:00 AM)",
+      },
+    },
+  },
   "import.type.thorSync.name": "Thor",
   "import.type.thorSync.description":
     "Direct account synchronization with Thor",
@@ -1993,6 +2069,11 @@ export default {
     "Direct account synchronization with Tradovate",
   "import.type.tradovateSync.details":
     "Direct sync with your Tradovate account. Requires OAuth authentication.",
+  "import.type.dxfeedSync.name": "DxFeed",
+  "import.type.dxfeedSync.description":
+    "Direct account synchronization with DxFeed",
+  "import.type.dxfeedSync.details":
+    "Direct sync with your DxFeed account. Requires username and password authentication.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Import from ATAS Excel files",
   "import.type.atas.details":
@@ -2011,6 +2092,8 @@ export default {
   "common.delete": "Delete",
   "common.clear": "Clear",
   "common.back": "Back",
+  "common.save": "Save",
+  "common.saving": "Saving...",
   "calendar.impactFilter.title": "Impact Filter",
   "calendar.impactFilter.low": "Low",
   "calendar.impactFilter.medium": "Medium",
