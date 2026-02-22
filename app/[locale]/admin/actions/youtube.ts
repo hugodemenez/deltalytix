@@ -3,6 +3,7 @@
 import { YoutubeTranscript } from 'youtube-transcript'
 import { generateText, Output } from "ai"
 import { z } from 'zod/v3';
+import { openai } from "@/lib/openai-client";
 
 const DELTALYTIX_CONTEXT = `Deltalytix est une plateforme web pour day traders de futures, avec une interface intuitive et personnalisable. Conçue à partir de mon expérience personnelle en tant que day trader de futures, utilisant des stratégies de scalping, elle propose des fonctionnalités comme la gestion de multiple compte, le suivi des challenges propfirms, et des tableaux de bord personnalisables. Notre but est de fournir aux traders des analyses approfondies sur leurs habitudes de trading pour optimiser leurs stratégies et améliorer leur prise de décision.`
 
@@ -13,7 +14,7 @@ const summarySchema = z.object({
 export async function generateTranscriptSummary(transcript: string): Promise<string | null> {
   try {
     const { output } = await generateText({
-      model: 'openai/gpt-5-mini',
+      model: openai('gpt-5-mini'),
       output: Output.object({ schema: summarySchema }),
       prompt: `Tu es un expert en développement web et en trading qui aide à résumer les mises à jour de Deltalytix.
 ${DELTALYTIX_CONTEXT}

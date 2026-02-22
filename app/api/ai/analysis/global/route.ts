@@ -1,7 +1,7 @@
 import { streamText } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
-import { openai } from "@ai-sdk/openai";
+import { openai } from "@/lib/openai-client";
 
 // Analysis Tools
 import { generateAnalysisComponent } from "../accounts/generate-analysis-component";

@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai"
+import { openai } from "@/lib/openai-client"
 import { streamObject } from "ai"
 import { tradeSchema, orderSchema } from './schema'
 import { type FinancialInstrument } from '../extract-orders/schema'

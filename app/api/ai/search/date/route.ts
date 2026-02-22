@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { openai } from "@/lib/openai-client";
 import { generateText, Output } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     });
 
     const { output } = await generateText({
-      model: 'openai/gpt-5-mini',
+      model: openai('gpt-5-mini'),
       output: Output.object({ schema: dateRangeSchema }),
       prompt: `You are an expert at parsing natural language date queries into date ranges or weekday filters.
 

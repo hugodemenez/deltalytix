@@ -1,7 +1,7 @@
 import { streamText, convertToModelMessages, stepCountIs } from "ai";
 import { NextRequest } from "next/server";
 import { z } from "zod/v3";
-import { openai } from "@ai-sdk/openai";
+import { openai } from "@/lib/openai-client";
 import { getCurrentDayData } from "./tools/get-current-day-data";
 import { ActionSchema } from "./schema";
 import { getDayData } from "./tools/get-trading-summary";
