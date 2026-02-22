@@ -61,3 +61,4 @@ datafeeds/
 
 # Lock files
 *.lock
+datarazi/docker-compose-ignore.yml

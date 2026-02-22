@@ -34,3 +34,6 @@ pnpm-debug.log*
 coverage
 dist
 tmp
+
+datarazi/docker-compose-ignore.yml
+datarazi
