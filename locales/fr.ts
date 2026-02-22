@@ -2113,6 +2113,82 @@ export default {
       syncCompleted: "Sync terminée pour le compte {accountId}",
     },
   },
+  dxfeedSync: {
+    title: "Synchronisation Compte DxFeed",
+    description:
+      "Connectez votre compte DxFeed pour synchroniser automatiquement vos trades avec vos identifiants.",
+    connected: "Compte DxFeed connecté avec succès",
+    disconnected: "Compte DxFeed déconnecté",
+    error: {
+      credentialsRequired: "L'email et le mot de passe sont requis",
+      authFailed: "Échec de l'authentification avec DxFeed",
+    },
+    addAccount: {
+      title: "Connecter un Compte DxFeed",
+      description:
+        "Entrez vos identifiants DxFeed pour connecter votre compte et synchroniser les trades.",
+      emailLabel: "Email",
+      emailPlaceholder: "Entrez votre email DxFeed",
+      passwordLabel: "Mot de passe",
+      passwordPlaceholder: "Entrez votre mot de passe DxFeed",
+      connecting: "Connexion...",
+      connect: "Connecter",
+    },
+    sync: {
+      error: "Erreur",
+      warning: "Attention",
+      success: "Succès",
+      syncFailed: "Échec de la synchronisation des trades : {error}",
+      unknownError: "Erreur inconnue",
+      inProgress: "Synchronisation DxFeed en cours pour le compte {accountId}",
+    },
+    multiAccount: {
+      accountName: "Nom du Compte",
+      lastSync: "Dernière Sync",
+      tokenStatus: "Statut du Token",
+      actions: "Actions",
+      expired: "Expiré",
+      valid: "Valide",
+      reconnect: "Reconnecter",
+      delete: "Supprimer",
+      savedAccounts: "Comptes Enregistrés",
+      addNew: "Ajouter",
+      syncAll: "Synchroniser Tout",
+      noSavedAccounts: "Aucun compte enregistré trouvé",
+      deleteAccount: "Supprimer le Compte",
+      deleteAccountConfirm:
+        'Êtes-vous sûr de vouloir supprimer le compte "{accountId}" ? Cette action est irréversible.',
+      accountDeleted: 'Le compte "{accountId}" a été supprimé avec succès.',
+      deleteError: 'Échec de la suppression du compte "{accountId}".',
+      accountsReloaded: "Comptes rechargés avec succès",
+      reloadError: "Échec du rechargement des comptes",
+      alreadyImportedTrades: "Trades déjà importés",
+      syncCompleteForAccount:
+        "Synchronisation réussie de {savedCount} trades sur {tradesCount} au total pour {accountId}.",
+      syncCompleteNoNewTradesForAccount:
+        "{tradesCount} trades trouvés pour {accountId} mais aucun nouveau trade.",
+      syncCompleteNoOrdersForAccount: "Aucun trade trouvé pour {accountId}.",
+      accountsCount: "comptes",
+      syncedAccounts: "Comptes Synchronisés",
+      dailySyncTimeLocal: "Heure de sync quotidienne (Local)",
+      dailySyncTimeTitle: "Définir l'heure de synchronisation quotidienne",
+      dailySyncTimeDescription:
+        "Configurez l'heure à laquelle ce compte devrait se synchroniser automatiquement chaque jour (en heure locale). Laissez vide pour désactiver la synchronisation automatique.",
+      dailySyncTimeLabel: "Heure de sync (heure locale)",
+      dailySyncTimePlaceholder: "HH:mm",
+      dailySyncTimeTimezoneNote: "L'heure est dans votre fuseau horaire local ({timezone})",
+      dailySyncTimeNotSet: "Non défini",
+      dailySyncTimeUpdated: "Heure de synchronisation quotidienne mise à jour avec succès",
+      dailySyncTimeUpdateError: "Échec de la mise à jour de l'heure de synchronisation",
+      quickPresets: "Préréglages Rapides",
+      presets: {
+        morning: "Matin (8h00)",
+        midday: "Midi (12h00)",
+        afterClose: "Après la Clôture du Marché (22h00 UTC)",
+        midnight: "Minuit (00h00)",
+      },
+    },
+  },
   "import.type.thorSync.name": "Thor",
   "import.type.thorSync.description":
     "Synchronisation directe de vos comptes connectés à Thor",
@@ -2123,6 +2199,11 @@ export default {
     "Synchronisation directe de compte avec Tradovate",
   "import.type.tradovateSync.details":
     "Synchronisation directe avec votre compte Tradovate. Nécessite une authentification OAuth.",
+  "import.type.dxfeedSync.name": "DxFeed",
+  "import.type.dxfeedSync.description":
+    "Synchronisation directe de compte avec DxFeed",
+  "import.type.dxfeedSync.details":
+    "Synchronisation directe avec votre compte DxFeed. Nécessite une authentification par identifiants.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Import depuis les fichiers Excel ATAS",
   "import.type.atas.details":
@@ -2142,6 +2223,8 @@ export default {
   "common.delete": "Supprimer",
   "common.clear": "Effacer",
   "common.back": "Retour",
+  "common.save": "Enregistrer",
+  "common.saving": "Enregistrement...",
   "calendar.impactFilter.title": "Filtre d'impact",
   "calendar.impactFilter.low": "Faible",
   "calendar.impactFilter.medium": "Moyen",
