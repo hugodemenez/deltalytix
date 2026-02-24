@@ -78,7 +78,7 @@ export async function authenticateDxFeed(
     const body: DxFeedLoginRequest = {
       login,
       password,
-      environment: 1,
+      environment: 0,
       version: 3,
       withDetails: true,
       connectOnlyTrading: true,
