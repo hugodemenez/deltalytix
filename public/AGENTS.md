@@ -45,3 +45,22 @@ turn raw trade history into clear insights, better habits, and consistent result
 ## Sharing and collaboration
 - Team dashboards for shared analytics.
 - Public and embed-friendly views for sharing results.
+
+## Cursor Cloud specific instructions
+
+### Services overview
+Single Next.js 16 application (TypeScript, React 19, Tailwind CSS 4, Prisma 7, PostgreSQL 16).
+No monorepo — one `package.json` at the repo root.
+
+### Running locally
+- **PostgreSQL**: `sudo dockerd &>/dev/null &` then `sudo docker compose up -d db` (uses `docker-compose.yml` at repo root).
+- **Database schema**: Set `DIRECT_URL` to the local Docker Postgres URL (see `docker-compose.yml` for credentials), then run `npx prisma db push` (or `prisma migrate dev`).
+- **Dev server**: `npm run dev` (port 3000). Requires `.env.local` and `.env` — see `.env.example` for full list.
+- Standard commands: `npm run lint` (ESLint), `npm run typecheck` (`tsc --noEmit`), `npm run build`.
+
+### Gotchas
+- **`DIRECT_URL` environment variable**: A Supabase-hosted `DIRECT_URL` may be injected as a secret. Prisma CLI (`prisma.config.ts`) uses `dotenv/config` which does **not** override existing env vars. You must pass `DIRECT_URL` explicitly (matching the docker-compose credentials) or `export` it before running any Prisma CLI command to target the local Docker Postgres.
+- **`.env` vs `.env.local`**: Next.js reads `.env.local` at runtime, but Prisma CLI reads `.env` via `dotenv/config`. Both files need the correct `DATABASE_URL`/`DIRECT_URL`.
+- **Supabase auth** is required for sign-in flows; without real Supabase credentials the landing/public pages work but authenticated routes will not.
+- The codebase has ~360 existing ESLint errors (mostly `@typescript-eslint/no-explicit-any`); these are pre-existing and not blocking.
+- `npx prisma generate` must run after `npm install` to produce the client at `prisma/generated/prisma`.
