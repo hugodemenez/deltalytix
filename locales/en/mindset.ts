@@ -80,7 +80,13 @@ export default {
       title: 'Trading Journal',
       placeholder: 'Write your trading thoughts and reflections here...',
       save: 'Save Entry',
-      editorPlaceholder: 'Start writing...'
+      editorPlaceholder: 'Start writing...',
+      exportPdf: 'Export PDF',
+      exportPdfSuccess: 'Journal PDF exported successfully.',
+      exportPdfError: 'Failed to export journal PDF.',
+      entrySectionTitle: 'Journal Entry',
+      tradeSummaryTitle: 'Trading Summary',
+      tradeDetailsTitle: 'Trade Details'
     },
     tags: {
       title: 'Session Tags',
@@ -116,6 +122,7 @@ export default {
       title: 'Trading Statistics',
       winningTrades: 'Winning Trades',
       losingTrades: 'Losing Trades',
+      tradesCount: 'Trades Count',
       totalPnL: 'Total P&L',
       winRate: 'Win Rate',
       symbol: 'Symbol',
