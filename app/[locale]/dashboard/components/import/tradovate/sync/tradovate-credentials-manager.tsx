@@ -27,10 +27,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useI18n } from "@/locales/client";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   initiateTradovateOAuth,
   updateDailySyncTimeAction,
 } from "./actions";
+import { TRADOVATE_FEE_TYPE_KEYS } from "./fee-types";
 import { useTradovateSyncStore } from "@/store/tradovate-sync-store";
 import { useTradovateSyncContext } from "@/context/tradovate-sync-context";
 
@@ -41,9 +43,12 @@ export function TradovateCredentialsManager() {
     accounts,
     deleteAccount,
     loadAccounts,
+    getIncludedFeeTypesForAccount,
+    updateIncludedFeeTypesForAccount,
   } = useTradovateSyncContext();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false);
+  const [isFeeDialogOpen, setIsFeeDialogOpen] = useState(false);
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
     null,
   );
@@ -218,6 +223,41 @@ export function TradovateCredentialsManager() {
     return `${localHours}:${localMinutes} ${tzName}`;
   }
 
+  const handleOpenFeeDialog = useCallback((accountId: string) => {
+    setSelectedAccountId(accountId);
+    setIsFeeDialogOpen(true);
+  }, []);
+
+  const [feeDialogState, setFeeDialogState] = useState<Record<string, boolean>>({});
+  const feeDialogInitialized = selectedAccountId && isFeeDialogOpen;
+
+  useEffect(() => {
+    if (feeDialogInitialized) {
+      setFeeDialogState(getIncludedFeeTypesForAccount(selectedAccountId!));
+    }
+  }, [feeDialogInitialized, selectedAccountId, getIncludedFeeTypesForAccount]);
+
+  const handleFeeDialogSave = useCallback(async () => {
+    if (!selectedAccountId) return;
+    const result = await updateIncludedFeeTypesForAccount(
+      selectedAccountId,
+      feeDialogState
+    );
+    if (result.success) {
+      toast.success(t("tradovateSync.multiAccount.feeConfigUpdated"));
+      setIsFeeDialogOpen(false);
+    } else {
+      toast.error(result.error || t("tradovateSync.multiAccount.feeConfigUpdateError"));
+    }
+  }, [selectedAccountId, feeDialogState, updateIncludedFeeTypesForAccount, t]);
+
+  const allFeeSelected = TRADOVATE_FEE_TYPE_KEYS.every((k) => feeDialogState[k]);
+  const handleFeeSelectAll = () => {
+    setFeeDialogState(
+      Object.fromEntries(TRADOVATE_FEE_TYPE_KEYS.map((k) => [k, !allFeeSelected]))
+    );
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4">
@@ -379,6 +419,14 @@ export function TradovateCredentialsManager() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="justify-start"
+                            onClick={() => handleOpenFeeDialog(account.accountId)}
+                          >
+                            {t("tradovateSync.multiAccount.configureFees")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="justify-start text-destructive hover:text-destructive"
                             onClick={() => {
                               setSelectedAccountId(account.accountId);
@@ -436,6 +484,65 @@ export function TradovateCredentialsManager() {
             >
               {t("common.delete")}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isFeeDialogOpen} onOpenChange={setIsFeeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t("tradovateSync.multiAccount.feeConfigTitle", {
+                accountId: selectedAccountId,
+              })}
+            </DialogTitle>
+            <DialogDescription>
+              {t("tradovateSync.multiAccount.feesToIncludeDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="flex flex-wrap gap-4">
+              {TRADOVATE_FEE_TYPE_KEYS.map((key) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`fee-dialog-${key}`}
+                    checked={!!feeDialogState[key]}
+                    onCheckedChange={(checked) =>
+                      setFeeDialogState((prev) => ({
+                        ...prev,
+                        [key]: checked === true,
+                      }))
+                    }
+                  />
+                  <Label
+                    htmlFor={`fee-dialog-${key}`}
+                    className="text-sm font-normal cursor-pointer"
+                  >
+                    {t(`tradovateSync.multiAccount.feeTypes.${key}`)}
+                  </Label>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between items-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleFeeSelectAll}
+              >
+                {allFeeSelected
+                  ? t("tradovateSync.multiAccount.deselectAllFees")
+                  : t("tradovateSync.multiAccount.selectAllFees")}
+              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsFeeDialogOpen(false)}>
+                  {t("common.cancel")}
+                </Button>
+                <Button onClick={handleFeeDialogSave}>
+                  {t("common.save")}
+                </Button>
+              </div>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

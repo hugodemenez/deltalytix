@@ -2080,6 +2080,23 @@ export default {
       dailySyncTimeUpdated: "Heure de sync quotidienne mise à jour avec succès",
       dailySyncTimeUpdateError: "Échec de la mise à jour de l'heure de sync",
       quickPresets: "Préréglages rapides",
+      feesToInclude: "Commissions à inclure par trade",
+      feesToIncludeDescription:
+        "Sélectionnez les types de frais à ajouter à la commission de chaque trade. La commission est incluse par défaut.",
+      selectAllFees: "Tout sélectionner",
+      deselectAllFees: "Tout désélectionner",
+      configureFees: "Configurer les commissions",
+      feeConfigTitle: "Config des commissions pour {accountId}",
+      feeConfigUpdated: "Config des commissions mise à jour",
+      feeConfigUpdateError: "Échec de la mise à jour de la config",
+      feeTypes: {
+        commission: "Commission",
+        exchangeFee: "Bourse",
+        clearingFee: "Clearing",
+        nfaFee: "NFA",
+        brokerageFee: "Courtage",
+        orderRoutingFee: "Routage d'ordres",
+      },
       presets: {
         morning: "Matin (8:00)",
         midday: "Midi (12:00)",
