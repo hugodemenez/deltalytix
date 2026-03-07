@@ -15,6 +15,7 @@ import {
   getExpandedRowModel,
   ExpandedState,
   OnChangeFn,
+  PaginationState,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import {
@@ -280,6 +281,14 @@ interface TradeTableReviewProps {
   config?: TradeTableReviewConfig;
 }
 
+function getColumnDefId(columnDef: ColumnDef<ExtendedTrade>): string | undefined {
+  if (columnDef.id) return columnDef.id
+  if ("accessorKey" in columnDef && typeof columnDef.accessorKey === "string") {
+    return columnDef.accessorKey
+  }
+  return undefined
+}
+
 export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps) {
   const t = useI18n();
   const { formattedTrades, updateTrades, deleteTrades } = useData();
@@ -300,6 +309,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     updateColumnVisibilityState,
     updatePageSize,
     updateGroupingGranularity,
+    updateGroupingMode,
   } = useTableConfigStore();
 
   const tableConfig = tables["trade-table"];
@@ -317,6 +327,9 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   const [groupingGranularity, setGroupingGranularity] = useState<number>(
     tableConfig?.groupingGranularity || 0,
   );
+  const [groupingMode, setGroupingMode] = useState<
+    "time" | "instrument" | "account"
+  >(tableConfig?.groupingMode || "time");
   const [selectedTrades, setSelectedTrades] = useState<string[]>([]);
   const [showPoints, setShowPoints] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
@@ -337,6 +350,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       }
       setPageSize(tableConfig.pageSize);
       setGroupingGranularity(tableConfig.groupingGranularity);
+      setGroupingMode(tableConfig.groupingMode || "time");
     }
   }, [tableConfig, config?.disableColumnConfig]);
 
@@ -392,7 +406,14 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     updateGroupingGranularity("trade-table", newGranularity);
   };
 
-  const handlePaginationChange = (updaterOrValue: any) => {
+  const handleGroupingModeChange = (
+    newMode: "time" | "instrument" | "account",
+  ) => {
+    setGroupingMode(newMode);
+    updateGroupingMode("trade-table", newMode);
+  };
+
+  const handlePaginationChange: OnChangeFn<PaginationState> = (updaterOrValue) => {
     const newPagination =
       typeof updaterOrValue === "function"
         ? updaterOrValue({ pageIndex, pageSize })
@@ -488,9 +509,14 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
 
       const roundedEntryDate = roundDate(entryDate);
 
-      const key = trade.groupId
-        ? `${trade.groupId}`
-        : `${trade.instrument}-${roundedEntryDate.toISOString()}`;
+      const autoGroupKey =
+        groupingMode === "instrument"
+          ? `instrument-${trade.instrument}`
+          : groupingMode === "account"
+            ? `account-${trade.accountNumber}`
+            : `${trade.instrument}-${roundedEntryDate.toISOString()}`;
+
+      const key = trade.groupId ? `${trade.groupId}` : autoGroupKey;
 
       if (!groups.has(key)) {
         groups.set(key, {
@@ -548,7 +574,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     });
 
     return Array.from(groups.values());
-  }, [trades, groupingGranularity, config?.groupTrades]);
+  }, [trades, groupingGranularity, groupingMode, config?.groupTrades]);
 
   // Initialize expanded state when expandByDefault is enabled
   React.useEffect(() => {
@@ -579,13 +605,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     });
   }, [groupedTrades]);
 
-  // Calculate totals across all trades (including sub-rows)
-  const totals = useMemo(() => {
+  const calculateTotalsForRows = (rows: ExtendedTrade[]) => {
     let totalPnl = 0;
     let totalCommission = 0;
     let totalQuantity = 0;
 
-    groupedTrades.forEach((row) => {
+    rows.forEach((row) => {
       // If row has sub-trades, sum from sub-trades
       if (row.trades.length > 0) {
         row.trades.forEach((trade) => {
@@ -602,7 +627,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
     });
 
     return { totalPnl, totalCommission, totalQuantity };
-  }, [groupedTrades]);
+  };
 
   // Check if all trades across all pages are selected
   const areAllTradesSelected = useMemo(() => {
@@ -1164,7 +1189,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       return allColumns;
     }
     return allColumns.filter((col) => {
-      const columnId = col.id || (col as any).accessorKey;
+      const columnId = getColumnDefId(col);
       return columnId && config.columns!.includes(columnId as string);
     });
   }, [allColumns, config?.columns]);
@@ -1204,6 +1229,10 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       minSize: 100,
     },
   });
+
+  const currentPageTotals = calculateTotalsForRows(
+    table.getPaginationRowModel().rows.map((row) => row.original),
+  );
 
   // Get style values from config
   const cardStyle = config?.style
@@ -1302,10 +1331,37 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             )}
             {config?.groupTrades !== false && (
               <Select
+                value={groupingMode}
+                onValueChange={(value: "time" | "instrument" | "account") =>
+                  handleGroupingModeChange(value)
+                }
+              >
+                <SelectTrigger className="min-w-[180px] max-w-[250px]">
+                  <SelectValue
+                    placeholder={t("trade-table.groupingMode.label")}
+                    className="truncate"
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="time">
+                    {t("trade-table.groupingMode.time")}
+                  </SelectItem>
+                  <SelectItem value="instrument">
+                    {t("trade-table.groupingMode.instrument")}
+                  </SelectItem>
+                  <SelectItem value="account">
+                    {t("trade-table.groupingMode.account")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            {config?.groupTrades !== false && (
+              <Select
                 value={groupingGranularity.toString()}
                 onValueChange={(value) =>
                   handleGroupingGranularityChange(parseInt(value))
                 }
+                disabled={groupingMode !== "time"}
               >
                 <SelectTrigger className="min-w-[180px] max-w-[250px]">
                   <div className="flex items-center w-full">
@@ -1323,7 +1379,11 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       </Tooltip>
                     </TooltipProvider>
                     <SelectValue
-                      placeholder={t("trade-table.granularity.label")}
+                      placeholder={
+                        groupingMode === "time"
+                          ? t("trade-table.granularity.label")
+                          : t("trade-table.granularity.disabledLabel")
+                      }
                       className="truncate"
                     />
                   </div>
@@ -1432,12 +1492,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             <tfoot className="sticky bottom-0 z-10 bg-muted/90 backdrop-blur-xs border-t-2 border-border">
               <tr className="border-b transition-colors">
                 {visibleColumns.map((column, index) => {
-                  const columnId = column.id || (column as any).accessorKey;
+                  const columnId = column.id;
                   
                   // Find the first non-select/expand column for "Total" label
                   const firstDataColumnIndex = visibleColumns.findIndex(
                     (col) => {
-                      const id = col.id || (col as any).accessorKey;
+                      const id = col.id;
                       return id !== "select" && id !== "expand";
                     }
                   );
@@ -1453,7 +1513,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                         )}
                         style={{ width: column.getSize() }}
                       >
-                        {t("trade-table.total")}
+                        {t("trade-table.subtotal")}
                       </td>
                     );
                   }
@@ -1483,10 +1543,10 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                       >
                         <span
                           className={cn(
-                            totals.totalPnl >= 0 ? "text-green-600" : "text-red-600"
+                            currentPageTotals.totalPnl >= 0 ? "text-green-600" : "text-red-600"
                           )}
                         >
-                          {totals.totalPnl.toFixed(2)}
+                          {currentPageTotals.totalPnl.toFixed(2)}
                         </span>
                       </td>
                     );
@@ -1501,7 +1561,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                         )}
                       style={{ width: column.getSize() }}
                       >
-                        ${totals.totalCommission.toFixed(2)}
+                        ${currentPageTotals.totalCommission.toFixed(2)}
                       </td>
                     );
                   }
@@ -1515,7 +1575,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                         )}
                       style={{ width: column.getSize() }}
                       >
-                        {totals.totalQuantity.toLocaleString()}
+                        {currentPageTotals.totalQuantity.toLocaleString()}
                       </td>
                     );
                   }
