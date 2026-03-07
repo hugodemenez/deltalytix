@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useMemo, useEffect, forwardRef } from "react"
+import { useState, useMemo, useEffect, useCallback, forwardRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink } from "lucide-react"
+import { Share, Check, ChevronsUpDown, Copy, Layout, ExternalLink, Download } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -46,8 +46,8 @@ interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
   size?: "default" | "sm" | "lg" | "icon"
   currentLayout?: {
-    desktop: any[]
-    mobile: any[]
+    desktop: Array<Record<string, unknown>>
+    mobile: Array<Record<string, unknown>>
   }
 }
 
@@ -169,6 +169,27 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       )
     }, [accountNumbers, searchQuery])
 
+    const getFilteredTrades = useCallback(() => {
+      if (!selectedDateRange.from) {
+        return []
+      }
+
+      const fromDate = startOfDay(selectedDateRange.from)
+      const toDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : undefined
+
+      return trades.filter((trade) => {
+        const tradeDate = new Date(trade.entryDate)
+        const hasValidDate = !Number.isNaN(tradeDate.getTime())
+        if (!hasValidDate) {
+          return false
+        }
+
+        return (shareAllAccounts || selectedAccounts.includes(trade.accountNumber)) &&
+          tradeDate >= fromDate &&
+          (!toDate || tradeDate <= toDate)
+      })
+    }, [selectedDateRange.from, selectedDateRange.to, shareAllAccounts, selectedAccounts, trades])
+
     const handleShare = async () => {
       try {
         if (!user) {
@@ -192,15 +213,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           return
         }
 
+        const filteredTrades = getFilteredTrades()
+
         const fromDate = startOfDay(selectedDateRange.from)
         const toDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : undefined
-
-        const filteredTrades = trades.filter(trade => {
-          const tradeDate = new Date(trade.entryDate)
-          return (shareAllAccounts || selectedAccounts.includes(trade.accountNumber)) &&
-            tradeDate >= fromDate &&
-            (!toDate || tradeDate <= toDate)
-        })
 
         if (filteredTrades.length === 0) {
           toast.error(t('share.error'), {
@@ -345,6 +361,127 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       }
     }
 
+    const handleExportPdf = async () => {
+      try {
+        if (!selectedDateRange.from) {
+          toast.error(t('share.error'), {
+            description: t('share.error.noStartDate'),
+          })
+          return
+        }
+
+        if (!shareAllAccounts && selectedAccounts.length === 0) {
+          toast.error(t('share.error'), {
+            description: t('share.error.noAccount'),
+          })
+          return
+        }
+
+        const filteredTrades = getFilteredTrades()
+        if (filteredTrades.length === 0) {
+          toast.error(t('share.error'), {
+            description: t('share.error.noTrades'),
+          })
+          return
+        }
+
+        const { jsPDF } = await import("jspdf")
+        const doc = new jsPDF({ unit: "pt", format: "a4" })
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        const margin = 40
+        const maxWidth = pageWidth - margin * 2
+        const lineHeight = 16
+        let y = margin
+
+        const addWrappedText = (text: string, fontSize = 11) => {
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(fontSize)
+          const lines = doc.splitTextToSize(text || "-", maxWidth)
+          lines.forEach((line: string) => {
+            if (y > pageHeight - margin) {
+              doc.addPage()
+              y = margin
+            }
+            doc.text(line, margin, y)
+            y += lineHeight
+          })
+        }
+
+        const addSectionTitle = (title: string) => {
+          if (y > pageHeight - margin * 2) {
+            doc.addPage()
+            y = margin
+          }
+          y += 8
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(14)
+          doc.text(title, margin, y)
+          y += lineHeight
+          doc.setFont("helvetica", "normal")
+        }
+
+        const formatTradeDate = (value?: string | null) => {
+          if (!value) return "-"
+          const parsedDate = new Date(value)
+          if (Number.isNaN(parsedDate.getTime())) return value
+          return format(parsedDate, "yyyy-MM-dd HH:mm")
+        }
+
+        const formatMoney = (value: number) => value.toFixed(2)
+
+        const totalGrossPnl = filteredTrades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0)
+        const totalCommission = filteredTrades.reduce((sum, trade) => sum + Number(trade.commission || 0), 0)
+        const totalNetPnl = totalGrossPnl - totalCommission
+        const winningTrades = filteredTrades.filter((trade) => Number(trade.pnl || 0) > 0).length
+        const winRate = (winningTrades / filteredTrades.length) * 100
+
+        const formattedFromDate = format(selectedDateRange.from, "yyyy-MM-dd")
+        const formattedToDate = selectedDateRange.to
+          ? format(selectedDateRange.to, "yyyy-MM-dd")
+          : null
+        const dateRangeLabel = formattedToDate
+          ? `${formattedFromDate} - ${formattedToDate}`
+          : formattedFromDate
+
+        const accountLabel = shareAllAccounts
+          ? t("share.pdfAllAccounts")
+          : selectedAccounts.join(", ")
+
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(18)
+        doc.text(shareTitle.trim() || t("share.pdfTitle"), margin, y)
+        y += 26
+
+        addWrappedText(`${t("share.pdfGeneratedOn")}: ${format(new Date(), "yyyy-MM-dd HH:mm")}`)
+        addWrappedText(`${t("share.pdfDateRange")}: ${dateRangeLabel}`)
+        addWrappedText(`${t("share.pdfAccounts")}: ${accountLabel}`)
+
+        addSectionTitle(t("share.pdfSummaryTitle"))
+        addWrappedText(`${t("share.pdfTotalTrades")}: ${filteredTrades.length}`)
+        addWrappedText(`${t("share.pdfGrossPnl")}: ${formatMoney(totalGrossPnl)}`)
+        addWrappedText(`${t("share.pdfCommission")}: ${formatMoney(totalCommission)}`)
+        addWrappedText(`${t("share.pdfNetPnl")}: ${formatMoney(totalNetPnl)}`)
+        addWrappedText(`${t("share.pdfWinRate")}: ${winRate.toFixed(2)}%`)
+
+        addSectionTitle(t("share.pdfTradesTitle"))
+        filteredTrades.forEach((trade, index) => {
+          const tradeLine =
+            `${index + 1}. ${formatTradeDate(trade.entryDate)} | ${trade.accountNumber} | ` +
+            `${trade.instrument} | ${trade.side ?? "-"} | Qty ${trade.quantity ?? 0} | ` +
+            `PnL ${formatMoney(Number(trade.pnl || 0))} | ` +
+            `Commission ${formatMoney(Number(trade.commission || 0))}`
+          addWrappedText(tradeLine)
+        })
+
+        doc.save(`dashboard-report-${format(new Date(), "yyyy-MM-dd")}.pdf`)
+        toast.success(t("share.exportPdfSuccess"))
+      } catch (error) {
+        console.error("Error exporting dashboard PDF:", error)
+        toast.error(t("share.exportPdfError"))
+      }
+    }
+
     const handleCopyUrl = async () => {
       try {
         await navigator.clipboard.writeText(shareUrl)
@@ -384,6 +521,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           <Button 
             ref={ref}
             variant={variant}
+            size={size}
             className={cn(
               "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
               isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
@@ -603,6 +741,13 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
               <DialogFooter>
                 {showManager ? null : !shareUrl ? (
                   <div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4 sm:justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={handleExportPdf}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      {t("share.exportPdfButton")}
+                    </Button>
                     <Button
                       variant="outline"
                       onClick={() => setShowManager(true)}
