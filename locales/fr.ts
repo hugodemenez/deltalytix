@@ -1346,6 +1346,7 @@ export default {
     next: "Suivant",
     totalTrades: "{count} trades",
     total: "Total",
+    subtotal: "Sous-total (page)",
     expandAll: "Tout développer",
     collapseAll: "Tout réduire",
     pageInfo: "Page {current} sur {total}",
@@ -1363,6 +1364,7 @@ export default {
     },
     granularity: {
       label: "Grouper les trades par",
+      disabledLabel: "Granularité disponible uniquement pour le regroupement temporel",
       exact: "Correspondance exacte",
       fiveSeconds: "5 secondes",
       tenSeconds: "10 secondes",
@@ -1370,6 +1372,12 @@ export default {
       oneMinute: "1 minute",
       tooltip:
         "Grouper les trades qui se sont produits dans l'intervalle de temps sélectionné",
+    },
+    groupingMode: {
+      label: "Mode de regroupement",
+      time: "Par heure",
+      instrument: "Par instrument",
+      account: "Par compte",
     },
     groupTrades: "Grouper les trades",
     ungroupTrades: "Dégrouper les trades",
