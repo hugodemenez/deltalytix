@@ -7,6 +7,8 @@ import { useI18n } from "@/locales/client"
 import { TradeProgressChart } from "./trade-progress-chart"
 import { Account } from "@/context/data-provider"
 import { WidgetSize } from '../../types/dashboard'
+import { useUserStore } from "@/store/user-store"
+import { formatCurrencyWithSymbol } from "@/lib/currency"
 
 interface AccountCardProps {
   account: Account
@@ -16,6 +18,7 @@ interface AccountCardProps {
 
 export function AccountCard({ account, onClick, size = 'large' }: AccountCardProps) {
   const t = useI18n()
+  const baseCurrency = useUserStore((state) => state.baseCurrency)
   
   // Extract metrics from account (computed server-side)
   const metrics = account.metrics
@@ -84,7 +87,7 @@ export function AccountCard({ account, onClick, size = 'large' }: AccountCardPro
           <span className={cn(
             "font-semibold truncate ml-2",
             size === 'small' || size === 'small-long' ? "text-sm" : "text-base"
-          )}>${currentBalance.toFixed(2)}</span>
+          )}>{formatCurrencyWithSymbol(currentBalance, baseCurrency)}</span>
         </div>
         {isConfigured ? (
           <div className={cn(
@@ -101,7 +104,7 @@ export function AccountCard({ account, onClick, size = 'large' }: AccountCardPro
             <div className="space-y-1">
               <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">{t('propFirm.card.remainingToTarget')}</span>
-                <span>${remainingToTarget.toFixed(2)}</span>
+                <span>{formatCurrencyWithSymbol(remainingToTarget, baseCurrency)}</span>
               </div>
               <Progress
                 value={progress}
@@ -167,11 +170,15 @@ export function AccountCard({ account, onClick, size = 'large' }: AccountCardPro
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{t('propFirm.card.maxAllowedDailyProfit')}</span>
-                  <span>${metrics.maxAllowedDailyProfit?.toFixed(2) || '-'}</span>
+                  <span>{metrics.maxAllowedDailyProfit !== null && metrics.maxAllowedDailyProfit !== undefined
+                    ? formatCurrencyWithSymbol(metrics.maxAllowedDailyProfit, baseCurrency)
+                    : '-'}</span>
                 </div>
                 <div className="flex justify-between text-xs text-muted-foreground">
                   <span>{t('propFirm.card.highestDailyProfit')}</span>
-                  <span>${metrics.highestProfitDay?.toFixed(2) || '-'}</span>
+                  <span>{metrics.highestProfitDay !== null && metrics.highestProfitDay !== undefined
+                    ? formatCurrencyWithSymbol(metrics.highestProfitDay, baseCurrency)
+                    : '-'}</span>
                 </div>
                 
                 {/* Trading Days Section */}
@@ -185,7 +192,7 @@ export function AccountCard({ account, onClick, size = 'large' }: AccountCardPro
                       {metrics.validTradingDays}/{metrics.totalTradingDays}
                       {account.minPnlToCountAsDay && account.minPnlToCountAsDay > 0 && (
                         <span className="ml-1 text-xs opacity-75">
-                          (≥${account.minPnlToCountAsDay})
+                          {`(≥${formatCurrencyWithSymbol(account.minPnlToCountAsDay, baseCurrency)})`}
                         </span>
                       )}
                     </span>
