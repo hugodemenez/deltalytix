@@ -1285,7 +1285,7 @@ export async function updateTradovateIncludedFeeTypes(
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return { error: 'User not authenticated' }
+      return { success: false, error: 'User not authenticated' }
     }
 
     await prisma.synchronization.update({
@@ -1302,7 +1302,7 @@ export async function updateTradovateIncludedFeeTypes(
     return { success: true }
   } catch (error) {
     console.error('Failed to update Tradovate fee config:', error)
-    return { error: 'Failed to update fee config' }
+    return { success: false, error: 'Failed to update fee config' }
   }
 }
 

@@ -33,6 +33,7 @@ import {
   updateDailySyncTimeAction,
 } from "./actions";
 import { TRADOVATE_FEE_TYPE_KEYS } from "./fee-types";
+import { translateTradovateFeeType } from "@/lib/translation-utils";
 import { useTradovateSyncStore } from "@/store/tradovate-sync-store";
 import { useTradovateSyncContext } from "@/context/tradovate-sync-context";
 
@@ -518,7 +519,7 @@ export function TradovateCredentialsManager() {
                     htmlFor={`fee-dialog-${key}`}
                     className="text-sm font-normal cursor-pointer"
                   >
-                    {t(`tradovateSync.multiAccount.feeTypes.${key}`)}
+                    {translateTradovateFeeType(t, key)}
                   </Label>
                 </div>
               ))}
