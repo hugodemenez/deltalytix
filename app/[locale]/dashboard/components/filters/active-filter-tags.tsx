@@ -11,7 +11,13 @@ import { Button } from "@/components/ui/button"
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUserStore } from "@/store/user-store"
 
-export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: boolean }) {
+type ActiveFilterTagsProps = {
+  showAccountNumbers: boolean
+  inline?: boolean
+  className?: string
+}
+
+export function ActiveFilterTags({ showAccountNumbers, inline = false, className }: ActiveFilterTagsProps) {
   const { 
     accountNumbers, 
     instruments, 
@@ -191,16 +197,33 @@ export function ActiveFilterTags({ showAccountNumbers }: { showAccountNumbers: b
     return sortedDays.map(day => getWeekdayName(day)).join(', ')
   }
 
+  const hasActiveFilters =
+    Boolean(dateRange?.from) ||
+    pnlRange?.min !== undefined ||
+    pnlRange?.max !== undefined ||
+    Boolean(weekdayFilter?.days?.length) ||
+    Boolean(accountNumbers?.length) ||
+    Boolean(instruments?.length) ||
+    Boolean(tagFilter?.tags?.length)
+
+  if (!hasActiveFilters) {
+    return null
+  }
+
   return (
     <motion.div
       key="active-filter-tags"
-      initial={{ height: 0, opacity: 0 }}
-      animate={{ height: "auto", opacity: 1 }}
-      exit={{ height: 0, opacity: 0 }}
+      initial={inline ? { opacity: 0 } : { height: 0, opacity: 0 }}
+      animate={inline ? { opacity: 1 } : { height: "auto", opacity: 1 }}
+      exit={inline ? { opacity: 0 } : { height: 0, opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="border-t border-border/40 bg-background/50 overflow-hidden"
+      className={cn(
+        "overflow-hidden",
+        inline ? "w-full" : "border-t border-border/40 bg-background/50",
+        className
+      )}
     >
-      <div className="px-10 py-2">
+      <div className={cn(inline ? "py-1" : "px-10 py-2")}>
         <div className="relative flex items-center overflow-hidden">
           <div 
             ref={scrollRef}
