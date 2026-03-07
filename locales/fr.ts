@@ -1826,8 +1826,16 @@ export default {
     preferences: {
       title: "Préférences Newsletter",
       description: "Gérez vos préférences email et paramètres d'abonnement",
-      comingSoon:
-        "Les fonctionnalités de gestion des préférences de la newsletter arrivent bientôt.",
+      missingEmail:
+        "Ajoutez votre email dans l'URL pour gérer vos préférences (exemple : ?email=vous@exemple.com).",
+      statusLabel: "Abonnement à la newsletter",
+      weeklySummaryLabel: "Mises à jour hebdomadaires Deltalytix",
+      monthlyStatsLabel: "Mise à jour mensuelle des statistiques",
+      renewalNoticeLabel: "Notification de renouvellement",
+      save: "Enregistrer les préférences",
+      saving: "Enregistrement...",
+      saved: "Préférences enregistrées avec succès.",
+      saveError: "Échec de l'enregistrement des préférences. Veuillez réessayer.",
     },
     admin: {
       inferNames: "Inférer les Noms",
