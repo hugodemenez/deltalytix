@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button"
 import { Trade } from '@/prisma/generated/prisma/browser'
 import { generateTradeHash } from '@/lib/utils'
+import { formatCurrencyValue, formatPriceValue } from '@/lib/ninjatrader-number-parser'
 import { PlatformProcessorProps } from '../config/platforms'
 import {
   Card,
@@ -13,93 +14,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-
-/**
- * Formats currency values from NinjaTrader CSV exports
- * Supports multiple formats:
- * - Negative values in parenthesis: ($400.00), (400.00)
- * - Standard negative: -$400.00, -400.00
- * - Positive values: $400.00, 400.00
- * - US format with thousand separators: $1,234.56
- * - European format with comma as decimal: 1234,56 or 1.234,56
- */
-const formatCurrencyValue = (pnl: string | undefined): { pnl: number, error?: string } => {
-  if (typeof pnl !== 'string' || pnl.trim() === '') {
-    return { pnl: 0, error: 'Invalid PNL value' };
-  }
-
-  const formattedPnl = pnl.trim();
-  
-  // Check if value is in parenthesis format (negative)
-  const isNegative = formattedPnl.startsWith('(') && formattedPnl.endsWith(')');
-  
-  // Remove parentheses and dollar signs
-  let cleanedValue = formattedPnl.replace(/[()$]/g, '');
-  
-  // Detect format: if there's both comma and period, determine which is decimal separator
-  if (cleanedValue.includes(',') && cleanedValue.includes('.')) {
-    // If comma comes before period, it's a thousand separator (US format: 1,234.56)
-    // If period comes before comma, it's European format (1.234,56)
-    const commaIndex = cleanedValue.indexOf(',');
-    const periodIndex = cleanedValue.indexOf('.');
-    
-    if (commaIndex < periodIndex) {
-      // US format: remove commas (thousand separators)
-      cleanedValue = cleanedValue.replace(/,/g, '');
-    } else {
-      // European format: remove periods (thousand separators) and replace comma with period
-      cleanedValue = cleanedValue.replace(/\./g, '').replace(',', '.');
-    }
-  } else if (cleanedValue.includes(',')) {
-    // Only comma present - could be either format
-    // European decimal format has 1+ digits after comma (e.g., 123,45 or 123,4567)
-    // US thousand separator has exactly 3 digits between each comma (e.g., 1,234 or 1,234,567)
-    const parts = cleanedValue.split(',');
-    
-    // Check if it matches US thousand separator pattern:
-    // - Multiple commas: all parts after first must be exactly 3 digits
-    // - Single comma with exactly 3 digits after
-    let isUSFormat = false;
-    if (parts.length === 2 && parts[1].length === 3) {
-      // Single comma with exactly 3 digits after (e.g., 1,234)
-      isUSFormat = true;
-    } else if (parts.length > 2) {
-      // Multiple commas: verify all parts except first are exactly 3 digits
-      isUSFormat = parts.slice(1).every(part => part.length === 3);
-    }
-    
-    if (isUSFormat) {
-      // US thousand separator format (e.g., 1,234 or 1,234,567)
-      cleanedValue = cleanedValue.replace(/,/g, '');
-    } else {
-      // European decimal format (e.g., 123,45 or 1,2 or 123,4567)
-      cleanedValue = cleanedValue.replace(',', '.');
-    }
-  }
-  
-  const numericValue = parseFloat(cleanedValue);
-  
-  if (isNaN(numericValue)) {
-    return { pnl: 0, error: 'Unable to parse PNL value' };
-  }
-  
-  return { pnl: isNegative ? -numericValue : numericValue };
-};
-
-const formatPriceValue = (price: string | undefined): { price: number, error?: string } => {
-  if (typeof price !== 'string' || price.trim() === '') {
-    return { price: 0, error: 'Invalid price value' };
-  }
-
-  const formattedPrice = price.trim();
-  const numericValue = parseFloat(formattedPrice.replace(',', '.'));
-  
-  if (isNaN(numericValue)) {
-    return { price: 0, error: 'Unable to parse price value' };
-  }
-  return { price: numericValue };
-};
 
 const convertToValidDate = (dateString: string): Date | null => {
   if (!dateString) return null;
