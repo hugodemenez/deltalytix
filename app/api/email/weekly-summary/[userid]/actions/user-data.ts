@@ -19,6 +19,7 @@ interface UserData {
     email: string
     firstName: string | null
     isActive: boolean
+    weeklySummaryEnabled: boolean
   }
   trades: {
     id: string
@@ -60,6 +61,10 @@ export async function getUserData(userId: string): Promise<UserData> {
     throw new Error(`Newsletter subscription not found or inactive for email: ${user.email}`)
   }
 
+  if (!newsletter.weeklySummaryEnabled) {
+    throw new Error(`Weekly summary disabled for email: ${user.email}`)
+  }
+
   const trades = await prisma.trade.findMany({
     where: {
       userId: user.id,
@@ -84,7 +89,8 @@ export async function getUserData(userId: string): Promise<UserData> {
     newsletter: {
       email: newsletter.email,
       firstName: newsletter.firstName,
-      isActive: newsletter.isActive
+      isActive: newsletter.isActive,
+      weeklySummaryEnabled: newsletter.weeklySummaryEnabled,
     },
     trades: last14DaysTrades
   }
