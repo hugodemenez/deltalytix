@@ -435,6 +435,7 @@ export async function storeDxFeedToken(
         token: tokenJson,
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
+        includedFeeTypes: null, // DxFeed has no fee differentiator
       },
       create: {
         userId: user.id,
@@ -442,6 +443,7 @@ export async function storeDxFeedToken(
         accountId,
         token: tokenJson,
         lastSyncedAt: new Date(),
+        includedFeeTypes: null, // DxFeed has no fee differentiator
       },
     })
 

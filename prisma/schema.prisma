@@ -148,17 +148,18 @@ model User {
 }
 
 model Synchronization {
-  id             String    @id @default(uuid())
-  userId         String
-  service        String
-  accountId      String
-  lastSyncedAt   DateTime
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  token          String?
-  tokenExpiresAt DateTime?
-  dailySyncTime  DateTime?
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String    @id @default(uuid())
+  userId           String
+  service          String
+  accountId        String
+  lastSyncedAt     DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  token            String?
+  tokenExpiresAt   DateTime?
+  dailySyncTime    DateTime?
+  includedFeeTypes Json?
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, service, accountId])
   @@index([userId])

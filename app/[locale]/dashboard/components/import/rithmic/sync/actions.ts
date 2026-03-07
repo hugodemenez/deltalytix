@@ -25,14 +25,16 @@ export async function setRithmicSynchronization(synchronization: Partial<Synchro
     },
     update: {
       ...synchronization,
-      userId: userId
+      userId: userId,
+      includedFeeTypes: null, // Rithmic has no fee differentiator
     },
     create: {
       ...synchronization,
       service: synchronization.service || 'rithmic',
       accountId: synchronization.accountId || '',
       lastSyncedAt: synchronization.lastSyncedAt || new Date(),
-      userId: userId
+      userId: userId,
+      includedFeeTypes: null, // Rithmic has no fee differentiator
     },
   })
 }

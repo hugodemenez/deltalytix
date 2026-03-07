@@ -149,6 +149,31 @@ interface Fill {
   commission: number
 }
 
+import { DEFAULT_INCLUDED_FEE_TYPES, type TradovateIncludedFeeTypes } from './fee-types'
+
+/** Sum fees based on which types are included */
+function getTotalFeeFromFillFee(fee: TradovateFillFee, includedFeeTypes: TradovateIncludedFeeTypes | boolean): number {
+  if (includedFeeTypes === true) {
+    return (
+      Number(fee.commission ?? 0) +
+      Number(fee.exchangeFee ?? 0) +
+      Number(fee.clearingFee ?? 0) +
+      Number(fee.nfaFee ?? 0) +
+      Number(fee.brokerageFee ?? 0) +
+      Number(fee.orderRoutingFee ?? 0)
+    )
+  }
+  const types = typeof includedFeeTypes === 'object' ? includedFeeTypes : { commission: true }
+  let total = 0
+  if (types.commission) total += Number(fee.commission ?? 0)
+  if (types.exchangeFee) total += Number(fee.exchangeFee ?? 0)
+  if (types.clearingFee) total += Number(fee.clearingFee ?? 0)
+  if (types.nfaFee) total += Number(fee.nfaFee ?? 0)
+  if (types.brokerageFee) total += Number(fee.brokerageFee ?? 0)
+  if (types.orderRoutingFee) total += Number(fee.orderRoutingFee ?? 0)
+  return total
+}
+
 
 interface TradovateTradesResult {
   processedTrades?: Trade[]
@@ -1237,15 +1262,47 @@ export async function getTradovateToken(accountId: string = 'default') {
       return { error: 'Token expired' }
     }
 
+    const includedFeeTypes = syncData.includedFeeTypes as Record<string, boolean> | null | undefined
     return {
       accessToken: syncData.token,
       expiresAt: syncData.tokenExpiresAt?.toISOString() || '',
       environment: 'demo', // Default to demo for now
-      accountId: syncData.accountId
+      accountId: syncData.accountId,
+      includedFeeTypes: includedFeeTypes ?? undefined
     }
   } catch (error) {
     console.error('Failed to get Tradovate token:', error)
     return { error: 'Failed to get token' }
+  }
+}
+
+export async function updateTradovateIncludedFeeTypes(
+  accountId: string,
+  includedFeeTypes: Record<string, boolean>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { error: 'User not authenticated' }
+    }
+
+    await prisma.synchronization.update({
+      where: {
+        userId_service_accountId: {
+          userId: user.id,
+          service: 'tradovate',
+          accountId
+        }
+      },
+      data: { includedFeeTypes }
+    })
+
+    return { success: true }
+  } catch (error) {
+    console.error('Failed to update Tradovate fee config:', error)
+    return { error: 'Failed to update fee config' }
   }
 }
 
@@ -1430,13 +1487,15 @@ async function updateLastSyncedAt(userId: string, accessToken: string) {
   
 export async function getTradovateTrades(
   accessToken: string,
-  options?: { userId?: string }
+  options?: { userId?: string; includeAllFees?: boolean; includedFeeTypes?: TradovateIncludedFeeTypes }
 ): Promise<TradovateTradesResult> {
   try {
     // If we are on the server
     // Identify user by access token
     logger.info('Fetching Tradovate fill pairs for improved trade building (demo only)')
-    
+    const includedFeeTypes: TradovateIncludedFeeTypes | boolean =
+      options?.includedFeeTypes ?? (options?.includeAllFees ? true : DEFAULT_INCLUDED_FEE_TYPES)
+
     // Resolve userId either from caller (e.g. cron) or current session
     let userId = options?.userId ?? null
     if (!userId) {
@@ -1505,12 +1564,12 @@ export async function getTradovateTrades(
       uniqueOrderIds.add(fill.orderId)
     })
 
-    // Map fees by ID and update fill commissions
+    // Map fees by ID and update fill commissions (based on included fee types)
     allFees.forEach(fee => {
       feesById.set(fee.id, fee)
       const fill = fillsById.get(fee.id)
       if (fill) {
-        fill.commission = Number(fee.commission || 0)
+        fill.commission = getTotalFeeFromFillFee(fee, includedFeeTypes)
       }
     })
 

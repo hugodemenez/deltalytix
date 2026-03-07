@@ -1951,6 +1951,23 @@ export default {
       dailySyncTimeUpdated: "Daily sync time updated successfully",
       dailySyncTimeUpdateError: "Failed to update sync time",
       quickPresets: "Quick Presets",
+      feesToInclude: "Fees to include in trade commission",
+      feesToIncludeDescription:
+        "Select which fee types to add to each trade's commission. Commission is included by default.",
+      selectAllFees: "Select all",
+      deselectAllFees: "Deselect all",
+      configureFees: "Configure fees",
+      feeConfigTitle: "Fee config for {accountId}",
+      feeConfigUpdated: "Fee config updated successfully",
+      feeConfigUpdateError: "Failed to update fee config",
+      feeTypes: {
+        commission: "Commission",
+        exchangeFee: "Exchange",
+        clearingFee: "Clearing",
+        nfaFee: "NFA",
+        brokerageFee: "Brokerage",
+        orderRoutingFee: "Order routing",
+      },
       presets: {
         morning: "Morning (8:00 AM)",
         midday: "Midday (12:00 PM)",
