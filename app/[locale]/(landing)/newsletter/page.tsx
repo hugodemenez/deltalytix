@@ -2,6 +2,7 @@ import { Metadata } from "next"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CheckCircle2 } from "lucide-react"
 import { getScopedI18n } from "@/locales/server"
+import { NewsletterPreferencesForm } from "./preferences-form"
 
 export const metadata: Metadata = {
   title: "Newsletter Preferences | Delatlytix",
@@ -42,17 +43,22 @@ export default async function NewsletterPage(
             </Card>
           )}
 
-          <Card className="shadow-xs">
-            <CardHeader className="space-y-3 sm:space-y-4">
-              <CardTitle className="text-lg sm:text-xl">{t("preferences.title")}</CardTitle>
-              <CardDescription className="text-sm sm:text-base">{t("preferences.description")}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                {t("preferences.comingSoon")}
-              </p>
-            </CardContent>
-          </Card>
+          <NewsletterPreferencesForm
+            email={email}
+            copy={{
+              title: t("preferences.title"),
+              description: t("preferences.description"),
+              missingEmail: t("preferences.missingEmail"),
+              statusLabel: t("preferences.statusLabel"),
+              weeklySummaryLabel: t("preferences.weeklySummaryLabel"),
+              monthlyStatsLabel: t("preferences.monthlyStatsLabel"),
+              renewalNoticeLabel: t("preferences.renewalNoticeLabel"),
+              save: t("preferences.save"),
+              saving: t("preferences.saving"),
+              saved: t("preferences.saved"),
+              saveError: t("preferences.saveError"),
+            }}
+          />
         </div>
       </div>
     </main>

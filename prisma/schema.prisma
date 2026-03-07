@@ -467,10 +467,13 @@ model Tag {
 }
 
 model Newsletter {
-  email     String  @id @unique
-  isActive  Boolean @default(true)
-  firstName String?
-  lastName  String?
+  email                String  @id @unique
+  isActive             Boolean @default(true)
+  weeklySummaryEnabled Boolean @default(true)
+  monthlyStatsEnabled  Boolean @default(true)
+  renewalNoticeEnabled Boolean @default(true)
+  firstName            String?
+  lastName             String?
 
   @@index([email])
   @@schema("public")
