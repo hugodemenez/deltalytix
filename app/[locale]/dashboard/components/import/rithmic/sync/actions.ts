@@ -26,7 +26,7 @@ export async function setRithmicSynchronization(synchronization: Partial<Synchro
     update: {
       ...synchronization,
       userId: userId,
-      includedFeeTypes: null, // Rithmic has no fee differentiator
+      includedFeeTypes: undefined, // Rithmic has no fee differentiator
     },
     create: {
       ...synchronization,
@@ -34,7 +34,7 @@ export async function setRithmicSynchronization(synchronization: Partial<Synchro
       accountId: synchronization.accountId || '',
       lastSyncedAt: synchronization.lastSyncedAt || new Date(),
       userId: userId,
-      includedFeeTypes: null, // Rithmic has no fee differentiator
+      includedFeeTypes: undefined, // Rithmic has no fee differentiator
     },
   })
 }
