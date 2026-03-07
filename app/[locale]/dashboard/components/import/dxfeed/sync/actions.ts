@@ -78,7 +78,7 @@ export async function authenticateDxFeed(
     const body: DxFeedLoginRequest = {
       login,
       password,
-      environment: 0,
+      environment: 0, // 0=Production, 1=Staging (demo)
       version: 3,
       withDetails: true,
       connectOnlyTrading: true,
@@ -213,7 +213,12 @@ function buildTradesFromDxFeedReport(
 
   for (const rt of reportTrades) {
     try {
-      if (!rt.isCloseTrade && rt.exitDate === 0) continue
+      // Skip open positions (no exit yet). A closed trade has exitDate > 0.
+      // isCloseTrade semantics can vary by API; rely on exitDate for closed trades.
+      if (rt.exitDate === 0 || rt.exitDate == null) {
+        logger.debug(`Skipping open position tradeId=${rt.tradeId} (exitDate=0)`)
+        continue
+      }
 
       const instrument = extractInstrumentSymbol(rt.contract)
       const side = rt.quantity > 0 ? 'Long' : 'Short'
@@ -323,15 +328,18 @@ export async function getDxFeedTrades(
     for (const account of accounts) {
       const accountLabel = account.accountHeader || account.accountReference || account.accountId.toString()
 
-      const response = await fetch(
+      // period=year fetches last 12 months; API may default to today only when omitted
+      const tradesUrl = new URL(
         `${baseUrl}/api/historical/TradingAccount/Trades/${account.accountId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Accept': 'application/json',
-          },
-        },
       )
+      tradesUrl.searchParams.set('period', 'year')
+
+      const response = await fetch(tradesUrl.toString(), {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      })
 
       if (!response.ok) {
         logger.warn(`Failed to fetch trades for account ${accountLabel} (status ${response.status})`)
