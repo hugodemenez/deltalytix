@@ -18,6 +18,7 @@ export interface TableConfig {
   columnFilters: ColumnFiltersState
   pageSize: number
   groupingGranularity: number
+  groupingMode: 'time' | 'instrument' | 'account'
 }
 
 interface TableConfigState {
@@ -32,6 +33,10 @@ interface TableConfigState {
   updateColumnFilters: (tableId: string, filters: ColumnFiltersState) => void
   updatePageSize: (tableId: string, pageSize: number) => void
   updateGroupingGranularity: (tableId: string, granularity: number) => void
+  updateGroupingMode: (
+    tableId: string,
+    mode: TableConfig["groupingMode"],
+  ) => void
   resetTableConfig: (tableId: string) => void
   resetAllConfigs: () => void
   migrateOldColumns: () => void
@@ -66,6 +71,7 @@ const defaultTradeTableConfig: TableConfig = {
   columnFilters: [],
   pageSize: 10,
   groupingGranularity: 0,
+  groupingMode: 'time',
 }
 
 export const useTableConfigStore = create<TableConfigState>()(
@@ -251,6 +257,16 @@ export const useTableConfigStore = create<TableConfigState>()(
           [tableId]: {
             ...state.tables[tableId],
             groupingGranularity: granularity,
+          },
+        },
+      })),
+
+      updateGroupingMode: (tableId, mode) => set((state) => ({
+        tables: {
+          ...state.tables,
+          [tableId]: {
+            ...state.tables[tableId],
+            groupingMode: mode,
           },
         },
       })),
