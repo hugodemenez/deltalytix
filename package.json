@@ -171,11 +171,13 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "postcss": "^8.5.6",
+    "protobufjs": "^8.0.0",
     "puppeteer": "^23.0.0",
     "react-email": "4.3.2",
     "tailwindcss": "^4.1.16",
     "ts-node": "^10.9.2",
     "tw-animate-css": "latest",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "ws": "^8.19.0"
   }
 }

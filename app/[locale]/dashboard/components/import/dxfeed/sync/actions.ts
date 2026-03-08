@@ -23,6 +23,13 @@ const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.DXFEED_DEBUG === 'true'
+const DXFEED_ENVIRONMENT = Number(
+  process.env.DXFEED_ENVIRONMENT ?? (process.env.NODE_ENV === 'production' ? '0' : '1'),
+)
+const DXFEED_HISTORY_LOOKBACK_DAYS = Math.max(
+  1,
+  Number(process.env.DXFEED_HISTORY_LOOKBACK_DAYS ?? '364'),
+)
 
 const logger = {
   debug: (message: string, data?: any) => {
@@ -55,6 +62,59 @@ function parseStoredCredentials(tokenField: string): DxFeedStoredCredentials | n
   }
 }
 
+function normalizeHistoricalHost(value?: string | null): string {
+  if (!value) return ''
+
+  try {
+    const parsed = new URL(value)
+    return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, '')
+  } catch {
+    return value.replace(/\/$/, '')
+  }
+}
+
+function parseHistoricalHostFromTradingWss(wssUrl?: string | null): string {
+  if (!wssUrl) return ''
+
+  try {
+    const parsed = new URL(wssUrl)
+    return `https://${parsed.hostname}`
+  } catch {
+    logger.warn('Failed to parse trading websocket URL')
+    return ''
+  }
+}
+
+function extractArrayPayload<T>(payload: unknown): T[] {
+  if (Array.isArray(payload)) {
+    return payload as T[]
+  }
+
+  if (payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown }).data)) {
+    return (payload as { data: T[] }).data
+  }
+
+  return []
+}
+
+function extractApiErrorMessage(payload: unknown): string | null {
+  if (!payload) return null
+
+  if (Array.isArray(payload)) {
+    const firstError = payload.find(
+      (item): item is { message?: string } => !!item && typeof item === 'object' && 'message' in item,
+    )
+    return firstError?.message ?? null
+  }
+
+  if (typeof payload === 'object' && 'message' in payload) {
+    const message = (payload as { message?: unknown }).message
+    return typeof message === 'string' ? message : null
+  }
+
+  return null
+}
+
 /**
  * Authenticate with DxFeed using username/password.
  * The auth response returns a token (body) and a host header
@@ -78,7 +138,7 @@ export async function authenticateDxFeed(
     const body: DxFeedLoginRequest = {
       login,
       password,
-      environment: 0, // 0=Production, 1=Staging (demo)
+      environment: DXFEED_ENVIRONMENT, // 0=Production, 1=Staging (demo)
       version: 3,
       withDetails: true,
       connectOnlyTrading: true,
@@ -101,41 +161,33 @@ export async function authenticateDxFeed(
       return { error: `Authentication failed (${response.status}): ${text || response.statusText}` }
     }
 
-    // Derive the historical API host from the wss response header.
-    // wss value looks like: wss://dxfeed.volumetricatrading.com/trading/wss?token=...
-    // The historical API is at the same domain over https.
-    let historicalHost = ''
-    const wssUrl = response.headers.get('wss')
-    if (wssUrl) {
-      try {
-        const parsed = new URL(wssUrl)
-        historicalHost = `https://${parsed.hostname}`
-      } catch {
-        logger.warn('Failed to parse wss header URL')
-      }
-    }
-
-    if (!historicalHost) {
-      logger.warn('Could not derive historical host from auth response')
-    }
-
     const data: DxFeedLoginResponse = await response.json()
 
     if (data.status !== 'OK' || !data.token) {
       return { error: data.reason || 'Authentication failed' }
     }
 
+    const historicalHost =
+      normalizeHistoricalHost(data.tradingRestReportHost) ||
+      parseHistoricalHostFromTradingWss(data.tradingWss || data.tradingWssEndpoint) ||
+      parseHistoricalHostFromTradingWss(response.headers.get('wss'))
+
+    if (!historicalHost) {
+      logger.warn('Could not derive historical host from auth response')
+    }
+
     logger.info('Auth successful')
 
+    const reportAccessToken = data.tradingRestReportToken || data.token
     const accounts = historicalHost
-      ? await getDxFeedAccounts(data.token, historicalHost)
+      ? await getDxFeedAccounts(reportAccessToken, historicalHost)
       : []
     const accountNumbers = accounts.map(
       (a) => a.accountHeader || a.accountReference || a.accountId.toString(),
     )
 
     const credentials: DxFeedStoredCredentials = {
-      accessToken: data.token,
+      accessToken: reportAccessToken,
       historicalHost,
       accountNumbers,
     }
@@ -179,8 +231,8 @@ export async function getDxFeedAccounts(
       return []
     }
 
-    const data: DxFeedAccountListResponse = await response.json()
-    return data.data || []
+    const data: DxFeedAccountListResponse | DxFeedTradingAccount[] = await response.json()
+    return extractArrayPayload<DxFeedTradingAccount>(data)
   } catch (error) {
     logger.error('Error fetching DxFeed accounts:', error)
     return []
@@ -327,12 +379,16 @@ export async function getDxFeedTrades(
 
     for (const account of accounts) {
       const accountLabel = account.accountHeader || account.accountReference || account.accountId.toString()
+      const historicalAccountId = account.accountReference || account.accountId.toString()
 
-      // period=year fetches last 12 months; API may default to today only when omitted
+      const endDt = new Date()
+      const startDt = new Date(endDt.getTime() - DXFEED_HISTORY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000)
+
       const tradesUrl = new URL(
-        `${baseUrl}/api/historical/TradingAccount/Trades/${account.accountId}`,
+        `${baseUrl}/api/historical/TradingAccount/Trades/${historicalAccountId}`,
       )
-      tradesUrl.searchParams.set('period', 'year')
+      tradesUrl.searchParams.set('startDt', startDt.toISOString())
+      tradesUrl.searchParams.set('endDt', endDt.toISOString())
 
       const response = await fetch(tradesUrl.toString(), {
         headers: {
@@ -342,12 +398,22 @@ export async function getDxFeedTrades(
       })
 
       if (!response.ok) {
-        logger.warn(`Failed to fetch trades for account ${accountLabel} (status ${response.status})`)
+        const text = await response.text()
+        logger.warn(
+          `Failed to fetch trades for account ${accountLabel} (status ${response.status}): ${text}`,
+        )
         continue
       }
 
-      const data: DxFeedTradesResponse = await response.json()
-      const reportTrades = data.data || []
+      const data: DxFeedTradesResponse | DxFeedReportTrade[] | Array<{ message?: string }> =
+        await response.json()
+      const apiError = extractApiErrorMessage(data)
+      if (apiError) {
+        logger.warn(`DxFeed returned an error for account ${accountLabel}: ${apiError}`)
+        continue
+      }
+
+      const reportTrades = extractArrayPayload<DxFeedReportTrade>(data)
 
       logger.info(`Received ${reportTrades.length} trades for account ${accountLabel}`)
 

@@ -26,6 +26,7 @@ WARP.md
 .DS_Store
 *.pem
 wip
+/private/
 
 # debug
 npm-debug.log*
