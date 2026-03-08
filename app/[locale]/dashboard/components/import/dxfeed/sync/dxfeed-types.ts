@@ -12,6 +12,12 @@ export interface DxFeedLoginResponse {
   token?: string
   reason?: string
   details?: string[]
+  tradingWss?: string
+  tradingWssEndpoint?: string
+  tradingRestReportHost?: string
+  tradingRestReportToken?: string
+  propfirmName?: string
+  tradingApiVersion?: number
 }
 
 /**
