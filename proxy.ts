@@ -3,6 +3,11 @@ import { createI18nMiddleware } from "next-international/middleware"
 import { createServerClient } from "@supabase/ssr"
 import { geolocation } from "@vercel/functions"
 import { User } from "@supabase/supabase-js"
+import {
+  getLocalDashboardUserEmail,
+  getLocalDashboardUserId,
+  isLocalDashboardAuthBypassEnabled,
+} from "@/lib/local-dashboard-auth"
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
@@ -20,6 +25,21 @@ async function updateSession(request: NextRequest) {
       headers: request.headers,
     },
   })
+
+  if (isLocalDashboardAuthBypassEnabled()) {
+    const localUserId = getLocalDashboardUserId()
+    const localUserEmail = getLocalDashboardUserEmail()
+
+    response.headers.set("x-user-id", localUserId)
+    response.headers.set("x-user-email", localUserEmail)
+    response.headers.set("x-auth-status", "authenticated")
+
+    return {
+      response,
+      user: { id: localUserId, email: localUserEmail } as unknown as User,
+      error: null,
+    }
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

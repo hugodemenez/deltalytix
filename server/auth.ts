@@ -5,6 +5,59 @@ import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { headers } from "next/headers"
 import { User } from '@supabase/supabase-js'
+import {
+  getLocalDashboardUserEmail,
+  getLocalDashboardUserId,
+  isLocalDashboardAuthBypassEnabled,
+} from '@/lib/local-dashboard-auth'
+
+function buildLocalDashboardBypassUser(): User {
+  const localUserId = getLocalDashboardUserId()
+  const localUserEmail = getLocalDashboardUserEmail()
+  const nowIso = new Date().toISOString()
+
+  return {
+    id: localUserId,
+    email: localUserEmail,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email_confirmed_at: nowIso,
+    phone: '',
+    confirmed_at: nowIso,
+    app_metadata: {
+      provider: 'local-dashboard-bypass',
+      providers: ['local-dashboard-bypass'],
+    },
+    user_metadata: {},
+    identities: [],
+    created_at: nowIso,
+    updated_at: nowIso,
+    is_anonymous: false,
+  } as User
+}
+
+async function ensureLocalDashboardUserInDatabase(): Promise<void> {
+  const localUserId = getLocalDashboardUserId()
+  const localUserEmail = getLocalDashboardUserEmail()
+
+  await prisma.user.upsert({
+    where: { id: localUserId },
+    update: {
+      auth_user_id: localUserId,
+      email: localUserEmail,
+    },
+    create: {
+      id: localUserId,
+      auth_user_id: localUserId,
+      email: localUserEmail,
+      language: 'en',
+    },
+  })
+
+  // Keep local dashboard bootstrap ergonomic by ensuring first-time layout exists.
+  const { createDefaultDashboardLayout } = await import('@/server/database')
+  await createDefaultDashboardLayout(localUserId)
+}
 
 export async function getWebsiteURL() {
   let url =
@@ -45,6 +98,52 @@ function handleAuthError(error: any): never {
 }
 
 export async function createClient() {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    await ensureLocalDashboardUserInDatabase()
+    const localUser = buildLocalDashboardBypassUser()
+
+    return {
+      auth: {
+        async getUser() {
+          return { data: { user: localUser }, error: null }
+        },
+        async signInWithOtp() {
+          return { error: null }
+        },
+        async signInWithPassword() {
+          return { data: { user: localUser, session: null }, error: null }
+        },
+        async signUp() {
+          return { data: { user: localUser, session: null }, error: null }
+        },
+        async resetPasswordForEmail() {
+          return { error: null }
+        },
+        async updateUser() {
+          return { data: { user: localUser }, error: null }
+        },
+        async verifyOtp() {
+          return { data: { user: localUser, session: null }, error: null }
+        },
+        async signOut() {
+          return { error: null }
+        },
+        async signInWithOAuth() {
+          return { data: { url: '/dashboard' }, error: null }
+        },
+        async linkIdentity() {
+          return { data: { url: '/dashboard' }, error: null }
+        },
+        async unlinkIdentity() {
+          return { error: null }
+        },
+        async getUserIdentities() {
+          return { data: [], error: null }
+        },
+      },
+    } as ReturnType<typeof createServerClient>
+  }
+
   const cookieStore = await cookies()
 
   return createServerClient(
@@ -530,6 +629,11 @@ export async function verifyOtp(email: string, token: string, type: 'email' | 's
 
 // Optimized function that uses middleware data when available
 export async function getUserId(): Promise<string> {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    await ensureLocalDashboardUserInDatabase()
+    return getLocalDashboardUserId()
+  }
+
   // First try to get user ID from middleware headers
   const headersList = await headers()
   const userIdFromMiddleware = headersList.get("x-user-id")
@@ -559,6 +663,10 @@ export async function getUserId(): Promise<string> {
 }
 
 export async function getUserEmail(): Promise<string> {
+  if (isLocalDashboardAuthBypassEnabled()) {
+    return getLocalDashboardUserEmail()
+  }
+
   const headersList = await headers()
   const userEmail = headersList.get("x-user-email")
   console.log("[Auth] getUserEmail FROM HEADERS", userEmail)
