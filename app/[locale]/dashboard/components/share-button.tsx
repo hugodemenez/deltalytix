@@ -213,6 +213,27 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
     const captureChartSnapshots = useCallback(async () => {
       const { default: html2canvas } = await import("html2canvas")
+      const openFixedLayers = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-state="open"]'),
+      ).filter((element) => {
+        const style = window.getComputedStyle(element)
+        if (style.position !== "fixed") {
+          return false
+        }
+
+        return element.getAttribute("role") === "dialog" || Number(style.zIndex || 0) >= 50
+      })
+
+      const previousVisibility = openFixedLayers.map((element) => ({
+        element,
+        visibility: element.style.visibility,
+      }))
+
+      openFixedLayers.forEach((element) => {
+        element.style.visibility = "hidden"
+      })
+
+      try {
       const chartNodes = Array.from(
         document.querySelectorAll<HTMLElement>('[data-widget-category="charts"]'),
       )
@@ -256,6 +277,15 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       }
 
       return snapshots
+      } finally {
+        previousVisibility.forEach(({ element, visibility }) => {
+          if (visibility) {
+            element.style.visibility = visibility
+            return
+          }
+          element.style.removeProperty("visibility")
+        })
+      }
     }, [t])
 
     const handleShare = async () => {
