@@ -51,6 +51,21 @@ interface ShareButtonProps {
   }
 }
 
+const CHART_WIDGET_LABELS: Record<string, string> = {
+  equityChart: "Equity Curve",
+  pnlChart: "P&L",
+  timeOfDay: "Time of Day Performance",
+  timeInPosition: "Time in Position",
+  timeRangePerformance: "Time Range Performance",
+  weekdayPnl: "Weekday P&L",
+  pnlBySide: "P&L by Side",
+  pnlPerContract: "P&L per Contract",
+  pnlPerContractDaily: "Daily P&L per Contract",
+  commissionsPnl: "Commissions vs P&L",
+  tradeDistribution: "Trade Distribution",
+  dailyTickTarget: "Daily Tick Target",
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
 
@@ -189,6 +204,59 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           (!toDate || tradeDate <= toDate)
       })
     }, [selectedDateRange.from, selectedDateRange.to, shareAllAccounts, selectedAccounts, trades])
+
+    const showExportError = useCallback((description: string) => {
+      toast.error(t("share.exportPdfErrorTitle"), {
+        description,
+      })
+    }, [t])
+
+    const captureChartSnapshots = useCallback(async () => {
+      const { default: html2canvas } = await import("html2canvas")
+      const chartNodes = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-widget-category="charts"]'),
+      )
+        .filter((node) => node.offsetWidth > 0 && node.offsetHeight > 0)
+        .slice(0, 6)
+
+      const snapshots: Array<{ title: string; imageDataUrl: string }> = []
+
+      for (const node of chartNodes) {
+        const widgetType = node.dataset.widgetType || ""
+        const title = CHART_WIDGET_LABELS[widgetType] || t("share.pdfChartFallbackTitle")
+
+        const canvas = await html2canvas(node, {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          logging: false,
+        })
+
+        snapshots.push({
+          title,
+          imageDataUrl: canvas.toDataURL("image/png"),
+        })
+      }
+
+      if (snapshots.length === 0) {
+        const dashboardGrid = document.querySelector<HTMLElement>(".react-grid-layout")
+        if (dashboardGrid && dashboardGrid.offsetWidth > 0 && dashboardGrid.offsetHeight > 0) {
+          const canvas = await html2canvas(dashboardGrid, {
+            scale: 2,
+            backgroundColor: "#ffffff",
+            useCORS: true,
+            logging: false,
+          })
+
+          snapshots.push({
+            title: t("share.pdfDashboardSnapshotTitle"),
+            imageDataUrl: canvas.toDataURL("image/png"),
+          })
+        }
+      }
+
+      return snapshots
+    }, [t])
 
     const handleShare = async () => {
       try {
@@ -364,77 +432,31 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const handleExportPdf = async () => {
       try {
         if (!selectedDateRange.from) {
-          toast.error(t('share.error'), {
-            description: t('share.error.noStartDate'),
-          })
-          return
-        }
-
-        if (!shareAllAccounts && selectedAccounts.length === 0) {
-          toast.error(t('share.error'), {
-            description: t('share.error.noAccount'),
-          })
+          showExportError(t('share.error.noStartDate'))
           return
         }
 
         const filteredTrades = getFilteredTrades()
-        if (filteredTrades.length === 0) {
-          toast.error(t('share.error'), {
-            description: t('share.error.noTrades'),
-          })
-          return
-        }
 
+        const chartSnapshots = await captureChartSnapshots()
         const { jsPDF } = await import("jspdf")
         const doc = new jsPDF({ unit: "pt", format: "a4" })
         const pageWidth = doc.internal.pageSize.getWidth()
         const pageHeight = doc.internal.pageSize.getHeight()
         const margin = 40
-        const maxWidth = pageWidth - margin * 2
-        const lineHeight = 16
-        let y = margin
-
-        const addWrappedText = (text: string, fontSize = 11) => {
-          doc.setFont("helvetica", "normal")
-          doc.setFontSize(fontSize)
-          const lines = doc.splitTextToSize(text || "-", maxWidth)
-          lines.forEach((line: string) => {
-            if (y > pageHeight - margin) {
-              doc.addPage()
-              y = margin
-            }
-            doc.text(line, margin, y)
-            y += lineHeight
-          })
-        }
-
-        const addSectionTitle = (title: string) => {
-          if (y > pageHeight - margin * 2) {
-            doc.addPage()
-            y = margin
-          }
-          y += 8
-          doc.setFont("helvetica", "bold")
-          doc.setFontSize(14)
-          doc.text(title, margin, y)
-          y += lineHeight
-          doc.setFont("helvetica", "normal")
-        }
-
-        const formatTradeDate = (value?: string | null) => {
-          if (!value) return "-"
-          const parsedDate = new Date(value)
-          if (Number.isNaN(parsedDate.getTime())) return value
-          return format(parsedDate, "yyyy-MM-dd HH:mm")
-        }
+        const contentWidth = pageWidth - margin * 2
+        const cardGap = 14
+        let y = 180
 
         const formatMoney = (value: number) => value.toFixed(2)
 
         const totalGrossPnl = filteredTrades.reduce((sum, trade) => sum + Number(trade.pnl || 0), 0)
-        const totalCommission = filteredTrades.reduce((sum, trade) => sum + Number(trade.commission || 0), 0)
-        const totalNetPnl = totalGrossPnl - totalCommission
+        const totalNetPnl = filteredTrades.reduce(
+          (sum, trade) => sum + Number(trade.pnl || 0) - Number(trade.commission || 0),
+          0,
+        )
         const winningTrades = filteredTrades.filter((trade) => Number(trade.pnl || 0) > 0).length
-        const winRate = (winningTrades / filteredTrades.length) * 100
+        const winRate = filteredTrades.length > 0 ? (winningTrades / filteredTrades.length) * 100 : 0
 
         const formattedFromDate = format(selectedDateRange.from, "yyyy-MM-dd")
         const formattedToDate = selectedDateRange.to
@@ -446,39 +468,165 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const accountLabel = shareAllAccounts
           ? t("share.pdfAllAccounts")
-          : selectedAccounts.join(", ")
+          : selectedAccounts.length > 0
+            ? selectedAccounts.join(", ")
+            : t("share.pdfAllAccounts")
 
-        doc.setFont("helvetica", "bold")
-        doc.setFontSize(18)
-        doc.text(shareTitle.trim() || t("share.pdfTitle"), margin, y)
-        y += 26
+        const drawHeader = () => {
+          doc.setFillColor(20, 24, 38)
+          doc.rect(0, 0, pageWidth, 140, "F")
+          doc.setDrawColor(67, 73, 96)
+          doc.setLineWidth(1)
+          doc.line(0, 140, pageWidth, 140)
 
-        addWrappedText(`${t("share.pdfGeneratedOn")}: ${format(new Date(), "yyyy-MM-dd HH:mm")}`)
-        addWrappedText(`${t("share.pdfDateRange")}: ${dateRangeLabel}`)
-        addWrappedText(`${t("share.pdfAccounts")}: ${accountLabel}`)
+          doc.setTextColor(255, 255, 255)
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(22)
+          doc.text(shareTitle.trim() || t("share.pdfStatementTitle"), margin, 52)
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(11)
+          doc.text(t("share.pdfStatementSubtitle"), margin, 72)
+
+          doc.setFontSize(10)
+          doc.text(`${t("share.pdfGeneratedOn")}: ${format(new Date(), "yyyy-MM-dd HH:mm")}`, margin, 98)
+          doc.text(`${t("share.pdfDateRange")}: ${dateRangeLabel}`, margin, 114)
+          doc.text(`${t("share.pdfAccounts")}: ${accountLabel}`, margin, 130)
+
+          doc.setTextColor(35, 39, 47)
+        }
+
+        const ensureSpace = (requiredHeight: number) => {
+          if (y + requiredHeight <= pageHeight - margin) {
+            return
+          }
+          doc.addPage()
+          drawHeader()
+          y = 170
+        }
+
+        const drawMetricCard = (x: number, cardY: number, label: string, value: string, valueColor?: [number, number, number]) => {
+          const cardHeight = 68
+          doc.setFillColor(248, 250, 252)
+          doc.setDrawColor(223, 227, 236)
+          doc.roundedRect(x, cardY, (contentWidth - cardGap) / 2, cardHeight, 8, 8, "FD")
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(10)
+          doc.setTextColor(89, 96, 115)
+          doc.text(label, x + 12, cardY + 22)
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(16)
+          if (valueColor) {
+            doc.setTextColor(valueColor[0], valueColor[1], valueColor[2])
+          } else {
+            doc.setTextColor(24, 28, 37)
+          }
+          doc.text(value, x + 12, cardY + 48)
+          doc.setTextColor(35, 39, 47)
+        }
+
+        const addSectionTitle = (title: string) => {
+          ensureSpace(28)
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(14)
+          doc.setTextColor(24, 28, 37)
+          doc.text(title, margin, y)
+          y += 16
+        }
+
+        const chartCardWidth = (contentWidth - cardGap) / 2
+        const chartCardHeight = 200
+        const getChartCardTop = (index: number) => y + Math.floor(index / 2) * (chartCardHeight + cardGap)
+
+        const renderChartCards = () => {
+          if (chartSnapshots.length === 0) {
+            ensureSpace(60)
+            doc.setFont("helvetica", "normal")
+            doc.setFontSize(11)
+            doc.setTextColor(89, 96, 115)
+            doc.text(t("share.pdfNoChartsAvailable"), margin, y + 24)
+            y += 44
+            return
+          }
+
+          chartSnapshots.forEach((snapshot, index) => {
+            const isRightColumn = index % 2 === 1
+            const cardX = isRightColumn ? margin + chartCardWidth + cardGap : margin
+            const cardY = getChartCardTop(index)
+
+            ensureSpace(chartCardHeight + cardGap)
+
+            doc.setFillColor(255, 255, 255)
+            doc.setDrawColor(223, 227, 236)
+            doc.roundedRect(cardX, cardY, chartCardWidth, chartCardHeight, 8, 8, "FD")
+
+            doc.setFont("helvetica", "bold")
+            doc.setFontSize(10)
+            doc.setTextColor(38, 43, 56)
+            doc.text(snapshot.title, cardX + 12, cardY + 18)
+
+            const imageProps = doc.getImageProperties(snapshot.imageDataUrl)
+            const availableWidth = chartCardWidth - 20
+            const availableHeight = chartCardHeight - 36
+            const widthRatio = availableWidth / imageProps.width
+            const heightRatio = availableHeight / imageProps.height
+            const ratio = Math.min(widthRatio, heightRatio)
+            const imageWidth = imageProps.width * ratio
+            const imageHeight = imageProps.height * ratio
+            const imageX = cardX + (chartCardWidth - imageWidth) / 2
+            const imageY = cardY + 26 + (availableHeight - imageHeight) / 2
+
+            doc.addImage(snapshot.imageDataUrl, "PNG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST")
+          })
+
+          const rows = Math.ceil(chartSnapshots.length / 2)
+          y += rows * (chartCardHeight + cardGap)
+        }
+
+        drawHeader()
 
         addSectionTitle(t("share.pdfSummaryTitle"))
-        addWrappedText(`${t("share.pdfTotalTrades")}: ${filteredTrades.length}`)
-        addWrappedText(`${t("share.pdfGrossPnl")}: ${formatMoney(totalGrossPnl)}`)
-        addWrappedText(`${t("share.pdfCommission")}: ${formatMoney(totalCommission)}`)
-        addWrappedText(`${t("share.pdfNetPnl")}: ${formatMoney(totalNetPnl)}`)
-        addWrappedText(`${t("share.pdfWinRate")}: ${winRate.toFixed(2)}%`)
+        ensureSpace(160)
 
-        addSectionTitle(t("share.pdfTradesTitle"))
-        filteredTrades.forEach((trade, index) => {
-          const tradeLine =
-            `${index + 1}. ${formatTradeDate(trade.entryDate)} | ${trade.accountNumber} | ` +
-            `${trade.instrument} | ${trade.side ?? "-"} | Qty ${trade.quantity ?? 0} | ` +
-            `PnL ${formatMoney(Number(trade.pnl || 0))} | ` +
-            `Commission ${formatMoney(Number(trade.commission || 0))}`
-          addWrappedText(tradeLine)
+        const leftX = margin
+        const rightX = margin + (contentWidth - cardGap) / 2 + cardGap
+        const rowOneY = y + 6
+        const rowTwoY = rowOneY + 82
+        const pnlColor: [number, number, number] = totalNetPnl >= 0 ? [24, 140, 92] : [199, 59, 68]
+
+        drawMetricCard(leftX, rowOneY, t("share.pdfTotalTrades"), String(filteredTrades.length))
+        drawMetricCard(rightX, rowOneY, t("share.pdfWinRate"), `${winRate.toFixed(2)}%`)
+        drawMetricCard(leftX, rowTwoY, t("share.pdfGrossPnl"), formatMoney(totalGrossPnl))
+        drawMetricCard(rightX, rowTwoY, t("share.pdfNetPnl"), formatMoney(totalNetPnl), pnlColor)
+
+        y = rowTwoY + 86
+
+        addSectionTitle(t("share.pdfChartsSectionTitle"))
+        renderChartCards()
+
+        const pageCount = doc.getNumberOfPages()
+        for (let page = 1; page <= pageCount; page++) {
+          doc.setPage(page)
+          doc.setDrawColor(223, 227, 236)
+          doc.line(margin, pageHeight - 30, pageWidth - margin, pageHeight - 30)
+          doc.setFont("helvetica", "normal")
+          doc.setFontSize(9)
+          doc.setTextColor(120, 126, 145)
+          doc.text(
+            `${t("share.pdfFooterTitle")} • ${t("share.pdfPage")} ${page}/${pageCount}`,
+            margin,
+            pageHeight - 16,
+          )
+        }
+
+        doc.setFont("helvetica", "bold")
+        doc.setFontSize(10)
+        doc.save(`dashboard-statement-${format(new Date(), "yyyy-MM-dd")}.pdf`)
+        toast.success(t("share.exportPdfSuccess"), {
+          description: t("share.exportPdfSuccessDescription"),
         })
-
-        doc.save(`dashboard-report-${format(new Date(), "yyyy-MM-dd")}.pdf`)
-        toast.success(t("share.exportPdfSuccess"))
       } catch (error) {
         console.error("Error exporting dashboard PDF:", error)
-        toast.error(t("share.exportPdfError"))
+        showExportError(t("share.exportPdfError"))
       }
     }
 
