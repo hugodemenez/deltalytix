@@ -29,6 +29,7 @@ type AccountGroupRow = {
   summary: {
     totalBalance: number
     totalPayouts: number
+    totalFee: number
     totalRemainingToTarget: number
     totalRemainingLoss: number
     averageProgress: number
@@ -76,6 +77,38 @@ function getAccountStartDate(account: Account) {
   return dailyDates[0] ?? null
 }
 
+function getAccountLifetimeInMonths(account: Account) {
+  const tradeDates = (account.trades ?? [])
+    .map((trade) => toValidDate(trade.entryDate))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  if (tradeDates.length === 0) return 0
+
+  const firstTradeDate = tradeDates[0]
+  const lastTradeDate = tradeDates[tradeDates.length - 1]
+  const monthSpan =
+    (lastTradeDate.getFullYear() - firstTradeDate.getFullYear()) * 12 +
+    (lastTradeDate.getMonth() - firstTradeDate.getMonth())
+
+  return Math.max(1, monthSpan + 1)
+}
+
+function isMonthlyPayment(account: Account) {
+  if (account.paymentFrequency === "MONTHLY") return true
+  return (account.isRecursively ?? "").toLowerCase() === "monthly"
+}
+
+function getAccountTotalFee(account: Account) {
+  const lifetimeFee = account.activationFees ?? 0
+  const monthlyPrice = account.price ?? account.priceWithPromo ?? 0
+  const monthlyFee = isMonthlyPayment(account)
+    ? getAccountLifetimeInMonths(account) * monthlyPrice
+    : 0
+
+  return lifetimeFee + monthlyFee
+}
+
 function isGroupRow(row: AccountRow): row is AccountGroupRow {
   return "kind" in row && row.kind === "group"
 }
@@ -103,6 +136,7 @@ function getAccountsSummary(accounts: Account[]) {
       const metrics = account.metrics
       acc.totalBalance += currentBalance
       acc.totalPayouts += getAccountTotalPayouts(account)
+      acc.totalFee += getAccountTotalFee(account)
       if (metrics?.isConfigured) {
         acc.totalRemainingToTarget += metrics.remainingToTarget ?? 0
         acc.totalRemainingLoss += metrics.remainingLoss ?? 0
@@ -115,6 +149,7 @@ function getAccountsSummary(accounts: Account[]) {
     {
       totalBalance: 0,
       totalPayouts: 0,
+      totalFee: 0,
       totalRemainingToTarget: 0,
       totalRemainingLoss: 0,
       totalProgress: 0,
@@ -126,6 +161,7 @@ function getAccountsSummary(accounts: Account[]) {
   return {
     totalBalance: summary.totalBalance,
     totalPayouts: summary.totalPayouts,
+    totalFee: summary.totalFee,
     totalRemainingToTarget: summary.totalRemainingToTarget,
     totalRemainingLoss: summary.totalRemainingLoss,
     averageProgress:
@@ -302,6 +338,12 @@ function AccountsTableSection({
         return (
           <div className="text-right font-semibold">
             ${summary.summary.totalPayouts.toFixed(2)}
+          </div>
+        )
+      case "totalFee":
+        return (
+          <div className="text-right font-semibold">
+            ${summary.summary.totalFee.toFixed(2)}
           </div>
         )
       case "drawdown":
@@ -728,6 +770,37 @@ export function AccountsTableView({
           const b = isGroupRow(rowB.original)
             ? rowB.original.summary.totalPayouts
             : getAccountTotalPayouts(rowB.original)
+          return a - b
+        },
+        size: 140,
+      },
+      {
+        id: "totalFee",
+        accessorFn: (row) =>
+          isGroupRow(row) ? row.summary.totalFee : getAccountTotalFee(row),
+        header: ({ column }) => (
+          <DataTableColumnHeader
+            column={column}
+            title={t("accounts.table.totalFee")}
+          />
+        ),
+        cell: ({ row }) => {
+          const totalFee = isGroupRow(row.original)
+            ? row.original.summary.totalFee
+            : getAccountTotalFee(row.original)
+          return (
+            <div className="text-right font-medium">
+              ${totalFee.toFixed(2)}
+            </div>
+          )
+        },
+        sortingFn: (rowA, rowB) => {
+          const a = isGroupRow(rowA.original)
+            ? rowA.original.summary.totalFee
+            : getAccountTotalFee(rowA.original)
+          const b = isGroupRow(rowB.original)
+            ? rowB.original.summary.totalFee
+            : getAccountTotalFee(rowB.original)
           return a - b
         },
         size: 140,
