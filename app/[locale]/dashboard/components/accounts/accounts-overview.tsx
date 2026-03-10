@@ -147,6 +147,38 @@ function getAccountBalance(account: Account) {
   return account.metrics?.currentBalance ?? account.startingBalance ?? 0
 }
 
+function getAccountLifetimeInMonths(account: Account) {
+  const tradeDates = (account.trades ?? [])
+    .map((trade) => toValidDate(trade.entryDate))
+    .filter((date): date is Date => Boolean(date))
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  if (tradeDates.length === 0) return 0
+
+  const firstTradeDate = tradeDates[0]
+  const lastTradeDate = tradeDates[tradeDates.length - 1]
+  const monthSpan =
+    (lastTradeDate.getFullYear() - firstTradeDate.getFullYear()) * 12 +
+    (lastTradeDate.getMonth() - firstTradeDate.getMonth())
+
+  return Math.max(1, monthSpan + 1)
+}
+
+function isMonthlyPayment(account: Account) {
+  if (account.paymentFrequency === "MONTHLY") return true
+  return (account.isRecursively ?? "").toLowerCase() === "monthly"
+}
+
+function getAccountTotalFee(account: Account) {
+  const lifetimeFee = account.activationFees ?? 0
+  const monthlyPrice = account.price ?? account.priceWithPromo ?? 0
+  const monthlyFee = isMonthlyPayment(account)
+    ? getAccountLifetimeInMonths(account) * monthlyPrice
+    : 0
+
+  return lifetimeFee + monthlyFee
+}
+
 function getAccountSortValue(account: Account, ruleId: string) {
   switch (ruleId) {
     case "account":
@@ -159,6 +191,8 @@ function getAccountSortValue(account: Account, ruleId: string) {
       return account.evaluation === false ? 1 : 0
     case "balance":
       return getAccountBalance(account)
+    case "totalFee":
+      return getAccountTotalFee(account)
     case "targetProgress":
       return account.metrics?.progress ?? 0
     case "drawdown":
@@ -793,6 +827,7 @@ export function AccountsOverview({ size }: { size: WidgetSize }) {
       { id: "startDate", label: t("accounts.table.startDate") },
       { id: "funded", label: t("accounts.table.funded") },
       { id: "balance", label: t("accounts.table.balance") },
+      { id: "totalFee", label: t("accounts.table.totalFee") },
       { id: "targetProgress", label: t("accounts.table.targetProgress") },
       { id: "drawdown", label: t("accounts.table.drawdownRemaining") },
       { id: "consistency", label: t("propFirm.card.consistency") },

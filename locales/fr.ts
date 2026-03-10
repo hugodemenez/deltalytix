@@ -2397,6 +2397,7 @@ export default {
   "accounts.table.fundedNo": "Compte de challenge",
   "accounts.table.balance": "Solde",
   "accounts.table.totalPayout": "Total des payouts",
+  "accounts.table.totalFee": "Coût total",
   "accounts.table.group": "Groupe",
   "accounts.table.targetProgress": "Progression de l’objectif",
   "accounts.table.remaining": "Restant",
