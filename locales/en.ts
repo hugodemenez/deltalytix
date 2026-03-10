@@ -2234,6 +2234,7 @@ export default {
   "accounts.table.fundedNo": "Challenge account",
   "accounts.table.balance": "Balance",
   "accounts.table.totalPayout": "Total payout",
+  "accounts.table.totalFee": "Total fee",
   "accounts.table.group": "Group",
   "accounts.table.targetProgress": "Target progress",
   "accounts.table.remaining": "Remaining",
