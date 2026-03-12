@@ -446,7 +446,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
                     <Command>
                       <CommandInput placeholder={t('share.searchAccounts')} />
                       <CommandEmpty>{t('share.noAccountFound')}</CommandEmpty>
-                      <CommandList>
+                      <CommandList className="max-h-60 overflow-y-auto">
                         <CommandGroup>
                           <CommandItem
                             value="toggle-all-accounts"
