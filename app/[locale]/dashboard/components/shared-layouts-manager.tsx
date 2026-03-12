@@ -6,7 +6,7 @@ import { useI18n } from "@/locales/client"
 import { getUserShared, deleteShared, updateSharedAccountNumbers } from "@/server/shared"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { Trash2, Link, Calendar, Users, ArrowLeft, ExternalLink, Pencil, Plus, X } from "lucide-react"
+import { Trash2, Link, Calendar, Users, ArrowLeft, ExternalLink, Pencil, Plus, X, Check, ChevronsUpDown } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Card,
@@ -26,8 +26,22 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { useUserStore } from "../../../../store/user-store"
 import { useTradesStore } from "../../../../store/trades-store"
+import { cn } from "@/lib/utils"
 
 interface SharedLayout {
   id: string
@@ -89,6 +103,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
   const [accountsLayout, setAccountsLayout] = useState<SharedLayout | null>(null)
   const [editableAccountNumbers, setEditableAccountNumbers] = useState<string[]>([])
   const [newAccountNumber, setNewAccountNumber] = useState("")
+  const [accountsComboboxOpen, setAccountsComboboxOpen] = useState(false)
   const [isUpdatingAccounts, setIsUpdatingAccounts] = useState(false)
 
   const availableAccountNumbers = useMemo(() => {
@@ -191,6 +206,14 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
 
   const removeAccountNumber = (accountToRemove: string) => {
     setEditableAccountNumbers(prev => prev.filter(account => account !== accountToRemove))
+  }
+
+  const toggleAccountNumber = (account: string) => {
+    setEditableAccountNumbers(prev => (
+      prev.includes(account)
+        ? prev.filter(item => item !== account)
+        : [...prev, account]
+    ))
   }
 
   const saveAccountNumbers = async () => {
@@ -430,25 +453,71 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
             {availableAccountNumbers.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">{t('share.quickAddAccounts')}</p>
-                <div className="flex flex-wrap gap-2">
-                  {availableAccountNumbers
-                    .filter(account => !editableAccountNumbers.includes(account))
-                    .slice(0, 10)
-                    .map(account => (
-                      <Button
-                        key={account}
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => {
-                          setEditableAccountNumbers(prev => [...prev, account])
-                        }}
-                        className="h-7 text-xs"
-                      >
-                        {account}
-                      </Button>
-                    ))}
-                </div>
+                <Popover open={accountsComboboxOpen} onOpenChange={setAccountsComboboxOpen} modal>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={accountsComboboxOpen}
+                      className="w-full justify-between"
+                    >
+                      <span className="truncate">
+                        {editableAccountNumbers.length === 0
+                          ? t('share.accountSearchPlaceholder')
+                          : t('share.accountsSelected', { count: editableAccountNumbers.length })}
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start" sideOffset={4}>
+                    <Command>
+                      <CommandInput placeholder={t('share.searchAccounts')} />
+                      <CommandEmpty>{t('share.noAccountFound')}</CommandEmpty>
+                      <CommandList>
+                        <CommandGroup>
+                          <CommandItem
+                            value="toggle-all-accounts"
+                            onSelect={() => {
+                              if (editableAccountNumbers.length === availableAccountNumbers.length) {
+                                setEditableAccountNumbers([])
+                              } else {
+                                setEditableAccountNumbers(availableAccountNumbers)
+                              }
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <Check
+                              className={cn(
+                                "h-4 w-4",
+                                editableAccountNumbers.length === availableAccountNumbers.length
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            <span className="flex-1">{t('filters.selectAllAccounts')}</span>
+                          </CommandItem>
+                          {availableAccountNumbers.map(account => (
+                            <CommandItem
+                              key={account}
+                              value={account}
+                              onSelect={() => toggleAccountNumber(account)}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "h-4 w-4",
+                                  editableAccountNumbers.includes(account) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <span className="flex-1 truncate">{account}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
 
@@ -457,7 +526,8 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
               {editableAccountNumbers.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t('share.emptyAccountsHint')}</p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="max-h-40 overflow-y-auto rounded-md border p-2">
+                  <div className="flex flex-wrap gap-2">
                   {editableAccountNumbers.map(account => (
                     <Badge key={account} variant="secondary" className="gap-1 pr-1">
                       <span>{account}</span>
@@ -471,6 +541,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
                       </button>
                     </Badge>
                   ))}
+                  </div>
                 </div>
               )}
             </div>

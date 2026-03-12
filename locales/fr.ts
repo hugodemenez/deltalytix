@@ -1168,6 +1168,8 @@ export default {
   "share.editAccountsDescription":
     "Ajoutez ou supprimez les numéros de compte pour ce layout partagé.",
   "share.accountNumberPlaceholder": "Entrez un numéro de compte",
+  "share.accountSearchPlaceholder": "Rechercher et sélectionner des comptes",
+  "share.accountsSelected": "{count} comptes sélectionnés",
   "share.addAccount": "Ajouter",
   "share.quickAddAccounts":
     "Ajout rapide depuis vos comptes actuellement chargés",

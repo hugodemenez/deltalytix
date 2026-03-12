@@ -1246,6 +1246,8 @@ export default {
   "share.editAccountsDescription":
     "Add or remove account numbers for this shared layout.",
   "share.accountNumberPlaceholder": "Enter an account number",
+  "share.accountSearchPlaceholder": "Search and select accounts",
+  "share.accountsSelected": "{count} accounts selected",
   "share.addAccount": "Add",
   "share.quickAddAccounts": "Quick add from your current accounts",
   "share.selectedAccounts": "Selected accounts",
