@@ -5,7 +5,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/server/stripe";
 import { PrismaClient } from "@/prisma/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import pg from "pg";
 import { sendSubscriptionErrorEmail } from "@/app/[locale]/(landing)/actions/send-support-email";
 
 // Helper function to get current period end from subscription items
@@ -70,10 +69,10 @@ export async function POST(req: Request) {
 
   if (permittedEvents.includes(event.type)) {
     let data;
-    const pool = new pg.Pool({
+    const adapter = new PrismaPg({
       connectionString: process.env.DATABASE_URL,
     })
-    const adapter = new PrismaPg(pool)
+    
     const prisma = new PrismaClient({ adapter })
 
     try {

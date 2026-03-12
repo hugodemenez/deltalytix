@@ -3,7 +3,6 @@
 import { getUserId } from '@/server/auth'
 import { PrismaClient, Trade, Payout } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import pg from 'pg'
 import { computeMetricsForAccounts } from '@/lib/account-metrics'
 import { Account } from '@/context/data-provider'
 import { updateTag } from 'next/cache'
@@ -12,11 +11,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-const pool = new pg.Pool({
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 })
-
-const adapter = new PrismaPg(pool)
 
 const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter })
 
@@ -483,7 +480,6 @@ export async function checkAndResetAccountsAction() {
     })
   }
 }
-
 
 export async function createAccountAction(accountNumber: string) {
   try {

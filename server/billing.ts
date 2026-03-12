@@ -4,15 +4,13 @@ import { createClient } from '@/server/auth'
 import { cookies } from 'next/headers'
 import { PrismaClient } from '@/prisma/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import pg from 'pg'
 import { stripe } from '@/server/stripe'
 import Stripe from 'stripe'
 
-const pool = new pg.Pool({
+const adapter = new PrismaPg({
   connectionString: process.env.DATABASE_URL,
 })
 
-const adapter = new PrismaPg(pool)
 const prisma = new PrismaClient({ adapter })
 
 // Helper function to get current period end from subscription items
@@ -93,20 +91,17 @@ export async function getSubscriptionData() {
           limit: 10,
         })
 
-
         // Get payment intents (for one-time payments like lifetime purchases)
         const paymentIntents = await stripe.paymentIntents.list({
           customer: customers.data[0].id,
           limit: 10,
         })
 
-
         // Get charges (alternative method for one-time payments)
         const charges = await stripe.charges.list({
           customer: customers.data[0].id,
           limit: 10,
         })
-
 
         // Combine invoices and one-time payments
         const validInvoices = allInvoices.data.filter(invoice =>
