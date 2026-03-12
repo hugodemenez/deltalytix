@@ -1163,6 +1163,23 @@ export default {
   "share.manageLayouts": "Gérer les layouts partagés",
   "share.backToShare": "Retour au partage",
   "share.shareAllAccounts": "Partager pour tous les comptes",
+  "share.allAccounts": "Tous les comptes",
+  "share.editAccounts": "Modifier les comptes",
+  "share.editAccountsDescription":
+    "Ajoutez ou supprimez les numéros de compte pour ce layout partagé.",
+  "share.accountSearchPlaceholder": "Rechercher et sélectionner des comptes",
+  "share.accountsSelected": "{count} comptes sélectionnés",
+  "share.quickAddAccounts": "Comptes disponibles",
+  "share.noAvailableAccounts": "Aucun compte disponible à sélectionner.",
+  "share.selectedAccounts": "Comptes sélectionnés",
+  "share.emptyAccountsHint":
+    "Aucun compte sélectionné. Enregistrer une liste vide partage tous les comptes.",
+  "share.removeAccount": "Supprimer le compte {account}",
+  "share.saveAccountChanges": "Enregistrer les modifications",
+  "share.savingAccounts": "Enregistrement...",
+  "share.accountUpdateSuccess": "Comptes mis à jour avec succès",
+  "share.error.updateAccountsFailed":
+    "Échec de la mise à jour des comptes partagés",
   widgets: {
     types: {
       equityChart: "Graphique du capital",
