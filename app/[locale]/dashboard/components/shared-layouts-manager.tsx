@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { useI18n } from "@/locales/client"
-import { getUserShared, deleteShared } from "@/server/shared"
+import { getUserShared, deleteShared, updateSharedAccountNumbers } from "@/server/shared"
 import { toast } from "sonner"
 import { format } from "date-fns"
-import { Trash2, Link, Calendar, Users, ArrowLeft, ExternalLink } from "lucide-react"
+import { Trash2, Link, Calendar, Users, ArrowLeft, ExternalLink, Pencil, Plus, X } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Card,
@@ -24,7 +24,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 import { useUserStore } from "../../../../store/user-store"
+import { useTradesStore } from "../../../../store/trades-store"
 
 interface SharedLayout {
   id: string
@@ -41,6 +44,7 @@ interface SharedLayout {
   expiresAt: Date | null
   viewCount: number
 }
+
 
 interface SharedLayoutsManagerProps {
   onBack: () => void
@@ -76,10 +80,27 @@ function SkeletonCard() {
 export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
   const t = useI18n()
   const user = useUserStore(state => state.user)
+  const trades = useTradesStore(state => state.trades)
   const [sharedLayouts, setSharedLayouts] = useState<SharedLayout[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedLayout, setSelectedLayout] = useState<SharedLayout | null>(null)
+  const [accountsDialogOpen, setAccountsDialogOpen] = useState(false)
+  const [accountsLayout, setAccountsLayout] = useState<SharedLayout | null>(null)
+  const [editableAccountNumbers, setEditableAccountNumbers] = useState<string[]>([])
+  const [newAccountNumber, setNewAccountNumber] = useState("")
+  const [isUpdatingAccounts, setIsUpdatingAccounts] = useState(false)
+
+  const availableAccountNumbers = useMemo(() => {
+    if (!trades || !Array.isArray(trades)) return []
+    return Array.from(
+      new Set(
+        trades
+          .map(trade => trade.accountNumber?.trim())
+          .filter((account): account is string => Boolean(account))
+      )
+    ).sort()
+  }, [trades])
 
   const loadSharedLayouts = useCallback(async () => {
     try {
@@ -97,7 +118,7 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [user, toast, t])
+  }, [user, t])
 
   useEffect(() => {
     if (user) {
@@ -137,6 +158,69 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
 
   const visitSharedLayout = (slug: string) => {
     window.open(`/shared/${slug}`, '_blank')
+  }
+
+  const openAccountsDialog = (layout: SharedLayout) => {
+    const initialAccounts = layout.accountNumbers.length === 0
+      ? availableAccountNumbers
+      : layout.accountNumbers
+
+    setAccountsLayout(layout)
+    setEditableAccountNumbers(
+      Array.from(
+        new Set(
+          initialAccounts
+            .map(account => account.trim())
+            .filter(Boolean)
+        )
+      )
+    )
+    setNewAccountNumber("")
+    setAccountsDialogOpen(true)
+  }
+
+  const addAccountNumber = () => {
+    const normalizedAccount = newAccountNumber.trim()
+    if (!normalizedAccount) return
+
+    setEditableAccountNumbers(prev => (
+      prev.includes(normalizedAccount) ? prev : [...prev, normalizedAccount]
+    ))
+    setNewAccountNumber("")
+  }
+
+  const removeAccountNumber = (accountToRemove: string) => {
+    setEditableAccountNumbers(prev => prev.filter(account => account !== accountToRemove))
+  }
+
+  const saveAccountNumbers = async () => {
+    if (!accountsLayout || !user) return
+
+    const normalizedAccountNumbers = Array.from(
+      new Set(editableAccountNumbers.map(account => account.trim()).filter(Boolean))
+    )
+
+    setIsUpdatingAccounts(true)
+    try {
+      await updateSharedAccountNumbers(accountsLayout.slug, user.id, normalizedAccountNumbers)
+
+      setSharedLayouts(prev => prev.map(layout =>
+        layout.slug === accountsLayout.slug
+          ? { ...layout, accountNumbers: normalizedAccountNumbers }
+          : layout
+      ))
+
+      setAccountsDialogOpen(false)
+      setAccountsLayout(null)
+      toast.success(t('share.accountUpdateSuccess'))
+    } catch (error) {
+      console.error('Error updating shared layout account numbers:', error)
+      toast.error(t('share.error'), {
+        description: t('share.error.updateAccountsFailed'),
+      })
+    } finally {
+      setIsUpdatingAccounts(false)
+    }
   }
 
   if (isLoading) {
@@ -222,7 +306,9 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
                     <div className="flex items-center gap-2 text-muted-foreground/90">
                       <Users className="h-3.5 w-3.5 shrink-0" />
                       <span className="text-xs">
-                        {layout.accountNumbers.length} {t('share.accounts')}
+                        {layout.accountNumbers.length === 0
+                          ? t('share.allAccounts')
+                          : `${layout.accountNumbers.length} ${t('share.accounts')}`}
                       </span>
                     </div>
                     {layout.viewCount > 0 && (
@@ -256,18 +342,29 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
                       <span className="text-xs">{t('share.copyUrl')}</span>
                     </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedLayout(layout)
-                      setDeleteDialogOpen(true)
-                    }}
-                    className="h-8 w-full text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                    <span className="text-xs">{t('share.delete')}</span>
-                  </Button>
+                  <div className="flex gap-2 w-full">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openAccountsDialog(layout)}
+                      className="h-8 flex-1 text-muted-foreground hover:text-foreground hover:bg-muted/70"
+                    >
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                      <span className="text-xs">{t('share.editAccounts')}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedLayout(layout)
+                        setDeleteDialogOpen(true)
+                      }}
+                      className="h-8 flex-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                      <span className="text-xs">{t('share.delete')}</span>
+                    </Button>
+                  </div>
                 </CardFooter>
               </Card>
             ))}
@@ -297,6 +394,102 @@ export function SharedLayoutsManager({ onBack }: SharedLayoutsManagerProps) {
               className="sm:flex-1"
             >
               {t('share.confirmDelete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={accountsDialogOpen} onOpenChange={setAccountsDialogOpen}>
+        <DialogContent className="sm:max-w-[560px] max-h-[90vh] sm:max-h-[85vh] w-[calc(100%-32px)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>{t('share.editAccounts')}</DialogTitle>
+            <DialogDescription>
+              {t('share.editAccountsDescription')}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                value={newAccountNumber}
+                onChange={(event) => setNewAccountNumber(event.target.value)}
+                placeholder={t('share.accountNumberPlaceholder')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    addAccountNumber()
+                  }
+                }}
+              />
+              <Button type="button" variant="outline" onClick={addAccountNumber}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                {t('share.addAccount')}
+              </Button>
+            </div>
+
+            {availableAccountNumbers.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">{t('share.quickAddAccounts')}</p>
+                <div className="flex flex-wrap gap-2">
+                  {availableAccountNumbers
+                    .filter(account => !editableAccountNumbers.includes(account))
+                    .slice(0, 10)
+                    .map(account => (
+                      <Button
+                        key={account}
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          setEditableAccountNumbers(prev => [...prev, account])
+                        }}
+                        className="h-7 text-xs"
+                      >
+                        {account}
+                      </Button>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">{t('share.selectedAccounts')}</p>
+              {editableAccountNumbers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">{t('share.emptyAccountsHint')}</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {editableAccountNumbers.map(account => (
+                    <Badge key={account} variant="secondary" className="gap-1 pr-1">
+                      <span>{account}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeAccountNumber(account)}
+                        className="rounded-sm hover:bg-muted p-0.5"
+                        aria-label={t('share.removeAccount', { account })}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setAccountsDialogOpen(false)}
+              className="sm:flex-1"
+            >
+              {t('share.cancel')}
+            </Button>
+            <Button
+              onClick={saveAccountNumbers}
+              className="sm:flex-1"
+              disabled={isUpdatingAccounts}
+            >
+              {isUpdatingAccounts ? t('share.savingAccounts') : t('share.saveAccountChanges')}
             </Button>
           </DialogFooter>
         </DialogContent>
