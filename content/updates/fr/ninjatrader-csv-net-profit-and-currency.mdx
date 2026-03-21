@@ -1,0 +1,13 @@
+---
+title: 'CSV NinjaTrader : PnL net et formats monetaires'
+description: 'Les imports performance ne comptent plus la commission deux fois ; les montants se lisent mieux.'
+date: '2026-03-21'
+status: completed
+completedDate: '2026-03-21'
+---
+
+# CSV NinjaTrader : PnL net et formats monetaires
+
+La colonne **Profit** de NinjaTrader est deja nette pour la ligne. L'import CSV performance rajoutait encore la commission par-dessus, ce qui gonflait le PnL par trade. Desormais le profit est conserve tel quel et la commission reste a part, comme dans les cumuls net profit de NinjaTrader.
+
+L'analyse des montants passe par un module partage qui gere mieux les formats US et europeens, les parentheses pour les negatifs et les separateurs de milliers, pour limiter les lignes qui retombaient a zero sans qu'on le voie.
