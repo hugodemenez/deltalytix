@@ -238,9 +238,8 @@ export default function NinjaTraderPerformanceProcessor({ headers, csvData, setP
         item.instrument = item.instrument.replace(/\s+\d{2}-\d{2}$/, '')
       }
 
-      if (item.pnl !== undefined && item.commission !== undefined) {
-        item.pnl = item.pnl + item.commission;
-      }
+      // NinjaTrader "Profit" is net PnL for the trade (same basis as "Cum. net profit" step).
+      // Commission is a separate column; do not add it — that was inflating PnL to MAE/MFE-sized values.
 
       // Add rowIndex to the trade object for unique identification
       item.id = generateTradeHash({ ...item as Trade, entryId: `${item.entryId || ''}-${rowIndex}` }).toString();
