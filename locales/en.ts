@@ -2151,6 +2151,9 @@ export default {
     weekly: "Weekly View",
     title: "Calendar View Mode",
   },
+  "calendar.viewOptions": {
+    showMaxProfitAndDD: "Show Max Profit & Max DD",
+  },
   notification: {
     title: "Current Progress",
     noAccount: "No account being processed",
