@@ -2283,6 +2283,9 @@ export default {
     weekly: "Vue Hebdomadaire",
     title: "Mode d'Affichage du Calendrier",
   },
+  "calendar.viewOptions": {
+    showMaxProfitAndDD: "Afficher max profit et max DD",
+  },
   notification: {
     title: "Progression en cours",
     noAccount: "Aucun compte en cours de traitement",
