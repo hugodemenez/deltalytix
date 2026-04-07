@@ -55,6 +55,13 @@ function extractApiError(payload: unknown): string | null {
   return null
 }
 
+function buildHistoricalAuthHeaders(token: string): HeadersInit {
+  return {
+    Authorization: token,
+    Accept: 'application/json',
+  }
+}
+
 async function main() {
   if (!LOGIN || !PASSWORD) {
     console.error('Set DXFEED_USERNAME and DXFEED_PASSWORD in .env')
@@ -111,10 +118,7 @@ async function main() {
 
   console.log('\n2. Fetching accounts...')
   const accountsRes = await fetch(`${historicalHost}/api/historical/TradingAccount/List`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/json',
-    },
+    headers: buildHistoricalAuthHeaders(token),
   })
 
   if (!accountsRes.ok) {
@@ -142,10 +146,7 @@ async function main() {
     const tradesUrl = `${historicalHost}/api/historical/TradingAccount/Trades/${accountRef}?startDt=${encodeURIComponent(startDt)}&endDt=${encodeURIComponent(endDt)}`
     console.log('  URL:', tradesUrl)
     const tradesRes = await fetch(tradesUrl, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
+      headers: buildHistoricalAuthHeaders(token),
     })
 
     if (!tradesRes.ok) {

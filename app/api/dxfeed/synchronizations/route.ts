@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
+  getDxFeedAccounts,
   getDxFeedSynchronizations,
   removeDxFeedToken,
 } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
@@ -14,22 +15,44 @@ export async function GET() {
       )
     }
 
-    const sanitized = (result.synchronizations || []).map(({ token, ...rest }) => {
-      let accountNumbers: string[] = []
-      if (token) {
-        try {
-          const parsed = JSON.parse(token)
-          if (Array.isArray(parsed.accountNumbers)) {
-            accountNumbers = parsed.accountNumbers
+    const sanitized = await Promise.all(
+      (result.synchronizations || []).map(async ({ token, ...rest }) => {
+        let accountNumbers: string[] = []
+        if (token) {
+          try {
+            const parsed = JSON.parse(token) as {
+              accessToken?: string
+              historicalHost?: string
+              accountNumbers?: string[]
+            }
+
+            if (Array.isArray(parsed.accountNumbers)) {
+              accountNumbers = parsed.accountNumbers
+            }
+
+            if (
+              accountNumbers.length === 0 &&
+              typeof parsed.accessToken === 'string' &&
+              typeof parsed.historicalHost === 'string'
+            ) {
+              const accounts = await getDxFeedAccounts(parsed.accessToken, parsed.historicalHost)
+              accountNumbers = accounts.map(
+                (account) =>
+                  account.accountHeader || account.accountReference || account.accountId.toString(),
+              )
+            }
+          } catch {
+            /* ignore parse errors */
           }
-        } catch { /* ignore parse errors */ }
-      }
-      return {
-        ...rest,
-        hasToken: !!token,
-        accountNumbers,
-      }
-    })
+        }
+
+        return {
+          ...rest,
+          hasToken: !!token,
+          accountNumbers,
+        }
+      }),
+    )
 
     return NextResponse.json({
       success: true,
