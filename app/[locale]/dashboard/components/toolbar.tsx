@@ -8,7 +8,7 @@ import { Pencil, Trash2, RotateCcw } from "lucide-react"
 import { ShareButton } from "./share-button"
 import { AddWidgetSheet } from "./add-widget-sheet"
 import { FilterCommandMenu } from "./filters/filter-command-menu"
-import { WidgetType, WidgetSize } from "../types/dashboard"
+import { WidgetType, WidgetSize, Layouts } from "../types/dashboard"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,17 +28,15 @@ import {
 } from "@/components/ui/context-menu"
 import { useState, useEffect, useRef } from "react"
 import { useToolbarSettingsStore } from "@/store/toolbar-settings-store"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { toast } from "sonner"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 interface ToolbarProps {
   onAddWidget: (type: WidgetType, size?: WidgetSize) => void
   isCustomizing: boolean
   onEditToggle: () => void
-  currentLayout: {
-    desktop: any[]
-    mobile: any[]
-  }
+  currentLayout: Layouts
   onRemoveAll: () => void
   onRestoreDefaults: () => void
 }
@@ -54,6 +52,10 @@ export function Toolbar({
   const t = useI18n()
   const { isMobile } = useData()
   const { settings, setAutoHide } = useToolbarSettingsStore()
+  const isCompactScreen = useMediaQuery("(max-width: 1100px)")
+  const [isConsentVisible, setIsConsentVisible] = useState(
+    typeof document !== "undefined" && document.body.hasAttribute("data-consent-banner")
+  )
 
   // Handle auto-hide toggle with proper state management
   const handleAutoHideToggle = () => {
@@ -70,12 +72,9 @@ export function Toolbar({
     )
   }
 
-  // Check if consent banner is visible
-  const [isConsentVisible, setIsConsentVisible] = useState(false)
-
   // Auto-hide functionality
   const [isHovered, setIsHovered] = useState(false)
-  const [isVisible, setIsVisible] = useState(!settings.autoHide) // Start hidden if auto-hide is enabled
+  const [isPinnedVisible, setIsPinnedVisible] = useState(() => !settings.autoHide)
   const [toolbarHeight, setToolbarHeight] = useState(0)
   const autoHideTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
@@ -90,9 +89,6 @@ export function Toolbar({
       attributes: true,
       attributeFilter: ['data-consent-banner']
     })
-
-    // Initial check
-    setIsConsentVisible(document.body.hasAttribute('data-consent-banner'))
 
     return () => observer.disconnect()
   }, [])
@@ -114,24 +110,14 @@ export function Toolbar({
 
   // Handle auto-hide functionality
   useEffect(() => {
-    if (!settings.autoHide) {
-      setIsVisible(true)
-      if (autoHideTimeoutRef.current) {
-        clearTimeout(autoHideTimeoutRef.current)
-        autoHideTimeoutRef.current = null
-      }
-      return
+    if (autoHideTimeoutRef.current) {
+      clearTimeout(autoHideTimeoutRef.current)
+      autoHideTimeoutRef.current = null
     }
 
-    if (isHovered) {
-      setIsVisible(true)
-      if (autoHideTimeoutRef.current) {
-        clearTimeout(autoHideTimeoutRef.current)
-        autoHideTimeoutRef.current = null
-      }
-    } else {
+    if (settings.autoHide && !isHovered) {
       autoHideTimeoutRef.current = setTimeout(() => {
-        setIsVisible(false)
+        setIsPinnedVisible(false)
       }, settings.autoHideDelay)
     }
 
@@ -158,12 +144,12 @@ export function Toolbar({
 
       // Also check if mouse is near the toolbar area horizontally
       const toolbarCenterX = viewportWidth / 2
-      const toolbarWidth = 400 // Approximate toolbar width
+      const toolbarWidth = toolbarRef.current?.offsetWidth ?? 400
       const horizontalThreshold = toolbarWidth / 2 + 50
       const inHorizontalRange = Math.abs(mouseX - toolbarCenterX) < horizontalThreshold
 
       if (shouldShow && inHorizontalRange) {
-        setIsVisible(true)
+        setIsPinnedVisible(true)
         setIsHovered(true)
       } else {
         setIsHovered(false)
@@ -198,13 +184,16 @@ export function Toolbar({
     }
   }
 
+  const useCompactLayout = isMobile || isCompactScreen
+  const isVisible = !settings.autoHide || isHovered || isPinnedVisible
+
   return (
     <ContextMenu>
       <ContextMenuTrigger>
         <motion.div
           ref={toolbarRef}
           className={cn(
-            "fixed inset-x-0 mx-auto z-10 w-fit",
+            "fixed inset-x-0 mx-auto z-10 w-fit max-w-[calc(100vw-1rem)] px-2 sm:px-0",
             isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
           )}
           style={{
@@ -222,21 +211,26 @@ export function Toolbar({
             <div className="absolute inset-0 bg-linear-to-t from-background/90 via-background/40 to-transparent h-4 rounded-t-full pointer-events-none" />
           )}
           <motion.div
-            className="flex items-center justify-center gap-4 p-3 bg-background/95 border rounded-full shadow-lg relative"
+            className={cn(
+              "flex items-center justify-center bg-background/95 border shadow-lg relative",
+              useCompactLayout
+                ? "max-w-full flex-wrap gap-2 rounded-3xl px-2.5 py-2"
+                : "gap-4 rounded-full p-3"
+            )}
           >
             <Button
               variant={isCustomizing ? "default" : "ghost"}
               onClick={onEditToggle}
               className={cn(
                 "h-10 rounded-full flex items-center justify-center transition-transform active:scale-95",
-                isMobile ? "w-10 p-0" : "min-w-[120px] gap-3 px-4"
+                useCompactLayout ? "w-10 shrink-0 p-0" : "min-w-[120px] gap-3 px-4"
               )}
             >
               <Pencil className={cn(
                 "h-4 w-4 shrink-0",
                 isCustomizing && "text-background"
               )} />
-              {!isMobile && (
+              {!useCompactLayout && (
                 <span className="text-sm font-medium">
                   {isCustomizing ? t('widgets.done') : t('widgets.edit')}
                 </span>
@@ -247,7 +241,11 @@ export function Toolbar({
 
             <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
 
-            <FilterCommandMenu variant="toolbar" />
+            <FilterCommandMenu
+              variant="toolbar"
+              className={cn(useCompactLayout ? "min-w-0 flex-1 basis-[11rem]" : "w-auto")}
+              compactBreakpoint={1100}
+            />
 
             {isCustomizing && (
               <div className="flex items-center gap-2">
