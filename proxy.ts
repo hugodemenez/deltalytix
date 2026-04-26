@@ -43,6 +43,24 @@ function acceptsMarkdown(request: NextRequest) {
     .some((value) => value.trim().toLowerCase().startsWith("text/markdown"))
 }
 
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error"
+}
+
+function errorIncludes(error: unknown, text: string) {
+  return errorMessage(error).includes(text)
+}
+
+function normalizeSameSite(
+  sameSite: boolean | "lax" | "strict" | "none" | undefined,
+) {
+  if (sameSite === "lax" || sameSite === "strict" || sameSite === "none") {
+    return sameSite
+  }
+
+  return undefined
+}
+
 function addAgentDiscoveryHeaders(response: NextResponse, request: NextRequest) {
   if (isHomepage(request.nextUrl.pathname)) {
     response.headers.set("link", linkHeaderValue())
@@ -90,16 +108,17 @@ async function updateSession(request: NextRequest) {
     const authPromise = supabase.auth.getUser()
     const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Auth timeout")), 5000))
 
-    const result = (await Promise.race([authPromise, timeoutPromise])) as any
+    const result = await Promise.race([
+      authPromise,
+      timeoutPromise,
+    ]) as Awaited<ReturnType<typeof supabase.auth.getUser>>
     user = result.data?.user || null
     error = result.error
-  } catch (authError: any) {
+  } catch (authError: unknown) {
     // Handle JSON parsing errors from Supabase API (when API returns HTML instead of JSON)
     if (
-      authError?.message?.includes('Unexpected token') ||
-      authError?.message?.includes('is not valid JSON') ||
-      authError?.originalError?.message?.includes('Unexpected token') ||
-      authError?.originalError?.message?.includes('is not valid JSON')
+      errorIncludes(authError, 'Unexpected token') ||
+      errorIncludes(authError, 'is not valid JSON')
     ) {
       console.error("[Proxy] Supabase API returned non-JSON response:", authError)
       // Don't throw - gracefully handle auth failures by treating as unauthenticated
@@ -121,7 +140,7 @@ async function updateSession(request: NextRequest) {
   } else {
     response.headers.set("x-auth-status", "unauthenticated")
     if (error) {
-      response.headers.set("x-auth-error", (error as any).message || "Unknown error")
+      response.headers.set("x-auth-error", errorMessage(error))
     }
   }
 
@@ -147,6 +166,7 @@ export default async function proxy(req: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/api/") ||
+    pathname === "/docs/api" ||
     pathname.includes(".") ||
     pathname.includes("/videos/") ||
     pathname === "/favicon.ico" ||
@@ -231,7 +251,7 @@ export default async function proxy(req: NextRequest) {
       expires: cookie.expires,
       httpOnly: cookie.httpOnly,
       secure: cookie.secure,
-      sameSite: cookie.sameSite as any,
+      sameSite: normalizeSameSite(cookie.sameSite),
     })
   })
 
@@ -302,7 +322,7 @@ export default async function proxy(req: NextRequest) {
     if (geo.countryRegion) {
       response.headers.set("x-user-region", encodeURIComponent(geo.countryRegion))
     }
-  } catch (geoError) {
+  } catch {
     // Fallback to Vercel headers
     const country = req.headers.get("x-vercel-ip-country")
     const city = req.headers.get("x-vercel-ip-city")
