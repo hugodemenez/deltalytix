@@ -3,6 +3,10 @@ import { createI18nMiddleware } from "next-international/middleware"
 import { createServerClient } from "@supabase/ssr"
 import { geolocation } from "@vercel/functions"
 import { User } from "@supabase/supabase-js"
+import {
+  homepageMarkdown,
+  linkHeaderValue,
+} from "@/lib/agent-discovery/metadata"
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
@@ -12,6 +16,40 @@ const I18nMiddleware = createI18nMiddleware({
   defaultLocale: "en",
   urlMappingStrategy: "rewrite",
 })
+
+const HOMEPAGE_PATHS = new Set([
+  "/",
+  "/en",
+  "/fr",
+  "/de",
+  "/es",
+  "/it",
+  "/pt",
+  "/vi",
+  "/hi",
+  "/ja",
+  "/zh",
+  "/yo",
+])
+
+function isHomepage(pathname: string) {
+  return HOMEPAGE_PATHS.has(pathname.replace(/\/$/, "") || "/")
+}
+
+function acceptsMarkdown(request: NextRequest) {
+  return request.headers
+    .get("accept")
+    ?.split(",")
+    .some((value) => value.trim().toLowerCase().startsWith("text/markdown"))
+}
+
+function addAgentDiscoveryHeaders(response: NextResponse, request: NextRequest) {
+  if (isHomepage(request.nextUrl.pathname)) {
+    response.headers.set("link", linkHeaderValue())
+  }
+
+  return response
+}
 
 async function updateSession(request: NextRequest) {
   // Create a proper NextResponse first
@@ -93,6 +131,18 @@ async function updateSession(request: NextRequest) {
 export default async function proxy(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
+  if (isHomepage(pathname) && acceptsMarkdown(req)) {
+    const markdown = homepageMarkdown(req)
+
+    return new NextResponse(markdown, {
+      headers: {
+        "content-type": "text/markdown; charset=utf-8",
+        "x-markdown-tokens": String(markdown.split(/\s+/).filter(Boolean).length),
+        link: linkHeaderValue(),
+      },
+    })
+  }
+
   // More specific static asset exclusions - must be first!
   if (
     pathname.startsWith("/_next/") ||
@@ -132,13 +182,13 @@ export default async function proxy(req: NextRequest) {
     // If embedding from a local file (file://), omit CSP entirely so browsers don't block
     if (isLocalFile) {
       response.headers.delete('Content-Security-Policy');
-      return response;
+      return addAgentDiscoveryHeaders(response, req);
     }
 
     // Development: omit CSP entirely to prevent frame-ancestors blocking during local testing
     if (isDev) {
       response.headers.delete('Content-Security-Policy');
-      return response;
+      return addAgentDiscoveryHeaders(response, req);
     }
 
     // Production CSP - more restrictive
@@ -166,7 +216,7 @@ export default async function proxy(req: NextRequest) {
       "form-action 'self';"
     );
     
-    return response;
+    return addAgentDiscoveryHeaders(response, req);
   }
   // Merge responses - copy headers from auth response to i18n response
   authResponse.headers.forEach((value, key) => {
@@ -271,7 +321,7 @@ export default async function proxy(req: NextRequest) {
     if (region) response.headers.set("x-user-region", encodeURIComponent(region))
   }
 
-  return response
+  return addAgentDiscoveryHeaders(response, req)
 }
 
 export const config = {
