@@ -10,6 +10,7 @@ import { unstable_cache } from 'next/cache'
 import { defaultLayouts } from '@/lib/default-layouts'
 import { formatTimestamp } from '@/lib/date-utils'
 import { v5 as uuidv5 } from 'uuid'
+import { recalcUserStats } from '@/server/gamification/actions'
 
 type TradeError =
   | 'DUPLICATE_TRADES'
@@ -127,6 +128,15 @@ export async function saveTradesAction(
     } catch (error) {
       console.error('[saveTrades] Error updating tag:', error)
       revalidateTag(`trades-${userId}`, { expire: 0 })
+    }
+
+    // Recalculate gamification stats for all import paths (CSV, IBKR, manual, etc.)
+    if (result.count > 0 && userId) {
+      try {
+        await recalcUserStats(userId)
+      } catch (err) {
+        console.error('[saveTrades] Failed to recalc user stats:', err)
+      }
     }
 
     return {
