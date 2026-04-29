@@ -8,6 +8,7 @@ import { Trophy } from 'lucide-react'
 interface LeaderboardEntry {
   rank:        number
   userId:      string
+  displayName: string   // safe: displayName or masked email — no raw PII
   xp:          number
   level:       number
   totalTrades: number
@@ -15,9 +16,9 @@ interface LeaderboardEntry {
 }
 
 interface LeaderboardPanelProps {
-  entries:    LeaderboardEntry[]
+  entries:       LeaderboardEntry[]
   currentUserId?: string
-  className?: string
+  className?:    string
 }
 
 const RANK_MEDALS = ['🥇', '🥈', '🥉']
@@ -43,7 +44,7 @@ export function LeaderboardPanel({ entries, currentUserId, className }: Leaderbo
             </span>
             <div className="flex-1 min-w-0">
               <p className="truncate font-medium">
-                {entry.userId === currentUserId ? 'You' : `Trader #${entry.rank}`}
+                {entry.userId === currentUserId ? 'You' : entry.displayName}
               </p>
               <p className="text-xs text-muted-foreground">
                 Lv.{entry.level} {levelTitle(entry.level)} · {entry.totalTrades} trades

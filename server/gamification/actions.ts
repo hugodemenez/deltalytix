@@ -6,10 +6,9 @@ import { levelFromXP, XP_PER_TRADE_WIN, XP_PER_TRADE_LOSS, XP_LOGIN_STREAK } fro
 
 /**
  * Recalculate UserStats for a user after trades change.
- * Called from trade import / sync flows.
+ * Call this after every trade import / sync.
  */
 export async function recalcUserStats(userId: string) {
-  // 1. Pull all trades for user
   const accounts = await prisma.account.findMany({
     where: { userId },
     select: { number: true },
@@ -26,22 +25,24 @@ export async function recalcUserStats(userId: string) {
   const winRate     = totalTrades > 0 ? wins / totalTrades : 0
   const totalPnl    = trades.reduce((s, t) => s + t.pnl - t.commission, 0)
 
-  // crude avg R:R using win/loss magnitudes
-  const avgWin  = wins > 0 ? trades.filter(t => t.pnl - t.commission > 0).reduce((s, t) => s + t.pnl - t.commission, 0) / wins : 0
+  const avgWin  = wins > 0
+    ? trades.filter(t => t.pnl - t.commission > 0).reduce((s, t) => s + t.pnl - t.commission, 0) / wins
+    : 0
   const losses  = totalTrades - wins
-  const avgLoss = losses > 0 ? Math.abs(trades.filter(t => t.pnl - t.commission <= 0).reduce((s, t) => s + t.pnl - t.commission, 0)) / losses : 1
-  const avgRR   = avgLoss > 0 ? avgWin / avgLoss : 0
+  const avgLoss = losses > 0
+    ? Math.abs(trades.filter(t => t.pnl - t.commission <= 0).reduce((s, t) => s + t.pnl - t.commission, 0)) / losses
+    : 1
+  const avgRR = avgLoss > 0 ? avgWin / avgLoss : 0
 
-  // XP from trades
-  const tradingXP = trades.reduce((s, t) =>
-    s + (t.pnl - t.commission > 0 ? XP_PER_TRADE_WIN : XP_PER_TRADE_LOSS), 0)
+  const tradingXP = trades.reduce(
+    (s, t) => s + (t.pnl - t.commission > 0 ? XP_PER_TRADE_WIN : XP_PER_TRADE_LOSS),
+    0
+  )
 
-  // streak XP
-  const streak = await prisma.streak.findUnique({ where: { userId } })
+  const streak   = await prisma.streak.findUnique({ where: { userId } })
   const streakXP = (streak?.current ?? 0) * XP_LOGIN_STREAK
-
-  const xp    = tradingXP + streakXP
-  const level = levelFromXP(xp)
+  const xp       = tradingXP + streakXP
+  const level    = levelFromXP(xp)
 
   await prisma.userStats.upsert({
     where:  { userId },
@@ -49,13 +50,17 @@ export async function recalcUserStats(userId: string) {
     create: { userId, xp, level, totalTrades, winRate, avgRR, totalPnl },
   })
 
-  // 2. Check achievements
-  await checkAndGrantAchievements(userId, { totalTrades, winRate, avgRR, totalPnl,
-    streak: streak?.current ?? 0 })
+  await checkAndGrantAchievements(userId, {
+    totalTrades,
+    winRate,
+    avgRR,
+    totalPnl,
+    streak: streak?.current ?? 0,
+  })
 }
 
 /**
- * Update login streak (call on every authenticated dashboard load).
+ * Update login streak. Call on every authenticated dashboard load.
  */
 export async function touchStreak(userId: string) {
   const today = new Date().toISOString().slice(0, 10)
@@ -63,13 +68,13 @@ export async function touchStreak(userId: string) {
   const existing = await prisma.streak.findUnique({ where: { userId } })
   if (!existing) {
     await prisma.streak.create({
-      data: { userId, current: 1, longest: 1, lastActiveAt: new Date(today) }
+      data: { userId, current: 1, longest: 1, lastActiveAt: new Date(today) },
     })
     return
   }
 
   const last = existing.lastActiveAt.toISOString().slice(0, 10)
-  if (last === today) return  // already touched today
+  if (last === today) return
 
   const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
   const continued  = last === yesterday
@@ -78,25 +83,22 @@ export async function touchStreak(userId: string) {
 
   await prisma.streak.update({
     where: { userId },
-    data:  { current: newCurrent, longest: newLongest, lastActiveAt: new Date(today), updatedAt: new Date() }
+    data:  { current: newCurrent, longest: newLongest, lastActiveAt: new Date(today), updatedAt: new Date() },
   })
 }
 
-/**
- * Check all achievements and grant newly unlocked ones.
- */
 async function checkAndGrantAchievements(
   userId: string,
   stats: { totalTrades: number; winRate: number; avgRR: number; totalPnl: number; streak: number }
 ) {
   const earned = await prisma.userAchievement.findMany({
-    where: { userId },
+    where:  { userId },
     select: { achievementId: true },
   })
   const earnedIds = new Set(earned.map(e => e.achievementId))
 
-  // referral count
-  const referral = await prisma.referral.findUnique({ where: { userId }, select: { referredUserIds: true } })
+  // Referral count — safe: Referral model exists in schema
+  const referral  = await prisma.referral.findUnique({ where: { userId }, select: { referredUserIds: true } })
   const referrals = referral?.referredUserIds.length ?? 0
 
   for (const ach of ACHIEVEMENTS) {
@@ -112,13 +114,13 @@ function isUnlocked(
   stats: { totalTrades: number; winRate: number; avgRR: number; totalPnl: number; streak: number; referrals: number }
 ): boolean {
   const c = ach.condition
-  if (c.totalTrades  !== undefined && stats.totalTrades  <  c.totalTrades)  return false
-  if (c.winRate      !== undefined && stats.winRate      <  c.winRate)      return false
-  if (c.minTrades    !== undefined && stats.totalTrades  <  c.minTrades)    return false
-  if (c.avgRR        !== undefined && stats.avgRR        <  c.avgRR)        return false
-  if (c.totalPnl     !== undefined && stats.totalPnl     <  c.totalPnl)     return false
-  if (c.streak       !== undefined && stats.streak       <  c.streak)       return false
-  if (c.referrals    !== undefined && stats.referrals    <  c.referrals)    return false
+  if (c.totalTrades !== undefined && stats.totalTrades < c.totalTrades) return false
+  if (c.winRate     !== undefined && stats.winRate     < c.winRate)     return false
+  if (c.minTrades   !== undefined && stats.totalTrades < c.minTrades)   return false
+  if (c.avgRR       !== undefined && stats.avgRR       < c.avgRR)       return false
+  if (c.totalPnl    !== undefined && stats.totalPnl    < c.totalPnl)    return false
+  if (c.streak      !== undefined && stats.streak      < c.streak)      return false
+  if (c.referrals   !== undefined && stats.referrals   < c.referrals)   return false
   return true
 }
 
@@ -132,7 +134,6 @@ export async function grantAchievement(userId: string, achievementId: string) {
     create: { userId, achievementId, notified: false },
   })
 
-  // Add XP bonus
   await prisma.userStats.upsert({
     where:  { userId },
     update: { xp: { increment: ach.xp }, updatedAt: new Date() },
@@ -142,17 +143,19 @@ export async function grantAchievement(userId: string, achievementId: string) {
 
 /**
  * Fetch top-N leaderboard entries.
+ * Uses displayName when set; falls back to masked email ("jo***@gmail.com").
  */
 export async function getLeaderboard(limit = 20) {
   const rows = await prisma.userStats.findMany({
     take:    limit,
     orderBy: { xp: 'desc' },
-    include: { user: { select: { email: true } } },
+    include: { user: { select: { email: true, displayName: true } } },
   })
   return rows.map((r, i) => ({
     rank:        i + 1,
     userId:      r.userId,
-    email:       r.user.email,
+    // Show displayName or mask email — never expose raw email
+    displayName: r.user.displayName ?? maskEmail(r.user.email),
     xp:          r.xp,
     level:       r.level,
     totalTrades: r.totalTrades,
@@ -160,12 +163,19 @@ export async function getLeaderboard(limit = 20) {
   }))
 }
 
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@')
+  const masked = local.slice(0, 2) + '***'
+  return domain ? `${masked}@${domain}` : masked
+}
+
 /**
- * Get unnotified achievements for the current user and mark them notified.
+ * Pop unnotified achievements for userId and mark them notified.
+ * Called by POST /api/gamification on dashboard mount.
  */
 export async function popNewAchievements(userId: string) {
   const fresh = await prisma.userAchievement.findMany({
-    where:  { userId, notified: false },
+    where:   { userId, notified: false },
     include: { achievement: true },
   })
   if (fresh.length === 0) return []
