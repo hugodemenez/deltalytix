@@ -23,13 +23,13 @@ export function WinRateByInstrument({ trades }: { trades: FormattedTrade[] }) {
         <p className="font-semibold">{d.instrument}</p>
         <p>Win Rate: <span className="font-bold">{d.winRate.toFixed(1)}%</span></p>
         <p>Trades: {d.total}</p>
-        <p>P&L: {fmt(d.pnl)}</p>
+        <p>P&amp;L: {fmt(d.pnl)}</p>
       </div>
     );
   };
 
   return (
-    <Card className="h-72 md:col-span-2 xl:col-span-1">
+    <Card className="h-72">
       <CardHeader className="p-4 pb-2 border-b h-14">
         <CardTitle className="text-base">Win Rate by Instrument</CardTitle>
       </CardHeader>
@@ -59,7 +59,7 @@ export function WinRateByInstrument({ trades }: { trades: FormattedTrade[] }) {
             />
             <ReferenceLine x={50} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="winRate" radius={[0, 3, 3, 0]} maxBarSize={16}>
+            <Bar dataKey="winRate" radius={[0, 3, 3, 0]} maxBarSize={16} isAnimationActive={false}>
               {data.map((entry, i) => (
                 <Cell
                   key={i}

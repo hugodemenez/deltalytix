@@ -23,7 +23,7 @@ export function WinRateByTime({ trades }: { trades: FormattedTrade[] }) {
         <p className="font-semibold">{d.label}</p>
         <p>Win Rate: <span className="font-bold">{d.winRate.toFixed(1)}%</span></p>
         <p>Trades: {d.total}</p>
-        <p>P&L: {fmt(d.pnl)}</p>
+        <p>P&amp;L: {fmt(d.pnl)}</p>
       </div>
     );
   };
@@ -48,7 +48,7 @@ export function WinRateByTime({ trades }: { trades: FormattedTrade[] }) {
             />
             <ReferenceLine y={50} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="winRate" radius={[3, 3, 0, 0]} maxBarSize={30}>
+            <Bar dataKey="winRate" radius={[3, 3, 0, 0]} maxBarSize={30} isAnimationActive={false}>
               {data.map((entry, i) => (
                 <Cell
                   key={i}

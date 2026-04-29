@@ -88,9 +88,7 @@ export function PerformanceCenterPage() {
             <TabsContent value="winrate" className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               <WinRateByTime trades={trades} />
               <WinRateByWeekday trades={trades} />
-              <div className="md:col-span-2 xl:col-span-1">
-                <WinRateByInstrument trades={trades} />
-              </div>
+              <WinRateByInstrument trades={trades} />
             </TabsContent>
 
             <TabsContent value="maemfe">

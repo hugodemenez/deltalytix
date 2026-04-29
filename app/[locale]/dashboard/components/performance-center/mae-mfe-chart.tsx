@@ -3,13 +3,23 @@
 import * as React from "react";
 import {
   ScatterChart, Scatter, XAxis, YAxis,
-  CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+  CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { FormattedTrade } from "./compute-metrics";
 
 const fmt = (v: number) =>
   v.toLocaleString("en-US", { style: "currency", currency: "USD" });
+
+function DotWin(props: any) {
+  const { cx, cy } = props;
+  return <circle cx={cx} cy={cy} r={4} fill="hsl(var(--chart-win))" fillOpacity={0.75} />;
+}
+
+function DotLoss(props: any) {
+  const { cx, cy } = props;
+  return <circle cx={cx} cy={cy} r={4} fill="hsl(var(--chart-loss))" fillOpacity={0.75} />;
+}
 
 export function MaeMfeChart({ trades }: { trades: FormattedTrade[] }) {
   const data = React.useMemo(() =>
@@ -36,7 +46,7 @@ export function MaeMfeChart({ trades }: { trades: FormattedTrade[] }) {
         <p className="font-semibold">{d.instrument}</p>
         <p>MAE: {fmt(d.mae)}</p>
         <p>MFE: {fmt(d.mfe)}</p>
-        <p>P&L: <span className={d.win ? "text-emerald-600" : "text-red-500"}>{fmt(d.pnl)}</span></p>
+        <p>P&amp;L: <span className={d.win ? "text-emerald-600" : "text-red-500"}>{fmt(d.pnl)}</span></p>
       </div>
     );
   };
@@ -78,6 +88,7 @@ export function MaeMfeChart({ trades }: { trades: FormattedTrade[] }) {
             <XAxis
               dataKey="mae"
               name="MAE"
+              type="number"
               tick={{ fontSize: 9 }}
               tickLine={false}
               axisLine={false}
@@ -87,27 +98,16 @@ export function MaeMfeChart({ trades }: { trades: FormattedTrade[] }) {
             <YAxis
               dataKey="mfe"
               name="MFE"
+              type="number"
               tick={{ fontSize: 9 }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v) => `$${v}`}
               width={48}
             />
-            <Tooltip content={<CustomTooltip />} />
-            <Scatter
-              name="Wins"
-              data={wins}
-              fill="hsl(var(--chart-win))"
-              fillOpacity={0.7}
-              r={4}
-            />
-            <Scatter
-              name="Losses"
-              data={losses}
-              fill="hsl(var(--chart-loss))"
-              fillOpacity={0.7}
-              r={4}
-            />
+            <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: "3 3" }} />
+            <Scatter name="Wins" data={wins} shape={<DotWin />} isAnimationActive={false} />
+            <Scatter name="Losses" data={losses} shape={<DotLoss />} isAnimationActive={false} />
           </ScatterChart>
         </ResponsiveContainer>
       </CardContent>

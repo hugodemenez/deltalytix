@@ -21,13 +21,16 @@ export function PeriodComparison({ trades }: { trades: FormattedTrade[] }) {
 
   const data = React.useMemo(() => getPeriodStats(trades, period), [trades, period]);
 
+  // rotate labels when there are many bars
+  const rotateTicks = data.length > 8;
+
   const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d = payload[0].payload;
     return (
       <div className="rounded-lg border bg-background p-2 shadow-xs text-xs">
         <p className="font-semibold">{d.label}</p>
-        <p>P&L: <span className={cn("font-bold", d.pnl >= 0 ? "text-emerald-600" : "text-red-500")}>{fmt(d.pnl)}</span></p>
+        <p>P&amp;L: <span className={cn("font-bold", d.pnl >= 0 ? "text-emerald-600" : "text-red-500")}>{fmt(d.pnl)}</span></p>
         <p>Trades: {d.trades}</p>
         <p>Win Rate: {d.winRate.toFixed(1)}%</p>
       </div>
@@ -61,14 +64,26 @@ export function PeriodComparison({ trades }: { trades: FormattedTrade[] }) {
       </CardHeader>
       <CardContent className="p-4 h-[calc(100%-3.5rem)]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ left: 4, right: 4, top: 4, bottom: 24 }}>
+          <BarChart
+            data={data}
+            margin={{
+              left: 4,
+              right: 4,
+              top: 4,
+              bottom: rotateTicks ? 48 : 24,
+            }}
+          >
             <CartesianGrid strokeDasharray="3 3" className="opacity-20" />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 9 }}
+              tick={{
+                fontSize: 9,
+                ...(rotateTicks ? { textAnchor: "end" } as object : {}),
+              }}
               tickLine={false}
               axisLine={false}
-              interval="preserveStartEnd"
+              interval={rotateTicks ? 0 : "preserveStartEnd"}
+              angle={rotateTicks ? -45 : 0}
             />
             <YAxis
               tick={{ fontSize: 9 }}

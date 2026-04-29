@@ -17,6 +17,8 @@ export function exportPerformanceCsv(
   trades: FormattedTrade[],
   metrics: PerformanceMetrics
 ): void {
+  if (typeof window === "undefined") return;
+
   const lines: string[] = [];
 
   // --- Summary section ---
@@ -68,8 +70,6 @@ export function exportPerformanceCsv(
   const a = document.createElement("a");
   a.href = url;
   a.download = `performance-export-${format(new Date(), "yyyy-MM-dd")}.csv`;
-  document.body.appendChild(a);
   a.click();
-  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
