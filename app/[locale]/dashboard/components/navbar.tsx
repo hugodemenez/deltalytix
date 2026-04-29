@@ -20,6 +20,7 @@ import { useModalStateStore } from '@/store/modal-state-store'
 import { useUserStore } from '@/store/user-store'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
+import { ProfileBadge } from '@/components/gamification/profile-badge'
 
 export default function Navbar() {
   const  user = useUserStore(state => state.supabaseUser)
@@ -98,6 +99,7 @@ export default function Navbar() {
               <ImportButton />
             </div>
             <div className="flex items-center gap-2">
+              <ProfileBadge className="hidden lg:flex" />
               <ReferralButton />
               <UserMenu />
             </div>
