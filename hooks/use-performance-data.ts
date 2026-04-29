@@ -1,4 +1,5 @@
 import useSWR from 'swr'
+import { useUserStore } from '@/store/user-store'
 import type { PeriodRange, PerformanceData } from '@/lib/performance/types'
 
 const fetcher = (url: string) => fetch(url).then(r => {
@@ -7,9 +8,12 @@ const fetcher = (url: string) => fetch(url).then(r => {
 })
 
 export function usePerformanceData(period: PeriodRange) {
+  const timezone = useUserStore(state => state.timezone)
+
   const params = new URLSearchParams({
     type:   period.type,
     offset: String(period.offset),
+    tz:     timezone,
     ...(period.from ? { from: period.from } : {}),
     ...(period.to   ? { to:   period.to   } : {}),
   })

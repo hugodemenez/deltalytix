@@ -1,4 +1,5 @@
 // ─── Phase 6: Pure calculation helpers ───────────────────────────────────────
+import { formatInTimeZone } from 'date-fns-tz'
 import type {
   WinRateByDimension,
   WinRateData,
@@ -20,6 +21,31 @@ export interface RawTrade {
 
 const NET = (t: RawTrade) => t.pnl - t.commission
 
+/**
+ * Parse a UTC ISO date string and return the hour (0-23) in the given IANA timezone.
+ * Falls back to UTC if the timezone is invalid.
+ */
+function getHourInTz(isoDate: string, timezone: string): number {
+  try {
+    return Number(formatInTimeZone(new Date(isoDate), timezone, 'H'))
+  } catch {
+    return new Date(isoDate).getUTCHours()
+  }
+}
+
+/**
+ * Parse a UTC ISO date string and return the ISO weekday (0=Mon … 6=Sun)
+ * in the given IANA timezone.
+ */
+function getWeekdayInTz(isoDate: string, timezone: string): number {
+  try {
+    // 'e' in date-fns-tz: 1=Mon … 7=Sun → convert to 0-based Mon=0
+    return (Number(formatInTimeZone(new Date(isoDate), timezone, 'e')) - 1 + 7) % 7
+  } catch {
+    return (new Date(isoDate).getUTCDay() + 6) % 7
+  }
+}
+
 // ── Win-rate breakdown ────────────────────────────────────────────────────────
 
 function toWinRateDimension(label: string, trades: RawTrade[]): WinRateByDimension {
@@ -36,7 +62,13 @@ function toWinRateDimension(label: string, trades: RawTrade[]): WinRateByDimensi
   }
 }
 
-export function computeWinRateData(trades: RawTrade[]): WinRateData {
+/**
+ * @param trades  Raw trades for the period
+ * @param timezone  IANA timezone string (e.g. "Europe/Moscow").
+ *                  Defaults to 'UTC' when omitted so the function remains
+ *                  backwards-compatible with tests that don't pass a timezone.
+ */
+export function computeWinRateData(trades: RawTrade[], timezone = 'UTC'): WinRateData {
   const overall = toWinRateDimension('Overall', trades)
 
   // By instrument
@@ -50,12 +82,11 @@ export function computeWinRateData(trades: RawTrade[]): WinRateData {
     .map(([label, ts]) => toWinRateDimension(label, ts))
     .sort((a, b) => b.trades - a.trades)
 
-  // By weekday (0=Mon ... 6=Sun)
+  // By weekday — use trader's local timezone so Mon/Tue/… reflect their session
   const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
   const weekdayMap = new Map<number, RawTrade[]>()
   for (const t of trades) {
-    const d = new Date(t.entryDate)
-    const dow = (d.getDay() + 6) % 7  // convert Sun=0 → Mon=0
+    const dow = getWeekdayInTz(t.entryDate, timezone)
     const list = weekdayMap.get(dow) ?? []
     list.push(t)
     weekdayMap.set(dow, list)
@@ -64,10 +95,10 @@ export function computeWinRateData(trades: RawTrade[]): WinRateData {
     toWinRateDimension(WEEKDAYS[i], weekdayMap.get(i) ?? [])
   )
 
-  // By hour of entry
+  // By hour of entry — use trader's local timezone
   const hourMap = new Map<number, RawTrade[]>()
   for (const t of trades) {
-    const h = new Date(t.entryDate).getHours()
+    const h = getHourInTz(t.entryDate, timezone)
     const list = hourMap.get(h) ?? []
     list.push(t)
     hourMap.set(h, list)

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // ── Parse period from query string ────────────────────────────────────────
+  // ── Parse period + timezone from query string ─────────────────────────────
   const sp = req.nextUrl.searchParams
   const period: PeriodRange = {
     type:   (sp.get('type') as PeriodRange['type']) ?? 'month',
@@ -21,14 +21,27 @@ export async function GET(req: NextRequest) {
     from:   sp.get('from') ?? undefined,
     to:     sp.get('to') ?? undefined,
   }
+
+  // Prefer timezone sent by the client; fall back to DB value, then UTC
+  let timezone = sp.get('tz') ?? 'UTC'
+  // Basic IANA validation: must contain a slash or be 'UTC'
+  if (timezone !== 'UTC' && !timezone.includes('/')) {
+    timezone = 'UTC'
+  }
+
   const { from, to } = resolveDateRange(period)
 
   // ── Fetch user's account numbers ──────────────────────────────────────────
   const dbUser = await prisma.user.findUnique({
     where:  { auth_user_id: user.id },
-    select: { id: true },
+    select: { id: true, timezone: true },
   })
   if (!dbUser) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+  // If client did not send a valid tz, use DB value as authoritative fallback
+  if (sp.get('tz') === null && dbUser.timezone) {
+    timezone = dbUser.timezone
+  }
 
   const accounts = await prisma.account.findMany({
     where:  { userId: dbUser.id },
@@ -69,7 +82,7 @@ export async function GET(req: NextRequest) {
   }))
 
   // ── Compute sections ──────────────────────────────────────────────────────
-  const winRate  = computeWinRateData(raw)
+  const winRate  = computeWinRateData(raw, timezone)
   const drawdown = computeDrawdown(raw)
   const summary  = computePeriodStats('Current', raw)
 
