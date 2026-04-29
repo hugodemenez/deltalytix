@@ -44,10 +44,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-
-#database
+# database
 **.db
 
+# backup files — should never be committed
+*.backup
+*.bak
 
 # vscode
 .vscode
@@ -55,7 +57,6 @@ next-env.d.ts
 # charting_library
 charting_library/
 datafeeds/
-
 
 # csv files
 *.csv

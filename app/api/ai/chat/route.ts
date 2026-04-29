@@ -1,6 +1,7 @@
 import { streamText, stepCountIs, convertToModelMessages } from "ai";
 import { NextRequest } from "next/server";
 import { z } from 'zod/v3';
+import { rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { getFinancialNews } from "./tools/get-financial-news";
 import { getJournalEntries } from "./tools/get-journal-entries";
 import { getMostTradedInstruments } from "./tools/get-most-traded-instruments";
@@ -17,7 +18,14 @@ import { buildSystemPrompt } from "./prompts";
 
 export const maxDuration = 60;
 
+// Rate limit: 20 AI requests per user per minute
+const AI_CHAT_RATE_LIMIT = { limit: 20, windowMs: 60_000, prefix: 'ai:chat' }
+
 export async function POST(req: NextRequest) {
+  // Apply rate limiting before any processing
+  const rl = rateLimit(req, AI_CHAT_RATE_LIMIT)
+  if (!rl.success) return rateLimitResponse(rl)
+
   try {
       const { messages, username, locale, timezone } = await req.json();
       console.log('[Chat Route] Received messages:', JSON.stringify(messages, null, 2));
@@ -38,7 +46,6 @@ export async function POST(req: NextRequest) {
     const previousWeekEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
 
     // Determine if this is the first message in the conversation
-    // A conversation starts with a user message, so if there's only one user message, it's the first
     const userMessages = messages.filter((msg: any) => msg.role === 'user');
     const isFirstMessage = userMessages.length === 1;
 
@@ -72,7 +79,6 @@ export async function POST(req: NextRequest) {
       },
 
       tools: {
-        // server-side tool with execute function
         getJournalEntries,
         getPreviousConversation,
         getMostTradedInstruments,
@@ -84,9 +90,6 @@ export async function POST(req: NextRequest) {
         getWeekSummaryForDate,
         getFinancialNews,
         generateEquityChart,
-        // client-side tool that is automatically executed on the client
-        // askForConfirmation,
-        // askForLocation,
       },
       
       onError: ({ error }) => {
@@ -122,4 +125,4 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
     });
   }
-} 
+}
