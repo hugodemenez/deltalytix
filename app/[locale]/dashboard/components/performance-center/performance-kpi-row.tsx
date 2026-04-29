@@ -4,12 +4,10 @@ import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { PerformanceMetrics } from "./compute-metrics";
-import { TrendingUp, TrendingDown, Target, BarChart2, Zap, Shield } from "lucide-react";
+import { TrendingUp, TrendingDown, Target, BarChart2, Zap, Shield, Ratio } from "lucide-react";
 
 const fmt = (v: number, decimals = 2) =>
   v.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-const fmtCurrency = (v: number) =>
-  `$${fmt(Math.abs(v))}${v < 0 ? " loss" : ""}`;
 
 interface KpiCardProps {
   label: string;
@@ -71,6 +69,13 @@ export function PerformanceKpiRow({ metrics }: { metrics: PerformanceMetrics }) 
       sub: "per trade",
       positive: metrics.expectancy >= 0 ? true : false,
       icon: <Zap className="h-4 w-4" />,
+    },
+    {
+      label: "Avg R:R",
+      value: metrics.avgRR > 0 ? `${fmt(metrics.avgRR)}x` : "—",
+      sub: "reward / risk",
+      positive: metrics.avgRR >= 1 ? true : metrics.avgRR > 0 ? null : null,
+      icon: <Ratio className="h-4 w-4" />,
     },
     {
       label: "Max Drawdown",
