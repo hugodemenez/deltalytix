@@ -1,0 +1,17 @@
+---
+title: 'Sign-in prompts stick to actual dashboard areas'
+description: 'Public URLs that happen to spell “dashboard” in the slug no longer bounce you toward authentication—the gate only surrounds real trader tooling.'
+date: '2026-05-02'
+status: completed
+completedDate: '2026-05-02'
+---
+
+# Sign-in prompts stick to actual dashboard areas
+
+We used to treat **any URL containing the text `/dashboard`** as if it were private. That meant totally public pages (for example some **Updates** stories whose slugs include “dashboard” in the middle) could suddenly demand a login even though the content is meant for everyone.
+
+The routing layer now locks down only the **real dashboard sections**: `/dashboard`, anything nested under it, plus `/teams/dashboard` and its children. Marketing or changelog pages can talk about dashboards without inheriting the auth wall.
+
+You should only see the login flow when you’re genuinely heading into the trading workspace that requires an account.
+
+

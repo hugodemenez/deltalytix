@@ -1,0 +1,19 @@
+---
+title: 'La connexion se cache vraiment sur le tableau de bord trader'
+description: 'On te demande de t’identifier seulement quand tu entres dans le tableau de bord réel ; les autres pages peuvent encore dire “dashboard” dans l’URL sans te bloquer.'
+date: '2026-05-02'
+status: completed
+completedDate: '2026-05-02'
+---
+
+# La connexion se cache vraiment sur le tableau de bord trader
+
+Jusque-là, la passerelle du site vérifiait grossièrement si l’URL contenait la sous-chaîne **`/dashboard`**.
+
+Des pages publiques, par exemple une note dans **`/updates/...`** dont le chemin contient un segment du type **`…/dashboard-widgets`**, pouvaient se retrouver classées comme “zone privée” et te balancer sur l’écran d’auth sans motif.
+
+Les garde-fous vérifient maintenant uniquement les chemins qui pointent réellement vers **`/dashboard`**, **`/dashboard/…`**, **`/teams/dashboard`** et **`/teams/dashboard/…`**, autrement dit là où vivent tes outils de trading.
+
+Les contenus vitrine qui parlent encore de “dashboard” dans le libellé peuvent ainsi rester lisibles avant toute tentative de connexion.
+
+
