@@ -18,33 +18,22 @@ import { InstrumentFilter } from "./instrument-filter"
 import { AccountFilter } from "./account-filter"
 import { useData } from "@/context/data-provider"
 import { cn } from "@/lib/utils"
-import { useState, useEffect } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { AccountGroupBoard } from "./account-group-board"
+import { useState } from "react"
 import { useModalStateStore } from "../../../../../store/modal-state-store"
 
 export function FilterDropdown() {
   const t = useI18n()
   const { isMobile } = useData()
-  const [open, setOpen] = useState(false)
-  const [accountFilterOpen, setAccountFilterOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const { accountGroupBoardOpen } = useModalStateStore()
-
-  // Close both dropdowns when account board is open
-  useEffect(() => {
-    if (accountGroupBoardOpen) {
-      setOpen(false)
-    }
-  }, [accountGroupBoardOpen])
+  const open = accountGroupBoardOpen ? false : menuOpen
 
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenu
+        open={open}
+        onOpenChange={(nextOpen) => setMenuOpen(accountGroupBoardOpen ? false : nextOpen)}
+      >
         <DropdownMenuTrigger asChild>
           <Button 
             variant="ghost"
@@ -61,13 +50,13 @@ export function FilterDropdown() {
             )}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
+        <DropdownMenuContent className="max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))] w-56 overflow-y-auto overscroll-contain">
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               {t('filters.accounts')}
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
-              <DropdownMenuSubContent className="w-[300px]">
+              <DropdownMenuSubContent className="max-h-[min(var(--radix-dropdown-menu-content-available-height),calc(100dvh-1rem))] w-[min(300px,calc(100vw-2rem))] overflow-y-auto overscroll-contain">
                 <AccountFilter showAccountNumbers={true}/>
               </DropdownMenuSubContent>
             </DropdownMenuPortal>

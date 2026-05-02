@@ -29,6 +29,8 @@ export type WidgetType =
   // | 'marketChart'
 export type WidgetSize = 'tiny' | 'small' | 'small-long' | 'medium' | 'large' | 'extra-large'
 
+export const DASHBOARD_COMPACT_BREAKPOINT = 1100
+
 export interface LayoutItem {
   i: string
   x: number
