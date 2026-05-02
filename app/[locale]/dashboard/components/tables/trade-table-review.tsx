@@ -101,6 +101,7 @@ import { EditableTimeCell } from "./editable-time-cell";
 import { EditableInstrumentCell } from "./editable-instrument-cell";
 import { BulkEditPanel } from "./bulk-edit-panel";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { DASHBOARD_COMPACT_BREAKPOINT } from "../../types/dashboard";
 
 // Custom Tags Header Component
 function TagsColumnHeader() {
@@ -1252,7 +1253,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
   // Determine if Card header should be shown (default to true if not specified)
   // Note: This only controls the Card header, not the table column headers
   const showHeader = config?.showHeader !== false;
-  const isCompactScreen = useMediaQuery("(max-width: 1100px)");
+  const isCompactScreen = useMediaQuery(`(max-width: ${DASHBOARD_COMPACT_BREAKPOINT}px)`);
 
   // Visible columns are used for rendering header/body/footer so hidden columns don't create gaps
   const visibleColumns = table.getVisibleLeafColumns();
@@ -1612,6 +1613,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             className="min-w-0"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
+            aria-label={t("trade-table.previous")}
           >
             <ChevronLeft className="h-4 w-4" />
             {!isCompactScreen && t("trade-table.previous")}
@@ -1628,6 +1630,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             className="min-w-0"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
+            aria-label={t("trade-table.next")}
           >
             {!isCompactScreen && t("trade-table.next")}
             <ChevronRight className="h-4 w-4" />

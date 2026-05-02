@@ -8,7 +8,7 @@ import { Pencil, Trash2, RotateCcw } from "lucide-react"
 import { ShareButton } from "./share-button"
 import { AddWidgetSheet } from "./add-widget-sheet"
 import { FilterCommandMenu } from "./filters/filter-command-menu"
-import { WidgetType, WidgetSize, Layouts } from "../types/dashboard"
+import { DASHBOARD_COMPACT_BREAKPOINT, WidgetType, WidgetSize, Layouts } from "../types/dashboard"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,7 +52,7 @@ export function Toolbar({
   const t = useI18n()
   const { isMobile } = useData()
   const { settings, setAutoHide } = useToolbarSettingsStore()
-  const isCompactScreen = useMediaQuery("(max-width: 1100px)")
+  const isCompactScreen = useMediaQuery(`(max-width: ${DASHBOARD_COMPACT_BREAKPOINT}px)`)
   const [isConsentVisible, setIsConsentVisible] = useState(
     typeof document !== "undefined" && document.body.hasAttribute("data-consent-banner")
   )
@@ -60,7 +60,6 @@ export function Toolbar({
   // Handle auto-hide toggle with proper state management
   const handleAutoHideToggle = () => {
     const newValue = !settings.autoHide
-    console.log('Toggling auto-hide from', settings.autoHide, 'to', newValue)
     setAutoHide(newValue)
 
     // Show toast notification
@@ -245,7 +244,7 @@ export function Toolbar({
             <FilterCommandMenu
               variant="toolbar"
               className={cn(useCompactLayout ? "min-w-0 flex-1 basis-full sm:basis-44" : "w-auto")}
-              compactBreakpoint={1100}
+              compactBreakpoint={DASHBOARD_COMPACT_BREAKPOINT}
             />
 
             {isCustomizing && (
