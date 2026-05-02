@@ -54,7 +54,7 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
-          agent -p --model auto --output-format text \
+          agent -p --model auto --trust --output-format text \
             "Review the changes in this pull request. Focus on:
             - Code quality and best practices
             - Potential bugs or security issues
