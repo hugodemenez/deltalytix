@@ -1,0 +1,44 @@
+# Development docker-compose — используй для локальной разработки
+# Только база данных + pgAdmin. Next.js запускается отдельно через `bun dev`
+#
+# Запуск: docker-compose -f docker-compose.dev.yml up -d
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: deltalytix-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devuser
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: deltalytix_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - deltalytix-postgres-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devuser -d deltalytix_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: deltalytix-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@local.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - deltalytix-pgadmin:/var/lib/pgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  deltalytix-postgres-dev:
+  deltalytix-pgadmin:

@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
+import { recalcUserStats } from '@/server/gamification/actions'
 import type {
   DxFeedLoginRequest,
   DxFeedLoginResponse,
@@ -451,6 +452,9 @@ export async function getDxFeedTrades(
     }
 
     logger.info(`Saved ${saveResult.numberOfTradesAdded} trades`)
+
+    // Recalculate gamification stats after successful trade save
+    recalcUserStats(userId).catch((e) => logger.error('recalcUserStats failed:', e))
 
     return {
       processedTrades: allTrades,

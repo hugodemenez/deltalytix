@@ -125,6 +125,7 @@ model User {
   isBeta                Boolean                @default(false)
   language              String                 @default("en")
   thorToken             String?
+  displayName           String?
   accounts              Account[]
   businesses            Business[]
   teams                 Team[]
@@ -142,6 +143,9 @@ model User {
   votes                 Vote[]
   businessSubscriptions BusinessSubscription[]
   referral              Referral?
+  userStats             UserStats?
+  userAchievements      UserAchievement[]
+  streak                Streak?
 
   @@index([email])
   @@schema("public")
@@ -587,6 +591,93 @@ model HistoricalData {
   @@index([timestamp])
   @@schema("public")
 }
+
+// ─── Phase 5: Gamification ───────────────────────────────────────────────────
+
+enum AchievementCategory {
+  TRADING
+  CONSISTENCY
+  RISK
+  SOCIAL
+  MILESTONE
+
+  @@schema("public")
+}
+
+enum AchievementRarity {
+  COMMON
+  UNCOMMON
+  RARE
+  EPIC
+  LEGENDARY
+
+  @@schema("public")
+}
+
+model UserStats {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  xp             Int      @default(0)
+  level          Int      @default(1)
+  totalTrades    Int      @default(0)
+  winRate        Float    @default(0)
+  avgRR          Float    @default(0)
+  bestStreak     Int      @default(0)
+  currentStreak  Int      @default(0)
+  totalPnl       Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([xp(sort: Desc)])
+  @@index([userId])
+  @@schema("public")
+}
+
+model Achievement {
+  id               String              @id
+  title            String
+  description      String
+  icon             String
+  category         AchievementCategory
+  rarity           AchievementRarity
+  xp               Int                 @default(0)
+  condition        Json                @default("{}")
+  createdAt        DateTime            @default(now())
+  userAchievements UserAchievement[]
+
+  @@schema("public")
+}
+
+model UserAchievement {
+  id            String      @id @default(uuid())
+  userId        String
+  achievementId String
+  earnedAt      DateTime    @default(now())
+  notified      Boolean     @default(false)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@schema("public")
+}
+
+model Streak {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  current      Int      @default(0)
+  longest      Int      @default(0)
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@schema("public")
+}
+
+// ─── Enums (existing) ────────────────────────────────────────────────────────
 
 enum PostType {
   FEATURE_REQUEST
