@@ -80,7 +80,13 @@ export default {
       title: 'Journal de Trading',
       placeholder: 'Écrivez vos pensées et réflexions sur votre trading ici...',
       save: 'Enregistrer',
-      editorPlaceholder: 'Commencez à écrire...'
+      editorPlaceholder: 'Commencez à écrire...',
+      exportPdf: 'Exporter en PDF',
+      exportPdfSuccess: 'Le PDF du journal a été exporté avec succès.',
+      exportPdfError: 'Échec de l\'export du PDF du journal.',
+      entrySectionTitle: 'Entrée de journal',
+      tradeSummaryTitle: 'Résumé de trading',
+      tradeDetailsTitle: 'Détails des trades'
     },
     tags: {
       title: 'Tags de Session',
@@ -116,6 +122,7 @@ export default {
       title: 'Statistiques de trading',
       winningTrades: 'Trades gagnants',
       losingTrades: 'Trades perdants',
+      tradesCount: 'Nombre de trades',
       totalPnL: 'P&L total',
       winRate: 'Taux de réussite',
       symbol: 'Symbole',
