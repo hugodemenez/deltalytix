@@ -21,7 +21,7 @@ on:
           - update-docs
 
 jobs:
-  cursor-automation:
+  cursor-review:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -53,6 +53,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           agent -p --model auto --trust --output-format text \
             "Review the changes in this pull request. Focus on:
