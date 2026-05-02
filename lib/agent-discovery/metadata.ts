@@ -1,15 +1,14 @@
 import type { NextRequest } from "next/server";
+import { getRequestOrigin, getSiteOrigin } from "@/lib/site-url";
 
 export const SITE_NAME = "Deltalytix";
-export const DEFAULT_ORIGIN = "https://deltalytix.com";
 
 export function getOrigin(request?: NextRequest | Request) {
   if (request) {
-    const url = new URL(request.url);
-    return `${url.protocol}//${url.host}`;
+    return getRequestOrigin(request.headers);
   }
 
-  return process.env.NEXT_PUBLIC_BASE_URL ?? DEFAULT_ORIGIN;
+  return getSiteOrigin();
 }
 
 export function absoluteUrl(path: string, request?: NextRequest | Request) {

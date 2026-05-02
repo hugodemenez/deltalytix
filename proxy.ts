@@ -10,9 +10,10 @@ import {
 
 // Maintenance mode flag - Set to true to enable maintenance mode
 const MAINTENANCE_MODE = false
+const LOCALES = ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo"]
 
 const I18nMiddleware = createI18nMiddleware({
-  locales: ["en", "fr", "de", "es", "it", "pt", "vi", "hi", "ja", "zh", "yo"],
+  locales: LOCALES,
   defaultLocale: "en",
   urlMappingStrategy: "rewrite",
 })
@@ -34,6 +35,28 @@ const HOMEPAGE_PATHS = new Set([
 
 function isHomepage(pathname: string) {
   return HOMEPAGE_PATHS.has(pathname.replace(/\/$/, "") || "/")
+}
+
+function withoutLocale(pathname: string) {
+  const segments = pathname.split("/")
+  const locale = segments[1]
+
+  if (LOCALES.includes(locale)) {
+    return `/${segments.slice(2).join("/")}`.replace(/\/$/, "") || "/"
+  }
+
+  return pathname.replace(/\/$/, "") || "/"
+}
+
+function isProtectedDashboardPath(pathname: string) {
+  const normalizedPathname = withoutLocale(pathname)
+
+  return (
+    normalizedPathname === "/dashboard" ||
+    normalizedPathname.startsWith("/dashboard/") ||
+    normalizedPathname === "/teams/dashboard" ||
+    normalizedPathname.startsWith("/teams/dashboard/")
+  )
 }
 
 function acceptsMarkdown(request: NextRequest) {
@@ -256,7 +279,7 @@ export default async function proxy(req: NextRequest) {
   })
 
   // Maintenance mode check
-  if (MAINTENANCE_MODE && !pathname.includes("/maintenance") && pathname.includes("/dashboard")) {
+  if (MAINTENANCE_MODE && !pathname.includes("/maintenance") && isProtectedDashboardPath(pathname)) {
     return NextResponse.redirect(new URL("/maintenance", req.url))
   }
 
@@ -276,7 +299,7 @@ export default async function proxy(req: NextRequest) {
 
   // Authentication checks with better error handling
   if (!user || error) {
-    const isPublicRoute = !pathname.includes("/dashboard")
+    const isPublicRoute = !isProtectedDashboardPath(pathname)
     if (!isPublicRoute) {
       const encodedSearchParams = `${pathname.substring(1)}${req.nextUrl.search}`
       const authUrl = new URL("/authentication", req.url)
