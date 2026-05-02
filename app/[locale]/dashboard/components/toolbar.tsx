@@ -193,7 +193,8 @@ export function Toolbar({
         <motion.div
           ref={toolbarRef}
           className={cn(
-            "fixed inset-x-0 mx-auto z-10 w-fit max-w-[calc(100vw-1rem)] px-2 sm:px-0",
+            "fixed inset-x-0 mx-auto z-10 max-w-[calc(100vw-1rem)] px-2 sm:px-0",
+            useCompactLayout ? "w-full sm:w-fit" : "w-fit",
             isConsentVisible ? "bottom-36 sm:bottom-20" : "bottom-4"
           )}
           style={{
@@ -214,7 +215,7 @@ export function Toolbar({
             className={cn(
               "flex items-center justify-center bg-background/95 border shadow-lg relative",
               useCompactLayout
-                ? "max-w-full flex-wrap gap-2 rounded-3xl px-2.5 py-2"
+                ? "max-h-[calc(100dvh-2rem)] max-w-full flex-wrap gap-2 overflow-y-auto rounded-3xl px-2.5 py-2"
                 : "gap-4 rounded-full p-3"
             )}
           >
@@ -237,13 +238,13 @@ export function Toolbar({
               )}
             </Button>
 
-            <ShareButton currentLayout={currentLayout} />
+            <ShareButton currentLayout={currentLayout} compact={useCompactLayout} />
 
-            <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} />
+            <AddWidgetSheet onAddWidget={onAddWidget} isCustomizing={isCustomizing} compact={useCompactLayout} />
 
             <FilterCommandMenu
               variant="toolbar"
-              className={cn(useCompactLayout ? "min-w-0 flex-1 basis-[11rem]" : "w-auto")}
+              className={cn(useCompactLayout ? "min-w-0 flex-1 basis-full sm:basis-44" : "w-auto")}
               compactBreakpoint={1100}
             />
 

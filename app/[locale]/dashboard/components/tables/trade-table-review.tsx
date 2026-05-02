@@ -1259,12 +1259,12 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
 
   return (
     <Card
-      className="h-full flex flex-col w-full"
+      className="h-full flex min-w-0 flex-col w-full"
       style={cardStyle}
     >
       {showHeader && (
         <CardHeader className="border-b shrink-0 p-3 sm:p-4">
-        <div className="flex w-full flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex w-full min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-center gap-1.5">
             <CardTitle className="line-clamp-1 text-base">
               {t("trade-table.title")}
@@ -1280,13 +1280,13 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
               </Tooltip>
             </TooltipProvider>
           </div>
-          <div className="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+          <div className="grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 xl:flex xl:w-auto xl:flex-wrap xl:items-center xl:justify-end">
             {selectedTrades.length > 0 && (
               <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="destructive"
-                    className="h-10 max-w-full font-normal whitespace-nowrap"
+                    className="h-10 w-full max-w-full font-normal whitespace-nowrap xl:w-auto"
                     onClick={() => setShowDeleteDialog(true)}
                   >
                     <Trash className="mr-2 h-4 w-4" />
@@ -1316,7 +1316,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             {config?.groupTrades !== false && selectedTrades.length >= 2 && (
               <Button
                 variant="outline"
-                className="h-10 max-w-full font-normal whitespace-nowrap"
+                className="h-10 w-full max-w-full font-normal whitespace-nowrap xl:w-auto"
                 onClick={handleGroupTrades}
               >
                 {t("trade-table.groupTrades")}
@@ -1325,7 +1325,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
             {config?.groupTrades !== false && selectedTrades.length > 0 && (
               <Button
                 variant="outline"
-                className="h-10 max-w-full font-normal whitespace-nowrap"
+                className="h-10 w-full max-w-full font-normal whitespace-nowrap xl:w-auto"
                 onClick={handleUngroupTrades}
               >
                 {t("trade-table.ungroupTrades")}
@@ -1338,7 +1338,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                   handleGroupingModeChange(value)
                 }
               >
-                <SelectTrigger className="w-full min-w-[min(100%,180px)] sm:w-auto sm:min-w-[180px] max-w-full sm:max-w-[250px]">
+                <SelectTrigger className="w-full min-w-0 max-w-full xl:w-[180px] xl:max-w-[250px]">
                   <SelectValue
                     placeholder={t("trade-table.groupingMode.label")}
                     className="truncate"
@@ -1365,7 +1365,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                 }
                 disabled={groupingMode !== "time"}
               >
-                <SelectTrigger className="w-full min-w-[min(100%,180px)] sm:w-auto sm:min-w-[180px] max-w-full sm:max-w-[250px]">
+                <SelectTrigger className="w-full min-w-0 max-w-full xl:w-[180px] xl:max-w-[250px]">
                   <div className="flex items-center w-full">
                     <TooltipProvider>
                       <Tooltip>
@@ -1417,8 +1417,11 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
       </CardHeader>
       )}
       <CardContent className="flex-1 min-h-0 overflow-auto p-0">
-        <div className="relative w-full min-w-fit">
-          <table className="w-full border-separate border-spacing-0 caption-bottom text-sm">
+        <div className="relative w-full min-w-max">
+          <table
+            className="w-full border-separate border-spacing-0 caption-bottom text-sm"
+            style={{ minWidth: table.getTotalSize() }}
+          >
             <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr
@@ -1428,7 +1431,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
                     {headerGroup.headers.map((header) => (
                       <th
                         key={header.id}
-                        className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l h-12 align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0"
+                        className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l h-12 align-middle text-muted-foreground [&:has([role=checkbox])]:pr-0"
                         style={{ width: header.getSize() }}
                       >
                         {header.isPlaceholder
@@ -1598,21 +1601,22 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           </table>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col items-start gap-3 border-t bg-background px-3 py-3 sm:px-4 md:flex-row md:items-center md:justify-between">
+      <CardFooter className="flex flex-col items-start gap-3 border-t bg-background px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="text-sm text-muted-foreground">
           {t("trade-table.totalTrades", { count: groupedTrades.length })}
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
+        <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap lg:w-auto lg:justify-end">
           <Button
             variant="outline"
             size="sm"
+            className="min-w-0"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
             <ChevronLeft className="h-4 w-4" />
             {!isCompactScreen && t("trade-table.previous")}
           </Button>
-          <span className="text-sm whitespace-nowrap">
+          <span className="col-span-2 text-center text-sm whitespace-nowrap sm:col-span-1 sm:text-left">
             {t("trade-table.pageInfo", {
               current: table.getState().pagination.pageIndex + 1,
               total: table.getPageCount(),
@@ -1621,6 +1625,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           <Button
             variant="outline"
             size="sm"
+            className="min-w-0"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
@@ -1630,7 +1635,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 min-w-[120px] sm:flex-none"
+            className="min-w-0 sm:flex-none"
             onClick={() => {
               const newPageSize = pageSize + 10;
               handlePageSizeChange(newPageSize);
@@ -1642,7 +1647,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 min-w-[150px] sm:w-[180px]"
+            className="min-w-0 sm:w-[180px]"
             onClick={() => {
               handlePageSizeChange(50);
               table.resetPageSize();
@@ -1654,7 +1659,7 @@ export function TradeTableReview({ tradesParam, config }: TradeTableReviewProps)
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 min-w-[130px] sm:flex-none"
+            className="min-w-0 sm:flex-none"
             onClick={() => {
               const maxPageSize = groupedTrades.length;
               handlePageSizeChange(maxPageSize);

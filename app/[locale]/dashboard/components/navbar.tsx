@@ -34,7 +34,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="sticky py-2 top-0 left-0 right-0 flex flex-col text-primary bg-background/80 backdrop-blur-md border-b shadow-xs w-full z-1">
+      <nav className="sticky py-2 top-0 left-0 right-0 z-40 flex w-full flex-col border-b bg-background/80 text-primary shadow-xs backdrop-blur-md">
         <div className="flex items-center justify-between px-3 sm:px-6 lg:px-10 h-16 gap-3 sm:gap-4">
           <div className="flex items-center gap-x-4">
             <div className="flex flex-col items-center">

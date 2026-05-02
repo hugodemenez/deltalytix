@@ -364,9 +364,12 @@ function AccountsTableSection({
   }
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0">
       <div className="overflow-x-auto" ref={tableWrapperRef}>
-        <table className="w-full border-separate border-spacing-0 text-sm">
+        <table
+          className="w-full border-separate border-spacing-0 text-sm"
+          style={{ minWidth: table.getTotalSize() }}
+        >
           <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs shadow-xs border-b [&_tr]:border-b">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr
@@ -376,7 +379,7 @@ function AccountsTableSection({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="whitespace-nowrap px-3 py-2 text-left text-sm font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l align-middle text-muted-foreground"
+                    className="whitespace-nowrap px-2 py-2 text-left text-xs font-semibold bg-muted/90 border-r border-border last:border-r-0 first:border-l align-middle text-muted-foreground sm:px-3 sm:text-sm"
                     style={{ width: header.getSize() }}
                   >
                     {header.isPlaceholder
@@ -401,7 +404,7 @@ function AccountsTableSection({
                     {table.getVisibleLeafColumns().map((column) => (
                       <td
                         key={`${entry.summary.id}-${column.id}`}
-                        className="px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle"
+                        className="px-2 py-2 text-xs border-r border-border/50 last:border-r-0 first:border-l align-middle sm:px-3 sm:text-sm"
                         style={{ width: column.getSize() }}
                       >
                         {renderSummaryCell(column.id, entry.summary)}
@@ -434,7 +437,7 @@ function AccountsTableSection({
                     <td
                       key={cell.id}
                       className={cn(
-                        "px-3 py-2 text-sm border-r border-border/50 last:border-r-0 first:border-l align-middle",
+                        "px-2 py-2 text-xs border-r border-border/50 last:border-r-0 first:border-l align-middle sm:px-3 sm:text-sm",
                         row.depth > 0 && cell.column.id === "account" && "pl-6"
                       )}
                       style={{ width: cell.column.getSize() }}
