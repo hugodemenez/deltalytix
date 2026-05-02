@@ -153,10 +153,19 @@ export default async function Page({ params }: PageProps) {
     notFound();
   }
 
+  let adjacentPosts: Awaited<ReturnType<typeof getAdjacentPosts>>;
+
+  try {
+    adjacentPosts = await getAdjacentPosts(slug, locale);
+  } catch (adjacentPostsError) {
+    console.error("Error fetching adjacent post data:", adjacentPostsError);
+    adjacentPosts = { previous: null, next: null };
+  }
+
+  const { previous, next } = adjacentPosts;
   const { meta, content } = post;
   const formattedDate = format(new Date(meta.date), "MMMM d, yyyy");
   const url = siteUrl(`/${locale}/updates/${slug}`);
-  const { previous, next } = await getAdjacentPosts(slug, locale);
 
   // Prepare JSON-LD structured data
   const jsonLd = {

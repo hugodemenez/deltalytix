@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getShared } from "@/server/shared"
 import { SharedPageClient } from "./shared-page-client"
-import { getSiteOrigin, siteUrl } from "@/lib/site-url"
+import { getRequestOrigin, siteUrl } from "@/lib/site-url"
 import { headers } from "next/headers"
 
 interface SharedPageProps {
@@ -15,15 +15,20 @@ interface SharedPageProps {
 export async function generateMetadata({ params }: SharedPageProps): Promise<Metadata> {
   const { locale, slug } = await params
   const requestHeaders = await headers()
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? "https"
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
-  const origin = getSiteOrigin(host ? `${protocol}://${host}` : undefined)
-  const sharedData = await getShared(slug)
+  const origin = getRequestOrigin(requestHeaders)
+  let sharedData: Awaited<ReturnType<typeof getShared>> = null
+
+  try {
+    sharedData = await getShared(slug)
+  } catch (error) {
+    console.error("Error loading shared metadata:", error)
+  }
+
   const title = sharedData?.params.title || "Shared Trading Performance"
   const description =
     sharedData?.params.description ||
     "View this shared Deltalytix trading performance dashboard."
-  const url = siteUrl(`/shared/${slug}`, origin)
+  const url = siteUrl(`/${locale}/shared/${slug}`, origin)
 
   return {
     title,

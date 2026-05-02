@@ -1,12 +1,11 @@
 import type { NextRequest } from "next/server";
-import { getSiteOrigin } from "@/lib/site-url";
+import { getRequestOrigin, getSiteOrigin } from "@/lib/site-url";
 
 export const SITE_NAME = "Deltalytix";
 
 export function getOrigin(request?: NextRequest | Request) {
   if (request) {
-    const url = new URL(request.url);
-    return getSiteOrigin(`${url.protocol}//${url.host}`);
+    return getRequestOrigin(request.headers);
   }
 
   return getSiteOrigin();

@@ -6,7 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { connection } from "next/server";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
-import { getSiteOrigin, siteUrl } from "@/lib/site-url";
+import { getRequestOrigin, siteUrl } from "@/lib/site-url";
 import { headers } from "next/headers";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -21,11 +21,9 @@ export async function generateMetadata({
   const params = searchParams ? await searchParams : undefined;
   const ref = (params?.ref as string) ?? "";
   const requestHeaders = await headers();
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? "https";
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
 
   // Build the dynamic image URL (works locally & in production)
-  const base = getSiteOrigin(host ? `${protocol}://${host}` : undefined);
+  const base = getRequestOrigin(requestHeaders);
   const ogUrl = `${base}/api/og${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`;
 
   return {
