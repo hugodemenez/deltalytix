@@ -5,6 +5,7 @@ import { Prisma } from "@/prisma/generated/prisma/browser";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { Group, Account } from "@/context/data-provider";
 import { Widget } from "@/app/[locale]/dashboard/types/dashboard";
+import { SupportedCurrency } from "@/lib/currency";
 import {
   deleteGroupAction,
   saveGroupAction,
@@ -43,6 +44,8 @@ type UserStore = {
   isSharedView: boolean;
   timezone: string;
   setTimezone: (timezone: string) => void;
+  baseCurrency: SupportedCurrency;
+  setBaseCurrency: (currency: SupportedCurrency) => void;
   setUser: (user: User | null) => void;
   setSupabaseUser: (supabaseUser: SupabaseUser | null) => void;
   setSubscription: (subscription: Subscription | null) => void;
@@ -79,6 +82,8 @@ export const useUserStore = create<UserStore>()(
       isSharedView: false,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       setTimezone: (timezone: string) => set({ timezone }),
+      baseCurrency: "USD",
+      setBaseCurrency: (baseCurrency) => set({ baseCurrency }),
       setUser: (user) => set({ user }),
       setSupabaseUser: (supabaseUser) => set({ supabaseUser }),
       setSubscription: (subscription) =>
@@ -200,6 +205,7 @@ export const useUserStore = create<UserStore>()(
       partialize: (state) => ({
         dashboardLayout: state.dashboardLayout,
         timezone: state.timezone,
+        baseCurrency: state.baseCurrency,
         isMobile: state.isMobile,
         isSharedView: state.isSharedView,
       }),
