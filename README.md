@@ -31,7 +31,31 @@
 - **Comprehensive trade analysis** with decile statistics and pattern recognition
 - **Customizable chart views** supporting multiple timeframes and indicators
 
-<!-- TODO: Add GIF showing dashboard overview with customizable widgets -->
+### 📈 Realtime Market Data
+
+- **Live quotes** via Finnhub WebSocket & REST API
+- **Unrealized P&L widget** in the header — always in sync with open positions
+- **SWR-powered polling hooks** with smart deduplication and caching
+
+### 🧠 Behavioral Analytics
+
+- **Pattern detectors** — revenge trading, overtrading, tilt, FOMO and more
+- **Alert cards panel** with severity levels and actionable insights
+- **Date-filtered API** with auth guard and full unit-test coverage
+
+### 📅 Economic Calendar
+
+- **TradingEconomics / Finnhub events** overlaid on the trading calendar
+- **P&L vs event scatter chart** — correlation analysis with stats
+- **Event detail popovers** showing impact on individual trades
+
+### 🎮 Gamification & Retention
+
+- **XP & leveling system** — earn XP for every trade logged
+- **20 achievements** across 5 categories (consistency, performance, discipline, volume, milestones)
+- **Streak tracking** — daily login and trading streaks with fire indicators
+- **Leaderboard** with privacy-safe display names
+- **Profile badge** in the navbar showing current level and progress
 
 ### 🔗 Multi-Broker Integration
 
@@ -39,8 +63,6 @@
 - **Rithmic sync** via proprietary service integration
 - **Built-in integrations** for FTMO, ProjectX, ATAS, and Interactive Brokers (IBKR)
 - **AI-powered file parsing** for any broker format when specific integration doesn't exist yet
-
-<!-- TODO: Add GIF showing CSV import flow with AI field mapping -->
 
 ### 🤖 AI-Powered Insights
 
@@ -50,14 +72,11 @@
 - **Pattern recognition** for identifying trading opportunities
 - **Rich text editor** with image resizing and table support for structured journaling
 
-<!-- TODO: Add GIF showing AI chat assistant helping with trade analysis -->
-
 ### 🌍 Internationalization
 
 - **Full i18n support** with English and French translations
 - **Extensible translation system** using next-international
 - **Locale-aware formatting** for dates, numbers, and currencies
-- **RTL language support** ready for future expansion
 
 ### ⚡ Modern Technology Stack
 
@@ -66,8 +85,6 @@
 - **TypeScript** for type-safe development
 - **Prisma ORM** for database operations
 - **Supabase** for authentication and real-time features
-
-<!-- TODO: Add GIF showing dark/light theme switching and mobile responsive design -->
 
 ---
 
@@ -94,6 +111,7 @@
 
 - **Payments**: Stripe integration with webhooks
 - **AI/ML**: OpenAI API for analysis and field mapping
+- **Market Data**: Finnhub (realtime quotes, economic events)
 - **Storage**: Supabase Storage for file uploads
 - **Broker Syncs**: Tradovate API, Rithmic proprietary service
 - **Platform Integrations**: FTMO, ProjectX, ATAS, Interactive Brokers (IBKR)
@@ -124,6 +142,7 @@ Before you begin, ensure you have the following:
 - **Stripe account** (for payment processing)
 - **OpenAI API key** (for AI features)
 - **Discord application** (for OAuth authentication)
+- **Finnhub API key** ([free tier available](https://finnhub.io)) — for realtime quotes & economic calendar
 
 ---
 
@@ -162,6 +181,9 @@ STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 DISCORD_CLIENT_ID=your_discord_client_id
 DISCORD_CLIENT_SECRET=your_discord_client_secret
 
+# Finnhub (realtime quotes & economic calendar)
+FINNHUB_API_KEY=your_finnhub_api_key
+
 # Application
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
@@ -177,6 +199,9 @@ npx prisma db push
 
 # Or run migrations (for production)
 npx prisma migrate dev
+
+# Apply gamification tables
+psql $DATABASE_URL -f prisma/migrations/phase5_gamification.sql
 
 # Seed the database (optional)
 npx prisma db seed
@@ -218,6 +243,12 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 3. Copy Client ID and Client Secret to environment variables
 4. Enable the `identify` and `email` scopes for user authentication
 
+### Finnhub Setup
+
+1. Sign up at [finnhub.io](https://finnhub.io) and get a free API key
+2. Add `FINNHUB_API_KEY` to `.env.local`
+3. Free tier supports 60 req/min — sufficient for development and small-scale production
+
 ### OpenAI Integration
 
 1. Get an API key from OpenAI
@@ -233,29 +264,49 @@ deltalytix/
 ├── app/                    # Next.js App Router
 │   ├── [locale]/          # Internationalized routes
 │   │   ├── dashboard/     # Main dashboard pages
+│   │   │   ├── achievements/  # Gamification achievements page
+│   │   │   └── components/   # Dashboard-specific components
 │   │   ├── admin/         # Admin panel
 │   │   ├── business/      # Business features
 │   │   └── (landing)/     # Marketing pages
 │   └── api/               # API routes
-│       ├── ai/           # AI-powered endpoints
-│       ├── auth/         # Authentication
-│       ├── stripe/       # Payment processing
-│       └── cron/         # Scheduled tasks
+│       ├── ai/            # AI-powered endpoints
+│       ├── auth/          # Authentication
+│       ├── quotes/        # Realtime market quotes (Finnhub)
+│       ├── economic-events/   # Economic calendar events
+│       ├── behavioral-analytics/  # Behavioral pattern analysis
+│       ├── gamification/  # XP, levels, achievements, leaderboard
+│       ├── stripe/        # Payment processing
+│       └── cron/          # Scheduled tasks
 ├── components/            # Reusable React components
 │   ├── ui/               # Base UI components (Radix UI)
+│   ├── realtime/         # Live quotes & unrealized P&L widgets
+│   ├── behavioral/       # Behavioral analytics alert cards
+│   ├── calendar/         # Economic events overlay & correlation
+│   ├── gamification/     # XP bar, badges, achievements, streaks, leaderboard
 │   ├── ai-elements/      # AI-powered components
 │   ├── emails/           # Email templates
-│   ├── tiptap/           # TipTap editor components
-│   └── magicui/          # Custom UI components
+│   └── tiptap/           # TipTap editor components
 ├── server/               # Server-side business logic
+│   └── gamification/     # Server actions: recalcStats, grantAchievement
 ├── store/                # Zustand state management
-├── prisma/               # Database schema and migrations
-├── locales/              # Internationalization files (EN/FR)
-├── lib/                  # Utility functions
+│   └── gamification-store.ts  # Achievement toast queue
 ├── hooks/                # Custom React hooks
-├── context/              # React Context providers
+│   ├── use-realtime-quotes.ts
+│   ├── use-unrealized-pnl.ts
+│   ├── use-behavioral-analytics.ts
+│   ├── use-economic-events.ts
+│   └── use-gamification.ts
+├── lib/                  # Utility functions & clients
+│   ├── finnhub.ts        # Finnhub REST/WS client
+│   ├── economic-calendar.ts  # Economic events client
+│   ├── behavioral-analytics.ts  # Pattern detectors
+│   └── gamification/     # XP formulas, achievements catalog
+├── prisma/               # Database schema and migrations
+│   └── migrations/
+│       └── phase5_gamification.sql  # UserStats, Achievement, Streak, Referral
+├── locales/              # Internationalization files (EN/FR)
 ├── docs/                 # Feature documentation
-│   └── JOURNAL_EDITOR.md # Journal editor feature guide
 └── content/              # MDX content for updates
 ```
 
@@ -349,10 +400,6 @@ This project is licensed under the **Creative Commons Attribution-NonCommercial 
 - ❌ **You cannot use this software for commercial purposes**
 - ❌ **You cannot distribute this software commercially without permission**
 
-### What This Means:
-
-This license allows you to use Deltalytix for personal, educational, and non-commercial purposes. You can modify and share the code as long as you give proper attribution and don't use it commercially.
-
 **For commercial licensing options, please contact us.**
 
 Read the full license text in the [LICENSE](LICENSE) file.
@@ -392,10 +439,7 @@ This project builds upon many excellent open source libraries:
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS
 - [Framer Motion](https://framer.com/motion/) - Animation library
 - [Radix UI](https://radix-ui.com/) - Accessible component primitives
-
-### Inspiration
-
-Deltalytix was inspired by the need for better trading analytics tools in the open source community.
+- [Finnhub](https://finnhub.io/) - Market data provider
 
 ---
 
@@ -422,16 +466,23 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 - [x] **Account Configurator Improvements** - Search functionality for prop firms, reset date consideration, and group management
 - [x] **Automated Journaling System** - AI-assisted trade journaling that focuses on mistakes and successes
 - [x] **Collaborative AI Assistant** - AI Trading Coach with data-aware conversations, pattern recognition, and behavioral insights
+- [x] **Realtime Market Data** *(Phase 2)* — Finnhub quotes, unrealized P&L widget, live polling hooks
+- [x] **Behavioral Analytics** *(Phase 3)* — Revenge trading, overtrading, tilt & FOMO detectors with alert panel
+- [x] **Economic Calendar** *(Phase 4)* — Event overlays on calendar, P&L vs event correlation scatter, event detail popovers
+- [x] **Gamification** *(Phase 5)* — XP leveling, 20 achievements, daily streaks, leaderboard, profile badge in navbar
 
 ### 🔄 Currently In Development
 
-- [ ] **Mobile Optimization** - Fully responsive design with mobile-specific Enhancements
-- [ ] **On premise deployment** - Dockerized version for self-hosting (uses postgres container)
+- [ ] **Performance Center** *(Phase 6)* — Deep analytics: win rate by time/instrument/weekday, MAE/MFE, drawdown, period comparison, PDF/CSV export
+- [ ] **Mobile Optimization** — Fully responsive design with mobile-specific enhancements
+- [ ] **On premise deployment** — Dockerized version for self-hosting (uses postgres container)
 
 ### 📋 Upcoming Features (Q2-Q3 2026)
 
-- [ ] **Enhanced Journaling Experience** - Session-based analysis with automated insights on trading patterns
-- [ ] **Market Data Integration** - Databento connection for real-time market insights and context
+- [ ] **Trade Review & Playbook** *(Phase 7-8)* — Setup library, execution quality scoring, per-setup win rate & expectancy
+- [ ] **Risk Management Dashboard** *(Phase 9)* — Daily loss limit tracker, position sizing calculator, real-time drawdown alerts
+- [ ] **Enhanced Journaling Experience** — Session-based analysis with automated insights on trading patterns
+- [ ] **Market Data Integration** — Databento connection for real-time market insights and context
 
 ### 🚀 Long-term Vision (2027+)
 
@@ -440,14 +491,15 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
 - [ ] **Advanced Market Analytics** - Deep market insights powered by Databento data feeds
 - [ ] **White-Label Solutions** - Customizable platform for trading firms and educational institutions
 - [ ] **Advanced Risk Management** - Real-time alerts and automated risk monitoring
+- [ ] **Mobile PWA** — Offline-first cache, push notifications for achievements and streaks
 - [ ] **Portfolio Optimization Tools** - Modern portfolio theory and risk-adjusted returns
 
 ### 🎯 Strategic Focus Areas
 
-- **Trader-Centric Development** - All features designed specifically for individual traders
-- **AI-Human Collaboration** - Seamless integration of AI insights into natural trading workflow
-- **Automated Learning** - Systems that help traders identify and learn from their patterns
-- **Market Context Integration** - Connecting trading performance to broader market conditions
+- **Trader-Centric Development** — All features designed specifically for individual traders
+- **AI-Human Collaboration** — Seamless integration of AI insights into natural trading workflow
+- **Automated Learning** — Systems that help traders identify and learn from their patterns
+- **Market Context Integration** — Connecting trading performance to broader market conditions
 
 ---
 
@@ -459,4 +511,3 @@ Deltalytix was inspired by the need for better trading analytics tools in the op
     <a href="https://deltalytix.app">Website</a>
   </p>
 </div>
-

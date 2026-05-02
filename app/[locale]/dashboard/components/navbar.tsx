@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { Globe, LayoutDashboard, ChevronDown } from "lucide-react"
+import { Globe, LayoutDashboard, ChevronDown, BarChart2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Logo } from '@/components/logo'
 import Link from 'next/link'
@@ -19,10 +19,13 @@ import { useModalStateStore } from '@/store/modal-state-store'
 import { useUserStore } from '@/store/user-store'
 import UserMenu from './user-menu'
 import ReferralButton from './referral-button'
+import { ProfileBadge } from '@/components/gamification/profile-badge'
+import { usePathname } from 'next/navigation'
 
 export default function Navbar() {
-  const  user = useUserStore(state => state.supabaseUser)
+  const user = useUserStore(state => state.supabaseUser)
   const t = useI18n()
+  const pathname = usePathname()
   const [shortcutsDialogOpen, setShortcutsDialogOpen] = useState(false)
   const [showAccountNumbers, setShowAccountNumbers] = useState(true)
   const [isLogoPopoverOpen, setIsLogoPopoverOpen] = useState(false)
@@ -63,7 +66,11 @@ export default function Navbar() {
                     <div className="grid gap-2">
                       <Link 
                         href="/dashboard" 
-                        className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
+                        className={`flex items-center gap-2 text-sm p-2 rounded-md transition-colors ${
+                          pathname.endsWith('/dashboard')
+                            ? 'bg-accent text-accent-foreground font-medium'
+                            : 'hover:bg-accent hover:text-accent-foreground'
+                        }`}
                         onClick={() => setIsLogoPopoverOpen(false)}
                       >
                         <div className="shrink-0 w-4 h-4">
@@ -72,8 +79,26 @@ export default function Navbar() {
                         {t('landing.navbar.logo.dashboard')}
                       </Link>
                       <Link 
+                        href="/dashboard/performance" 
+                        className={`flex items-center gap-2 text-sm p-2 rounded-md transition-colors ${
+                          pathname.includes('/performance')
+                            ? 'bg-accent text-accent-foreground font-medium'
+                            : 'hover:bg-accent hover:text-accent-foreground'
+                        }`}
+                        onClick={() => setIsLogoPopoverOpen(false)}
+                      >
+                        <div className="shrink-0 w-4 h-4">
+                          <BarChart2 className="h-full w-full" />
+                        </div>
+                        Performance Center
+                      </Link>
+                      <Link 
                         href="/" 
-                        className="flex items-center gap-2 text-sm hover:bg-accent hover:text-accent-foreground p-2 rounded-md transition-colors"
+                        className={`flex items-center gap-2 text-sm p-2 rounded-md transition-colors ${
+                          pathname === '/'
+                            ? 'bg-accent text-accent-foreground font-medium'
+                            : 'hover:bg-accent hover:text-accent-foreground'
+                        }`}
                         onClick={() => setIsLogoPopoverOpen(false)}
                       >
                         <div className="shrink-0 w-4 h-4">
@@ -97,6 +122,7 @@ export default function Navbar() {
               <ImportButton />
             </div>
             <div className="flex items-center gap-2">
+              <ProfileBadge className="hidden lg:flex" />
               <ReferralButton />
               <UserMenu />
             </div>
