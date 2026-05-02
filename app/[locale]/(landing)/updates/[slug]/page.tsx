@@ -140,27 +140,33 @@ export default async function Page({ params }: PageProps) {
   const { slug, locale } = resolvedParams;
   setStaticParamsLocale(locale);
 
-  let post: Awaited<ReturnType<typeof getPost>>;
+  const [postResult, adjacentPostsResult] = await Promise.allSettled([
+    getPost(slug, locale),
+    getAdjacentPosts(slug, locale),
+  ]);
 
-  try {
-    post = await getPost(slug, locale);
-  } catch (postError) {
-    console.error("Error fetching post data:", postError);
+  if (postResult.status === "rejected") {
+    console.error("Error fetching post data:", postResult.reason);
     notFound();
   }
 
+  const post = postResult.value;
   if (!post) {
     notFound();
   }
 
-  let adjacentPosts: Awaited<ReturnType<typeof getAdjacentPosts>>;
-
-  try {
-    adjacentPosts = await getAdjacentPosts(slug, locale);
-  } catch (adjacentPostsError) {
-    console.error("Error fetching adjacent post data:", adjacentPostsError);
-    adjacentPosts = { previous: null, next: null };
-  }
+  const adjacentPosts =
+    adjacentPostsResult.status === "fulfilled"
+      ? adjacentPostsResult.value
+      : (() => {
+          console.error(
+            "Error fetching adjacent post data:",
+            adjacentPostsResult.reason
+          );
+          return { previous: null, next: null } as Awaited<
+            ReturnType<typeof getAdjacentPosts>
+          >;
+        })();
 
   const { previous, next } = adjacentPosts;
   const { meta, content } = post;
