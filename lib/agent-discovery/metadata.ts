@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 export const SITE_NAME = "Deltalytix";
-export const DEFAULT_ORIGIN = "https://deltalytix.com";
+export const DEFAULT_ORIGIN = `https://${"deltalytix.app"}`;
 
 export function getOrigin(request?: NextRequest | Request) {
   if (request) {

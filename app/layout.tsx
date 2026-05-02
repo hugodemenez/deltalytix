@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import Script from "next/script";
 import { connection } from "next/server";
 import { ScrollLockFix } from "@/components/scroll-lock-fix";
+import { getSiteOrigin, siteUrl } from "@/lib/site-url";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,18 +21,18 @@ export async function generateMetadata({
   const ref = (params?.ref as string) ?? "";
 
   // Build the dynamic image URL (works locally & in production)
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "https://deltalytix.app";
+  const base = getSiteOrigin();
   const ogUrl = `${base}/api/og${ref ? `?ref=${encodeURIComponent(ref)}` : ""}`;
 
   return {
     title: "Deltalytix",
     description: "Next generation trading dashboard",
-    metadataBase: new URL("https://deltalytix.app"),
+    metadataBase: new URL(base),
     alternates: {
-      canonical: "https://deltalytix.app",
+      canonical: siteUrl(),
       languages: {
-        "en-US": "https://deltalytix.app",
-        "fr-FR": "https://deltalytix.app/fr",
+        "en-US": siteUrl(),
+        "fr-FR": siteUrl("/fr"),
       },
     },
     // ---------- OPEN GRAPH ----------

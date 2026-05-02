@@ -1,51 +1,52 @@
 import { MetadataRoute } from 'next'
+import { siteUrl } from '@/lib/site-url'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: 'https://deltalytix.app',
+      url: siteUrl(),
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: 'https://deltalytix.app/about',
+      url: siteUrl('/about'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: 'https://deltalytix.app/pricing',
+      url: siteUrl('/pricing'),
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
     },
     {
-      url: 'https://deltalytix.app/updates',
+      url: siteUrl('/updates'),
       lastModified: new Date(),
       changeFrequency: 'weekly', 
       priority: 0.7,
     },
     {
-      url: 'https://deltalytix.app/support',
+      url: siteUrl('/support'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.6,
     },
     {
-      url: 'https://deltalytix.app/authentication',
+      url: siteUrl('/authentication'),
       lastModified: new Date(),
       changeFrequency: 'yearly',
       priority: 0.6,
     },
     {
-      url: 'https://deltalytix.app/privacy',
+      url: siteUrl('/privacy'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.5,
     },
     {
-      url: 'https://deltalytix.app/terms',
+      url: siteUrl('/terms'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.5,
