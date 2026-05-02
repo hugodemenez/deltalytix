@@ -10,6 +10,8 @@ interface CalendarViewState {
   setSelectedDate: (date: Date | null) => void
   selectedWeekDate: Date | null
   setSelectedWeekDate: (date: Date | null) => void
+  showMaxProfitAndDrawdown: boolean
+  setShowMaxProfitAndDrawdown: (show: boolean) => void
 }
 
 export const useCalendarViewStore = create<CalendarViewState>()(
@@ -20,7 +22,9 @@ export const useCalendarViewStore = create<CalendarViewState>()(
       selectedDate: null,
       setSelectedDate: (date) => set({ selectedDate: date }),
       selectedWeekDate: null,
-      setSelectedWeekDate: (date) => set({ selectedWeekDate: date })
+      setSelectedWeekDate: (date) => set({ selectedWeekDate: date }),
+      showMaxProfitAndDrawdown: true,
+      setShowMaxProfitAndDrawdown: (show) => set({ showMaxProfitAndDrawdown: show })
     }),
     {
       name: "calendar-view-store",

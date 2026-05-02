@@ -85,6 +85,14 @@ function parseHistoricalHostFromTradingWss(wssUrl?: string | null): string {
   }
 }
 
+function buildHistoricalAuthHeaders(accessToken: string): HeadersInit {
+  return {
+    // The report API expects the raw tradingRestReportToken, not a Bearer token.
+    'Authorization': accessToken,
+    'Accept': 'application/json',
+  }
+}
+
 function extractArrayPayload<T>(payload: unknown): T[] {
   if (Array.isArray(payload)) {
     return payload as T[]
@@ -220,14 +228,12 @@ export async function getDxFeedAccounts(
     logger.debug('Fetching accounts from:', url)
 
     const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
-      },
+      headers: buildHistoricalAuthHeaders(accessToken),
     })
 
     if (!response.ok) {
-      logger.warn(`Failed to fetch accounts (status ${response.status})`)
+      const text = await response.text()
+      logger.warn(`Failed to fetch accounts (status ${response.status}): ${text}`)
       return []
     }
 
@@ -391,10 +397,7 @@ export async function getDxFeedTrades(
       tradesUrl.searchParams.set('endDt', endDt.toISOString())
 
       const response = await fetch(tradesUrl.toString(), {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Accept': 'application/json',
-        },
+        headers: buildHistoricalAuthHeaders(accessToken),
       })
 
       if (!response.ok) {

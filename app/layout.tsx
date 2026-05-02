@@ -150,6 +150,89 @@ export default async function RootLayout({
           `}
         </Script>
 
+        <Script id="webmcp-tools" strategy="afterInteractive">
+          {`
+            (function() {
+              var modelContext = navigator.modelContext;
+              if (!modelContext) return;
+
+              var registerTool = modelContext.registerTool || modelContext.provideContext;
+              if (typeof registerTool !== 'function') return;
+
+              var abortController = new AbortController();
+              var publicPages = {
+                home: '/',
+                pricing: '/en/pricing',
+                support: '/en/support',
+                updates: '/en/updates',
+                apiCatalog: '/.well-known/api-catalog',
+                agentSkills: '/.well-known/agent-skills/index.json'
+              };
+
+              function register(definition) {
+                try {
+                  return registerTool.call(modelContext, definition, { signal: abortController.signal });
+                } catch (error) {
+                  try {
+                    return registerTool.call(modelContext, { tools: [definition], signal: abortController.signal });
+                  } catch (_) {
+                    return undefined;
+                  }
+                }
+              }
+
+              register({
+                name: 'deltalytix.discover_resources',
+                description: 'Return public Deltalytix discovery resources for agents.',
+                inputSchema: {
+                  type: 'object',
+                  properties: {},
+                  additionalProperties: false
+                },
+                execute: function() {
+                  return {
+                    resources: {
+                      apiCatalog: new URL('/.well-known/api-catalog', location.origin).toString(),
+                      agentSkills: new URL('/.well-known/agent-skills/index.json', location.origin).toString(),
+                      mcpServerCard: new URL('/.well-known/mcp/server-card.json', location.origin).toString(),
+                      oauthProtectedResource: new URL('/.well-known/oauth-protected-resource', location.origin).toString(),
+                      openidConfiguration: new URL('/.well-known/openid-configuration', location.origin).toString()
+                    }
+                  };
+                }
+              });
+
+              register({
+                name: 'deltalytix.navigate',
+                description: 'Navigate to a public Deltalytix page by key.',
+                inputSchema: {
+                  type: 'object',
+                  properties: {
+                    page: {
+                      type: 'string',
+                      enum: Object.keys(publicPages),
+                      description: 'Public Deltalytix page to open.'
+                    }
+                  },
+                  required: ['page'],
+                  additionalProperties: false
+                },
+                execute: function(input) {
+                  var page = input && input.page;
+                  var path = publicPages[page];
+                  if (!path) {
+                    throw new Error('Unknown Deltalytix page: ' + page);
+                  }
+
+                  var url = new URL(path, location.origin).toString();
+                  location.assign(url);
+                  return { url: url };
+                }
+              });
+            })();
+          `}
+        </Script>
+
         {/* Prevent Google Translate DOM manipulation */}
         <Script id="prevent-google-translate" strategy="beforeInteractive">
           {`

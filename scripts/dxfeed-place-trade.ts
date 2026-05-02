@@ -56,6 +56,13 @@ function extractArrayPayload<T>(payload: unknown): T[] {
   return []
 }
 
+function buildHistoricalAuthHeaders(reportToken: string): HeadersInit {
+  return {
+    Authorization: reportToken,
+    Accept: 'application/json',
+  }
+}
+
 async function auth(): Promise<{
   tradingToken: string
   reportToken: string
@@ -100,10 +107,7 @@ async function auth(): Promise<{
 
 async function fetchHistoricalAccounts(reportToken: string, historicalHost: string) {
   const response = await fetch(`${historicalHost}/api/historical/TradingAccount/List`, {
-    headers: {
-      Authorization: `Bearer ${reportToken}`,
-      Accept: 'application/json',
-    },
+    headers: buildHistoricalAuthHeaders(reportToken),
   })
 
   if (!response.ok) {
@@ -127,10 +131,7 @@ async function fetchHistoricalTrades(
   url.searchParams.set('endDt', endDt.toISOString())
 
   const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${reportToken}`,
-      Accept: 'application/json',
-    },
+    headers: buildHistoricalAuthHeaders(reportToken),
   })
 
   if (!response.ok) {
