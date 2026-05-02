@@ -45,3 +45,27 @@ turn raw trade history into clear insights, better habits, and consistent result
 ## Sharing and collaboration
 - Team dashboards for shared analytics.
 - Public and embed-friendly views for sharing results.
+
+## Cursor Cloud specific instructions
+
+### Services overview
+- **Next.js dev server**: `npm run dev` (port 3000). Single app, not a monorepo.
+- **PostgreSQL 16**: started via `docker compose up db -d` from the repo root. Default creds: `devuser`/`devpass`/`deltalytix_dev`.
+- **Prisma 7**: uses `@prisma/adapter-pg` at runtime (`DATABASE_URL`) and `DIRECT_URL` for CLI migrations via `prisma.config.ts`.
+
+### Key commands
+| Task | Command |
+|---|---|
+| Install deps | `npm install` |
+| Generate Prisma client | `npx prisma generate` |
+| Run migrations | `DIRECT_URL="postgresql://devuser:devpass@localhost:5432/deltalytix_dev" npx prisma migrate dev` |
+| Lint | `npm run lint` (ESLint; expect ~400 pre-existing errors) |
+| Type-check | `npm run typecheck` (`tsc --noEmit` — should pass clean) |
+| Dev server | `npm run dev` |
+
+### Gotchas
+- **`prisma.config.ts` uses `dotenv/config`**, which reads `.env` (not `.env.local`). For Prisma CLI commands (`migrate`, `db push`), either create a `.env` with `DIRECT_URL`/`DATABASE_URL`, or pass them as shell env vars explicitly.
+- **No lockfile is committed**. `npm install` creates `package-lock.json` locally. Do not commit it.
+- **Docker-in-Docker**: the Cloud Agent VM requires `fuse-overlayfs` storage driver and `iptables-legacy` for Docker to work. The update script handles Docker daemon startup.
+- **Supabase auth**: without real Supabase keys, the landing page and public routes work, but login/dashboard routes requiring auth will redirect. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` secrets for full auth flow.
+- **canvas native module**: `npm install` builds the `canvas` package which needs system libs. These are pre-installed in the Cloud Agent VM. If `canvas` build fails, install `build-essential libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev`.
