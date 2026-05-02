@@ -125,138 +125,138 @@ export async function generateMetadata({
 }
 
 export default async function Page({ params }: PageProps) {
+  let resolvedParams: { slug: string; locale: string };
+
   try {
-    const resolvedParams = await Promise.resolve(params);
+    resolvedParams = await Promise.resolve(params);
     if (!resolvedParams || !resolvedParams.slug || !resolvedParams.locale) {
-      notFound();
-    }
-
-    const { slug, locale } = resolvedParams;
-    setStaticParamsLocale(locale);
-
-    try {
-      const post = await getPost(slug, locale);
-
-      if (!post) {
-        notFound();
-      }
-
-      const { meta, content } = post;
-      const formattedDate = format(new Date(meta.date), "MMMM d, yyyy");
-      const url = siteUrl(`/${locale}/updates/${slug}`);
-      const { previous, next } = await getAdjacentPosts(slug, locale);
-
-      // Prepare JSON-LD structured data
-      const jsonLd = {
-        "@context": "https://schema.org",
-        "@type": "Article",
-        headline: meta.title,
-        description: meta.description,
-        image: meta.image || "/og-image.png",
-        datePublished: meta.date,
-        dateModified: meta.updatedAt || meta.date,
-        author: {
-          "@type": "Organization",
-          name: "Deltalytix",
-          url: siteUrl(),
-        },
-        publisher: {
-          "@type": "Organization",
-          name: "Deltalytix",
-          logo: {
-            "@type": "ImageObject",
-            url: siteUrl("/logo.png"),
-          },
-        },
-        mainEntityOfPage: {
-          "@type": "WebPage",
-          "@id": url,
-        },
-      };
-
-      return (
-        <>
-          <Script id="json-ld" type="application/ld+json">
-            {JSON.stringify(jsonLd)}
-          </Script>
-
-          <article
-            className="max-w-4xl mx-auto px-4 pt-16 pb-16 sm:px-6 lg:px-8"
-            itemScope
-            itemType="https://schema.org/Article"
-          >
-            <UpdatesNavigation
-              previous={previous}
-              next={next}
-              locale={locale}
-              position="top"
-            />
-            <div className="mb-8">
-              <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-                <time dateTime={meta.date} itemProp="datePublished">
-                  {formattedDate}
-                </time>
-                <Badge
-                  variant={
-                    meta.status === "in-progress"
-                      ? "secondary"
-                      : meta.status === "completed"
-                        ? "default"
-                        : "outline"
-                  }
-                >
-                  {meta.status === "in-progress"
-                    ? "In Progress"
-                    : meta.status === "completed"
-                      ? "Completed"
-                      : "Upcoming"}
-                </Badge>
-              </div>
-            </div>
-
-            {meta.image && (
-              <div className="mb-8 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-                <Image
-                  src={meta.image}
-                  alt={meta.title}
-                  width={1200}
-                  height={600}
-                  className="w-full h-auto"
-                  priority
-                  itemProp="image"
-                />
-              </div>
-            )}
-
-            <div
-              className="prose prose-neutral dark:prose-invert max-w-none 
-              prose-pre:p-0 prose-pre:bg-transparent 
-              prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-neutral-100 prose-code:text-neutral-800 
-              dark:prose-code:bg-neutral-800 dark:prose-code:text-neutral-200
-              prose-table:w-full prose-table:mt-6 prose-table:mb-8
-              prose-thead:border-b prose-thead:border-neutral-200 dark:prose-thead:border-neutral-800
-              prose-th:px-6 prose-th:py-3 prose-th:text-left prose-th:font-semibold
-              prose-td:px-6 prose-td:py-3 prose-td:border-b prose-td:border-neutral-200 dark:prose-td:border-neutral-800
-              prose-tr:transition-colors prose-tr:hover:bg-neutral-50 dark:prose-tr:hover:bg-neutral-900/30"
-              itemProp="articleBody"
-            >
-              {content}
-            </div>
-            <UpdatesNavigation
-              previous={previous}
-              next={next}
-              locale={locale}
-            />
-            <MdxSidebar />
-          </article>
-        </>
-      );
-    } catch (postError) {
-      console.error("Error fetching post data:", postError);
       notFound();
     }
   } catch (paramError) {
     console.error("Error resolving params:", paramError);
     notFound();
   }
+
+  const { slug, locale } = resolvedParams;
+  setStaticParamsLocale(locale);
+
+  let post: Awaited<ReturnType<typeof getPost>>;
+
+  try {
+    post = await getPost(slug, locale);
+  } catch (postError) {
+    console.error("Error fetching post data:", postError);
+    notFound();
+  }
+
+  if (!post) {
+    notFound();
+  }
+
+  const { meta, content } = post;
+  const formattedDate = format(new Date(meta.date), "MMMM d, yyyy");
+  const url = siteUrl(`/${locale}/updates/${slug}`);
+  const { previous, next } = await getAdjacentPosts(slug, locale);
+
+  // Prepare JSON-LD structured data
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: meta.title,
+    description: meta.description,
+    image: meta.image || "/og-image.png",
+    datePublished: meta.date,
+    dateModified: meta.updatedAt || meta.date,
+    author: {
+      "@type": "Organization",
+      name: "Deltalytix",
+      url: siteUrl(),
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Deltalytix",
+      logo: {
+        "@type": "ImageObject",
+        url: siteUrl("/logo.png"),
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": url,
+    },
+  };
+
+  return (
+    <>
+      <Script id="json-ld" type="application/ld+json">
+        {JSON.stringify(jsonLd)}
+      </Script>
+
+      <article
+        className="max-w-4xl mx-auto px-4 pt-16 pb-16 sm:px-6 lg:px-8"
+        itemScope
+        itemType="https://schema.org/Article"
+      >
+        <UpdatesNavigation
+          previous={previous}
+          next={next}
+          locale={locale}
+          position="top"
+        />
+        <div className="mb-8">
+          <div className="flex items-center gap-4 text-sm text-neutral-600 dark:text-neutral-400 mb-4">
+            <time dateTime={meta.date} itemProp="datePublished">
+              {formattedDate}
+            </time>
+            <Badge
+              variant={
+                meta.status === "in-progress"
+                  ? "secondary"
+                  : meta.status === "completed"
+                    ? "default"
+                    : "outline"
+              }
+            >
+              {meta.status === "in-progress"
+                ? "In Progress"
+                : meta.status === "completed"
+                  ? "Completed"
+                  : "Upcoming"}
+            </Badge>
+          </div>
+        </div>
+
+        {meta.image && (
+          <div className="mb-8 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+            <Image
+              src={meta.image}
+              alt={meta.title}
+              width={1200}
+              height={600}
+              className="w-full h-auto"
+              priority
+              itemProp="image"
+            />
+          </div>
+        )}
+
+        <div
+          className="prose prose-neutral dark:prose-invert max-w-none
+              prose-pre:p-0 prose-pre:bg-transparent
+              prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:bg-neutral-100 prose-code:text-neutral-800
+              dark:prose-code:bg-neutral-800 dark:prose-code:text-neutral-200
+              prose-table:w-full prose-table:mt-6 prose-table:mb-8
+              prose-thead:border-b prose-thead:border-neutral-200 dark:prose-thead:border-neutral-800
+              prose-th:px-6 prose-th:py-3 prose-th:text-left prose-th:font-semibold
+              prose-td:px-6 prose-td:py-3 prose-td:border-b prose-td:border-neutral-200 dark:prose-td:border-neutral-800
+              prose-tr:transition-colors prose-tr:hover:bg-neutral-50 dark:prose-tr:hover:bg-neutral-900/30"
+          itemProp="articleBody"
+        >
+          {content}
+        </div>
+        <UpdatesNavigation previous={previous} next={next} locale={locale} />
+        <MdxSidebar />
+      </article>
+    </>
+  );
 }
