@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from 'react'
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
@@ -36,6 +36,7 @@ const DxFeedSyncContext = createContext<DxFeedSyncContextType | undefined>(undef
 
 export function DxFeedSyncContextProvider({ children }: { children: ReactNode }) {
   const [isAutoSyncing, setIsAutoSyncing] = useState(false)
+  const isAutoSyncingRef = useRef(false)
   const [accounts, setAccounts] = useState<DxFeedSyncAccount[]>([])
   const [syncInterval, setSyncInterval] = useState(15)
   const [enableAutoSync, setEnableAutoSync] = useState(false)
@@ -167,8 +168,9 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
   )
 
   const performSyncForAllAccounts = useCallback(async () => {
-    if (isAutoSyncing) return
+    if (isAutoSyncingRef.current) return
 
+    isAutoSyncingRef.current = true
     setIsAutoSyncing(true)
 
     try {
@@ -182,12 +184,16 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
     } catch (error) {
       console.error('Error during bulk sync:', error)
     } finally {
+      isAutoSyncingRef.current = false
       setIsAutoSyncing(false)
     }
-  }, [isAutoSyncing, accounts, performSyncForAccount])
+  }, [accounts, performSyncForAccount])
 
   const checkAndPerformSyncs = useCallback(async () => {
-    if (!enableAutoSync || isAutoSyncing) return
+    if (!enableAutoSync || isAutoSyncingRef.current) return
+
+    isAutoSyncingRef.current = true
+    setIsAutoSyncing(true)
 
     try {
       const now = Date.now()
@@ -204,8 +210,11 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       }
     } catch (error) {
       console.warn('Error during dxfeed auto-sync check:', error)
+    } finally {
+      isAutoSyncingRef.current = false
+      setIsAutoSyncing(false)
     }
-  }, [enableAutoSync, isAutoSyncing, accounts, syncInterval, performSyncForAccount])
+  }, [enableAutoSync, accounts, syncInterval, performSyncForAccount])
 
   useEffect(() => {
     if (!enableAutoSync) return
