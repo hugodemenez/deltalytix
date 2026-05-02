@@ -2,7 +2,8 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getShared } from "@/server/shared"
 import { SharedPageClient } from "./shared-page-client"
-import { siteUrl } from "@/lib/site-url"
+import { getSiteOrigin, siteUrl } from "@/lib/site-url"
+import { headers } from "next/headers"
 
 interface SharedPageProps {
   params: Promise<{
@@ -13,12 +14,16 @@ interface SharedPageProps {
 
 export async function generateMetadata({ params }: SharedPageProps): Promise<Metadata> {
   const { locale, slug } = await params
+  const requestHeaders = await headers()
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? "https"
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
+  const origin = getSiteOrigin(host ? `${protocol}://${host}` : undefined)
   const sharedData = await getShared(slug)
   const title = sharedData?.params.title || "Shared Trading Performance"
   const description =
     sharedData?.params.description ||
     "View this shared Deltalytix trading performance dashboard."
-  const url = siteUrl(`/shared/${slug}`)
+  const url = siteUrl(`/shared/${slug}`, origin)
 
   return {
     title,
@@ -34,7 +39,7 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
       type: "website",
       images: [
         {
-          url: siteUrl(`/${locale}/shared/${slug}/opengraph-image`),
+          url: siteUrl(`/${locale}/shared/${slug}/opengraph-image`, origin),
           width: 1200,
           height: 630,
           alt: title,
@@ -45,7 +50,7 @@ export async function generateMetadata({ params }: SharedPageProps): Promise<Met
       card: "summary_large_image",
       title,
       description,
-      images: [siteUrl(`/${locale}/shared/${slug}/opengraph-image`)],
+      images: [siteUrl(`/${locale}/shared/${slug}/opengraph-image`, origin)],
     },
   }
 }
