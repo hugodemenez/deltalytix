@@ -142,7 +142,7 @@ export function NewsletterPreferencesForm({
                 disabled={isLoading || isSaving}
                 onCheckedChange={(checked) =>
                   setPreferences((prev) => ({
-                    ...prev,
+                    ...(prev ?? defaultPreferences),
                     isActive: checked,
                   }))
                 }
@@ -159,7 +159,7 @@ export function NewsletterPreferencesForm({
                 disabled={isLoading || isSaving}
                 onCheckedChange={(checked) =>
                   setPreferences((prev) => ({
-                    ...prev,
+                    ...(prev ?? defaultPreferences),
                     weeklySummaryEnabled: checked,
                   }))
                 }
@@ -176,7 +176,7 @@ export function NewsletterPreferencesForm({
                 disabled={isLoading || isSaving}
                 onCheckedChange={(checked) =>
                   setPreferences((prev) => ({
-                    ...prev,
+                    ...(prev ?? defaultPreferences),
                     monthlyStatsEnabled: checked,
                   }))
                 }
@@ -193,7 +193,7 @@ export function NewsletterPreferencesForm({
                 disabled={isLoading || isSaving}
                 onCheckedChange={(checked) =>
                   setPreferences((prev) => ({
-                    ...prev,
+                    ...(prev ?? defaultPreferences),
                     renewalNoticeEnabled: checked,
                   }))
                 }
