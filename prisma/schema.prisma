@@ -4,8 +4,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  schemas   = ["public"]
+  provider = "postgresql"
+  schemas  = ["public"]
 }
 
 model Trade {
@@ -148,17 +148,18 @@ model User {
 }
 
 model Synchronization {
-  id             String    @id @default(uuid())
-  userId         String
-  service        String
-  accountId      String
-  lastSyncedAt   DateTime
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  token          String?
-  tokenExpiresAt DateTime?
-  dailySyncTime  DateTime?
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String    @id @default(uuid())
+  userId           String
+  service          String
+  accountId        String
+  lastSyncedAt     DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  token            String?
+  tokenExpiresAt   DateTime?
+  dailySyncTime    DateTime?
+  includedFeeTypes Json?
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, service, accountId])
   @@index([userId])
@@ -338,14 +339,15 @@ model Account {
 }
 
 model Payout {
-  id            String   @id @default(uuid())
-  amount        Float
-  date          DateTime
-  createdAt     DateTime @default(now())
-  status        String   @default("PENDING")
-  accountNumber String
-  accountId     String
-  account       Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id                        String   @id @default(uuid())
+  amount                    Float
+  date                      DateTime
+  createdAt                 DateTime @default(now())
+  status                    String   @default("PENDING")
+  accountNumber             String
+  accountId                 String
+  account                   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  propfirmSharingPercentage Float?   @default(0)
 
   @@index([accountNumber])
   @@schema("public")

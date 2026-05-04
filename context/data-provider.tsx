@@ -14,7 +14,6 @@ import {
   Payout as PrismaPayout,
   DashboardLayout as PrismaDashboardLayout,
   Subscription as PrismaSubscription,
-  Tag,
 } from "@/prisma/generated/prisma/browser";
 import { SharedParams } from "@/server/shared";
 import {
@@ -35,7 +34,6 @@ import {
   deleteAccountAction,
   setupAccountAction,
   savePayoutAction,
-  calculateAccountBalanceAction,
   calculateAccountMetricsAction,
   deleteTradesByIdsAction,
 } from "@/server/accounts";
@@ -47,11 +45,10 @@ import {
   renameGroupAction,
 } from "@/server/groups";
 import { createClient } from "@/lib/supabase";
-import { prisma } from "@/lib/prisma";
 import { signOut, getUserId, updateUserLanguage } from "@/server/auth";
 import { DashboardLayoutWithWidgets, useUserStore } from "@/store/user-store";
 import { useTickDetailsStore } from "@/store/tick-details-store";
-import { useFinancialEventsStore } from "@/store/financial-events-store";
+import { useFinancialEventsStore } from "@/store/widgets/financial-events-store";
 import { useTradesStore } from "@/store/trades-store";
 import { getTradesCache, setTradesCache } from "@/lib/indexeddb/trades-cache";
 import { endOfDay, isValid, parseISO, set, startOfDay } from "date-fns";
@@ -61,10 +58,15 @@ import { useParams } from "next/navigation";
 import { deleteTagAction } from "@/server/tags";
 import { useRouter } from "next/navigation";
 import { useCurrentLocale } from "@/locales/client";
-import { useMoodStore } from "@/store/mood-store";
+import { useMoodStore } from "@/store/widgets/mood-store";
+import { useEquityChartStore } from "@/store/widgets/equity-chart-store";
+import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store";
 import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store";
 import { getSubscriptionData } from "@/server/billing";
+import { getEquityChartDataAction } from "@/server/equity-chart";
 import { defaultLayouts } from "@/lib/default-layouts";
+import { getTimeRangeKey } from "@/lib/time-range";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Types from trades-data.tsx
 type StatisticsProps = {
@@ -188,10 +190,10 @@ export interface Account extends Omit<PrismaAccount, "payouts" | "group"> {
       amount: number;
       date: Date;
       status: string;
+      propfirmSharingPercentage?: number | null;
     };
   }>;
 }
-
 
 // Combined Context Type
 interface DataContextType {
@@ -199,7 +201,6 @@ interface DataContextType {
   refreshTradesOnly: (options?: { force?: boolean }) => Promise<void>;
   refreshUserDataOnly: (options?: { force?: boolean; includeStripe?: boolean }) => Promise<void>;
   refreshAllData: (options?: { force?: boolean }) => Promise<void>;
-  isPlusUser: () => boolean;
   isLoading: boolean;
   isMobile: boolean;
   isSharedView: boolean;
@@ -254,10 +255,6 @@ interface DataContextType {
   saveGroup: (name: string) => Promise<Group | undefined>;
   renameGroup: (groupId: string, name: string) => Promise<void>;
   deleteGroup: (groupId: string) => Promise<void>;
-  moveAccountToGroup: (
-    accountId: string,
-    targetGroupId: string | null
-  ) => Promise<void>;
   moveAccountsToGroup: (
     accountIds: string[],
     targetGroupId: string | null
@@ -273,32 +270,7 @@ interface DataContextType {
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-// Add this hook before the UserDataProvider component
-function useIsMobileDetection() {
-  const [isMobile, setIsMobile] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia("(max-width: 768px)").matches;
-  });
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const mobileQuery = window.matchMedia("(max-width: 768px)");
-    const checkMobile = (e: MediaQueryListEvent | MediaQueryList) =>
-      setIsMobile(e.matches);
-
-    // Check immediately
-    checkMobile(mobileQuery);
-
-    // Add listener for changes
-    mobileQuery.addEventListener("change", checkMobile);
-    return () => mobileQuery.removeEventListener("change", checkMobile);
-  }, []);
-
-  return isMobile;
-}
-
-const supabase = createClient();
 
 export const DataProvider: React.FC<{
   children: React.ReactNode;
@@ -307,12 +279,10 @@ export const DataProvider: React.FC<{
     userId: string;
   };
 }> = ({ children, isSharedView = false, adminView = null }) => {
-  const router = useRouter();
   const params = useParams();
-  const isMobile = useIsMobileDetection();
+  const isMobile = useIsMobile();
 
   // Get store values
-  const user = useUserStore((state) => state.user);
   const setUser = useUserStore((state) => state.setUser);
   const setSubscription = useUserStore((state) => state.setSubscription);
   const setTags = useUserStore((state) => state.setTags);
@@ -335,6 +305,22 @@ export const DataProvider: React.FC<{
   const locale = useCurrentLocale();
   const isLoading = useUserStore((state) => state.isLoading);
   const setIsLoading = useUserStore((state) => state.setIsLoading);
+
+  const equityChartConfig = useEquityChartStore((state) => state.config);
+  const setEquityChartData = useEquityChartDataStore((state) => state.setData);
+  const setEquityChartLoading = useEquityChartDataStore(
+    (state) => state.setIsLoading
+  );
+
+  const hasEquityChartWidget = useMemo(() => {
+    if (!dashboardLayout) return false;
+    const desktop = dashboardLayout.desktop ?? [];
+    const mobile = dashboardLayout.mobile ?? [];
+    return (
+      desktop.some((w) => w.type === "equityChart") ||
+      mobile.some((w) => w.type === "equityChart")
+    );
+  }, [dashboardLayout]);
 
   // Stripe subscription store
   const setStripeSubscription = useStripeSubscriptionStore(
@@ -370,6 +356,58 @@ export const DataProvider: React.FC<{
   const [hourFilter, setHourFilter] = useState<HourFilter>({ hour: null });
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] });
   const [isFirstConnection, setIsFirstConnection] = useState(false);
+
+  const fetchEquityChartData = useCallback(async () => {
+    setEquityChartLoading(true);
+    try {
+      const result = await getEquityChartDataAction({
+        instruments,
+        accountNumbers,
+        dateRange:
+          dateRange?.from && dateRange?.to
+            ? {
+                from: dateRange.from.toISOString(),
+                to: dateRange.to.toISOString(),
+              }
+            : undefined,
+        pnlRange,
+        tickRange,
+        timeRange,
+        tickFilter,
+        weekdayFilter,
+        hourFilter,
+        tagFilter,
+        timezone,
+        showIndividual: equityChartConfig.showIndividual,
+        maxAccounts: 8,
+        dataSampling: equityChartConfig.dataSampling,
+        selectedAccounts: equityChartConfig.selectedAccountsToDisplay ?? [],
+      });
+      setEquityChartData(result);
+    } catch (error) {
+      console.error("[DataProvider] Failed to fetch equity chart data:", error);
+      setEquityChartData({ chartData: [], accountNumbers: [] });
+    } finally {
+      setEquityChartLoading(false);
+    }
+  }, [
+    instruments,
+    accountNumbers,
+    dateRange,
+    pnlRange,
+    tickRange,
+    timeRange,
+    tickFilter,
+    weekdayFilter,
+    hourFilter,
+    tagFilter,
+    timezone,
+    equityChartConfig.showIndividual,
+    equityChartConfig.dataSampling,
+    equityChartConfig.selectedAccountsToDisplay,
+    setEquityChartData,
+    setEquityChartLoading,
+  ]);
 
   // Load data from the server
   const loadData = useCallback(async () => {
@@ -413,36 +451,13 @@ export const DataProvider: React.FC<{
         return;
       }
 
-      if (adminView) {
-        const trades = await getTradesAction(adminView.userId as string, false);
-        setTrades(trades as PrismaTrade[]);
-        // RESET ALL OTHER STATES
-        setUser(null);
-        setSubscription(null);
-        setTags([]);
-        setGroups([]);
-        setMoods([]);
-        setEvents([]);
-        setTickDetails([]);
-        setAccounts([]);
-        setGroups([]);
-        setDashboardLayout({
-          id: "admin-layout",
-          userId: "admin",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          desktop: defaultLayouts.desktop,
-          mobile: defaultLayouts.mobile,
-        });
-        return;
-      }
-
       // Step 1: Get Supabase user
+      const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user?.id) {
+      if (!user || !user.id) {
         await signOut();
         setIsLoading(false);
         return;
@@ -454,10 +469,10 @@ export const DataProvider: React.FC<{
       // But check if the layout is already in the state
       // TODO: Cache layout client side (lightweight)
       if (!dashboardLayout) {
-        const userId = await getUserId();
-        const dashboardLayoutResponse = await getDashboardLayout(userId);
+        const dashboardLayoutResponse = await getDashboardLayout(user.id);
         if (dashboardLayoutResponse) {
           setDashboardLayout(
+            // Convert from JSONB to DashboardLayoutWithWidgets type
             dashboardLayoutResponse as unknown as DashboardLayoutWithWidgets
           );
         } else {
@@ -469,20 +484,19 @@ export const DataProvider: React.FC<{
       // Step 2: Fetch trades (with caching server side)
       // I think we could make basic computations server side to offload inital stats computations
       // Dev: prefer local IndexedDB to avoid hitting remote DB on reloads
-      const userId = await getUserId();
       if (
         process.env.NODE_ENV === "development" &&
-        userId &&
+        user.id &&
         !params?.isSharedView // avoid caching shared/public views
       ) {
-        const cachedTrades = await getTradesCache(userId);
+        const cachedTrades = await getTradesCache(user.id);
         if (cachedTrades && Array.isArray(cachedTrades) && cachedTrades.length > 0) {
           setTrades(cachedTrades);
         } else {
-          const trades = await getTradesAction(userId, false);
+          const trades = await getTradesAction(user.id, false);
           const safeTrades = Array.isArray(trades) ? trades : [];
           setTrades(safeTrades);
-          setTradesCache(userId, safeTrades).catch((err) =>
+          setTradesCache(user.id, safeTrades).catch((err) =>
             console.error("[DataProvider] Failed to cache trades in IndexedDB (loadData)", err),
           );
         }
@@ -515,6 +529,11 @@ export const DataProvider: React.FC<{
       setEvents(data.financialEvents);
       setTickDetails(data.tickDetails);
       setIsFirstConnection(data.userData?.isFirstConnection || false);
+
+      // Compute the equity chart data
+      if (hasEquityChartWidget && !isSharedView) {
+        fetchEquityChartData();
+      }
     } catch (error) {
       console.error("Error loading data:", error);
       // Optionally handle specific error cases here
@@ -705,6 +724,9 @@ export const DataProvider: React.FC<{
           includeStripe: true,
           withLoading: false,
         });
+        if (hasEquityChartWidget) {
+          await fetchEquityChartData();
+        }
         console.log("[refreshAllData] Successfully refreshed trades and user data");
       } catch (error) {
         console.error("Error refreshing all data:", error);
@@ -712,7 +734,7 @@ export const DataProvider: React.FC<{
         setIsLoading(false);
       }
     },
-    [refreshTradesOnly, refreshUserDataOnly, supabaseUser?.id]
+    [refreshTradesOnly, refreshUserDataOnly, supabaseUser?.id, hasEquityChartWidget, fetchEquityChartData]
   );
 
   // Dev-only: persist trades store into IndexedDB so reloads avoid DB hits
@@ -728,6 +750,7 @@ export const DataProvider: React.FC<{
       );
     }, 200);
 
+    console.log("[DataProvider] Syncing trades to IndexedDB");
     return () => window.clearTimeout(timer);
   }, [trades, supabaseUser?.id]);
 
@@ -940,23 +963,6 @@ export const DataProvider: React.FC<{
     [formattedTrades, accounts]
   );
 
-  const isPlusUser = () => {
-    // Use Stripe subscription store for more accurate subscription status
-    const stripeSubscription =
-      useStripeSubscriptionStore.getState().stripeSubscription;
-    if (stripeSubscription) {
-      const planName = stripeSubscription.plan?.name?.toLowerCase() || "";
-      return planName.includes("plus") || planName.includes("pro");
-    }
-
-    // Fallback to database subscription
-    return Boolean(
-      subscription?.status === "active" &&
-        ["plus", "pro"].includes(
-          subscription?.plan?.split("_")[0].toLowerCase() || ""
-        )
-    );
-  };
 
   const saveAccount = useCallback(
     async (newAccount: Account) => {
@@ -1227,86 +1233,6 @@ export const DataProvider: React.FC<{
     [accounts, setAccounts]
   );
 
-  // Add moveAccountToGroup function
-  const moveAccountToGroup = useCallback(
-    async (accountId: string, targetGroupId: string | null) => {
-      try {
-        const { accounts: currentAccounts, groups: currentGroups } =
-          useUserStore.getState();
-        if (!currentAccounts || currentAccounts.length === 0) {
-          console.error("No accounts available to move");
-          return;
-        }
-
-        // Update accounts state using the freshest snapshot
-        const updatedAccounts = currentAccounts.map((account: Account) => {
-          if (account.id === accountId) {
-            return { ...account, groupId: targetGroupId };
-          }
-          return account;
-        });
-        setAccounts(updatedAccounts);
-
-        // Update groups state using the freshest snapshot
-        const accountToMove = currentAccounts.find(
-          (acc) => acc.id === accountId
-        );
-        if (accountToMove) {
-          // We have to ensure that the target group is created
-          if (targetGroupId) {
-            const targetGroup = currentGroups.find(
-              (group) => group.id === targetGroupId
-            );
-            if (!targetGroup) {
-              const newGroup = await saveGroup(targetGroupId);
-              if (newGroup) {
-                setGroups(
-                  currentGroups.map((group) =>
-                    group.id === targetGroupId
-                      ? {
-                          ...group,
-                          accounts: [...group.accounts, accountToMove],
-                        }
-                      : group
-                  )
-                );
-              }
-            } else {
-              setGroups(
-                currentGroups.map((group) => {
-                  // If this is the target group, add the account only if it's not already there
-                  if (group.id === targetGroupId) {
-                    const accountExists = group.accounts.some(
-                      (acc) => acc.id === accountId
-                    );
-                    return {
-                      ...group,
-                      accounts: accountExists
-                        ? group.accounts
-                        : [...group.accounts, accountToMove],
-                    };
-                  }
-                  // For all other groups, remove the account if it exists
-                  return {
-                    ...group,
-                    accounts: group.accounts.filter(
-                      (acc) => acc.id !== accountId
-                    ),
-                  };
-                })
-              );
-            }
-          }
-        }
-
-        await moveAccountToGroupAction(accountId, targetGroupId);
-      } catch (error) {
-        console.error("Error moving account to group:", error);
-        throw error;
-      }
-    },
-    [setAccounts, setGroups]
-  );
 
   const moveAccountsToGroup = useCallback(
     async (accountIds: string[], targetGroupId: string | null) => {
@@ -1595,7 +1521,6 @@ export const DataProvider: React.FC<{
   );
 
   const contextValue: DataContextType = {
-    isPlusUser,
     isLoading,
     isMobile,
     isSharedView,
@@ -1662,7 +1587,6 @@ export const DataProvider: React.FC<{
     saveGroup,
     renameGroup,
     deleteGroup,
-    moveAccountToGroup,
     moveAccountsToGroup,
 
     // Payout functions
@@ -1686,16 +1610,3 @@ export const useData = () => {
   return context;
 };
 
-// Add getTimeRangeKey function at the top level
-function getTimeRangeKey(timeInPosition: number): string {
-  const minutes = timeInPosition / 60; // Convert seconds to minutes
-  if (minutes < 1) return "under1min";
-  if (minutes >= 1 && minutes < 5) return "1to5min";
-  if (minutes >= 5 && minutes < 10) return "5to10min";
-  if (minutes >= 10 && minutes < 15) return "10to15min";
-  if (minutes >= 15 && minutes < 30) return "15to30min";
-  if (minutes >= 30 && minutes < 60) return "30to60min";
-  if (minutes >= 60 && minutes < 120) return "1to2hours";
-  if (minutes >= 120 && minutes < 300) return "2to5hours";
-  return "over5hours";
-}

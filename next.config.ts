@@ -3,6 +3,25 @@ import createMDX from '@next/mdx';
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  async redirects() {
+    return [
+      {
+        source: '/updates',
+        destination: '/en/updates',
+        permanent: false,
+      },
+      {
+        source: '/updates/:slug',
+        destination: '/en/updates/:slug',
+        permanent: false,
+      },
+      {
+        source: '/shared/:slug',
+        destination: '/en/shared/:slug',
+        permanent: false,
+      },
+    ];
+  },
   // cacheComponents: true, // Enable Cache Components (Next.js 16+)
   images: {
     remotePatterns: [

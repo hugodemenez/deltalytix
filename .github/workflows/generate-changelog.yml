@@ -39,7 +39,7 @@ jobs:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
         run: |
           # Create a new branch from the current HEAD (which is the PR head SHA)
-          BRANCH_NAME="changelog/pr-${{ github.event.pull_request.number }}-$(date +%s)"
+          BRANCH_NAME="changelog/pr-${{ github.event.pull_request.number }}"
           git checkout -b "$BRANCH_NAME"
 
           # Get the date range for the changelog
@@ -49,7 +49,7 @@ jobs:
           LAST_COMMIT_DATE=$(git log --format=%ai -1 "$HEAD_SHA" | cut -d' ' -f1)
 
           # Generate changelog using Cursor CLI
-          agent -p --force \
+          agent -p --force --trust \
             "Analyze the changes in this pull request from beta to main. 
             
             Create changelog entries following the Deltalytix format:

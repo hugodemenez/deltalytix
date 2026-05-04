@@ -41,7 +41,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SyncCountdown } from "./sync-countdown";
-import { useSyncContext } from "@/context/sync-context";
 import { useI18n } from "@/locales/client";
 import { toast } from "sonner";
 import { useRithmicSyncStore, SyncInterval } from "@/store/rithmic-sync-store";
@@ -53,6 +52,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useUserStore } from "@/store/user-store";
+import { useRithmicSyncContext } from "@/context/rithmic-sync-context";
 
 interface Synchronization {
   accountId: string;
@@ -83,13 +83,12 @@ export function RithmicCredentialsManager({
   const [selectedCredentialId, setSelectedCredentialId] = useState<
     string | null
   >(null);
-  const { rithmic } = useSyncContext();
   const {
     performSyncForCredential,
     connect,
     getWebSocketUrl,
     authenticateAndGetAccounts,
-  } = rithmic;
+  } = useRithmicSyncContext();
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [deletingSyncId, setDeletingSyncId] = useState<string | null>(null);
   const t = useI18n();

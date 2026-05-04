@@ -6,11 +6,12 @@
   "license": "CC-BY-NC-4.0",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "ts-node scripts/generate-routes.ts",
+    "prebuild": "ts-node scripts/generate-routes.ts && npx prisma generate",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "screenshot:dashboard": "node scripts/screenshot-dashboard.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.10",
@@ -114,7 +115,7 @@
     "nanoid": "^5.1.6",
     "next": "^16.1.1",
     "next-international": "^1.3.1",
-    "next-mdx-remote": "^5.0.0",
+    "next-mdx-remote": "^6.0.0",
     "openai": "^6.7.0",
     "papaparse": "^5.5.3",
     "pdf-lib": "^1.17.1",
@@ -147,7 +148,7 @@
     "streamdown": "^2.0.1",
     "stripe": "^19.1.0",
     "tailwind-merge": "^3.3.1",
-    "tiptap-extension-resize-image": "^1.3.1",
+    "tiptap-extension-resize-image": "1.3.3",
     "tokenlens": "^1.3.1",
     "use-stick-to-bottom": "^1.1.1",
     "uuid": "^13.0.0",
@@ -170,6 +171,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
     "postcss": "^8.5.6",
+    "puppeteer": "^23.0.0",
     "react-email": "4.3.2",
     "tailwindcss": "^4.1.16",
     "ts-node": "^10.9.2",

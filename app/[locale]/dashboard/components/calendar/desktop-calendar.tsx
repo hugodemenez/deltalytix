@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, Newspaper, Calendar, CalendarDays } from "lu
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { FinancialEvent } from "@/prisma/generated/prisma/browser"
 import { CalendarModal } from "./daily-modal"
@@ -19,10 +20,10 @@ import { HourlyFinancialTimeline } from "../mindset/hourly-financial-timeline"
 import { ImportanceFilter } from "@/app/[locale]/dashboard/components/importance-filter"
 import { CountryFilter } from "@/components/country-filter"
 import { useNewsFilterStore } from "@/store/filters/news-filter-store"
-import { useCalendarViewStore } from "@/store/calendar-view"
+import { useCalendarViewStore } from "@/store/widgets/calendar-view"
 import WeeklyCalendarPnl from "./weekly-calendar"
 import { CalendarData } from "@/app/[locale]/dashboard/types/calendar"
-import { useFinancialEventsStore } from "@/store/financial-events-store"
+import { useFinancialEventsStore } from "@/store/widgets/financial-events-store"
 import { useUserStore } from "@/store/user-store"
 import { Account } from "@/context/data-provider"
 import { HIDDEN_GROUP_NAME } from "../filters/account-group-board"
@@ -325,7 +326,9 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
     selectedDate,
     setSelectedDate,
     selectedWeekDate,
-    setSelectedWeekDate
+    setSelectedWeekDate,
+    showMaxProfitAndDrawdown,
+    setShowMaxProfitAndDrawdown
   } = useCalendarViewStore()
 
   // Use the global news filter store
@@ -648,7 +651,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
                             ? `${dayData.tradeNumber} ${dayData.tradeNumber > 1 ? t('calendar.trades') : t('calendar.trade')}`
                             : t('calendar.noTrades')}
                         </div>
-                        {dayData && (
+                        {dayData && showMaxProfitAndDrawdown && (
                           <>
                             <div className={cn(
                               "text-[7px] sm:text-[9px] text-green-600 dark:text-green-400 truncate text-center",
@@ -720,32 +723,44 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
         isLoading={isLoading}
       />
       <CardFooter className="flex justify-end">
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted">
-          <Button
-            variant={viewMode === 'daily' ? 'default' : 'ghost'}
-            size="sm"
-            className={cn(
-              "h-7 px-2 transition-colors",
-              viewMode === 'daily' && "bg-primary text-primary-foreground shadow-sm font-semibold"
-            )}
-            onClick={() => setViewMode('daily')}
-          >
-            <Calendar className="h-4 w-4 mr-1" />
-            <span className="text-xs">{t('calendar.viewMode.daily')}</span>
-          </Button>
-          <Button
-            variant={viewMode === 'weekly' ? 'default' : 'ghost'}
-            size="sm"
-            className={cn(
-              "h-7 px-2 transition-colors",
-              viewMode === 'weekly' && "bg-primary text-primary-foreground shadow-sm font-semibold"
-            )}
-            onClick={() => setViewMode('weekly')}
-          >
-            <CalendarDays className="h-4 w-4 mr-1" />
-            <span className="text-xs">{t('calendar.viewMode.weekly')}</span>
-          </Button>
+        <div className="flex items-center justify-between gap-4 w-full">
+          <div className="flex items-center gap-2">
+            <span className="text-xs sm:text-sm text-muted-foreground">
+              {t('calendar.viewOptions.showMaxProfitAndDD')}
+            </span>
+            <Switch
+              checked={showMaxProfitAndDrawdown}
+              onCheckedChange={setShowMaxProfitAndDrawdown}
+              className="data-[state=checked]:bg-primary"
+            />
+          </div>
+          {/* View Mode Toggle */}
+          <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted">
+            <Button
+              variant={viewMode === 'daily' ? 'default' : 'ghost'}
+              size="sm"
+              className={cn(
+                "h-7 px-2 transition-colors",
+                viewMode === 'daily' && "bg-primary text-primary-foreground shadow-sm font-semibold"
+              )}
+              onClick={() => setViewMode('daily')}
+            >
+              <Calendar className="h-4 w-4 mr-1" />
+              <span className="text-xs">{t('calendar.viewMode.daily')}</span>
+            </Button>
+            <Button
+              variant={viewMode === 'weekly' ? 'default' : 'ghost'}
+              size="sm"
+              className={cn(
+                "h-7 px-2 transition-colors",
+                viewMode === 'weekly' && "bg-primary text-primary-foreground shadow-sm font-semibold"
+              )}
+              onClick={() => setViewMode('weekly')}
+            >
+              <CalendarDays className="h-4 w-4 mr-1" />
+              <span className="text-xs">{t('calendar.viewMode.weekly')}</span>
+            </Button>
+          </div>
         </div>
       </CardFooter>
     </Card>

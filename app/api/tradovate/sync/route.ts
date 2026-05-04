@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getTradovateToken,
   getTradovateTrades,
-} from "@/app/[locale]/dashboard/components/import/tradovate/actions";
+} from "@/app/[locale]/dashboard/components/import/tradovate/sync/actions";
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,7 +27,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const syncResult = await getTradovateTrades(tokenResult.accessToken);
+    // Use account-level fee config from DB (stored in sync record)
+    const syncResult = await getTradovateTrades(tokenResult.accessToken, {
+      includedFeeTypes: tokenResult.includedFeeTypes,
+    });
     if (syncResult.error) {
       return NextResponse.json(
         { success: false, message: syncResult.error },

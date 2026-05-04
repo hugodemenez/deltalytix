@@ -34,7 +34,7 @@ export async function getTradesCache(userId: string): Promise<PrismaTrade[] | nu
   const db = await openDb()
   if (!db) return null
 
-  return await new Promise((resolve, reject) => {
+  const trades = await new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly")
     const store = tx.objectStore(STORE_NAME)
     const request = store.get(`${KEY_PREFIX}${userId}`)
@@ -45,6 +45,7 @@ export async function getTradesCache(userId: string): Promise<PrismaTrade[] | nu
     }
     request.onerror = () => reject(request.error)
   })
+  return trades as PrismaTrade[] | null
 }
 
 export async function setTradesCache(userId: string, trades: PrismaTrade[]): Promise<void> {

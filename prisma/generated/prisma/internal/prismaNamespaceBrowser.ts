@@ -222,7 +222,8 @@ export const SynchronizationScalarFieldEnum = {
   updatedAt: 'updatedAt',
   token: 'token',
   tokenExpiresAt: 'tokenExpiresAt',
-  dailySyncTime: 'dailySyncTime'
+  dailySyncTime: 'dailySyncTime',
+  includedFeeTypes: 'includedFeeTypes'
 } as const
 
 export type SynchronizationScalarFieldEnum = (typeof SynchronizationScalarFieldEnum)[keyof typeof SynchronizationScalarFieldEnum]
@@ -373,7 +374,8 @@ export const PayoutScalarFieldEnum = {
   createdAt: 'createdAt',
   status: 'status',
   accountNumber: 'accountNumber',
-  accountId: 'accountId'
+  accountId: 'accountId',
+  propfirmSharingPercentage: 'propfirmSharingPercentage'
 } as const
 
 export type PayoutScalarFieldEnum = (typeof PayoutScalarFieldEnum)[keyof typeof PayoutScalarFieldEnum]
@@ -594,19 +596,19 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-export const JsonNullValueInput = {
-  JsonNull: JsonNull
-} as const
-
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
-
-
 export const NullableJsonNullValueInput = {
   DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
 export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+export const JsonNullValueInput = {
+  JsonNull: JsonNull
+} as const
+
+export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
 export const QueryMode = {

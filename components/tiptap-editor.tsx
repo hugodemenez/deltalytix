@@ -15,6 +15,7 @@ declare module "@tiptap/core" {
 import StarterKit from "@tiptap/starter-kit";
 import { Extension } from "@tiptap/core";
 import ResizableImageExtension from "tiptap-extension-resize-image";
+import "@tiptap/extension-image"; // Import for setImage command type augmentation
 import { BubbleMenu as BubbleMenuExtension } from "@tiptap/extension-bubble-menu";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { TextStyleKit } from "@tiptap/extension-text-style";
@@ -323,10 +324,6 @@ export function TiptapEditor({
       }),
       ResizableImageExtension.configure({
         inline: true,
-        allowBase64: false,
-        HTMLAttributes: {
-          class: "rounded-lg",
-        },
       }),
       TextAlign.configure({
         types: ["heading", "paragraph"],
