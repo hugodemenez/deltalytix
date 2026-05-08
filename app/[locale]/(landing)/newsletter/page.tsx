@@ -49,6 +49,7 @@ export default async function NewsletterPage(
               title: t("preferences.title"),
               description: t("preferences.description"),
               missingEmail: t("preferences.missingEmail"),
+              authRequired: t("preferences.authRequired"),
               statusLabel: t("preferences.statusLabel"),
               weeklySummaryLabel: t("preferences.weeklySummaryLabel"),
               monthlyStatsLabel: t("preferences.monthlyStatsLabel"),
