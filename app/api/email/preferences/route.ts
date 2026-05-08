@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import pg from "pg"
+import { createClient } from "@/server/auth"
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
@@ -20,14 +21,26 @@ type NewsletterPreferencesPayload = {
 
 export async function GET(request: Request) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const userEmail = user?.email?.trim().toLowerCase()
+
+    if (!userEmail) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
-    const email = searchParams.get("email")
+    const email = searchParams.get("email")?.trim().toLowerCase()
 
     if (!email) {
       return NextResponse.json(
         { error: "Email parameter is required" },
         { status: 400 },
       )
+    }
+
+    if (email !== userEmail) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const newsletter = await prisma.newsletter.findUnique({
@@ -59,11 +72,23 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const userEmail = user?.email?.trim().toLowerCase()
+
+    if (!userEmail) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const body = (await request.json()) as NewsletterPreferencesPayload
     const email = body.email?.trim().toLowerCase()
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 })
+    }
+
+    if (email !== userEmail) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
 
     const dataToUpdate = {

@@ -20,6 +20,7 @@ type NewsletterPreferencesFormProps = {
     title: string
     description: string
     missingEmail: string
+    authRequired: string
     statusLabel: string
     weeklySummaryLabel: string
     monthlyStatsLabel: string
@@ -47,6 +48,7 @@ export function NewsletterPreferencesForm({
   const [isSaving, setIsSaving] = useState(false)
   const [statusMessage, setStatusMessage] = useState<string>("")
   const [hasError, setHasError] = useState(false)
+  const [authRequired, setAuthRequired] = useState(false)
 
   const canManage = useMemo(() => Boolean(email), [email])
 
@@ -60,8 +62,15 @@ export function NewsletterPreferencesForm({
       setIsLoading(true)
       setStatusMessage("")
       setHasError(false)
+      setAuthRequired(false)
       try {
         const response = await fetch(`/api/email/preferences?email=${encodeURIComponent(email)}`)
+        if (response.status === 401 || response.status === 403) {
+          setAuthRequired(true)
+          setStatusMessage(copy.authRequired)
+          setHasError(true)
+          return
+        }
         if (!response.ok) {
           throw new Error("Failed to load preferences")
         }
@@ -90,6 +99,7 @@ export function NewsletterPreferencesForm({
     setIsSaving(true)
     setStatusMessage("")
     setHasError(false)
+    setAuthRequired(false)
 
     try {
       const response = await fetch("/api/email/preferences", {
@@ -103,6 +113,12 @@ export function NewsletterPreferencesForm({
         }),
       })
 
+      if (response.status === 401 || response.status === 403) {
+        setAuthRequired(true)
+        setStatusMessage(copy.authRequired)
+        setHasError(true)
+        return
+      }
       if (!response.ok) {
         throw new Error("Failed to save preferences")
       }
@@ -125,6 +141,8 @@ export function NewsletterPreferencesForm({
       <CardContent className="space-y-4">
         {!canManage ? (
           <p className="text-sm sm:text-base text-muted-foreground">{copy.missingEmail}</p>
+        ) : authRequired ? (
+          <p className="text-sm sm:text-base text-destructive">{copy.authRequired}</p>
         ) : isLoading || !preferences ? (
           <div className="flex items-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -1854,6 +1854,7 @@ export default {
       description: "Gérez vos préférences email et paramètres d'abonnement",
       missingEmail:
         "Ajoutez votre email dans l'URL pour gérer vos préférences (exemple : ?email=vous@exemple.com).",
+      authRequired: "Veuillez vous connecter pour gérer vos préférences de newsletter.",
       statusLabel: "Abonnement à la newsletter",
       weeklySummaryLabel: "Mises à jour hebdomadaires Deltalytix",
       monthlyStatsLabel: "Mise à jour mensuelle des statistiques",
