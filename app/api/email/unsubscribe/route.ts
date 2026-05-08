@@ -24,10 +24,18 @@ export async function GET(request: Request) {
     // Update or create newsletter record with isActive = false
     await prisma.newsletter.upsert({
       where: { email },
-      update: { isActive: false },
+      update: {
+        isActive: false,
+        weeklySummaryEnabled: false,
+        monthlyStatsEnabled: false,
+        renewalNoticeEnabled: false,
+      },
       create: {
         email,
-        isActive: false
+        isActive: false,
+        weeklySummaryEnabled: false,
+        monthlyStatsEnabled: false,
+        renewalNoticeEnabled: false,
       }
     })
 

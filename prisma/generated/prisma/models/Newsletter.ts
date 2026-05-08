@@ -27,6 +27,9 @@ export type AggregateNewsletter = {
 export type NewsletterMinAggregateOutputType = {
   email: string | null
   isActive: boolean | null
+  weeklySummaryEnabled: boolean | null
+  monthlyStatsEnabled: boolean | null
+  renewalNoticeEnabled: boolean | null
   firstName: string | null
   lastName: string | null
 }
@@ -34,6 +37,9 @@ export type NewsletterMinAggregateOutputType = {
 export type NewsletterMaxAggregateOutputType = {
   email: string | null
   isActive: boolean | null
+  weeklySummaryEnabled: boolean | null
+  monthlyStatsEnabled: boolean | null
+  renewalNoticeEnabled: boolean | null
   firstName: string | null
   lastName: string | null
 }
@@ -41,6 +47,9 @@ export type NewsletterMaxAggregateOutputType = {
 export type NewsletterCountAggregateOutputType = {
   email: number
   isActive: number
+  weeklySummaryEnabled: number
+  monthlyStatsEnabled: number
+  renewalNoticeEnabled: number
   firstName: number
   lastName: number
   _all: number
@@ -50,6 +59,9 @@ export type NewsletterCountAggregateOutputType = {
 export type NewsletterMinAggregateInputType = {
   email?: true
   isActive?: true
+  weeklySummaryEnabled?: true
+  monthlyStatsEnabled?: true
+  renewalNoticeEnabled?: true
   firstName?: true
   lastName?: true
 }
@@ -57,6 +69,9 @@ export type NewsletterMinAggregateInputType = {
 export type NewsletterMaxAggregateInputType = {
   email?: true
   isActive?: true
+  weeklySummaryEnabled?: true
+  monthlyStatsEnabled?: true
+  renewalNoticeEnabled?: true
   firstName?: true
   lastName?: true
 }
@@ -64,6 +79,9 @@ export type NewsletterMaxAggregateInputType = {
 export type NewsletterCountAggregateInputType = {
   email?: true
   isActive?: true
+  weeklySummaryEnabled?: true
+  monthlyStatsEnabled?: true
+  renewalNoticeEnabled?: true
   firstName?: true
   lastName?: true
   _all?: true
@@ -144,6 +162,9 @@ export type NewsletterGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inter
 export type NewsletterGroupByOutputType = {
   email: string
   isActive: boolean
+  weeklySummaryEnabled: boolean
+  monthlyStatsEnabled: boolean
+  renewalNoticeEnabled: boolean
   firstName: string | null
   lastName: string | null
   _count: NewsletterCountAggregateOutputType | null
@@ -172,6 +193,9 @@ export type NewsletterWhereInput = {
   NOT?: Prisma.NewsletterWhereInput | Prisma.NewsletterWhereInput[]
   email?: Prisma.StringFilter<"Newsletter"> | string
   isActive?: Prisma.BoolFilter<"Newsletter"> | boolean
+  weeklySummaryEnabled?: Prisma.BoolFilter<"Newsletter"> | boolean
+  monthlyStatsEnabled?: Prisma.BoolFilter<"Newsletter"> | boolean
+  renewalNoticeEnabled?: Prisma.BoolFilter<"Newsletter"> | boolean
   firstName?: Prisma.StringNullableFilter<"Newsletter"> | string | null
   lastName?: Prisma.StringNullableFilter<"Newsletter"> | string | null
 }
@@ -179,6 +203,9 @@ export type NewsletterWhereInput = {
 export type NewsletterOrderByWithRelationInput = {
   email?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  weeklySummaryEnabled?: Prisma.SortOrder
+  monthlyStatsEnabled?: Prisma.SortOrder
+  renewalNoticeEnabled?: Prisma.SortOrder
   firstName?: Prisma.SortOrderInput | Prisma.SortOrder
   lastName?: Prisma.SortOrderInput | Prisma.SortOrder
 }
@@ -189,6 +216,9 @@ export type NewsletterWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.NewsletterWhereInput[]
   NOT?: Prisma.NewsletterWhereInput | Prisma.NewsletterWhereInput[]
   isActive?: Prisma.BoolFilter<"Newsletter"> | boolean
+  weeklySummaryEnabled?: Prisma.BoolFilter<"Newsletter"> | boolean
+  monthlyStatsEnabled?: Prisma.BoolFilter<"Newsletter"> | boolean
+  renewalNoticeEnabled?: Prisma.BoolFilter<"Newsletter"> | boolean
   firstName?: Prisma.StringNullableFilter<"Newsletter"> | string | null
   lastName?: Prisma.StringNullableFilter<"Newsletter"> | string | null
 }, "email" | "email">
@@ -196,6 +226,9 @@ export type NewsletterWhereUniqueInput = Prisma.AtLeast<{
 export type NewsletterOrderByWithAggregationInput = {
   email?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  weeklySummaryEnabled?: Prisma.SortOrder
+  monthlyStatsEnabled?: Prisma.SortOrder
+  renewalNoticeEnabled?: Prisma.SortOrder
   firstName?: Prisma.SortOrderInput | Prisma.SortOrder
   lastName?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.NewsletterCountOrderByAggregateInput
@@ -209,6 +242,9 @@ export type NewsletterScalarWhereWithAggregatesInput = {
   NOT?: Prisma.NewsletterScalarWhereWithAggregatesInput | Prisma.NewsletterScalarWhereWithAggregatesInput[]
   email?: Prisma.StringWithAggregatesFilter<"Newsletter"> | string
   isActive?: Prisma.BoolWithAggregatesFilter<"Newsletter"> | boolean
+  weeklySummaryEnabled?: Prisma.BoolWithAggregatesFilter<"Newsletter"> | boolean
+  monthlyStatsEnabled?: Prisma.BoolWithAggregatesFilter<"Newsletter"> | boolean
+  renewalNoticeEnabled?: Prisma.BoolWithAggregatesFilter<"Newsletter"> | boolean
   firstName?: Prisma.StringNullableWithAggregatesFilter<"Newsletter"> | string | null
   lastName?: Prisma.StringNullableWithAggregatesFilter<"Newsletter"> | string | null
 }
@@ -216,6 +252,9 @@ export type NewsletterScalarWhereWithAggregatesInput = {
 export type NewsletterCreateInput = {
   email: string
   isActive?: boolean
+  weeklySummaryEnabled?: boolean
+  monthlyStatsEnabled?: boolean
+  renewalNoticeEnabled?: boolean
   firstName?: string | null
   lastName?: string | null
 }
@@ -223,6 +262,9 @@ export type NewsletterCreateInput = {
 export type NewsletterUncheckedCreateInput = {
   email: string
   isActive?: boolean
+  weeklySummaryEnabled?: boolean
+  monthlyStatsEnabled?: boolean
+  renewalNoticeEnabled?: boolean
   firstName?: string | null
   lastName?: string | null
 }
@@ -230,6 +272,9 @@ export type NewsletterUncheckedCreateInput = {
 export type NewsletterUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  weeklySummaryEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  monthlyStatsEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  renewalNoticeEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -237,6 +282,9 @@ export type NewsletterUpdateInput = {
 export type NewsletterUncheckedUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  weeklySummaryEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  monthlyStatsEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  renewalNoticeEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -244,6 +292,9 @@ export type NewsletterUncheckedUpdateInput = {
 export type NewsletterCreateManyInput = {
   email: string
   isActive?: boolean
+  weeklySummaryEnabled?: boolean
+  monthlyStatsEnabled?: boolean
+  renewalNoticeEnabled?: boolean
   firstName?: string | null
   lastName?: string | null
 }
@@ -251,6 +302,9 @@ export type NewsletterCreateManyInput = {
 export type NewsletterUpdateManyMutationInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  weeklySummaryEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  monthlyStatsEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  renewalNoticeEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -258,6 +312,9 @@ export type NewsletterUpdateManyMutationInput = {
 export type NewsletterUncheckedUpdateManyInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   isActive?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  weeklySummaryEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  monthlyStatsEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  renewalNoticeEnabled?: Prisma.BoolFieldUpdateOperationsInput | boolean
   firstName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   lastName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
@@ -265,6 +322,9 @@ export type NewsletterUncheckedUpdateManyInput = {
 export type NewsletterCountOrderByAggregateInput = {
   email?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  weeklySummaryEnabled?: Prisma.SortOrder
+  monthlyStatsEnabled?: Prisma.SortOrder
+  renewalNoticeEnabled?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
   lastName?: Prisma.SortOrder
 }
@@ -272,6 +332,9 @@ export type NewsletterCountOrderByAggregateInput = {
 export type NewsletterMaxOrderByAggregateInput = {
   email?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  weeklySummaryEnabled?: Prisma.SortOrder
+  monthlyStatsEnabled?: Prisma.SortOrder
+  renewalNoticeEnabled?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
   lastName?: Prisma.SortOrder
 }
@@ -279,6 +342,9 @@ export type NewsletterMaxOrderByAggregateInput = {
 export type NewsletterMinOrderByAggregateInput = {
   email?: Prisma.SortOrder
   isActive?: Prisma.SortOrder
+  weeklySummaryEnabled?: Prisma.SortOrder
+  monthlyStatsEnabled?: Prisma.SortOrder
+  renewalNoticeEnabled?: Prisma.SortOrder
   firstName?: Prisma.SortOrder
   lastName?: Prisma.SortOrder
 }
@@ -288,6 +354,9 @@ export type NewsletterMinOrderByAggregateInput = {
 export type NewsletterSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   email?: boolean
   isActive?: boolean
+  weeklySummaryEnabled?: boolean
+  monthlyStatsEnabled?: boolean
+  renewalNoticeEnabled?: boolean
   firstName?: boolean
   lastName?: boolean
 }, ExtArgs["result"]["newsletter"]>
@@ -295,6 +364,9 @@ export type NewsletterSelect<ExtArgs extends runtime.Types.Extensions.InternalAr
 export type NewsletterSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   email?: boolean
   isActive?: boolean
+  weeklySummaryEnabled?: boolean
+  monthlyStatsEnabled?: boolean
+  renewalNoticeEnabled?: boolean
   firstName?: boolean
   lastName?: boolean
 }, ExtArgs["result"]["newsletter"]>
@@ -302,6 +374,9 @@ export type NewsletterSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ex
 export type NewsletterSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   email?: boolean
   isActive?: boolean
+  weeklySummaryEnabled?: boolean
+  monthlyStatsEnabled?: boolean
+  renewalNoticeEnabled?: boolean
   firstName?: boolean
   lastName?: boolean
 }, ExtArgs["result"]["newsletter"]>
@@ -309,11 +384,14 @@ export type NewsletterSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ex
 export type NewsletterSelectScalar = {
   email?: boolean
   isActive?: boolean
+  weeklySummaryEnabled?: boolean
+  monthlyStatsEnabled?: boolean
+  renewalNoticeEnabled?: boolean
   firstName?: boolean
   lastName?: boolean
 }
 
-export type NewsletterOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"email" | "isActive" | "firstName" | "lastName", ExtArgs["result"]["newsletter"]>
+export type NewsletterOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"email" | "isActive" | "weeklySummaryEnabled" | "monthlyStatsEnabled" | "renewalNoticeEnabled" | "firstName" | "lastName", ExtArgs["result"]["newsletter"]>
 
 export type $NewsletterPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Newsletter"
@@ -321,6 +399,9 @@ export type $NewsletterPayload<ExtArgs extends runtime.Types.Extensions.Internal
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     email: string
     isActive: boolean
+    weeklySummaryEnabled: boolean
+    monthlyStatsEnabled: boolean
+    renewalNoticeEnabled: boolean
     firstName: string | null
     lastName: string | null
   }, ExtArgs["result"]["newsletter"]>
@@ -748,6 +829,9 @@ export interface Prisma__NewsletterClient<T, Null = never, ExtArgs extends runti
 export interface NewsletterFieldRefs {
   readonly email: Prisma.FieldRef<"Newsletter", 'String'>
   readonly isActive: Prisma.FieldRef<"Newsletter", 'Boolean'>
+  readonly weeklySummaryEnabled: Prisma.FieldRef<"Newsletter", 'Boolean'>
+  readonly monthlyStatsEnabled: Prisma.FieldRef<"Newsletter", 'Boolean'>
+  readonly renewalNoticeEnabled: Prisma.FieldRef<"Newsletter", 'Boolean'>
   readonly firstName: Prisma.FieldRef<"Newsletter", 'String'>
   readonly lastName: Prisma.FieldRef<"Newsletter", 'String'>
 }

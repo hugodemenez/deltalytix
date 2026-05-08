@@ -136,6 +136,29 @@ export async function GET(req: Request) {
       )
     }
 
+    const candidateEmails = Array.from(
+      new Set(
+        accountsToNotify
+          .map(account => account.user?.email)
+          .filter((email): email is string => Boolean(email))
+      )
+    )
+
+    const renewalPreferences = await prisma.newsletter.findMany({
+      where: {
+        email: {
+          in: candidateEmails
+        },
+        isActive: true,
+        renewalNoticeEnabled: true,
+      },
+      select: {
+        email: true,
+      }
+    })
+
+    const allowedEmails = new Set(renewalPreferences.map(pref => pref.email))
+
     let successCount = 0
     let errorCount = 0
     
@@ -143,11 +166,18 @@ export async function GET(req: Request) {
     const userAccountsMap = new Map<string, typeof accountsToNotify>()
     
     accountsToNotify.forEach(account => {
-      if (account.user?.email) {
+      if (account.user?.email && allowedEmails.has(account.user.email)) {
         const existing = userAccountsMap.get(account.user.email) || []
         userAccountsMap.set(account.user.email, [...existing, account])
       }
     })
+
+    if (userAccountsMap.size === 0) {
+      return NextResponse.json(
+        { message: 'No users with active renewal notice preferences found' },
+        { status: 200 }
+      )
+    }
 
     // Send emails to each user
     for (const [userEmail, userAccounts] of userAccountsMap) {
