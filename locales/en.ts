@@ -1736,6 +1736,7 @@ export default {
       description: "Manage your email preferences and subscription settings",
       missingEmail:
         "Add your email in the URL to manage preferences (example: ?email=you@example.com).",
+      authRequired: "Please sign in to manage your newsletter preferences.",
       statusLabel: "Newsletter Subscription",
       weeklySummaryLabel: "Deltalytix Weekly Updates",
       monthlyStatsLabel: "Monthly Stats Update",
