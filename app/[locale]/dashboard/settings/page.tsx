@@ -28,9 +28,12 @@ import {
   LogOut,
   Building2,
   Eye,
-  EyeOff
+  EyeOff,
+  BarChart3,
+  RotateCcw
 } from "lucide-react"
 import { signOut, setPasswordAction } from "@/server/auth"
+import { useBreakevenStore } from "@/store/widgets/breakeven-store"
 import Link from 'next/link'
 import { useChangeLocale, useCurrentLocale } from "@/locales/client"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -84,6 +87,11 @@ export default function SettingsPage() {
   const timezone = useUserStore(state => state.timezone)
   const setTimezone = useUserStore(state => state.setTimezone)
   
+  const breakevenRange = useBreakevenStore(state => state.range)
+  const setBreakevenRange = useBreakevenStore(state => state.setRange)
+  const resetBreakeven = useBreakevenStore(state => state.reset)
+  const [beMin, setBeMin] = useState(breakevenRange.min.toString())
+  const [beMax, setBeMax] = useState(breakevenRange.max.toString())
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(false)
   const [tradingAlerts, setTradingAlerts] = useState(true)
@@ -329,6 +337,88 @@ export default function SettingsPage() {
                 </DropdownMenu>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Trading Preferences Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              {t('dashboard.settings.tradingPreferences')}
+            </CardTitle>
+            <CardDescription>
+              {t('dashboard.settings.tradingPreferences.description')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-base font-medium">{t('dashboard.settings.breakeven.title')}</Label>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('dashboard.settings.breakeven.description')}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="be-min">{t('dashboard.settings.breakeven.min')}</Label>
+                <Input
+                  id="be-min"
+                  type="number"
+                  step="any"
+                  value={beMin}
+                  onChange={(e) => setBeMin(e.target.value)}
+                  onBlur={() => {
+                    const val = parseFloat(beMin)
+                    if (!isNaN(val) && val <= breakevenRange.max) {
+                      setBreakevenRange({ ...breakevenRange, min: val })
+                    } else {
+                      setBeMin(breakevenRange.min.toString())
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                  }}
+                  placeholder="-10"
+                />
+              </div>
+              <div>
+                <Label htmlFor="be-max">{t('dashboard.settings.breakeven.max')}</Label>
+                <Input
+                  id="be-max"
+                  type="number"
+                  step="any"
+                  value={beMax}
+                  onChange={(e) => setBeMax(e.target.value)}
+                  onBlur={() => {
+                    const val = parseFloat(beMax)
+                    if (!isNaN(val) && val >= breakevenRange.min) {
+                      setBreakevenRange({ ...breakevenRange, max: val })
+                    } else {
+                      setBeMax(breakevenRange.max.toString())
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                  }}
+                  placeholder="10"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {t('dashboard.settings.breakeven.example')}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                resetBreakeven()
+                setBeMin('0')
+                setBeMax('0')
+              }}
+            >
+              <RotateCcw className="mr-2 h-3.5 w-3.5" />
+              {t('dashboard.settings.breakeven.reset')}
+            </Button>
           </CardContent>
         </Card>
 

@@ -62,6 +62,7 @@ import { useMoodStore } from "@/store/widgets/mood-store";
 import { useEquityChartStore } from "@/store/widgets/equity-chart-store";
 import { useEquityChartDataStore } from "@/store/widgets/equity-chart-data-store";
 import { useStripeSubscriptionStore } from "@/store/stripe-subscription-store";
+import { useBreakevenStore } from "@/store/widgets/breakeven-store";
 import { getSubscriptionData } from "@/server/billing";
 import { getEquityChartDataAction } from "@/server/equity-chart";
 import { defaultLayouts } from "@/lib/default-layouts";
@@ -305,6 +306,8 @@ export const DataProvider: React.FC<{
   const locale = useCurrentLocale();
   const isLoading = useUserStore((state) => state.isLoading);
   const setIsLoading = useUserStore((state) => state.setIsLoading);
+
+  const breakevenRange = useBreakevenStore((state) => state.range);
 
   const equityChartConfig = useEquityChartStore((state) => state.config);
   const setEquityChartData = useEquityChartDataStore((state) => state.setData);
@@ -929,7 +932,7 @@ export const DataProvider: React.FC<{
   ]);
 
   const statistics = useMemo(() => {
-    const stats = calculateStatistics(formattedTrades, accounts);
+    const stats = calculateStatistics(formattedTrades, accounts, breakevenRange);
 
     // Calculate gross profits and gross losses including commissions
     const grossProfits = formattedTrades.reduce((sum, trade) => {
@@ -956,7 +959,7 @@ export const DataProvider: React.FC<{
       ...stats,
       profitFactor,
     };
-  }, [formattedTrades, accounts]);
+  }, [formattedTrades, accounts, breakevenRange]);
 
   const calendarData = useMemo(
     () => formatCalendarData(formattedTrades, accounts),

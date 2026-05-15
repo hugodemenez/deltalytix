@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/app/[locale]/dashboard/types/statistics"
 import { Account } from "@/context/data-provider"
+import { BreakevenRange } from "@/store/widgets/breakeven-store"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -28,7 +29,7 @@ export function parsePositionTime(timeInSeconds: number): string {
   return formattedTime;
 }
 
-export function calculateStatistics(trades: Trade[], accounts: Account[] = []): StatisticsProps {
+export function calculateStatistics(trades: Trade[], accounts: Account[] = [], breakevenRange?: BreakevenRange): StatisticsProps {
   if (!trades.length) {
     return {
       cumulativeFees: 0,
@@ -83,6 +84,9 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = []): 
     nbPayouts: 0,
   };
 
+  const beMin = breakevenRange?.min ?? 0;
+  const beMax = breakevenRange?.max ?? 0;
+
   const statistics = trades.reduce((acc: StatisticsProps, trade: Trade) => {
     const pnl = trade.pnl;
     
@@ -91,9 +95,9 @@ export function calculateStatistics(trades: Trade[], accounts: Account[] = []): 
     acc.cumulativeFees += trade.commission;
     acc.totalPositionTime += trade.timeInPosition;
 
-    if (pnl === 0) {
+    if (pnl >= beMin && pnl <= beMax) {
       acc.nbBe++;
-    } else if (pnl > 0) {
+    } else if (pnl > beMax) {
       acc.nbWin++;
       acc.winningStreak++;
       acc.grossWin += pnl;
