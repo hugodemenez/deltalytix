@@ -1,46 +1,38 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-
-export type BreakevenRange = {
-  min: number
-  max: number
-}
+import { BreakevenRange, DEFAULT_BREAKEVEN_RANGE } from '@/types/breakeven'
 
 type BreakevenStore = {
   range: BreakevenRange
   setRange: (range: BreakevenRange) => void
-  setMin: (min: number) => void
-  setMax: (max: number) => void
   reset: () => void
 }
 
-const defaultRange: BreakevenRange = {
-  min: 0,
-  max: 0,
+const normalizeRange = (range: BreakevenRange): BreakevenRange => {
+  const min = Number.isFinite(range.min) ? range.min : DEFAULT_BREAKEVEN_RANGE.min
+  const max = Number.isFinite(range.max) ? range.max : DEFAULT_BREAKEVEN_RANGE.max
+  return min <= max ? { min, max } : DEFAULT_BREAKEVEN_RANGE
 }
 
 export const useBreakevenStore = create<BreakevenStore>()(
   persist(
     (set) => ({
-      range: defaultRange,
+      range: DEFAULT_BREAKEVEN_RANGE,
 
-      setRange: (range) => set({ range }),
-
-      setMin: (min) =>
-        set((state) => ({
-          range: { ...state.range, min },
-        })),
-
-      setMax: (max) =>
-        set((state) => ({
-          range: { ...state.range, max },
-        })),
-
-      reset: () => set({ range: defaultRange }),
+      setRange: (range) => set({ range: normalizeRange(range) }),
+      reset: () => set({ range: DEFAULT_BREAKEVEN_RANGE }),
     }),
     {
       name: 'deltalytix-breakeven-store',
       storage: createJSONStorage(() => localStorage),
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState as Partial<BreakevenStore> | undefined)?.range
+        return {
+          ...currentState,
+          ...(persistedState as object),
+          range: persisted ? normalizeRange(persisted) : currentState.range,
+        }
+      },
     }
   )
 )

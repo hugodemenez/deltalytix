@@ -20,6 +20,7 @@ import { useSearchParams } from 'next/navigation'
 import { applyEmbedTheme, THEME_PRESETS, getOverridesFromSearchParams } from './theme'
 import Script from 'next/script'
 import { I18nProviderClient } from '@/locales/client'
+import { DEFAULT_BREAKEVEN_RANGE } from '@/types/breakeven'
 
 
 // Removed ThemeProvider import - using simple theme implementation
@@ -72,6 +73,14 @@ export default function EmbedPage() {
     const preset = searchParams.get('preset') || undefined
     const lang = searchParams.get('lang') || 'en'
     const [trades, setTrades] = React.useState<any[]>(mockTrades)
+    const breakevenRange = React.useMemo(() => {
+      const min = Number.parseFloat(searchParams.get('beMin') ?? '')
+      const max = Number.parseFloat(searchParams.get('beMax') ?? '')
+      if (Number.isFinite(min) && Number.isFinite(max) && min <= max) {
+        return { min, max }
+      }
+      return DEFAULT_BREAKEVEN_RANGE
+    }, [searchParams])
 
     // Simple theme + preset + overrides application without context
     React.useEffect(() => {
@@ -203,7 +212,7 @@ export default function EmbedPage() {
         { key: 'time-of-day', render: () => <TimeOfDayPerformanceChart trades={trades} /> },
         { key: 'time-in-position', render: () => <TimeInPositionByHourChart trades={trades} /> },
         { key: 'pnl-by-side', render: () => <PnLBySideChartEmbed trades={trades} /> },
-        { key: 'trade-distribution', render: () => <TradeDistributionChartEmbed trades={trades} /> },
+        { key: 'trade-distribution', render: () => <TradeDistributionChartEmbed trades={trades} breakevenRange={breakevenRange} /> },
         { key: 'weekday-pnl', render: () => <WeekdayPnLChartEmbed trades={trades} /> },
         { key: 'pnl-per-contract', render: () => <PnLPerContractChartEmbed trades={trades} /> },
         { key: 'pnl-per-contract-daily', render: () => <PnLPerContractDailyChartEmbed trades={trades} instrument={selectedInstrument} /> },
@@ -211,7 +220,7 @@ export default function EmbedPage() {
         { key: 'commissions-pnl', render: () => <CommissionsPnLEmbed trades={trades} /> },
         { key: 'contract-quantity', render: () => <ContractQuantityChartEmbed trades={trades} /> },
       ]
-    ), [trades, selectedInstrument])
+    ), [trades, selectedInstrument, breakevenRange])
 
     // Function to send chart click message to parent
     const sendChartClickMessage = React.useCallback((chartKey: string, chartName: string) => {

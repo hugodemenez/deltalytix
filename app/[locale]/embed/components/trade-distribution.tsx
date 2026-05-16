@@ -20,32 +20,39 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useI18n } from "@/locales/client";
-import { useBreakevenStore } from "@/store/widgets/breakeven-store";
+import {
+  BreakevenRange,
+  DEFAULT_BREAKEVEN_RANGE,
+} from "@/types/breakeven";
 
 export default function TradeDistributionChartEmbed({
   trades,
+  breakevenRange = DEFAULT_BREAKEVEN_RANGE,
 }: {
   trades: { pnl: number; commission?: number }[];
+  breakevenRange?: BreakevenRange;
 }) {
   const t = useI18n();
-  const breakevenRange = useBreakevenStore((state) => state.range);
 
   const chartData = React.useMemo(() => {
     const beMin = breakevenRange?.min ?? 0;
     const beMax = breakevenRange?.max ?? 0;
     const nbTrades = trades.length;
-    const nbWin = trades.filter((t) => {
+    let nbWin = 0;
+    let nbLoss = 0;
+    let nbBe = 0;
+
+    trades.forEach((t) => {
       const net = t.pnl - (t.commission || 0);
-      return net > beMax;
-    }).length;
-    const nbLoss = trades.filter((t) => {
-      const net = t.pnl - (t.commission || 0);
-      return net < beMin;
-    }).length;
-    const nbBe = trades.filter((t) => {
-      const net = t.pnl - (t.commission || 0);
-      return net >= beMin && net <= beMax;
-    }).length;
+      if (net >= beMin && net <= beMax) {
+        nbBe++;
+      } else if (net > beMax) {
+        nbWin++;
+      } else {
+        nbLoss++;
+      }
+    });
+
     const winRate = nbTrades ? (nbWin / nbTrades) * 100 : 0;
     const lossRate = nbTrades ? (nbLoss / nbTrades) * 100 : 0;
     const beRate = nbTrades ? (nbBe / nbTrades) * 100 : 0;

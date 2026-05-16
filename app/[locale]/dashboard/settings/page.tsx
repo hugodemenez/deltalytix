@@ -90,8 +90,6 @@ export default function SettingsPage() {
   const breakevenRange = useBreakevenStore(state => state.range)
   const setBreakevenRange = useBreakevenStore(state => state.setRange)
   const resetBreakeven = useBreakevenStore(state => state.reset)
-  const [beMin, setBeMin] = useState(breakevenRange.min.toString())
-  const [beMax, setBeMax] = useState(breakevenRange.max.toString())
   const [emailNotifications, setEmailNotifications] = useState(true)
   const [pushNotifications, setPushNotifications] = useState(false)
   const [tradingAlerts, setTradingAlerts] = useState(true)
@@ -358,23 +356,26 @@ export default function SettingsPage() {
                 {t('dashboard.settings.breakeven.description')}
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div
+              className="grid grid-cols-2 gap-4"
+              key={`breakeven-${breakevenRange.min}-${breakevenRange.max}`}
+            >
               <div>
                 <Label htmlFor="be-min">{t('dashboard.settings.breakeven.min')}</Label>
                 <Input
                   id="be-min"
                   type="number"
                   step="any"
-                  value={beMin}
-                  onChange={(e) => setBeMin(e.target.value)}
-                  onBlur={() => {
-                    const val = parseFloat(beMin)
-                    if (!isNaN(val) && val <= breakevenRange.max) {
-                      setBreakevenRange({ ...breakevenRange, min: val })
-                    } else {
-                      setBeMin(breakevenRange.min.toString())
-                    }
-                  }}
+                  defaultValue={breakevenRange.min.toString()}
+                   onBlur={(e) => {
+                     const val = parseFloat(e.target.value)
+                     if (!isNaN(val) && val <= breakevenRange.max) {
+                       setBreakevenRange({ ...breakevenRange, min: val })
+                     } else {
+                       toast.error(t('dashboard.settings.breakeven.invalidMin'))
+                       e.target.value = breakevenRange.min.toString()
+                     }
+                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                   }}
@@ -387,16 +388,16 @@ export default function SettingsPage() {
                   id="be-max"
                   type="number"
                   step="any"
-                  value={beMax}
-                  onChange={(e) => setBeMax(e.target.value)}
-                  onBlur={() => {
-                    const val = parseFloat(beMax)
-                    if (!isNaN(val) && val >= breakevenRange.min) {
-                      setBreakevenRange({ ...breakevenRange, max: val })
-                    } else {
-                      setBeMax(breakevenRange.max.toString())
-                    }
-                  }}
+                  defaultValue={breakevenRange.max.toString()}
+                   onBlur={(e) => {
+                     const val = parseFloat(e.target.value)
+                     if (!isNaN(val) && val >= breakevenRange.min) {
+                       setBreakevenRange({ ...breakevenRange, max: val })
+                     } else {
+                       toast.error(t('dashboard.settings.breakeven.invalidMax'))
+                       e.target.value = breakevenRange.max.toString()
+                     }
+                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
                   }}
@@ -412,8 +413,6 @@ export default function SettingsPage() {
               size="sm"
               onClick={() => {
                 resetBreakeven()
-                setBeMin('0')
-                setBeMax('0')
               }}
             >
               <RotateCcw className="mr-2 h-3.5 w-3.5" />
