@@ -7,6 +7,7 @@ import { Clock, PiggyBank, Award, BarChart, Info } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { cn, calculateStatistics } from "@/lib/utils"
 import { useI18n, useCurrentLocale } from "@/locales/client"
+import { useBreakevenStore } from "@/store/widgets/breakeven-store"
 import { Progress } from "@/components/ui/progress"
 import { CalendarEntry } from "@/app/[locale]/dashboard/types/calendar"
 import { Trade } from "@/prisma/generated/prisma/browser"
@@ -26,6 +27,7 @@ function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (.
 
 export default function StatisticsWidget({ size = 'medium', dayData }: StatisticsWidgetProps) {
   const dataContext = useData()
+  const breakevenRange = useBreakevenStore((state) => state.range)
   const [activeTooltip, setActiveTooltip] = React.useState<string | null>(null)
   const [isTouch, setIsTouch] = React.useState(false)
   const cardRef = React.useRef<HTMLDivElement>(null)
@@ -51,11 +53,10 @@ export default function StatisticsWidget({ size = 'medium', dayData }: Statistic
   // Calculate statistics - either for a specific day or for all data
   const statistics = React.useMemo(() => {
     if (dayData?.trades) {
-      // Calculate statistics for this specific day
-      return calculateStatistics(dayData.trades as Trade[], [])
+      return calculateStatistics(dayData.trades as Trade[], [], breakevenRange)
     }
     return dataContext.statistics
-  }, [dayData, dataContext.statistics])
+  }, [dayData, dataContext.statistics, breakevenRange])
 
   const calendarData = React.useMemo(() => {
     if (dayData) {
