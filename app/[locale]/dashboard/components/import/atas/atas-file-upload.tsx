@@ -2,7 +2,7 @@
 
 import React, { useCallback, useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
-import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 import { ImportType } from "../import-type-selection";
 import { Progress } from "@/components/ui/progress";
 import { XIcon, FileIcon, AlertCircle, ArrowUpCircle } from "lucide-react";
@@ -20,6 +20,68 @@ interface AtasFileUploadProps {
   setStep: React.Dispatch<React.SetStateAction<Step>>;
   setError: React.Dispatch<React.SetStateAction<string | null>>;
 }
+
+const EXPECTED_ATAS_COLUMNS = [
+  "Account",
+  "Instrument",
+  "Open time",
+  "Open price",
+  "Open volume",
+  "Close time",
+  "Close price",
+  "Close volume",
+  "PnL",
+];
+
+const parseAtasWorkbook = (data: ArrayBuffer): string[][] => {
+  const workbook = XLSX.read(data, { type: "array", cellDates: true });
+  const journalSheet = workbook.Sheets["Journal"];
+
+  if (!journalSheet) {
+    throw new Error(
+      "Could not find 'Journal' sheet in the Excel file. Please make sure the sheet is named 'Journal'.",
+    );
+  }
+
+  const jsonData = XLSX.utils
+    .sheet_to_json<string[]>(journalSheet, {
+      header: 1,
+      defval: "",
+      raw: false,
+      blankrows: false,
+      dateNF: "yyyy-mm-dd hh:mm:ss",
+    })
+    .map((row) => row.map((cell) => String(cell ?? "")));
+
+  if (jsonData.length === 0) {
+    throw new Error("The Journal sheet appears to be empty.");
+  }
+
+  const headerRowIndex = jsonData.findIndex((row) =>
+    row.some((cell) => cell.trim() !== ""),
+  );
+
+  if (headerRowIndex === -1) {
+    throw new Error("The Journal sheet appears to be empty.");
+  }
+
+  const headers = jsonData[headerRowIndex].map((header) => header.trim());
+  const dataRows = jsonData
+    .slice(headerRowIndex + 1)
+    .filter((row) => row.some((cell) => cell !== ""));
+
+  const missingColumns = EXPECTED_ATAS_COLUMNS.filter(
+    (column) => !headers.includes(column),
+  );
+
+  if (missingColumns.length > 0) {
+    throw new Error(
+      `Missing required columns: ${missingColumns.join(", ")}. Please make sure your Excel file has the correct format.`,
+    );
+  }
+
+  return [headers, ...dataRows];
+};
 
 export default function AtasFileUpload({
   importType,
@@ -48,99 +110,15 @@ export default function AtasFileUpload({
           return;
         }
 
-        // For now, we'll use a simple approach to read Excel files
-        // In a production environment, you might want to use a library like 'xlsx' or 'exceljs'
         const reader = new FileReader();
 
         reader.onload = async (e) => {
           try {
-            const workbook = new ExcelJS.Workbook();
-            await workbook.xlsx.load(e.target?.result as ArrayBuffer);
-
-            // Look for the "Journal" sheet
-            const journalSheet = workbook.getWorksheet("Journal");
-            if (!journalSheet) {
-              reject(
-                new Error(
-                  "Could not find 'Journal' sheet in the Excel file. Please make sure the sheet is named 'Journal'.",
-                ),
-              );
-              return;
-            }
-
-            // Convert sheet to JSON
-            const jsonData: string[][] = [];
-            journalSheet.eachRow((row, rowNumber) => {
-              const rowData: string[] = [];
-              row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-                rowData.push(cell.value?.toString() || "");
-              });
-              jsonData.push(rowData);
-            });
-
-            if (jsonData.length === 0) {
-              reject(new Error("The Journal sheet appears to be empty."));
-              return;
-            }
-
-            // Find the header row (first row with data)
-            let headerRowIndex = 0;
-            for (let i = 0; i < jsonData.length; i++) {
-              const row = jsonData[i];
-              if (
-                row &&
-                row.length > 0 &&
-                row.some(
-                  (cell) =>
-                    cell && typeof cell === "string" && cell.trim() !== "",
-                )
-              ) {
-                headerRowIndex = i;
-                break;
-              }
-            }
-
-            const headers = jsonData[headerRowIndex] as string[];
-            const dataRows = jsonData
-              .slice(headerRowIndex + 1)
-              .filter(
-                (row) =>
-                  row &&
-                  row.length > 0 &&
-                  row.some(
-                    (cell) =>
-                      cell !== null && cell !== undefined && cell !== "",
-                  ),
-              );
-
-            // Validate that we have the expected columns
-            const expectedColumns = [
-              "Account",
-              "Instrument",
-              "Open time",
-              "Open price",
-              "Open volume",
-              "Close time",
-              "Close price",
-              "Close volume",
-              "PnL",
-            ];
-            const missingColumns = expectedColumns.filter(
-              (col) => !headers.includes(col),
-            );
-
-            if (missingColumns.length > 0) {
-              reject(
-                new Error(
-                  `Missing required columns: ${missingColumns.join(", ")}. Please make sure your Excel file has the correct format.`,
-                ),
-              );
-              return;
-            }
+            const fileData = parseAtasWorkbook(e.target?.result as ArrayBuffer);
 
             setParsedFiles((prevFiles) => {
               const newFiles = [...prevFiles];
-              newFiles[index] = [headers, ...dataRows];
+              newFiles[index] = fileData;
               return newFiles;
             });
 
