@@ -530,10 +530,6 @@ export const DataProvider: React.FC<{
       setTickDetails(data.tickDetails);
       setIsFirstConnection(data.userData?.isFirstConnection || false);
 
-      // Compute the equity chart data
-      if (hasEquityChartWidget && !isSharedView) {
-        fetchEquityChartData();
-      }
     } catch (error) {
       console.error("Error loading data:", error);
       // Optionally handle specific error cases here
@@ -582,6 +578,17 @@ export const DataProvider: React.FC<{
       mounted = false;
     };
   }, [isSharedView]); // Only depend on isSharedView
+
+  useEffect(() => {
+    if (isSharedView || !supabaseUser?.id || !hasEquityChartWidget) return;
+
+    void fetchEquityChartData();
+  }, [
+    isSharedView,
+    supabaseUser?.id,
+    hasEquityChartWidget,
+    fetchEquityChartData,
+  ]);
 
   // Persist language changes without blocking UI
   useEffect(() => {
