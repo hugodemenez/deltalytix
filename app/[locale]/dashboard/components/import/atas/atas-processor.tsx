@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -202,6 +202,7 @@ export default function AtasProcessor({
   const existingTrades = useTradesStore((state) => state.trades);
   const timezone = useUserStore((state) => state.timezone);
   const [allProcessedTrades, setAllProcessedTrades] = useState<Trade[]>([]);
+  const duplicateCheckTradesRef = useRef<Trade[] | null>(null);
   const [missingCommissions, setMissingCommissions] = useState<{
     [key: string]: number;
   }>({});
@@ -300,6 +301,10 @@ export default function AtasProcessor({
   const processTrades = useCallback(() => {
     const newTrades: Trade[] = [];
     const missingCommissionsTemp: { [key: string]: boolean } = {};
+    // Freeze the duplicate baseline so saving the preview does not make it disappear.
+    const tradesForDuplicateCheck =
+      duplicateCheckTradesRef.current ?? existingTrades;
+    duplicateCheckTradesRef.current = tradesForDuplicateCheck;
 
     csvData.forEach((row) => {
       const item: Partial<Trade> = {};
@@ -433,7 +438,7 @@ export default function AtasProcessor({
       item.id = generateTradeHash(item);
 
       // Check if trade already exists
-      const existingTrade = existingTrades.find(
+      const existingTrade = tradesForDuplicateCheck.find(
         (trade) =>
           trade.accountNumber === item.accountNumber &&
           trade.instrument === item.instrument &&
