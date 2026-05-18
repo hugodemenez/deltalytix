@@ -1,13 +1,7 @@
 'use server'
 
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
+import { prisma } from "@/lib/prisma"
+import { normalizeNewsletterEmail } from "@/lib/newsletter-email"
 
 interface UserData {
   user: {
@@ -54,7 +48,7 @@ export async function getUserData(userId: string): Promise<UserData> {
   }
 
   const newsletter = await prisma.newsletter.findUnique({
-    where: { email: user.email },
+    where: { email: normalizeNewsletterEmail(user.email) },
   })
 
   if (!newsletter || !newsletter.isActive) {

@@ -26,8 +26,10 @@ type NewsletterPreferencesFormProps = {
     monthlyStatsLabel: string
     renewalNoticeLabel: string
     save: string
+    loading: string
     saving: string
     saved: string
+    loadError: string
     saveError: string
   }
 }
@@ -58,13 +60,20 @@ export function NewsletterPreferencesForm({
       return
     }
 
+    const controller = new AbortController()
+
     const fetchPreferences = async () => {
       setIsLoading(true)
       setStatusMessage("")
       setHasError(false)
       setAuthRequired(false)
+      setPreferences(null)
+
       try {
-        const response = await fetch(`/api/email/preferences?email=${encodeURIComponent(email)}`)
+        const response = await fetch(
+          `/api/email/preferences?email=${encodeURIComponent(email)}`,
+          { signal: controller.signal },
+        )
         if (response.status === 401 || response.status === 403) {
           setAuthRequired(true)
           setStatusMessage(copy.authRequired)
@@ -76,6 +85,8 @@ export function NewsletterPreferencesForm({
         }
 
         const data = (await response.json()) as NewsletterPreferences
+        if (controller.signal.aborted) return
+
         setPreferences({
           isActive: data.isActive,
           weeklySummaryEnabled: data.weeklySummaryEnabled,
@@ -83,15 +94,22 @@ export function NewsletterPreferencesForm({
           renewalNoticeEnabled: data.renewalNoticeEnabled,
         })
       } catch {
+        if (controller.signal.aborted) return
         setHasError(true)
-        setStatusMessage(copy.saveError)
+        setStatusMessage(copy.loadError)
       } finally {
-        setIsLoading(false)
+        if (!controller.signal.aborted) {
+          setIsLoading(false)
+        }
       }
     }
 
     fetchPreferences()
-  }, [email, copy.saveError])
+
+    return () => {
+      controller.abort()
+    }
+  }, [email, copy.authRequired, copy.loadError])
 
   const handleSave = async () => {
     if (!email || !preferences) return
@@ -143,11 +161,15 @@ export function NewsletterPreferencesForm({
           <p className="text-sm sm:text-base text-muted-foreground">{copy.missingEmail}</p>
         ) : authRequired ? (
           <p className="text-sm sm:text-base text-destructive">{copy.authRequired}</p>
-        ) : isLoading || !preferences ? (
+        ) : isLoading ? (
           <div className="flex items-center text-sm text-muted-foreground">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            {copy.saving}
+            {copy.loading}
           </div>
+        ) : !preferences ? (
+          <p className="text-sm sm:text-base text-destructive">
+            {statusMessage || copy.loadError}
+          </p>
         ) : (
           <>
             <div className="flex items-center justify-between rounded-md border p-3">
