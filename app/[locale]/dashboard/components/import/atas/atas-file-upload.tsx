@@ -33,13 +33,54 @@ const EXPECTED_ATAS_COLUMNS = [
   "PnL",
 ];
 
+const ATAS_JOURNAL_SHEET_NAMES = ["Journal", "Journal commercial"];
+
+const ATAS_HEADER_MAPPINGS: Record<string, string> = {
+  account: "Account",
+  compte: "Account",
+  instrument: "Instrument",
+  outil: "Instrument",
+  "open time": "Open time",
+  "heure d'ouverture": "Open time",
+  "open price": "Open price",
+  "prix d'ouverture": "Open price",
+  "open volume": "Open volume",
+  "volume d'ouverture": "Open volume",
+  "close time": "Close time",
+  "heure de cloture": "Close time",
+  "heure de clôture": "Close time",
+  "close price": "Close price",
+  "prix de cloture": "Close price",
+  "prix de clôture": "Close price",
+  "close volume": "Close volume",
+  volume: "Close volume",
+  pnl: "PnL",
+  comment: "Comment",
+  commentaire: "Comment",
+};
+
+const normalizeAtasHeaderKey = (header: string): string =>
+  header
+    .replace(/\u200B/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+const normalizeAtasHeader = (header: string): string =>
+  ATAS_HEADER_MAPPINGS[normalizeAtasHeaderKey(header)] || header.trim();
+
 const parseAtasWorkbook = (data: ArrayBuffer): string[][] => {
   const workbook = XLSX.read(data, { type: "array", cellDates: true });
-  const journalSheet = workbook.Sheets["Journal"];
+  const journalSheetName = ATAS_JOURNAL_SHEET_NAMES.find(
+    (sheetName) => workbook.Sheets[sheetName],
+  );
+  const journalSheet = journalSheetName
+    ? workbook.Sheets[journalSheetName]
+    : undefined;
 
   if (!journalSheet) {
     throw new Error(
-      "Could not find 'Journal' sheet in the Excel file. Please make sure the sheet is named 'Journal'.",
+      "Could not find 'Journal' sheet in the Excel file. Please make sure the sheet is named 'Journal' or 'Journal commercial'.",
     );
   }
 
@@ -65,7 +106,7 @@ const parseAtasWorkbook = (data: ArrayBuffer): string[][] => {
     throw new Error("The Journal sheet appears to be empty.");
   }
 
-  const headers = jsonData[headerRowIndex].map((header) => header.trim());
+  const headers = jsonData[headerRowIndex].map(normalizeAtasHeader);
   const dataRows = jsonData
     .slice(headerRowIndex + 1)
     .filter((row) => row.some((cell) => cell !== ""));
@@ -84,7 +125,6 @@ const parseAtasWorkbook = (data: ArrayBuffer): string[][] => {
 };
 
 export default function AtasFileUpload({
-  importType,
   setRawCsvData,
   setCsvData,
   setHeaders,
