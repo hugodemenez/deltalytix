@@ -55,8 +55,10 @@ export default async function NewsletterPage(
               monthlyStatsLabel: t("preferences.monthlyStatsLabel"),
               renewalNoticeLabel: t("preferences.renewalNoticeLabel"),
               save: t("preferences.save"),
+              loading: t("preferences.loading"),
               saving: t("preferences.saving"),
               saved: t("preferences.saved"),
+              loadError: t("preferences.loadError"),
               saveError: t("preferences.saveError"),
             }}
           />

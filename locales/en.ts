@@ -1777,8 +1777,10 @@ export default {
       monthlyStatsLabel: "Monthly Stats Update",
       renewalNoticeLabel: "Renewals Notification",
       save: "Save Preferences",
+      loading: "Loading preferences...",
       saving: "Saving...",
       saved: "Preferences saved successfully.",
+      loadError: "Failed to load preferences. Please try again.",
       saveError: "Failed to save preferences. Please try again.",
     },
     admin: {

@@ -1,25 +1,20 @@
 import { NextResponse } from "next/server"
-import { PrismaClient } from "@/prisma/generated/prisma/client"
-import { PrismaPg } from "@prisma/adapter-pg"
-import { redirect } from "next/navigation"
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-
-const prisma = new PrismaClient({ adapter })
+import { prisma } from "@/lib/prisma"
+import { normalizeNewsletterEmail } from "@/lib/newsletter-email"
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const email = searchParams.get('email')
+    const emailParam = searchParams.get("email")
 
-    if (!email) {
+    if (!emailParam) {
       return NextResponse.json(
         { error: 'Email parameter is required' },
         { status: 400 }
       )
     }
+
+    const email = normalizeNewsletterEmail(emailParam)
 
     // Update or create newsletter record with isActive = false
     await prisma.newsletter.upsert({

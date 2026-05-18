@@ -1895,8 +1895,10 @@ export default {
       monthlyStatsLabel: "Mise à jour mensuelle des statistiques",
       renewalNoticeLabel: "Notification de renouvellement",
       save: "Enregistrer les préférences",
+      loading: "Chargement des préférences...",
       saving: "Enregistrement...",
       saved: "Préférences enregistrées avec succès.",
+      loadError: "Échec du chargement des préférences. Veuillez réessayer.",
       saveError: "Échec de l'enregistrement des préférences. Veuillez réessayer.",
     },
     admin: {
