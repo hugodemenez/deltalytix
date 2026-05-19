@@ -1,0 +1,13 @@
+---
+title: 'ATAS import respects your timezone for trade times'
+description: 'Open and close times from ATAS journals align with the timezone set in your profile.'
+date: '2026-05-19'
+status: completed
+completedDate: '2026-05-19'
+---
+
+# ATAS import respects your timezone for trade times
+
+Open and close times on ATAS journal rows are treated as local times in **your profile timezone**, then stored consistently for charts, filters, and the trade table. That covers Excel date cells, plain `YYYY-MM-DD HH:mm` strings, and the odd formatted date string ATAS sometimes emits.
+
+After import, entry and exit times should line up with how you read them in ATAS instead of drifting by an hour or landing on the wrong day when your timezone is not UTC.

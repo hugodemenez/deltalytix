@@ -1,0 +1,13 @@
+---
+title: 'Equity chart widget loads when it should'
+description: 'The equity curve on your dashboard appears reliably if you have that widget on your layout.'
+date: '2026-05-19'
+status: completed
+completedDate: '2026-05-19'
+---
+
+# Equity chart widget loads when it should
+
+If your dashboard layout includes the **Equity chart** widget, the curve should show up again after sign-in instead of sometimes staying blank. Fetching equity data now waits until we know you are signed in and that the widget is actually on your layout, then loads in step with those conditions.
+
+Shared view links are unchanged—the chart still does not load there when it is not meant to. On your own dashboard, you should see account growth over time without needing a refresh trick.
