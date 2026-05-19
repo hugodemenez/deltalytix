@@ -193,9 +193,10 @@ export async function GET(req: Request) {
 
     // Send emails to each user
     for (const [, userAccounts] of userAccountsMap) {
+      const user = userAccounts[0].user!
+      const userEmail = user.email!
+
       try {
-        const user = userAccounts[0].user!
-        const userEmail = user.email!
         const userLanguage = user.language || 'en'
         const locale = getDateLocale(userLanguage)
         
