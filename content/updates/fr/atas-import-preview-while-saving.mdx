@@ -1,0 +1,13 @@
+---
+title: "Import ATAS : aperçu stable pendant l'enregistrement"
+description: "L'aperçu des trades reste affiché à l'enregistrement et la détection des doublons reste fiable."
+date: '2026-05-19'
+status: completed
+completedDate: '2026-05-19'
+---
+
+# Import ATAS : apercu stable pendant l'enregistrement
+
+A l'etape **apercu** de l'import ATAS, l'enregistrement pouvait rafraichir la liste locale des trades, vider l'apercu ou faire passer des lignes en doublon a tort. L'import fige desormais un instantane de vos trades existants pour toute la session de verification des doublons.
+
+Vous pouvez parcourir les trades nouveaux ou en double, saisir les commissions manquantes et confirmer sans voir l'apercu disparaitre ni des lignes basculer en « deja importe » pendant la sauvegarde.

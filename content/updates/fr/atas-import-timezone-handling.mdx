@@ -1,0 +1,13 @@
+---
+title: 'Import ATAS : heures des trades selon votre fuseau'
+description: "Les heures d'ouverture et de clôture suivent le fuseau défini dans votre profil."
+date: '2026-05-19'
+status: completed
+completedDate: '2026-05-19'
+---
+
+# Import ATAS : heures des trades selon votre fuseau
+
+Les heures d'ouverture et de cloture du journal ATAS sont interpretees dans **le fuseau de votre profil**, puis enregistrees de facon coherente pour les graphiques, filtres et le tableau des trades. Cela couvre les cellules date Excel, les chaines `AAAA-MM-JJ HH:mm` et les formats de date parfois renvoyes par ATAS.
+
+Apres l'import, les horaires doivent correspondre a ce que vous voyez dans ATAS, sans decalage d'une heure ni changement de jour quand votre fuseau n'est pas UTC.
