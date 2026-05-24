@@ -153,7 +153,7 @@ export function computeAccountMetrics(
     if (runningBalance > highestBalance) highestBalance = runningBalance
   }
   const totalPayouts = validPayouts.reduce((s, p) => s + p.amount, 0)
-  const currentBalance = runningBalance - totalPayouts
+  const rawCurrentBalance = runningBalance - totalPayouts
 
   let drawdownLevel: number
   if (account.trailingDrawdown) {
@@ -166,6 +166,13 @@ export function computeAccountMetrics(
   } else {
     drawdownLevel = (account.startingBalance || 0) - (account.drawdownThreshold || 0)
   }
+  // For prop-firm accounts, losses beyond the accepted drawdown are not realized.
+  // Clamp displayed balance at the drawdown floor once the account is breached.
+  const currentBalance =
+    (account.drawdownThreshold || 0) > 0
+      ? Math.max(rawCurrentBalance, drawdownLevel)
+      : rawCurrentBalance
+
   const remainingLoss = Math.max(0, currentBalance - drawdownLevel)
   const dd = account.drawdownThreshold || 0
   const drawdownProgress = dd > 0 ? (((dd) - remainingLoss) / dd) * 100 : 0
