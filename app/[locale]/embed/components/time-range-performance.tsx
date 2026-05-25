@@ -1,4 +1,5 @@
 "use client";
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import * as React from "react";
 import {
@@ -89,9 +90,9 @@ export default function TimeRangePerformanceChart({
 
     trades.forEach((trade) => {
       const timeRange = getTimeRangeKey(trade.timeInPosition);
-      timeRangeData[timeRange].totalPnl += trade.pnl - (trade.commission || 0);
+      timeRangeData[timeRange].totalPnl += getTradeNetPnl(trade);
       timeRangeData[timeRange].totalTrades++;
-      if (trade.pnl - (trade.commission || 0) > 0) {
+      if (getTradeNetPnl(trade) > 0) {
         timeRangeData[timeRange].winCount++;
       } else {
         timeRangeData[timeRange].lossCount++;

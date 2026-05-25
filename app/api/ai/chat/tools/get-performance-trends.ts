@@ -1,3 +1,4 @@
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
@@ -28,7 +29,7 @@ interface TrendAnalysis {
 function calculatePeriodMetrics(trades: Trade[]): PerformanceTrend | null {
   if (!trades || trades.length === 0) return null;
   
-  const netPnL = trades.reduce((sum, t) => sum + t.pnl - t.commission, 0);
+  const netPnL = trades.reduce((sum, t) => sum + getTradeNetPnl(t), 0);
   const wins = trades.filter(t => t.pnl > 0);
   const losses = trades.filter(t => t.pnl < 0);
   

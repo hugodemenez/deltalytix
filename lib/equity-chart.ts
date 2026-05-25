@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 import {
   parseISO,
   eachDayOfInterval,
@@ -299,7 +300,7 @@ export function computeEquityChartData(
   finalFilteredTrades.forEach((trade) => {
     allEvents.push({
       date: new Date(trade.entryDate),
-      amount: trade.pnl - (trade.commission || 0),
+      amount: getTradeNetPnl(trade),
       isPayout: false,
       isReset: false,
       accountNumber: trade.accountNumber,

@@ -1,3 +1,4 @@
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 "use client";
 
 import * as React from "react";
@@ -44,19 +45,19 @@ export default function PnLBySideChartEmbed({
     const shortTrades = trades.filter((t) => t.side?.toLowerCase() === "short");
 
     const longPnL = longTrades.reduce(
-      (sum, t) => sum + (t.pnl - (t.commission || 0)),
+      (sum, t) => sum + (getTradeNetPnl(t)),
       0,
     );
     const shortPnL = shortTrades.reduce(
-      (sum, t) => sum + (t.pnl - (t.commission || 0)),
+      (sum, t) => sum + (getTradeNetPnl(t)),
       0,
     );
 
     const longWins = longTrades.filter(
-      (t) => t.pnl - (t.commission || 0) > 0,
+      (t) => getTradeNetPnl(t) > 0,
     ).length;
     const shortWins = shortTrades.filter(
-      (t) => t.pnl - (t.commission || 0) > 0,
+      (t) => getTradeNetPnl(t) > 0,
     ).length;
 
     return [

@@ -5,6 +5,7 @@ import { format } from "date-fns"
 import { formatInTimeZone } from 'date-fns-tz'
 import { StatisticsProps } from "@/app/[locale]/dashboard/types/statistics"
 import { Account } from "@/context/data-provider"
+import { getTradeNetPnl } from "@/lib/trade-net-pnl"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -156,7 +157,7 @@ export function formatCalendarData(trades: Trade[], accounts: Account[] = []) {
       acc[date] = { pnl: 0, tradeNumber: 0, longNumber: 0, shortNumber: 0, trades: [] }
     }
     acc[date].tradeNumber++
-    acc[date].pnl += trade.pnl-trade.commission;
+    acc[date].pnl += getTradeNetPnl(trade);
 
     const isLong = trade.side 
       ? (trade.side.toLowerCase() === 'long' || trade.side.toLowerCase() === 'buy' || trade.side.toLowerCase() === 'b') 
@@ -203,7 +204,7 @@ export function calculateTradingDays(trades: Trade[], minPnlToCountAsDay?: numbe
     }
     
     // Calculate net PnL (including commission)
-    dailyPnL[dateKey] += trade.pnl - (trade.commission || 0);
+    dailyPnL[dateKey] += getTradeNetPnl(trade);
   });
 
   const totalTradingDays = Object.keys(dailyPnL).length;

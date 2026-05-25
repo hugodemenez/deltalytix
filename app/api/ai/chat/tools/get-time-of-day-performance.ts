@@ -1,3 +1,4 @@
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 import { getTradesAction } from "@/server/database";
 import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
@@ -48,7 +49,7 @@ function calculateTimeMetrics(trades: Trade[], timezone: string = 'UTC'): TimePe
   if (!trades || trades.length === 0) return null;
   
   const totalTrades = trades.length;
-  const netPnL = trades.reduce((sum, t) => sum + t.pnl - t.commission, 0);
+  const netPnL = trades.reduce((sum, t) => sum + getTradeNetPnl(t), 0);
   const wins = trades.filter(t => t.pnl > 0);
   const losses = trades.filter(t => t.pnl < 0);
   
@@ -67,7 +68,7 @@ function calculateTimeMetrics(trades: Trade[], timezone: string = 'UTC'): TimePe
   }, {} as Record<string, Trade[]>);
   
   const profitableDays = Object.values(dailyGroups).filter(dayTrades => 
-    dayTrades.reduce((sum, t) => sum + t.pnl - t.commission, 0) > 0
+    dayTrades.reduce((sum, t) => sum + getTradeNetPnl(t), 0) > 0
   ).length;
   
   const consistency = Object.keys(dailyGroups).length > 0 ? (profitableDays / Object.keys(dailyGroups).length) * 100 : 0;

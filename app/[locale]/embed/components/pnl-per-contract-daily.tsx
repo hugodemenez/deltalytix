@@ -1,3 +1,4 @@
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 'use client'
 
 import * as React from "react"
@@ -36,7 +37,7 @@ export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { 
         const date = typeof t.entryDate === 'string' ? new Date(t.entryDate) : t.entryDate
         if (Number.isNaN(date.getTime())) return
         const dateKey = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd', { locale: enUS })
-        const net = t.pnl - (t.commission || 0)
+        const net = getTradeNetPnl(t)
         if (!byDate[dateKey]) byDate[dateKey] = { totalPnl: 0, totalContracts: 0, tradeCount: 0, winCount: 0 }
         byDate[dateKey].totalPnl += net
         byDate[dateKey].totalContracts += t.quantity

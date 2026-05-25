@@ -1,4 +1,5 @@
 import { getTradesAction } from "@/server/database";
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
 import { z } from 'zod/v3';
@@ -95,7 +96,7 @@ function calculateOverallMetrics(trades: Trade[]): OverallMetrics {
   let maxDrawdown = 0;
   
   for (const trade of trades) {
-    runningPnL += trade.pnl - trade.commission;
+    runningPnL += getTradeNetPnl(trade);
     if (runningPnL > peak) {
       peak = runningPnL;
     }
@@ -106,7 +107,7 @@ function calculateOverallMetrics(trades: Trade[]): OverallMetrics {
   }
   
   // Simple Sharpe ratio calculation (assuming risk-free rate of 0)
-  const dailyReturns = trades.map(t => t.pnl - t.commission);
+  const dailyReturns = trades.map(t => getTradeNetPnl(t));
   const avgDailyReturn = dailyReturns.reduce((sum, r) => sum + r, 0) / dailyReturns.length;
   const stdDev = Math.sqrt(dailyReturns.reduce((sum, r) => sum + Math.pow(r - avgDailyReturn, 2), 0) / dailyReturns.length);
   const sharpeRatio = stdDev > 0 ? avgDailyReturn / stdDev : 0;

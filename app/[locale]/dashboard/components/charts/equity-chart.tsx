@@ -1,4 +1,5 @@
 "use client";
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import * as React from "react";
 import {
@@ -753,7 +754,7 @@ export default function EquityChart({ size = "medium" }: EquityChartProps) {
 
       // Add net PnL from all trades on this day
       dayTrades.forEach((trade) => {
-        cumulativeEquity += trade.pnl - (trade.commission || 0);
+        cumulativeEquity += getTradeNetPnl(trade);
       });
 
       chartData.push({

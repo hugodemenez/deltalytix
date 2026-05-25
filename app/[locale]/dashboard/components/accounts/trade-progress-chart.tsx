@@ -1,4 +1,5 @@
 'use client'
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, ReferenceLine, Tooltip } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
@@ -83,7 +84,7 @@ export function TradeProgressChart({
   const allEvents: ChartEvent[] = [
     ...trades.map(trade => ({
       date: new Date(trade.entryDate),
-      amount: trade.pnl - (trade.commission || 0),
+      amount: getTradeNetPnl(trade),
       isPayout: false,
       isReset: false
     })),

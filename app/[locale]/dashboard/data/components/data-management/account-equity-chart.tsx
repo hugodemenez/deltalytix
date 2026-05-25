@@ -1,4 +1,5 @@
 'use client'
+import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import * as React from "react"
 import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer, TooltipProps, ReferenceLine } from "recharts"
@@ -111,7 +112,7 @@ export function AccountEquityChart({
     const allEvents: ChartEvent[] = [
       ...sortedTrades.map(trade => ({
         date: new Date(trade.entryDate),
-        amount: trade.pnl - (trade.commission || 0),
+        amount: getTradeNetPnl(trade),
         isPayout: false
       })),
       ...payoutPoints
