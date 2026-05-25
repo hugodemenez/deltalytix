@@ -12,6 +12,10 @@ import {
   remapMisconfiguredHistoricalHost,
   resolveDxFeedHistoricalHost,
 } from '@/lib/dxfeed-historical-host'
+import {
+  authPropfirmMatchesSelection,
+  getDxFeedPropFirm,
+} from '@/lib/dxfeed-propfirms'
 import type {
   DxFeedLoginRequest,
   DxFeedLoginResponse,
@@ -112,10 +116,16 @@ function extractApiErrorMessage(payload: unknown): string | null {
 export async function authenticateDxFeed(
   login: string,
   password: string,
+  propFirmId: string,
 ): Promise<{ success?: boolean; error?: string }> {
   try {
     if (!DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
       return { error: 'DxFeed configuration not set' }
+    }
+
+    const propFirm = getDxFeedPropFirm(propFirmId)
+    if (!propFirm?.enabled) {
+      return { error: 'Please select a supported prop firm' }
     }
 
     const supabase = await createClient()
@@ -156,13 +166,20 @@ export async function authenticateDxFeed(
       return { error: data.reason || 'Authentication failed' }
     }
 
-    const historicalHost = resolveDxFeedHistoricalHost(data, response.headers)
+    if (!authPropfirmMatchesSelection(data.propfirmName, propFirm)) {
+      return {
+        error: `These credentials are for ${data.propfirmName ?? 'another firm'}, not ${propFirm.name}. Select the correct prop firm and try again.`,
+      }
+    }
+
+    const historicalHost = resolveDxFeedHistoricalHost(data, response.headers, { propFirmId: propFirm.id })
 
     if (!historicalHost) {
       logger.warn('Could not derive historical host from auth response (check prop firm mapping)')
+      return { error: `Could not resolve trade history server for ${propFirm.name}` }
     }
 
-    logger.info('Auth successful')
+    logger.info(`Auth successful for ${propFirm.name}`)
 
     const reportAccessToken = data.tradingRestReportToken || data.token
     const accounts = historicalHost
@@ -176,6 +193,7 @@ export async function authenticateDxFeed(
       accessToken: reportAccessToken,
       historicalHost,
       accountNumbers,
+      propFirmId: propFirm.id,
       propfirmName: data.propfirmName,
     }
 
@@ -324,7 +342,11 @@ export async function getDxFeedTrades(
 
     let { accessToken, historicalHost } = credentials
     if (!historicalHost) {
-      const fallbackHost = resolveDxFeedHistoricalHost({ propfirmName: credentials.propfirmName })
+      const fallbackHost = resolveDxFeedHistoricalHost(
+        { propfirmName: credentials.propfirmName },
+        undefined,
+        { propFirmId: credentials.propFirmId },
+      )
       if (!fallbackHost) {
         return { error: 'No historical API host found in stored credentials' }
       }
@@ -349,8 +371,11 @@ export async function getDxFeedTrades(
     let accounts = await getDxFeedAccounts(accessToken, historicalHost)
 
     const remappedHost =
-      resolveDxFeedHistoricalHost({ propfirmName: credentials.propfirmName }) ||
-      remapMisconfiguredHistoricalHost(historicalHost)
+      resolveDxFeedHistoricalHost(
+        { propfirmName: credentials.propfirmName },
+        undefined,
+        { propFirmId: credentials.propFirmId },
+      ) || remapMisconfiguredHistoricalHost(historicalHost)
     if (accounts.length === 0 && remappedHost && remappedHost !== historicalHost) {
       logger.info('Retrying DxFeed account list with remapped historical host')
       accounts = await getDxFeedAccounts(accessToken, remappedHost)

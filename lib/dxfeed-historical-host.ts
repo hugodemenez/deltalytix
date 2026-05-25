@@ -6,6 +6,12 @@
  * Auth may return propfirmName + tradingWss but omit tradingRestReportHost.
  */
 
+import {
+  buildHistoricalHostForPropFirm,
+  getDxFeedPropFirm,
+  normalizeDxFeedPropfirmKey,
+} from '@/lib/dxfeed-propfirms'
+
 export function normalizeDxFeedHistoricalHost(value?: string | null): string {
   if (!value) return ''
 
@@ -17,9 +23,7 @@ export function normalizeDxFeedHistoricalHost(value?: string | null): string {
   }
 }
 
-function normalizePropfirmKey(name?: string | null): string {
-  return (name ?? '').trim().toLowerCase().replace(/[^a-z0-9]/g, '')
-}
+const normalizePropfirmKey = normalizeDxFeedPropfirmKey
 
 /**
  * Known prop firms → historical REST API base URL.
@@ -93,12 +97,23 @@ export interface DxFeedHistoricalHostAuthHints {
   propfirmName?: string | null
 }
 
+export interface ResolveDxFeedHistoricalHostOptions {
+  /** User-selected prop firm from connect UI */
+  propFirmId?: string | null
+}
+
 export function resolveDxFeedHistoricalHost(
   authData: DxFeedHistoricalHostAuthHints,
   responseHeaders?: { get(name: string): string | null },
+  options?: ResolveDxFeedHistoricalHostOptions,
 ): string {
   const fromAuth = normalizeDxFeedHistoricalHost(authData.tradingRestReportHost)
   if (fromAuth) return fromAuth
+
+  const selectedFirm = getDxFeedPropFirm(options?.propFirmId)
+  if (selectedFirm) {
+    return buildHistoricalHostForPropFirm(selectedFirm)
+  }
 
   const propfirmKey = normalizePropfirmKey(authData.propfirmName)
   const wssUrl =

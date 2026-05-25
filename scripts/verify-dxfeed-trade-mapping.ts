@@ -45,7 +45,9 @@ async function main() {
   })
   const authData = await authRes.json()
   const token = authData.tradingRestReportToken || authData.token
-  const host = resolveDxFeedHistoricalHost(authData, authRes.headers)
+  const host = resolveDxFeedHistoricalHost(authData, authRes.headers, {
+    propFirmId: process.env.DXFEED_PROP_FIRM_ID || 'miltraders',
+  })
   if (!host) {
     console.error('Could not resolve historical host')
     process.exit(1)

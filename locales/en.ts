@@ -2032,12 +2032,17 @@ export default {
     disconnected: "DxFeed account disconnected",
     error: {
       credentialsRequired: "Email and password are required",
+      propFirmRequired: "Please select your prop firm",
       authFailed: "Failed to authenticate with DxFeed",
     },
     addAccount: {
       title: "Connect DxFeed Account",
       description:
-        "Enter your DxFeed credentials to connect your account and sync trades.",
+        "Select your prop firm and enter your DxFeed credentials to connect and sync trades.",
+      propFirmLabel: "Prop firm",
+      propFirmPlaceholder: "Select your prop firm",
+      propFirmHint:
+        "Use the same prop firm as your trading login. Trade history is fetched from that firm's server.",
       emailLabel: "Email",
       emailPlaceholder: "Enter your DxFeed email",
       passwordLabel: "Password",
@@ -2054,6 +2059,7 @@ export default {
       inProgress: "DxFeed sync in progress for account {accountId}",
     },
     multiAccount: {
+      propFirm: "Prop firm",
       accountName: "Account Name",
       lastSync: "Last Sync",
       tokenStatus: "Token Status",

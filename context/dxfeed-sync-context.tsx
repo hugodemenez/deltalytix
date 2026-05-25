@@ -11,6 +11,7 @@ export interface DxFeedSyncAccount {
   service: string
   accountId: string
   hasToken: boolean
+  propFirmName?: string | null
   accountNumbers: string[]
   lastSyncedAt: Date
   tokenExpiresAt: Date | null
@@ -51,6 +52,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       service: sync.service,
       accountId: sync.accountId,
       hasToken: !!sync.hasToken,
+      propFirmName: sync.propFirmName ?? null,
       accountNumbers: Array.isArray(sync.accountNumbers) ? sync.accountNumbers : [],
       lastSyncedAt: sync?.lastSyncedAt ? new Date(sync.lastSyncedAt) : new Date(),
       tokenExpiresAt: sync?.tokenExpiresAt ? new Date(sync.tokenExpiresAt) : null,

@@ -4,6 +4,7 @@ import {
   getDxFeedSynchronizations,
   removeDxFeedToken,
 } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
+import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
 
 export async function GET() {
   try {
@@ -18,13 +19,19 @@ export async function GET() {
     const sanitized = await Promise.all(
       (result.synchronizations || []).map(async ({ token, ...rest }) => {
         let accountNumbers: string[] = []
+        let propFirmName: string | null = null
         if (token) {
           try {
             const parsed = JSON.parse(token) as {
               accessToken?: string
               historicalHost?: string
               accountNumbers?: string[]
+              propFirmId?: string
+              propfirmName?: string
             }
+
+            const firm = getDxFeedPropFirm(parsed.propFirmId)
+            propFirmName = firm?.name ?? parsed.propfirmName ?? null
 
             if (Array.isArray(parsed.accountNumbers)) {
               accountNumbers = parsed.accountNumbers
@@ -49,6 +56,7 @@ export async function GET() {
         return {
           ...rest,
           hasToken: !!token,
+          propFirmName,
           accountNumbers,
         }
       }),

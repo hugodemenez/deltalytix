@@ -94,7 +94,9 @@ async function auth(): Promise<{
   const wssUrl = data.tradingWss || res.headers.get('wss')
   if (!wssUrl) throw new Error('No wss URL in auth response')
 
-  const historicalHost = resolveDxFeedHistoricalHost(data, res.headers)
+  const historicalHost = resolveDxFeedHistoricalHost(data, res.headers, {
+    propFirmId: process.env.DXFEED_PROP_FIRM_ID || 'miltraders',
+  })
 
   return {
     tradingToken: data.token,

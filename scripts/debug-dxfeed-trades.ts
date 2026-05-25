@@ -8,6 +8,8 @@
 import 'dotenv/config'
 import { resolveDxFeedHistoricalHost } from '../lib/dxfeed-historical-host'
 
+const PROP_FIRM_ID = process.env.DXFEED_PROP_FIRM_ID || 'miltraders'
+
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
 
@@ -92,7 +94,9 @@ async function main() {
   }
 
   const token = authData.tradingRestReportToken || authData.token
-  const historicalHost = resolveDxFeedHistoricalHost(authData, authRes.headers)
+  const historicalHost = resolveDxFeedHistoricalHost(authData, authRes.headers, {
+    propFirmId: PROP_FIRM_ID,
+  })
 
   if (!historicalHost) {
     console.error('No historical host (add prop firm to lib/dxfeed-historical-host.ts)')

@@ -26,10 +26,21 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
 import { authenticateDxFeed, updateDxFeedDailySyncTimeAction } from './actions'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
+import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
+
+const DXFEED_PROP_FIRM_OPTIONS = getEnabledDxFeedPropFirms()
+const DEFAULT_PROP_FIRM_ID = DXFEED_PROP_FIRM_OPTIONS[0]?.id ?? ''
 
 export function DxFeedCredentialsManager() {
   const {
@@ -49,6 +60,7 @@ export function DxFeedCredentialsManager() {
   const [isReloading, setIsReloading] = useState(false)
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
+  const [selectedPropFirmId, setSelectedPropFirmId] = useState(DEFAULT_PROP_FIRM_ID)
   const [dailySyncTime, setDailySyncTime] = useState<string>('')
   const [isSavingTime, setIsSavingTime] = useState(false)
   const t = useI18n()
@@ -68,6 +80,10 @@ export function DxFeedCredentialsManager() {
   )
 
   const handleAddAccount = useCallback(async () => {
+    if (!selectedPropFirmId) {
+      toast.error(t('dxfeedSync.error.propFirmRequired'))
+      return
+    }
     if (!loginEmail || !loginPassword) {
       toast.error(t('dxfeedSync.error.credentialsRequired'))
       return
@@ -75,7 +91,7 @@ export function DxFeedCredentialsManager() {
 
     try {
       setIsLoading(true)
-      const result = await authenticateDxFeed(loginEmail, loginPassword)
+      const result = await authenticateDxFeed(loginEmail, loginPassword, selectedPropFirmId)
 
       if (result.error) {
         toast.error(result.error)
@@ -92,7 +108,9 @@ export function DxFeedCredentialsManager() {
     } finally {
       setIsLoading(false)
     }
-  }, [loginEmail, loginPassword, t, loadAccounts])
+  }, [loginEmail, loginPassword, selectedPropFirmId, t, loadAccounts])
+
+  const selectedPropFirm = DXFEED_PROP_FIRM_OPTIONS.find((f) => f.id === selectedPropFirmId)
 
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString()
@@ -265,6 +283,7 @@ export function DxFeedCredentialsManager() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>{t('dxfeedSync.multiAccount.propFirm')}</TableHead>
               <TableHead>{t('dxfeedSync.multiAccount.accountName')}</TableHead>
               <TableHead>{t('dxfeedSync.multiAccount.lastSync')}</TableHead>
               <TableHead>{t('dxfeedSync.multiAccount.dailySyncTimeLocal')}</TableHead>
@@ -275,6 +294,9 @@ export function DxFeedCredentialsManager() {
           <TableBody>
             {accounts.map((account) => (
                 <TableRow key={account.accountId}>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {account.propFirmName ?? '—'}
+                  </TableCell>
                   <TableCell className="font-medium">
                     {account.accountNumbers.length > 0 ? (
                       <Popover>
@@ -395,7 +417,7 @@ export function DxFeedCredentialsManager() {
             ))}
             {accounts.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
                   {t('dxfeedSync.multiAccount.noSavedAccounts')}
                 </TableCell>
               </TableRow>
@@ -412,6 +434,37 @@ export function DxFeedCredentialsManager() {
             <DialogDescription>{t('dxfeedSync.addAccount.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="dxfeed-prop-firm">{t('dxfeedSync.addAccount.propFirmLabel')}</Label>
+              <Select value={selectedPropFirmId} onValueChange={setSelectedPropFirmId}>
+                <SelectTrigger id="dxfeed-prop-firm">
+                  <SelectValue placeholder={t('dxfeedSync.addAccount.propFirmPlaceholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {DXFEED_PROP_FIRM_OPTIONS.map((firm) => (
+                    <SelectItem key={firm.id} value={firm.id}>
+                      {firm.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                {t('dxfeedSync.addAccount.propFirmHint')}
+                {selectedPropFirm?.website ? (
+                  <>
+                    {' '}
+                    <a
+                      href={selectedPropFirm.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline underline-offset-2"
+                    >
+                      {selectedPropFirm.website.replace(/^https?:\/\//, '')}
+                    </a>
+                  </>
+                ) : null}
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="dxfeed-email">{t('dxfeedSync.addAccount.emailLabel')}</Label>
               <Input
@@ -436,7 +489,10 @@ export function DxFeedCredentialsManager() {
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button onClick={handleAddAccount} disabled={isLoading}>
+              <Button
+                onClick={handleAddAccount}
+                disabled={isLoading || !selectedPropFirmId}
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
