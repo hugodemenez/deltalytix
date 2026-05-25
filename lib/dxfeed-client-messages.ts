@@ -17,6 +17,7 @@ const SUPPORT_HINT_CODES: Set<string> = new Set([
 const RECONNECT_HINT_CODES: Set<string> = new Set([
   DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT,
   DxFeedErrorCode.NO_TOKEN_RECONNECT,
+  DxFeedErrorCode.TOKEN_EXPIRED,
   DxFeedErrorCode.INVALID_STORED_CREDENTIALS,
   DxFeedErrorCode.SYNC_ACCOUNTS_UNAVAILABLE,
   DxFeedErrorCode.SYNC_FETCH_FAILED,
@@ -50,6 +51,7 @@ export function formatDxFeedError(
     'Missing prop firm. Please reconnect your DxFeed account.':
       DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT,
     'No DxFeed token found': DxFeedErrorCode.NO_TOKEN_RECONNECT,
+    'Token expired': DxFeedErrorCode.TOKEN_EXPIRED,
     'Failed to get trades': DxFeedErrorCode.SYNC_FAILED,
     DUPLICATE_TRADES: DxFeedErrorCode.DUPLICATE_TRADES,
   }

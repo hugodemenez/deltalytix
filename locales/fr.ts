@@ -2193,6 +2193,8 @@ export default {
         "Cette connexion est obsolète.",
       NO_TOKEN_RECONNECT:
         "Cette connexion a expiré.",
+      TOKEN_EXPIRED:
+        "Votre session DxFeed a expiré. Reconnectez-vous avec vos identifiants prop firm pour continuer la synchronisation.",
       DUPLICATE_TRADES:
         "Ces trades sont déjà présents dans votre journal.",
       SYNC_FAILED:

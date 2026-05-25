@@ -324,12 +324,12 @@ export function DxFeedCredentialsManager() {
                         </Badge>
                         <span
                           className={`px-2 py-0.5 rounded text-xs shrink-0 ${
-                            connection.hasToken
+                            connection.hasToken && !connection.tokenExpired
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                               : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                           }`}
                         >
-                          {connection.hasToken
+                          {connection.hasToken && !connection.tokenExpired
                             ? t('dxfeedSync.multiAccount.valid')
                             : t('dxfeedSync.multiAccount.expired')}
                         </span>
@@ -368,7 +368,7 @@ export function DxFeedCredentialsManager() {
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                   >
-                    {!connection.hasToken && (
+                    {(!connection.hasToken || connection.tokenExpired) && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -386,7 +386,11 @@ export function DxFeedCredentialsManager() {
                         await performSyncForAccount(connection.accountId)
                         setSyncingId(null)
                       }}
-                      disabled={syncingId !== null || !connection.hasToken}
+                      disabled={
+                        syncingId !== null ||
+                        !connection.hasToken ||
+                        !!connection.tokenExpired
+                      }
                       className="h-8 w-8 p-0 shrink-0"
                       title={t('dxfeedSync.multiAccount.syncAll')}
                     >

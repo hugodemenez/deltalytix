@@ -96,6 +96,8 @@ export interface DxFeedSyncAccount {
   service: string
   accountId: string
   hasToken: boolean
+  /** True when saved credentials exist but the DxFeed session is no longer valid */
+  tokenExpired?: boolean
   propFirmName?: string | null
   accountNumbers: string[]
   lastSyncedAt: Date
@@ -137,6 +139,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       service: sync.service,
       accountId: sync.accountId,
       hasToken: !!sync.hasToken,
+      tokenExpired: !!sync.tokenExpired,
       propFirmName: sync.propFirmName ?? null,
       accountNumbers: Array.isArray(sync.accountNumbers) ? sync.accountNumbers : [],
       lastSyncedAt: sync?.lastSyncedAt ? new Date(sync.lastSyncedAt) : new Date(),
@@ -187,7 +190,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
         return { success: false, message: t('dxfeedSync.sync.accountNotFound') }
       }
 
-      if (!account.hasToken) {
+      if (account.tokenExpired || !account.hasToken) {
         return { success: false, message: t('dxfeedSync.sync.tokenMissing') }
       }
 
@@ -216,9 +219,9 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
             }
 
             if (!response.ok || !payload?.success) {
-              const err = new Error(
-                formatDxFeedError(t, payload?.message, payload?.errorParams),
-              ) as Error & { errorParams?: Record<string, string | number> }
+              const err = new Error(payload?.message || DxFeedErrorCode.SYNC_FAILED) as Error & {
+                errorParams?: Record<string, string | number>
+              }
               err.errorParams = payload?.errorParams
               throw err
             }
@@ -232,13 +235,16 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
             loading: t('dxfeedSync.sync.inProgress', { accountId: syncLabel }),
             success: (result) => result,
             error: (e) => {
-              const message =
-                e instanceof Error ? e.message : t('dxfeedSync.sync.unknownError')
+              const code =
+                e instanceof Error ? e.message : DxFeedErrorCode.SYNC_FAILED
               const params =
                 e instanceof Error && 'errorParams' in e
                   ? (e as Error & { errorParams?: Record<string, string | number> }).errorParams
                   : undefined
-              return getDxFeedErrorToastContent(t, message, params)
+              if (code === DxFeedErrorCode.TOKEN_EXPIRED) {
+                void loadAccounts()
+              }
+              return getDxFeedErrorToastContent(t, code, params)
             },
             copyLabel: t('common.copy'),
           },
@@ -246,10 +252,14 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
 
         return { success: true, message: message.title }
       } catch (error) {
-        const errorMsg =
-          error instanceof Error ? error.message : t('dxfeedSync.sync.unknownError')
+        const code =
+          error instanceof Error ? error.message : DxFeedErrorCode.SYNC_FAILED
+        const params =
+          error instanceof Error && 'errorParams' in error
+            ? (error as Error & { errorParams?: Record<string, string | number> }).errorParams
+            : undefined
         console.error('Sync error:', error)
-        return { success: false, message: errorMsg }
+        return { success: false, message: formatDxFeedError(t, code, params) }
       }
     },
     [accounts, t, refreshTradesOnly, loadAccounts],
@@ -262,7 +272,7 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
     setIsAutoSyncing(true)
 
     try {
-      const validAccounts = accounts.filter((acc) => acc.hasToken)
+      const validAccounts = accounts.filter((acc) => acc.hasToken && !acc.tokenExpired)
       if (validAccounts.length === 0) return
 
       for (const account of validAccounts) {
