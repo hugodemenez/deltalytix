@@ -2027,26 +2027,77 @@ export default {
   dxfeedSync: {
     title: "DxFeed Account Sync",
     description:
-      "Connect your DxFeed account to automatically sync your trades using your credentials.",
+      "Connect your DxFeed / Volumetrica account to import closed trades automatically.",
     connected: "DxFeed account connected successfully",
     disconnected: "DxFeed account disconnected",
     error: {
-      credentialsRequired: "Email and password are required",
-      propFirmRequired: "Please select your prop firm",
-      authFailed: "Failed to authenticate with DxFeed",
+      credentialsRequired: "Enter your email and password to continue",
+      propFirmRequired: "Select your prop firm before connecting",
+      authFailed: "Could not connect to DxFeed",
+    },
+    errors: {
+      UNKNOWN:
+        "Something went wrong. Try again, or contact Support if the problem continues.",
+      CONFIG_NOT_SET:
+        "DxFeed is not configured on this app yet. Contact Support so we can enable it for your environment.",
+      PROP_FIRM_REQUIRED: "Select your prop firm in the list, then try again.",
+      PROP_FIRM_UNSUPPORTED:
+        "This prop firm is not available in the list yet.",
+      PROP_FIRMS_UNAVAILABLE:
+        "No prop firms are available to connect right now.",
+      USER_NOT_AUTHENTICATED:
+        "You must be signed in to connect DxFeed. Sign in and try again.",
+      AUTH_HTTP_ERROR:
+        "DxFeed rejected the connection (HTTP {status}). Check your email and password, or try again later. Details: {detail}",
+      AUTH_REJECTED: "DxFeed rejected your login: {reason}",
+      AUTH_PROP_FIRM_MISMATCH:
+        "These credentials belong to {authPropfirm}, not {selectedPropfirm}. Select the matching prop firm in the list, or use the correct login.",
+      HISTORICAL_HOST_UNRESOLVED:
+        "We could not reach the trade history server for {propfirm}.",
+      AUTH_UNEXPECTED:
+        "Connection failed unexpectedly. Check your credentials and try again.",
+      INVALID_STORED_CREDENTIALS:
+        "Saved connection data is invalid.",
+      MISSING_PROP_FIRM_RECONNECT:
+        "This connection is outdated.",
+      NO_TOKEN_RECONNECT:
+        "This connection has expired.",
+      DUPLICATE_TRADES:
+        "These trades are already in your journal.",
+      SYNC_FAILED:
+        "Trade sync failed. Try again in a few minutes.",
+      SAVE_TRADES_FAILED:
+        "Trades were fetched but could not be saved: {detail}",
+      ACCOUNT_ID_REQUIRED: "Account identifier is missing. Refresh the page and try again.",
+      LOAD_SYNCHRONIZATIONS_FAILED:
+        "Could not load your saved DxFeed connections. Refresh the page.",
+      DELETE_SYNC_FAILED: "Could not remove this connection. Try again.",
+      UPDATE_SYNC_TIME_FAILED: "Could not update the daily sync time. Try again.",
+      hintContactSupport:
+        "Open Support (menu → Support) and tell us your prop firm name if it is missing from the list. We can add supported firms on request.",
+      hintReconnect:
+        "Remove this connection, click Add New, select your prop firm, and sign in again with your DxFeed credentials.",
+      hintPropFirmMismatch:
+        "The prop firm in the dropdown must match the account you use on your prop firm's platform.",
+      hintCheckCredentials:
+        "Use the same email and password as on your prop firm's trading platform (demo vs live must match your account type).",
     },
     addAccount: {
       title: "Connect DxFeed Account",
       description:
-        "Select your prop firm and enter your DxFeed credentials to connect and sync trades.",
+        "Choose your prop firm, then sign in with the same credentials you use on that firm's platform.",
       propFirmLabel: "Prop firm",
       propFirmPlaceholder: "Select your prop firm",
       propFirmHint:
-        "Use the same prop firm as your trading login. Trade history is fetched from that firm's server.",
+        "Pick the firm where you trade (e.g. Miltraders). Trades are imported from that firm's history server—not from the generic DxFeed site.",
+      noPropFirmsTitle: "Your prop firm is not listed yet",
+      noPropFirmsDescription:
+        "We only show firms we have configured. Contact Support with your prop firm name and website so we can add it.",
+      noPropFirmsAction: "Contact Support",
       emailLabel: "Email",
-      emailPlaceholder: "Enter your DxFeed email",
+      emailPlaceholder: "Email from your prop firm login",
       passwordLabel: "Password",
-      passwordPlaceholder: "Enter your DxFeed password",
+      passwordPlaceholder: "Password from your prop firm login",
       connecting: "Connecting...",
       connect: "Connect",
     },
@@ -2054,9 +2105,11 @@ export default {
       error: "Error",
       warning: "Warning",
       success: "Success",
-      syncFailed: "Trade sync failed: {error}",
-      unknownError: "Unknown error",
-      inProgress: "DxFeed sync in progress for account {accountId}",
+      syncFailed: "{error}",
+      unknownError: "Unknown error during sync",
+      inProgress: "Syncing trades for {accountId}…",
+      tokenMissing: "Connection expired—use Reconnect to sign in again",
+      accountNotFound: "Account not found. Refresh the list and try again.",
     },
     multiAccount: {
       propFirm: "Prop firm",
@@ -2120,7 +2173,7 @@ export default {
   "import.type.dxfeedSync.description":
     "Direct account synchronization with DxFeed",
   "import.type.dxfeedSync.details":
-    "Direct sync with your DxFeed account. Requires username and password authentication.",
+    "Import closed trades from your prop firm (DxFeed / Volumetrica). Select your firm, then sign in with your platform credentials.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Import from ATAS Excel files",
   "import.type.atas.details":

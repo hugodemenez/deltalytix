@@ -3,6 +3,7 @@ import {
   getDxFeedToken,
   getDxFeedTrades,
 } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
 
     if (!accountId) {
       return NextResponse.json(
-        { success: false, message: 'accountId is required' },
+        { success: false, message: DxFeedErrorCode.ACCOUNT_ID_REQUIRED },
         { status: 400 },
       )
     }
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: tokenResult.error || 'Missing DxFeed credentials',
+          message: tokenResult.error || DxFeedErrorCode.NO_TOKEN_RECONNECT,
         },
         { status: 400 },
       )
@@ -30,7 +31,11 @@ export async function POST(request: NextRequest) {
     const syncResult = await getDxFeedTrades(tokenResult.storedTokenJson)
     if (syncResult.error) {
       return NextResponse.json(
-        { success: false, message: syncResult.error },
+        {
+          success: false,
+          message: syncResult.error,
+          errorParams: syncResult.errorParams,
+        },
         { status: 400 },
       )
     }
@@ -44,7 +49,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error performing DxFeed sync:', error)
     return NextResponse.json(
-      { success: false, message: 'Failed to perform DxFeed sync' },
+      { success: false, message: DxFeedErrorCode.SYNC_FAILED },
       { status: 500 },
     )
   }

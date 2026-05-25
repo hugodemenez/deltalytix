@@ -33,8 +33,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import Link from 'next/link'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
+import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
 import { authenticateDxFeed, updateDxFeedDailySyncTimeAction } from './actions'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
@@ -94,7 +97,12 @@ export function DxFeedCredentialsManager() {
       const result = await authenticateDxFeed(loginEmail, loginPassword, selectedPropFirmId)
 
       if (result.error) {
-        toast.error(result.error)
+        const { title, description } = getDxFeedErrorToastContent(
+          t,
+          result.error,
+          result.errorParams,
+        )
+        toast.error(title, description ? { description } : undefined)
         return
       }
 
@@ -104,7 +112,10 @@ export function DxFeedCredentialsManager() {
       setLoginPassword('')
       await loadAccounts()
     } catch (error) {
-      toast.error(t('dxfeedSync.error.authFailed'))
+      console.error('DxFeed connect error:', error)
+      toast.error(t('dxfeedSync.error.authFailed'), {
+        description: t('dxfeedSync.errors.hintCheckCredentials'),
+      })
     } finally {
       setIsLoading(false)
     }
@@ -122,7 +133,9 @@ export function DxFeedCredentialsManager() {
       await loadAccounts()
       toast.success(t('dxfeedSync.multiAccount.accountsReloaded'))
     } catch (error) {
-      toast.error(t('dxfeedSync.multiAccount.reloadError'))
+      toast.error(t('dxfeedSync.multiAccount.reloadError'), {
+        description: t('dxfeedSync.errors.hintContactSupport'),
+      })
       console.error('Reload error:', error)
     } finally {
       setIsReloading(false)
@@ -166,7 +179,10 @@ export function DxFeedCredentialsManager() {
         setIsTimeDialogOpen(false)
         await loadAccounts()
       } else {
-        toast.error(result.error || t('dxfeedSync.multiAccount.dailySyncTimeUpdateError'))
+        const { title, description } = getDxFeedErrorToastContent(t, result.error)
+        toast.error(title || t('dxfeedSync.multiAccount.dailySyncTimeUpdateError'), {
+          description,
+        })
       }
     } catch (error) {
       toast.error(t('dxfeedSync.multiAccount.dailySyncTimeUpdateError'))
@@ -434,6 +450,17 @@ export function DxFeedCredentialsManager() {
             <DialogDescription>{t('dxfeedSync.addAccount.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
+            {DXFEED_PROP_FIRM_OPTIONS.length === 0 ? (
+              <Alert variant="destructive">
+                <AlertTitle>{t('dxfeedSync.addAccount.noPropFirmsTitle')}</AlertTitle>
+                <AlertDescription className="space-y-2">
+                  <p>{t('dxfeedSync.addAccount.noPropFirmsDescription')}</p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href="/support">{t('dxfeedSync.addAccount.noPropFirmsAction')}</Link>
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : (
             <div className="space-y-2">
               <Label htmlFor="dxfeed-prop-firm">{t('dxfeedSync.addAccount.propFirmLabel')}</Label>
               <Select value={selectedPropFirmId} onValueChange={setSelectedPropFirmId}>
@@ -465,6 +492,7 @@ export function DxFeedCredentialsManager() {
                 ) : null}
               </p>
             </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="dxfeed-email">{t('dxfeedSync.addAccount.emailLabel')}</Label>
               <Input
@@ -491,7 +519,11 @@ export function DxFeedCredentialsManager() {
               </Button>
               <Button
                 onClick={handleAddAccount}
-                disabled={isLoading || !selectedPropFirmId}
+                disabled={
+                  isLoading ||
+                  !selectedPropFirmId ||
+                  DXFEED_PROP_FIRM_OPTIONS.length === 0
+                }
               >
                 {isLoading ? (
                   <>

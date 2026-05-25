@@ -94,9 +94,16 @@ export interface DxFeedTradesMultiAccountResponse {
   } | null
 }
 
+export interface DxFeedActionResult {
+  success?: boolean
+  error?: string
+  errorParams?: Record<string, string | number>
+}
+
 export interface DxFeedTradesResult {
   processedTrades?: import('@/prisma/generated/prisma/client').Trade[]
   savedCount?: number
   tradesCount?: number
   error?: string
+  errorParams?: Record<string, string | number>
 }

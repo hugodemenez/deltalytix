@@ -12,6 +12,7 @@ import {
   normalizeDxFeedHistoricalHost,
   resolveDxFeedHistoricalHost,
 } from '@/lib/dxfeed-historical-host'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import {
   authPropfirmMatchesSelection,
   buildHistoricalHostForPropFirm,
@@ -24,6 +25,7 @@ import type {
   DxFeedAccountListResponse,
   DxFeedTradesResponse,
   DxFeedReportTrade,
+  DxFeedActionResult,
   DxFeedTradesResult,
   DxFeedTradingAccount,
 } from './dxfeed-types'
@@ -118,25 +120,25 @@ export async function authenticateDxFeed(
   login: string,
   password: string,
   propFirmId: string,
-): Promise<{ success?: boolean; error?: string }> {
+): Promise<DxFeedActionResult> {
   try {
     if (!DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
-      return { error: 'DxFeed configuration not set' }
+      return { error: DxFeedErrorCode.CONFIG_NOT_SET }
     }
 
     if (!propFirmId?.trim()) {
-      return { error: 'Please select a supported prop firm' }
+      return { error: DxFeedErrorCode.PROP_FIRM_REQUIRED }
     }
 
     const propFirm = getDxFeedPropFirm(propFirmId)
     if (!propFirm?.enabled) {
-      return { error: 'Please select a supported prop firm' }
+      return { error: DxFeedErrorCode.PROP_FIRM_UNSUPPORTED }
     }
 
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      return { error: 'User not authenticated' }
+      return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
     }
 
     const body: DxFeedLoginRequest = {
@@ -162,18 +164,31 @@ export async function authenticateDxFeed(
     if (!response.ok) {
       const text = await response.text()
       logger.error(`Auth request failed with status ${response.status}`)
-      return { error: `Authentication failed (${response.status}): ${text || response.statusText}` }
+      return {
+        error: DxFeedErrorCode.AUTH_HTTP_ERROR,
+        errorParams: {
+          status: response.status,
+          detail: text?.slice(0, 200) || response.statusText,
+        },
+      }
     }
 
     const data: DxFeedLoginResponse = await response.json()
 
     if (data.status !== 'OK' || !data.token) {
-      return { error: data.reason || 'Authentication failed' }
+      return {
+        error: DxFeedErrorCode.AUTH_REJECTED,
+        errorParams: { reason: data.reason || 'Authentication failed' },
+      }
     }
 
     if (!authPropfirmMatchesSelection(data.propfirmName, propFirm)) {
       return {
-        error: `These credentials are for ${data.propfirmName ?? 'another firm'}, not ${propFirm.name}. Select the correct prop firm and try again.`,
+        error: DxFeedErrorCode.AUTH_PROP_FIRM_MISMATCH,
+        errorParams: {
+          authPropfirm: data.propfirmName ?? '—',
+          selectedPropfirm: propFirm.name,
+        },
       }
     }
 
@@ -181,7 +196,10 @@ export async function authenticateDxFeed(
 
     if (!historicalHost) {
       logger.warn('Could not derive historical host from auth response (check prop firm mapping)')
-      return { error: `Could not resolve trade history server for ${propFirm.name}` }
+      return {
+        error: DxFeedErrorCode.HISTORICAL_HOST_UNRESOLVED,
+        errorParams: { propfirm: propFirm.name },
+      }
     }
 
     logger.info(`Auth successful for ${propFirm.name}`)
@@ -210,7 +228,7 @@ export async function authenticateDxFeed(
     return { success: true }
   } catch (error) {
     logger.error('Authentication error:', error)
-    return { error: 'Failed to authenticate with DxFeed' }
+    return { error: DxFeedErrorCode.AUTH_UNEXPECTED }
   }
 }
 
@@ -342,12 +360,12 @@ export async function getDxFeedTrades(
   try {
     const credentials = parseStoredCredentials(initialTokenJson)
     if (!credentials) {
-      return { error: 'Invalid stored DxFeed credentials' }
+      return { error: DxFeedErrorCode.INVALID_STORED_CREDENTIALS }
     }
 
     const propFirm = getDxFeedPropFirm(credentials.propFirmId)
     if (!propFirm) {
-      return { error: 'Missing prop firm. Please reconnect your DxFeed account.' }
+      return { error: DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT }
     }
 
     const { accessToken } = credentials
@@ -361,7 +379,7 @@ export async function getDxFeedTrades(
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
-        return { error: 'User not authenticated' }
+        return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
       }
       userId = user.id
     }
@@ -449,14 +467,15 @@ export async function getDxFeedTrades(
     if (saveResult.error) {
       if (saveResult.error === 'DUPLICATE_TRADES') {
         return {
-          error: 'DUPLICATE_TRADES',
+          error: DxFeedErrorCode.DUPLICATE_TRADES,
           processedTrades: allTrades,
           tradesCount: allTrades.length,
         }
       }
       logger.error(`Failed to save trades: ${saveResult.error}`)
       return {
-        error: `Failed to save trades: ${saveResult.error}`,
+        error: DxFeedErrorCode.SAVE_TRADES_FAILED,
+        errorParams: { detail: saveResult.error },
         processedTrades: allTrades,
         tradesCount: allTrades.length,
       }
@@ -471,7 +490,7 @@ export async function getDxFeedTrades(
     }
   } catch (error) {
     logger.error('Failed to get DxFeed trades:', error)
-    return { error: 'Failed to get trades' }
+    return { error: DxFeedErrorCode.SYNC_FAILED }
   }
 }
 
@@ -654,6 +673,6 @@ export async function updateDxFeedDailySyncTimeAction(
     return { success: true }
   } catch (error) {
     logger.error('Error updating daily sync time:', error)
-    return { success: false, error: 'Failed to update daily sync time' }
+    return { success: false, error: DxFeedErrorCode.UPDATE_SYNC_TIME_FAILED }
   }
 }

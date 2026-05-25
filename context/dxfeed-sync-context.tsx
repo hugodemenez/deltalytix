@@ -4,6 +4,8 @@ import { createContext, useContext, useEffect, useState, useRef, useCallback, Re
 import { useData } from '@/context/data-provider'
 import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
+import { formatDxFeedError, getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
 /** Client-safe subset of Synchronization (token stripped, replaced with hasToken) */
 export interface DxFeedSyncAccount {
   id: string
@@ -79,8 +81,12 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       setAccounts(data.map(normalizeSynchronization))
     } catch (error) {
       console.warn('Failed to load DxFeed accounts:', error)
+      toast.error(
+        formatDxFeedError(t, 'LOAD_SYNCHRONIZATIONS_FAILED'),
+        { description: t('dxfeedSync.errors.hintContactSupport') },
+      )
     }
-  }, [normalizeSynchronization])
+  }, [normalizeSynchronization, t])
 
   const deleteAccount = useCallback(async (accountId: string) => {
     setAccounts((prev) => prev.filter((acc) => acc.accountId !== accountId))
@@ -95,11 +101,11 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
     async (accountId: string) => {
       const account = accounts.find((acc) => acc.accountId === accountId)
       if (!account) {
-        return { success: false, message: `Account ${accountId} not found` }
+        return { success: false, message: t('dxfeedSync.sync.accountNotFound') }
       }
 
       if (!account.hasToken) {
-        return { success: false, message: `Token for account ${accountId} is missing` }
+        return { success: false, message: t('dxfeedSync.sync.tokenMissing') }
       }
 
       try {
@@ -112,12 +118,19 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
 
           const payload = await response.json()
 
-          if (payload?.message === 'DUPLICATE_TRADES') {
+          if (
+            payload?.message === DxFeedErrorCode.DUPLICATE_TRADES ||
+            payload?.message === 'DUPLICATE_TRADES'
+          ) {
             return t('dxfeedSync.multiAccount.alreadyImportedTrades')
           }
 
           if (!response.ok || !payload?.success) {
-            throw new Error(payload?.message || `Sync error for account ${accountId}`)
+            const err = new Error(
+              formatDxFeedError(t, payload?.message, payload?.errorParams),
+            ) as Error & { errorParams?: Record<string, string | number> }
+            err.errorParams = payload?.errorParams
+            throw err
           }
 
           const savedCount = payload.savedCount || 0
@@ -151,17 +164,22 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
         toast.promise(promise, {
           loading: t('dxfeedSync.sync.inProgress', { accountId }),
           success: (msg: string) => msg,
-          error: (e) =>
-            t('dxfeedSync.sync.syncFailed', {
-              error: e instanceof Error ? e.message : t('dxfeedSync.sync.unknownError'),
-            }),
+          error: (e) => {
+            const message =
+              e instanceof Error ? e.message : t('dxfeedSync.sync.unknownError')
+            const params =
+              e instanceof Error && 'errorParams' in e
+                ? (e as Error & { errorParams?: Record<string, string | number> }).errorParams
+                : undefined
+            const { title, description } = getDxFeedErrorToastContent(t, message, params)
+            return description ? `${title}\n${description}` : title
+          },
         })
         const message: string = await promise
         return { success: true, message }
       } catch (error) {
-        const errorMsg = `Sync error for account ${accountId}: ${
+        const errorMsg =
           error instanceof Error ? error.message : t('dxfeedSync.sync.unknownError')
-        }`
         console.error('Sync error:', error)
         return { success: false, message: errorMsg }
       }

@@ -4,6 +4,7 @@ import {
   getDxFeedSynchronizations,
   removeDxFeedToken,
 } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/actions'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { getDxFeedPropFirm } from '@/lib/dxfeed-propfirms'
 
 export async function GET() {
@@ -69,7 +70,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching DxFeed synchronizations:', error)
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch DxFeed synchronizations' },
+      { success: false, message: DxFeedErrorCode.LOAD_SYNCHRONIZATIONS_FAILED },
       { status: 500 },
     )
   }
@@ -82,7 +83,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!accountId) {
       return NextResponse.json(
-        { success: false, message: 'accountId is required' },
+        { success: false, message: DxFeedErrorCode.ACCOUNT_ID_REQUIRED },
         { status: 400 },
       )
     }
@@ -102,7 +103,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Error deleting DxFeed synchronization:', error)
     return NextResponse.json(
-      { success: false, message: 'Failed to delete synchronization' },
+      { success: false, message: DxFeedErrorCode.DELETE_SYNC_FAILED },
       { status: 500 },
     )
   }
