@@ -1,6 +1,5 @@
 'use client'
 
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 import * as React from "react"
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

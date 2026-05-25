@@ -1,6 +1,5 @@
 "use client";
 
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 import * as React from "react";
 import {
   PieChart,
