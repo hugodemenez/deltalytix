@@ -2301,6 +2301,8 @@ export default {
       accountsCount: "comptes de trading",
       syncedAccounts: "Comptes Synchronisés",
       dailySyncTimeLocal: "Heure de sync quotidienne (Local)",
+      dailySyncSchedule: "Planification de sync quotidienne",
+      dailySyncScheduleNotScheduled: "Non planifiée",
       dailySyncTimeTitle: "Définir l'heure de synchronisation quotidienne",
       dailySyncTimeDescription:
         "Configurez l'heure à laquelle ce compte devrait se synchroniser automatiquement chaque jour (en heure locale). Laissez vide pour désactiver la synchronisation automatique.",

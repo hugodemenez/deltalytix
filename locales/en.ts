@@ -2167,6 +2167,8 @@ export default {
       accountsCount: "trading accounts",
       syncedAccounts: "Synced Accounts",
       dailySyncTimeLocal: "Daily sync time (Local)",
+      dailySyncSchedule: "Daily sync schedule",
+      dailySyncScheduleNotScheduled: "Not scheduled",
       dailySyncTimeTitle: "Set daily sync time",
       dailySyncTimeDescription:
         "Configure when this account should automatically sync each day (in your local time). Leave empty to disable automatic syncing.",

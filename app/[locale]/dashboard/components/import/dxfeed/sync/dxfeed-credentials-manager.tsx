@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, Trash2, Plus, RefreshCw, MoreVertical } from 'lucide-react'
+import { Loader2, Trash2, Plus, RefreshCw, MoreVertical, Clock } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -65,7 +65,12 @@ export function DxFeedCredentialsManager() {
   const [selectedPropFirmId, setSelectedPropFirmId] = useState(DEFAULT_PROP_FIRM_ID)
   const [dailySyncTime, setDailySyncTime] = useState<string>('')
   const [isSavingTime, setIsSavingTime] = useState(false)
+  const [actionsMenuAccountId, setActionsMenuAccountId] = useState<string | null>(null)
   const t = useI18n()
+
+  const closeActionsMenu = useCallback(() => {
+    setActionsMenuAccountId(null)
+  }, [])
 
   const handleDelete = useCallback(
     async (accountId: string) => {
@@ -230,8 +235,8 @@ export function DxFeedCredentialsManager() {
     )
   }, [])
 
-  function formatSyncTime(date: Date | null) {
-    if (!date) return t('dxfeedSync.multiAccount.dailySyncTimeNotSet')
+  function formatDailySyncTimeValue(date: Date | null): string | null {
+    if (!date) return null
 
     const utcDate = new Date(date)
     const localHours = utcDate.getHours().toString().padStart(2, '0')
@@ -246,6 +251,13 @@ export function DxFeedCredentialsManager() {
     const tzName = parts.find((part) => part.type === 'timeZoneName')?.value || ''
 
     return `${localHours}:${localMinutes} ${tzName}`
+  }
+
+  function getDailySyncScheduleLabel(date: Date | null) {
+    return (
+      formatDailySyncTimeValue(date) ??
+      t('dxfeedSync.multiAccount.dailySyncScheduleNotScheduled')
+    )
   }
 
   return (
@@ -361,6 +373,12 @@ export function DxFeedCredentialsManager() {
                           {formatDate(connection.lastSyncedAt.toISOString())}
                         </span>
                       </p>
+                      <p className="text-xs text-muted-foreground">
+                        {t('dxfeedSync.multiAccount.dailySyncSchedule')}:{' '}
+                        <span className="text-foreground/80">
+                          {getDailySyncScheduleLabel(connection.dailySyncTime)}
+                        </span>
+                      </p>
                     </div>
                   </AccordionTrigger>
                   <div
@@ -400,32 +418,48 @@ export function DxFeedCredentialsManager() {
                         <RefreshCw className="h-4 w-4 text-muted-foreground" />
                       )}
                     </Button>
-                    <Popover modal>
+                    <Popover
+                      modal
+                      open={actionsMenuAccountId === connection.accountId}
+                      onOpenChange={(open) =>
+                        setActionsMenuAccountId(open ? connection.accountId : null)
+                      }
+                    >
                       <PopoverTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-52 p-2" align="end">
+                      <PopoverContent className="w-56 p-2" align="end">
                         <div className="flex flex-col space-y-1">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="justify-start"
-                            onClick={() =>
+                            className="justify-start h-auto py-2"
+                            onClick={() => {
+                              closeActionsMenu()
                               handleSetDailySyncTime(
                                 connection.accountId,
                                 connection.dailySyncTime,
                               )
-                            }
+                            }}
                           >
-                            {formatSyncTime(connection.dailySyncTime)}
+                            <Clock className="h-4 w-4 mr-2 shrink-0" />
+                            <div className="flex min-w-0 flex-col items-start text-left">
+                              <span className="text-xs font-medium leading-tight">
+                                {t('dxfeedSync.multiAccount.dailySyncSchedule')}
+                              </span>
+                              <span className="text-sm text-muted-foreground leading-tight">
+                                {getDailySyncScheduleLabel(connection.dailySyncTime)}
+                              </span>
+                            </div>
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
                             className="justify-start text-destructive hover:text-destructive"
                             onClick={() => {
+                              closeActionsMenu()
                               setSelectedAccountId(connection.accountId)
                               setIsDeleteDialogOpen(true)
                             }}
