@@ -8,12 +8,10 @@ import { prisma } from '@/lib/prisma'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
-import {
-  remapMisconfiguredHistoricalHost,
-  resolveDxFeedHistoricalHost,
-} from '@/lib/dxfeed-historical-host'
+import { resolveDxFeedHistoricalHost } from '@/lib/dxfeed-historical-host'
 import {
   authPropfirmMatchesSelection,
+  buildHistoricalHostForPropFirm,
   getDxFeedPropFirm,
 } from '@/lib/dxfeed-propfirms'
 import type {
@@ -340,19 +338,13 @@ export async function getDxFeedTrades(
       return { error: 'Invalid stored DxFeed credentials' }
     }
 
-    let { accessToken, historicalHost } = credentials
-    if (!historicalHost) {
-      const fallbackHost = resolveDxFeedHistoricalHost(
-        { propfirmName: credentials.propfirmName },
-        undefined,
-        { propFirmId: credentials.propFirmId },
-      )
-      if (!fallbackHost) {
-        return { error: 'No historical API host found in stored credentials' }
-      }
-      historicalHost = fallbackHost
-      logger.info('Resolved historical API host from prop firm mapping')
+    const propFirm = getDxFeedPropFirm(credentials.propFirmId)
+    if (!propFirm) {
+      return { error: 'Missing prop firm. Please reconnect your DxFeed account.' }
     }
+
+    const { accessToken } = credentials
+    const historicalHost = buildHistoricalHostForPropFirm(propFirm)
 
     let userId = options?.userId ?? null
     if (!userId) {
@@ -368,21 +360,7 @@ export async function getDxFeedTrades(
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
 
     logger.info('Fetching DxFeed accounts...')
-    let accounts = await getDxFeedAccounts(accessToken, historicalHost)
-
-    const remappedHost =
-      resolveDxFeedHistoricalHost(
-        { propfirmName: credentials.propfirmName },
-        undefined,
-        { propFirmId: credentials.propFirmId },
-      ) || remapMisconfiguredHistoricalHost(historicalHost)
-    if (accounts.length === 0 && remappedHost && remappedHost !== historicalHost) {
-      logger.info('Retrying DxFeed account list with remapped historical host')
-      accounts = await getDxFeedAccounts(accessToken, remappedHost)
-      if (accounts.length > 0) {
-        historicalHost = remappedHost
-      }
-    }
+    const accounts = await getDxFeedAccounts(accessToken, historicalHost)
 
     const accountNumbers = accounts.map(
       (a) => a.accountHeader || a.accountReference || a.accountId.toString(),

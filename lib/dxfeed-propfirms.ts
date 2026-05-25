@@ -5,7 +5,7 @@
  * - Trading (WebSocket): {tradingSubdomain}.{domain}
  * - Historical REST:     {historicalSubdomain}.{domain}
  *
- * Add new firms here as they are validated (or via DXFEED_HISTORICAL_HOSTS env overrides).
+ * Add new firms here as they are validated.
  */
 
 export interface DxFeedPropFirmDefinition {
@@ -47,6 +47,19 @@ export function getDxFeedPropFirm(id?: string | null): DxFeedPropFirmDefinition 
   const key = normalizeDxFeedPropfirmKey(id)
   return DXFEED_PROP_FIRMS.find(
     (f) => f.id === id || normalizeDxFeedPropfirmKey(f.id) === key || normalizeDxFeedPropfirmKey(f.name) === key,
+  )
+}
+
+export function getDxFeedPropFirmByAuthName(
+  propfirmName?: string | null,
+): DxFeedPropFirmDefinition | undefined {
+  const key = normalizeDxFeedPropfirmKey(propfirmName)
+  if (!key) return undefined
+  return DXFEED_PROP_FIRMS.find(
+    (f) =>
+      normalizeDxFeedPropfirmKey(f.name) === key ||
+      normalizeDxFeedPropfirmKey(f.id) === key ||
+      normalizeDxFeedPropfirmKey(f.domain.split('.')[0]) === key,
   )
 }
 
