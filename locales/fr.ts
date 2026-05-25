@@ -2246,6 +2246,14 @@ export default {
     },
     multiAccount: {
       propFirm: "Firme prop",
+      connection: "Connexion",
+      connectionLoginHint: "Identifiant DxFeed utilisé pour la connexion",
+      tradingAccountsCount: "{count} compte(s) de trading",
+      tradingAccountsList: "Comptes de trading sur cette connexion",
+      noTradingAccounts:
+        "Aucun compte de trading détecté pour l'instant. Lancez une synchronisation après vos premiers trades.",
+      syncImportsAllAccounts:
+        "Chaque synchronisation importe les trades clôturés de tous les comptes listés ci-dessous (ex. 50K-001, 50K-002, 100K-001).",
       accountName: "Nom du Compte",
       lastSync: "Dernière Sync",
       tokenStatus: "Statut du Token",
@@ -2271,7 +2279,7 @@ export default {
       syncCompleteNoNewTradesForAccount:
         "{tradesCount} trades trouvés pour {accountId} mais aucun nouveau trade.",
       syncCompleteNoOrdersForAccount: "Aucun trade trouvé pour {accountId}.",
-      accountsCount: "comptes",
+      accountsCount: "comptes de trading",
       syncedAccounts: "Comptes Synchronisés",
       dailySyncTimeLocal: "Heure de sync quotidienne (Local)",
       dailySyncTimeTitle: "Définir l'heure de synchronisation quotidienne",

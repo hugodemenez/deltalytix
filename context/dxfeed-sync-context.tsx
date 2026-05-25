@@ -135,22 +135,28 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
 
           const savedCount = payload.savedCount || 0
           const tradesCount = payload.tradesCount || 0
+          const tradingCount = account.accountNumbers.length
+          const syncLabel = account.propFirmName
+            ? tradingCount > 0
+              ? `${account.propFirmName} (${tradingCount} ${t('dxfeedSync.multiAccount.accountsCount')})`
+              : account.propFirmName
+            : accountId
 
           let successMessage: string
           if (savedCount > 0) {
             successMessage = t('dxfeedSync.multiAccount.syncCompleteForAccount', {
               savedCount,
               tradesCount,
-              accountId,
+              accountId: syncLabel,
             })
           } else if (tradesCount > 0) {
             successMessage = t('dxfeedSync.multiAccount.syncCompleteNoNewTradesForAccount', {
               tradesCount,
-              accountId,
+              accountId: syncLabel,
             })
           } else {
             successMessage = t('dxfeedSync.multiAccount.syncCompleteNoOrdersForAccount', {
-              accountId,
+              accountId: syncLabel,
             })
           }
 

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, Trash2, Plus, RefreshCw, MoreVertical, ChevronDown } from 'lucide-react'
+import { Loader2, Trash2, Plus, RefreshCw, MoreVertical } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -11,21 +11,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -295,152 +293,166 @@ export function DxFeedCredentialsManager() {
         </div>
       </div>
 
-      <div className="border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('dxfeedSync.multiAccount.propFirm')}</TableHead>
-              <TableHead>{t('dxfeedSync.multiAccount.accountName')}</TableHead>
-              <TableHead>{t('dxfeedSync.multiAccount.lastSync')}</TableHead>
-              <TableHead>{t('dxfeedSync.multiAccount.dailySyncTimeLocal')}</TableHead>
-              <TableHead>{t('dxfeedSync.multiAccount.tokenStatus')}</TableHead>
-              <TableHead>{t('dxfeedSync.multiAccount.actions')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {accounts.map((account) => (
-                <TableRow key={account.accountId}>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {account.propFirmName ?? '—'}
-                  </TableCell>
-                  <TableCell className="font-medium">
-                    {account.accountNumbers.length > 0 ? (
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-auto px-2 py-1 text-left font-medium">
-                            <span className="truncate max-w-[160px]">
-                              {account.accountNumbers.length === 1
-                                ? account.accountNumbers[0]
-                                : `${account.accountNumbers.length} ${t('dxfeedSync.multiAccount.accountsCount')}`}
-                            </span>
-                            {account.accountNumbers.length > 1 && (
-                              <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-                            )}
-                          </Button>
-                        </PopoverTrigger>
-                        {account.accountNumbers.length > 1 && (
-                          <PopoverContent className="w-64 p-0" align="start">
-                            <div className="px-3 py-2 border-b">
-                              <p className="text-sm font-medium">{t('dxfeedSync.multiAccount.syncedAccounts')}</p>
-                            </div>
-                            <ScrollArea className="max-h-[200px]">
-                              <div className="p-2 space-y-1">
-                                {account.accountNumbers.map((num) => (
-                                  <div
-                                    key={num}
-                                    className="px-2 py-1.5 text-sm rounded hover:bg-muted"
-                                  >
-                                    {num}
-                                  </div>
-                                ))}
-                              </div>
-                            </ScrollArea>
-                          </PopoverContent>
-                        )}
-                      </Popover>
-                    ) : (
-                      <span className="text-muted-foreground text-sm">{account.accountId}</span>
+      {accounts.length === 0 ? (
+        <div className="border rounded-lg px-4 py-8 text-center text-muted-foreground text-sm">
+          {t('dxfeedSync.multiAccount.noSavedAccounts')}
+        </div>
+      ) : (
+        <Accordion type="multiple" className="border rounded-lg divide-y">
+          {accounts.map((connection) => {
+            const tradingAccountCount = connection.accountNumbers.length
+
+            return (
+              <AccordionItem
+                key={connection.accountId}
+                value={connection.accountId}
+                className="border-0"
+              >
+                <div className="flex items-stretch">
+                  <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline [&[data-state=open]>svg]:rotate-180">
+                    <div className="grid w-full gap-3 text-left sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_auto_auto] sm:items-center sm:gap-4 pr-2">
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">
+                          {t('dxfeedSync.multiAccount.propFirm')}
+                        </p>
+                        <p className="font-semibold truncate">
+                          {connection.propFirmName ?? '—'}
+                        </p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">
+                          {t('dxfeedSync.multiAccount.connection')}
+                        </p>
+                        <p className="text-sm truncate" title={connection.accountId}>
+                          {connection.accountId}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="w-fit shrink-0">
+                        {t('dxfeedSync.multiAccount.tradingAccountsCount', {
+                          count: tradingAccountCount,
+                        })}
+                      </Badge>
+                      <div className="flex flex-col gap-1 text-xs sm:items-end">
+                        <span
+                          className={`px-2 py-0.5 rounded w-fit ${
+                            connection.hasToken
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          }`}
+                        >
+                          {connection.hasToken
+                            ? t('dxfeedSync.multiAccount.valid')
+                            : t('dxfeedSync.multiAccount.expired')}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {t('dxfeedSync.multiAccount.lastSync')}:{' '}
+                          {formatDate(connection.lastSyncedAt.toISOString())}
+                        </span>
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <div
+                    className="flex items-center gap-1 px-3 border-l shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    {!connection.hasToken && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsAddDialogOpen(true)}
+                        className="h-8 hidden sm:inline-flex"
+                      >
+                        {t('dxfeedSync.multiAccount.reconnect')}
+                      </Button>
                     )}
-                  </TableCell>
-                  <TableCell>{formatDate(account.lastSyncedAt.toISOString())}</TableCell>
-                  <TableCell>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() =>
-                        handleSetDailySyncTime(account.accountId, account.dailySyncTime)
-                      }
-                      className="text-xs"
+                      onClick={async () => {
+                        setSyncingId(connection.accountId)
+                        await performSyncForAccount(connection.accountId)
+                        setSyncingId(null)
+                      }}
+                      disabled={syncingId !== null || !connection.hasToken}
+                      className="h-8 w-8 p-0"
+                      title={t('dxfeedSync.multiAccount.syncAll')}
                     >
-                      {formatSyncTime(account.dailySyncTime)}
-                    </Button>
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        account.hasToken
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}
-                    >
-                      {account.hasToken
-                        ? t('dxfeedSync.multiAccount.valid')
-                        : t('dxfeedSync.multiAccount.expired')}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-center items-center gap-2">
-                      {!account.hasToken && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsAddDialogOpen(true)}
-                          className="h-8"
-                        >
-                          {t('dxfeedSync.multiAccount.reconnect')}
-                        </Button>
+                      {syncingId === connection.accountId ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4 text-muted-foreground" />
                       )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={async () => {
-                          await performSyncForAccount(account.accountId)
-                        }}
-                        disabled={syncingId !== null || !account.hasToken}
-                      >
-                        {syncingId === account.accountId ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                      <Popover modal>
-                        <PopoverTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="h-4 w-4" />
+                    </Button>
+                    <Popover modal>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-52 p-2" align="end">
+                        <div className="flex flex-col space-y-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start"
+                            onClick={() =>
+                              handleSetDailySyncTime(
+                                connection.accountId,
+                                connection.dailySyncTime,
+                              )
+                            }
+                          >
+                            {formatSyncTime(connection.dailySyncTime)}
                           </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-48 p-2" align="end">
-                          <div className="flex flex-col space-y-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="justify-start text-destructive hover:text-destructive"
-                              onClick={() => {
-                                setSelectedAccountId(account.accountId)
-                                setIsDeleteDialogOpen(true)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              {t('dxfeedSync.multiAccount.delete')}
-                            </Button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </TableCell>
-                </TableRow>
-            ))}
-            {accounts.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
-                  {t('dxfeedSync.multiAccount.noSavedAccounts')}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="justify-start text-destructive hover:text-destructive"
+                            onClick={() => {
+                              setSelectedAccountId(connection.accountId)
+                              setIsDeleteDialogOpen(true)
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {t('dxfeedSync.multiAccount.delete')}
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+                <AccordionContent className="px-4 pb-4 pt-0">
+                  <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+                    <p className="text-sm font-medium">
+                      {t('dxfeedSync.multiAccount.tradingAccountsList')}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('dxfeedSync.multiAccount.syncImportsAllAccounts')}
+                    </p>
+                    {tradingAccountCount > 0 ? (
+                      <ul className="space-y-1">
+                        {connection.accountNumbers.map((name) => (
+                          <li
+                            key={name}
+                            className="text-sm font-mono px-2 py-1.5 rounded bg-background border"
+                          >
+                            {name}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        {t('dxfeedSync.multiAccount.noTradingAccounts')}
+                      </p>
+                    )}
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            )
+          })}
+        </Accordion>
+      )}
 
       {/* Add Account Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
