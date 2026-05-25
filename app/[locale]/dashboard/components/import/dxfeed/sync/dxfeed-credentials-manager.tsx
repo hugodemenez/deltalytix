@@ -325,67 +325,66 @@ export function DxFeedCredentialsManager() {
                 value={connection.accountId}
                 className="border-0"
               >
-                <div className="flex flex-col sm:flex-row sm:items-stretch min-w-0">
-                  <AccordionTrigger className="flex-1 px-3 py-3 sm:px-4 sm:py-4 hover:no-underline [&[data-state=open]>svg]:rotate-180 min-w-0">
-                    <div className="flex w-full min-w-0 flex-col gap-3 text-left pr-1 sm:pr-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="shrink-0">
-                          {t('dxfeedSync.multiAccount.tradingAccountsCount', {
-                            count: tradingAccountCount,
-                          })}
-                        </Badge>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs shrink-0 ${
-                            connection.hasToken && !connection.tokenExpired
-                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                              : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}
-                        >
-                          {connection.hasToken && !connection.tokenExpired
-                            ? t('dxfeedSync.multiAccount.valid')
-                            : t('dxfeedSync.multiAccount.expired')}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 min-w-0">
-                        <div className="min-w-0 space-y-0.5">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            {t('dxfeedSync.multiAccount.propFirm')}
-                          </p>
-                          <p className="text-base font-semibold break-words">
-                            {connection.propFirmName ?? '—'}
-                          </p>
-                        </div>
-                        <div className="min-w-0 space-y-0.5">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                            {t('dxfeedSync.multiAccount.connection')}
-                          </p>
-                          <p
-                            className="text-sm break-all text-foreground/90"
-                            title={connection.accountId}
+                <div className="flex min-w-0 flex-col">
+                  <div className="flex min-w-0 flex-col sm:flex-row sm:items-stretch">
+                    <div className="min-w-0 flex-1 px-3 py-3 sm:px-4 sm:py-4">
+                      <div className="flex w-full min-w-0 flex-col gap-3 text-left">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="secondary" className="shrink-0">
+                            {t('dxfeedSync.multiAccount.tradingAccountsCount', {
+                              count: tradingAccountCount,
+                            })}
+                          </Badge>
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs shrink-0 ${
+                              connection.hasToken && !connection.tokenExpired
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}
                           >
-                            {connection.accountId}
-                          </p>
+                            {connection.hasToken && !connection.tokenExpired
+                              ? t('dxfeedSync.multiAccount.connected')
+                              : t('dxfeedSync.multiAccount.expired')}
+                          </span>
                         </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 min-w-0">
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              {t('dxfeedSync.multiAccount.propFirm')}
+                            </p>
+                            <p className="text-base font-semibold break-words">
+                              {connection.propFirmName ?? '—'}
+                            </p>
+                          </div>
+                          <div className="min-w-0 space-y-0.5">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              {t('dxfeedSync.multiAccount.connection')}
+                            </p>
+                            <p
+                              className="text-sm break-all text-foreground/90"
+                              title={connection.accountId}
+                            >
+                              {connection.accountId}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {t('dxfeedSync.multiAccount.lastSync')}:{' '}
+                          <span className="text-foreground/80">
+                            {formatDate(connection.lastSyncedAt.toISOString())}
+                          </span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('dxfeedSync.multiAccount.dailySyncSchedule')}:{' '}
+                          <span className="text-foreground/80">
+                            {getDailySyncScheduleLabel(connection.dailySyncTime)}
+                          </span>
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {t('dxfeedSync.multiAccount.lastSync')}:{' '}
-                        <span className="text-foreground/80">
-                          {formatDate(connection.lastSyncedAt.toISOString())}
-                        </span>
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t('dxfeedSync.multiAccount.dailySyncSchedule')}:{' '}
-                        <span className="text-foreground/80">
-                          {getDailySyncScheduleLabel(connection.dailySyncTime)}
-                        </span>
-                      </p>
                     </div>
-                  </AccordionTrigger>
-                  <div
-                    className="flex items-center justify-end gap-1 px-3 py-2 sm:py-0 border-t sm:border-t-0 sm:border-l shrink-0 bg-muted/20 sm:bg-transparent"
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
+                    <div
+                      className="flex items-center justify-end gap-1 px-3 py-2 sm:py-0 border-t sm:border-t-0 sm:border-l shrink-0 bg-muted/20 sm:bg-transparent"
+                    >
                     {(!connection.hasToken || connection.tokenExpired) && (
                       <Button
                         variant="outline"
@@ -470,9 +469,20 @@ export function DxFeedCredentialsManager() {
                         </div>
                       </PopoverContent>
                     </Popover>
+                    </div>
                   </div>
+                  <AccordionTrigger className="w-full border-t px-4 py-2.5 flex items-center justify-center gap-2 text-sm font-normal text-muted-foreground hover:bg-muted/40 hover:no-underline [&[data-state=open]>svg]:rotate-180 [&[data-state=open]_.expand-when-closed]:hidden [&[data-state=open]_.expand-when-open]:inline-flex">
+                    <span className="expand-when-closed inline-flex items-center gap-1.5">
+                      {t('dxfeedSync.multiAccount.expandTradingAccounts', {
+                        count: tradingAccountCount,
+                      })}
+                    </span>
+                    <span className="expand-when-open hidden items-center gap-1.5">
+                      {t('dxfeedSync.multiAccount.collapseTradingAccounts')}
+                    </span>
+                  </AccordionTrigger>
                 </div>
-                <AccordionContent className="px-4 pb-4 pt-0">
+                <AccordionContent className="px-4 pb-2 pt-0 border-t border-dashed">
                   <div className="rounded-md border bg-muted/30 p-3 space-y-2">
                     <p className="text-sm font-medium">
                       {t('dxfeedSync.multiAccount.tradingAccountsList')}
