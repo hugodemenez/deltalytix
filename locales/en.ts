@@ -2081,6 +2081,14 @@ export default {
         "The prop firm in the dropdown must match the account you use on your prop firm's platform.",
       hintCheckCredentials:
         "Use the same email and password as on your prop firm's trading platform (demo vs live must match your account type).",
+      SYNC_FETCH_FAILED:
+        "Could not load trades from DxFeed ({failures} of {total} accounts failed). Reconnect and try again.",
+      SYNC_ACCOUNTS_UNAVAILABLE:
+        "Could not list your trading accounts ({count} were saved earlier). Reconnect with the same prop firm.",
+      SYNC_OPEN_ONLY:
+        "DxFeed returned {raw} position(s) but none are closed trades yet for {accountId}.",
+      SYNC_NO_TRADES_IN_RANGE:
+        "No trades returned by DxFeed for {accountId} in the lookback window.",
     },
     addAccount: {
       title: "Connect DxFeed Account",
@@ -2110,6 +2118,15 @@ export default {
       inProgress: "Syncing trades for {accountId}…",
       tokenMissing: "Connection expired—use Reconnect to sign in again",
       accountNotFound: "Account not found. Refresh the list and try again.",
+      openOnlyTitle:
+        "No closed trades to import for {accountId} ({raw} open position(s) skipped)",
+      openOnlyDescription:
+        "Only completed round-trip trades are imported. Close a position on your platform, then sync again.",
+      noTradesInRangeTitle: "No trades found for {accountId}",
+      noTradesInRangeDescription:
+        "DxFeed returned no trade history for the selected period. Place and close a trade, or reconnect if your session expired.",
+      partialFetchWarning:
+        "Some accounts could not be queried ({failures}/{total}). Results may be incomplete.",
     },
     multiAccount: {
       propFirm: "Prop firm",

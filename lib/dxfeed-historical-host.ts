@@ -5,8 +5,10 @@
 
 import {
   buildHistoricalHostForPropFirm,
+  buildTradingHostForPropFirm,
   getDxFeedPropFirm,
   getDxFeedPropFirmByAuthName,
+  type DxFeedPropFirmDefinition,
 } from '@/lib/dxfeed-propfirms'
 
 export function normalizeDxFeedHistoricalHost(value?: string | null): string {
@@ -46,4 +48,34 @@ export function resolveDxFeedHistoricalHost(
   }
 
   return ''
+}
+
+/**
+ * Older connections sometimes stored the trading WSS host instead of the historical REST host.
+ * Trading hosts return 404 on /api/historical/* — remap to the catalog historical host.
+ */
+export function coerceDxFeedHistoricalHostForSync(
+  storedHost: string | null | undefined,
+  propFirm: DxFeedPropFirmDefinition,
+): string {
+  const catalogHistorical = buildHistoricalHostForPropFirm(propFirm)
+  const normalized = normalizeDxFeedHistoricalHost(storedHost)
+  if (!normalized) return catalogHistorical
+
+  const tradingHost = normalizeDxFeedHistoricalHost(buildTradingHostForPropFirm(propFirm))
+  if (normalized === tradingHost) return catalogHistorical
+
+  try {
+    const hostname = new URL(normalized).hostname
+    const tradingSubdomain = propFirm.tradingSubdomain ?? 'trading-volumetrica'
+    if (hostname.startsWith(`${tradingSubdomain}.`)) {
+      return catalogHistorical
+    }
+  } catch {
+    if (normalized.includes('trading-volumetrica')) {
+      return catalogHistorical
+    }
+  }
+
+  return normalized
 }

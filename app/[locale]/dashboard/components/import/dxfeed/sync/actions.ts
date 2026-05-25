@@ -9,6 +9,7 @@ import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
 import {
+  coerceDxFeedHistoricalHostForSync,
   normalizeDxFeedHistoricalHost,
   resolveDxFeedHistoricalHost,
 } from '@/lib/dxfeed-historical-host'
@@ -265,6 +266,20 @@ export async function getDxFeedAccounts(
   }
 }
 
+/** DxFeed may send epoch seconds or milliseconds depending on endpoint/version. */
+function normalizeDxFeedEpochMs(value: number | null | undefined): number {
+  if (value == null || value <= 0) return 0
+  if (value < 1e12) return Math.round(value * 1000)
+  return Math.round(value)
+}
+
+function isClosedDxFeedReportTrade(rt: DxFeedReportTrade): boolean {
+  const exitMs = normalizeDxFeedEpochMs(rt.exitDate)
+  if (exitMs > 0) return true
+  if (rt.isCloseTrade === true) return true
+  return false
+}
+
 function extractInstrumentSymbol(contract: DxFeedReportTrade['contract']): string {
   if (!contract) return 'Unknown'
 
@@ -286,15 +301,15 @@ function buildTradesFromDxFeedReport(
   reportTrades: DxFeedReportTrade[],
   accountLabel: string,
   userId: string,
-): Trade[] {
+): { trades: Trade[]; openSkipped: number } {
   const trades: Trade[] = []
+  let openSkipped = 0
 
   for (const rt of reportTrades) {
     try {
-      // Skip open positions (no exit yet). A closed trade has exitDate > 0.
-      // isCloseTrade semantics can vary by API; rely on exitDate for closed trades.
-      if (rt.exitDate === 0 || rt.exitDate == null) {
-        logger.debug(`Skipping open position tradeId=${rt.tradeId} (exitDate=0)`)
+      if (!isClosedDxFeedReportTrade(rt)) {
+        openSkipped += 1
+        logger.debug(`Skipping open position tradeId=${rt.tradeId}`)
         continue
       }
 
@@ -302,8 +317,10 @@ function buildTradesFromDxFeedReport(
       const side = rt.quantity > 0 ? 'Long' : 'Short'
       const quantity = Math.abs(rt.quantity)
 
-      const entryDate = new Date(rt.entryDate)
-      const exitDate = new Date(rt.exitDate)
+      const entryMs = normalizeDxFeedEpochMs(rt.entryDate)
+      const exitMs = normalizeDxFeedEpochMs(rt.exitDate)
+      const entryDate = new Date(entryMs)
+      const exitDate = new Date(exitMs)
       const durationSeconds = Math.max(0, Math.round((exitDate.getTime() - entryDate.getTime()) / 1000))
 
       const pnl = rt.netPl
@@ -350,7 +367,7 @@ function buildTradesFromDxFeedReport(
     }
   }
 
-  return trades
+  return { trades, openSkipped }
 }
 
 export async function getDxFeedTrades(
@@ -369,10 +386,8 @@ export async function getDxFeedTrades(
     }
 
     const { accessToken } = credentials
-    // Prefer host resolved at connect (e.g. tradingRestReportHost from auth); fall back to catalog.
-    const historicalHost =
-      normalizeDxFeedHistoricalHost(credentials.historicalHost) ||
-      buildHistoricalHostForPropFirm(propFirm)
+    // Prefer host from connect; remap mistaken trading WSS hosts; fall back to catalog.
+    const historicalHost = coerceDxFeedHistoricalHostForSync(credentials.historicalHost, propFirm)
 
     let userId = options?.userId ?? null
     if (!userId) {
@@ -404,9 +419,25 @@ export async function getDxFeedTrades(
       storedTokenJson = updatedJson
     }
 
+    const syncStats = {
+      tradingAccounts: accounts.length,
+      rawTrades: 0,
+      closedTrades: 0,
+      openTradesSkipped: 0,
+      fetchFailures: 0,
+    }
+
     if (accounts.length === 0) {
+      const cachedAccounts = credentials.accountNumbers?.length ?? 0
+      if (cachedAccounts > 0) {
+        return {
+          error: DxFeedErrorCode.SYNC_ACCOUNTS_UNAVAILABLE,
+          errorParams: { count: cachedAccounts },
+          syncStats,
+        }
+      }
       await updateLastSyncedAt(userId, storedTokenJson)
-      return { processedTrades: [], savedCount: 0, tradesCount: 0 }
+      return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
     logger.info(`Found ${accounts.length} accounts, fetching trades...`)
@@ -432,6 +463,7 @@ export async function getDxFeedTrades(
 
       if (!response.ok) {
         const text = await response.text()
+        syncStats.fetchFailures += 1
         logger.warn(
           `Failed to fetch trades for account ${accountLabel} (status ${response.status}): ${text}`,
         )
@@ -442,23 +474,36 @@ export async function getDxFeedTrades(
         await response.json()
       const apiError = extractApiErrorMessage(data)
       if (apiError) {
+        syncStats.fetchFailures += 1
         logger.warn(`DxFeed returned an error for account ${accountLabel}: ${apiError}`)
         continue
       }
 
       const reportTrades = extractArrayPayload<DxFeedReportTrade>(data)
+      syncStats.rawTrades += reportTrades.length
 
       logger.info(`Received ${reportTrades.length} trades for account ${accountLabel}`)
 
-      const trades = buildTradesFromDxFeedReport(reportTrades, accountLabel, userId)
+      const { trades, openSkipped } = buildTradesFromDxFeedReport(reportTrades, accountLabel, userId)
+      syncStats.openTradesSkipped += openSkipped
       allTrades.push(...trades)
     }
 
+    syncStats.closedTrades = allTrades.length
+
     await updateLastSyncedAt(userId, storedTokenJson)
 
+    if (syncStats.fetchFailures > 0 && syncStats.fetchFailures >= accounts.length) {
+      return {
+        error: DxFeedErrorCode.SYNC_FETCH_FAILED,
+        errorParams: { failures: syncStats.fetchFailures, total: accounts.length },
+        syncStats,
+      }
+    }
+
     if (allTrades.length === 0) {
-      logger.info('No trades to save')
-      return { processedTrades: [], savedCount: 0, tradesCount: 0 }
+      logger.info(`No closed trades to save: ${JSON.stringify(syncStats)}`)
+      return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
     logger.info(`Saving ${allTrades.length} trades...`)
@@ -470,6 +515,7 @@ export async function getDxFeedTrades(
           error: DxFeedErrorCode.DUPLICATE_TRADES,
           processedTrades: allTrades,
           tradesCount: allTrades.length,
+          syncStats,
         }
       }
       logger.error(`Failed to save trades: ${saveResult.error}`)
@@ -478,6 +524,7 @@ export async function getDxFeedTrades(
         errorParams: { detail: saveResult.error },
         processedTrades: allTrades,
         tradesCount: allTrades.length,
+        syncStats,
       }
     }
 
@@ -487,6 +534,7 @@ export async function getDxFeedTrades(
       processedTrades: allTrades,
       savedCount: saveResult.numberOfTradesAdded,
       tradesCount: allTrades.length,
+      syncStats,
     }
   } catch (error) {
     logger.error('Failed to get DxFeed trades:', error)

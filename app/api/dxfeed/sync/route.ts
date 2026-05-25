@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
           success: false,
           message: syncResult.error,
           errorParams: syncResult.errorParams,
+          syncStats: syncResult.syncStats,
         },
         { status: 400 },
       )
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
       success: true,
       savedCount: syncResult.savedCount ?? 0,
       tradesCount: syncResult.tradesCount ?? 0,
+      syncStats: syncResult.syncStats,
       message: 'Sync completed',
     })
   } catch (error) {

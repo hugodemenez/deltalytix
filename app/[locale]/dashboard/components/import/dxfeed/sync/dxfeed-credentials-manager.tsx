@@ -36,6 +36,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
 import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
+import { showToastWithCopy } from '@/lib/toast-copy'
 import { authenticateDxFeed, updateDxFeedDailySyncTimeAction } from './actions'
 import { useDxFeedSyncContext } from '@/context/dxfeed-sync-context'
 import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
@@ -100,19 +101,25 @@ export function DxFeedCredentialsManager() {
           result.error,
           result.errorParams,
         )
-        toast.error(title, description ? { description } : undefined)
+        showToastWithCopy('error', title, {
+          description,
+          copyLabel: t('common.copy'),
+        })
         return
       }
 
-      toast.success(t('dxfeedSync.connected'))
+      showToastWithCopy('success', t('dxfeedSync.connected'), {
+        copyLabel: t('common.copy'),
+      })
       setIsAddDialogOpen(false)
       setLoginEmail('')
       setLoginPassword('')
       await loadAccounts()
     } catch (error) {
       console.error('DxFeed connect error:', error)
-      toast.error(t('dxfeedSync.error.authFailed'), {
+      showToastWithCopy('error', t('dxfeedSync.error.authFailed'), {
         description: t('dxfeedSync.errors.hintCheckCredentials'),
+        copyLabel: t('common.copy'),
       })
     } finally {
       setIsLoading(false)

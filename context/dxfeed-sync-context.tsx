@@ -6,6 +6,89 @@ import { toast } from 'sonner'
 import { useI18n } from '@/locales/client'
 import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
 import { formatDxFeedError, getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
+import { runToastWithCopy, showToastWithCopy } from '@/lib/toast-copy'
+import type { DxFeedSyncStats } from '@/app/[locale]/dashboard/components/import/dxfeed/sync/dxfeed-types'
+
+interface DxFeedSyncApiPayload {
+  success?: boolean
+  message?: string
+  errorParams?: Record<string, string | number>
+  savedCount?: number
+  tradesCount?: number
+  syncStats?: DxFeedSyncStats
+}
+
+function buildSyncLabel(account: DxFeedSyncAccount, t: unknown): string {
+  const translate = t as (key: string, params?: Record<string, string | number>) => string
+  const tradingCount = account.accountNumbers.length
+  if (account.propFirmName) {
+    return tradingCount > 0
+      ? `${account.propFirmName} (${tradingCount} ${translate('dxfeedSync.multiAccount.accountsCount')})`
+      : account.propFirmName
+  }
+  return account.accountId
+}
+
+function buildSyncSuccessToast(
+  t: unknown,
+  syncLabel: string,
+  payload: DxFeedSyncApiPayload,
+): { title: string; description?: string } {
+  const translate = t as (key: string, params?: Record<string, string | number>) => string
+  const savedCount = payload.savedCount ?? 0
+  const tradesCount = payload.tradesCount ?? 0
+  const stats = payload.syncStats
+
+  if (savedCount > 0) {
+    return {
+      title: translate('dxfeedSync.multiAccount.syncCompleteForAccount', {
+        savedCount,
+        tradesCount,
+        accountId: syncLabel,
+      }),
+    }
+  }
+
+  if (tradesCount > 0) {
+    return {
+      title: translate('dxfeedSync.multiAccount.syncCompleteNoNewTradesForAccount', {
+        tradesCount,
+        accountId: syncLabel,
+      }),
+    }
+  }
+
+  if (stats && stats.rawTrades > 0 && stats.closedTrades === 0) {
+    return {
+      title: translate('dxfeedSync.sync.openOnlyTitle', {
+        accountId: syncLabel,
+        raw: stats.rawTrades,
+        open: stats.openTradesSkipped,
+      }),
+      description: translate('dxfeedSync.sync.openOnlyDescription'),
+    }
+  }
+
+  if (stats && stats.rawTrades === 0 && stats.fetchFailures === 0) {
+    return {
+      title: translate('dxfeedSync.sync.noTradesInRangeTitle', { accountId: syncLabel }),
+      description: translate('dxfeedSync.sync.noTradesInRangeDescription'),
+    }
+  }
+
+  return {
+    title: translate('dxfeedSync.multiAccount.syncCompleteNoOrdersForAccount', {
+      accountId: syncLabel,
+    }),
+    description:
+      stats && stats.fetchFailures > 0
+        ? translate('dxfeedSync.sync.partialFetchWarning', {
+            failures: stats.fetchFailures,
+            total: stats.tradingAccounts,
+          })
+        : undefined,
+  }
+}
 /** Client-safe subset of Synchronization (token stripped, replaced with hasToken) */
 export interface DxFeedSyncAccount {
   id: string
@@ -81,10 +164,10 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       setAccounts(data.map(normalizeSynchronization))
     } catch (error) {
       console.warn('Failed to load DxFeed accounts:', error)
-      toast.error(
-        formatDxFeedError(t, 'LOAD_SYNCHRONIZATIONS_FAILED'),
-        { description: t('dxfeedSync.errors.hintContactSupport') },
-      )
+      showToastWithCopy('error', formatDxFeedError(t, 'LOAD_SYNCHRONIZATIONS_FAILED'), {
+        description: t('dxfeedSync.errors.hintContactSupport'),
+        copyLabel: t('common.copy'),
+      })
     }
   }, [normalizeSynchronization, t])
 
@@ -109,80 +192,59 @@ export function DxFeedSyncContextProvider({ children }: { children: ReactNode })
       }
 
       try {
-        const runSync = async () => {
-          const response = await fetch('/api/dxfeed/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ accountId }),
-          })
+        const syncLabel = buildSyncLabel(account, t)
 
-          const payload = await response.json()
-
-          if (
-            payload?.message === DxFeedErrorCode.DUPLICATE_TRADES ||
-            payload?.message === 'DUPLICATE_TRADES'
-          ) {
-            return t('dxfeedSync.multiAccount.alreadyImportedTrades')
-          }
-
-          if (!response.ok || !payload?.success) {
-            const err = new Error(
-              formatDxFeedError(t, payload?.message, payload?.errorParams),
-            ) as Error & { errorParams?: Record<string, string | number> }
-            err.errorParams = payload?.errorParams
-            throw err
-          }
-
-          const savedCount = payload.savedCount || 0
-          const tradesCount = payload.tradesCount || 0
-          const tradingCount = account.accountNumbers.length
-          const syncLabel = account.propFirmName
-            ? tradingCount > 0
-              ? `${account.propFirmName} (${tradingCount} ${t('dxfeedSync.multiAccount.accountsCount')})`
-              : account.propFirmName
-            : accountId
-
-          let successMessage: string
-          if (savedCount > 0) {
-            successMessage = t('dxfeedSync.multiAccount.syncCompleteForAccount', {
-              savedCount,
-              tradesCount,
-              accountId: syncLabel,
+        const message = await runToastWithCopy(
+          async () => {
+            const response = await fetch('/api/dxfeed/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accountId }),
             })
-          } else if (tradesCount > 0) {
-            successMessage = t('dxfeedSync.multiAccount.syncCompleteNoNewTradesForAccount', {
-              tradesCount,
-              accountId: syncLabel,
-            })
-          } else {
-            successMessage = t('dxfeedSync.multiAccount.syncCompleteNoOrdersForAccount', {
-              accountId: syncLabel,
-            })
-          }
 
-          await loadAccounts()
-          await refreshTradesOnly({ force: false })
+            const payload = (await response.json()) as DxFeedSyncApiPayload
 
-          return successMessage
-        }
+            if (
+              payload?.message === DxFeedErrorCode.DUPLICATE_TRADES ||
+              payload?.message === 'DUPLICATE_TRADES'
+            ) {
+              await loadAccounts()
+              await refreshTradesOnly({ force: false })
+              return {
+                title: t('dxfeedSync.multiAccount.alreadyImportedTrades'),
+              }
+            }
 
-        const promise = runSync()
-        toast.promise(promise, {
-          loading: t('dxfeedSync.sync.inProgress', { accountId }),
-          success: (msg: string) => msg,
-          error: (e) => {
-            const message =
-              e instanceof Error ? e.message : t('dxfeedSync.sync.unknownError')
-            const params =
-              e instanceof Error && 'errorParams' in e
-                ? (e as Error & { errorParams?: Record<string, string | number> }).errorParams
-                : undefined
-            const { title, description } = getDxFeedErrorToastContent(t, message, params)
-            return description ? `${title}\n${description}` : title
+            if (!response.ok || !payload?.success) {
+              const err = new Error(
+                formatDxFeedError(t, payload?.message, payload?.errorParams),
+              ) as Error & { errorParams?: Record<string, string | number> }
+              err.errorParams = payload?.errorParams
+              throw err
+            }
+
+            await loadAccounts()
+            await refreshTradesOnly({ force: false })
+
+            return buildSyncSuccessToast(t, syncLabel, payload)
           },
-        })
-        const message: string = await promise
-        return { success: true, message }
+          {
+            loading: t('dxfeedSync.sync.inProgress', { accountId: syncLabel }),
+            success: (result) => result,
+            error: (e) => {
+              const message =
+                e instanceof Error ? e.message : t('dxfeedSync.sync.unknownError')
+              const params =
+                e instanceof Error && 'errorParams' in e
+                  ? (e as Error & { errorParams?: Record<string, string | number> }).errorParams
+                  : undefined
+              return getDxFeedErrorToastContent(t, message, params)
+            },
+            copyLabel: t('common.copy'),
+          },
+        )
+
+        return { success: true, message: message.title }
       } catch (error) {
         const errorMsg =
           error instanceof Error ? error.message : t('dxfeedSync.sync.unknownError')

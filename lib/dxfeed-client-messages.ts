@@ -18,6 +18,8 @@ const RECONNECT_HINT_CODES: Set<string> = new Set([
   DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT,
   DxFeedErrorCode.NO_TOKEN_RECONNECT,
   DxFeedErrorCode.INVALID_STORED_CREDENTIALS,
+  DxFeedErrorCode.SYNC_ACCOUNTS_UNAVAILABLE,
+  DxFeedErrorCode.SYNC_FETCH_FAILED,
 ])
 
 /**

@@ -2214,6 +2214,14 @@ export default {
         "La firme sélectionnée doit correspondre au compte que vous utilisez sur la plateforme de votre firme prop.",
       hintCheckCredentials:
         "Utilisez le même e-mail et mot de passe que sur la plateforme de trading de votre firme (démo ou live selon votre compte).",
+      SYNC_FETCH_FAILED:
+        "Impossible de charger les trades DxFeed ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
+      SYNC_ACCOUNTS_UNAVAILABLE:
+        "Impossible de lister vos comptes de trading ({count} enregistrés auparavant). Reconnectez-vous avec la même firme prop.",
+      SYNC_OPEN_ONLY:
+        "DxFeed a renvoyé {raw} position(s) mais aucun trade clôturé pour {accountId}.",
+      SYNC_NO_TRADES_IN_RANGE:
+        "Aucun trade renvoyé par DxFeed pour {accountId} sur la période consultée.",
     },
     addAccount: {
       title: "Connecter un compte DxFeed",
@@ -2243,6 +2251,15 @@ export default {
       inProgress: "Synchronisation des trades pour {accountId}…",
       tokenMissing: "Connexion expirée—utilisez Reconnecter pour vous identifier à nouveau",
       accountNotFound: "Compte introuvable. Actualisez la liste et réessayez.",
+      openOnlyTitle:
+        "Aucun trade clôturé à importer pour {accountId} ({raw} position(s) ouverte(s) ignorée(s))",
+      openOnlyDescription:
+        "Seuls les trades round-trip terminés sont importés. Clôturez une position sur votre plateforme, puis resynchronisez.",
+      noTradesInRangeTitle: "Aucun trade trouvé pour {accountId}",
+      noTradesInRangeDescription:
+        "DxFeed n'a renvoyé aucun historique sur la période. Passez un trade clôturé ou reconnectez-vous si la session a expiré.",
+      partialFetchWarning:
+        "Certains comptes n'ont pas pu être interrogés ({failures}/{total}). Les résultats peuvent être incomplets.",
     },
     multiAccount: {
       propFirm: "Firme prop",

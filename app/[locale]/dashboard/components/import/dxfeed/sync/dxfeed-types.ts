@@ -100,10 +100,20 @@ export interface DxFeedActionResult {
   errorParams?: Record<string, string | number>
 }
 
+export interface DxFeedSyncStats {
+  tradingAccounts: number
+  rawTrades: number
+  closedTrades: number
+  openTradesSkipped: number
+  fetchFailures: number
+}
+
 export interface DxFeedTradesResult {
   processedTrades?: import('@/prisma/generated/prisma/client').Trade[]
   savedCount?: number
+  /** Closed trades ready to import (after filters) */
   tradesCount?: number
+  syncStats?: DxFeedSyncStats
   error?: string
   errorParams?: Record<string, string | number>
 }
