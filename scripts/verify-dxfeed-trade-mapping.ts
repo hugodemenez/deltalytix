@@ -4,25 +4,15 @@
  */
 
 import 'dotenv/config'
+import { resolveDxFeedHistoricalHost } from '../lib/dxfeed-historical-host'
 
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
-const DXFEED_BASE_URL = process.env.DXFEED_BASEURL || process.env.DXFEED_BASE_URL
 const LOGIN = process.env.DXFEED_USERNAME
 const PASSWORD = process.env.DXFEED_PASSWORD
 const ENVIRONMENT = process.env.DXFEED_ENVIRONMENT
   ? parseInt(process.env.DXFEED_ENVIRONMENT, 10)
   : 0
-
-function normalizeHistoricalHost(value?: string | null) {
-  if (!value) return ''
-  try {
-    const parsed = new URL(value)
-    return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, '')
-  } catch {
-    return value.replace(/\/$/, '')
-  }
-}
 
 function extractInstrumentSymbol(contract: { symbol?: string | null; contractName?: string | null } | null): string {
   if (!contract) return 'Unknown'
@@ -36,7 +26,7 @@ function extractInstrumentSymbol(contract: { symbol?: string | null; contractNam
 }
 
 async function main() {
-  if (!LOGIN || !PASSWORD || !DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY || !DXFEED_BASE_URL) {
+  if (!LOGIN || !PASSWORD || !DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
     console.error('Missing DXFEED_* env vars')
     process.exit(1)
   }
@@ -55,7 +45,12 @@ async function main() {
   })
   const authData = await authRes.json()
   const token = authData.tradingRestReportToken || authData.token
-  const host = normalizeHistoricalHost(DXFEED_BASE_URL)
+  const host = resolveDxFeedHistoricalHost(authData, authRes.headers)
+  if (!host) {
+    console.error('Could not resolve historical host')
+    process.exit(1)
+  }
+  console.log('propfirm:', authData.propfirmName, 'host:', host)
 
   const accountsRes = await fetch(`${host}/api/historical/TradingAccount/List`, {
     headers: { Authorization: token, Accept: 'application/json' },

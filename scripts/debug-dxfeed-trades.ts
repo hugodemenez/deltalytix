@@ -6,10 +6,10 @@
  */
 
 import 'dotenv/config'
+import { resolveDxFeedHistoricalHost } from '../lib/dxfeed-historical-host'
 
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
-const DXFEED_BASE_URL = process.env.DXFEED_BASEURL || process.env.DXFEED_BASE_URL
 
 const LOGIN = process.env.DXFEED_USERNAME
 const PASSWORD = process.env.DXFEED_PASSWORD
@@ -20,17 +20,6 @@ const ENVIRONMENT = process.env.DXFEED_ENVIRONMENT
 const HISTORY_LOOKBACK_DAYS = process.env.DXFEED_HISTORY_LOOKBACK_DAYS
   ? parseInt(process.env.DXFEED_HISTORY_LOOKBACK_DAYS, 10)
   : 364
-
-function normalizeHistoricalHost(value?: string | null) {
-  if (!value) return ''
-
-  try {
-    const parsed = new URL(value)
-    return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, '')
-  } catch {
-    return value.replace(/\/$/, '')
-  }
-}
 
 function extractArrayPayload<T>(payload: unknown): T[] {
   if (Array.isArray(payload)) return payload as T[]
@@ -103,18 +92,15 @@ async function main() {
   }
 
   const token = authData.tradingRestReportToken || authData.token
-  const historicalHost =
-    normalizeHistoricalHost(authData.tradingRestReportHost) ||
-    normalizeHistoricalHost(DXFEED_BASE_URL) ||
-    normalizeHistoricalHost(authData.tradingWss ? `https://${new URL(authData.tradingWss).hostname}` : '') ||
-    normalizeHistoricalHost(
-      authRes.headers.get('wss') ? `https://${new URL(authRes.headers.get('wss')!).hostname}` : '',
-    )
+  const historicalHost = resolveDxFeedHistoricalHost(authData, authRes.headers)
 
   if (!historicalHost) {
-    console.error('No historical host (set DXFEED_BASEURL or check auth response)')
+    console.error('No historical host (add prop firm to lib/dxfeed-historical-host.ts)')
     process.exit(1)
   }
+
+  console.log('  propfirmName:', authData.propfirmName)
+  console.log('  resolved historicalHost:', historicalHost)
 
   console.log('Auth OK, historicalHost:', historicalHost)
 

@@ -6,6 +6,7 @@
  */
 
 import 'dotenv/config'
+import { resolveDxFeedHistoricalHost } from '../lib/dxfeed-historical-host'
 import WebSocket from 'ws'
 import path from 'path'
 import { createRequire } from 'module'
@@ -15,7 +16,6 @@ const protobuf = require('protobufjs')
 
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
-const DXFEED_BASE_URL = process.env.DXFEED_BASEURL || process.env.DXFEED_BASE_URL
 const LOGIN = process.env.DXFEED_USERNAME
 const PASSWORD = process.env.DXFEED_PASSWORD
 const ENVIRONMENT = process.env.DXFEED_ENVIRONMENT
@@ -94,10 +94,7 @@ async function auth(): Promise<{
   const wssUrl = data.tradingWss || res.headers.get('wss')
   if (!wssUrl) throw new Error('No wss URL in auth response')
 
-  const historicalHost =
-    normalizeHistoricalHost(data.tradingRestReportHost) ||
-    normalizeHistoricalHost(DXFEED_BASE_URL) ||
-    normalizeHistoricalHost(`https://${new URL(wssUrl).hostname}`)
+  const historicalHost = resolveDxFeedHistoricalHost(data, res.headers)
 
   return {
     tradingToken: data.token,

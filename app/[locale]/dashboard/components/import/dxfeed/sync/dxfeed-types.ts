@@ -29,6 +29,8 @@ export interface DxFeedStoredCredentials {
   accessToken: string
   historicalHost: string
   accountNumbers?: string[]
+  /** From auth propfirmName — used to re-resolve host if sync config changes */
+  propfirmName?: string
 }
 
 export interface DxFeedTradingAccount {

@@ -8,6 +8,10 @@ import { prisma } from '@/lib/prisma'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
+import {
+  remapMisconfiguredHistoricalHost,
+  resolveDxFeedHistoricalHost,
+} from '@/lib/dxfeed-historical-host'
 import type {
   DxFeedLoginRequest,
   DxFeedLoginResponse,
@@ -21,7 +25,6 @@ import type {
 
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
-const DXFEED_BASE_URL = process.env.DXFEED_BASEURL || process.env.DXFEED_BASE_URL
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.DXFEED_DEBUG === 'true'
 const DXFEED_ENVIRONMENT = Number(
@@ -61,56 +64,6 @@ function parseStoredCredentials(tokenField: string): DxFeedStoredCredentials | n
   } catch {
     return null
   }
-}
-
-function normalizeHistoricalHost(value?: string | null): string {
-  if (!value) return ''
-
-  try {
-    const parsed = new URL(value)
-    return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, '')
-  } catch {
-    return value.replace(/\/$/, '')
-  }
-}
-
-function parseHistoricalHostFromTradingWss(wssUrl?: string | null): string {
-  if (!wssUrl) return ''
-
-  try {
-    const parsed = new URL(wssUrl)
-    return `https://${parsed.hostname}`
-  } catch {
-    logger.warn('Failed to parse trading websocket URL')
-    return ''
-  }
-}
-
-/**
- * Resolve the REST historical/report API base URL.
- * Some prop firms omit tradingRestReportHost and share the trading WSS host,
- * but the historical API lives on a separate host (DXFEED_BASEURL).
- */
-function resolveDxFeedHistoricalHost(
-  authData: Pick<DxFeedLoginResponse, 'tradingRestReportHost' | 'tradingWss' | 'tradingWssEndpoint'>,
-  responseHeaders?: { get(name: string): string | null },
-): string {
-  const fromAuth = normalizeHistoricalHost(authData.tradingRestReportHost)
-  if (fromAuth) return fromAuth
-
-  const fromEnv = normalizeHistoricalHost(DXFEED_BASE_URL)
-  if (fromEnv) {
-    logger.debug('Using DXFEED_BASEURL for historical API host')
-    return fromEnv
-  }
-
-  const wssUrl =
-    authData.tradingWss ||
-    authData.tradingWssEndpoint ||
-    responseHeaders?.get('wss') ||
-    null
-
-  return parseHistoricalHostFromTradingWss(wssUrl)
 }
 
 function buildHistoricalAuthHeaders(accessToken: string): HeadersInit {
@@ -206,7 +159,7 @@ export async function authenticateDxFeed(
     const historicalHost = resolveDxFeedHistoricalHost(data, response.headers)
 
     if (!historicalHost) {
-      logger.warn('Could not derive historical host from auth response or DXFEED_BASEURL')
+      logger.warn('Could not derive historical host from auth response (check prop firm mapping)')
     }
 
     logger.info('Auth successful')
@@ -223,6 +176,7 @@ export async function authenticateDxFeed(
       accessToken: reportAccessToken,
       historicalHost,
       accountNumbers,
+      propfirmName: data.propfirmName,
     }
 
     const storeResult = await storeDxFeedToken(JSON.stringify(credentials), login)
@@ -370,12 +324,12 @@ export async function getDxFeedTrades(
 
     let { accessToken, historicalHost } = credentials
     if (!historicalHost) {
-      const fallbackHost = normalizeHistoricalHost(DXFEED_BASE_URL)
+      const fallbackHost = resolveDxFeedHistoricalHost({ propfirmName: credentials.propfirmName })
       if (!fallbackHost) {
         return { error: 'No historical API host found in stored credentials' }
       }
       historicalHost = fallbackHost
-      logger.info('Using DXFEED_BASEURL for historical API (missing in stored credentials)')
+      logger.info('Resolved historical API host from prop firm mapping')
     }
 
     let userId = options?.userId ?? null
@@ -394,12 +348,14 @@ export async function getDxFeedTrades(
     logger.info('Fetching DxFeed accounts...')
     let accounts = await getDxFeedAccounts(accessToken, historicalHost)
 
-    const fallbackHost = normalizeHistoricalHost(DXFEED_BASE_URL)
-    if (accounts.length === 0 && fallbackHost && fallbackHost !== historicalHost) {
-      logger.info('Retrying DxFeed account list with DXFEED_BASEURL host')
-      accounts = await getDxFeedAccounts(accessToken, fallbackHost)
+    const remappedHost =
+      resolveDxFeedHistoricalHost({ propfirmName: credentials.propfirmName }) ||
+      remapMisconfiguredHistoricalHost(historicalHost)
+    if (accounts.length === 0 && remappedHost && remappedHost !== historicalHost) {
+      logger.info('Retrying DxFeed account list with remapped historical host')
+      accounts = await getDxFeedAccounts(accessToken, remappedHost)
       if (accounts.length > 0) {
-        historicalHost = fallbackHost
+        historicalHost = remappedHost
       }
     }
 
@@ -407,7 +363,11 @@ export async function getDxFeedTrades(
       (a) => a.accountHeader || a.accountReference || a.accountId.toString(),
     )
     if (accountNumbers.length > 0) {
-      const updatedCreds: DxFeedStoredCredentials = { ...credentials, historicalHost, accountNumbers }
+      const updatedCreds: DxFeedStoredCredentials = {
+        ...credentials,
+        historicalHost,
+        accountNumbers,
+      }
       const updatedJson = JSON.stringify(updatedCreds)
       await updateStoredCredentials(userId, storedTokenJson, updatedJson)
       storedTokenJson = updatedJson
