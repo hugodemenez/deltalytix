@@ -8,7 +8,10 @@ import { prisma } from '@/lib/prisma'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
-import { resolveDxFeedHistoricalHost } from '@/lib/dxfeed-historical-host'
+import {
+  normalizeDxFeedHistoricalHost,
+  resolveDxFeedHistoricalHost,
+} from '@/lib/dxfeed-historical-host'
 import {
   authPropfirmMatchesSelection,
   buildHistoricalHostForPropFirm,
@@ -119,6 +122,10 @@ export async function authenticateDxFeed(
   try {
     if (!DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
       return { error: 'DxFeed configuration not set' }
+    }
+
+    if (!propFirmId?.trim()) {
+      return { error: 'Please select a supported prop firm' }
     }
 
     const propFirm = getDxFeedPropFirm(propFirmId)
@@ -344,7 +351,10 @@ export async function getDxFeedTrades(
     }
 
     const { accessToken } = credentials
-    const historicalHost = buildHistoricalHostForPropFirm(propFirm)
+    // Prefer host resolved at connect (e.g. tradingRestReportHost from auth); fall back to catalog.
+    const historicalHost =
+      normalizeDxFeedHistoricalHost(credentials.historicalHost) ||
+      buildHistoricalHostForPropFirm(propFirm)
 
     let userId = options?.userId ?? null
     if (!userId) {

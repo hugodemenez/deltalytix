@@ -99,7 +99,7 @@ async function main() {
   })
 
   if (!historicalHost) {
-    console.error('No historical host (add prop firm to lib/dxfeed-historical-host.ts)')
+    console.error('No historical host (add prop firm to lib/dxfeed-propfirms.ts or set DXFEED_PROP_FIRM_ID)')
     process.exit(1)
   }
 
