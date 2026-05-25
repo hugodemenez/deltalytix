@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, Trash2, Plus, RefreshCw, MoreVertical, Clock } from 'lucide-react'
+import { Loader2, Trash2, Plus, RefreshCw, MoreVertical } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -53,7 +53,7 @@ export function DxFeedCredentialsManager() {
     loadAccounts,
   } = useDxFeedSyncContext()
 
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isTimeDialogOpen, setIsTimeDialogOpen] = useState(false)
   const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null)
@@ -72,15 +72,15 @@ export function DxFeedCredentialsManager() {
     setActionsMenuAccountId(null)
   }, [])
 
-  const handleDelete = useCallback(
+  const handleRemoveConnection = useCallback(
     async (accountId: string) => {
       try {
         await deleteAccount(accountId)
-        setIsDeleteDialogOpen(false)
-        toast.success(t('dxfeedSync.multiAccount.accountDeleted', { accountId }))
+        setIsRemoveDialogOpen(false)
+        toast.success(t('dxfeedSync.multiAccount.connectionRemoved', { accountId }))
       } catch (error) {
-        toast.error(t('dxfeedSync.multiAccount.deleteError', { accountId }))
-        console.error('Delete error:', error)
+        toast.error(t('dxfeedSync.multiAccount.removeError', { accountId }))
+        console.error('Remove connection error:', error)
       }
     },
     [t, deleteAccount],
@@ -253,13 +253,6 @@ export function DxFeedCredentialsManager() {
     return `${localHours}:${localMinutes} ${tzName}`
   }
 
-  function getDailySyncScheduleLabel(date: Date | null) {
-    return (
-      formatDailySyncTimeValue(date) ??
-      t('dxfeedSync.multiAccount.dailySyncScheduleNotScheduled')
-    )
-  }
-
   return (
     <div className="space-y-4 min-w-0 w-full">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -374,12 +367,47 @@ export function DxFeedCredentialsManager() {
                             {formatDate(connection.lastSyncedAt.toISOString())}
                           </span>
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {t('dxfeedSync.multiAccount.dailySyncSchedule')}:{' '}
-                          <span className="text-foreground/80">
-                            {getDailySyncScheduleLabel(connection.dailySyncTime)}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                          <span className="text-muted-foreground">
+                            {t('dxfeedSync.multiAccount.dailySyncSchedule')}:
                           </span>
-                        </p>
+                          {connection.dailySyncTime ? (
+                            <>
+                              <span className="text-foreground/80">
+                                {formatDailySyncTimeValue(connection.dailySyncTime)}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                className="h-auto p-0 text-xs font-normal"
+                                onClick={() =>
+                                  handleSetDailySyncTime(
+                                    connection.accountId,
+                                    connection.dailySyncTime,
+                                  )
+                                }
+                              >
+                                {t('dxfeedSync.multiAccount.editSchedule')}
+                              </Button>
+                            </>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-xs font-normal"
+                              onClick={() =>
+                                handleSetDailySyncTime(
+                                  connection.accountId,
+                                  connection.dailySyncTime,
+                                )
+                              }
+                            >
+                              {t('dxfeedSync.multiAccount.scheduleSync')}
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div
@@ -429,44 +457,20 @@ export function DxFeedCredentialsManager() {
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-56 p-2" align="end">
-                        <div className="flex flex-col space-y-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="justify-start h-auto py-2"
-                            onClick={() => {
-                              closeActionsMenu()
-                              handleSetDailySyncTime(
-                                connection.accountId,
-                                connection.dailySyncTime,
-                              )
-                            }}
-                          >
-                            <Clock className="h-4 w-4 mr-2 shrink-0" />
-                            <div className="flex min-w-0 flex-col items-start text-left">
-                              <span className="text-xs font-medium leading-tight">
-                                {t('dxfeedSync.multiAccount.dailySyncSchedule')}
-                              </span>
-                              <span className="text-sm text-muted-foreground leading-tight">
-                                {getDailySyncScheduleLabel(connection.dailySyncTime)}
-                              </span>
-                            </div>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="justify-start text-destructive hover:text-destructive"
-                            onClick={() => {
-                              closeActionsMenu()
-                              setSelectedAccountId(connection.accountId)
-                              setIsDeleteDialogOpen(true)
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {t('dxfeedSync.multiAccount.delete')}
-                          </Button>
-                        </div>
+                      <PopoverContent className="w-52 p-2" align="end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full justify-start text-destructive hover:text-destructive"
+                          onClick={() => {
+                            closeActionsMenu()
+                            setSelectedAccountId(connection.accountId)
+                            setIsRemoveDialogOpen(true)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          {t('dxfeedSync.multiAccount.removeConnection')}
+                        </Button>
                       </PopoverContent>
                     </Popover>
                     </div>
@@ -611,26 +615,28 @@ export function DxFeedCredentialsManager() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      {/* Remove Connection Confirmation Dialog */}
+      <Dialog open={isRemoveDialogOpen} onOpenChange={setIsRemoveDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{t('dxfeedSync.multiAccount.deleteAccount')}</DialogTitle>
+            <DialogTitle>{t('dxfeedSync.multiAccount.removeConnection')}</DialogTitle>
             <DialogDescription>
-              {t('dxfeedSync.multiAccount.deleteAccountConfirm', {
+              {t('dxfeedSync.multiAccount.removeConnectionConfirm', {
                 accountId: selectedAccountId,
               })}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end space-x-2 mt-4">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsRemoveDialogOpen(false)}>
               {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
-              onClick={() => selectedAccountId && handleDelete(selectedAccountId)}
+              onClick={() =>
+                selectedAccountId && handleRemoveConnection(selectedAccountId)
+              }
             >
-              {t('common.delete')}
+              {t('dxfeedSync.multiAccount.remove')}
             </Button>
           </div>
         </DialogContent>
