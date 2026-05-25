@@ -8,6 +8,21 @@ import { prisma } from '@/lib/prisma'
 import { formatTimestamp } from '@/lib/date-utils'
 import { createTradeWithDefaults } from '@/lib/trade-factory'
 import { getUserId } from '@/server/auth'
+import {
+  coerceDxFeedHistoricalHostForSync,
+  normalizeDxFeedHistoricalHost,
+  resolveDxFeedHistoricalHost,
+} from '@/lib/dxfeed-historical-host'
+import { DxFeedErrorCode } from '@/lib/dxfeed-errors'
+import {
+  isDxFeedTokenExpired,
+  resolveDxFeedTokenExpiresAt,
+} from '@/lib/dxfeed-token'
+import {
+  authPropfirmMatchesSelection,
+  buildHistoricalHostForPropFirm,
+  getDxFeedPropFirm,
+} from '@/lib/dxfeed-propfirms'
 import type {
   DxFeedLoginRequest,
   DxFeedLoginResponse,
@@ -15,6 +30,7 @@ import type {
   DxFeedAccountListResponse,
   DxFeedTradesResponse,
   DxFeedReportTrade,
+  DxFeedActionResult,
   DxFeedTradesResult,
   DxFeedTradingAccount,
 } from './dxfeed-types'
@@ -59,29 +75,6 @@ function parseStoredCredentials(tokenField: string): DxFeedStoredCredentials | n
     return null
   } catch {
     return null
-  }
-}
-
-function normalizeHistoricalHost(value?: string | null): string {
-  if (!value) return ''
-
-  try {
-    const parsed = new URL(value)
-    return `${parsed.protocol}//${parsed.host}`.replace(/\/$/, '')
-  } catch {
-    return value.replace(/\/$/, '')
-  }
-}
-
-function parseHistoricalHostFromTradingWss(wssUrl?: string | null): string {
-  if (!wssUrl) return ''
-
-  try {
-    const parsed = new URL(wssUrl)
-    return `https://${parsed.hostname}`
-  } catch {
-    logger.warn('Failed to parse trading websocket URL')
-    return ''
   }
 }
 
@@ -131,16 +124,26 @@ function extractApiErrorMessage(payload: unknown): string | null {
 export async function authenticateDxFeed(
   login: string,
   password: string,
-): Promise<{ success?: boolean; error?: string }> {
+  propFirmId: string,
+): Promise<DxFeedActionResult> {
   try {
     if (!DXFEED_AUTH_URL || !DXFEED_PLATFORM_KEY) {
-      return { error: 'DxFeed configuration not set' }
+      return { error: DxFeedErrorCode.CONFIG_NOT_SET }
+    }
+
+    if (!propFirmId?.trim()) {
+      return { error: DxFeedErrorCode.PROP_FIRM_REQUIRED }
+    }
+
+    const propFirm = getDxFeedPropFirm(propFirmId)
+    if (!propFirm?.enabled) {
+      return { error: DxFeedErrorCode.PROP_FIRM_UNSUPPORTED }
     }
 
     const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
-      return { error: 'User not authenticated' }
+      return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
     }
 
     const body: DxFeedLoginRequest = {
@@ -166,30 +169,58 @@ export async function authenticateDxFeed(
     if (!response.ok) {
       const text = await response.text()
       logger.error(`Auth request failed with status ${response.status}`)
-      return { error: `Authentication failed (${response.status}): ${text || response.statusText}` }
+      return {
+        error: DxFeedErrorCode.AUTH_HTTP_ERROR,
+        errorParams: {
+          status: response.status,
+          detail: text?.slice(0, 200) || response.statusText,
+        },
+      }
     }
 
     const data: DxFeedLoginResponse = await response.json()
 
     if (data.status !== 'OK' || !data.token) {
-      return { error: data.reason || 'Authentication failed' }
+      return {
+        error: DxFeedErrorCode.AUTH_REJECTED,
+        errorParams: { reason: data.reason || 'Authentication failed' },
+      }
     }
 
-    const historicalHost =
-      normalizeHistoricalHost(data.tradingRestReportHost) ||
-      parseHistoricalHostFromTradingWss(data.tradingWss || data.tradingWssEndpoint) ||
-      parseHistoricalHostFromTradingWss(response.headers.get('wss'))
+    if (!authPropfirmMatchesSelection(data.propfirmName, propFirm)) {
+      return {
+        error: DxFeedErrorCode.AUTH_PROP_FIRM_MISMATCH,
+        errorParams: {
+          authPropfirm: data.propfirmName ?? '—',
+          selectedPropfirm: propFirm.name,
+        },
+      }
+    }
+
+    const historicalHost = resolveDxFeedHistoricalHost(data, response.headers, { propFirmId: propFirm.id })
 
     if (!historicalHost) {
-      logger.warn('Could not derive historical host from auth response')
+      logger.warn('Could not derive historical host from auth response (check prop firm mapping)')
+      return {
+        error: DxFeedErrorCode.HISTORICAL_HOST_UNRESOLVED,
+        errorParams: { propfirm: propFirm.name },
+      }
     }
 
-    logger.info('Auth successful')
+    logger.info(`Auth successful for ${propFirm.name}`)
 
     const reportAccessToken = data.tradingRestReportToken || data.token
-    const accounts = historicalHost
+    const tokenExpiresAt = resolveDxFeedTokenExpiresAt(reportAccessToken)
+
+    const accountsResult = historicalHost
       ? await getDxFeedAccounts(reportAccessToken, historicalHost)
-      : []
+      : { ok: false as const, status: 0, unauthorized: false }
+
+    if (!accountsResult.ok && accountsResult.unauthorized) {
+      return { error: DxFeedErrorCode.TOKEN_EXPIRED }
+    }
+
+    const accounts = accountsResult.ok ? accountsResult.accounts : []
     const accountNumbers = accounts.map(
       (a) => a.accountHeader || a.accountReference || a.accountId.toString(),
     )
@@ -198,9 +229,13 @@ export async function authenticateDxFeed(
       accessToken: reportAccessToken,
       historicalHost,
       accountNumbers,
+      propFirmId: propFirm.id,
+      propfirmName: data.propfirmName,
     }
 
-    const storeResult = await storeDxFeedToken(JSON.stringify(credentials), login)
+    const storeResult = await storeDxFeedToken(JSON.stringify(credentials), login, {
+      tokenExpiresAt,
+    })
     if (storeResult.error) {
       logger.warn('Failed to store token')
     }
@@ -208,18 +243,22 @@ export async function authenticateDxFeed(
     return { success: true }
   } catch (error) {
     logger.error('Authentication error:', error)
-    return { error: 'Failed to authenticate with DxFeed' }
+    return { error: DxFeedErrorCode.AUTH_UNEXPECTED }
   }
 }
+
+export type DxFeedAccountsFetchResult =
+  | { ok: true; accounts: DxFeedTradingAccount[] }
+  | { ok: false; status: number; unauthorized: boolean }
 
 export async function getDxFeedAccounts(
   accessToken: string,
   historicalHost: string,
-): Promise<DxFeedTradingAccount[]> {
+): Promise<DxFeedAccountsFetchResult> {
   try {
     if (!historicalHost) {
       logger.error('No historical host provided')
-      return []
+      return { ok: false, status: 0, unauthorized: false }
     }
 
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
@@ -234,15 +273,53 @@ export async function getDxFeedAccounts(
     if (!response.ok) {
       const text = await response.text()
       logger.warn(`Failed to fetch accounts (status ${response.status}): ${text}`)
-      return []
+      return {
+        ok: false,
+        status: response.status,
+        unauthorized: response.status === 401 || response.status === 403,
+      }
     }
 
     const data: DxFeedAccountListResponse | DxFeedTradingAccount[] = await response.json()
-    return extractArrayPayload<DxFeedTradingAccount>(data)
+    return { ok: true, accounts: extractArrayPayload<DxFeedTradingAccount>(data) }
   } catch (error) {
     logger.error('Error fetching DxFeed accounts:', error)
-    return []
+    return { ok: false, status: 0, unauthorized: false }
   }
+}
+
+export async function markDxFeedConnectionExpired(accountId: string): Promise<void> {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return
+
+  await prisma.synchronization.updateMany({
+    where: { userId: user.id, service: 'dxfeed', accountId },
+    data: { tokenExpiresAt: new Date(0) },
+  })
+}
+
+async function markDxFeedTokenExpired(userId: string, accountId: string): Promise<void> {
+  await prisma.synchronization.updateMany({
+    where: { userId, service: 'dxfeed', accountId },
+    data: { tokenExpiresAt: new Date(0) },
+  })
+}
+
+/** DxFeed may send epoch seconds or milliseconds depending on endpoint/version. */
+function normalizeDxFeedEpochMs(value: number | null | undefined): number {
+  if (value == null || value <= 0) return 0
+  if (value < 1e12) return Math.round(value * 1000)
+  return Math.round(value)
+}
+
+function isClosedDxFeedReportTrade(rt: DxFeedReportTrade): boolean {
+  const exitMs = normalizeDxFeedEpochMs(rt.exitDate)
+  if (exitMs > 0) return true
+  if (rt.isCloseTrade === true) return true
+  return false
 }
 
 function extractInstrumentSymbol(contract: DxFeedReportTrade['contract']): string {
@@ -266,15 +343,15 @@ function buildTradesFromDxFeedReport(
   reportTrades: DxFeedReportTrade[],
   accountLabel: string,
   userId: string,
-): Trade[] {
+): { trades: Trade[]; openSkipped: number } {
   const trades: Trade[] = []
+  let openSkipped = 0
 
   for (const rt of reportTrades) {
     try {
-      // Skip open positions (no exit yet). A closed trade has exitDate > 0.
-      // isCloseTrade semantics can vary by API; rely on exitDate for closed trades.
-      if (rt.exitDate === 0 || rt.exitDate == null) {
-        logger.debug(`Skipping open position tradeId=${rt.tradeId} (exitDate=0)`)
+      if (!isClosedDxFeedReportTrade(rt)) {
+        openSkipped += 1
+        logger.debug(`Skipping open position tradeId=${rt.tradeId}`)
         continue
       }
 
@@ -282,12 +359,15 @@ function buildTradesFromDxFeedReport(
       const side = rt.quantity > 0 ? 'Long' : 'Short'
       const quantity = Math.abs(rt.quantity)
 
-      const entryDate = new Date(rt.entryDate)
-      const exitDate = new Date(rt.exitDate)
+      const entryMs = normalizeDxFeedEpochMs(rt.entryDate)
+      const exitMs = normalizeDxFeedEpochMs(rt.exitDate)
+      const entryDate = new Date(entryMs)
+      const exitDate = new Date(exitMs)
       const durationSeconds = Math.max(0, Math.round((exitDate.getTime() - entryDate.getTime()) / 1000))
 
-      const pnl = rt.netPl
-      const commission = rt.grossPl - rt.netPl
+      // App stores gross PnL in `pnl`; net = pnl - commission. DxFeed netPl is already after fees.
+      const pnl = rt.grossPl
+      const commission = Math.abs(rt.grossPl - rt.netPl)
 
       const tradeData = {
         accountNumber: accountLabel,
@@ -330,7 +410,7 @@ function buildTradesFromDxFeedReport(
     }
   }
 
-  return trades
+  return { trades, openSkipped }
 }
 
 export async function getDxFeedTrades(
@@ -340,20 +420,25 @@ export async function getDxFeedTrades(
   try {
     const credentials = parseStoredCredentials(initialTokenJson)
     if (!credentials) {
-      return { error: 'Invalid stored DxFeed credentials' }
+      return { error: DxFeedErrorCode.INVALID_STORED_CREDENTIALS }
     }
 
-    const { accessToken, historicalHost } = credentials
-    if (!historicalHost) {
-      return { error: 'No historical API host found in stored credentials' }
+    const propFirm = getDxFeedPropFirm(credentials.propFirmId)
+    if (!propFirm) {
+      return { error: DxFeedErrorCode.MISSING_PROP_FIRM_RECONNECT }
     }
+
+    const { accessToken } = credentials
+    // Prefer host from connect; remap mistaken trading WSS hosts; fall back to catalog.
+    const historicalHost = coerceDxFeedHistoricalHostForSync(credentials.historicalHost, propFirm)
 
     let userId = options?.userId ?? null
+    let syncAccountId: string | null = null
     if (!userId) {
       const supabase = await createClient()
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) {
-        return { error: 'User not authenticated' }
+        return { error: DxFeedErrorCode.USER_NOT_AUTHENTICATED }
       }
       userId = user.id
     }
@@ -361,22 +446,64 @@ export async function getDxFeedTrades(
     let storedTokenJson = initialTokenJson
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
 
+    const syncRow = await prisma.synchronization.findFirst({
+      where: { userId, service: 'dxfeed', token: initialTokenJson },
+      select: { accountId: true, tokenExpiresAt: true },
+    })
+    syncAccountId = syncRow?.accountId ?? null
+
+    if (isDxFeedTokenExpired(syncRow?.tokenExpiresAt)) {
+      if (syncAccountId) {
+        await markDxFeedTokenExpired(userId, syncAccountId)
+      }
+      return { error: DxFeedErrorCode.TOKEN_EXPIRED }
+    }
+
     logger.info('Fetching DxFeed accounts...')
-    const accounts = await getDxFeedAccounts(accessToken, historicalHost)
+    const accountsResult = await getDxFeedAccounts(accessToken, historicalHost)
+
+    if (!accountsResult.ok && accountsResult.unauthorized) {
+      if (syncAccountId) {
+        await markDxFeedTokenExpired(userId, syncAccountId)
+      }
+      return { error: DxFeedErrorCode.TOKEN_EXPIRED }
+    }
+
+    const accounts = accountsResult.ok ? accountsResult.accounts : []
 
     const accountNumbers = accounts.map(
       (a) => a.accountHeader || a.accountReference || a.accountId.toString(),
     )
     if (accountNumbers.length > 0) {
-      const updatedCreds: DxFeedStoredCredentials = { ...credentials, accountNumbers }
+      const updatedCreds: DxFeedStoredCredentials = {
+        ...credentials,
+        historicalHost,
+        accountNumbers,
+      }
       const updatedJson = JSON.stringify(updatedCreds)
       await updateStoredCredentials(userId, storedTokenJson, updatedJson)
       storedTokenJson = updatedJson
     }
 
+    const syncStats = {
+      tradingAccounts: accounts.length,
+      rawTrades: 0,
+      closedTrades: 0,
+      openTradesSkipped: 0,
+      fetchFailures: 0,
+    }
+
     if (accounts.length === 0) {
+      const cachedAccounts = credentials.accountNumbers?.length ?? 0
+      if (cachedAccounts > 0) {
+        return {
+          error: DxFeedErrorCode.SYNC_ACCOUNTS_UNAVAILABLE,
+          errorParams: { count: cachedAccounts },
+          syncStats,
+        }
+      }
       await updateLastSyncedAt(userId, storedTokenJson)
-      return { processedTrades: [], savedCount: 0, tradesCount: 0 }
+      return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
     logger.info(`Found ${accounts.length} accounts, fetching trades...`)
@@ -402,6 +529,13 @@ export async function getDxFeedTrades(
 
       if (!response.ok) {
         const text = await response.text()
+        if (response.status === 401 || response.status === 403) {
+          if (syncAccountId) {
+            await markDxFeedTokenExpired(userId, syncAccountId)
+          }
+          return { error: DxFeedErrorCode.TOKEN_EXPIRED, syncStats }
+        }
+        syncStats.fetchFailures += 1
         logger.warn(
           `Failed to fetch trades for account ${accountLabel} (status ${response.status}): ${text}`,
         )
@@ -412,23 +546,36 @@ export async function getDxFeedTrades(
         await response.json()
       const apiError = extractApiErrorMessage(data)
       if (apiError) {
+        syncStats.fetchFailures += 1
         logger.warn(`DxFeed returned an error for account ${accountLabel}: ${apiError}`)
         continue
       }
 
       const reportTrades = extractArrayPayload<DxFeedReportTrade>(data)
+      syncStats.rawTrades += reportTrades.length
 
       logger.info(`Received ${reportTrades.length} trades for account ${accountLabel}`)
 
-      const trades = buildTradesFromDxFeedReport(reportTrades, accountLabel, userId)
+      const { trades, openSkipped } = buildTradesFromDxFeedReport(reportTrades, accountLabel, userId)
+      syncStats.openTradesSkipped += openSkipped
       allTrades.push(...trades)
     }
 
+    syncStats.closedTrades = allTrades.length
+
     await updateLastSyncedAt(userId, storedTokenJson)
 
+    if (syncStats.fetchFailures > 0 && syncStats.fetchFailures >= accounts.length) {
+      return {
+        error: DxFeedErrorCode.SYNC_FETCH_FAILED,
+        errorParams: { failures: syncStats.fetchFailures, total: accounts.length },
+        syncStats,
+      }
+    }
+
     if (allTrades.length === 0) {
-      logger.info('No trades to save')
-      return { processedTrades: [], savedCount: 0, tradesCount: 0 }
+      logger.info(`No closed trades to save: ${JSON.stringify(syncStats)}`)
+      return { processedTrades: [], savedCount: 0, tradesCount: 0, syncStats }
     }
 
     logger.info(`Saving ${allTrades.length} trades...`)
@@ -437,16 +584,19 @@ export async function getDxFeedTrades(
     if (saveResult.error) {
       if (saveResult.error === 'DUPLICATE_TRADES') {
         return {
-          error: 'DUPLICATE_TRADES',
+          error: DxFeedErrorCode.DUPLICATE_TRADES,
           processedTrades: allTrades,
           tradesCount: allTrades.length,
+          syncStats,
         }
       }
       logger.error(`Failed to save trades: ${saveResult.error}`)
       return {
-        error: `Failed to save trades: ${saveResult.error}`,
+        error: DxFeedErrorCode.SAVE_TRADES_FAILED,
+        errorParams: { detail: saveResult.error },
         processedTrades: allTrades,
         tradesCount: allTrades.length,
+        syncStats,
       }
     }
 
@@ -456,10 +606,11 @@ export async function getDxFeedTrades(
       processedTrades: allTrades,
       savedCount: saveResult.numberOfTradesAdded,
       tradesCount: allTrades.length,
+      syncStats,
     }
   } catch (error) {
     logger.error('Failed to get DxFeed trades:', error)
-    return { error: 'Failed to get trades' }
+    return { error: DxFeedErrorCode.SYNC_FAILED }
   }
 }
 
@@ -492,6 +643,7 @@ async function updateStoredCredentials(userId: string, oldTokenJson: string, new
 export async function storeDxFeedToken(
   tokenJson: string,
   accountId: string = 'default',
+  options?: { tokenExpiresAt?: Date },
 ) {
   try {
     const supabase = await createClient()
@@ -510,6 +662,7 @@ export async function storeDxFeedToken(
       },
       update: {
         token: tokenJson,
+        tokenExpiresAt: options?.tokenExpiresAt ?? null,
         lastSyncedAt: new Date(),
         updatedAt: new Date(),
         includedFeeTypes: undefined, // DxFeed has no fee differentiator
@@ -519,6 +672,7 @@ export async function storeDxFeedToken(
         service: 'dxfeed',
         accountId,
         token: tokenJson,
+        tokenExpiresAt: options?.tokenExpiresAt ?? null,
         lastSyncedAt: new Date(),
         includedFeeTypes: undefined, // DxFeed has no fee differentiator
       },
@@ -550,7 +704,11 @@ export async function getDxFeedToken(accountId: string = 'default') {
     })
 
     if (!syncData?.token) {
-      return { error: 'No DxFeed token found' }
+      return { error: DxFeedErrorCode.NO_TOKEN_RECONNECT }
+    }
+
+    if (isDxFeedTokenExpired(syncData.tokenExpiresAt)) {
+      return { error: DxFeedErrorCode.TOKEN_EXPIRED }
     }
 
     return {
@@ -642,6 +800,6 @@ export async function updateDxFeedDailySyncTimeAction(
     return { success: true }
   } catch (error) {
     logger.error('Error updating daily sync time:', error)
-    return { success: false, error: 'Failed to update daily sync time' }
+    return { success: false, error: DxFeedErrorCode.UPDATE_SYNC_TIME_FAILED }
   }
 }
