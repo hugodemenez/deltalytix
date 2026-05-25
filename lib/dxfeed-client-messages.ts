@@ -1,6 +1,11 @@
 import { DxFeedErrorCode, isDxFeedErrorCode } from '@/lib/dxfeed-errors'
 
+/** Loose translator; useI18n `t` is cast internally for next-international strict keys. */
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string
+
+function asTranslateFn(t: unknown): TranslateFn {
+  return t as TranslateFn
+}
 
 const SUPPORT_HINT_CODES: Set<string> = new Set([
   DxFeedErrorCode.CONFIG_NOT_SET,
@@ -19,16 +24,18 @@ const RECONNECT_HINT_CODES: Set<string> = new Set([
  * Maps server error codes (and legacy English strings) to localized user messages.
  */
 export function formatDxFeedError(
-  t: TranslateFn,
+  t: unknown,
   error?: string | null,
   errorParams?: Record<string, string | number>,
 ): string {
+  const translate = asTranslateFn(t)
+
   if (!error) {
-    return t('dxfeedSync.errors.UNKNOWN')
+    return translate('dxfeedSync.errors.UNKNOWN')
   }
 
   if (isDxFeedErrorCode(error)) {
-    return t(`dxfeedSync.errors.${error}`, errorParams)
+    return translate(`dxfeedSync.errors.${error}`, errorParams)
   }
 
   // Legacy English messages from older server responses (pre–error-code)
@@ -47,11 +54,11 @@ export function formatDxFeedError(
 
   const code = legacyMap[error]
   if (code) {
-    return t(`dxfeedSync.errors.${code}`, errorParams)
+    return translate(`dxfeedSync.errors.${code}`, errorParams)
   }
 
   if (error.startsWith('Authentication failed (')) {
-    return t('dxfeedSync.errors.AUTH_HTTP_ERROR', {
+    return translate('dxfeedSync.errors.AUTH_HTTP_ERROR', {
       detail: error.replace('Authentication failed ', ''),
     })
   }
@@ -62,34 +69,35 @@ export function formatDxFeedError(
 
   if (error.startsWith('Could not resolve trade history server for ')) {
     const propfirm = error.replace('Could not resolve trade history server for ', '')
-    return t('dxfeedSync.errors.HISTORICAL_HOST_UNRESOLVED', { propfirm })
+    return translate('dxfeedSync.errors.HISTORICAL_HOST_UNRESOLVED', { propfirm })
   }
 
-  return t('dxfeedSync.errors.UNKNOWN')
+  return translate('dxfeedSync.errors.UNKNOWN')
 }
 
 export function getDxFeedErrorToastContent(
-  t: TranslateFn,
+  t: unknown,
   error?: string | null,
   errorParams?: Record<string, string | number>,
 ): { title: string; description?: string } {
+  const translate = asTranslateFn(t)
   const code = error && isDxFeedErrorCode(error) ? error : null
   const title = formatDxFeedError(t, error, errorParams)
 
   if (code && SUPPORT_HINT_CODES.has(code)) {
-    return { title, description: t('dxfeedSync.errors.hintContactSupport') }
+    return { title, description: translate('dxfeedSync.errors.hintContactSupport') }
   }
 
   if (code && RECONNECT_HINT_CODES.has(code)) {
-    return { title, description: t('dxfeedSync.errors.hintReconnect') }
+    return { title, description: translate('dxfeedSync.errors.hintReconnect') }
   }
 
   if (code === DxFeedErrorCode.AUTH_PROP_FIRM_MISMATCH) {
-    return { title, description: t('dxfeedSync.errors.hintPropFirmMismatch') }
+    return { title, description: translate('dxfeedSync.errors.hintPropFirmMismatch') }
   }
 
   if (code === DxFeedErrorCode.AUTH_REJECTED || code === DxFeedErrorCode.AUTH_HTTP_ERROR) {
-    return { title, description: t('dxfeedSync.errors.hintCheckCredentials') }
+    return { title, description: translate('dxfeedSync.errors.hintCheckCredentials') }
   }
 
   return { title }
