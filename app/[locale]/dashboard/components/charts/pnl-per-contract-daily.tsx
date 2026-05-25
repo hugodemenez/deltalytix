@@ -1,5 +1,4 @@
 "use client";
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import * as React from "react";
 import {
@@ -155,7 +154,7 @@ export default function PnLPerContractDailyChart({
           };
         }
 
-        const netPnl = getTradeNetPnl(trade);
+        const netPnl = trade.pnl - (trade.commission || 0);
         acc[dateKey].trades.push(trade);
         acc[dateKey].totalPnl += netPnl;
         acc[dateKey].totalContracts += trade.quantity;

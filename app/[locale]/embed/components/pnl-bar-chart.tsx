@@ -58,7 +58,7 @@ export default function DailyPnLChartEmbed({
       const dateKey = d.toISOString().slice(0, 10);
       if (!byDate[dateKey])
         byDate[dateKey] = { pnl: 0, longNumber: 0, shortNumber: 0 };
-      byDate[dateKey].pnl += getTradeNetPnl(t);
+      byDate[dateKey].pnl += t.pnl - (t.commission || 0);
       const side = (t.side || "").toLowerCase();
       if (side === "long") byDate[dateKey].longNumber += 1;
       else if (side === "short") byDate[dateKey].shortNumber += 1;

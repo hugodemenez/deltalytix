@@ -45,19 +45,19 @@ export default function PnLBySideChartEmbed({
     const shortTrades = trades.filter((t) => t.side?.toLowerCase() === "short");
 
     const longPnL = longTrades.reduce(
-      (sum, t) => sum + (getTradeNetPnl(t)),
+      (sum, t) => sum + (t.pnl - (t.commission || 0)),
       0,
     );
     const shortPnL = shortTrades.reduce(
-      (sum, t) => sum + (getTradeNetPnl(t)),
+      (sum, t) => sum + (t.pnl - (t.commission || 0)),
       0,
     );
 
     const longWins = longTrades.filter(
-      (t) => getTradeNetPnl(t) > 0,
+      (t) => t.pnl - (t.commission || 0) > 0,
     ).length;
     const shortWins = shortTrades.filter(
-      (t) => getTradeNetPnl(t) > 0,
+      (t) => t.pnl - (t.commission || 0) > 0,
     ).length;
 
     return [

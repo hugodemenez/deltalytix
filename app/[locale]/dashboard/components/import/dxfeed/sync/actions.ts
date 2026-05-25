@@ -323,9 +323,8 @@ function buildTradesFromDxFeedReport(
       const exitDate = new Date(exitMs)
       const durationSeconds = Math.max(0, Math.round((exitDate.getTime() - entryDate.getTime()) / 1000))
 
-      // DxFeed netPl is after fees; commission is informational (do not subtract again in aggregates).
       const pnl = rt.netPl
-      const commission = Math.abs(rt.grossPl - rt.netPl)
+      const commission = rt.grossPl - rt.netPl
 
       const tradeData = {
         accountNumber: accountLabel,

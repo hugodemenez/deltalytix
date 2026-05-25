@@ -1,5 +1,4 @@
 import { getTradesAction } from "@/server/database";
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 import { getGroupsAction } from "@/server/groups";
 import { Trade } from "@/prisma/generated/prisma/client";
 import { tool } from "ai";
@@ -107,7 +106,7 @@ function calculateAccountMetrics(accountNumber: string, trades: Trade[], allTrad
   let maxDrawdown = 0;
   
   for (const trade of accountTrades) {
-    runningPnL += getTradeNetPnl(trade);
+    runningPnL += trade.pnl - trade.commission;
     if (runningPnL > peak) {
       peak = runningPnL;
     }
@@ -118,7 +117,7 @@ function calculateAccountMetrics(accountNumber: string, trades: Trade[], allTrad
   }
   
   // Calculate Sharpe ratio
-  const returns = accountTrades.map(t => getTradeNetPnl(t));
+  const returns = accountTrades.map(t => t.pnl - t.commission);
   const avgReturn = returns.reduce((sum, r) => sum + r, 0) / returns.length;
   const stdDev = Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / returns.length);
   const sharpeRatio = stdDev > 0 ? avgReturn / stdDev : 0;
@@ -156,7 +155,7 @@ function calculateAccountMetrics(accountNumber: string, trades: Trade[], allTrad
   }, {} as Record<string, Trade[]>);
   
   const profitableWeeks = Object.values(weeklyGroups).filter(weekTrades => 
-    weekTrades.reduce((sum, t) => sum + getTradeNetPnl(t), 0) > 0
+    weekTrades.reduce((sum, t) => sum + t.pnl - t.commission, 0) > 0
   ).length;
   
   const consistency = Object.keys(weeklyGroups).length > 0 ? (profitableWeeks / Object.keys(weeklyGroups).length) * 100 : 0;

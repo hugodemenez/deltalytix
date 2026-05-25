@@ -1,5 +1,4 @@
 'use server'
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import { getUserId } from '@/server/auth'
 import { PrismaClient, Trade, Payout } from '@/prisma/generated/prisma/client'
@@ -581,7 +580,7 @@ function calculateAccountBalance(
   let balance = account.startingBalance || 0;
 
   // Calculate PnL from trades (trades are already filtered by account)
-  const tradesPnL = trades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0);
+  const tradesPnL = trades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0);
   balance += tradesPnL;
 
   // Add payouts

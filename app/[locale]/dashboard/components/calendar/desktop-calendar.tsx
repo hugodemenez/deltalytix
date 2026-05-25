@@ -1,5 +1,4 @@
 'use client'
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import React, { useState, useEffect, useMemo } from "react"
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, startOfWeek, getDay, endOfWeek, addDays, isSameDay, getYear } from "date-fns"
@@ -432,7 +431,7 @@ export default function CalendarPnl({ calendarData, hideFiltersOnMobile = false 
       const equity = [0];
       let cumulative = 0;
       sortedTrades.forEach(trade => {
-        cumulative += getTradeNetPnl(trade);
+        cumulative += trade.pnl - (trade.commission || 0);
         equity.push(cumulative);
       });
 

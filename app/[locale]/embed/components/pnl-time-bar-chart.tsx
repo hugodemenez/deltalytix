@@ -1,5 +1,4 @@
 "use client";
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import * as React from "react";
 import {
@@ -48,7 +47,7 @@ export default function TimeOfDayPerformanceChart({
           : trade.entryDate;
       if (Number.isNaN(d.getTime())) return;
       const hour = d.getUTCHours();
-      hourlyTotals[hour].totalPnl += getTradeNetPnl(trade);
+      hourlyTotals[hour].totalPnl += trade.pnl - (trade.commission || 0);
       hourlyTotals[hour].count += 1;
     });
 

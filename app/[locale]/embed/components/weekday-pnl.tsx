@@ -53,7 +53,7 @@ export default function WeekdayPnLChartEmbed({
         typeof t.entryDate === "string" ? new Date(t.entryDate) : t.entryDate;
       if (Number.isNaN(d.getTime())) return;
       const dow = d.getUTCDay();
-      totals[dow].total += getTradeNetPnl(t);
+      totals[dow].total += t.pnl - (t.commission || 0);
       totals[dow].count += 1;
     });
     return days.map((day) => ({

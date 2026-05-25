@@ -1,5 +1,4 @@
 'use server'
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import { createClient, User } from '@supabase/supabase-js'
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!, {
@@ -250,7 +249,7 @@ export async function getUserEquityData(page: number = 1, limit: number = 10) {
     // Calculate cumulative PnL and equity curve
     let cumulativePnL = 0
     const equityCurve = sortedTrades.map((trade, index) => {
-      const netPnl = getTradeNetPnl(trade)
+      const netPnl = trade.pnl - (trade.commission || 0)
       cumulativePnL += netPnl
       return {
         date: trade.createdAt.toISOString().slice(0, 10),
@@ -261,12 +260,12 @@ export async function getUserEquityData(page: number = 1, limit: number = 10) {
     })
 
     // Calculate statistics with commissions included
-    const totalPnL = userTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0)
-    const winningTrades = userTrades.filter(trade => (getTradeNetPnl(trade)) > 0)
-    const losingTrades = userTrades.filter(trade => (getTradeNetPnl(trade)) < 0)
+    const totalPnL = userTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0)
+    const winningTrades = userTrades.filter(trade => (trade.pnl - (trade.commission || 0)) > 0)
+    const losingTrades = userTrades.filter(trade => (trade.pnl - (trade.commission || 0)) < 0)
     const winRate = userTrades.length > 0 ? (winningTrades.length / userTrades.length) * 100 : 0
-    const averageWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0) / winningTrades.length : 0
-    const averageLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0) / losingTrades.length : 0
+    const averageWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0) / winningTrades.length : 0
+    const averageLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0) / losingTrades.length : 0
     const maxDrawdown = calculateMaxDrawdown(equityCurve)
     const profitFactor = Math.abs(averageLoss) > 0 ? Math.abs(averageWin) / Math.abs(averageLoss) : 0
 
@@ -349,7 +348,7 @@ export async function getIndividualUserEquityData(userId: string) {
   // Calculate cumulative PnL and equity curve
   let cumulativePnL = 0
   const equityCurve = sortedTrades.map((trade, index) => {
-    const netPnl = getTradeNetPnl(trade)
+    const netPnl = trade.pnl - (trade.commission || 0)
     cumulativePnL += netPnl
     return {
       date: trade.createdAt.toISOString().slice(0, 10),
@@ -360,12 +359,12 @@ export async function getIndividualUserEquityData(userId: string) {
   })
 
   // Calculate statistics with commissions included
-  const totalPnL = trades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0)
-  const winningTrades = trades.filter(trade => (getTradeNetPnl(trade)) > 0)
-  const losingTrades = trades.filter(trade => (getTradeNetPnl(trade)) < 0)
+  const totalPnL = trades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0)
+  const winningTrades = trades.filter(trade => (trade.pnl - (trade.commission || 0)) > 0)
+  const losingTrades = trades.filter(trade => (trade.pnl - (trade.commission || 0)) < 0)
   const winRate = trades.length > 0 ? (winningTrades.length / trades.length) * 100 : 0
-  const averageWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0) / winningTrades.length : 0
-  const averageLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0) / losingTrades.length : 0
+  const averageWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0) / winningTrades.length : 0
+  const averageLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0) / losingTrades.length : 0
   const maxDrawdown = calculateMaxDrawdown(equityCurve)
   const profitFactor = Math.abs(averageLoss) > 0 ? Math.abs(averageWin) / Math.abs(averageLoss) : 0
 
@@ -487,7 +486,7 @@ export async function getTeamEquityData(teamId: string, page: number = 1, limit:
     // Calculate cumulative PnL and equity curve
     let cumulativePnL = 0
     const equityCurve = sortedTrades.map((trade, index) => {
-      const netPnl = getTradeNetPnl(trade)
+      const netPnl = trade.pnl - (trade.commission || 0)
       cumulativePnL += netPnl
       return {
         date: trade.entryDate.slice(0, 10),
@@ -498,12 +497,12 @@ export async function getTeamEquityData(teamId: string, page: number = 1, limit:
     })
 
     // Calculate statistics with commissions included
-    const totalPnL = userTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0)
-    const winningTrades = userTrades.filter(trade => (getTradeNetPnl(trade)) > 0)
-    const losingTrades = userTrades.filter(trade => (getTradeNetPnl(trade)) < 0)
+    const totalPnL = userTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0)
+    const winningTrades = userTrades.filter(trade => (trade.pnl - (trade.commission || 0)) > 0)
+    const losingTrades = userTrades.filter(trade => (trade.pnl - (trade.commission || 0)) < 0)
     const winRate = userTrades.length > 0 ? (winningTrades.length / userTrades.length) * 100 : 0
-    const averageWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0) / winningTrades.length : 0
-    const averageLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0) / losingTrades.length : 0
+    const averageWin = winningTrades.length > 0 ? winningTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0) / winningTrades.length : 0
+    const averageLoss = losingTrades.length > 0 ? losingTrades.reduce((sum, trade) => sum + (trade.pnl - (trade.commission || 0)), 0) / losingTrades.length : 0
     const maxDrawdown = calculateMaxDrawdown(equityCurve)
     const profitFactor = Math.abs(averageLoss) > 0 ? Math.abs(averageWin) / Math.abs(averageLoss) : 0
 
@@ -643,7 +642,7 @@ export async function exportTeamTradesAction(teamId: string): Promise<string> {
   ]
 
   const csvRows = trades.map(trade => {
-    const netPnl = getTradeNetPnl(trade)
+    const netPnl = trade.pnl - (trade.commission || 0)
     return [
       userEmailMap[trade.userId] || 'Unknown',
       trade.id,

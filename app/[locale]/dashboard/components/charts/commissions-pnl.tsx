@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/tooltip";
 import { WidgetSize } from "@/app/[locale]/dashboard/types/dashboard";
 import { useI18n } from "@/locales/client";
-import { getTradeNetPnl } from "@/lib/trade-net-pnl";
 
 interface CommissionsPnLChartProps {
   size?: WidgetSize;
@@ -52,7 +51,7 @@ export default function CommissionsPnLChart({
 
 
   const chartData = React.useMemo(() => {
-    const totalPnL = trades.reduce((sum, trade) => sum + getTradeNetPnl(trade), 0);
+    const totalPnL = trades.reduce((sum, trade) => sum + trade.pnl, 0);
     const totalCommissions = trades.reduce(
       (sum, trade) => sum + trade.commission,
       0,

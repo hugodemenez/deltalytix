@@ -54,7 +54,6 @@ import { getTradesCache, setTradesCache } from "@/lib/indexeddb/trades-cache";
 import { endOfDay, isValid, parseISO, set, startOfDay } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { calculateStatistics, formatCalendarData } from "@/lib/utils";
-import { getTradeNetPnl } from "@/lib/trade-net-pnl";
 import { useParams } from "next/navigation";
 import { deleteTagAction } from "@/server/tags";
 import { useRouter } from "next/navigation";
@@ -941,13 +940,13 @@ export const DataProvider: React.FC<{
 
     // Calculate gross profits and gross losses including commissions
     const grossProfits = formattedTrades.reduce((sum, trade) => {
-      const totalPnL = getTradeNetPnl(trade);
+      const totalPnL = trade.pnl - trade.commission;
       return totalPnL > 0 ? sum + totalPnL : sum;
     }, 0);
 
     const grossLosses = Math.abs(
       formattedTrades.reduce((sum, trade) => {
-        const totalPnL = getTradeNetPnl(trade);
+        const totalPnL = trade.pnl - trade.commission;
         return totalPnL < 0 ? sum + totalPnL : sum;
       }, 0)
     );

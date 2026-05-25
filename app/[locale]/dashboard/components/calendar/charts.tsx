@@ -1,5 +1,4 @@
 "use client"
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import React from 'react'
 import { BarChart, Bar, Cell, Tooltip, ResponsiveContainer, Legend, XAxis, YAxis, CartesianGrid, LineChart, Line, ComposedChart, ReferenceLine } from "recharts"
@@ -60,7 +59,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
     // Calculate P&L for each account
     const accountPnL = dayData.trades.reduce((acc, trade) => {
       const accountNumber = trade.accountNumber || 'Unknown'
-      const totalPnL = getTradeNetPnl(trade)
+      const totalPnL = trade.pnl - (trade.commission || 0)
       acc[accountNumber] = (acc[accountNumber] || 0) + totalPnL
       return acc
     }, {} as Record<string, number>);
@@ -82,7 +81,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
       .map((trade, index) => {
         const runningBalance = dayData.trades
           .slice(0, index + 1)
-          .reduce((sum, t) => sum + (getTradeNetPnl(t)), 0);
+          .reduce((sum, t) => sum + (t.pnl - (t.commission || 0)), 0);
         return {
           time: new Date(trade.entryDate).toLocaleTimeString(locale),
           date: new Date(trade.entryDate).toLocaleDateString(locale, { 
@@ -91,7 +90,7 @@ export function Charts({ dayData, isWeekly = false }: ChartsProps) {
             day: 'numeric',
           }),
           balance: runningBalance,
-          pnl: getTradeNetPnl(trade),
+          pnl: trade.pnl - (trade.commission || 0),
           tradeNumber: index + 1,
         }
       });

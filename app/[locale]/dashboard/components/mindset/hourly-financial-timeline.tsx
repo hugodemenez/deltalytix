@@ -1,5 +1,4 @@
 "use client"
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import { useMemo, useRef, useEffect, useState } from "react"
 import { format } from "date-fns"
@@ -268,7 +267,7 @@ export function HourlyFinancialTimeline({
     // Add aggregated trades to the hour map
     tradesByHour.forEach((hourTrades, hour) => {
       if (hourTrades.length > 0) {
-        const totalPnL = hourTrades.reduce((sum, trade) => sum + (getTradeNetPnl(trade)), 0)
+        const totalPnL = hourTrades.reduce((sum, trade) => sum + (trade.pnl - trade.commission), 0)
         const uniqueSymbols = new Set(hourTrades.map(trade => trade.instrument))
         
         hourMap.get(hour)?.push({
@@ -622,9 +621,9 @@ function TradeCard({ trade, onClick, timezone, dateLocale, expanded = false, dat
                   </TableCell>
                   <TableCell className={cn(
                     "text-right font-medium",
-                    (getTradeNetPnl(t)) > 0 ? "text-green-500" : "text-red-500"
+                    (t.pnl - t.commission) > 0 ? "text-green-500" : "text-red-500"
                   )}>
-                    {(getTradeNetPnl(t)).toFixed(2)}
+                    {(t.pnl - t.commission).toFixed(2)}
                   </TableCell>
                 </TableRow>
               ))}

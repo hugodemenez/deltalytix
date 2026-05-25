@@ -1,5 +1,4 @@
 "use client";
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import * as React from "react";
 import {
@@ -98,7 +97,7 @@ export default function PnLPerContractChart({
     const instrumentGroups = trades.reduce(
       (acc, trade) => {
         const instrument = trade.instrument || "Unknown";
-        const netPnl = getTradeNetPnl(trade); // Calculate net PnL (gross PnL - commission)
+        const netPnl = trade.pnl - (trade.commission || 0); // Calculate net PnL (gross PnL - commission)
 
         if (!acc[instrument]) {
           acc[instrument] = {

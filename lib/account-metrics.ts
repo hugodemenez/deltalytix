@@ -1,6 +1,5 @@
 // Shared, environment-agnostic account metrics utilities
 // These functions can be used on both server and client for consistent results.
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 import type { Trade as PrismaTrade } from '@/prisma/generated/prisma/browser'
 import type { Account } from '@/context/data-provider'
 
@@ -85,7 +84,7 @@ export function computeAccountMetrics(
     const tradeEvents: Event[] = sortedTrades.map(tr => ({
       kind: 'trade',
       date: toDate(tr.entryDate)!,
-      pnl: getTradeNetPnl(tr),
+      pnl: tr.pnl - (tr.commission || 0),
       trade: tr,
     }))
     const payoutEvents: Event[] = validPayouts.map(p => ({
@@ -126,7 +125,7 @@ export function computeAccountMetrics(
   for (const trade of filteredTrades) {
     const d = toDate(trade.entryDate)!
     const key = d.toISOString().split('T')[0]
-    const pnl = getTradeNetPnl(trade)
+    const pnl = trade.pnl - (trade.commission || 0)
     dailyPnL[key] = (dailyPnL[key] || 0) + pnl
     totalProfit += pnl
   }
@@ -149,7 +148,7 @@ export function computeAccountMetrics(
   let highestBalance = account.startingBalance || 0
 
   for (const trade of filteredTrades) {
-    const pnl = getTradeNetPnl(trade)
+    const pnl = trade.pnl - (trade.commission || 0)
     runningBalance += pnl
     if (runningBalance > highestBalance) highestBalance = runningBalance
   }
@@ -185,7 +184,7 @@ export function computeAccountMetrics(
   }
   const totalTradingDays = Object.keys(dailyTrades).length
   const validTradingDays = Object.entries(dailyTrades).filter(([_, dayTrades]) => {
-    const dayPnL = dayTrades.reduce((sum, t) => sum + getTradeNetPnl(t), 0)
+    const dayPnL = dayTrades.reduce((sum, t) => sum + (t.pnl - (t.commission || 0)), 0)
     return dayPnL >= (account.minPnlToCountAsDay || 0)
   }).length
 

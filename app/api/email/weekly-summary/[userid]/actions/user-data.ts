@@ -1,5 +1,4 @@
 'use server'
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import { PrismaClient } from "@/prisma/generated/prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
@@ -129,11 +128,11 @@ export async function computeTradingStats(
     })
 
     if (existingEntry) {
-      existingEntry.pnl = Number((existingEntry.pnl + getTradeNetPnl(trade)).toFixed(2))
+      existingEntry.pnl = Number((existingEntry.pnl + trade.pnl - trade.commission).toFixed(2))
     } else {
       acc.push({
         date: tradeDate,
-        pnl: Number((getTradeNetPnl(trade)).toFixed(2)),
+        pnl: Number((trade.pnl - trade.commission).toFixed(2)),
         weekday
       })
     }

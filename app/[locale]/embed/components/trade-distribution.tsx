@@ -31,9 +31,9 @@ export default function TradeDistributionChartEmbed({
 
   const chartData = React.useMemo(() => {
     const nbTrades = trades.length;
-    const nbWin = trades.filter((t) => getTradeNetPnl(t) > 0).length;
-    const nbLoss = trades.filter((t) => getTradeNetPnl(t) < 0).length;
-    const nbBe = trades.filter((t) => getTradeNetPnl(t) === 0).length;
+    const nbWin = trades.filter((t) => t.pnl - (t.commission || 0) > 0).length;
+    const nbLoss = trades.filter((t) => t.pnl - (t.commission || 0) < 0).length;
+    const nbBe = trades.filter((t) => t.pnl - (t.commission || 0) === 0).length;
     const winRate = nbTrades ? (nbWin / nbTrades) * 100 : 0;
     const lossRate = nbTrades ? (nbLoss / nbTrades) * 100 : 0;
     const beRate = nbTrades ? (nbBe / nbTrades) * 100 : 0;

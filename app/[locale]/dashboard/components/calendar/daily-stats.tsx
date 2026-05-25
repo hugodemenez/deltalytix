@@ -1,5 +1,4 @@
 "use client"
-import { getTradeNetPnl } from '@/lib/trade-net-pnl'
 
 import React from 'react'
 import {
@@ -50,7 +49,7 @@ export function DailyStats({ dayData, isWeekly = false }: DailyStatsProps) {
     // Calculate P&L for each account
     const accountPnL = dayData.trades.reduce((acc, trade) => {
       const accountNumber = trade.accountNumber || 'Unknown'
-      const totalPnL = getTradeNetPnl(trade)
+      const totalPnL = trade.pnl - (trade.commission || 0)
       acc[accountNumber] = (acc[accountNumber] || 0) + totalPnL
       return acc
     }, {} as Record<string, number>)
@@ -64,7 +63,7 @@ export function DailyStats({ dayData, isWeekly = false }: DailyStatsProps) {
     const equity = [0];
     let cumulative = 0;
     sortedTrades.forEach(trade => {
-      cumulative += getTradeNetPnl(trade);
+      cumulative += trade.pnl - (trade.commission || 0);
       equity.push(cumulative);
     });
 

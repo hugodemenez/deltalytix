@@ -37,7 +37,7 @@ export default function PnLPerContractDailyChartEmbed({ trades, instrument }: { 
         const date = typeof t.entryDate === 'string' ? new Date(t.entryDate) : t.entryDate
         if (Number.isNaN(date.getTime())) return
         const dateKey = formatInTimeZone(date, 'UTC', 'yyyy-MM-dd', { locale: enUS })
-        const net = getTradeNetPnl(t)
+        const net = t.pnl - (t.commission || 0)
         if (!byDate[dateKey]) byDate[dateKey] = { totalPnl: 0, totalContracts: 0, tradeCount: 0, winCount: 0 }
         byDate[dateKey].totalPnl += net
         byDate[dateKey].totalContracts += t.quantity
