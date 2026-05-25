@@ -21,6 +21,7 @@ import type {
 
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
+const DXFEED_BASE_URL = process.env.DXFEED_BASEURL || process.env.DXFEED_BASE_URL
 
 const IS_DEV = process.env.NODE_ENV === 'development' || process.env.DXFEED_DEBUG === 'true'
 const DXFEED_ENVIRONMENT = Number(
@@ -83,6 +84,33 @@ function parseHistoricalHostFromTradingWss(wssUrl?: string | null): string {
     logger.warn('Failed to parse trading websocket URL')
     return ''
   }
+}
+
+/**
+ * Resolve the REST historical/report API base URL.
+ * Some prop firms omit tradingRestReportHost and share the trading WSS host,
+ * but the historical API lives on a separate host (DXFEED_BASEURL).
+ */
+function resolveDxFeedHistoricalHost(
+  authData: Pick<DxFeedLoginResponse, 'tradingRestReportHost' | 'tradingWss' | 'tradingWssEndpoint'>,
+  responseHeaders?: { get(name: string): string | null },
+): string {
+  const fromAuth = normalizeHistoricalHost(authData.tradingRestReportHost)
+  if (fromAuth) return fromAuth
+
+  const fromEnv = normalizeHistoricalHost(DXFEED_BASE_URL)
+  if (fromEnv) {
+    logger.debug('Using DXFEED_BASEURL for historical API host')
+    return fromEnv
+  }
+
+  const wssUrl =
+    authData.tradingWss ||
+    authData.tradingWssEndpoint ||
+    responseHeaders?.get('wss') ||
+    null
+
+  return parseHistoricalHostFromTradingWss(wssUrl)
 }
 
 function buildHistoricalAuthHeaders(accessToken: string): HeadersInit {
@@ -175,13 +203,10 @@ export async function authenticateDxFeed(
       return { error: data.reason || 'Authentication failed' }
     }
 
-    const historicalHost =
-      normalizeHistoricalHost(data.tradingRestReportHost) ||
-      parseHistoricalHostFromTradingWss(data.tradingWss || data.tradingWssEndpoint) ||
-      parseHistoricalHostFromTradingWss(response.headers.get('wss'))
+    const historicalHost = resolveDxFeedHistoricalHost(data, response.headers)
 
     if (!historicalHost) {
-      logger.warn('Could not derive historical host from auth response')
+      logger.warn('Could not derive historical host from auth response or DXFEED_BASEURL')
     }
 
     logger.info('Auth successful')
@@ -343,9 +368,14 @@ export async function getDxFeedTrades(
       return { error: 'Invalid stored DxFeed credentials' }
     }
 
-    const { accessToken, historicalHost } = credentials
+    let { accessToken, historicalHost } = credentials
     if (!historicalHost) {
-      return { error: 'No historical API host found in stored credentials' }
+      const fallbackHost = normalizeHistoricalHost(DXFEED_BASE_URL)
+      if (!fallbackHost) {
+        return { error: 'No historical API host found in stored credentials' }
+      }
+      historicalHost = fallbackHost
+      logger.info('Using DXFEED_BASEURL for historical API (missing in stored credentials)')
     }
 
     let userId = options?.userId ?? null
@@ -362,13 +392,22 @@ export async function getDxFeedTrades(
     const baseUrl = historicalHost.endsWith('/') ? historicalHost.slice(0, -1) : historicalHost
 
     logger.info('Fetching DxFeed accounts...')
-    const accounts = await getDxFeedAccounts(accessToken, historicalHost)
+    let accounts = await getDxFeedAccounts(accessToken, historicalHost)
+
+    const fallbackHost = normalizeHistoricalHost(DXFEED_BASE_URL)
+    if (accounts.length === 0 && fallbackHost && fallbackHost !== historicalHost) {
+      logger.info('Retrying DxFeed account list with DXFEED_BASEURL host')
+      accounts = await getDxFeedAccounts(accessToken, fallbackHost)
+      if (accounts.length > 0) {
+        historicalHost = fallbackHost
+      }
+    }
 
     const accountNumbers = accounts.map(
       (a) => a.accountHeader || a.accountReference || a.accountId.toString(),
     )
     if (accountNumbers.length > 0) {
-      const updatedCreds: DxFeedStoredCredentials = { ...credentials, accountNumbers }
+      const updatedCreds: DxFeedStoredCredentials = { ...credentials, historicalHost, accountNumbers }
       const updatedJson = JSON.stringify(updatedCreds)
       await updateStoredCredentials(userId, storedTokenJson, updatedJson)
       storedTokenJson = updatedJson

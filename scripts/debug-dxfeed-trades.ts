@@ -9,6 +9,7 @@ import 'dotenv/config'
 
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
+const DXFEED_BASE_URL = process.env.DXFEED_BASEURL || process.env.DXFEED_BASE_URL
 
 const LOGIN = process.env.DXFEED_USERNAME
 const PASSWORD = process.env.DXFEED_PASSWORD
@@ -104,13 +105,14 @@ async function main() {
   const token = authData.tradingRestReportToken || authData.token
   const historicalHost =
     normalizeHistoricalHost(authData.tradingRestReportHost) ||
+    normalizeHistoricalHost(DXFEED_BASE_URL) ||
     normalizeHistoricalHost(authData.tradingWss ? `https://${new URL(authData.tradingWss).hostname}` : '') ||
     normalizeHistoricalHost(
       authRes.headers.get('wss') ? `https://${new URL(authRes.headers.get('wss')!).hostname}` : '',
     )
 
   if (!historicalHost) {
-    console.error('No historical host from wss header')
+    console.error('No historical host (set DXFEED_BASEURL or check auth response)')
     process.exit(1)
   }
 

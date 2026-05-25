@@ -15,6 +15,7 @@ const protobuf = require('protobufjs')
 
 const DXFEED_AUTH_URL = process.env.DXFEED_AUTH_URL
 const DXFEED_PLATFORM_KEY = process.env.DXFEED_PLATFORM_KEY
+const DXFEED_BASE_URL = process.env.DXFEED_BASEURL || process.env.DXFEED_BASE_URL
 const LOGIN = process.env.DXFEED_USERNAME
 const PASSWORD = process.env.DXFEED_PASSWORD
 const ENVIRONMENT = process.env.DXFEED_ENVIRONMENT
@@ -95,6 +96,7 @@ async function auth(): Promise<{
 
   const historicalHost =
     normalizeHistoricalHost(data.tradingRestReportHost) ||
+    normalizeHistoricalHost(DXFEED_BASE_URL) ||
     normalizeHistoricalHost(`https://${new URL(wssUrl).hostname}`)
 
   return {
