@@ -242,54 +242,52 @@ export function DxFeedCredentialsManager() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold">
-              {t('dxfeedSync.multiAccount.savedAccounts')}
-            </h2>
-            <Button
-              onClick={handleReloadAccounts}
-              size="sm"
-              variant="ghost"
-              disabled={isReloading}
-              className="h-8 w-8 p-0"
-            >
-              {isReloading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-            </Button>
-          </div>
-          <div className="flex gap-2 items-center">
-            <Button
-              onClick={async () => {
-                await performSyncForAllAccounts()
-              }}
-              size="sm"
-              variant="outline"
-              disabled={syncingId !== null}
-              className="h-8"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              {t('dxfeedSync.multiAccount.syncAll')}
-            </Button>
-            <Button
-              onClick={() => setIsAddDialogOpen(true)}
-              disabled={isLoading}
-              size="sm"
-              className="h-8"
-            >
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4 mr-2" />
-              )}
-              {t('dxfeedSync.multiAccount.addNew')}
-            </Button>
-          </div>
+    <div className="space-y-4 min-w-0 w-full">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="text-sm sm:text-base font-semibold truncate">
+            {t('dxfeedSync.multiAccount.savedAccounts')}
+          </h3>
+          <Button
+            onClick={handleReloadAccounts}
+            size="sm"
+            variant="ghost"
+            disabled={isReloading}
+            className="h-8 w-8 p-0 shrink-0"
+          >
+            {isReloading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Button
+            onClick={async () => {
+              await performSyncForAllAccounts()
+            }}
+            size="sm"
+            variant="outline"
+            disabled={syncingId !== null}
+            className="h-8 flex-1 sm:flex-none"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            <span className="truncate">{t('dxfeedSync.multiAccount.syncAll')}</span>
+          </Button>
+          <Button
+            onClick={() => setIsAddDialogOpen(true)}
+            disabled={isLoading}
+            size="sm"
+            className="h-8 flex-1 sm:flex-none"
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            {t('dxfeedSync.multiAccount.addNew')}
+          </Button>
         </div>
       </div>
 
@@ -308,33 +306,17 @@ export function DxFeedCredentialsManager() {
                 value={connection.accountId}
                 className="border-0"
               >
-                <div className="flex items-stretch">
-                  <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline [&[data-state=open]>svg]:rotate-180">
-                    <div className="grid w-full gap-3 text-left sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)_auto_auto] sm:items-center sm:gap-4 pr-2">
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">
-                          {t('dxfeedSync.multiAccount.propFirm')}
-                        </p>
-                        <p className="font-semibold truncate">
-                          {connection.propFirmName ?? '—'}
-                        </p>
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">
-                          {t('dxfeedSync.multiAccount.connection')}
-                        </p>
-                        <p className="text-sm truncate" title={connection.accountId}>
-                          {connection.accountId}
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="w-fit shrink-0">
-                        {t('dxfeedSync.multiAccount.tradingAccountsCount', {
-                          count: tradingAccountCount,
-                        })}
-                      </Badge>
-                      <div className="flex flex-col gap-1 text-xs sm:items-end">
+                <div className="flex flex-col sm:flex-row sm:items-stretch min-w-0">
+                  <AccordionTrigger className="flex-1 px-3 py-3 sm:px-4 sm:py-4 hover:no-underline [&[data-state=open]>svg]:rotate-180 min-w-0">
+                    <div className="flex w-full min-w-0 flex-col gap-3 text-left pr-1 sm:pr-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="shrink-0">
+                          {t('dxfeedSync.multiAccount.tradingAccountsCount', {
+                            count: tradingAccountCount,
+                          })}
+                        </Badge>
                         <span
-                          className={`px-2 py-0.5 rounded w-fit ${
+                          className={`px-2 py-0.5 rounded text-xs shrink-0 ${
                             connection.hasToken
                               ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                               : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
@@ -344,15 +326,38 @@ export function DxFeedCredentialsManager() {
                             ? t('dxfeedSync.multiAccount.valid')
                             : t('dxfeedSync.multiAccount.expired')}
                         </span>
-                        <span className="text-muted-foreground">
-                          {t('dxfeedSync.multiAccount.lastSync')}:{' '}
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 min-w-0">
+                        <div className="min-w-0 space-y-0.5">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {t('dxfeedSync.multiAccount.propFirm')}
+                          </p>
+                          <p className="text-base font-semibold break-words">
+                            {connection.propFirmName ?? '—'}
+                          </p>
+                        </div>
+                        <div className="min-w-0 space-y-0.5">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {t('dxfeedSync.multiAccount.connection')}
+                          </p>
+                          <p
+                            className="text-sm break-all text-foreground/90"
+                            title={connection.accountId}
+                          >
+                            {connection.accountId}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t('dxfeedSync.multiAccount.lastSync')}:{' '}
+                        <span className="text-foreground/80">
                           {formatDate(connection.lastSyncedAt.toISOString())}
                         </span>
-                      </div>
+                      </p>
                     </div>
                   </AccordionTrigger>
                   <div
-                    className="flex items-center gap-1 px-3 border-l shrink-0"
+                    className="flex items-center justify-end gap-1 px-3 py-2 sm:py-0 border-t sm:border-t-0 sm:border-l shrink-0 bg-muted/20 sm:bg-transparent"
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => e.stopPropagation()}
                   >
@@ -361,7 +366,7 @@ export function DxFeedCredentialsManager() {
                         variant="outline"
                         size="sm"
                         onClick={() => setIsAddDialogOpen(true)}
-                        className="h-8 hidden sm:inline-flex"
+                        className="h-8 text-xs sm:text-sm"
                       >
                         {t('dxfeedSync.multiAccount.reconnect')}
                       </Button>
@@ -375,7 +380,7 @@ export function DxFeedCredentialsManager() {
                         setSyncingId(null)
                       }}
                       disabled={syncingId !== null || !connection.hasToken}
-                      className="h-8 w-8 p-0"
+                      className="h-8 w-8 p-0 shrink-0"
                       title={t('dxfeedSync.multiAccount.syncAll')}
                     >
                       {syncingId === connection.accountId ? (
@@ -386,7 +391,7 @@ export function DxFeedCredentialsManager() {
                     </Button>
                     <Popover modal>
                       <PopoverTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
