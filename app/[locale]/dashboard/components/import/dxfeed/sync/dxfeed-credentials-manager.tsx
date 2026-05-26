@@ -130,8 +130,6 @@ export function DxFeedCredentialsManager() {
     }
   }, [loginEmail, loginPassword, selectedPropFirmId, t, loadAccounts])
 
-  const selectedPropFirm = DXFEED_PROP_FIRM_OPTIONS.find((f) => f.id === selectedPropFirmId)
-
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString()
   }
@@ -521,22 +519,6 @@ export function DxFeedCredentialsManager() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm text-muted-foreground">
-                {t('dxfeedSync.addAccount.propFirmHint')}
-                {selectedPropFirm?.website ? (
-                  <>
-                    {' '}
-                    <a
-                      href={selectedPropFirm.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline underline-offset-2"
-                    >
-                      {selectedPropFirm.website.replace(/^https?:\/\//, '')}
-                    </a>
-                  </>
-                ) : null}
-              </p>
             </div>
             )}
             <div className="space-y-2">
