@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, Trash2, Plus, RefreshCw, MoreVertical } from 'lucide-react'
+import { Loader2, Trash2, Plus, RefreshCw, MoreVertical, ChevronDown, Check } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -24,16 +24,18 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import Link from 'next/link'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useI18n } from '@/locales/client'
 import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
 import { getDxFeedErrorToastContent } from '@/lib/dxfeed-client-messages'
 import { showToastWithCopy } from '@/lib/toast-copy'
 import { authenticateDxFeed, updateDxFeedDailySyncTimeAction } from './actions'
@@ -42,6 +44,7 @@ import { getEnabledDxFeedPropFirms } from '@/lib/dxfeed-propfirms'
 
 const DXFEED_PROP_FIRM_OPTIONS = getEnabledDxFeedPropFirms()
 const DEFAULT_PROP_FIRM_ID = DXFEED_PROP_FIRM_OPTIONS[0]?.id ?? ''
+const PROP_FIRM_SEARCH_THRESHOLD = 5
 
 export function DxFeedCredentialsManager() {
   const {
@@ -65,7 +68,17 @@ export function DxFeedCredentialsManager() {
   const [dailySyncTime, setDailySyncTime] = useState<string>('')
   const [isSavingTime, setIsSavingTime] = useState(false)
   const [actionsMenuAccountId, setActionsMenuAccountId] = useState<string | null>(null)
+  const [propFirmOpen, setPropFirmOpen] = useState(false)
+  const [propFirmSearch, setPropFirmSearch] = useState('')
   const t = useI18n()
+
+  const selectedPropFirm = DXFEED_PROP_FIRM_OPTIONS.find((f) => f.id === selectedPropFirmId)
+  const showPropFirmSearch = DXFEED_PROP_FIRM_OPTIONS.length > PROP_FIRM_SEARCH_THRESHOLD
+  const filteredPropFirms = propFirmSearch
+    ? DXFEED_PROP_FIRM_OPTIONS.filter((firm) =>
+        firm.name.toLowerCase().includes(propFirmSearch.toLowerCase()),
+      )
+    : DXFEED_PROP_FIRM_OPTIONS
 
   const closeActionsMenu = useCallback(() => {
     setActionsMenuAccountId(null)
@@ -507,18 +520,71 @@ export function DxFeedCredentialsManager() {
             ) : (
             <div className="space-y-2">
               <Label htmlFor="dxfeed-prop-firm">{t('dxfeedSync.addAccount.propFirmLabel')}</Label>
-              <Select value={selectedPropFirmId} onValueChange={setSelectedPropFirmId}>
-                <SelectTrigger id="dxfeed-prop-firm">
-                  <SelectValue placeholder={t('dxfeedSync.addAccount.propFirmPlaceholder')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {DXFEED_PROP_FIRM_OPTIONS.map((firm) => (
-                    <SelectItem key={firm.id} value={firm.id}>
-                      {firm.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover
+                open={propFirmOpen}
+                onOpenChange={(open) => {
+                  setPropFirmOpen(open)
+                  if (!open) setPropFirmSearch('')
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    id="dxfeed-prop-firm"
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={propFirmOpen}
+                    className="h-10 w-full justify-between font-normal"
+                  >
+                    <span className="truncate">
+                      {selectedPropFirm?.name ?? t('dxfeedSync.addAccount.propFirmPlaceholder')}
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] max-w-[calc(100vw-2rem)] p-0"
+                  align="start"
+                >
+                  <Command shouldFilter={false}>
+                    {showPropFirmSearch ? (
+                      <CommandInput
+                        placeholder={t('filters.searchPropfirm')}
+                        value={propFirmSearch}
+                        onValueChange={setPropFirmSearch}
+                      />
+                    ) : null}
+                    <CommandList
+                      className={
+                        showPropFirmSearch ? 'max-h-[min(280px,50vh)] overflow-y-auto' : undefined
+                      }
+                    >
+                      <CommandEmpty>{t('filters.noPropfirmFound')}</CommandEmpty>
+                      <CommandGroup>
+                        {filteredPropFirms.map((firm) => (
+                          <CommandItem
+                            key={firm.id}
+                            value={firm.id}
+                            onSelect={() => {
+                              setSelectedPropFirmId(firm.id)
+                              setPropFirmOpen(false)
+                              setPropFirmSearch('')
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4 shrink-0',
+                                selectedPropFirmId === firm.id ? 'opacity-100' : 'opacity-0',
+                              )}
+                            />
+                            <span className="truncate">{firm.name}</span>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             )}
             <div className="space-y-2">
