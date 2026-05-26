@@ -92,6 +92,37 @@ function addAgentDiscoveryHeaders(response: NextResponse, request: NextRequest) 
   return response
 }
 
+function safeRedirectPath(nextParam: string | null) {
+  if (!nextParam) {
+    return "/dashboard"
+  }
+
+  let nextPath = nextParam
+
+  try {
+    nextPath = decodeURIComponent(nextPath)
+  } catch {
+    return "/dashboard"
+  }
+
+  if (
+    nextPath.startsWith("//") ||
+    nextPath.startsWith("\\") ||
+    nextPath.includes("://") ||
+    nextPath.includes("\\")
+  ) {
+    return "/dashboard"
+  }
+
+  const normalizedPath = nextPath.startsWith("/") ? nextPath : `/${nextPath}`
+
+  if (normalizedPath.startsWith("//")) {
+    return "/dashboard"
+  }
+
+  return normalizedPath
+}
+
 async function updateSession(request: NextRequest) {
   // Create a proper NextResponse first
   const response = NextResponse.next({
@@ -319,8 +350,7 @@ export default async function proxy(req: NextRequest) {
     // Authenticated - redirect from auth to dashboard
     if (pathname.includes("/authentication")) {
       const nextParam = req.nextUrl.searchParams.get("next")
-      const redirectUrl = nextParam ? `/${nextParam}` : "/dashboard"
-      return NextResponse.redirect(new URL(redirectUrl, req.url))
+      return NextResponse.redirect(new URL(safeRedirectPath(nextParam), req.url))
     }
   }
 

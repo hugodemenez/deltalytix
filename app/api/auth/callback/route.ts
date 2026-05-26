@@ -3,6 +3,37 @@ import { createClient, ensureUserInDatabase } from '@/server/auth'
 import { NextResponse } from 'next/server'
 // The client you created from the Server-Side Auth instructions
 
+function safeRedirectPath(nextParam: string | null) {
+  if (!nextParam) {
+    return '/dashboard'
+  }
+
+  let nextPath = nextParam
+
+  try {
+    nextPath = decodeURIComponent(nextPath)
+  } catch {
+    return '/dashboard'
+  }
+
+  if (
+    nextPath.startsWith('//') ||
+    nextPath.startsWith('\\') ||
+    nextPath.includes('://') ||
+    nextPath.includes('\\')
+  ) {
+    return '/dashboard'
+  }
+
+  const normalizedPath = nextPath.startsWith('/') ? nextPath : `/${nextPath}`
+
+  if (normalizedPath.startsWith('//')) {
+    return '/dashboard'
+  }
+
+  return normalizedPath
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -21,11 +52,6 @@ export async function GET(request: Request) {
     action
   })
 
-  // Redirect to the decoded 'next' URL if it exists, otherwise to the homepage
-  let decodedNext: string | null = null;
-  if (next) {
-    decodedNext = decodeURIComponent(next)
-  }
   if (code) {
     try {
       const supabase = await createClient()
@@ -67,22 +93,14 @@ export async function GET(request: Request) {
 
         const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
         const isLocalEnv = process.env.NODE_ENV === 'development'
+        const redirectPath = safeRedirectPath(next)
         if (isLocalEnv) {
           // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, origin))
-          }
-          return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
+          return NextResponse.redirect(new URL(redirectPath, origin))
         } else if (forwardedHost) {
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, `https://${forwardedHost}`))
-          }
-          return NextResponse.redirect(`https://${forwardedHost}${next ?? '/dashboard'}`)
+          return NextResponse.redirect(new URL(redirectPath, `https://${forwardedHost}`))
         } else {
-          if (decodedNext) {
-            return NextResponse.redirect(new URL(decodedNext, origin))
-          }
-          return NextResponse.redirect(`${origin}${next ?? '/dashboard'}`)
+          return NextResponse.redirect(new URL(redirectPath, origin))
         }
       } else {
         console.log('Auth callback error:', error)

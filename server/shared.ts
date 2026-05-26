@@ -100,6 +100,10 @@ export async function getShared(slug: string): Promise<{params: SharedParams, tr
         return null
       }
 
+      if (!shared.isPublic || (shared.expiresAt && shared.expiresAt < new Date())) {
+        return null
+      }
+
       // Update view count
       await tx.shared.update({
         where: { slug },
