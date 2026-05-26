@@ -35,6 +35,15 @@ export const DXFEED_PROP_FIRMS: DxFeedPropFirmDefinition[] = [
     tradingSubdomain: 'trading-volumetrica',
     enabled: true,
   },
+  {
+    id: 'phoenixtraderfunding',
+    name: 'Phoenix Trader Funding',
+    website: 'https://dxfeed.phoenixtraderfunding.com',
+    domain: 'phoenixtraderfunding.com',
+    historicalSubdomain: 'dxfeed',
+    tradingSubdomain: 'trading-volumetrica',
+    enabled: true,
+  },
   // More Volumetrica-based firms can be added once their domain pattern is confirmed.
 ]
 

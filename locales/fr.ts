@@ -2163,7 +2163,7 @@ export default {
     disconnected: "Compte DxFeed déconnecté",
     error: {
       credentialsRequired: "Saisissez votre e-mail et votre mot de passe",
-      propFirmRequired: "Sélectionnez votre firme prop avant de vous connecter",
+      propFirmRequired: "Sélectionnez votre propfirm avant de vous connecter",
       authFailed: "Impossible de se connecter à DxFeed",
     },
     errors: {
@@ -2171,11 +2171,11 @@ export default {
         "Une erreur s'est produite. Réessayez ou contactez le Support si le problème persiste.",
       CONFIG_NOT_SET:
         "DxFeed n'est pas encore configuré sur cette application. Contactez le Support pour l'activer.",
-      PROP_FIRM_REQUIRED: "Sélectionnez votre firme prop dans la liste, puis réessayez.",
+      PROP_FIRM_REQUIRED: "Sélectionnez votre propfirm dans la liste, puis réessayez.",
       PROP_FIRM_UNSUPPORTED:
-        "Cette firme prop n'est pas encore disponible dans la liste.",
+        "Cette propfirm n'est pas encore disponible dans la liste.",
       PROP_FIRMS_UNAVAILABLE:
-        "Aucune firme prop n'est disponible pour le moment.",
+        "Aucune propfirm n'est disponible pour le moment.",
       USER_NOT_AUTHENTICATED:
         "Vous devez être connecté pour lier DxFeed. Connectez-vous puis réessayez.",
       AUTH_HTTP_ERROR:
@@ -2194,7 +2194,7 @@ export default {
       NO_TOKEN_RECONNECT:
         "Cette connexion a expiré.",
       TOKEN_EXPIRED:
-        "Votre session DxFeed a expiré. Reconnectez-vous avec vos identifiants prop firm pour continuer la synchronisation.",
+        "Votre session DxFeed a expiré. Reconnectez-vous avec vos identifiants propfirm pour continuer la synchronisation.",
       DUPLICATE_TRADES:
         "Ces trades sont déjà présents dans votre journal.",
       SYNC_FAILED:
@@ -2209,17 +2209,17 @@ export default {
       UPDATE_SYNC_TIME_FAILED:
         "Impossible de mettre à jour l'heure de sync quotidienne. Réessayez.",
       hintContactSupport:
-        "Ouvrez le Support (menu → Support) et indiquez le nom de votre firme prop si elle n'apparaît pas dans la liste. Nous pouvons ajouter des firmes sur demande.",
+        "Ouvrez le Support (menu → Support) et indiquez le nom de votre propfirm si elle n'apparaît pas dans la liste. Nous pouvons ajouter des propfirms sur demande.",
       hintReconnect:
-        "Supprimez cette connexion, cliquez sur Ajouter, sélectionnez votre firme prop et reconnectez-vous avec vos identifiants DxFeed.",
+        "Supprimez cette connexion, cliquez sur Ajouter, sélectionnez votre propfirm et reconnectez-vous avec vos identifiants DxFeed.",
       hintPropFirmMismatch:
-        "La firme sélectionnée doit correspondre au compte que vous utilisez sur la plateforme de votre firme prop.",
+        "La propfirm sélectionnée doit correspondre au compte que vous utilisez sur la plateforme de votre propfirm.",
       hintCheckCredentials:
-        "Utilisez le même e-mail et mot de passe que sur la plateforme de trading de votre firme (démo ou live selon votre compte).",
+        "Utilisez le même e-mail et mot de passe que sur la plateforme de trading de votre propfirm (démo ou live selon votre compte).",
       SYNC_FETCH_FAILED:
         "Impossible de charger les trades DxFeed ({failures} sur {total} comptes en échec). Reconnectez-vous et réessayez.",
       SYNC_ACCOUNTS_UNAVAILABLE:
-        "Impossible de lister vos comptes de trading ({count} enregistrés auparavant). Reconnectez-vous avec la même firme prop.",
+        "Impossible de lister vos comptes de trading ({count} enregistrés auparavant). Reconnectez-vous avec la même propfirm.",
       SYNC_OPEN_ONLY:
         "DxFeed a renvoyé {raw} position(s) mais aucun trade clôturé pour {accountId}.",
       SYNC_NO_TRADES_IN_RANGE:
@@ -2228,19 +2228,19 @@ export default {
     addAccount: {
       title: "Connecter un compte DxFeed",
       description:
-        "Choisissez votre firme prop, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
-      propFirmLabel: "Firme prop",
-      propFirmPlaceholder: "Sélectionnez votre firme prop",
+        "Choisissez votre propfirm, puis connectez-vous avec les mêmes identifiants que sur sa plateforme.",
+      propFirmLabel: "Propfirm",
+      propFirmPlaceholder: "Sélectionnez votre propfirm",
       propFirmHint:
-        "Choisissez la firme où vous tradez (ex. Miltraders). Les trades sont importés depuis son serveur d'historique—notamment depuis le site DxFeed générique.",
-      noPropFirmsTitle: "Votre firme prop n'est pas encore listée",
+        "Choisissez la propfirm où vous tradez (ex. Miltraders, Phoenix Trader Funding). Les trades sont importés depuis son serveur d'historique—notamment depuis le site DxFeed générique.",
+      noPropFirmsTitle: "Votre propfirm n'est pas encore listée",
       noPropFirmsDescription:
-        "Seules les firmes que nous avons configurées apparaissent ici. Contactez le Support avec le nom et le site de votre firme pour que nous l'ajoutions.",
+        "Seules les propfirms que nous avons configurées apparaissent ici. Contactez le Support avec le nom et le site de votre propfirm pour que nous l'ajoutions.",
       noPropFirmsAction: "Contacter le Support",
       emailLabel: "E-mail",
-      emailPlaceholder: "E-mail de connexion à votre firme prop",
+      emailPlaceholder: "E-mail de connexion à votre propfirm",
       passwordLabel: "Mot de passe",
-      passwordPlaceholder: "Mot de passe de votre firme prop",
+      passwordPlaceholder: "Mot de passe de votre propfirm",
       connecting: "Connexion...",
       connect: "Connecter",
     },
@@ -2264,7 +2264,7 @@ export default {
         "Certains comptes n'ont pas pu être interrogés ({failures}/{total}). Les résultats peuvent être incomplets.",
     },
     multiAccount: {
-      propFirm: "Firme prop",
+      propFirm: "Propfirm",
       connection: "Connexion",
       connectionLoginHint: "Identifiant DxFeed utilisé pour la connexion",
       tradingAccountsCount: "{count} compte(s) de trading",
@@ -2279,17 +2279,22 @@ export default {
       actions: "Actions",
       expired: "Expiré",
       valid: "Valide",
+      connected: "Connecté",
+      expandTradingAccounts: "Voir {count} compte(s) de trading",
+      collapseTradingAccounts: "Masquer les comptes de trading",
       reconnect: "Reconnecter",
-      delete: "Supprimer",
+      remove: "Retirer",
+      removeConnection: "Retirer la connexion",
+      removeConnectionConfirm:
+        'Retirer la connexion « {accountId} » ? Les trades déjà importés restent dans Deltalytix. Supprimez les comptes ou trades manuellement dans Gestion des données si vous souhaitez les effacer.',
+      connectionRemoved: 'Connexion « {accountId} » retirée.',
+      removeError: 'Échec du retrait de la connexion « {accountId} ».',
+      scheduleSync: "Planifier",
+      editSchedule: "Modifier",
       savedAccounts: "Comptes Enregistrés",
       addNew: "Ajouter",
       syncAll: "Synchroniser Tout",
       noSavedAccounts: "Aucun compte enregistré trouvé",
-      deleteAccount: "Supprimer le Compte",
-      deleteAccountConfirm:
-        'Êtes-vous sûr de vouloir supprimer le compte "{accountId}" ? Cette action est irréversible.',
-      accountDeleted: 'Le compte "{accountId}" a été supprimé avec succès.',
-      deleteError: 'Échec de la suppression du compte "{accountId}".',
       accountsReloaded: "Comptes rechargés avec succès",
       reloadError: "Échec du rechargement des comptes",
       alreadyImportedTrades: "Trades déjà importés",
@@ -2301,6 +2306,8 @@ export default {
       accountsCount: "comptes de trading",
       syncedAccounts: "Comptes Synchronisés",
       dailySyncTimeLocal: "Heure de sync quotidienne (Local)",
+      dailySyncSchedule: "Planification de sync quotidienne",
+      dailySyncScheduleNotScheduled: "Non planifiée",
       dailySyncTimeTitle: "Définir l'heure de synchronisation quotidienne",
       dailySyncTimeDescription:
         "Configurez l'heure à laquelle ce compte devrait se synchroniser automatiquement chaque jour (en heure locale). Laissez vide pour désactiver la synchronisation automatique.",
@@ -2333,7 +2340,7 @@ export default {
   "import.type.dxfeedSync.description":
     "Synchronisation directe de compte avec DxFeed",
   "import.type.dxfeedSync.details":
-    "Importez vos trades clôturés depuis votre firme prop (DxFeed / Volumetrica). Sélectionnez la firme, puis connectez-vous avec vos identifiants plateforme.",
+    "Importez vos trades clôturés depuis votre propfirm (DxFeed / Volumetrica). Sélectionnez la propfirm, puis connectez-vous avec vos identifiants plateforme.",
   "import.type.atas.name": "ATAS",
   "import.type.atas.description": "Import depuis les fichiers Excel ATAS",
   "import.type.atas.details":
