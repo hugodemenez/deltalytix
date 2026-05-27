@@ -1956,7 +1956,14 @@ export default {
   tradovateSync: {
     title: "Synchronisation Compte Tradovate",
     description:
-      "Connectez votre compte Tradovate pour synchroniser automatiquement vos trades en utilisant l'authentification OAuth.",
+      "Connectez votre compte Tradovate via OAuth pour synchroniser les trades du jour. Définissez une heure de sync quotidienne sur chaque compte pour importer automatiquement l'activité de chaque journée.",
+    importInfo: {
+      title: "Avant de synchroniser",
+      currentDayOnly:
+        "Tradovate n'expose que les trades du jour de bourse en cours. Chaque synchronisation—manuelle ou planifiée—n'importe que les ordres du jour ; les jours précédents ne sont pas disponibles via l'API.",
+      dailySyncReminder:
+        "Définissez une heure de synchronisation quotidienne pour chaque compte connecté afin que les trades soient importés automatiquement chaque jour. Sans cela, vous devez synchroniser manuellement le jour même, sinon ces trades ne seront pas capturés.",
+    },
     environment: "Environnement",
     environments: {
       demo: "Démo (Comptes Propfirms Simulés)",
@@ -2096,7 +2103,7 @@ export default {
       environmentDemo: "Démo",
       dailySyncTimeTitle: "Définir l'heure de sync quotidienne",
       dailySyncTimeDescription:
-        "Configurez l'heure à laquelle ce compte doit se synchroniser automatiquement chaque jour (dans votre heure locale). Laissez vide pour désactiver la synchronisation automatique.",
+        "Comme Tradovate ne fournit que les trades du jour en cours, planifiez une sync quotidienne pour importer automatiquement l'activité de chaque journée. Choisissez une heure dans votre fuseau local (par exemple, après la clôture). Laissez vide pour désactiver la synchronisation automatique.",
       dailySyncTimeLabel: "Heure de sync (heure locale)",
       dailySyncTimePlaceholder: "HH:mm",
       dailySyncTimeTimezoneNote:
@@ -2335,7 +2342,7 @@ export default {
   "import.type.tradovateSync.description":
     "Synchronisation directe de compte avec Tradovate",
   "import.type.tradovateSync.details":
-    "Synchronisation directe avec votre compte Tradovate. Nécessite une authentification OAuth.",
+    "Connexion OAuth pour importer uniquement les trades Tradovate du jour. Définissez une heure de sync quotidienne sur chaque compte pour capturer chaque journée de trading automatiquement—même lorsque vous n'êtes pas connecté.",
   "import.type.dxfeedSync.name": "DxFeed",
   "import.type.dxfeedSync.description":
     "Synchronisation directe de compte avec DxFeed",
