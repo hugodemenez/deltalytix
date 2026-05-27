@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import {
   Trade as PrismaTrade,
@@ -356,8 +357,11 @@ export const DataProvider: React.FC<{
   const [hourFilter, setHourFilter] = useState<HourFilter>({ hour: null });
   const [tagFilter, setTagFilter] = useState<TagFilter>({ tags: [] });
   const [isFirstConnection, setIsFirstConnection] = useState(false);
+  const equityChartRequestIdRef = useRef(0);
 
   const fetchEquityChartData = useCallback(async () => {
+    const requestId = equityChartRequestIdRef.current + 1;
+    equityChartRequestIdRef.current = requestId;
     setEquityChartLoading(true);
     try {
       const result = await getEquityChartDataAction({
@@ -383,12 +387,18 @@ export const DataProvider: React.FC<{
         dataSampling: equityChartConfig.dataSampling,
         selectedAccounts: equityChartConfig.selectedAccountsToDisplay ?? [],
       });
-      setEquityChartData(result);
+      if (requestId === equityChartRequestIdRef.current) {
+        setEquityChartData(result);
+      }
     } catch (error) {
       console.error("[DataProvider] Failed to fetch equity chart data:", error);
-      setEquityChartData({ chartData: [], accountNumbers: [] });
+      if (requestId === equityChartRequestIdRef.current) {
+        setEquityChartData({ chartData: [], accountNumbers: [] });
+      }
     } finally {
-      setEquityChartLoading(false);
+      if (requestId === equityChartRequestIdRef.current) {
+        setEquityChartLoading(false);
+      }
     }
   }, [
     instruments,
