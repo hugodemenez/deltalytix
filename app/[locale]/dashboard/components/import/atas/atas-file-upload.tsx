@@ -46,13 +46,15 @@ const ATAS_HEADER_MAPPINGS: Record<string, string> = {
   "prix d'ouverture": "Open price",
   "open volume": "Open volume",
   "volume d'ouverture": "Open volume",
+  "volume ouvert": "Open volume",
   "close time": "Close time",
   "heure de cloture": "Close time",
-  "heure de clôture": "Close time",
+  "periode de fermeture": "Close time",
   "close price": "Close price",
   "prix de cloture": "Close price",
-  "prix de clôture": "Close price",
   "close volume": "Close volume",
+  "fermer le volume": "Close volume",
+  "volume ferme": "Close volume",
   volume: "Close volume",
   pnl: "PnL",
   comment: "Comment",
@@ -62,6 +64,8 @@ const ATAS_HEADER_MAPPINGS: Record<string, string> = {
 const normalizeAtasHeaderKey = (header: string): string =>
   header
     .replace(/\u200B/g, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");

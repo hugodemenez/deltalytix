@@ -92,6 +92,86 @@ const convertZonedDatePartsToUtcIso = (
   return correctUTC.toISOString().replace("Z", "+00:00");
 };
 
+const isValidDateParts = (
+  year: number,
+  month: number,
+  day: number,
+  hours: number,
+  minutes: number,
+  seconds: number
+): boolean => {
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31 ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59 ||
+    seconds < 0 ||
+    seconds > 59
+  ) {
+    return false;
+  }
+
+  const date = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day &&
+    date.getUTCHours() === hours &&
+    date.getUTCMinutes() === minutes &&
+    date.getUTCSeconds() === seconds
+  );
+};
+
+const parseLocalAtasDateParts = (
+  dateStr: string
+):
+  | {
+      year: number;
+      month: number;
+      day: number;
+      hours: number;
+      minutes: number;
+      seconds: number;
+    }
+  | undefined => {
+  const isoLikeMatch = dateStr.match(
+    /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?$/
+  );
+
+  if (isoLikeMatch) {
+    return {
+      year: parseInt(isoLikeMatch[1], 10),
+      month: parseInt(isoLikeMatch[2], 10),
+      day: parseInt(isoLikeMatch[3], 10),
+      hours: parseInt(isoLikeMatch[4], 10),
+      minutes: parseInt(isoLikeMatch[5], 10),
+      seconds: parseInt(isoLikeMatch[6] || "0", 10),
+    };
+  }
+
+  const localizedMatch = dateStr.match(
+    /^(\d{1,2})[/.](\d{1,2})[/.](\d{4})[ T](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?$/
+  );
+
+  if (!localizedMatch) {
+    return undefined;
+  }
+
+  return {
+    // ATAS localized exports use day-first display formats such as dd/MM/yyyy.
+    year: parseInt(localizedMatch[3], 10),
+    month: parseInt(localizedMatch[2], 10),
+    day: parseInt(localizedMatch[1], 10),
+    hours: parseInt(localizedMatch[4], 10),
+    minutes: parseInt(localizedMatch[5], 10),
+    seconds: parseInt(localizedMatch[6] || "0", 10),
+  };
+};
+
 const parseAtasDate = (
   dateValue: unknown,
   timezone: string
@@ -103,6 +183,7 @@ const parseAtasDate = (
   try {
     // Excel parses dates and provides them as Date objects or Date object strings
     const dateStr = String(dateValue);
+    const trimmedDateStr = dateStr.trim();
 
     // Check if it's already a Date object or a string representation of a Date object
     let dateObj: Date | null = null;
@@ -144,25 +225,36 @@ const parseAtasDate = (
       );
     }
 
-    const localDateMatch = dateStr.match(
-      /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/
-    );
+    const localDateParts = parseLocalAtasDateParts(trimmedDateStr);
+    if (localDateParts) {
+      if (
+        !isValidDateParts(
+          localDateParts.year,
+          localDateParts.month,
+          localDateParts.day,
+          localDateParts.hours,
+          localDateParts.minutes,
+          localDateParts.seconds
+        )
+      ) {
+        console.error(`Invalid ATAS date: ${dateStr}`);
+        return undefined;
+      }
 
-    if (localDateMatch) {
       return convertZonedDatePartsToUtcIso(
-        parseInt(localDateMatch[1], 10),
-        parseInt(localDateMatch[2], 10),
-        parseInt(localDateMatch[3], 10),
-        parseInt(localDateMatch[4], 10),
-        parseInt(localDateMatch[5], 10),
-        parseInt(localDateMatch[6] || "0", 10),
+        localDateParts.year,
+        localDateParts.month,
+        localDateParts.day,
+        localDateParts.hours,
+        localDateParts.minutes,
+        localDateParts.seconds,
         timezone
       );
     }
 
-    // Check if it's already in ISO format
-    if (dateStr.includes("T") || dateStr.includes("-")) {
-      const date = new Date(dateStr);
+    // Only treat strings with an explicit offset as absolute instants.
+    if (/[ T].*(?:Z|[+-]\d{2}:?\d{2})$/i.test(trimmedDateStr)) {
+      const date = new Date(trimmedDateStr);
       if (!isNaN(date.getTime())) {
         return date.toISOString().replace("Z", "+00:00");
       }
