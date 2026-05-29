@@ -51,20 +51,27 @@ interface ShareButtonProps {
   }
 }
 
-const CHART_WIDGET_LABELS: Record<string, string> = {
-  equityChart: "Equity Curve",
-  pnlChart: "P&L",
-  timeOfDay: "Time of Day Performance",
-  timeInPosition: "Time in Position",
-  timeRangePerformance: "Time Range Performance",
-  weekdayPnl: "Weekday P&L",
-  pnlBySide: "P&L by Side",
-  pnlPerContract: "P&L per Contract",
-  pnlPerContractDaily: "Daily P&L per Contract",
-  commissionsPnl: "Commissions vs P&L",
-  tradeDistribution: "Trade Distribution",
-  dailyTickTarget: "Daily Tick Target",
-}
+// Map each chart widget type to an existing translation key so PDF chart
+// titles stay localized instead of being hardcoded in English.
+const CHART_WIDGET_LABEL_KEYS = {
+  equityChart: "widgets.types.equityChart",
+  pnlChart: "widgets.types.pnlChart",
+  timeOfDay: "widgets.types.timeOfDay",
+  timeInPosition: "widgets.types.timeInPosition",
+  timeRangePerformance: "timeRangePerformance.title",
+  weekdayPnl: "widgets.types.weekdayPnl",
+  pnlBySide: "widgets.types.pnlBySide",
+  pnlPerContract: "widgets.types.pnlPerContract",
+  pnlPerContractDaily: "widgets.types.pnlPerContractDaily",
+  commissionsPnl: "widgets.types.commissionsPnl",
+  tradeDistribution: "tradeDistribution.title",
+  dailyTickTarget: "widgets.types.dailyTickTarget",
+} as const
+
+type ChartWidgetType = keyof typeof CHART_WIDGET_LABEL_KEYS
+
+// Maximum number of chart widgets captured into the PDF chart grid.
+const MAX_PDF_CHARTS = 6
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false)
@@ -234,35 +241,24 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       })
 
       try {
-      const chartNodes = Array.from(
-        document.querySelectorAll<HTMLElement>('[data-widget-category="charts"]'),
-      )
-        .filter((node) => node.offsetWidth > 0 && node.offsetHeight > 0)
-        .slice(0, 6)
+        const chartNodes = Array.from(
+          document.querySelectorAll<HTMLElement>('[data-widget-category="charts"]'),
+        )
+          .filter((node) => node.offsetWidth > 0 && node.offsetHeight > 0)
+          .slice(0, MAX_PDF_CHARTS)
 
-      const snapshots: Array<{ title: string; imageDataUrl: string }> = []
+        const snapshots: Array<{ title: string; imageDataUrl: string }> = []
 
-      for (const node of chartNodes) {
-        const widgetType = node.dataset.widgetType || ""
-        const title = CHART_WIDGET_LABELS[widgetType] || t("share.pdfChartFallbackTitle")
+        for (const node of chartNodes) {
+          const widgetType = node.dataset.widgetType || ""
+          const labelKey = CHART_WIDGET_LABEL_KEYS[widgetType as ChartWidgetType]
+          // All mapped keys are parameter-free; cast to a representative key so
+          // `t` instantiates with a single key instead of an unrepresentable union.
+          const title = labelKey
+            ? t(labelKey as "widgets.types.equityChart")
+            : t("share.pdfChartFallbackTitle")
 
-        const canvas = await html2canvas(node, {
-          scale: 2,
-          backgroundColor: "#ffffff",
-          useCORS: true,
-          logging: false,
-        })
-
-        snapshots.push({
-          title,
-          imageDataUrl: canvas.toDataURL("image/png"),
-        })
-      }
-
-      if (snapshots.length === 0) {
-        const dashboardGrid = document.querySelector<HTMLElement>(".react-grid-layout")
-        if (dashboardGrid && dashboardGrid.offsetWidth > 0 && dashboardGrid.offsetHeight > 0) {
-          const canvas = await html2canvas(dashboardGrid, {
+          const canvas = await html2canvas(node, {
             scale: 2,
             backgroundColor: "#ffffff",
             useCORS: true,
@@ -270,13 +266,29 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           })
 
           snapshots.push({
-            title: t("share.pdfDashboardSnapshotTitle"),
+            title,
             imageDataUrl: canvas.toDataURL("image/png"),
           })
         }
-      }
 
-      return snapshots
+        if (snapshots.length === 0) {
+          const dashboardGrid = document.querySelector<HTMLElement>(".react-grid-layout")
+          if (dashboardGrid && dashboardGrid.offsetWidth > 0 && dashboardGrid.offsetHeight > 0) {
+            const canvas = await html2canvas(dashboardGrid, {
+              scale: 2,
+              backgroundColor: "#ffffff",
+              useCORS: true,
+              logging: false,
+            })
+
+            snapshots.push({
+              title: t("share.pdfDashboardSnapshotTitle"),
+              imageDataUrl: canvas.toDataURL("image/png"),
+            })
+          }
+        }
+
+        return snapshots
       } finally {
         previousVisibility.forEach(({ element, visibility }) => {
           if (visibility) {
@@ -468,6 +480,11 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const filteredTrades = getFilteredTrades()
 
+        if (filteredTrades.length === 0) {
+          showExportError(t('share.error.noTrades'))
+          return
+        }
+
         const chartSnapshots = await captureChartSnapshots()
         const { jsPDF } = await import("jspdf")
         const doc = new jsPDF({ unit: "pt", format: "a4" })
@@ -565,7 +582,30 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
 
         const chartCardWidth = (contentWidth - cardGap) / 2
         const chartCardHeight = 200
-        const getChartCardTop = (index: number) => y + Math.floor(index / 2) * (chartCardHeight + cardGap)
+
+        const drawChartCard = (snapshot: { title: string; imageDataUrl: string }, cardX: number, cardY: number) => {
+          doc.setFillColor(255, 255, 255)
+          doc.setDrawColor(223, 227, 236)
+          doc.roundedRect(cardX, cardY, chartCardWidth, chartCardHeight, 8, 8, "FD")
+
+          doc.setFont("helvetica", "bold")
+          doc.setFontSize(10)
+          doc.setTextColor(38, 43, 56)
+          doc.text(snapshot.title, cardX + 12, cardY + 18)
+
+          const imageProps = doc.getImageProperties(snapshot.imageDataUrl)
+          const availableWidth = chartCardWidth - 20
+          const availableHeight = chartCardHeight - 36
+          const widthRatio = availableWidth / imageProps.width
+          const heightRatio = availableHeight / imageProps.height
+          const ratio = Math.min(widthRatio, heightRatio)
+          const imageWidth = imageProps.width * ratio
+          const imageHeight = imageProps.height * ratio
+          const imageX = cardX + (chartCardWidth - imageWidth) / 2
+          const imageY = cardY + 26 + (availableHeight - imageHeight) / 2
+
+          doc.addImage(snapshot.imageDataUrl, "PNG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST")
+        }
 
         const renderChartCards = () => {
           if (chartSnapshots.length === 0) {
@@ -578,38 +618,22 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
             return
           }
 
-          chartSnapshots.forEach((snapshot, index) => {
-            const isRightColumn = index % 2 === 1
-            const cardX = isRightColumn ? margin + chartCardWidth + cardGap : margin
-            const cardY = getChartCardTop(index)
-
+          // Render two cards per row, paginating one row at a time so that
+          // each card's vertical position is anchored to the live `y` after
+          // any page break (avoids cards drifting off the page boundary).
+          for (let i = 0; i < chartSnapshots.length; i += 2) {
             ensureSpace(chartCardHeight + cardGap)
+            const rowY = y
 
-            doc.setFillColor(255, 255, 255)
-            doc.setDrawColor(223, 227, 236)
-            doc.roundedRect(cardX, cardY, chartCardWidth, chartCardHeight, 8, 8, "FD")
+            drawChartCard(chartSnapshots[i], margin, rowY)
 
-            doc.setFont("helvetica", "bold")
-            doc.setFontSize(10)
-            doc.setTextColor(38, 43, 56)
-            doc.text(snapshot.title, cardX + 12, cardY + 18)
+            const rightSnapshot = chartSnapshots[i + 1]
+            if (rightSnapshot) {
+              drawChartCard(rightSnapshot, margin + chartCardWidth + cardGap, rowY)
+            }
 
-            const imageProps = doc.getImageProperties(snapshot.imageDataUrl)
-            const availableWidth = chartCardWidth - 20
-            const availableHeight = chartCardHeight - 36
-            const widthRatio = availableWidth / imageProps.width
-            const heightRatio = availableHeight / imageProps.height
-            const ratio = Math.min(widthRatio, heightRatio)
-            const imageWidth = imageProps.width * ratio
-            const imageHeight = imageProps.height * ratio
-            const imageX = cardX + (chartCardWidth - imageWidth) / 2
-            const imageY = cardY + 26 + (availableHeight - imageHeight) / 2
-
-            doc.addImage(snapshot.imageDataUrl, "PNG", imageX, imageY, imageWidth, imageHeight, undefined, "FAST")
-          })
-
-          const rows = Math.ceil(chartSnapshots.length / 2)
-          y += rows * (chartCardHeight + cardGap)
+            y = rowY + chartCardHeight + cardGap
+          }
         }
 
         drawHeader()

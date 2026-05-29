@@ -1167,7 +1167,6 @@ export default {
   "share.exportPdfSuccessDescription": "Le PDF de votre relevé dashboard est prêt.",
   "share.exportPdfErrorTitle": "Impossible d'exporter le PDF",
   "share.exportPdfError": "Échec de génération du PDF de relevé dashboard",
-  "share.pdfTitle": "Rapport de trading du dashboard",
   "share.pdfStatementTitle": "Relevé de performance trading",
   "share.pdfStatementSubtitle": "Résumé formaté de vos performances du dashboard",
   "share.pdfGeneratedOn": "Généré le",
@@ -1181,10 +1180,8 @@ export default {
   "share.pdfChartFallbackTitle": "Widget graphique",
   "share.pdfFooterTitle": "Relevé Deltalytix",
   "share.pdfPage": "Page",
-  "share.pdfTradesTitle": "Détails des trades",
   "share.pdfTotalTrades": "Nombre total de trades",
   "share.pdfGrossPnl": "P&L brut",
-  "share.pdfCommission": "Commission",
   "share.pdfNetPnl": "P&L net",
   "share.pdfWinRate": "Taux de réussite",
   widgets: {
