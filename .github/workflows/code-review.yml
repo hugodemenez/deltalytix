@@ -88,8 +88,28 @@ jobs:
           cat "$DIFF_STAT_FILE" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Code Review (on PR)
+      - name: Check review limit
         if: github.event_name == 'pull_request'
+        id: check-limit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # Count completed (non-cancelled) runs of this workflow on the PR
+          # branch. The current run is still in progress so it isn't counted.
+          COMPLETED=$(gh api \
+            "repos/${{ github.repository }}/actions/workflows/code-review.yml/runs?event=pull_request&branch=${{ github.head_ref }}&per_page=100" \
+            --jq '[.workflow_runs[] | select(.conclusion != null and .conclusion != "cancelled")] | length')
+          echo "Completed reviews on this PR branch: $COMPLETED / 3"
+          if [ "$COMPLETED" -ge 3 ]; then
+            echo "::notice::Review limit (3) reached for this PR; skipping"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Code Review (on PR)
+        if: github.event_name == 'pull_request' && steps.check-limit.outputs.skip != 'true'
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ github.token }}
