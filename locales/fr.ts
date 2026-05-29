@@ -1956,7 +1956,7 @@ export default {
   tradovateSync: {
     title: "Synchronisation Compte Tradovate",
     description:
-      "Connectez votre compte Tradovate via OAuth pour synchroniser les trades du jour. Définissez une heure de sync quotidienne sur chaque compte pour importer automatiquement l'activité de chaque journée.",
+      "Connectez votre compte Tradovate via OAuth pour synchroniser vos trades.",
     importInfo: {
       title: "Avant de synchroniser",
       currentDayOnly:

@@ -1832,7 +1832,7 @@ export default {
   tradovateSync: {
     title: "Tradovate Account Sync",
     description:
-      "Connect your Tradovate account via OAuth to sync today's trades. Set a daily sync time on each account so each day's activity is imported automatically.",
+      "Connect your Tradovate account via OAuth to sync your trades.",
     importInfo: {
       title: "Before you sync",
       currentDayOnly:
