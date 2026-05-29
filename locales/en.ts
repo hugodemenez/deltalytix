@@ -1836,9 +1836,9 @@ export default {
     importInfo: {
       title: "Before you sync",
       currentDayOnly:
-        "Tradovate only exposes trades from the current trading day. Each sync—manual or scheduled—imports today's orders only; older days are not available through the API.",
+        "Tradovate only exposes trades from the current trading day (not available on weekends or holidays). Each sync—manual or scheduled—imports today's orders only; prior days cannot be retrieved.",
       dailySyncReminder:
-        "Set a daily sync time for every connected account so trades are imported automatically each day. Without it, you must sync manually on the same day you trade, or those trades will not be captured.",
+        "Set a daily sync time (e.g. after market close) on each connected account so trades are captured automatically. Without it, you must sync manually that same day.",
     },
     environment: "Environment",
     environments: {

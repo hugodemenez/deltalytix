@@ -18,7 +18,7 @@ export function TradovateSync() {
         </p>
       </div>
 
-      <Alert className="border-blue-200/80 bg-blue-50/50 dark:border-blue-900/50 dark:bg-blue-950/30">
+      <Alert variant="info">
         <Info className="h-4 w-4" />
         <AlertTitle>{t('tradovateSync.importInfo.title')}</AlertTitle>
         <AlertDescription className="space-y-2">

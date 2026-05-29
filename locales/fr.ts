@@ -1960,9 +1960,9 @@ export default {
     importInfo: {
       title: "Avant de synchroniser",
       currentDayOnly:
-        "Tradovate n'expose que les trades du jour de bourse en cours. Chaque synchronisation—manuelle ou planifiée—n'importe que les ordres du jour ; les jours précédents ne sont pas disponibles via l'API.",
+        "Tradovate ne permet pas d'accéder à l'historique de trading antérieur à la journée actuelle (week-ends et jours fériés non disponibles). Chaque synchronisation n'importe que les trades du jour.",
       dailySyncReminder:
-        "Définissez une heure de synchronisation quotidienne pour chaque compte connecté afin que les trades soient importés automatiquement chaque jour. Sans cela, vous devez synchroniser manuellement le jour même, sinon ces trades ne seront pas capturés.",
+        "Configurez une heure de sync quotidienne (ex. après la clôture) sur chaque compte pour importer les trades automatiquement. Sans ça, vous devez synchroniser manuellement le jour même.",
     },
     environment: "Environnement",
     environments: {
