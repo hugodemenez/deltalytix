@@ -1,7 +1,7 @@
 'use client'
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { useI18n } from "@/locales/client"
+import { useI18n } from '@/locales/client'
 import { Info } from 'lucide-react'
 import { TradovateCredentialsManager } from './tradovate-credentials-manager'
  
