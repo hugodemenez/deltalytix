@@ -1832,7 +1832,14 @@ export default {
   tradovateSync: {
     title: "Tradovate Account Sync",
     description:
-      "Connect your Tradovate account to automatically sync your trades using OAuth authentication.",
+      "Connect your Tradovate account via OAuth to sync your trades.",
+    importInfo: {
+      title: "Before you sync",
+      currentDayOnly:
+        "Tradovate only exposes trades from the current trading day (not available on weekends or holidays). Each sync—manual or scheduled—imports today's orders only; prior days cannot be retrieved.",
+      dailySyncReminder:
+        "Set a daily sync time (e.g. after market close) on each connected account so trades are captured automatically. Without it, you must sync manually that same day.",
+    },
     environment: "Environment",
     environments: {
       demo: "Demo (Propfirms Simulated Accounts)",
@@ -1967,7 +1974,7 @@ export default {
       environmentDemo: "Demo",
       dailySyncTimeTitle: "Set daily sync time",
       dailySyncTimeDescription:
-        "Configure when this account should automatically sync each day (in your local time). Leave empty to disable automatic syncing.",
+        "Because Tradovate only provides the current day's trades, schedule a daily sync so each day's activity is imported automatically. Choose a time in your local timezone (for example, after market close). Leave empty to disable automatic syncing.",
       dailySyncTimeLabel: "Sync time (local time)",
       dailySyncTimePlaceholder: "HH:mm",
       dailySyncTimeTimezoneNote: "Time is in your local timezone ({timezone})",
@@ -2201,7 +2208,7 @@ export default {
   "import.type.tradovateSync.description":
     "Direct account synchronization with Tradovate",
   "import.type.tradovateSync.details":
-    "Direct sync with your Tradovate account. Requires OAuth authentication.",
+    "OAuth connection to import today's Tradovate trades only. Set a daily sync time on each account so every trading day is captured automatically—even when you are not logged in.",
   "import.type.dxfeedSync.name": "DxFeed",
   "import.type.dxfeedSync.description":
     "Direct account synchronization with DxFeed",
