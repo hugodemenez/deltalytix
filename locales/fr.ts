@@ -1164,6 +1164,7 @@ export default {
   "share.backToShare": "Retour au partage",
   "share.shareAllAccounts": "Partager pour tous les comptes",
   "share.exportPdfButton": "Exporter en PDF",
+  "share.exportPdfInProgress": "Exportation...",
   "share.exportPdfSuccess": "Le relevé a été exporté avec succès",
   "share.exportPdfSuccessDescription": "Le PDF de votre relevé dashboard est prêt.",
   "share.exportPdfErrorTitle": "Impossible d'exporter le PDF",

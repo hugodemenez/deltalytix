@@ -54,19 +54,22 @@ interface ShareButtonProps {
 
 // Map each chart widget type to an existing translation key so PDF chart
 // titles stay localized instead of being hardcoded in English.
+// Keys are actual WidgetType values (as emitted by data-widget-type); values
+// are existing translation keys so PDF chart titles stay localized.
 const CHART_WIDGET_LABEL_KEYS = {
   equityChart: "widgets.types.equityChart",
   pnlChart: "widgets.types.pnlChart",
-  timeOfDay: "widgets.types.timeOfDay",
-  timeInPosition: "widgets.types.timeInPosition",
-  timeRangePerformance: "timeRangePerformance.title",
-  weekdayPnl: "widgets.types.weekdayPnl",
-  pnlBySide: "widgets.types.pnlBySide",
-  pnlPerContract: "widgets.types.pnlPerContract",
-  pnlPerContractDaily: "widgets.types.pnlPerContractDaily",
+  timeOfDayChart: "widgets.types.timeOfDay",
+  timeInPositionChart: "widgets.types.timeInPosition",
+  weekdayPnlChart: "widgets.types.weekdayPnl",
+  pnlBySideChart: "widgets.types.pnlBySide",
+  pnlPerContractChart: "widgets.types.pnlPerContract",
+  pnlPerContractDailyChart: "widgets.types.pnlPerContractDaily",
+  tickDistribution: "widgets.types.tickDistribution",
   commissionsPnl: "widgets.types.commissionsPnl",
   tradeDistribution: "tradeDistribution.title",
   dailyTickTarget: "widgets.types.dailyTickTarget",
+  timeRangePerformance: "timeRangePerformance.title",
 } as const
 
 type ChartWidgetType = keyof typeof CHART_WIDGET_LABEL_KEYS
@@ -146,6 +149,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     const [showManager, setShowManager] = useState(false)
     const [shareTitle, setShareTitle] = useState("")
     const [shareAllAccounts, setShareAllAccounts] = useState(true)
+    const [isExporting, setIsExporting] = useState(false)
     const useCompactButton = compact || isMobile
 
     // Get the earliest and latest trade dates
@@ -471,6 +475,9 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     }
 
     const handleExportPdf = async () => {
+      if (isExporting) {
+        return
+      }
       try {
         if (!selectedDateRange.from) {
           showExportError(t('share.error.noStartDate'))
@@ -483,6 +490,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
           showExportError(t('share.error.noTrades'))
           return
         }
+
+        setIsExporting(true)
 
         const chartSnapshots = await captureChartSnapshots()
         const { jsPDF } = await import("jspdf")
@@ -680,6 +689,8 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       } catch (error) {
         console.error("Error exporting dashboard PDF:", error)
         showExportError(t("share.exportPdfError"))
+      } finally {
+        setIsExporting(false)
       }
     }
 
@@ -945,9 +956,10 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
                     <Button
                       variant="outline"
                       onClick={handleExportPdf}
+                      disabled={isExporting}
                     >
                       <Download className="h-4 w-4 mr-2" />
-                      {t("share.exportPdfButton")}
+                      {isExporting ? t("share.exportPdfInProgress") : t("share.exportPdfButton")}
                     </Button>
                     <Button
                       variant="outline"

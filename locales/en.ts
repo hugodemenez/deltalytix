@@ -1242,6 +1242,7 @@ export default {
   "share.backToShare": "Back to share",
   "share.shareAllAccounts": "Share for all accounts",
   "share.exportPdfButton": "Export PDF",
+  "share.exportPdfInProgress": "Exporting...",
   "share.exportPdfSuccess": "Statement exported successfully",
   "share.exportPdfSuccessDescription": "Your dashboard statement PDF is ready.",
   "share.exportPdfErrorTitle": "Unable to export PDF",
