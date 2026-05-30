@@ -41,6 +41,7 @@ import { fr } from 'date-fns/locale'
 import { Switch } from "@/components/ui/switch"
 import { useTradesStore } from "../../../../store/trades-store"
 import { useUserStore } from "../../../../store/user-store"
+import type { WidgetType } from "../types/dashboard"
 
 interface ShareButtonProps {
   variant?: "ghost" | "outline" | "secondary"
@@ -68,7 +69,7 @@ const CHART_WIDGET_LABEL_KEYS = {
   tradeDistribution: "tradeDistribution.title",
   dailyTickTarget: "widgets.types.dailyTickTarget",
   timeRangePerformance: "timeRangePerformance.title",
-} as const
+} as const satisfies Partial<Record<WidgetType, string>>
 
 type ChartWidgetType = keyof typeof CHART_WIDGET_LABEL_KEYS
 
