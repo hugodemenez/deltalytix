@@ -11,7 +11,8 @@ import type { ExportPdfPayload, PdfTrade } from "@/lib/pdf/statement"
 // avoids the mobile tab-reload/out-of-memory failures that html2canvas caused:
 // the browser only POSTs the (already filtered, already in-memory) trades it is
 // displaying, and the server returns a finished PDF to download.
-export const runtime = "nodejs"
+// (Node.js is the default runtime; an explicit `runtime` export is incompatible
+// with this project's experimental.useCache config.)
 export const maxDuration = 60
 
 const MESSAGES = { en: enMessages, fr: frMessages } as const
