@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { renderToBuffer } from "@react-pdf/renderer"
+import { renderToBuffer, type DocumentProps } from "@react-pdf/renderer"
 import React from "react"
 import { formatInTimeZone } from "date-fns-tz"
 import enMessages from "@/locales/en"
@@ -110,9 +110,16 @@ export async function POST(request: NextRequest) {
     const strings = buildStrings(t)
     const generatedAt = formatInTimeZone(new Date(), timezone, "yyyy-MM-dd HH:mm")
 
-    const buffer = await renderToBuffer(
-      React.createElement(StatementDocument, { payload, strings, generatedAt }),
-    )
+    // StatementDocument renders a @react-pdf <Document>; cast because
+    // renderToBuffer's parameter is typed to ReactElement<DocumentProps>, which
+    // createElement's inferred element type does not structurally match.
+    const element = React.createElement(StatementDocument, {
+      payload,
+      strings,
+      generatedAt,
+    }) as React.ReactElement<DocumentProps>
+
+    const buffer = await renderToBuffer(element)
 
     const filename = `dashboard-statement-${formatInTimeZone(new Date(), timezone, "yyyy-MM-dd")}.pdf`
 
