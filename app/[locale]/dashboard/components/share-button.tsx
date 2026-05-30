@@ -226,7 +226,7 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
     }, [t])
 
     const captureChartSnapshots = useCallback(async () => {
-      const { default: html2canvas } = await import("html2canvas")
+      const { domToJpeg } = await import("modern-screenshot")
       const openFixedLayers = Array.from(
         document.querySelectorAll<HTMLElement>('[data-state="open"]'),
       ).filter((element) => {
@@ -248,49 +248,40 @@ export const ShareButton = forwardRef<HTMLButtonElement, ShareButtonProps>(
       })
 
       try {
-        // Mobile browsers (notably iOS Safari / in-app WebViews) enforce tight
-        // per-tab memory limits. html2canvas at scale 2 plus PNG data URLs across
-        // every widget can exhaust them, which the OS resolves by killing and
-        // reloading the tab — the "freeze then reload" users see. Capture at a
-        // lower scale and emit JPEG (no alpha, far smaller) on small viewports.
+        // modern-screenshot serializes the DOM into an SVG <foreignObject> and
+        // draws it once, which is markedly faster than html2canvas's node-by-node
+        // repaint and avoids the per-widget memory pile-up that crashed mobile
+        // tabs. Still emit JPEG (no alpha, small) and drop to scale 1 on small
+        // viewports to stay within mobile memory limits.
         const isMobileViewport = typeof window !== "undefined" && window.innerWidth < 768
         const captureScale = isMobileViewport ? 1 : 2
-        const imageMimeType = "image/jpeg"
         const imageQuality = 0.85
 
-        const renderToDataUrl = async (node: HTMLElement) => {
-          const canvas = await html2canvas(node, {
+        const renderToDataUrl = async (node: HTMLElement) =>
+          domToJpeg(node, {
             scale: captureScale,
+            quality: imageQuality,
             backgroundColor: "#ffffff",
-            useCORS: true,
-            logging: false,
-            // Strip transient editor affordances from the cloned DOM only (the
-            // live page is untouched). In customize mode — always-on for mobile —
+            // Strip transient editor affordances from each cloned node (the live
+            // page is untouched). In customize mode — always-on for mobile —
             // widget content gets a blur, plus hover/focus reveal a translucent
-            // scrim and drag-handle overlay. None of that belongs in the export
-            // and the blur is what was washing out the captured charts.
-            onclone: (_clonedDoc, clonedNode) => {
-              clonedNode.style.filter = "none"
-              clonedNode.querySelectorAll<HTMLElement>("*").forEach((el) => {
-                el.style.filter = "none"
-                el.style.backdropFilter = "none"
-              })
-              clonedNode
-                .querySelectorAll<HTMLElement>(
-                  '.drag-handle, [class*="group-hover:opacity"], [class*="group-focus-within:opacity"]',
-                )
-                .forEach((el) => {
-                  el.style.opacity = "0"
-                })
+            // scrim and drag-handle overlay; the blur is what washed out captures.
+            onCloneEachNode: (cloned) => {
+              if (!(cloned instanceof HTMLElement)) {
+                return
+              }
+              cloned.style.filter = "none"
+              cloned.style.backdropFilter = "none"
+              const className = cloned.getAttribute("class") || ""
+              if (
+                cloned.classList.contains("drag-handle") ||
+                className.includes("group-hover:opacity") ||
+                className.includes("group-focus-within:opacity")
+              ) {
+                cloned.style.opacity = "0"
+              }
             },
           })
-          const dataUrl = canvas.toDataURL(imageMimeType, imageQuality)
-          // Release the backing store promptly so memory is reclaimed before the
-          // next capture instead of piling up until the whole loop finishes.
-          canvas.width = 0
-          canvas.height = 0
-          return dataUrl
-        }
 
         // Capture every visible chart widget; the PDF renderer flows them
         // across multiple pages, so there is no fixed cap.
